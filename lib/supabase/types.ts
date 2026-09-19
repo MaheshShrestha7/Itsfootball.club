@@ -15,6 +15,20 @@ export type SponsorTier = 'platinum' | 'gold' | 'silver' | 'bronze' | 'grassroot
 export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | 'Media Request' | 'Youth Academy';
 
 export type HeroPinType = 'event' | 'fixture' | 'news' | 'image';
+export type SeasonStatus = 'active' | 'completed' | 'upcoming';
+
+export interface ClubSeason {
+  id: string;
+  club_id: string;
+  name: string; // e.g. "2026/27" or "2026/2027"
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  is_current: boolean;
+  status: SeasonStatus;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface HeroSliderPinnedItem {
   id: string;
@@ -55,6 +69,8 @@ export interface Club {
   contact_phone: string;
   custom_domain?: string;
   previous_slugs?: string[];
+  current_season_id?: string;
+  seasons?: ClubSeason[];
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -88,6 +104,7 @@ export interface ClubMember {
   executive_title?: string;
   executive_bio?: string;
   executive_order?: number;
+  executive_season?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -167,6 +184,7 @@ export interface ClubEvent {
   title: string;
   description: string;
   category: EventCategory;
+  season?: string;
   start_time: string;
   end_time?: string;
   location: string;

@@ -65,6 +65,8 @@ export default function ClubPublicPage({
     news,
     gallery,
     clubScoreProfiles,
+    seasons,
+    getActiveSeason
   } = useClub();
 
   const matchedClub = selectClubBySlug(resolvedParams.clubSlug);
@@ -78,15 +80,15 @@ export default function ClubPublicPage({
     const isOldAlias = Array.isArray(club.previous_slugs) &&
       club.previous_slugs.some(prev => prev.toLowerCase() === currentParam);
     
-    // Only rewrite URL if accessed via a confirmed older alias
-    if (isOldAlias && club.slug.toLowerCase() !== currentParam) {
+    if (isOldAlias) {
       window.history.replaceState(null, '', `/${club.slug}`);
     }
   }, [isHydrated, club, resolvedParams.clubSlug]);
 
-  // Component local states
+  // Tab & Filter states
   const [squadFilter, setSquadFilter] = useState<'ALL' | 'GK' | 'DEF' | 'MID' | 'FWD'>('ALL');
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
+  const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
   const [leaderboardMode, setLeaderboardMode] = useState<'clubscore' | 'traditional'>('clubscore');
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -99,13 +101,25 @@ export default function ClubPublicPage({
 
   // Filtered data for this club
   const clubId = club?.id || '';
+  const clubSeasons = seasons.filter(s => s.club_id === clubId);
+  const activeSeason = getActiveSeason ? getActiveSeason(clubId) : null;
   const clubMembers = members.filter(m => m.club_id === clubId);
   const squadPlayers = clubMembers.filter(m => m.role === 'player');
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
   const liveMatch = clubMatches.find(m => m.status === 'live');
-  const upcomingMatches = clubMatches.filter(m => m.status === 'upcoming');
-  const pastMatches = clubMatches.filter(m => m.status === 'completed');
+
+  const resolvedSeasonName = fixturesSeasonFilter === 'CURRENT'
+    ? (activeSeason?.name || '2026/27')
+    : fixturesSeasonFilter;
+
+  const filteredClubMatches = clubMatches.filter(m => {
+    if (fixturesSeasonFilter === 'ALL') return true;
+    return m.season === resolvedSeasonName;
+  });
+
+  const upcomingMatches = filteredClubMatches.filter(m => m.status === 'upcoming');
+  const pastMatches = filteredClubMatches.filter(m => m.status === 'completed');
   const clubEvents = events.filter(e => e.club_id === clubId);
   const clubSponsors = sponsors.filter(s => s.club_id === clubId);
   const clubNews = news.filter(n => n.club_id === clubId);
@@ -1221,38 +1235,70 @@ export default function ClubPublicPage({
               <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Fixtures & Match Results</h2>
             </div>
 
-            {/* Tab switchers */}
-            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-              <button
-                onClick={() => setFixturesTab('upcoming')}
-                style={{
-                  padding: '0.45rem 1.1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: fixturesTab === 'upcoming' ? 'var(--club-primary)' : 'transparent',
-                  color: fixturesTab === 'upcoming' ? '#FFFFFF' : 'var(--text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Upcoming Matches
-              </button>
-              <button
-                onClick={() => setFixturesTab('results')}
-                style={{
-                  padding: '0.45rem 1.1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: fixturesTab === 'results' ? 'var(--club-primary)' : 'transparent',
-                  color: fixturesTab === 'results' ? '#FFFFFF' : 'var(--text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Latest Results
-              </button>
+            {/* Filter controls: Season dropdown & Tab switcher */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</span>
+                <select
+                  value={fixturesSeasonFilter}
+                  onChange={(e) => setFixturesSeasonFilter(e.target.value)}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    background: 'rgba(255, 255, 255, 0.07)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: '#FFFFFF',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="CURRENT" style={{ background: '#111827', color: '#FFFFFF' }}>
+                    Current Season ({activeSeason?.name || '2026/27'})
+                  </option>
+                  <option value="ALL" style={{ background: '#111827', color: '#FFFFFF' }}>All Seasons</option>
+                  {clubSeasons.map(s => (
+                    <option key={s.id} value={s.name} style={{ background: '#111827', color: '#FFFFFF' }}>
+                      {s.name} {s.is_current ? '(Active)' : `(${s.status})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tab switchers */}
+              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+                <button
+                  onClick={() => setFixturesTab('upcoming')}
+                  style={{
+                    padding: '0.45rem 1.1rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: fixturesTab === 'upcoming' ? 'var(--club-primary)' : 'transparent',
+                    color: fixturesTab === 'upcoming' ? '#FFFFFF' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Upcoming Matches
+                </button>
+                <button
+                  onClick={() => setFixturesTab('results')}
+                  style={{
+                    padding: '0.45rem 1.1rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: fixturesTab === 'results' ? 'var(--club-primary)' : 'transparent',
+                    color: fixturesTab === 'results' ? '#FFFFFF' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Latest Results
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1271,8 +1317,15 @@ export default function ClubPublicPage({
               >
                 {/* Competition & Date */}
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
-                    {match.competition}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
+                      {match.competition}
+                    </span>
+                    {match.season && (
+                      <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
+                        {match.season}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '0.9rem', color: '#FFFFFF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
                     <Calendar size={14} color="var(--text-muted)" />
@@ -1500,7 +1553,14 @@ export default function ClubPublicPage({
       <section style={{ padding: '4.5rem 0', background: 'rgba(255,255,255,0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>LEADERSHIP</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <span className="badge badge-primary">LEADERSHIP</span>
+              {activeSeason && (
+                <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', fontSize: '0.72rem' }}>
+                  🗓️ {activeSeason.name} Tenure
+                </span>
+              )}
+            </div>
             <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Executive Committee & Governance</h2>
             <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
               The dedicated board, management, and technical staff guiding {club.name}.
@@ -1526,9 +1586,14 @@ export default function ClubPublicPage({
                 <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.2rem' }}>
                   {exec.full_name}
                 </h4>
-                <div style={{ color: 'var(--club-primary)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.6rem' }}>
+                <div style={{ color: 'var(--club-primary)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                   {exec.executive_title}
                 </div>
+                {(exec.executive_season || activeSeason) && (
+                  <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                    Tenure: {exec.executive_season || activeSeason?.name || '2026/27'}
+                  </span>
+                )}
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                   {exec.executive_bio}
                 </p>

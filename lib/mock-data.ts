@@ -15,7 +15,8 @@ import {
   ClubScoreRuleConfig,
   ClubBadge,
   PlayerAvailability,
-  DraftLineup
+  DraftLineup,
+  ClubSeason
 } from './supabase/types';
 
 // ==============================================================================
@@ -137,6 +138,69 @@ export const INITIAL_CLUBS: Club[] = [
 ];
 
 // ==============================================================================
+// 1.5 CLUB SEASONS
+// ==============================================================================
+export const INITIAL_SEASONS: ClubSeason[] = [
+  // Apex City FC / Red Lions FC
+  {
+    id: 'season-2026-27',
+    club_id: 'club-apex-01',
+    name: '2026/27',
+    start_date: '2026-08-01',
+    end_date: '2027-05-31',
+    is_current: true,
+    status: 'active',
+    notes: 'Current ongoing championship campaign across league and cup fixtures.',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'season-2025-26',
+    club_id: 'club-apex-01',
+    name: '2025/26',
+    start_date: '2025-08-01',
+    end_date: '2026-05-30',
+    is_current: false,
+    status: 'completed',
+    notes: 'Historic season finishing top 3 and qualifying for Metropolitan Super Cup.',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'season-2027-28',
+    club_id: 'club-apex-01',
+    name: '2027/28',
+    start_date: '2027-08-01',
+    end_date: '2028-05-31',
+    is_current: false,
+    status: 'upcoming',
+    notes: 'Upcoming centenary expansion season.',
+    created_at: new Date().toISOString(),
+  },
+  // Titan Athletic FC
+  {
+    id: 'season-titan-2026-27',
+    club_id: 'club-titan-02',
+    name: '2026/27',
+    start_date: '2026-08-01',
+    end_date: '2027-05-31',
+    is_current: true,
+    status: 'active',
+    notes: 'Active premier division challenge.',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'season-titan-2025-26',
+    club_id: 'club-titan-02',
+    name: '2025/26',
+    start_date: '2025-08-01',
+    end_date: '2026-05-30',
+    is_current: false,
+    status: 'completed',
+    notes: 'Consolidation season.',
+    created_at: new Date().toISOString(),
+  },
+];
+
+// ==============================================================================
 // 2. CLUB MEMBERS & SQUAD
 // ==============================================================================
 export const INITIAL_MEMBERS: ClubMember[] = [
@@ -156,6 +220,7 @@ export const INITIAL_MEMBERS: ClubMember[] = [
     executive_title: 'Club President & Founder',
     executive_bio: 'Former national athlete and sports technology leader, spearheading Apex City FC since inception.',
     executive_order: 1,
+    executive_season: '2026/27',
   },
   {
     id: 'mem-apex-02',
@@ -172,6 +237,7 @@ export const INITIAL_MEMBERS: ClubMember[] = [
     executive_title: 'Head Coach (UEFA Pro)',
     executive_bio: 'Renowned tactician renowned for high-tempo attacking football and youth development.',
     executive_order: 2,
+    executive_season: '2026/27',
   },
   {
     id: 'mem-apex-03',
@@ -188,6 +254,7 @@ export const INITIAL_MEMBERS: ClubMember[] = [
     executive_title: 'Honorary Secretary',
     executive_bio: 'Oversees club compliance, member relations, and municipal league operations.',
     executive_order: 3,
+    executive_season: '2026/27',
   },
   {
     id: 'mem-apex-04',
@@ -204,6 +271,7 @@ export const INITIAL_MEMBERS: ClubMember[] = [
     executive_title: 'Club Treasurer',
     executive_bio: 'Chartered accountant managing commercial partnerships and club financial governance.',
     executive_order: 4,
+    executive_season: '2026/27',
   },
 
   // Apex City FC Squad Players
@@ -491,7 +559,7 @@ export const INITIAL_MATCHES: Match[] = [
     id: 'match-live-01',
     club_id: 'club-apex-01',
     competition: 'Premier Metropolitan League',
-    season: '2025/2026',
+    season: '2026/27',
     home_team_name: 'Apex City FC',
     away_team_name: 'Metro Rovers',
     home_team_logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80',
@@ -513,7 +581,7 @@ export const INITIAL_MATCHES: Match[] = [
     id: 'match-upcoming-02',
     club_id: 'club-apex-01',
     competition: 'Metropolitan Super Cup (Semi-Final)',
-    season: '2025/2026',
+    season: '2026/27',
     home_team_name: 'Titan Athletic FC',
     away_team_name: 'Apex City FC',
     home_team_logo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=100&auto=format&fit=crop&q=80',
@@ -535,7 +603,7 @@ export const INITIAL_MATCHES: Match[] = [
     id: 'match-past-03',
     club_id: 'club-apex-01',
     competition: 'Premier Metropolitan League',
-    season: '2025/2026',
+    season: '2025/26',
     home_team_name: 'Apex City FC',
     away_team_name: 'St. Jude United',
     home_team_logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80',
@@ -555,7 +623,7 @@ export const INITIAL_MATCHES: Match[] = [
     id: 'match-past-04',
     club_id: 'club-apex-01',
     competition: 'Premier Metropolitan League',
-    season: '2025/2026',
+    season: '2025/26',
     home_team_name: 'Harbor City Rangers',
     away_team_name: 'Apex City FC',
     home_team_logo: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=100&auto=format&fit=crop&q=80',
@@ -651,6 +719,7 @@ export const INITIAL_EVENTS: ClubEvent[] = [
     title: 'First Team Open Training & Fan Meet',
     description: 'Come watch Coach Morales lead tactical drills ahead of the derby. Autograph & photo session on the pitch immediately following training.',
     category: 'training',
+    season: '2026/27',
     start_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 3 * 3600 * 1000).toISOString(),
     location: 'Apex Park Main Pitch',
@@ -664,6 +733,7 @@ export const INITIAL_EVENTS: ClubEvent[] = [
     title: 'Annual Club Gala & Championship Dinner',
     description: 'Black tie celebration honoring player achievements, sponsor recognition, and academy graduates. Formal 3-course dinner and live auction.',
     category: 'social',
+    season: '2026/27',
     start_time: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000).toISOString(),
     end_time: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000 + 5 * 3600 * 1000).toISOString(),
     location: 'Grand Ballroom, Metro Harbor Hotel',
@@ -677,6 +747,7 @@ export const INITIAL_EVENTS: ClubEvent[] = [
     title: 'Senior & U23 Open Player Trials',
     description: 'Official assessment trial for outfield players and goalkeepers seeking entry into the Apex City FC competitive squad for the 2026/27 campaign.',
     category: 'trial',
+    season: '2026/27',
     start_time: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
     end_time: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000 + 4 * 3600 * 1000).toISOString(),
     location: 'Apex Training Grounds - Pitch 2',
@@ -690,6 +761,7 @@ export const INITIAL_EVENTS: ClubEvent[] = [
     title: 'Apex City FC Annual General Meeting (AGM)',
     description: 'Club executive committee updates, financial review, voting on constitution amendments, and member forum.',
     category: 'agm',
+    season: '2026/27',
     start_time: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
     end_time: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000 + 2 * 3600 * 1000).toISOString(),
     location: 'Apex Clubhouse Member Lounge',

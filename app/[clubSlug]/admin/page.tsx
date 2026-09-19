@@ -16,7 +16,8 @@ import {
   QrCode,
   Activity,
   Plus,
-  Sparkles
+  Sparkles,
+  CalendarDays
 } from 'lucide-react';
 
 export default function AdminDashboardPage({
@@ -25,7 +26,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, getActiveSeason } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
@@ -33,6 +34,7 @@ export default function AdminDashboardPage({
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const liveMatch = clubMatches.find(m => m.status === 'live');
   const clubEvents = events.filter(e => e.club_id === club.id);
+  const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
 
   return (
     <div>
@@ -70,6 +72,23 @@ export default function AdminDashboardPage({
         gap: '1.25rem',
         marginBottom: '2.5rem',
       }}>
+        {/* KPI 0: Active Season */}
+        <Link href={`/${club.slug}/admin/seasons`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>
+              Active Season
+            </span>
+            <div style={{ color: '#10B981' }}><CalendarDays size={20} /></div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+            {activeSeason?.name || '2026/27'}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span>Manage campaign timeline</span>
+            <ArrowRight size={12} />
+          </div>
+        </Link>
+
         {/* KPI 1: Squad Members */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>

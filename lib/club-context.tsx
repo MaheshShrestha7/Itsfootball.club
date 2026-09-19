@@ -20,7 +20,8 @@ import {
   PlayerAvailability,
   AvailabilityStatus,
   DraftLineup,
-  MatchAuditPayload
+  MatchAuditPayload,
+  ClubSeason
 } from './supabase/types';
 import {
   INITIAL_CLUBS,
@@ -37,7 +38,8 @@ import {
   DEFAULT_CLUBSCORE_RULES,
   STANDARD_BADGES,
   INITIAL_AVAILABILITIES,
-  INITIAL_DRAFT_LINEUPS
+  INITIAL_DRAFT_LINEUPS,
+  INITIAL_SEASONS
 } from './mock-data';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 
@@ -52,6 +54,7 @@ interface ClubContextType {
   sponsors: Sponsor[];
   news: NewsArticle[];
   gallery: MediaGalleryItem[];
+  seasons: ClubSeason[];
   
   // Hydration state
   isHydrated: boolean;
@@ -62,8 +65,17 @@ interface ClubContextType {
   // Club Management
   createClub: (clubData: Partial<Club>) => Club;
   updateClubBranding: (clubId: string, updates: Partial<Club>) => void;
+
+  // Seasons Management
+  addSeason: (seasonData: Omit<ClubSeason, 'id' | 'created_at' | 'updated_at'>) => ClubSeason;
+  updateSeason: (seasonId: string, updates: Partial<ClubSeason>) => void;
+  deleteSeason: (seasonId: string) => void;
+  setCurrentSeason: (clubId: string, seasonId: string) => void;
+  getActiveSeason: (clubId: string) => ClubSeason | undefined;
   
-  // Match Day Live Controller
+  // Match Day Live Controller & Fixtures CRUD
+  addMatch: (matchData: Omit<Match, 'id' | 'created_at'>) => Match;
+  deleteMatch: (matchId: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   addMatchEvent: (eventData: Omit<MatchEvent, 'id' | 'created_at'>) => void;
   deleteMatchEvent: (eventId: string) => void;
@@ -77,7 +89,7 @@ interface ClubContextType {
   addMember: (memberData: Omit<ClubMember, 'id' | 'created_at'>) => ClubMember;
   updateMember: (memberId: string, updates: Partial<ClubMember>) => void;
   deleteMember: (memberId: string) => void;
-  appointExecutive: (memberId: string, title: string, bio?: string, order?: number) => void;
+  appointExecutive: (memberId: string, title: string, bio?: string, order?: number, season?: string) => void;
   updatePlayerStats: (memberId: string, stats: Partial<PlayerStats>) => void;
   
   // Sponsors Management
@@ -194,6 +206,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [clubScoreRules, setClubScoreRules] = useState<Record<string, ClubScoreRuleConfig>>(DEFAULT_CLUBSCORE_RULES);
   const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>(INITIAL_AVAILABILITIES);
   const [draftLineups, setDraftLineups] = useState<DraftLineup[]>(INITIAL_DRAFT_LINEUPS);
+  const [seasons, setSeasons] = useState<ClubSeason[]>(INITIAL_SEASONS);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load from localStorage on mount if present
@@ -225,6 +238,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
+          if (parsed.seasons?.length) setSeasons(parsed.seasons);
         }
       } catch (err) {
         console.warn('Could not read state from localStorage', err);
@@ -262,6 +276,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
+          if (parsed.seasons?.length) setSeasons(parsed.seasons);
         } catch (err) {
           console.warn('Cross-tab storage parse error', err);
         }
@@ -292,14 +307,15 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           activityLogs,
           clubScoreRules,
           availabilities,
-          draftLineups
+          draftLineups,
+          seasons
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch (err) {
         console.warn('Could not save state to localStorage', err);
       }
     }
-  }, [isHydrated, clubs, members, playerStats, matches, matchEvents, events, sponsors, news, gallery, clubScoreProfiles, activityLogs, clubScoreRules, availabilities, draftLineups]);
+  }, [isHydrated, clubs, members, playerStats, matches, matchEvents, events, sponsors, news, gallery, clubScoreProfiles, activityLogs, clubScoreRules, availabilities, draftLineups, seasons]);
 
   // Realtime match timer tick simulation for live matches
   useEffect(() => {
@@ -419,7 +435,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       id: `match-${clubId}-1`,
       club_id: clubId,
       competition: 'Premier Regional League',
-      season: '2025/2026',
+      season: '2026/27',
       home_team_name: newClub.name,
       away_team_name: 'United Athletic',
       home_team_logo: newClub.logo_url,
@@ -435,6 +451,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       period: 'pre_match',
       home_formation: '4-3-3',
       away_formation: '4-2-3-1',
+      created_at: new Date().toISOString(),
+    };
+
+    const starterSeason: ClubSeason = {
+      id: `season-${clubId}-1`,
+      club_id: clubId,
+      name: '2026/27',
+      start_date: '2026-08-01',
+      end_date: '2027-05-31',
+      is_current: true,
+      status: 'active',
+      notes: 'Inaugural championship season.',
       created_at: new Date().toISOString(),
     };
 
@@ -456,6 +484,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setMembers(prev => [...prev, starterMember1, starterMember2]);
     setPlayerStats(prev => [...prev, starterStats]);
     setMatches(prev => [...prev, starterMatch]);
+    setSeasons(prev => [...prev, starterSeason]);
     setNews(prev => [starterNews, ...prev]);
     setActiveClub(newClub);
 
@@ -586,6 +615,128 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [clubs]);
+
+  // Season Management
+  const addSeason = useCallback((seasonData: Omit<ClubSeason, 'id' | 'created_at' | 'updated_at'>): ClubSeason => {
+    const newSeason: ClubSeason = {
+      ...seasonData,
+      id: `season-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setSeasons(prev => {
+      if (newSeason.is_current) {
+        return [...prev.map(s => s.club_id === newSeason.club_id ? { ...s, is_current: false } : s), newSeason];
+      }
+      return [...prev, newSeason];
+    });
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('club_seasons').insert(newSeason).then(({ error }) => {
+          if (error) console.warn('Could not sync created season to Supabase:', error.message);
+        });
+      }
+    }
+
+    return newSeason;
+  }, []);
+
+  const updateSeason = useCallback((seasonId: string, updates: Partial<ClubSeason>) => {
+    setSeasons(prev => {
+      const target = prev.find(s => s.id === seasonId);
+      if (!target) return prev;
+      const clubId = target.club_id;
+
+      return prev.map(s => {
+        if (s.id === seasonId) {
+          return { ...s, ...updates, updated_at: new Date().toISOString() };
+        }
+        if (updates.is_current && s.club_id === clubId && s.id !== seasonId) {
+          return { ...s, is_current: false };
+        }
+        return s;
+      });
+    });
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('club_seasons').update(updates).eq('id', seasonId).then(({ error }) => {
+          if (error) console.warn('Could not sync updated season to Supabase:', error.message);
+        });
+      }
+    }
+  }, []);
+
+  const deleteSeason = useCallback((seasonId: string) => {
+    setSeasons(prev => prev.filter(s => s.id !== seasonId));
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('club_seasons').delete().eq('id', seasonId).then(({ error }) => {
+          if (error) console.warn('Could not sync deleted season to Supabase:', error.message);
+        });
+      }
+    }
+  }, []);
+
+  const setCurrentSeason = useCallback((clubId: string, seasonId: string) => {
+    setSeasons(prev =>
+      prev.map(s => {
+        if (s.club_id !== clubId) return s;
+        return {
+          ...s,
+          is_current: s.id === seasonId,
+          status: s.id === seasonId ? 'active' : s.status,
+          updated_at: new Date().toISOString(),
+        };
+      })
+    );
+  }, []);
+
+  const getActiveSeason = useCallback((clubId: string): ClubSeason | undefined => {
+    const clubSeasons = seasons.filter(s => s.club_id === clubId);
+    return clubSeasons.find(s => s.is_current) || clubSeasons.find(s => s.status === 'active') || clubSeasons[0];
+  }, [seasons]);
+
+  // Fixtures CRUD
+  const addMatch = useCallback((matchData: Omit<Match, 'id' | 'created_at'>): Match => {
+    const newMatch: Match = {
+      ...matchData,
+      id: `match-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    setMatches(prev => [newMatch, ...prev]);
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('matches').insert(newMatch).then(({ error }) => {
+          if (error) console.warn('Could not sync created match to Supabase:', error.message);
+        });
+      }
+    }
+
+    return newMatch;
+  }, []);
+
+  const deleteMatch = useCallback((matchId: string) => {
+    setMatches(prev => prev.filter(m => m.id !== matchId));
+    setMatchEvents(prev => prev.filter(e => e.match_id !== matchId));
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('matches').delete().eq('id', matchId).then(({ error }) => {
+          if (error) console.warn('Could not sync deleted match to Supabase:', error.message);
+        });
+      }
+    }
+  }, []);
 
   // 3. Update Match
   const updateMatch = useCallback((matchId: string, updates: Partial<Match>) => {
@@ -852,7 +1003,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setPlayerStats(prev => prev.filter(s => s.member_id !== memberId));
   }, []);
 
-  const appointExecutive = useCallback((memberId: string, title: string, bio?: string, order?: number) => {
+  const appointExecutive = useCallback((memberId: string, title: string, bio?: string, order?: number, season?: string) => {
     setMembers(prev =>
       prev.map(m =>
         m.id === memberId
@@ -862,6 +1013,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               executive_title: title,
               executive_bio: bio || m.executive_bio,
               executive_order: order ?? (m.executive_order || 99),
+              executive_season: season || m.executive_season,
             }
           : m
       )
@@ -1250,6 +1402,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         sponsors,
         news,
         gallery,
+        seasons,
         clubScoreProfiles,
         activityLogs,
         clubScoreRules,
@@ -1258,6 +1411,13 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         selectClubBySlug,
         createClub,
         updateClubBranding,
+        addSeason,
+        updateSeason,
+        deleteSeason,
+        setCurrentSeason,
+        getActiveSeason,
+        addMatch,
+        deleteMatch,
         updateMatch,
         addMatchEvent,
         deleteMatchEvent,

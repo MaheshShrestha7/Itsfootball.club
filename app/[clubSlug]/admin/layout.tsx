@@ -26,7 +26,8 @@ import {
   UserCheck,
   Trophy,
   Layers,
-  Sparkles
+  Sparkles,
+  CalendarDays
 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
@@ -40,15 +41,17 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason } = useClub();
   const { user, logout, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
   const userRole = user ? getUserRoleForClub(club.id) : null;
+  const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
 
   const navItems = [
     { label: '3.11 Admin Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
+    { label: '🗓️ Season Management', href: `/${club.slug}/admin/seasons`, icon: CalendarDays, badge: activeSeason?.name },
     { label: '3.1 Interface & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
     { label: '⭐ Hero Slider Pins', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
     { label: '3.2 Live Match Controller', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },

@@ -26,14 +26,23 @@ export default function AdminEventsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateClubBranding, seasons, getActiveSeason } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubEvents = events.filter(e => e.club_id === club.id);
+  const clubSeasons = seasons.filter(s => s.club_id === club.id);
+  const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
+
   const [scannerEvent, setScannerEvent] = useState<ClubEvent | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
+
+  const filteredEvents = clubEvents.filter(e => {
+    if (seasonFilter === 'ALL') return true;
+    return (e.season || activeSeason?.name) === seasonFilter;
+  });
 
   const handleTogglePinEvent = (evt: ClubEvent) => {
     // Preserve default slides if no custom pins exist yet
@@ -74,6 +83,7 @@ export default function AdminEventsPage({
     title: '',
     description: '',
     category: 'training' as EventCategory,
+    season: activeSeason?.name || '2026/27',
     start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
     location: club.stadium_name,
     max_capacity: 150,
@@ -86,6 +96,7 @@ export default function AdminEventsPage({
       title: '',
       description: '',
       category: 'training',
+      season: activeSeason?.name || '2026/27',
       start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
       location: club.stadium_name,
       max_capacity: 150,
@@ -100,6 +111,7 @@ export default function AdminEventsPage({
       title: evt.title,
       description: evt.description,
       category: evt.category,
+      season: evt.season || activeSeason?.name || '2026/27',
       start_time: new Date(evt.start_time).toISOString().slice(0, 16),
       location: evt.location,
       max_capacity: evt.max_capacity,
@@ -123,6 +135,7 @@ export default function AdminEventsPage({
         title: form.title,
         description: form.description,
         category: form.category,
+        season: form.season,
         start_time: new Date(form.start_time).toISOString(),
         location: form.location,
         max_capacity: Number(form.max_capacity),
@@ -154,39 +167,88 @@ export default function AdminEventsPage({
           </p>
         </div>
 
-        <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Plus size={16} />
-          <span>Add New Event</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Season Filter Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+            <button
+              onClick={() => setSeasonFilter('ALL')}
+              style={{
+                padding: '0.35rem 0.85rem',
+                borderRadius: '6px',
+                border: 'none',
+                background: seasonFilter === 'ALL' ? 'var(--club-primary)' : 'transparent',
+                color: seasonFilter === 'ALL' ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+              }}
+            >
+              All Seasons
+            </button>
+            {clubSeasons.map(s => (
+              <button
+                key={s.id}
+                onClick={() => setSeasonFilter(s.name)}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: seasonFilter === s.name ? 'var(--club-primary)' : 'transparent',
+                  color: seasonFilter === s.name ? '#FFFFFF' : 'var(--text-muted)',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                }}
+              >
+                {s.name} {s.is_current ? '★' : ''}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Plus size={16} />
+            <span>Add New Event</span>
+          </button>
+        </div>
       </div>
 
       {/* Events Table / Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {clubEvents.map(evt => (
-          <div
-            key={evt.id}
-            className="glass-panel"
-            style={{
-              padding: '1.5rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1.5rem',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: '260px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                <span className="badge" style={{
-                  backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.2)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                  color: evt.category === 'training' ? '#10B981' : evt.category === 'social' ? '#F59E0B' : '#3B82F6',
-                }}>
-                  {evt.category.toUpperCase()}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Capacity: {evt.rsvp_count} / {evt.max_capacity} RSVPs
-                </span>
-              </div>
+        {filteredEvents.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              No events found for season &quot;{seasonFilter}&quot;.
+            </p>
+          </div>
+        ) : (
+          filteredEvents.map(evt => (
+            <div
+              key={evt.id}
+              className="glass-panel"
+              style={{
+                padding: '1.5rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1.5rem',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: '260px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                  <span className="badge" style={{
+                    backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.2)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                    color: evt.category === 'training' ? '#10B981' : evt.category === 'social' ? '#F59E0B' : '#3B82F6',
+                  }}>
+                    {evt.category.toUpperCase()}
+                  </span>
+                  <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.7rem' }}>
+                    {evt.season || activeSeason?.name || '2026/27'} Season
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Capacity: {evt.rsvp_count} / {evt.max_capacity} RSVPs
+                  </span>
+                </div>
 
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem' }}>
                 {evt.title}
@@ -255,7 +317,7 @@ export default function AdminEventsPage({
               </button>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       {/* Add / Edit Event Modal */}
@@ -299,6 +361,24 @@ export default function AdminEventsPage({
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Associated Season</label>
+                <select
+                  className="form-select"
+                  value={form.season}
+                  onChange={e => setForm({ ...form, season: e.target.value })}
+                >
+                  {clubSeasons.map(s => (
+                    <option key={s.id} value={s.name}>
+                      {s.name} {s.is_current ? '(Current Active Season)' : ''}
+                    </option>
+                  ))}
+                  {!clubSeasons.some(s => s.name === form.season) && (
+                    <option value={form.season}>{form.season}</option>
+                  )}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

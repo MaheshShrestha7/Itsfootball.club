@@ -120,11 +120,25 @@ export async function GET(
       : [];
     const matchesPlayed = playedMatches.length;
 
-    // Determine current active season (e.g. from the latest match or '2025/2026')
+    // Query club_seasons for the designated active current season
+    let activeSeasonName: string | null = null;
+    const { data: activeSeasonRow } = await supabase
+      .from('club_seasons')
+      .select('name')
+      .eq('club_id', clubId)
+      .eq('is_current', true)
+      .maybeSingle();
+
+    if (activeSeasonRow?.name) {
+      activeSeasonName = activeSeasonRow.name;
+    }
+
+    // Determine current active season (e.g. from club_seasons, or latest match, or '2026/27')
     const currentSeason =
+      activeSeasonName ||
       playedMatches[0]?.season ||
       matches?.[0]?.season ||
-      '2025/2026';
+      '2026/27';
 
     const currentSeasonMatches = playedMatches.filter(
       m => !m.season || m.season === currentSeason

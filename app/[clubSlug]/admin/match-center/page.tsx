@@ -24,7 +24,10 @@ import {
   Timer,
   RotateCcw,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  CalendarDays,
+  X,
+  Calendar
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 
@@ -40,21 +43,44 @@ export default function AdminMatchCenterControllerPage({
     matches,
     matchEvents,
     updateMatch,
+    addMatch,
+    deleteMatch,
     addMatchEvent,
     deleteMatchEvent,
     members,
+    seasons,
+    getActiveSeason
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = matches.filter(m => m.club_id === club.id);
+  const clubSeasons = seasons.filter(s => s.club_id === club.id);
+  const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
+
+  const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
+
+  const filteredMatches = clubMatches.filter(m => {
+    if (seasonFilter === 'ALL') return true;
+    return m.season === seasonFilter;
+  });
+
   const [selectedMatchId, setSelectedMatchId] = useState<string>(clubMatches[0]?.id || '');
 
-  const match = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
   const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
 
   // Active Admin Sub-Tab
   const [adminTab, setAdminTab] = useState<'events' | 'tactics' | 'clock'>('events');
+
+  // New Fixture Modal state
+  const [isCreateFixtureOpen, setIsCreateFixtureOpen] = useState(false);
+  const [fixtureOpponent, setFixtureOpponent] = useState('');
+  const [fixtureCompetition, setFixtureCompetition] = useState('Premier Regional League');
+  const [fixtureSeason, setFixtureSeason] = useState(activeSeason?.name || '2026/27');
+  const [fixtureDate, setFixtureDate] = useState(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
+  const [fixtureVenue, setFixtureVenue] = useState(club.stadium_name);
+  const [fixtureIsHome, setFixtureIsHome] = useState(true);
 
   // Quick event form states
   const [eventType, setEventType] = useState<MatchEventType>('goal');
@@ -68,21 +94,104 @@ export default function AdminMatchCenterControllerPage({
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
 
-  if (!match) {
-    return (
-      <div style={{ textAlign: 'center', padding: '4rem' }}>
-        <h2 style={{ color: '#FFFFFF', fontWeight: 800 }}>No match fixtures found for this club.</h2>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          Create a match fixture in the club dashboard to broadcast live reporting.
-        </p>
-      </div>
-    );
-  }
-
   const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
     setFeedback({ text, type });
     setTimeout(() => setFeedback(null), 3000);
   };
+
+  const handleCreateFixture = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fixtureOpponent.trim()) return;
+
+    const newFixture = addMatch({
+      club_id: club.id,
+      competition: fixtureCompetition,
+      season: fixtureSeason,
+      home_team_name: fixtureIsHome ? club.name : fixtureOpponent.trim(),
+      away_team_name: fixtureIsHome ? fixtureOpponent.trim() : club.name,
+      home_team_logo: fixtureIsHome ? club.logo_url : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80',
+      away_team_logo: fixtureIsHome ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80' : club.logo_url,
+      is_club_home: fixtureIsHome,
+      match_date: new Date(fixtureDate).toISOString(),
+      venue: fixtureVenue,
+      status: 'upcoming',
+      home_score: 0,
+      away_score: 0,
+      current_minute: 0,
+      added_time: 0,
+      period: 'pre_match',
+      home_formation: '4-3-3',
+      away_formation: '4-4-2',
+      match_format: '11v11',
+    });
+
+    setSelectedMatchId(newFixture.id);
+    setIsCreateFixtureOpen(false);
+    setFixtureOpponent('');
+    showFeedback(`✓ Scheduled new fixture against ${fixtureOpponent} for ${fixtureSeason} season!`);
+  };
+
+  if (!match) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h2 style={{ color: '#FFFFFF', fontWeight: 800 }}>No match fixtures found for this club.</h2>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+          Schedule a match fixture associated with a season to operate live matchday reporting.
+        </p>
+        <button
+          onClick={() => setIsCreateFixtureOpen(true)}
+          className="btn btn-primary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Plus size={16} />
+          <span>Schedule First Fixture</span>
+        </button>
+
+        {isCreateFixtureOpen && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}>
+            <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>Schedule New Fixture</h3>
+                <button onClick={() => setIsCreateFixtureOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}><X size={20} /></button>
+              </div>
+              <form onSubmit={handleCreateFixture}>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Opponent Team *</label>
+                  <input type="text" required className="form-input" placeholder="e.g. Metro Rovers" value={fixtureOpponent} onChange={e => setFixtureOpponent(e.target.value)} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Competition</label>
+                    <input type="text" className="form-input" value={fixtureCompetition} onChange={e => setFixtureCompetition(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Season</label>
+                    <select className="form-select" value={fixtureSeason} onChange={e => setFixtureSeason(e.target.value)}>
+                      {clubSeasons.map(s => (<option key={s.id} value={s.name}>{s.name}</option>))}
+                      {!clubSeasons.some(s => s.name === fixtureSeason) && (<option value={fixtureSeason}>{fixtureSeason}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                  <button type="button" onClick={() => setIsCreateFixtureOpen(false)} className="btn btn-secondary">Cancel</button>
+                  <button type="submit" className="btn btn-primary">Schedule Fixture</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Adjust score
   const handleScoreAdjust = (side: 'home' | 'away', delta: number) => {
@@ -269,28 +378,53 @@ export default function AdminMatchCenterControllerPage({
         </div>
       )}
 
-      {/* Fixture Selector Dropdown */}
+      {/* Fixture Selector Dropdown & Season Controls */}
       <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              Select Fixture:
-            </span>
-            <select
-              className="form-select"
-              style={{ maxWidth: '380px' }}
-              value={selectedMatchId}
-              onChange={e => setSelectedMatchId(e.target.value)}
-            >
-              {clubMatches.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.home_team_name} vs {m.away_team_name} ({m.status.toUpperCase()})
-                </option>
-              ))}
-            </select>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
+            {/* Season Filter Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <CalendarDays size={14} color="var(--club-primary)" /> Season:
+              </span>
+              <select
+                className="form-select"
+                style={{ width: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
+                value={seasonFilter}
+                onChange={e => setSeasonFilter(e.target.value)}
+              >
+                <option value="ALL">All Seasons</option>
+                {clubSeasons.map(s => (
+                  <option key={s.id} value={s.name}>
+                    {s.name} {s.is_current ? '★' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Fixture:
+              </span>
+              <select
+                className="form-select"
+                style={{ maxWidth: '340px' }}
+                value={selectedMatchId}
+                onChange={e => setSelectedMatchId(e.target.value)}
+              >
+                {filteredMatches.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.home_team_name} vs {m.away_team_name} ({m.season}) [{m.status.toUpperCase()}]
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <CalendarDays size={12} /> {match.season}
+            </span>
             <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
               Formation: {match.home_formation || '4-3-3'}
             </span>
@@ -299,6 +433,14 @@ export default function AdminMatchCenterControllerPage({
                 +{match.added_time}&apos; Stoppage
               </span>
             )}
+            <button
+              onClick={() => setIsCreateFixtureOpen(true)}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}
+            >
+              <Plus size={14} />
+              <span>Schedule Fixture</span>
+            </button>
           </div>
         </div>
       </div>
@@ -888,6 +1030,150 @@ export default function AdminMatchCenterControllerPage({
           showFeedback('Match stats successfully verified and baked into season records!');
         }}
       />
+
+      {/* Schedule Fixture Modal */}
+      {isCreateFixtureOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem',
+        }}>
+          <div className="glass-panel" style={{
+            width: '100%',
+            maxWidth: '560px',
+            padding: '2rem',
+            borderRadius: '16px',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-surface)',
+            boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CalendarDays size={20} color="var(--club-primary)" />
+                Schedule Match Fixture
+              </h3>
+              <button
+                onClick={() => setIsCreateFixtureOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateFixture}>
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Opponent Club Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. Metro Rovers, St. Jude United"
+                  value={fixtureOpponent}
+                  onChange={e => setFixtureOpponent(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Competition</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={fixtureCompetition}
+                    onChange={e => setFixtureCompetition(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Associated Season *</label>
+                  <select
+                    className="form-select"
+                    value={fixtureSeason}
+                    onChange={e => setFixtureSeason(e.target.value)}
+                  >
+                    {clubSeasons.map(s => (
+                      <option key={s.id} value={s.name}>
+                        {s.name} {s.is_current ? '(Current Active)' : ''}
+                      </option>
+                    ))}
+                    {!clubSeasons.some(s => s.name === fixtureSeason) && (
+                      <option value={fixtureSeason}>{fixtureSeason}</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Kickoff Date & Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    className="form-input"
+                    value={fixtureDate}
+                    onChange={e => setFixtureDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Venue / Stadium</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={fixtureVenue}
+                    onChange={e => setFixtureVenue(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                padding: '0.85rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                cursor: 'pointer',
+              }} onClick={() => setFixtureIsHome(!fixtureIsHome)}>
+                <input
+                  type="checkbox"
+                  id="fixtureHomeCheck"
+                  checked={fixtureIsHome}
+                  onChange={e => setFixtureIsHome(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--club-primary)', cursor: 'pointer' }}
+                />
+                <label htmlFor="fixtureHomeCheck" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#FFFFFF' }}>
+                  {club.name} is the Home Team (Playing at {club.stadium_name})
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateFixtureOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  Schedule Fixture
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
