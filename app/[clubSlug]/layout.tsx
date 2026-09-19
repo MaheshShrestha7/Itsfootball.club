@@ -1,0 +1,56 @@
+'use client';
+
+import React, { use } from 'react';
+import { useClub } from '@/lib/club-context';
+import ClubNavbar from '@/components/ClubNavbar';
+import Footer from '@/components/Footer';
+import { hexToRgb, evaluateColorContrast } from '@/lib/theme-utils';
+
+export default function ClubLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ clubSlug: string }>;
+}) {
+  const resolvedParams = use(params);
+  const { clubs, selectClubBySlug, sponsors } = useClub();
+  const club = selectClubBySlug(resolvedParams.clubSlug) ||
+    clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase()) ||
+    clubs[0];
+
+  // Dynamic CSS variables injected for this club tenant
+  const primaryRgb = hexToRgb(club?.primary_color || '#10B981');
+  const secondaryRgb = hexToRgb(club?.secondary_color || '#0F172A');
+  const accentRgb = hexToRgb(club?.accent_color || '#F59E0B');
+
+  // WCAG 2.2 AA Contrast calculation
+  const contrastEval = evaluateColorContrast(club?.primary_color || '#10B981');
+
+  const clubSponsors = club ? sponsors.filter(s => s.club_id === club.id) : [];
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        // Injected Dynamic Branding Variables & WCAG Compliant Contrast Text
+        ['--club-primary' as any]: club.primary_color,
+        ['--club-primary-rgb' as any]: primaryRgb.rgbString,
+        ['--club-primary-contrast' as any]: contrastEval.bestTextColor,
+        ['--club-secondary' as any]: club.secondary_color,
+        ['--club-secondary-rgb' as any]: secondaryRgb.rgbString,
+        ['--club-accent' as any]: club.accent_color,
+        ['--club-accent-rgb' as any]: accentRgb.rgbString,
+      }}
+    >
+      <ClubNavbar club={club} />
+      <div style={{ flex: 1 }}>
+        {children}
+      </div>
+      <Footer club={club} sponsors={clubSponsors} />
+    </div>
+  );
+}
+

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="100%" height="100%">
+  <defs>
+    <linearGradient id="apexShieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="50%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#022C22"/>
+    </linearGradient>
+    <linearGradient id="emeraldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <filter id="apexGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#10B981" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Shield Trim -->
+  <path d="M 120,8 C 190,8 228,36 228,100 C 228,185 160,248 120,272 C 80,248 12,185 12,100 C 12,36 50,8 120,8 Z"
+        fill="url(#goldAccent)" filter="url(#apexGlow)"/>
+
+  <!-- Secondary Emerald Rim -->
+  <path d="M 120,15 C 184,15 219,41 219,100 C 219,179 156,238 120,261 C 84,238 21,179 21,100 C 21,41 56,15 120,15 Z"
+        fill="url(#emeraldAccent)"/>
+
+  <!-- Inner Dark Shield Body -->
+  <path d="M 120,23 C 178,23 209,47 209,100 C 209,173 151,228 120,249 C 89,228 31,173 31,100 C 31,47 62,23 120,23 Z"
+        fill="url(#apexShieldGrad)"/>
+
+  <!-- Geometric Apex Mountains Peak -->
+  <polygon points="120,45 170,140 145,140 120,95 95,140 70,140" fill="url(#emeraldAccent)"/>
+  <polygon points="120,45 145,140 120,95" fill="#059669"/>
+  <polygon points="120,70 155,140 85,140" fill="none" stroke="url(#goldAccent)" stroke-width="2"/>
+
+  <!-- Central Star -->
+  <polygon points="120,40 123,48 131,49 125,54 127,62 120,57 113,62 115,54 109,49 117,48" fill="url(#goldAccent)"/>
+
+  <!-- Football / Soccer Ball Icon -->
+  <g transform="translate(120, 178)">
+    <circle cx="0" cy="0" r="22" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/>
+    <polygon points="0,-9 9,-3 6,8 -6,8 -9,-3" fill="#0F172A"/>
+    <line x1="0" y1="-9" x2="0" y2="-22" stroke="#0F172A" stroke-width="2"/>
+    <line x1="9" y1="-3" x2="21" y2="-7" stroke="#0F172A" stroke-width="2"/>
+    <line x1="6" y1="8" x2="15" y2="18" stroke="#0F172A" stroke-width="2"/>
+    <line x1="-6" y1="8" x2="-15" y2="18" stroke="#0F172A" stroke-width="2"/>
+    <line x1="-9" y1="-3" x2="-21" y2="-7" stroke="#0F172A" stroke-width="2"/>
+  </g>
+
+  <!-- Club Banner Ribbon -->
+  <g transform="translate(120, 226)">
+    <!-- Banner Shadow -->
+    <path d="M -90,0 L 90,0 L 80,18 L -80,18 Z" fill="#022C22" opacity="0.6"/>
+    <!-- Banner Body -->
+    <path d="M -85,-3 L 85,-3 L 75,15 L -75,15 Z" fill="url(#goldAccent)" stroke="#B45309" stroke-width="1"/>
+    <!-- Text -->
+    <text x="0" y="9" font-family="'Outfit', 'Impact', sans-serif" font-size="11" font-weight="900" fill="#0F172A" text-anchor="middle" letter-spacing="1.5">APEX CITY FC</text>
+  </g>
+
+  <!-- Foundation Year -->
+  <text x="120" y="244" font-family="'Outfit', sans-serif" font-size="8.5" font-weight="800" fill="url(#goldAccent)" text-anchor="middle" letter-spacing="2">EST. 2018</text>
+</svg>

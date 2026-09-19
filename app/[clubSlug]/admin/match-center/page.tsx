@@ -1,0 +1,893 @@
+'use client';
+
+import React, { useState, use } from 'react';
+import Link from 'next/link';
+import { useClub } from '@/lib/club-context';
+import { MatchEventType, MatchPeriod, PitchPosition } from '@/lib/supabase/types';
+import TacticalPitch from '@/components/TacticalPitch';
+import {
+  Radio,
+  Play,
+  Pause,
+  Plus,
+  Minus,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Shield,
+  Send,
+  Trash2,
+  ExternalLink,
+  Layers,
+  Move,
+  Users,
+  Timer,
+  RotateCcw,
+  Sparkles,
+  ShieldCheck
+} from 'lucide-react';
+import StatsAuditModal from '@/components/StatsAuditModal';
+
+export default function AdminMatchCenterControllerPage({
+  params,
+}: {
+  params: Promise<{ clubSlug: string }>;
+}) {
+  const resolvedParams = use(params);
+  const {
+    clubs,
+    selectClubBySlug,
+    matches,
+    matchEvents,
+    updateMatch,
+    addMatchEvent,
+    deleteMatchEvent,
+    members,
+  } = useClub();
+
+  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  const clubMatches = matches.filter(m => m.club_id === club.id);
+  const [selectedMatchId, setSelectedMatchId] = useState<string>(clubMatches[0]?.id || '');
+
+  const match = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
+  const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
+
+  // Active Admin Sub-Tab
+  const [adminTab, setAdminTab] = useState<'events' | 'tactics' | 'clock'>('events');
+
+  // Quick event form states
+  const [eventType, setEventType] = useState<MatchEventType>('goal');
+  const [teamSide, setTeamSide] = useState<'home' | 'away'>('home');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(squadPlayers[1]?.id || 'custom');
+  const [customPlayerName, setCustomPlayerName] = useState('');
+  const [selectedSubOffId, setSelectedSubOffId] = useState<string>(squadPlayers[0]?.id || '');
+  const [assistName, setAssistName] = useState('');
+  const [eventMinute, setEventMinute] = useState(match ? match.current_minute : 75);
+  const [eventDetail, setEventDetail] = useState('');
+  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+
+  if (!match) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h2 style={{ color: '#FFFFFF', fontWeight: 800 }}>No match fixtures found for this club.</h2>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+          Create a match fixture in the club dashboard to broadcast live reporting.
+        </p>
+      </div>
+    );
+  }
+
+  const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setFeedback({ text, type });
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  // Adjust score
+  const handleScoreAdjust = (side: 'home' | 'away', delta: number) => {
+    if (side === 'home') {
+      const newScore = Math.max(0, match.home_score + delta);
+      updateMatch(match.id, { home_score: newScore });
+      showFeedback(`Updated ${match.home_team_name} score to ${newScore}`);
+    } else {
+      const newScore = Math.max(0, match.away_score + delta);
+      updateMatch(match.id, { away_score: newScore });
+      showFeedback(`Updated ${match.away_team_name} score to ${newScore}`);
+    }
+  };
+
+  // Adjust match period
+  const handlePeriodTransition = (period: MatchPeriod, status: any, defaultMin?: number) => {
+    const updates: any = { period, status };
+    if (typeof defaultMin === 'number') {
+      updates.current_minute = defaultMin;
+      setEventMinute(defaultMin);
+    }
+    updateMatch(match.id, updates);
+    showFeedback(`Match transitioned to ${period.toUpperCase().replace('_', ' ')} (${status.toUpperCase()})`);
+  };
+
+  // Adjust match minute
+  const handleMinuteAdjust = (delta: number) => {
+    const newMin = Math.max(0, Math.min(120, match.current_minute + delta));
+    updateMatch(match.id, { current_minute: newMin });
+    setEventMinute(newMin);
+  };
+
+  // Set stoppage time
+  const handleSetAddedTime = (minutes: number) => {
+    updateMatch(match.id, { added_time: minutes });
+    showFeedback(`Stoppage time board set to +${minutes} minute${minutes > 1 ? 's' : ''}`);
+  };
+
+  // Handle Event Logging
+  const handleLogEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    let resolvedPlayerName = '';
+    if (teamSide === 'home') {
+      if (selectedPlayerId === 'custom') {
+        resolvedPlayerName = customPlayerName.trim();
+      } else {
+        const found = squadPlayers.find(p => p.id === selectedPlayerId);
+        resolvedPlayerName = found ? found.full_name : customPlayerName.trim();
+      }
+    } else {
+      resolvedPlayerName = customPlayerName.trim() || `${match.away_team_name} Player`;
+    }
+
+    if (!resolvedPlayerName) {
+      showFeedback('Please enter or select a player name.', 'error');
+      return;
+    }
+
+    let detail = eventDetail.trim();
+    let assist = assistName.trim();
+
+    if (eventType === 'sub') {
+      const offPlayer = squadPlayers.find(p => p.id === selectedSubOffId);
+      const offName = offPlayer ? offPlayer.full_name : 'Player';
+      detail = `Substitution: ${resolvedPlayerName} ON, ${offName} OFF. ${detail}`.trim();
+    }
+
+    addMatchEvent({
+      match_id: match.id,
+      club_id: club.id,
+      minute: Number(eventMinute),
+      event_type: eventType,
+      team_side: teamSide,
+      player_name: resolvedPlayerName,
+      assist_player_name: assist || undefined,
+      detail_text: detail || undefined,
+    });
+
+    showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${eventMinute}')`);
+    setEventDetail('');
+    setAssistName('');
+    if (selectedPlayerId === 'custom') setCustomPlayerName('');
+  };
+
+  // Delete event with automatic score reversal
+  const handleDeleteEvent = (eventId: string, eventSummary: string) => {
+    deleteMatchEvent(eventId);
+    showFeedback(`Removed event: ${eventSummary}`);
+  };
+
+  // Save Tactical Lineup to Match
+  const handleSaveTacticalLineup = (formationName: string, positions: PitchPosition[]) => {
+    updateMatch(match.id, {
+      home_formation: formationName,
+      home_lineup_coords: positions,
+    });
+    showFeedback(`Tactical lineup & ${formationName} formation published live to Match Center!`);
+  };
+
+  return (
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '1rem',
+        marginBottom: '2rem',
+      }}>
+        <div>
+          <span className="badge badge-live" style={{ marginBottom: '0.4rem' }}>
+            <span className="pulse-dot" /> MATCH-DAY COMMAND CENTER • 3.2
+          </span>
+          <h1 style={{ fontSize: '2.1rem', fontWeight: 900, color: '#FFFFFF' }}>
+            Live Match-Day Reporting & Tactical Hub
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            Broadcast real-time score updates, stoppage time, substitutions, and custom tactical formations.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
+          <button
+            type="button"
+            onClick={() => setIsAuditModalOpen(true)}
+            className="btn btn-sm"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: match.is_audited
+                ? 'rgba(16, 185, 129, 0.15)'
+                : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+              color: match.is_audited ? '#10B981' : '#000000',
+              fontWeight: 800,
+              border: match.is_audited ? '1px solid #10B981' : 'none',
+              boxShadow: match.is_audited ? 'none' : '0 4px 14px rgba(245, 158, 11, 0.4)',
+            }}
+          >
+            <ShieldCheck size={15} />
+            <span>{match.is_audited ? 'Stats Audited & Baked ✓' : 'Audit & Finalize Stats'}</span>
+          </button>
+
+          <Link
+            href={`/${club.slug}/admin/lineup/draft`}
+            className="btn btn-secondary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Layers size={14} color="#F59E0B" />
+            <span>Draft Workbench</span>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/match/${match.id}`}
+            target="_blank"
+            className="btn btn-secondary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+          >
+            <span>Launch Public Match Center</span>
+            <ExternalLink size={14} />
+          </Link>
+        </div>
+      </div>
+
+      {/* Feedback Banner */}
+      {feedback && (
+        <div style={{
+          background: feedback.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+          border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md)',
+          color: feedback.type === 'error' ? '#EF4444' : '#10B981',
+          fontWeight: 700,
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          {feedback.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{feedback.text}</span>
+        </div>
+      )}
+
+      {/* Fixture Selector Dropdown */}
+      <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              Select Fixture:
+            </span>
+            <select
+              className="form-select"
+              style={{ maxWidth: '380px' }}
+              value={selectedMatchId}
+              onChange={e => setSelectedMatchId(e.target.value)}
+            >
+              {clubMatches.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.home_team_name} vs {m.away_team_name} ({m.status.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
+              Formation: {match.home_formation || '4-3-3'}
+            </span>
+            {match.added_time > 0 && (
+              <span className="badge badge-gold" style={{ fontSize: '0.75rem' }}>
+                +{match.added_time}&apos; Stoppage
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginBottom: '2rem',
+        borderBottom: '1px solid var(--border-subtle)',
+        paddingBottom: '0.75rem',
+      }}>
+        {[
+          { id: 'events', label: 'Score & Event Console', icon: Radio },
+          { id: 'tactics', label: 'Tactical Pitch & Free-Form Lineups', icon: Move },
+          { id: 'clock', label: 'Match Clock & Stoppage Board', icon: Timer },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = adminTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setAdminTab(tab.id as any)}
+              className="btn btn-sm"
+              style={{
+                background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                border: '1px solid',
+                borderColor: isActive ? 'var(--border-medium)' : 'transparent',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.55rem 1rem',
+              }}
+            >
+              <Icon size={16} color={isActive ? club.primary_color : 'currentColor'} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: LIVE SCORE & EVENT CONSOLE */}
+      {/* ========================================================================= */}
+      {adminTab === 'events' && (
+        <div>
+          {/* Main Scoreboard Command Hub */}
+          <div className="glass-panel" style={{
+            padding: '2rem',
+            marginBottom: '2.5rem',
+            background: 'linear-gradient(180deg, #0e1624 0%, #080d15 100%)',
+            border: '2px solid rgba(255, 255, 255, 0.15)',
+          }}>
+            {/* Quick Period & Minute Bar */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              marginBottom: '2rem',
+              borderBottom: '1px solid var(--border-subtle)',
+              paddingBottom: '1.25rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: '2.2rem',
+                  fontWeight: 900,
+                  color: match.status === 'live' ? '#EF4444' : '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  <Clock size={26} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
+                  <span>{match.current_minute}&apos;</span>
+                  {match.added_time > 0 && (
+                    <span style={{ fontSize: '1.2rem', color: '#F59E0B' }}>
+                      (+{match.added_time}&apos;)
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" title="-1 minute">
+                    <Minus size={14} /> 1m
+                  </button>
+                  <button onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" title="+1 minute">
+                    <Plus size={14} /> 1m
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Period Status Indicators */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                <button
+                  onClick={() => handlePeriodTransition('first_half', 'live', 1)}
+                  className="btn btn-sm"
+                  style={{ background: match.period === 'first_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                >
+                  1st Half (Kickoff)
+                </button>
+                <button
+                  onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
+                  className="btn btn-sm"
+                  style={{ background: match.period === 'halftime' ? '#F59E0B' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                >
+                  Half Time (HT)
+                </button>
+                <button
+                  onClick={() => handlePeriodTransition('second_half', 'live', 46)}
+                  className="btn btn-sm"
+                  style={{ background: match.period === 'second_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                >
+                  2nd Half
+                </button>
+                <button
+                  onClick={() => handlePeriodTransition('full_time', 'completed', 90)}
+                  className="btn btn-sm"
+                  style={{ background: match.status === 'completed' ? '#3B82F6' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                >
+                  Full Time (FT)
+                </button>
+              </div>
+            </div>
+
+            {/* Live Score Controls Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              alignItems: 'center',
+              gap: '2rem',
+            }}>
+              {/* Home Team Score */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFFFFF', marginBottom: '0.4rem' }}>
+                  {match.home_team_name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <button
+                    onClick={() => handleScoreAdjust('home', -1)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0 }}
+                    title="Subtract 1 goal"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '3.4rem', fontWeight: 900, color: '#FFFFFF', minWidth: '55px' }}>
+                    {match.home_score}
+                  </span>
+                  <button
+                    onClick={() => handleScoreAdjust('home', 1)}
+                    className="btn btn-primary btn-sm"
+                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0, background: club.primary_color }}
+                    title="Add 1 goal"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-muted)' }}>
+                :
+              </div>
+
+              {/* Away Team Score */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFFFFF', marginBottom: '0.4rem' }}>
+                  {match.away_team_name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <button
+                    onClick={() => handleScoreAdjust('away', -1)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0 }}
+                    title="Subtract 1 goal"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '3.4rem', fontWeight: 900, color: '#FFFFFF', minWidth: '55px' }}>
+                    {match.away_score}
+                  </span>
+                  <button
+                    onClick={() => handleScoreAdjust('away', 1)}
+                    className="btn btn-primary btn-sm"
+                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0, background: '#3B82F6' }}
+                    title="Add 1 goal"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Event Logger Form */}
+          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Radio size={18} color="#10B981" /> Broadcast Live Match Event
+            </h3>
+
+            <form onSubmit={handleLogEvent}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Event Type</label>
+                  <select
+                    className="form-select"
+                    value={eventType}
+                    onChange={e => setEventType(e.target.value as MatchEventType)}
+                  >
+                    <option value="goal">⚽ Goal (Regular)</option>
+                    <option value="penalty">🎯 Goal (Penalty)</option>
+                    <option value="yellow_card">🟨 Yellow Card</option>
+                    <option value="red_card">🟥 Red Card</option>
+                    <option value="sub">🔄 Substitution</option>
+                    <option value="var">🖥️ VAR Review</option>
+                    <option value="commentary">🎙️ Tactical Commentary</option>
+                    <option value="whistle">📢 Period Whistle</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Team Side</label>
+                  <select
+                    className="form-select"
+                    value={teamSide}
+                    onChange={e => setTeamSide(e.target.value as any)}
+                  >
+                    <option value="home">{match.home_team_name} (Home)</option>
+                    <option value="away">{match.away_team_name} (Away)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Match Minute</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={120}
+                    className="form-input"
+                    value={eventMinute}
+                    onChange={e => setEventMinute(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Player Selector */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                {teamSide === 'home' ? (
+                  <div className="form-group">
+                    <label className="form-label">
+                      {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
+                    </label>
+                    <select
+                      className="form-select"
+                      value={selectedPlayerId}
+                      onChange={e => setSelectedPlayerId(e.target.value)}
+                    >
+                      {squadPlayers.map(p => (
+                        <option key={p.id} value={p.id}>
+                          #{p.jersey_number} {p.full_name} ({p.player_position})
+                        </option>
+                      ))}
+                      <option value="custom">-- Custom Name / Other Player --</option>
+                    </select>
+
+                    {selectedPlayerId === 'custom' && (
+                      <input
+                        type="text"
+                        required
+                        className="form-input"
+                        placeholder="Enter player name"
+                        style={{ marginTop: '0.5rem' }}
+                        value={customPlayerName}
+                        onChange={e => setCustomPlayerName(e.target.value)}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">Opponent Player Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input"
+                      placeholder="e.g. Leo Silva"
+                      value={customPlayerName}
+                      onChange={e => setCustomPlayerName(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {/* If Substitution: Select player coming OFF */}
+                {eventType === 'sub' && teamSide === 'home' ? (
+                  <div className="form-group">
+                    <label className="form-label">Player Coming OFF *</label>
+                    <select
+                      className="form-select"
+                      value={selectedSubOffId}
+                      onChange={e => setSelectedSubOffId(e.target.value)}
+                    >
+                      {squadPlayers.map(p => (
+                        <option key={p.id} value={p.id}>
+                          #{p.jersey_number} {p.full_name} ({p.player_position})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">Assist / Involved Secondary (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Julian Drake"
+                      value={assistName}
+                      onChange={e => setAssistName(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Event Detail / Tactical Notes</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Curling strike into top corner after neat combination play."
+                  value={eventDetail}
+                  onChange={e => setEventDetail(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: club.primary_color }}>
+                  <Send size={16} />
+                  <span>Broadcast Event Live</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Logged Events List with Deletion */}
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+              Logged Match Events ({events.length})
+            </h3>
+
+            {events.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                No events recorded yet. Log goals, substitutions, and cards above.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {events.map(evt => (
+                  <div
+                    key={evt.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.85rem 1.15rem',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span className="badge" style={{
+                        backgroundColor: evt.event_type === 'goal' ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'rgba(255,255,255,0.1)',
+                        color: evt.event_type === 'yellow_card' ? '#000000' : '#FFFFFF',
+                        fontWeight: 900,
+                        minWidth: '40px',
+                        justifyContent: 'center',
+                      }}>
+                        {evt.minute}&apos;
+                      </span>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 800, color: '#FFFFFF' }}>
+                            {evt.event_type.toUpperCase().replace('_', ' ')} • {evt.player_name}
+                          </span>
+                          {evt.assist_player_name && (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              (Ast: {evt.assist_player_name})
+                            </span>
+                          )}
+                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+                            {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
+                          </span>
+                        </div>
+                        {evt.detail_text && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                            {evt.detail_text}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.35rem 0.65rem', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                      title="Delete event and revert score if goal"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: TACTICAL PITCH & FREE-FORM FORMATIONS */}
+      {/* ========================================================================= */}
+      {adminTab === 'tactics' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem 2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Move size={20} color="#F59E0B" /> Tactical Pitch & Free-Form Manager
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
+                  Coaches can choose a tactical preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or freely drag and drop any player node into custom shapes. Click &quot;Save Shape&quot; to publish directly to the live match center.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Tactical Pitch */}
+          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+            <TacticalPitch
+              players={squadPlayers}
+              formation={match.home_formation || '4-3-3'}
+              savedPositions={match.home_lineup_coords}
+              primaryColor={club.primary_color}
+              isEditable={true}
+              matchEvents={events}
+              onSaveFormation={handleSaveTacticalLineup}
+              teamName={match.home_team_name}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: CLOCK & STOPPAGE TIME BOARD */}
+      {/* ========================================================================= */}
+      {adminTab === 'clock' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+          {/* Stoppage Time Board (4th Official LED) */}
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Timer size={18} color="#F59E0B" /> 4th Official Stoppage Board
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Select additional stoppage time indicated by the match referee.
+            </p>
+
+            {/* LED Display Box */}
+            <div style={{
+              background: '#040609',
+              border: '2px solid #F59E0B',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              boxShadow: '0 0 25px rgba(245, 158, 11, 0.3)',
+            }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Official Stoppage Time
+              </span>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '3.5rem', fontWeight: 900, color: '#F59E0B', marginTop: '0.2rem' }}>
+                +{match.added_time}&apos;
+              </div>
+            </div>
+
+            {/* Quick Added Time Buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 10].map(mins => (
+                <button
+                  key={mins}
+                  onClick={() => handleSetAddedTime(mins)}
+                  className="btn btn-sm"
+                  style={{
+                    background: match.added_time === mins ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)',
+                    color: match.added_time === mins ? '#000000' : '#FFFFFF',
+                    fontWeight: 800,
+                    border: '1px solid',
+                    borderColor: match.added_time === mins ? '#F59E0B' : 'var(--border-subtle)',
+                  }}
+                >
+                  +{mins}&apos;
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Period Transition Manager */}
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Clock size={18} color="#10B981" /> Match Period Transition
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Trigger whistle transitions to control live status on supporter feeds.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                onClick={() => handlePeriodTransition('first_half', 'live', 1)}
+                className="btn btn-secondary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
+              >
+                <span>Kickoff (1st Half Start)</span>
+                <span className="badge badge-primary">1&apos;</span>
+              </button>
+
+              <button
+                onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
+                className="btn btn-secondary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
+              >
+                <span>Half Time Whistle</span>
+                <span className="badge badge-gold">HT 45&apos;</span>
+              </button>
+
+              <button
+                onClick={() => handlePeriodTransition('second_half', 'live', 46)}
+                className="btn btn-secondary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
+              >
+                <span>2nd Half Kickoff</span>
+                <span className="badge badge-primary">46&apos;</span>
+              </button>
+
+              <button
+                onClick={() => handlePeriodTransition('extra_time', 'live', 91)}
+                className="btn btn-secondary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
+              >
+                <span>Extra Time (Cup/Knockout)</span>
+                <span className="badge badge-primary">ET 91&apos;</span>
+              </button>
+
+              <button
+                onClick={() => handlePeriodTransition('penalties', 'live', 120)}
+                className="btn btn-secondary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
+              >
+                <span>Penalty Shootout</span>
+                <span className="badge badge-gold">PSO</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handlePeriodTransition('full_time', 'completed', 90);
+                  setIsAuditModalOpen(true);
+                }}
+                className="btn btn-primary"
+                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: '#3B82F6' }}
+              >
+                <span>Full Time (Final Whistle & Audit)</span>
+                <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#FFF' }}>FT</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post-Match Stats Audit Modal */}
+      <StatsAuditModal
+        match={match}
+        events={events}
+        squadPlayers={squadPlayers}
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        onAuditCompleted={() => {
+          showFeedback('Match stats successfully verified and baked into season records!');
+        }}
+      />
+    </div>
+  );
+}

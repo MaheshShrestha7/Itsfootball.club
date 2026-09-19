@@ -1,0 +1,788 @@
+-- ==============================================================================
+-- itsfootball.club: Multi-Tenant Database Schema
+-- Supabase PostgreSQL with Row Level Security (RLS) & Realtime
+-- ==============================================================================
+
+-- 1. Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Clean Up (for fresh migrations if re-run)
+-- DROP TABLE IF EXISTS contact_inquiries CASCADE;
+-- DROP TABLE IF EXISTS club_analytics CASCADE;
+-- DROP TABLE IF EXISTS media_gallery CASCADE;
+-- DROP TABLE IF EXISTS news_articles CASCADE;
+-- DROP TABLE IF EXISTS sponsors CASCADE;
+-- DROP TABLE IF EXISTS event_attendees CASCADE;
+-- DROP TABLE IF EXISTS events CASCADE;
+-- DROP TABLE IF EXISTS match_events CASCADE;
+-- DROP TABLE IF EXISTS matches CASCADE;
+-- DROP TABLE IF EXISTS player_stats CASCADE;
+-- DROP TABLE IF EXISTS club_members CASCADE;
+-- DROP TABLE IF EXISTS clubs CASCADE;
+
+-- ------------------------------------------------------------------------------
+-- 3. CLUBS TABLE (Tenant Entity)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clubs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    slug VARCHAR(64) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    short_name VARCHAR(16) NOT NULL,
+    motto VARCHAR(255),
+    founded_year INTEGER DEFAULT 2024,
+    logo_url TEXT,
+    banner_url TEXT,
+    primary_color VARCHAR(16) DEFAULT '#10B981',
+    secondary_color VARCHAR(16) DEFAULT '#0F172A',
+    accent_color VARCHAR(16) DEFAULT '#F59E0B',
+    stadium_name VARCHAR(255),
+    stadium_address TEXT,
+    stadium_lat DOUBLE PRECISION,
+    stadium_lng DOUBLE PRECISION,
+    stadium_capacity INTEGER DEFAULT 5000,
+    stadium_pitch_type VARCHAR(64) DEFAULT 'Natural Hybrid Turf',
+    stadium_parking_info TEXT,
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(64),
+    custom_domain VARCHAR(255) UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast lookup by slug & domain
+CREATE INDEX IF NOT EXISTS idx_clubs_slug ON clubs (slug);
+CREATE INDEX IF NOT EXISTS idx_clubs_custom_domain ON clubs (custom_domain);
+
+-- ------------------------------------------------------------------------------
+-- 4. CLUB MEMBERS & SQUAD TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS club_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    user_id UUID, -- Optional link to Supabase auth.users
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(64),
+    role VARCHAR(32) DEFAULT 'player' CHECK (role IN ('owner', 'admin', 'staff', 'player', 'member', 'supporter')),
+    player_position VARCHAR(32) CHECK (player_position IN ('GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST', 'SUB', NULL)),
+    jersey_number INTEGER,
+    photo_url TEXT,
+    date_of_birth DATE,
+    nationality VARCHAR(64),
+    preferred_foot VARCHAR(16) DEFAULT 'Right',
+    height_cm INTEGER,
+    weight_kg INTEGER,
+    status VARCHAR(32) DEFAULT 'active' CHECK (status IN ('active', 'injured', 'suspended', 'alumni')),
+    qr_code_token VARCHAR(128) UNIQUE NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
+    membership_tier VARCHAR(32) DEFAULT 'Senior Player',
+    membership_expires_at DATE DEFAULT (CURRENT_DATE + INTERVAL '1 year'),
+    
+    -- Executive committee fields
+    is_executive BOOLEAN DEFAULT FALSE,
+    executive_title VARCHAR(128), -- e.g. "Club President", "Head Coach", "General Secretary"
+    executive_bio TEXT,
+    executive_order INTEGER DEFAULT 99,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_members_club_id ON club_members (club_id);
+CREATE INDEX IF NOT EXISTS idx_members_qr_token ON club_members (qr_code_token);
+CREATE INDEX IF NOT EXISTS idx_members_role ON club_members (role);
+
+-- ------------------------------------------------------------------------------
+-- 5. PLAYER STATISTICS TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS player_stats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES club_members(id) ON DELETE CASCADE,
+    season VARCHAR(32) DEFAULT '2025/2026',
+    appearances INTEGER DEFAULT 0,
+    minutes_played INTEGER DEFAULT 0,
+    goals INTEGER DEFAULT 0,
+    assists INTEGER DEFAULT 0,
+    clean_sheets INTEGER DEFAULT 0,
+    yellow_cards INTEGER DEFAULT 0,
+    red_cards INTEGER DEFAULT 0,
+    motm_awards INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(member_id, season)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_stats_club ON player_stats (club_id);
+CREATE INDEX IF NOT EXISTS idx_player_stats_goals ON player_stats (goals DESC);
+
+-- ------------------------------------------------------------------------------
+-- 6. MATCHES TABLE (Fixtures & Results)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS matches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    competition VARCHAR(128) NOT NULL DEFAULT 'Premier Championship',
+    season VARCHAR(32) DEFAULT '2025/2026',
+    home_team_name VARCHAR(255) NOT NULL,
+    away_team_name VARCHAR(255) NOT NULL,
+    home_team_logo TEXT,
+    away_team_logo TEXT,
+    is_club_home BOOLEAN DEFAULT TRUE,
+    match_date TIMESTAMPTZ NOT NULL,
+    venue VARCHAR(255) NOT NULL,
+    status VARCHAR(32) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'live', 'halftime', 'completed', 'postponed', 'cancelled')),
+    home_score INTEGER DEFAULT 0,
+    away_score INTEGER DEFAULT 0,
+    current_minute INTEGER DEFAULT 0,
+    added_time INTEGER DEFAULT 0,
+    period VARCHAR(32) DEFAULT 'pre_match' CHECK (period IN ('pre_match', 'first_half', 'halftime', 'second_half', 'extra_time', 'penalties', 'full_time')),
+    home_formation VARCHAR(16) DEFAULT '4-3-3',
+    away_formation VARCHAR(16) DEFAULT '4-2-3-1',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_matches_club ON matches (club_id);
+CREATE INDEX IF NOT EXISTS idx_matches_date ON matches (match_date);
+CREATE INDEX IF NOT EXISTS idx_matches_status ON matches (status);
+
+-- ------------------------------------------------------------------------------
+-- 7. MATCH EVENTS (Live Match-Day Events)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS match_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    minute INTEGER NOT NULL,
+    added_minute INTEGER DEFAULT 0,
+    event_type VARCHAR(32) NOT NULL CHECK (event_type IN ('goal', 'penalty', 'own_goal', 'yellow_card', 'red_card', 'sub', 'var', 'commentary', 'whistle')),
+    team_side VARCHAR(16) NOT NULL CHECK (team_side IN ('home', 'away')),
+    player_name VARCHAR(255),
+    assist_player_name VARCHAR(255),
+    detail_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events (match_id, minute);
+
+-- ------------------------------------------------------------------------------
+-- 8. CLUB EVENTS (Matches, Training, Socials, AGM)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(32) NOT NULL CHECK (category IN ('match', 'training', 'social', 'agm', 'trial', 'tournament')),
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ,
+    location VARCHAR(255) NOT NULL,
+    max_capacity INTEGER DEFAULT 200,
+    rsvp_count INTEGER DEFAULT 0,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_club ON events (club_id, start_time);
+
+-- ------------------------------------------------------------------------------
+-- 9. EVENT ATTENDEES & CHECK-IN
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS event_attendees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    member_id UUID REFERENCES club_members(id) ON DELETE SET NULL,
+    attendee_name VARCHAR(255) NOT NULL,
+    attendee_email VARCHAR(255),
+    checkin_status VARCHAR(32) DEFAULT 'registered' CHECK (checkin_status IN ('registered', 'checked_in', 'cancelled')),
+    checked_in_at TIMESTAMPTZ,
+    qr_ticket_code VARCHAR(128) UNIQUE NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendees_event ON event_attendees (event_id);
+CREATE INDEX IF NOT EXISTS idx_attendees_qr ON event_attendees (qr_ticket_code);
+
+-- ------------------------------------------------------------------------------
+-- 10. SPONSORS TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sponsors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    logo_url TEXT NOT NULL,
+    website_url TEXT,
+    tier VARCHAR(32) NOT NULL DEFAULT 'gold' CHECK (tier IN ('platinum', 'gold', 'silver', 'bronze', 'grassroots')),
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sponsors_club ON sponsors (club_id, tier, display_order);
+
+-- ------------------------------------------------------------------------------
+-- 11. NEWS & CONTENT TABLE (CMS)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS news_articles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    summary TEXT,
+    content TEXT NOT NULL,
+    cover_image_url TEXT,
+    video_embed_url TEXT,
+    author_name VARCHAR(128) DEFAULT 'Club Media Team',
+    tags TEXT[] DEFAULT ARRAY['Club News'],
+    is_featured BOOLEAN DEFAULT FALSE,
+    published_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(club_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_club ON news_articles (club_id, published_at DESC);
+
+-- ------------------------------------------------------------------------------
+-- 12. MEDIA GALLERY TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS media_gallery (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    media_type VARCHAR(16) NOT NULL CHECK (media_type IN ('image', 'video')),
+    media_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    album_name VARCHAR(128) DEFAULT 'Matchday Moments',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_gallery_club ON media_gallery (club_id, created_at DESC);
+
+-- ------------------------------------------------------------------------------
+-- 13. CLUB PUBLIC PAGE ANALYTICS TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS club_analytics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL, -- e.g. 'page_view', 'pass_scanned', 'match_view', 'fixture_click'
+    page_path VARCHAR(255),
+    visitor_hash VARCHAR(64),
+    referrer TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_club ON club_analytics (club_id, created_at);
+
+-- ------------------------------------------------------------------------------
+-- 14. CONTACT INQUIRIES TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS contact_inquiries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    sender_name VARCHAR(255) NOT NULL,
+    sender_email VARCHAR(255) NOT NULL,
+    sender_phone VARCHAR(64),
+    inquiry_type VARCHAR(64) DEFAULT 'General Inquiry' CHECK (inquiry_type IN ('General Inquiry', 'Player Trial', 'Sponsorship', 'Media Request', 'Youth Academy')),
+    message TEXT NOT NULL,
+    status VARCHAR(32) DEFAULT 'unread' CHECK (status IN ('unread', 'read', 'replied', 'archived')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inquiries_club ON contact_inquiries (club_id, created_at DESC);
+
+-- ------------------------------------------------------------------------------
+-- 15. CLUBSCORE RULES (Per-Club Point Weights & Multipliers)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clubscore_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    points_training_checkin INTEGER NOT NULL DEFAULT 10,
+    points_social_checkin INTEGER NOT NULL DEFAULT 5,
+    points_match_appearance INTEGER NOT NULL DEFAULT 5,
+    points_goal_forward INTEGER NOT NULL DEFAULT 10,
+    points_goal_midfielder INTEGER NOT NULL DEFAULT 12,
+    points_goal_defender INTEGER NOT NULL DEFAULT 15,
+    points_assist INTEGER NOT NULL DEFAULT 7,
+    points_clean_sheet_gk_def INTEGER NOT NULL DEFAULT 10,
+    points_motm INTEGER NOT NULL DEFAULT 15,
+    points_yellow_card_penalty INTEGER NOT NULL DEFAULT -3,
+    points_red_card_penalty INTEGER NOT NULL DEFAULT -10,
+    streak_multiplier_3w NUMERIC(3,2) NOT NULL DEFAULT 1.15,
+    streak_multiplier_5w NUMERIC(3,2) NOT NULL DEFAULT 1.25,
+    streak_multiplier_10w NUMERIC(3,2) NOT NULL DEFAULT 1.50,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(club_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_clubscore_rules_club ON clubscore_rules(club_id);
+
+-- ------------------------------------------------------------------------------
+-- 16. MEMBER CLUBSCORE PROFILES (Season Totals, Streaks & Tiers)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS member_clubscore_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES club_members(id) ON DELETE CASCADE,
+    season VARCHAR(32) NOT NULL DEFAULT '2025/2026',
+    total_points INTEGER NOT NULL DEFAULT 0,
+    weekly_points INTEGER NOT NULL DEFAULT 0,
+    monthly_points INTEGER NOT NULL DEFAULT 0,
+    current_streak INTEGER NOT NULL DEFAULT 0,
+    highest_streak INTEGER NOT NULL DEFAULT 0,
+    tier VARCHAR(32) NOT NULL DEFAULT 'Rookie' CHECK (tier IN ('Rookie', 'Prospect', 'First Team', 'All-Star', 'Club Legend')),
+    badges JSONB NOT NULL DEFAULT '[]'::jsonb,
+    last_activity_date DATE,
+    streak_updated_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(member_id, season)
+);
+
+CREATE INDEX IF NOT EXISTS idx_clubscore_profiles_club_season ON member_clubscore_profiles(club_id, season);
+CREATE INDEX IF NOT EXISTS idx_clubscore_profiles_total_pts ON member_clubscore_profiles(total_points DESC);
+CREATE INDEX IF NOT EXISTS idx_clubscore_profiles_weekly_pts ON member_clubscore_profiles(weekly_points DESC);
+CREATE INDEX IF NOT EXISTS idx_clubscore_profiles_streak ON member_clubscore_profiles(current_streak DESC);
+
+-- ------------------------------------------------------------------------------
+-- 17. GAMIFICATION ACTIVITY LOG (Immutable Point Ledger)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gamification_activity_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES club_members(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL CHECK (
+        event_type IN (
+            'training_checkin',
+            'social_checkin',
+            'match_appearance',
+            'match_goal',
+            'match_assist',
+            'match_clean_sheet',
+            'match_motm',
+            'disciplinary_card',
+            'streak_bonus',
+            'admin_award'
+        )
+    ),
+    points_awarded INTEGER NOT NULL,
+    multiplier NUMERIC(3,2) NOT NULL DEFAULT 1.00,
+    final_points INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    reference_id UUID,
+    created_by UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_log_member ON gamification_activity_log(member_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_log_club ON gamification_activity_log(club_id, created_at DESC);
+
+-- ==============================================================================
+-- 18. ROW LEVEL SECURITY (RLS) POLICIES
+-- ==============================================================================
+ALTER TABLE clubs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE club_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news_articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_gallery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE club_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_inquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clubscore_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE member_clubscore_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gamification_activity_log ENABLE ROW LEVEL SECURITY;
+
+-- Public READ policies for active clubs & content
+DROP POLICY IF EXISTS "Public clubs read" ON clubs;
+CREATE POLICY "Public clubs read" ON clubs FOR SELECT USING (is_active = TRUE);
+
+DROP POLICY IF EXISTS "Public members read" ON club_members;
+CREATE POLICY "Public members read" ON club_members FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public player_stats read" ON player_stats;
+CREATE POLICY "Public player_stats read" ON player_stats FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public matches read" ON matches;
+CREATE POLICY "Public matches read" ON matches FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public match_events read" ON match_events;
+CREATE POLICY "Public match_events read" ON match_events FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public events read" ON events;
+CREATE POLICY "Public events read" ON events FOR SELECT USING (is_public = TRUE);
+
+DROP POLICY IF EXISTS "Public sponsors read" ON sponsors;
+CREATE POLICY "Public sponsors read" ON sponsors FOR SELECT USING (is_active = TRUE);
+
+DROP POLICY IF EXISTS "Public news read" ON news_articles;
+CREATE POLICY "Public news read" ON news_articles FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public media read" ON media_gallery;
+CREATE POLICY "Public media read" ON media_gallery FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public clubscore_rules read" ON clubscore_rules;
+CREATE POLICY "Public clubscore_rules read" ON clubscore_rules FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public member_clubscore_profiles read" ON member_clubscore_profiles;
+CREATE POLICY "Public member_clubscore_profiles read" ON member_clubscore_profiles FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public gamification_activity_log read" ON gamification_activity_log;
+CREATE POLICY "Public gamification_activity_log read" ON gamification_activity_log FOR SELECT USING (TRUE);
+
+-- Allow public contact submission & analytics logging
+DROP POLICY IF EXISTS "Public contact submit" ON contact_inquiries;
+CREATE POLICY "Public contact submit" ON contact_inquiries FOR INSERT WITH CHECK (TRUE);
+
+DROP POLICY IF EXISTS "Public analytics log" ON club_analytics;
+CREATE POLICY "Public analytics log" ON club_analytics FOR INSERT WITH CHECK (TRUE);
+
+-- Authenticated Admin / Club Owner policies (checked against user_id or club role)
+DROP POLICY IF EXISTS "Club admin clubs edit" ON clubs;
+CREATE POLICY "Club admin clubs edit" ON clubs FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = clubs.id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin members manage" ON club_members;
+CREATE POLICY "Club admin members manage" ON club_members FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = club_members.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin matches manage" ON matches;
+CREATE POLICY "Club admin matches manage" ON matches FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = matches.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin match events manage" ON match_events;
+CREATE POLICY "Club admin match events manage" ON match_events FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = match_events.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin events manage" ON events;
+CREATE POLICY "Club admin events manage" ON events FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = events.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin sponsors manage" ON sponsors;
+CREATE POLICY "Club admin sponsors manage" ON sponsors FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = sponsors.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin news manage" ON news_articles;
+CREATE POLICY "Club admin news manage" ON news_articles FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = news_articles.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin inquiries read" ON contact_inquiries;
+CREATE POLICY "Club admin inquiries read" ON contact_inquiries FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = contact_inquiries.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin clubscore_rules manage" ON clubscore_rules;
+CREATE POLICY "Club admin clubscore_rules manage" ON clubscore_rules FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = clubscore_rules.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin member_clubscore_profiles manage" ON member_clubscore_profiles;
+CREATE POLICY "Club admin member_clubscore_profiles manage" ON member_clubscore_profiles FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = member_clubscore_profiles.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+DROP POLICY IF EXISTS "Club admin gamification_activity_log insert" ON gamification_activity_log;
+CREATE POLICY "Club admin gamification_activity_log insert" ON gamification_activity_log FOR INSERT WITH CHECK (
+    auth.uid() IN (
+        SELECT user_id FROM club_members WHERE club_id = gamification_activity_log.club_id AND role IN ('owner', 'admin')
+    )
+);
+
+-- ==============================================================================
+-- 19. AUTOMATED POINT & STREAK FUNCTIONS
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION fn_get_clubscore_tier(points INTEGER)
+RETURNS VARCHAR(32) AS $$
+BEGIN
+    IF points >= 500 THEN
+        RETURN 'Club Legend';
+    ELSIF points >= 300 THEN
+        RETURN 'All-Star';
+    ELSIF points >= 150 THEN
+        RETURN 'First Team';
+    ELSIF points >= 50 THEN
+        RETURN 'Prospect';
+    ELSE
+        RETURN 'Rookie';
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION fn_award_clubscore(
+    p_club_id UUID,
+    p_member_id UUID,
+    p_event_type VARCHAR(64),
+    p_points INTEGER,
+    p_description TEXT,
+    p_reference_id UUID DEFAULT NULL,
+    p_season VARCHAR(32) DEFAULT '2025/2026'
+)
+RETURNS VOID AS $$
+DECLARE
+    v_multiplier NUMERIC(3,2) := 1.00;
+    v_final_points INTEGER;
+    v_current_streak INTEGER := 0;
+    v_last_activity DATE;
+BEGIN
+    INSERT INTO member_clubscore_profiles (club_id, member_id, season)
+    VALUES (p_club_id, p_member_id, p_season)
+    ON CONFLICT (member_id, season) DO NOTHING;
+
+    SELECT current_streak, last_activity_date
+    INTO v_current_streak, v_last_activity
+    FROM member_clubscore_profiles
+    WHERE member_id = p_member_id AND season = p_season;
+
+    IF v_current_streak >= 10 THEN
+        v_multiplier := 1.50;
+    ELSIF v_current_streak >= 5 THEN
+        v_multiplier := 1.25;
+    ELSIF v_current_streak >= 3 THEN
+        v_multiplier := 1.15;
+    END IF;
+
+    IF p_points > 0 THEN
+        v_final_points := ROUND(p_points * v_multiplier);
+    ELSE
+        v_final_points := p_points;
+    END IF;
+
+    IF p_event_type IN ('training_checkin', 'social_checkin', 'match_appearance') THEN
+        IF v_last_activity IS NULL OR v_last_activity < (CURRENT_DATE - INTERVAL '6 days') THEN
+            v_current_streak := v_current_streak + 1;
+        END IF;
+    END IF;
+
+    INSERT INTO gamification_activity_log (
+        club_id,
+        member_id,
+        event_type,
+        points_awarded,
+        multiplier,
+        final_points,
+        description,
+        reference_id
+    ) VALUES (
+        p_club_id,
+        p_member_id,
+        p_event_type,
+        p_points,
+        v_multiplier,
+        v_final_points,
+        p_description,
+        p_reference_id
+    );
+
+    UPDATE member_clubscore_profiles
+    SET total_points = total_points + v_final_points,
+        weekly_points = weekly_points + v_final_points,
+        monthly_points = monthly_points + v_final_points,
+        current_streak = v_current_streak,
+        highest_streak = GREATEST(highest_streak, v_current_streak),
+        tier = fn_get_clubscore_tier(total_points + v_final_points),
+        last_activity_date = CURRENT_DATE,
+        updated_at = NOW()
+    WHERE member_id = p_member_id AND season = p_season;
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION trg_fn_on_event_checkin()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_event_category VARCHAR(32);
+    v_points INTEGER := 10;
+BEGIN
+    IF (OLD.checkin_status IS DISTINCT FROM NEW.checkin_status AND NEW.checkin_status = 'checked_in') THEN
+        IF NEW.member_id IS NOT NULL THEN
+            SELECT category INTO v_event_category FROM events WHERE id = NEW.event_id;
+            
+            IF v_event_category = 'social' THEN
+                v_points := 5;
+            ELSE
+                v_points := 10;
+            END IF;
+
+            PERFORM fn_award_clubscore(
+                NEW.club_id,
+                NEW.member_id,
+                CASE WHEN v_event_category = 'social' THEN 'social_checkin' ELSE 'training_checkin' END,
+                v_points,
+                'Verified QR Check-In: ' || COALESCE(v_event_category, 'Event'),
+                NEW.event_id
+            );
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_event_attendee_clubscore ON event_attendees;
+CREATE TRIGGER trg_event_attendee_clubscore
+    AFTER UPDATE ON event_attendees
+    FOR EACH ROW
+    EXECUTE FUNCTION trg_fn_on_event_checkin();
+
+-- ==============================================================================
+-- 20. PLAYER AVAILABILITY & RSVP HUB (Pre-Match Call-Ups)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS player_availabilities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    member_id UUID NOT NULL REFERENCES club_members(id) ON DELETE CASCADE,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('available', 'unavailable', 'maybe', 'pending')),
+    note TEXT,
+    response_token VARCHAR(64) UNIQUE NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
+    responded_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_target_fixture CHECK (match_id IS NOT NULL OR event_id IS NOT NULL),
+    UNIQUE(club_id, match_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_availabilities_club_match ON player_availabilities(club_id, match_id);
+CREATE INDEX IF NOT EXISTS idx_availabilities_token ON player_availabilities(response_token);
+CREATE INDEX IF NOT EXISTS idx_availabilities_member ON player_availabilities(member_id);
+
+ALTER TABLE player_availabilities ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public availability read" ON player_availabilities;
+CREATE POLICY "Public availability read" ON player_availabilities FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Public availability respond by token" ON player_availabilities;
+CREATE POLICY "Public availability respond by token" ON player_availabilities FOR UPDATE USING (TRUE) WITH CHECK (TRUE);
+
+DROP POLICY IF EXISTS "Club admin availabilities manage" ON player_availabilities;
+CREATE POLICY "Club admin availabilities manage" ON player_availabilities FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members
+        WHERE club_id = player_availabilities.club_id
+        AND role IN ('owner', 'admin')
+    )
+);
+
+-- ==============================================================================
+-- 21. DRAFT LINEUPS & MATCH EXTENSIONS
+-- ==============================================================================
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_audited BOOLEAN DEFAULT FALSE;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS audited_at TIMESTAMPTZ;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS audited_by UUID;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_format VARCHAR(16) DEFAULT '11v11';
+
+CREATE TABLE IF NOT EXISTS draft_lineups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    format VARCHAR(16) NOT NULL DEFAULT '11v11' CHECK (format IN ('11v11', '9v9', '7v7')),
+    formation VARCHAR(32) NOT NULL DEFAULT '4-3-3',
+    lineup_coords JSONB NOT NULL DEFAULT '[]'::jsonb,
+    bench_member_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tactical_notes TEXT,
+    is_published BOOLEAN NOT NULL DEFAULT FALSE,
+    published_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(match_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_draft_lineups_club ON draft_lineups(club_id);
+CREATE INDEX IF NOT EXISTS idx_draft_lineups_match ON draft_lineups(match_id);
+
+ALTER TABLE draft_lineups ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public published draft read" ON draft_lineups;
+CREATE POLICY "Public published draft read" ON draft_lineups FOR SELECT USING (is_published = TRUE);
+
+DROP POLICY IF EXISTS "Club admin draft lineups manage" ON draft_lineups;
+CREATE POLICY "Club admin draft lineups manage" ON draft_lineups FOR ALL USING (
+    auth.uid() IN (
+        SELECT user_id FROM club_members
+        WHERE club_id = draft_lineups.club_id
+        AND role IN ('owner', 'admin')
+    )
+);
+
+CREATE OR REPLACE FUNCTION fn_publish_draft_lineup(p_match_id UUID)
+RETURNS VOID AS $$
+DECLARE
+    v_draft RECORD;
+BEGIN
+    SELECT * INTO v_draft FROM draft_lineups WHERE match_id = p_match_id;
+
+    IF v_draft.id IS NULL THEN
+        RAISE EXCEPTION 'No draft lineup found for match %', p_match_id;
+    END IF;
+
+    UPDATE matches
+    SET home_formation = v_draft.formation,
+        home_lineup_coords = v_draft.lineup_coords,
+        match_format = v_draft.format
+    WHERE id = p_match_id;
+
+    UPDATE draft_lineups
+    SET is_published = TRUE,
+        published_at = NOW(),
+        updated_at = NOW()
+    WHERE match_id = p_match_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==============================================================================
+-- 22. SUPABASE REALTIME REPLICATION CONFIGURATION
+-- ==============================================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND tablename = 'matches'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE matches;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND tablename = 'match_events'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE match_events;
+    END IF;
+END $$;
+
+

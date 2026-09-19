@@ -1,0 +1,306 @@
+'use client';
+
+import React, { use } from 'react';
+import Link from 'next/link';
+import { useClub } from '@/lib/club-context';
+import {
+  Users,
+  Radio,
+  Calendar,
+  CreditCard,
+  TrendingUp,
+  Award,
+  Settings,
+  ArrowRight,
+  Shield,
+  QrCode,
+  Activity,
+  Plus,
+  Sparkles
+} from 'lucide-react';
+
+export default function AdminDashboardPage({
+  params,
+}: {
+  params: Promise<{ clubSlug: string }>;
+}) {
+  const resolvedParams = use(params);
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news } = useClub();
+  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  const clubMembers = members.filter(m => m.club_id === club.id);
+  const squadPlayers = clubMembers.filter(m => m.role === 'player');
+  const clubMatches = matches.filter(m => m.club_id === club.id);
+  const liveMatch = clubMatches.find(m => m.status === 'live');
+  const clubEvents = events.filter(e => e.club_id === club.id);
+
+  return (
+    <div>
+      {/* Top Banner / Greeting */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '1rem',
+        marginBottom: '2rem',
+      }}>
+        <div>
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ADMIN PORTAL • 3.11</span>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
+            {club.name} Dashboard
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            Real-time club control room, match operations, squad accreditation, and public portal configurations.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link href={`/${club.slug}/admin/scanner`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <QrCode size={16} />
+            <span>Launch QR Scanner</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* KPI Cards Row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '1.25rem',
+        marginBottom: '2.5rem',
+      }}>
+        {/* KPI 1: Squad Members */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              First Team Squad
+            </span>
+            <div style={{ color: 'var(--club-primary)' }}><Users size={20} /></div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+            {squadPlayers.length}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            {clubMembers.length} total club personnel
+          </div>
+        </div>
+
+        {/* KPI 2: Live Match or Fixtures */}
+        <div className="glass-panel" style={{ padding: '1.5rem', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? '#EF4444' : 'var(--text-muted)', textTransform: 'uppercase' }}>
+              {liveMatch ? 'LIVE MATCH STATUS' : 'SCHEDULED FIXTURES'}
+            </span>
+            <div style={{ color: liveMatch ? '#EF4444' : 'var(--text-muted)' }}><Radio size={20} /></div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+            {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: liveMatch ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            {liveMatch ? `${liveMatch.current_minute}' in progress` : 'Regular season active'}
+          </div>
+        </div>
+
+        {/* KPI 3: Member Passes Issued */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Active Member Passes
+            </span>
+            <div style={{ color: '#F59E0B' }}><CreditCard size={20} /></div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+            {clubMembers.length}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            Unique QR passes active
+          </div>
+        </div>
+
+        {/* KPI 4: Estimated Page Visits */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Public Page Visits
+            </span>
+            <div style={{ color: '#3B82F6' }}><TrendingUp size={20} /></div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+            8,420
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.5rem' }}>
+            +24% vs last month
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions Panel */}
+      <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1rem' }}>
+          Quick Management Actions
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <Link
+            href={`/${club.slug}/admin/match-center`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444' }}>
+              <Radio size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Match Controller</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Score & live events</div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/admin/branding`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: '#10B981' }}>
+              <Settings size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Club Branding</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Colors, logo & domain</div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/admin/squad`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6' }}>
+              <Users size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Squad & Players</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roster & stats</div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/admin/events`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B' }}>
+              <Calendar size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Club Events</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainings & social</div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/admin/hero-slider`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}>
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Hero Slider Pins</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Curate pinned slides</div>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Two Column Section: Live Match Ops + Recent Activity */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem' }}>
+        {/* Live Match Operation Overview */}
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+              Matchday Command
+            </h3>
+            {liveMatch ? (
+              <span className="badge badge-live">LIVE • {liveMatch.current_minute}&apos;</span>
+            ) : (
+              <span className="badge" style={{ background: 'rgba(255,255,255,0.06)' }}>STANDBY</span>
+            )}
+          </div>
+
+          {liveMatch ? (
+            <div>
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                padding: '1.25rem',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1.25rem',
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{liveMatch.home_team_name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Home</div>
+                </div>
+
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+                  {liveMatch.home_score} : {liveMatch.away_score}
+                </div>
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{liveMatch.away_team_name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Away</div>
+                </div>
+              </div>
+
+              <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary" style={{ width: '100%' }}>
+                Open Live Match Controller &rarr;
+              </Link>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No fixture currently marked as LIVE.</p>
+              <Link href={`/${club.slug}/admin/match-center`} className="btn btn-secondary btn-sm">
+                Initialize Match Center
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Recent Platform Activities */}
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+            Recent Club Activity Feed
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {[
+              { text: 'Goal logged: Dante Moreno (18\')', time: '12 mins ago', type: 'goal' },
+              { text: 'Pass verified: Julian Drake (#10)', time: '45 mins ago', type: 'scan' },
+              { text: 'New RSVP recorded for First Team Open Training', time: '2 hours ago', type: 'event' },
+              { text: 'Branding configuration saved', time: 'Yesterday', type: 'settings' },
+            ].map((act, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  fontSize: '0.825rem',
+                }}
+              >
+                <div style={{ color: '#FFFFFF' }}>{act.text}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{act.time}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

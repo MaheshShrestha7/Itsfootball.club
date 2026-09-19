@@ -1,0 +1,46 @@
+I  want to create a holistic multi-tenant soccer (football) website, where :
+
+1. User can create account and then create and configure their own club.
+2. Each club will have their own dedicated pages with all the features which are mentioned below.
+3. Each club will have their own public web page and also can link to custom domain.
+
+Features available for each club management : 
+1. Live match-day reporting (match-center)
+2. Member portal with virtual member pass (with unique QR per member), player stats etc.
+3. Admin portal where admin can manage all features including : 
+	3.1. club public page interface configurations (eg : public page primary,seconday color, club name, short name, motto, club logo/icon etc)
+	3.2. live match day reporting updates.
+	3.3. Add/edit/remove events.
+	3.4. Add/edit/remove members/players.
+	3.5. Appoint members/players as executive committe member (president, secretary etc)
+	3.6. Add/edit/remove club sponsors.
+	3.7. Content management (news/announcement/images/video/video embeds etc)
+	3.8. club's public page analytics
+	3.9. Member verifications via QR code scan.
+	3.10. Events check-ins via QR scan.
+	3.11. Admin Dashboard
+	
+4. Club's public page includes : 
+	4.1. Showcase of events/gallery/ match report etc on hero.
+	4.2. Sponsors showcase
+	4.3. Scheduled fixtures and results
+	4.4. Scheduled Social events showcase
+	4.5. Latest news showcase
+	4.6. executive committee showcase
+	4.7. Players (squad roster) showcase and leaderboard
+	4.8. Home ground details include (map)
+	4.9. Contact form
+	
+  
+
+- Ensure to verify your work before confirmation.
+- Ensure that it meets SECURITY and web standards. 
+- Consider avoiding AI slop for UI and UX. 
+- Make sure to use elegant and professional UI experience.
+- Make use of elegant animation where required.
+- Use Supabase as backend DB.
+- Use Cloudfare R2 as file storage on cloud where needed.
+
+DON'Ts : 
+- Don't provide/leak any API Keys or secrets hardcoded on the code anywhere. SECURITY is a major thing.
+- Avoid making AI slop UI/UX
