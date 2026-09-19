@@ -9,6 +9,8 @@
 # Next.js build output
 /.next/
 /out/
+/.open-next/
+/.wrangler/
 
 # Production
 /build
