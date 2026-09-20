@@ -29,6 +29,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   const [logoError, setLogoError] = useState(false);
 
+  // Reset error latch whenever club branding updates
+  useEffect(() => {
+    setLogoError(false);
+  }, [club.logo_url]);
+
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');

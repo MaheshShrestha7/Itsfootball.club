@@ -26,13 +26,14 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, getActiveSeason } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, getActiveSeason, getClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
   const squadPlayers = clubMembers.filter(m => m.role === 'player');
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const liveMatch = clubMatches.find(m => m.status === 'live');
+  const analytics = getClubAnalytics(club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
 
@@ -48,7 +49,7 @@ export default function AdminDashboardPage({
         marginBottom: '2rem',
       }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ADMIN PORTAL • 3.11</span>
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ADMIN CONSOLE</span>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
             {club.name} Dashboard
           </h1>
@@ -121,37 +122,40 @@ export default function AdminDashboardPage({
           </div>
         </div>
 
-        {/* KPI 3: Member Passes Issued */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+        {/* KPI 3: Member Passes Issued & Turnstile Scans */}
+        <Link href={`/${club.slug}/admin/scanner`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Active Member Passes
+              Member Passes & Turnstile
             </span>
             <div style={{ color: '#F59E0B' }}><CreditCard size={20} /></div>
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
             {clubMembers.length}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Unique QR passes active
+          <div style={{ fontSize: '0.75rem', color: '#F59E0B', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span>{analytics.gateScansCount.toLocaleString()} turnstile scans recorded</span>
+            <ArrowRight size={12} />
           </div>
-        </div>
+        </Link>
 
-        {/* KPI 4: Estimated Page Visits */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+        {/* KPI 4: Live Public Page Visits */}
+        <Link href={`/${club.slug}/admin/analytics`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Public Page Visits
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span className="pulse-dot" style={{ background: '#10B981' }} />
+              <span>Public Page Visits</span>
             </span>
             <div style={{ color: '#3B82F6' }}><TrendingUp size={20} /></div>
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
-            8,420
+            {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.5rem' }}>
-            +24% vs last month
+          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span>Live analytics stream active</span>
+            <ArrowRight size={12} />
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Quick Actions Panel */}

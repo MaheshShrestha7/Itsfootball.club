@@ -79,7 +79,7 @@ export default function AdminSponsorsPage({
         marginBottom: '2rem',
       }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>COMMERCIAL • 3.6</span>
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB SPONSORS & PARTNERS</span>
           <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
             Club Sponsors & Commercial Partners
           </h1>

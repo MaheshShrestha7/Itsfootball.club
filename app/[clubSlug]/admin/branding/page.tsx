@@ -183,7 +183,7 @@ export default function AdminBrandingPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CONFIGURATION • 3.1</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>BRANDING & KIT DESIGN</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
           Club Branding & Visual Interface
         </h1>

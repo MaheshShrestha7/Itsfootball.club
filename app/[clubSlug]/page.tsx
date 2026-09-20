@@ -99,6 +99,11 @@ export default function ClubPublicPage({
   const [isSliderPaused, setIsSliderPaused] = useState(false);
   const [heroLogoError, setHeroLogoError] = useState(false);
 
+  // Reset logo error whenever club branding updates
+  useEffect(() => {
+    setHeroLogoError(false);
+  }, [club?.logo_url]);
+
   // Filtered data for this club
   const clubId = club?.id || '';
   const clubSeasons = seasons.filter(s => s.club_id === clubId);
@@ -298,20 +303,36 @@ export default function ClubPublicPage({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '1rem',
-          padding: '2rem'
+          gap: '1.25rem',
+          padding: '2rem',
+          textAlign: 'center',
         }}>
           <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            border: '3px solid rgba(255,255,255,0.1)',
-            borderTopColor: 'var(--club-primary, #10B981)',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Loading official club experience...
-          </p>
+            position: 'relative',
+            width: '64px',
+            height: '64px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '50%',
+              border: '3px solid rgba(255,255,255,0.08)',
+              borderTopColor: 'var(--club-primary, #10B981)',
+              animation: 'spin 0.9s linear infinite',
+            }} />
+            <Shield size={28} color="var(--club-primary, #10B981)" style={{ opacity: 0.9 }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF', letterSpacing: '0.02em' }}>
+              Loading Club Headquarters...
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+              Syncing matchday lineups, squad rosters, and live turnstiles
+            </p>
+          </div>
         </div>
       );
     }

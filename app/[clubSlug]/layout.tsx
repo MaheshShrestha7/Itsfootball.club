@@ -1,6 +1,7 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
@@ -14,10 +15,18 @@ export default function ClubLayout({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, sponsors } = useClub();
+  const pathname = usePathname();
+  const { clubs, selectClubBySlug, sponsors, trackPageView } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) ||
     clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase()) ||
     clubs[0];
+
+  // Track real public page visits for live club analytics
+  useEffect(() => {
+    if (club?.id && pathname && !pathname.includes('/admin')) {
+      trackPageView(club.id, pathname);
+    }
+  }, [club?.id, pathname, trackPageView]);
 
   // Dynamic CSS variables injected for this club tenant
   const primaryRgb = hexToRgb(club?.primary_color || '#10B981');

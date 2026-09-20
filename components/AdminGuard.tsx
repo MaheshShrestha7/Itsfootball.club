@@ -40,22 +40,32 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '60vh',
-        gap: '1rem',
+        gap: '1.25rem',
       }}>
         <div style={{
-          width: '52px',
-          height: '52px',
-          borderRadius: '16px',
-          border: `2px solid ${club.primary_color}`,
+          position: 'relative',
+          width: '60px',
+          height: '60px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(0,0,0,0.4)',
         }}>
-          <Lock size={24} color={club.primary_color} className="animate-spin" />
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: `3px solid ${club.primary_color}30`,
+            borderTopColor: club.primary_color,
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          {club.logo_url ? (
+            <img src={club.logo_url} alt={club.name} style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '50%' }} />
+          ) : (
+            <Shield size={26} color={club.primary_color} />
+          )}
         </div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Verifying security accreditation...
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 700 }}>
+          Verifying {club.name} accreditation...
         </div>
       </div>
     );
@@ -99,18 +109,23 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
         >
           {/* Security Crest Header */}
           <div style={{
-            width: '64px',
-            height: '64px',
+            width: '68px',
+            height: '68px',
             borderRadius: '20px',
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2))',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
+            background: `linear-gradient(135deg, ${club.primary_color}25, rgba(0, 0, 0, 0.4))`,
+            border: `2px solid ${club.primary_color}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.5rem auto',
-            color: '#EF4444',
+            boxShadow: `0 8px 25px ${club.primary_color}30`,
+            overflow: 'hidden',
           }}>
-            <Lock size={30} />
+            {club.logo_url ? (
+              <img src={club.logo_url} alt={club.name} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+            ) : (
+              <Shield size={34} color={club.primary_color} />
+            )}
           </div>
 
           <span className="badge badge-danger" style={{ marginBottom: '0.6rem' }}>

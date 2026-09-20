@@ -305,7 +305,7 @@ export default function AdminMatchCenterControllerPage({
       }}>
         <div>
           <span className="badge badge-live" style={{ marginBottom: '0.4rem' }}>
-            <span className="pulse-dot" /> MATCH-DAY COMMAND CENTER • 3.2
+            <span className="pulse-dot" /> MATCHDAY COMMAND CENTER
           </span>
           <h1 style={{ fontSize: '2.1rem', fontWeight: 900, color: '#FFFFFF' }}>
             Live Match-Day Reporting & Tactical Hub

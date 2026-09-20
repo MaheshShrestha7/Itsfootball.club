@@ -255,6 +255,31 @@ export interface ClubAnalytics {
   created_at: string;
 }
 
+export interface GateScanRecord {
+  id: string;
+  club_id: string;
+  scan_type: 'pass_verification' | 'event_checkin';
+  token: string;
+  member_id?: string;
+  member_name: string;
+  event_id?: string;
+  event_title?: string;
+  valid: boolean;
+  scanned_at: string;
+}
+
+export interface ClubAnalyticsSummary {
+  totalVisits: number;
+  weeklyVisits: number[];
+  weeklyDays: string[];
+  matchCenterFans: number;
+  gateScansCount: number;
+  avgDuration: string;
+  topSections: { name: string; views: string; count: number; color: string }[];
+  deviceBreakdown: { name: string; percentage: string; color: string }[];
+  recentGateScans: GateScanRecord[];
+}
+
 export interface ContactInquiry {
   id: string;
   club_id: string;

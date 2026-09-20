@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { MatchFormat, PitchPosition, ClubMember } from '@/lib/supabase/types';
-import TacticalPitch from '@/components/TacticalPitch';
+import TacticalPitch, { PlayerDragPayload, FORMAT_PRESETS } from '@/components/TacticalPitch';
 import AdminGuard from '@/components/AdminGuard';
 import {
   Layers,
@@ -23,7 +23,8 @@ import {
   AlertCircle,
   Users,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  GripVertical
 } from 'lucide-react';
 
 export default function DraftLineupPage() {
@@ -72,6 +73,26 @@ export default function DraftLineupPage() {
     return currentDraft?.formation || activeMatch?.home_formation || '4-3-3';
   });
 
+  const buildDefaultCoords = useCallback((fmt: MatchFormat, formName: string): PitchPosition[] => {
+    const presetMap = FORMAT_PRESETS[fmt] || FORMAT_PRESETS['11v11'];
+    const preset = presetMap[formName] || Object.values(presetMap)[0];
+    if (!preset) return [];
+    return preset.coords.map((coord, idx) => {
+      const squadPlayer = squadPlayers[idx];
+      return {
+        id: squadPlayer?.id || `pos-${idx}`,
+        member_id: squadPlayer?.id,
+        name: squadPlayer?.full_name || `Player ${idx + 1}`,
+        number: squadPlayer?.jersey_number || (idx === 0 ? 1 : idx + 1),
+        position: squadPlayer?.player_position || coord.position,
+        x: coord.x,
+        y: coord.y,
+        role: coord.role,
+        is_captain: squadPlayer?.is_executive && squadPlayer?.role === 'player',
+      };
+    });
+  }, [squadPlayers]);
+
   const [lineupCoords, setLineupCoords] = useState<PitchPosition[]>(() => {
     if (currentDraft?.lineup_coords?.length) return currentDraft.lineup_coords;
     if (activeMatch?.home_lineup_coords?.length) return activeMatch.home_lineup_coords;
@@ -91,19 +112,26 @@ export default function DraftLineupPage() {
   useEffect(() => {
     if (activeMatch) {
       const draft = draftLineups.find(d => d.match_id === activeMatch.id);
-      if (draft) {
+      if (draft && draft.lineup_coords?.length) {
         setMatchFormat(draft.format);
         setFormation(draft.formation);
-        setLineupCoords(draft.lineup_coords || []);
+        setLineupCoords(draft.lineup_coords);
         setTacticalNotes(draft.tactical_notes || '');
-      } else {
+      } else if (activeMatch.home_lineup_coords?.length) {
         setMatchFormat(activeMatch.match_format || '11v11');
         setFormation(activeMatch.home_formation || '4-3-3');
-        setLineupCoords(activeMatch.home_lineup_coords || []);
+        setLineupCoords(activeMatch.home_lineup_coords);
+        setTacticalNotes('');
+      } else {
+        const fmt = activeMatch.match_format || '11v11';
+        const form = activeMatch.home_formation || '4-3-3';
+        setMatchFormat(fmt);
+        setFormation(form);
+        setLineupCoords(buildDefaultCoords(fmt, form));
         setTacticalNotes('');
       }
     }
-  }, [activeMatch, draftLineups]);
+  }, [activeMatch, draftLineups, buildDefaultCoords]);
 
   // Match Availabilities lookup
   const matchAvailabilities = useMemo(() => {
@@ -153,6 +181,101 @@ export default function DraftLineupPage() {
     });
 
     showFeedback('Draft lineup saved successfully! (Private to coaches)');
+  };
+
+  const [isBenchOver, setIsBenchOver] = useState<boolean>(false);
+
+  // Drag-and-drop replacement / swap handler (buildlineup.com style)
+  const handlePlayerDropReplace = (targetPitchPosId: string, source: PlayerDragPayload) => {
+    setLineupCoords(prev => {
+      const currentList = prev.length > 0 ? prev : buildDefaultCoords(matchFormat, formation);
+      const targetPos = currentList.find(p => p.id === targetPitchPosId || p.member_id === targetPitchPosId);
+      if (!targetPos) return currentList;
+
+      // Case 1: Dragging a starter onto another starter -> SWAP POSITIONS
+      if (source.type === 'pitch') {
+        if (!source.posId || source.posId === targetPitchPosId) return prev;
+        const sourcePos = prev.find(p => p.id === source.posId);
+        if (!sourcePos) return prev;
+
+        const updated = prev.map(p => {
+          if (p.id === targetPitchPosId) {
+            return {
+              ...p,
+              member_id: sourcePos.member_id,
+              name: sourcePos.name,
+              number: sourcePos.number,
+              position: sourcePos.position,
+              is_captain: sourcePos.is_captain,
+            };
+          }
+          if (p.id === source.posId) {
+            return {
+              ...p,
+              member_id: targetPos.member_id,
+              name: targetPos.name,
+              number: targetPos.number,
+              position: targetPos.position,
+              is_captain: targetPos.is_captain,
+            };
+          }
+          return p;
+        });
+
+        showFeedback(`Swapped ${sourcePos.name} and ${targetPos.name} on the pitch!`, 'success');
+        return updated;
+      }
+
+      // Case 2: Dragging a bench player onto a starter -> REPLACE / SUBSTITUTE
+      if (source.type === 'bench') {
+        const benchPlayer = squadPlayers.find(p => p.id === source.memberId);
+        const prevStarterName = targetPos.name;
+
+        const updated = prev.map(p => {
+          if (p.id === targetPitchPosId) {
+            return {
+              ...p,
+              member_id: source.memberId,
+              name: source.name || benchPlayer?.full_name || 'Player',
+              number: source.number ?? benchPlayer?.jersey_number ?? p.number,
+              position: source.position ?? benchPlayer?.player_position ?? p.position,
+              is_captain: benchPlayer?.is_executive && benchPlayer?.role === 'player',
+            };
+          }
+          return p;
+        });
+
+        showFeedback(`Substituted in ${source.name} for ${prevStarterName}!`, 'success');
+        return updated;
+      }
+
+      return prev;
+    });
+  };
+
+  // Move starter to bench
+  const handleBenchStarter = (pitchPosId: string) => {
+    setLineupCoords(prev => {
+      const targetPos = prev.find(p => p.id === pitchPosId);
+      if (!targetPos) return prev;
+      const starterName = targetPos.name;
+
+      const updated = prev.map(p => {
+        if (p.id === pitchPosId) {
+          return {
+            ...p,
+            member_id: undefined,
+            name: `Position ${p.position}`,
+            number: 0,
+            is_captain: false,
+          };
+        }
+        return p;
+      });
+
+      showFeedback(`Moved ${starterName} to the bench`, 'info');
+      return updated;
+    });
   };
 
   // Swap Starter with Bench Player
@@ -377,6 +500,7 @@ export default function DraftLineupPage() {
                 teamName={activeMatch.home_team_name}
                 onSaveFormation={handleSaveDraft}
                 onSwapWithBench={pitchPlayerId => setSwappingPitchPlayerId(pitchPlayerId)}
+                onPlayerDropReplace={handlePlayerDropReplace}
               />
             </div>
 
@@ -403,8 +527,58 @@ export default function DraftLineupPage() {
                 <Users size={18} color="#3B82F6" /> Substitutes & Reserves
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
-                Players on the bench with real-time matchday RSVP availability.
+                Drag any player card onto a pitch position to replace or substitute.
               </p>
+            </div>
+
+            {/* Drag Target Dropzone to bench starter */}
+            <div
+              onDragOver={e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (!isBenchOver) setIsBenchOver(true);
+              }}
+              onDragLeave={() => setIsBenchOver(false)}
+              onDrop={e => {
+                e.preventDefault();
+                setIsBenchOver(false);
+                try {
+                  let data: PlayerDragPayload | null = null;
+                  try {
+                    const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+                    if (raw) data = JSON.parse(raw);
+                  } catch {}
+                  if (!data && typeof window !== 'undefined') {
+                    data = (window as any).__activePlayerDragPayload || null;
+                  }
+                  if (data && data.type === 'pitch' && data.posId) {
+                    handleBenchStarter(data.posId);
+                  }
+                } catch (err) {
+                  console.warn('Drop to bench failed', err);
+                } finally {
+                  if (typeof window !== 'undefined') {
+                    (window as any).__activePlayerDragPayload = null;
+                  }
+                }
+              }}
+              style={{
+                border: `2px dashed ${isBenchOver ? '#10B981' : 'var(--border-subtle)'}`,
+                borderRadius: '8px',
+                padding: '0.65rem 0.75rem',
+                textAlign: 'center',
+                background: isBenchOver ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.45rem',
+              }}
+            >
+              <ArrowLeftRight size={14} color={isBenchOver ? '#10B981' : 'var(--text-muted)'} />
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: isBenchOver ? '#10B981' : 'var(--text-secondary)' }}>
+                {isBenchOver ? 'Drop here to send player to Bench' : 'Drag player to Pitch or drop here to Bench'}
+              </span>
             </div>
 
             {/* Bench List */}
@@ -422,6 +596,27 @@ export default function DraftLineupPage() {
                   return (
                     <div
                       key={player.id}
+                      draggable={true}
+                      onDragStart={e => {
+                        const payload: PlayerDragPayload = {
+                          type: 'bench',
+                          memberId: player.id,
+                          name: player.full_name,
+                          number: player.jersey_number,
+                          position: player.player_position,
+                        };
+                        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+                        e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                        e.dataTransfer.effectAllowed = 'copyMove';
+                        if (typeof window !== 'undefined') {
+                          (window as any).__activePlayerDragPayload = payload;
+                        }
+                      }}
+                      onDragEnd={() => {
+                        if (typeof window !== 'undefined') {
+                          (window as any).__activePlayerDragPayload = null;
+                        }
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -431,9 +626,14 @@ export default function DraftLineupPage() {
                         background: 'rgba(15, 23, 42, 0.65)',
                         border: '1px solid var(--border-subtle)',
                         gap: '0.5rem',
+                        cursor: 'grab',
+                        userSelect: 'none',
+                        transition: 'all 0.15s ease',
                       }}
+                      title="Drag to Pitch to substitute starter"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                        <GripVertical size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
                         <img
                           src={player.photo_url}
                           alt={player.full_name}

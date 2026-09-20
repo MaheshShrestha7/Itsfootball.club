@@ -52,7 +52,7 @@ export default function AdminCommitteePage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>GOVERNANCE • 3.5</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
           Executive Committee Appointments
         </h1>

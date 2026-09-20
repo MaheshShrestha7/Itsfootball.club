@@ -412,7 +412,7 @@ export default function AdminSquadPage({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-            <span className="badge badge-primary">ROSTER • 3.4</span>
+            <span className="badge badge-primary">SQUAD ROSTER & PLAYERS</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Total: {clubMembers.length} Members ({clubMembers.filter(m => {
                 const roles = getMemberRoles(m);

@@ -18,6 +18,15 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+export interface PlayerDragPayload {
+  type: 'bench' | 'pitch';
+  posId?: string;
+  memberId: string;
+  name: string;
+  number?: number;
+  position?: string;
+}
+
 export interface TacticalPitchProps {
   players: ClubMember[];
   formation?: string;
@@ -30,6 +39,7 @@ export interface TacticalPitchProps {
   onSaveFormation?: (formationName: string, positions: PitchPosition[]) => void;
   teamName?: string;
   onSwapWithBench?: (pitchPlayerId: string) => void;
+  onPlayerDropReplace?: (targetPitchPosId: string, source: PlayerDragPayload) => void;
 }
 
 // Standard preset formation configurations grouped by match format
@@ -253,6 +263,7 @@ export default function TacticalPitch({
   onSaveFormation,
   teamName,
   onSwapWithBench,
+  onPlayerDropReplace,
 }: TacticalPitchProps) {
   // Helper to determine active format
   const detectFormat = (fName: string, propFormat?: MatchFormat): MatchFormat => {
@@ -263,6 +274,65 @@ export default function TacticalPitch({
   };
 
   const [activeFormat, setActiveFormat] = useState<MatchFormat>(() => detectFormat(formation, matchFormat));
+  const [hoveredDropTargetId, setHoveredDropTargetId] = useState<string | null>(null);
+  const [draggingPitchPosId, setDraggingPitchPosId] = useState<string | null>(null);
+
+  const handleNodeDrop = (e: React.DragEvent, targetPosId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setHoveredDropTargetId(null);
+    setDraggingPitchPosId(null);
+
+    try {
+      let data: PlayerDragPayload | null = null;
+      try {
+        const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+        if (raw) data = JSON.parse(raw);
+      } catch {}
+      if (!data && typeof window !== 'undefined') {
+        data = (window as any).__activePlayerDragPayload || null;
+      }
+      if (!data) return;
+
+      // Update positions immediately in TacticalPitch
+      setPositions(prev => {
+        if (data.type === 'bench') {
+          return prev.map(p => (p.id === targetPosId ? {
+            ...p,
+            member_id: data.memberId,
+            name: data.name,
+            number: data.number ?? p.number,
+            position: data.position ?? p.position,
+          } : p));
+        }
+        if (data.type === 'pitch' && data.posId) {
+          const sourcePos = prev.find(p => p.id === data.posId);
+          const tgtPos = prev.find(p => p.id === targetPosId);
+          if (!sourcePos || !tgtPos) return prev;
+          return prev.map(p => {
+            if (p.id === targetPosId) {
+              return { ...p, member_id: sourcePos.member_id, name: sourcePos.name, number: sourcePos.number, position: sourcePos.position };
+            }
+            if (p.id === data.posId) {
+              return { ...p, member_id: tgtPos.member_id, name: tgtPos.name, number: tgtPos.number, position: tgtPos.position };
+            }
+            return p;
+          });
+        }
+        return prev;
+      });
+
+      if (onPlayerDropReplace) {
+        onPlayerDropReplace(targetPosId, data);
+      }
+    } catch (err) {
+      console.warn('Error handling player drop on pitch:', err);
+    } finally {
+      if (typeof window !== 'undefined') {
+        (window as any).__activePlayerDragPayload = null;
+      }
+    }
+  };
 
   // Sync format if prop changes
   useEffect(() => {
@@ -365,9 +435,10 @@ export default function TacticalPitch({
     handleSelectPreset(key);
   };
 
+  const [dragOriginCoords, setDragOriginCoords] = useState<{ id: string; x: number; y: number } | null>(null);
+
   // 1. Pointer Down on a Player Pin
   const handlePointerDown = (e: React.PointerEvent, playerId: string) => {
-
     if (!isEditable) return;
     e.preventDefault();
     e.stopPropagation();
@@ -380,6 +451,7 @@ export default function TacticalPitch({
 
     const player = positions.find(p => p.id === playerId);
     if (player) {
+      setDragOriginCoords({ id: playerId, x: player.x, y: player.y });
       setDragCoordinateFeedback({
         x: player.x,
         y: player.y,
@@ -400,6 +472,20 @@ export default function TacticalPitch({
     const clampedX = Math.round(Math.max(5, Math.min(95, rawX)) * 10) / 10;
     const clampedY = Math.round(Math.max(8, Math.min(92, rawY)) * 10) / 10;
 
+    // Check proximity to other players for swap target preview
+    const nearbyPlayer = positions.find(p => {
+      if (p.id === draggingPlayerId) return false;
+      const dx = p.x - clampedX;
+      const dy = p.y - clampedY;
+      return Math.sqrt(dx * dx + dy * dy) < 6.5;
+    });
+
+    if (nearbyPlayer) {
+      setHoveredDropTargetId(nearbyPlayer.id);
+    } else {
+      setHoveredDropTargetId(null);
+    }
+
     setPositions(prev =>
       prev.map(p => (p.id === draggingPlayerId ? { ...p, x: clampedX, y: clampedY } : p))
     );
@@ -407,7 +493,7 @@ export default function TacticalPitch({
     setDragCoordinateFeedback({
       x: clampedX,
       y: clampedY,
-      zone: getSectorZone(clampedX, clampedY),
+      zone: nearbyPlayer ? `SWAP TARGET: ${nearbyPlayer.name} (#${nearbyPlayer.number})` : getSectorZone(clampedX, clampedY),
     });
 
     if (selectedFormationKey !== 'Custom') {
@@ -425,8 +511,42 @@ export default function TacticalPitch({
       } catch {
         // Safe fallback
       }
+
+      if (hoveredDropTargetId && hoveredDropTargetId !== draggingPlayerId) {
+        const draggedPos = positions.find(p => p.id === draggingPlayerId);
+        const tgtPos = positions.find(p => p.id === hoveredDropTargetId);
+        if (draggedPos && tgtPos) {
+          if (dragOriginCoords && dragOriginCoords.id === draggingPlayerId) {
+            setPositions(prev =>
+              prev.map(p => {
+                if (p.id === hoveredDropTargetId) {
+                  return { ...p, member_id: draggedPos.member_id, name: draggedPos.name, number: draggedPos.number, position: draggedPos.position };
+                }
+                if (p.id === draggingPlayerId) {
+                  return { ...p, x: dragOriginCoords.x, y: dragOriginCoords.y, member_id: tgtPos.member_id, name: tgtPos.name, number: tgtPos.number, position: tgtPos.position };
+                }
+                return p;
+              })
+            );
+          }
+
+          if (onPlayerDropReplace) {
+            onPlayerDropReplace(hoveredDropTargetId, {
+              type: 'pitch',
+              posId: draggingPlayerId,
+              memberId: draggedPos.member_id || '',
+              name: draggedPos.name,
+              number: draggedPos.number,
+              position: draggedPos.position,
+            });
+          }
+        }
+        setHoveredDropTargetId(null);
+      }
+
       setDraggingPlayerId(null);
       setDragCoordinateFeedback(null);
+      setDragOriginCoords(null);
     }
   };
 
@@ -723,17 +843,60 @@ export default function TacticalPitch({
         {/* 5. Interactive Draggable Player Nodes */}
         {positions.map(pos => {
           const badges = getPlayerMatchBadges(pos.name);
-          const isDragging = draggingPlayerId === pos.id;
+          const isDragging = draggingPlayerId === pos.id || draggingPitchPosId === pos.id;
           const isSelected = selectedPlayerId === pos.id;
+          const isDropTarget = hoveredDropTargetId === pos.id && draggingPitchPosId !== pos.id;
 
           return (
             <div
               key={pos.id}
+              data-posid={pos.id}
               className={`pitch-player-node ${isDragging ? 'is-dragging' : ''} ${isSelected ? 'is-selected' : ''}`}
               style={{
                 left: `${pos.x}%`,
                 top: `${pos.y}%`,
+                cursor: isEditable ? 'grab' : 'pointer',
               }}
+              draggable={isEditable}
+              onDragStart={e => {
+                if (!isEditable) return;
+                const payload: PlayerDragPayload = {
+                  type: 'pitch',
+                  posId: pos.id,
+                  memberId: pos.member_id || '',
+                  name: pos.name,
+                  number: pos.number,
+                  position: pos.position,
+                };
+                e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+                e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                e.dataTransfer.effectAllowed = 'move';
+                if (typeof window !== 'undefined') {
+                  (window as any).__activePlayerDragPayload = payload;
+                }
+                setDraggingPitchPosId(pos.id);
+              }}
+              onDragEnd={() => {
+                setDraggingPitchPosId(null);
+                setHoveredDropTargetId(null);
+                if (typeof window !== 'undefined') {
+                  (window as any).__activePlayerDragPayload = null;
+                }
+              }}
+              onDragOver={e => {
+                if (!isEditable) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (hoveredDropTargetId !== pos.id) {
+                  setHoveredDropTargetId(pos.id);
+                }
+              }}
+              onDragLeave={() => {
+                if (hoveredDropTargetId === pos.id) {
+                  setHoveredDropTargetId(null);
+                }
+              }}
+              onDrop={e => handleNodeDrop(e, pos.id)}
               onPointerDown={e => handlePointerDown(e, pos.id)}
               onClick={() => setSelectedPlayerId(pos.id)}
               onKeyDown={e => handleKeyDown(e, pos.id)}
@@ -741,6 +904,33 @@ export default function TacticalPitch({
               role="button"
               aria-label={`${pos.name}, number ${pos.number}, ${pos.position}. Use arrow keys to reposition.`}
             >
+              {/* Drop Target Swap Indicator Badge */}
+              {isDropTarget && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-24px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#10B981',
+                  color: '#070A0F',
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                  whiteSpace: 'nowrap',
+                  zIndex: 25,
+                  pointerEvents: 'none',
+                  animation: 'pulse 1s infinite',
+                }}>
+                  <ArrowLeftRight size={10} />
+                  <span>SWAP</span>
+                </div>
+              )}
+
               {/* Jersey Node Pin */}
               <div
                 className="player-node-circle"
@@ -752,10 +942,14 @@ export default function TacticalPitch({
                   background: pos.position === 'GK'
                     ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
                     : `linear-gradient(135deg, ${primaryColor} 0%, rgba(0,0,0,0.3) 100%), ${primaryColor}`,
-                  border: isSelected
+                  border: isDropTarget
+                    ? '2.5px solid #10B981'
+                    : isSelected
                     ? '2.5px solid #FFFFFF'
                     : '2px solid rgba(255, 255, 255, 0.85)',
-                  boxShadow: isDragging
+                  boxShadow: isDropTarget
+                    ? '0 0 25px #10B981, 0 0 10px #10B981'
+                    : isDragging
                     ? '0 0 20px #F59E0B, 0 8px 20px rgba(0,0,0,0.7)'
                     : isSelected
                     ? '0 0 16px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.6)'

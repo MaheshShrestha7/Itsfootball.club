@@ -158,7 +158,7 @@ export default function AdminEventsPage({
         marginBottom: '2rem',
       }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>OPERATIONS • 3.3</span>
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB OPERATIONS & EVENTS</span>
           <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
             Club Events & Trainings Management
           </h1>

@@ -32,7 +32,7 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, events, verifyMemberPass, checkInMemberToEvent } = useClub();
+  const { clubs, selectClubBySlug, members, events, verifyMemberPass, checkInMemberToEvent, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
@@ -99,6 +99,17 @@ export default function AdminScannerPage({
       });
 
       setScanLogs(prev => [newLog, ...prev]);
+
+      // Record to live club analytics engine
+      recordGateScan({
+        club_id: club.id,
+        scan_type: 'event_checkin',
+        token,
+        member_name: res.attendeeName || 'Event Attendee',
+        event_id: selectedEvent?.id,
+        event_title: selectedEvent?.title,
+        valid: res.success,
+      });
     } else {
       const res = verifyMemberPass(token);
       const newLog: ScanLogEntry = {
@@ -113,6 +124,16 @@ export default function AdminScannerPage({
 
       setCurrentResult(res);
       setScanLogs(prev => [newLog, ...prev]);
+
+      // Record to live club analytics engine
+      recordGateScan({
+        club_id: club.id,
+        scan_type: 'pass_verification',
+        token,
+        member_id: res.member?.id,
+        member_name: res.member?.full_name || 'Member',
+        valid: res.valid,
+      });
     }
   };
 
@@ -124,7 +145,7 @@ export default function AdminScannerPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ACCREDITATION • 3.9 & 3.10</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY ACCREDITATION</span>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
           QR Scanner Reticle & Gate Check-In
         </h1>
@@ -133,7 +154,7 @@ export default function AdminScannerPage({
         </p>
       </div>
 
-      {/* Mode Selector: 3.9 Pass Verification vs 3.10 Event Check-In */}
+      {/* Mode Selector: Member Verification vs Event Check-In */}
       <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -145,7 +166,7 @@ export default function AdminScannerPage({
                 color: mode === 'verify' ? '#FFFFFF' : 'var(--text-secondary)',
               }}
             >
-              <span>3.9 Member Pass Verification</span>
+              <span>Member Pass Verification</span>
             </button>
 
             <button
@@ -156,7 +177,7 @@ export default function AdminScannerPage({
                 color: mode === 'checkin' ? '#FFFFFF' : 'var(--text-secondary)',
               }}
             >
-              <span>3.10 Event Attendance Check-In</span>
+              <span>Event Attendance Check-In</span>
             </button>
           </div>
 

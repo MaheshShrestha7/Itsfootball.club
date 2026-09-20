@@ -255,7 +255,7 @@ export default function AdminHeroSliderPage({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
             <span className="badge badge-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Sparkles size={12} />
-              <span>HERO SLIDER SPOTLIGHT • 3.12</span>
+              <span>HERO SLIDER SPOTLIGHT</span>
             </span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {pinnedItems.length} items pinned ({activePinned.length} active)

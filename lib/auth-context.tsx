@@ -75,32 +75,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    let isMounted = true;
+
     const initAuth = async () => {
-      // 1. If Supabase is connected, check real Supabase Auth session
+      // 1. If Supabase is connected, check real Supabase Auth session with safety timeout
       if (isSupabaseConfigured) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          const { data } = await supabase.auth.getSession();
-          if (data.session?.user) {
-            const authUser = data.session.user;
-            setUser({
-              id: authUser.id,
-              email: authUser.email || '',
-              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Member',
-              avatar_url: authUser.user_metadata?.avatar_url,
-              club_roles: authUser.user_metadata?.club_roles || { all: 'owner' },
-              created_at: authUser.created_at,
-            });
-            setIsLoading(false);
-            return;
+        try {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            // Guard with a 1500ms timeout so network latency never hangs the app
+            const sessionPromise = supabase.auth.getSession();
+            const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+              setTimeout(() => resolve({ data: { session: null } }), 1500)
+            );
+            const { data } = await Promise.race([sessionPromise, timeoutPromise]);
+            if (data?.session?.user && isMounted) {
+              const authUser = data.session.user;
+              setUser({
+                id: authUser.id,
+                email: authUser.email || '',
+                full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Member',
+                avatar_url: authUser.user_metadata?.avatar_url,
+                club_roles: authUser.user_metadata?.club_roles || { all: 'owner' },
+                created_at: authUser.created_at,
+              });
+              setIsLoading(false);
+              return;
+            }
           }
+        } catch (supabaseErr) {
+          console.warn('Supabase session lookup skipped/failed:', supabaseErr);
         }
       }
 
       // 2. Local session engine check
       try {
         const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (saved) {
+        if (saved && isMounted) {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.email) {
             setUser(parsed);
@@ -109,11 +120,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn('Could not restore auth session', err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     initAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync session across browser tabs

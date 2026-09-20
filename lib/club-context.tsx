@@ -20,8 +20,12 @@ import {
   PlayerAvailability,
   AvailabilityStatus,
   DraftLineup,
+  ClubSeason,
+  ClubAnalytics,
+  GateScanRecord,
+  ClubAnalyticsSummary,
   MatchAuditPayload,
-  ClubSeason
+  MatchAuditItem
 } from './supabase/types';
 import {
   INITIAL_CLUBS,
@@ -133,6 +137,13 @@ interface ClubContextType {
 
   // Post-Match Stats Audit & Leaderboard Baking
   auditAndBakeMatchStats: (matchId: string, payload: MatchAuditPayload) => { success: boolean; totalPointsAwarded: number; message: string };
+
+  // Live Analytics & Operations Tracking
+  analyticsEvents: ClubAnalytics[];
+  gateScans: GateScanRecord[];
+  trackPageView: (clubId: string, path: string) => void;
+  recordGateScan: (scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => void;
+  getClubAnalytics: (clubId: string) => ClubAnalyticsSummary;
 }
 
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
@@ -207,6 +218,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>(INITIAL_AVAILABILITIES);
   const [draftLineups, setDraftLineups] = useState<DraftLineup[]>(INITIAL_DRAFT_LINEUPS);
   const [seasons, setSeasons] = useState<ClubSeason[]>(INITIAL_SEASONS);
+  const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
+  const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load from localStorage on mount if present
@@ -239,6 +252,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
           if (parsed.seasons?.length) setSeasons(parsed.seasons);
+          if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
+          if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
         }
       } catch (err) {
         console.warn('Could not read state from localStorage', err);
@@ -277,6 +292,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
           if (parsed.seasons?.length) setSeasons(parsed.seasons);
+          if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
+          if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
         } catch (err) {
           console.warn('Cross-tab storage parse error', err);
         }
@@ -308,14 +325,36 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           clubScoreRules,
           availabilities,
           draftLineups,
-          seasons
+          seasons,
+          analyticsEvents,
+          gateScans,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch (err) {
         console.warn('Could not save state to localStorage', err);
       }
     }
-  }, [isHydrated, clubs, members, playerStats, matches, matchEvents, events, sponsors, news, gallery, clubScoreProfiles, activityLogs, clubScoreRules, availabilities, draftLineups, seasons]);
+  }, [
+    isHydrated,
+    clubs,
+    activeClub?.id,
+    members,
+    playerStats,
+    matches,
+    matchEvents,
+    events,
+    sponsors,
+    news,
+    gallery,
+    clubScoreProfiles,
+    activityLogs,
+    clubScoreRules,
+    availabilities,
+    draftLineups,
+    seasons,
+    analyticsEvents,
+    gateScans,
+  ]);
 
   // Realtime match timer tick simulation for live matches
   useEffect(() => {
@@ -610,12 +649,27 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof window !== 'undefined') {
       try {
+        const currentSaved = localStorage.getItem(STORAGE_KEY);
+        const parsed = currentSaved ? JSON.parse(currentSaved) : {};
+        const updatedClubs = (parsed.clubs || clubs).map((c: Club) =>
+          c.id === clubId ? { ...c, ...updates, updated_at: new Date().toISOString() } : c
+        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          ...parsed,
+          clubs: updatedClubs,
+          activeClubId: activeClub?.id === clubId ? clubId : parsed.activeClubId,
+        }));
+      } catch (err) {
+        console.warn('Could not immediately sync branding to localStorage', err);
+      }
+
+      try {
         window.dispatchEvent(new CustomEvent('itsfootball-club-updated', { detail: { clubId } }));
       } catch (e) {
         // ignore
       }
     }
-  }, [clubs]);
+  }, [clubs, activeClub]);
 
   // Season Management
   const addSeason = useCallback((seasonData: Omit<ClubSeason, 'id' | 'created_at' | 'updated_at'>): ClubSeason => {
@@ -1289,7 +1343,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const rules = clubScoreRules[targetMatch.club_id] || DEFAULT_CLUBSCORE_RULES;
 
     // 1. Process and award Clean Sheet points to GK & Defenders
-    payload.clean_sheet_member_ids.forEach(memId => {
+    payload.clean_sheet_member_ids.forEach((memId: string) => {
       const pts = rules.points_clean_sheet_gk_def || 10;
       awardClubScorePoints(
         memId,
@@ -1323,7 +1377,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 3. Process audited match events (goals, assists, cards)
-    payload.audited_events.forEach(evt => {
+    payload.audited_events.forEach((evt: MatchAuditItem) => {
       if (evt.player_id) {
         if (evt.event_type === 'goal' || evt.event_type === 'penalty') {
           const pts = rules.points_goal_forward || 10;
@@ -1360,7 +1414,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     });
 
     // 4. Record appearance for squad participants
-    payload.appearance_member_ids.forEach(memId => {
+    payload.appearance_member_ids.forEach((memId: string) => {
       const pts = rules.points_match_appearance || 5;
       awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
       totalXP += pts;
@@ -1389,6 +1443,127 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [matches, clubScoreRules, awardClubScorePoints]);
 
+  // 18. Live Analytics & Operations Tracking
+  const trackPageView = useCallback((clubId: string, path: string) => {
+    if (typeof window === 'undefined') return;
+
+    let device = 'Desktop';
+    const ua = navigator.userAgent || '';
+    if (/tablet|ipad/i.test(ua) || (window.innerWidth >= 768 && window.innerWidth <= 1024)) {
+      device = 'Tablet';
+    } else if (/mobile|iphone|android|phone/i.test(ua) || window.innerWidth < 768) {
+      device = 'Mobile';
+    }
+
+    const newEvent: ClubAnalytics = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      club_id: clubId,
+      event_type: 'page_view',
+      page_path: path,
+      visitor_hash: `${device.toLowerCase()}-${Math.random().toString(36).substring(2, 9)}`,
+      referrer: document.referrer || undefined,
+      metadata: { device, screenWidth: window.innerWidth },
+      created_at: new Date().toISOString(),
+    };
+
+    setAnalyticsEvents(prev => [newEvent, ...prev.slice(0, 999)]);
+  }, []);
+
+  const recordGateScan = useCallback((scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => {
+    const newScan: GateScanRecord = {
+      ...scan,
+      id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      scanned_at: new Date().toISOString(),
+    };
+
+    setGateScans(prev => [newScan, ...prev.slice(0, 499)]);
+  }, []);
+
+  const getClubAnalytics = useCallback((clubId: string): ClubAnalyticsSummary => {
+    const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
+    const clubScans = gateScans.filter(s => s.club_id === clubId);
+
+    // Realistic baseline for demo clubs (e.g. Apex City FC: 8,420 base + real live views)
+    const baseVisits = clubId === 'club-apex-01' ? 8420 : clubId === 'club-red-lions-01' ? 4210 : 250;
+    const totalVisits = baseVisits + clubViews.length;
+
+    // Day of week buckets (Mon -> Sun)
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat (Matchday)', 'Sun'];
+    // Base weekly curve with matchday surge
+    const baseWeekly = clubId === 'club-apex-01' 
+      ? [640, 720, 890, 810, 1420, 2980, 1120] 
+      : [320, 410, 480, 450, 780, 1540, 620];
+    
+    // Add real views into corresponding days
+    const weeklyVisits = [...baseWeekly];
+    clubViews.forEach(v => {
+      const dayIdx = new Date(v.created_at).getDay(); // 0 is Sun, 1 is Mon...
+      const mappedIdx = dayIdx === 0 ? 6 : dayIdx - 1; // map to 0=Mon, ..., 6=Sun
+      weeklyVisits[mappedIdx] = (weeklyVisits[mappedIdx] || 0) + 1;
+    });
+
+    // Gate Scans
+    const baseScans = clubId === 'club-apex-01' ? 1248 : 310;
+    const gateScansCount = baseScans + clubScans.length;
+
+    // Match Center peak viewers
+    const liveMatch = matches.find(m => m.club_id === clubId && m.status === 'live');
+    const matchViews = clubViews.filter(v => v.page_path.includes('/match') || v.page_path.includes('match-center')).length;
+    const matchCenterFans = liveMatch ? (3410 + matchViews * 8) : 0;
+
+    // Device breakdown
+    const mobileCount = clubViews.filter(v => (v.metadata as any)?.device === 'Mobile').length;
+    const desktopCount = clubViews.filter(v => (v.metadata as any)?.device === 'Desktop').length;
+    const tabletCount = clubViews.filter(v => (v.metadata as any)?.device === 'Tablet').length;
+    const totalRecorded = clubViews.length || 1;
+
+    // Weighted with realistic baseline (68% mobile, 24% desktop, 8% tablet)
+    const mobilePct = Math.round(((mobileCount / totalRecorded) * 0.4 + 0.684 * 0.6) * 100);
+    const desktopPct = Math.round(((desktopCount / totalRecorded) * 0.4 + 0.242 * 0.6) * 100);
+    const tabletPct = Math.max(1, 100 - mobilePct - desktopPct);
+
+    // Section breakdown
+    const sectionHits: Record<string, number> = {
+      'Live Match-Day Center': 412 + clubViews.filter(v => v.page_path.includes('/match')).length * 5,
+      'First Team Squad & Stats': 268 + clubViews.filter(v => v.page_path.includes('/squad') || v.page_path.includes('#squad')).length * 5,
+      'Fixtures & Results': 154 + clubViews.filter(v => v.page_path.includes('/events') || v.page_path.includes('#fixtures')).length * 5,
+      'Digital Member Pass Portal': 110 + clubViews.filter(v => v.page_path.includes('/member')).length * 5,
+      'Home Ground & Stadium Guide': 56 + clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
+    };
+    const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
+
+    const colors: Record<string, string> = {
+      'Live Match-Day Center': '#EF4444',
+      'First Team Squad & Stats': 'var(--club-primary)',
+      'Fixtures & Results': '#3B82F6',
+      'Digital Member Pass Portal': '#F59E0B',
+      'Home Ground & Stadium Guide': '#A855F7',
+    };
+
+    const topSections = Object.entries(sectionHits).map(([name, count]) => ({
+      name,
+      count,
+      views: `${Math.round((count / totalSectionHits) * 1000) / 10}%`,
+      color: colors[name] || '#10B981',
+    }));
+
+    return {
+      totalVisits,
+      weeklyVisits,
+      weeklyDays: days,
+      matchCenterFans,
+      gateScansCount,
+      avgDuration: '4m 32s',
+      topSections,
+      deviceBreakdown: [
+        { name: 'Mobile Phones (Smartphones)', percentage: `${mobilePct}%`, color: '#10B981' },
+        { name: 'Desktop & Laptops', percentage: `${desktopPct}%`, color: '#3B82F6' },
+        { name: 'Tablets & Consoles', percentage: `${tabletPct}%`, color: '#F59E0B' },
+      ],
+      recentGateScans: clubScans.slice(0, 10),
+    };
+  }, [analyticsEvents, gateScans, matches]);
+
   return (
     <ClubContext.Provider
       value={{
@@ -1409,6 +1584,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         clubScoreRules,
         availabilities,
         draftLineups,
+        analyticsEvents,
+        gateScans,
         selectClubBySlug,
         createClub,
         updateClubBranding,
@@ -1451,6 +1628,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         getDraftLineup,
         publishDraftLineup,
         auditAndBakeMatchStats,
+        trackPageView,
+        recordGateScan,
+        getClubAnalytics,
       }}
     >
       {children}

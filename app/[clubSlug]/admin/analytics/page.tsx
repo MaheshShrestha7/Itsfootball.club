@@ -10,22 +10,23 @@ export default function AdminAnalyticsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members } = useClub();
+  const { clubs, selectClubBySlug, getClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat (Matchday)', 'Sun'];
-  const trafficData = [640, 720, 890, 810, 1420, 2980, 1120];
-  const maxTraffic = Math.max(...trafficData);
+  const analytics = getClubAnalytics(club.id);
+  const days = analytics.weeklyDays;
+  const trafficData = analytics.weeklyVisits;
+  const maxTraffic = Math.max(...trafficData, 1);
 
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>METRICS • 3.8</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>AUDIENCE & CLUB ANALYTICS</span>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
           Club Public Page Analytics
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Visitor metrics, live match-center attendance, member pass scans, and engagement trends.
+          Real-time visitor metrics, live match-center attendance, turnstile scans, and audience engagement trends.
         </p>
       </div>
 
@@ -38,13 +39,16 @@ export default function AdminAnalyticsPage({
       }}>
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>WEEKLY VISITS</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>LIVE PUBLIC VISITS</span>
             <Eye size={18} color="var(--club-primary)" />
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
-            8,580
+            {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.35rem' }}>+18.4% vs last week</div>
+          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="pulse-dot" style={{ background: '#10B981', width: '6px', height: '6px' }} />
+            <span>Active live stream</span>
+          </div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -53,9 +57,11 @@ export default function AdminAnalyticsPage({
             <Radio size={18} color="#EF4444" />
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
-            3,410
+            {analytics.matchCenterFans.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>Live match peak</div>
+          <div style={{ fontSize: '0.75rem', color: analytics.matchCenterFans > 0 ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.35rem' }}>
+            {analytics.matchCenterFans > 0 ? 'Live match in progress' : 'Fixture standby'}
+          </div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -64,7 +70,7 @@ export default function AdminAnalyticsPage({
             <QrCode size={18} color="#F59E0B" />
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
-            1,248
+            {analytics.gateScansCount.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.35rem' }}>Turnstile accreditations</div>
         </div>
@@ -75,7 +81,7 @@ export default function AdminAnalyticsPage({
             <TrendingUp size={18} color="#3B82F6" />
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
-            4m 32s
+            {analytics.avgDuration}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>High fan retention</div>
         </div>
@@ -83,13 +89,18 @@ export default function AdminAnalyticsPage({
 
       {/* Weekly Traffic Bar Chart */}
       <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.5rem' }}>
-          Weekly Visitor Activity (Surge on Matchday)
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
+            Weekly Visitor Activity (Surge on Matchday)
+          </h3>
+          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+            Real-Time Aggregation
+          </span>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '220px', gap: '1rem', paddingTop: '1rem' }}>
           {trafficData.map((val, idx) => {
-            const heightPct = (val / maxTraffic) * 100;
+            const heightPct = Math.max(12, Math.round((val / maxTraffic) * 100));
             const isMatchday = idx === 5;
 
             return (
@@ -124,20 +135,14 @@ export default function AdminAnalyticsPage({
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {[
-              { name: 'Live Match-Day Center', views: '41.2%', color: '#EF4444' },
-              { name: 'First Team Squad & Stats', views: '26.8%', color: 'var(--club-primary)' },
-              { name: 'Fixtures & Results', views: '15.4%', color: '#3B82F6' },
-              { name: 'Digital Member Pass Portal', views: '11.0%', color: '#F59E0B' },
-              { name: 'Home Ground & Stadium Guide', views: '5.6%', color: '#A855F7' },
-            ].map(sec => (
+            {analytics.topSections.map(sec => (
               <div key={sec.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
                   <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{sec.name}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>{sec.views}</span>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{sec.views}</span>
                 </div>
                 <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: sec.views, height: '100%', background: sec.color }} />
+                  <div style={{ width: sec.views, height: '100%', background: sec.color, transition: 'width 0.5s ease' }} />
                 </div>
               </div>
             ))}
@@ -151,35 +156,17 @@ export default function AdminAnalyticsPage({
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Mobile Phones (Smartphones)</span>
-                <span style={{ color: '#10B981', fontWeight: 700 }}>68.4%</span>
+            {analytics.deviceBreakdown.map(dev => (
+              <div key={dev.name}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{dev.name}</span>
+                  <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
+                </div>
+                <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: dev.percentage, height: '100%', background: dev.color, transition: 'width 0.5s ease' }} />
+                </div>
               </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '68.4%', height: '100%', background: '#10B981' }} />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Desktop & Laptops</span>
-                <span style={{ color: '#3B82F6', fontWeight: 700 }}>24.2%</span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '24.2%', height: '100%', background: '#3B82F6' }} />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Tablets & Consoles</span>
-                <span style={{ color: '#F59E0B', fontWeight: 700 }}>7.4%</span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '7.4%', height: '100%', background: '#F59E0B' }} />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

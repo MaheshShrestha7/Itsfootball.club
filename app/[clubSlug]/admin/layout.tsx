@@ -64,25 +64,58 @@ export default function AdminLayout({
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
 
-  const navItems = [
-    { label: '3.11 Admin Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
-    { label: '🗓️ Season Management', href: `/${club.slug}/admin/seasons`, icon: CalendarDays, badge: activeSeason?.name },
-    { label: '3.1 Interface & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
-    { label: '⭐ Hero Slider Pins', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
-    { label: '3.2 Live Match Controller', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
-    { label: '📋 Draft Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
-    { label: '⏱️ Pre-Match Availability', href: `/${club.slug}/availability`, icon: UserCheck },
-    { label: '3.3 Club Events', href: `/${club.slug}/admin/events`, icon: Calendar },
-    { label: '3.4 Squad & Members', href: `/${club.slug}/admin/squad`, icon: Users },
-    { label: '🏆 ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Trophy },
-    { label: '3.5 Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
-    { label: '3.6 Club Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
-    { label: '3.7 Content CMS', href: `/${club.slug}/admin/content`, icon: FileText },
-    { label: '3.8 Public Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
-    { label: '3.9 & 3.10 QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
+  interface NavItem {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+    badge?: string;
+  }
+
+  interface NavSection {
+    title: string;
+    items: NavItem[];
+  }
+
+  const navSections: NavSection[] = [
+    {
+      title: 'Overview',
+      items: [
+        { label: 'Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: 'Matchday Operations',
+      items: [
+        { label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
+        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
+        { label: 'Player Availability', href: `/${club.slug}/availability`, icon: UserCheck },
+        { label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
+        { label: 'Events & Fixtures', href: `/${club.slug}/admin/events`, icon: Calendar },
+      ],
+    },
+    {
+      title: 'Squad & Governance',
+      items: [
+        { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
+        { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
+        { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: CalendarDays, badge: activeSeason?.name },
+        { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Trophy },
+      ],
+    },
+    {
+      title: 'Brand & Media',
+      items: [
+        { label: 'Interface & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
+        { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
+        { label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
+        { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
+        { label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
+      ],
+    },
   ];
 
-  const currentNavItem = navItems.find(item => item.href === pathname);
+  const allNavItems = navSections.flatMap(s => s.items);
+  const currentNavItem = allNavItems.find(item => item.href === pathname);
 
   const renderSidebarContent = (onItemClick?: () => void) => (
     <>
@@ -93,9 +126,9 @@ export default function AdminLayout({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '0.75rem',
-          background: 'rgba(0,0,0,0.3)',
+          background: 'rgba(0,0,0,0.35)',
           borderRadius: 'var(--radius-md)',
-          marginBottom: '1.5rem',
+          marginBottom: '1.25rem',
           border: '1px solid var(--border-subtle)',
         }}>
           <img
@@ -113,49 +146,75 @@ export default function AdminLayout({
           </div>
         </div>
 
-        {/* Nav Items */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          {navItems.map(item => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onItemClick}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)',
-                  color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
-                  background: isActive ? 'var(--club-primary)' : 'transparent',
-                  fontWeight: isActive ? 700 : 500,
-                  fontSize: '0.85rem',
-                  transition: 'all 0.15s',
-                  minHeight: '44px',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Icon size={16} color={isActive ? '#FFFFFF' : 'var(--text-muted)'} />
-                  <span>{item.label}</span>
+        {/* Categorized Nav Sections */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {navSections.map(section => (
+            <div key={section.title}>
+              {section.title !== 'Overview' && (
+                <div style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: 'var(--text-muted)',
+                  padding: '0.2rem 0.65rem 0.4rem 0.65rem',
+                }}>
+                  {section.title}
                 </div>
-                {item.badge && (
-                  <span className="badge badge-live" style={{ fontSize: '0.6rem', padding: '0.15rem 0.45rem' }}>
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {section.items.map(item => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onItemClick}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.6rem 0.85rem',
+                        borderRadius: 'var(--radius-sm)',
+                        color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                        border: isActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                        boxShadow: isActive ? 'inset 3px 0 0 var(--club-primary)' : 'none',
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: '0.85rem',
+                        transition: 'all 0.15s ease',
+                        minHeight: '42px',
+                      }}
+                      onMouseEnter={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                          e.currentTarget.style.color = '#FFFFFF';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-secondary)';
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <Icon size={16} color={isActive ? 'var(--club-primary)' : 'var(--text-muted)'} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="badge badge-live" style={{ fontSize: '0.6rem', padding: '0.15rem 0.45rem' }}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
 
