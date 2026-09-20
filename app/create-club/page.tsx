@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { useClub, validateClubSlug } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
@@ -26,6 +27,7 @@ import {
 export default function CreateClubPage() {
   const router = useRouter();
   const { clubs, createClub } = useClub();
+  const { user, assignClubRole } = useAuth();
 
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -138,8 +140,14 @@ export default function CreateClubPage() {
       setStep(1);
       return;
     }
-    const newClub = createClub(formData);
-    router.push(`/${newClub.slug}`);
+    const newClub = createClub({
+      ...formData,
+      owner_id: user?.id,
+    });
+    if (user) {
+      assignClubRole(newClub.id, 'owner');
+    }
+    router.push('/my-clubs');
   };
 
   return (

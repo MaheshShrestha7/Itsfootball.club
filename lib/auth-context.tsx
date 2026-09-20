@@ -60,6 +60,7 @@ interface AuthContextType {
   getUserRoleForClub: (clubId: string) => ClubRole | null;
   hasClubAdminAccess: (clubId: string) => boolean;
   loginDemoUser: (role: 'owner' | 'player' | 'supporter') => void;
+  assignClubRole: (clubId: string, role: ClubRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -157,36 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Please enter a valid email address.' };
     }
 
-    // 1. Supabase integration if configured
-    if (isSupabaseConfigured && password) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        if (data.user) {
-          const authUser = data.user;
-          const userObj: UserProfile = {
-            id: authUser.id,
-            email: authUser.email || trimmedEmail,
-            full_name: authUser.user_metadata?.full_name || trimmedEmail.split('@')[0],
-            avatar_url: authUser.user_metadata?.avatar_url,
-            club_roles: authUser.user_metadata?.club_roles || { all: 'owner' },
-            created_at: authUser.created_at,
-          };
-          persistUser(userObj);
-          return { success: true };
-        }
-      }
-    }
-
-    // 2. Demo Persona lookup
+    // 1. Demo Persona lookup first for immediate testing
     if (trimmedEmail.includes('admin') || trimmedEmail.includes('vance') || trimmedEmail.includes('owner')) {
       persistUser(DEMO_PERSONAS.owner);
       return { success: true };
@@ -197,14 +169,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
 
-    // Default registered user
+    // 2. Supabase integration if configured
+    if (isSupabaseConfigured && password) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: trimmedEmail,
+            password,
+          });
+
+          if (!error && data.user) {
+            const authUser = data.user;
+            const userObj: UserProfile = {
+              id: authUser.id,
+              email: authUser.email || trimmedEmail,
+              full_name: authUser.user_metadata?.full_name || trimmedEmail.split('@')[0],
+              avatar_url: authUser.user_metadata?.avatar_url,
+              club_roles: authUser.user_metadata?.club_roles || {},
+              created_at: authUser.created_at,
+            };
+            persistUser(userObj);
+            return { success: true };
+          }
+        } catch (err) {
+          console.warn('Supabase sign-in fallback:', err);
+        }
+      }
+    }
+
+    // 3. Default registered local user
     const defaultUser: UserProfile = {
       id: `user-${Date.now()}`,
       email: trimmedEmail,
       full_name: trimmedEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      club_roles: {
-        all: 'owner', // In local environment, newly authenticated accounts hold administrative authority
-      },
+      club_roles: {},
       created_at: new Date().toISOString(),
     };
 
@@ -222,31 +221,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured && password) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { data, error } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim(),
-              club_roles: { all: 'owner' },
-            },
-          },
-        });
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        if (data.user) {
-          const userObj: UserProfile = {
-            id: data.user.id,
+        try {
+          const { data, error } = await supabase.auth.signUp({
             email: trimmedEmail,
-            full_name: fullName.trim(),
-            club_roles: { all: 'owner' },
-            created_at: new Date().toISOString(),
-          };
-          persistUser(userObj);
-          return { success: true };
+            password,
+            options: {
+              data: {
+                full_name: fullName.trim(),
+                club_roles: {},
+              },
+            },
+          });
+
+          if (!error && data.user) {
+            const userObj: UserProfile = {
+              id: data.user.id,
+              email: trimmedEmail,
+              full_name: fullName.trim(),
+              club_roles: {},
+              created_at: new Date().toISOString(),
+            };
+            persistUser(userObj);
+            return { success: true };
+          }
+        } catch (err) {
+          console.warn('Supabase sign-up fallback:', err);
         }
       }
     }
@@ -255,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: `user-${Date.now()}`,
       email: trimmedEmail,
       full_name: fullName.trim(),
-      club_roles: { all: 'owner' },
+      club_roles: {},
       created_at: new Date().toISOString(),
     };
 
@@ -291,6 +290,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return role === 'owner' || role === 'admin';
   }, [user, getUserRoleForClub]);
 
+  // Assign or claim role for a club in user's active session profile
+  const assignClubRole = useCallback((clubId: string, role: ClubRole) => {
+    if (!user) return;
+    const updatedUser: UserProfile = {
+      ...user,
+      club_roles: {
+        ...user.club_roles,
+        [clubId]: role,
+      },
+    };
+    persistUser(updatedUser);
+  }, [user, persistUser]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -303,6 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getUserRoleForClub,
         hasClubAdminAccess,
         loginDemoUser,
+        assignClubRole,
       }}
     >
       {children}

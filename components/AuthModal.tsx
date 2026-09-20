@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
@@ -8,9 +9,11 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'signup';
+  redirectTo?: string;
 }
 
-export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redirectTo = '/my-clubs' }: AuthModalProps) {
+  const router = useRouter();
   const { login, signup } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
 
@@ -34,6 +37,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
           setErrorMsg(res.error || 'Failed to sign in. Please verify credentials.');
         } else {
           onClose();
+          if (redirectTo) {
+            window.location.href = redirectTo;
+          }
         }
       } else {
         const res = await signup(email, fullName, password);
@@ -41,6 +47,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
           setErrorMsg(res.error || 'Failed to register account.');
         } else {
           onClose();
+          if (redirectTo) {
+            window.location.href = redirectTo;
+          }
         }
       }
     } catch (err: any) {

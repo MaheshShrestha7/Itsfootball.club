@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
+import AuthModal from '@/components/AuthModal';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import {
   Shield,
   Radio,
@@ -18,11 +20,16 @@ import {
   CheckCircle,
   ExternalLink,
   Zap,
-  Globe
+  Globe,
+  User
 } from 'lucide-react';
 
 export default function PlatformHomePage() {
   const { clubs, matches } = useClub();
+  const { user, isAuthenticated } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
   const featuredClub = clubs[0];
   const liveMatches = matches.filter(m => m.status === 'live');
   const liveMatchClub = liveMatches[0] ? (clubs.find(c => c.id === liveMatches[0].club_id) || featuredClub) : null;
@@ -97,25 +104,88 @@ export default function PlatformHomePage() {
 
           <div style={{
             display: 'flex',
-            flexWrap: 'wrap',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '1rem',
             marginBottom: '4rem',
           }}>
-            <Link href="/create-club" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Zap size={20} />
-              <span>Create Your Club</span>
-            </Link>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem',
+            }}>
+              {isAuthenticated && user ? (
+                <>
+                  <Link href="/my-clubs" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Shield size={20} />
+                    <span>Go to My Clubs ({user.full_name.split(' ')[0]})</span>
+                  </Link>
 
-            <Link
-              href={`/${featuredClub?.slug || 'clubs'}`}
-              className="btn btn-secondary btn-lg"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-            >
-              <span>Tour {featuredClub?.name || 'Featured Club'}</span>
-              <ArrowRight size={18} />
-            </Link>
+                  <Link href="/create-club" className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Zap size={18} />
+                    <span>Launch Another Club</span>
+                  </Link>
+
+                  <Link
+                    href={`/${featuredClub?.slug || 'clubs'}`}
+                    className="btn btn-secondary btn-lg"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                  >
+                    <span>Tour {featuredClub?.name || 'Featured Club'}</span>
+                    <ArrowRight size={18} />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/create-club" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Zap size={20} />
+                    <span>Create Your Club</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}
+                    className="btn btn-secondary btn-lg"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                  >
+                    <User size={18} />
+                    <span>Sign In to Your Club</span>
+                  </button>
+
+                  <Link
+                    href={`/${featuredClub?.slug || 'clubs'}`}
+                    className="btn btn-secondary btn-lg"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                  >
+                    <span>Tour {featuredClub?.name || 'Featured Club'}</span>
+                    <ArrowRight size={18} />
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {!isAuthenticated && (
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
+                Already manage a club?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}
+                  style={{ background: 'none', border: 'none', color: '#10B981', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  Sign in
+                </button>
+                {' '}or{' '}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}
+                  style={{ background: 'none', border: 'none', color: '#10B981', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  register an account
+                </button>
+                {' '}to open your club dashboard.
+              </div>
+            )}
           </div>
 
           {/* Quick Pillar Grid */}
@@ -449,6 +519,13 @@ export default function PlatformHomePage() {
           </div>
         </div>
       </section>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authMode}
+        redirectTo="/my-clubs"
+      />
 
       <Footer />
     </div>

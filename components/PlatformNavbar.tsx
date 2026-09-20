@@ -154,7 +154,27 @@ export default function PlatformNavbar() {
 
           {/* Auth Status / Sign In Trigger */}
           {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Link
+                href="/my-clubs"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  color: '#10B981',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Shield size={15} color="#10B981" />
+                <span>My Clubs</span>
+              </Link>
+
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -270,6 +290,28 @@ export default function PlatformNavbar() {
 
               {/* Navigation Links */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.75rem' }}>
+                {isAuthenticated && user && (
+                  <Link
+                    href="/my-clubs"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    <Shield size={18} color="#10B981" />
+                    <span>My Clubs</span>
+                  </Link>
+                )}
+
                 <Link
                   href="/clubs"
                   onClick={() => setMobileDrawerOpen(false)}

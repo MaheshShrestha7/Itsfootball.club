@@ -46,6 +46,7 @@ export interface HeroSliderPinnedItem {
 
 export interface Club {
   id: string;
+  owner_id?: string;
   slug: string;
   name: string;
   short_name: string;

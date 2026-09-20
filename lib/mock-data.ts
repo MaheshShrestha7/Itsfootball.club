@@ -25,6 +25,7 @@ import {
 export const INITIAL_CLUBS: Club[] = [
   {
     id: 'club-apex-01',
+    owner_id: 'user-elena-vance-admin',
     slug: 'apex-city-fc',
     name: 'Apex City FC',
     short_name: 'ACFC',

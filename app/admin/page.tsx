@@ -10,9 +10,8 @@ export default function AdminRootRedirect() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    const targetSlug = activeClub?.slug || clubs[0]?.slug || 'apex-city-fc';
-    router.replace(`/${targetSlug}/admin`);
-  }, [router, isHydrated, activeClub?.slug, clubs]);
+    router.replace('/my-clubs');
+  }, [router, isHydrated]);
 
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>

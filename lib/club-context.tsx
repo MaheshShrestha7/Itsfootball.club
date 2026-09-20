@@ -357,6 +357,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     const newClub: Club = {
       id: clubId,
+      owner_id: clubData.owner_id,
       slug: finalSlug,
       name: cleanName,
       short_name: sanitizeText(clubData.short_name) || cleanName.substring(0, 3).toUpperCase(),
