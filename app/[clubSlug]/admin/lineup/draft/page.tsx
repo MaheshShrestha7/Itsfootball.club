@@ -485,7 +485,7 @@ export default function DraftLineupPage() {
         </div>
 
         {/* Workbench Layout: Pitch on Left, Bench & Availability Drawer on Right */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '1.75rem', alignItems: 'start' }}>
+        <div className="lineup-workbench-layout" style={{ display: 'grid', gap: '1.75rem', alignItems: 'start' }}>
           
           {/* Tactical Pitch Sandbox */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -498,6 +498,8 @@ export default function DraftLineupPage() {
                 primaryColor={club.primary_color}
                 isEditable={true}
                 teamName={activeMatch.home_team_name}
+                orientation="vertical"
+                allowOrientationToggle={true}
                 onSaveFormation={handleSaveDraft}
                 onSwapWithBench={pitchPlayerId => setSwappingPitchPlayerId(pitchPlayerId)}
                 onPlayerDropReplace={handlePlayerDropReplace}

@@ -15,7 +15,9 @@ import {
   Crosshair,
   User,
   Flame,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 
 export interface PlayerDragPayload {
@@ -40,6 +42,8 @@ export interface TacticalPitchProps {
   teamName?: string;
   onSwapWithBench?: (pitchPlayerId: string) => void;
   onPlayerDropReplace?: (targetPitchPosId: string, source: PlayerDragPayload) => void;
+  orientation?: 'vertical' | 'horizontal';
+  allowOrientationToggle?: boolean;
 }
 
 // Standard preset formation configurations grouped by match format
@@ -264,7 +268,21 @@ export default function TacticalPitch({
   teamName,
   onSwapWithBench,
   onPlayerDropReplace,
+  orientation,
+  allowOrientationToggle = true,
 }: TacticalPitchProps) {
+  // Orientation state (portrait/vertical optimized for mobile devices)
+  const [isVertical, setIsVertical] = useState<boolean>(() => {
+    if (orientation !== undefined) return orientation === 'vertical';
+    return false;
+  });
+
+  useEffect(() => {
+    if (orientation !== undefined) {
+      setIsVertical(orientation === 'vertical');
+    }
+  }, [orientation]);
+
   // Helper to determine active format
   const detectFormat = (fName: string, propFormat?: MatchFormat): MatchFormat => {
     if (propFormat) return propFormat;
@@ -465,8 +483,19 @@ export default function TacticalPitch({
     if (!draggingPlayerId || !pitchRef.current) return;
 
     const rect = pitchRef.current.getBoundingClientRect();
-    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
-    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    let rawX: number;
+    let rawY: number;
+
+    if (isVertical) {
+      // In vertical orientation:
+      // Screen X relates to lateral pitch position Y (0% left touchline -> 100% right touchline)
+      // Screen Y relates to longitudinal pitch position X (0% bottom defending goal -> 100% top attacking goal)
+      rawY = ((e.clientX - rect.left) / rect.width) * 100;
+      rawX = 100 - (((e.clientY - rect.top) / rect.height) * 100);
+    } else {
+      rawX = ((e.clientX - rect.left) / rect.width) * 100;
+      rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    }
 
     // Pitch constraints: 5% <= X <= 95%, 8% <= Y <= 92%
     const clampedX = Math.round(Math.max(5, Math.min(95, rawX)) * 10) / 10;
@@ -558,11 +587,19 @@ export default function TacticalPitch({
     let deltaX = 0;
     let deltaY = 0;
 
-    if (e.key === 'ArrowLeft') deltaX = -step;
-    else if (e.key === 'ArrowRight') deltaX = step;
-    else if (e.key === 'ArrowUp') deltaY = -step;
-    else if (e.key === 'ArrowDown') deltaY = step;
-    else return;
+    if (isVertical) {
+      if (e.key === 'ArrowUp') deltaX = step;
+      else if (e.key === 'ArrowDown') deltaX = -step;
+      else if (e.key === 'ArrowLeft') deltaY = -step;
+      else if (e.key === 'ArrowRight') deltaY = step;
+      else return;
+    } else {
+      if (e.key === 'ArrowLeft') deltaX = -step;
+      else if (e.key === 'ArrowRight') deltaX = step;
+      else if (e.key === 'ArrowUp') deltaY = -step;
+      else if (e.key === 'ArrowDown') deltaY = step;
+      else return;
+    }
 
     e.preventDefault();
 
@@ -712,6 +749,25 @@ export default function TacticalPitch({
 
         {/* Action Controls: Reset & Save */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {allowOrientationToggle && (
+            <button
+              type="button"
+              onClick={() => setIsVertical(v => !v)}
+              className="btn btn-secondary btn-sm"
+              style={{
+                padding: '0.35rem 0.65rem',
+                fontSize: '0.78rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+              title={isVertical ? "Switch to Horizontal view" : "Switch to Vertical (Mobile) view"}
+            >
+              {isVertical ? <Monitor size={13} /> : <Smartphone size={13} />}
+              <span>{isVertical ? 'Horizontal' : 'Vertical'}</span>
+            </button>
+          )}
+
           {isFreeFormMode && (
             <button
               onClick={handleResetToPreset}
@@ -772,7 +828,7 @@ export default function TacticalPitch({
       {/* THE FOOTBALL PITCH CANVAS */}
       <div
         ref={pitchRef}
-        className="tactical-pitch"
+        className={`tactical-pitch ${isVertical ? 'tactical-pitch-vertical' : ''}`}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
@@ -837,7 +893,7 @@ export default function TacticalPitch({
           textTransform: 'uppercase',
           pointerEvents: 'none',
         }}>
-          <span>Attacking Direction &rarr;</span>
+          <span>{isVertical ? 'Attacking Direction ↑' : 'Attacking Direction →'}</span>
         </div>
 
         {/* 5. Interactive Draggable Player Nodes */}
@@ -853,8 +909,8 @@ export default function TacticalPitch({
               data-posid={pos.id}
               className={`pitch-player-node ${isDragging ? 'is-dragging' : ''} ${isSelected ? 'is-selected' : ''}`}
               style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
+                left: isVertical ? `${pos.y}%` : `${pos.x}%`,
+                top: isVertical ? `${100 - pos.x}%` : `${pos.y}%`,
                 cursor: isEditable ? 'grab' : 'pointer',
               }}
               draggable={isEditable}
