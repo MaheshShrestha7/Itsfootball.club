@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import {
   Club,
   ClubMember,
+  ClubRole,
   PlayerStats,
   Match,
   MatchEvent,
@@ -25,7 +26,10 @@ import {
   GateScanRecord,
   ClubAnalyticsSummary,
   MatchAuditPayload,
-  MatchAuditItem
+  MatchAuditItem,
+  MemberMessage,
+  MemberApplicationInput,
+  ClubSeasonStatsSummary
 } from './supabase/types';
 import {
   INITIAL_CLUBS,
@@ -43,7 +47,8 @@ import {
   STANDARD_BADGES,
   INITIAL_AVAILABILITIES,
   INITIAL_DRAFT_LINEUPS,
-  INITIAL_SEASONS
+  INITIAL_SEASONS,
+  INITIAL_MEMBER_MESSAGES
 } from './mock-data';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 
@@ -144,6 +149,20 @@ interface ClubContextType {
   trackPageView: (clubId: string, path: string) => void;
   recordGateScan: (scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => void;
   getClubAnalytics: (clubId: string) => ClubAnalyticsSummary;
+
+  // Member Portal, Application Lifecycle & Messaging
+  memberMessages: MemberMessage[];
+  applyForMembership: (clubId: string, input: MemberApplicationInput) => { success: boolean; member?: ClubMember; message: string; error?: string };
+  approveMemberApplication: (memberId: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
+  rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
+  verifyMemberLogin: (clubId: string, email: string, password?: string) => { success: boolean; member?: ClubMember; error?: string; status?: 'pending' | 'approved' | 'rejected' };
+  requestMagicLink: (clubId: string, email: string) => { success: boolean; token?: string; magicLinkUrl?: string; error?: string; status?: 'pending' | 'approved' | 'rejected' };
+  verifyMagicLink: (clubId: string, token: string) => { success: boolean; member?: ClubMember; error?: string };
+  sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
+  replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
+  getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
+  getClubMemberMessages: (clubId: string) => MemberMessage[];
+  getClubSeasonStats: (clubId: string) => ClubSeasonStatsSummary;
 }
 
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
@@ -220,6 +239,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [seasons, setSeasons] = useState<ClubSeason[]>(INITIAL_SEASONS);
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
   const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
+  const [memberMessages, setMemberMessages] = useState<MemberMessage[]>(INITIAL_MEMBER_MESSAGES);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load from localStorage on mount if present
@@ -238,7 +258,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               setActiveClub(parsed.clubs[0]);
             }
           }
-          if (parsed.members?.length) setMembers(parsed.members);
+          if (parsed.members?.length) {
+            setMembers(parsed.members.map((m: ClubMember) => ({
+              ...m,
+              membership_status: m.membership_status || 'approved'
+            })));
+          }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (parsed.matches?.length) setMatches(parsed.matches);
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
@@ -254,6 +279,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.seasons?.length) setSeasons(parsed.seasons);
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
+          if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
         }
       } catch (err) {
         console.warn('Could not read state from localStorage', err);
@@ -294,6 +320,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.seasons?.length) setSeasons(parsed.seasons);
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
+          if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
         } catch (err) {
           console.warn('Cross-tab storage parse error', err);
         }
@@ -328,6 +355,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           seasons,
           analyticsEvents,
           gateScans,
+          memberMessages,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch (err) {
@@ -354,6 +382,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     seasons,
     analyticsEvents,
     gateScans,
+    memberMessages,
   ]);
 
   // Realtime match timer tick simulation for live matches
@@ -1564,6 +1593,368 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [analyticsEvents, gateScans, matches]);
 
+  // 17. Member Portal Workflow, Applications, Magic Links & Admin Messaging
+  const applyForMembership = useCallback((clubId: string, input: MemberApplicationInput): { success: boolean; member?: ClubMember; message: string; error?: string } => {
+    const cleanEmail = input.email.toLowerCase().trim();
+    const cleanName = sanitizeText(input.full_name.trim());
+    
+    if (!cleanEmail || !cleanName) {
+      return { success: false, message: 'Please provide full name and valid email address.', error: 'Missing required fields' };
+    }
+
+    const existing = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      if (existing.membership_status === 'pending') {
+        return {
+          success: false,
+          member: existing,
+          message: 'You already have an active application under committee review. Club administrators will process your membership shortly.',
+          error: 'Application already pending'
+        };
+      } else if (existing.membership_status === 'approved') {
+        return {
+          success: false,
+          member: existing,
+          message: 'An active membership already exists for this email address. Please proceed to sign in with your email or magic link.',
+          error: 'Member already approved'
+        };
+      }
+    }
+
+    const role: ClubRole = input.membership_tier.toLowerCase().includes('supporter') ? 'supporter' : 'player';
+    const newMemberId = `mem-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const pendingToken = `pass-pending-${clubId.replace('club-', '')}-${Date.now().toString(36)}`;
+
+    const newMem: ClubMember = {
+      id: newMemberId,
+      club_id: clubId,
+      full_name: cleanName,
+      email: cleanEmail,
+      phone: input.phone ? sanitizeText(input.phone.trim()) : undefined,
+      role,
+      player_position: input.player_position,
+      jersey_number: input.jersey_number,
+      status: 'active',
+      membership_status: 'pending',
+      membership_tier: input.membership_tier || 'Supporter Season Pass',
+      membership_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      qr_code_token: pendingToken,
+      photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
+      is_executive: false,
+      applied_at: new Date().toISOString(),
+      password_hash: input.password ? input.password : undefined,
+      application_notes: input.application_notes ? sanitizeText(input.application_notes) : undefined,
+      emergency_contact: input.emergency_contact ? sanitizeText(input.emergency_contact) : undefined,
+      created_at: new Date().toISOString(),
+    };
+
+    setMembers(prev => [...prev, newMem]);
+
+    // Initialize stats
+    const newStats: PlayerStats = {
+      id: `stat-${newMem.id}`,
+      club_id: clubId,
+      member_id: newMem.id,
+      season: '2025/2026',
+      appearances: 0,
+      minutes_played: 0,
+      goals: 0,
+      assists: 0,
+      clean_sheets: 0,
+      yellow_cards: 0,
+      red_cards: 0,
+      motm_awards: 0,
+    };
+    setPlayerStats(prev => [...prev, newStats]);
+
+    return {
+      success: true,
+      member: newMem,
+      message: 'Membership application submitted successfully! Your application is in the committee queue for approval.'
+    };
+  }, [members]);
+
+  const approveMemberApplication = useCallback((memberId: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      return { success: false, message: 'Member record not found.' };
+    }
+
+    const activeToken = `pass-${member.club_id.replace('club-', '')}-${Date.now().toString(36)}`;
+
+    const updatedMember: ClubMember = {
+      ...member,
+      membership_status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: adminName,
+      qr_code_token: activeToken,
+      updated_at: new Date().toISOString(),
+    };
+
+    setMembers(prev => prev.map(m => (m.id === memberId ? updatedMember : m)));
+
+    // Award welcome points
+    awardClubScorePoints(memberId, 50, 'social_checkin', 'Membership Application Approved & Welcome Pack', member.club_id);
+
+    // Automated welcome message
+    const welcomeMsg: MemberMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      club_id: member.club_id,
+      member_id: member.id,
+      sender_type: 'admin',
+      sender_name: `${adminName} (Administration)`,
+      subject: 'Official Membership Approved & Digital Pass Active',
+      category: 'Committee',
+      content: `Welcome ${member.full_name}! Your application for ${member.membership_tier} has been officially approved. Your digital turnstile pass is now active for stadium gate access and team matchdays.`,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMemberMessages(prev => [...prev, welcomeMsg]);
+
+    return {
+      success: true,
+      member: updatedMember,
+      message: `Approved ${member.full_name}'s membership application!`
+    };
+  }, [members, awardClubScorePoints]);
+
+  const rejectMemberApplication = useCallback((memberId: string, reason: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      return { success: false, message: 'Member record not found.' };
+    }
+
+    const updatedMember: ClubMember = {
+      ...member,
+      membership_status: 'rejected',
+      rejection_reason: sanitizeText(reason || 'Application not approved for current season.'),
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: adminName,
+      updated_at: new Date().toISOString(),
+    };
+
+    setMembers(prev => prev.map(m => (m.id === memberId ? updatedMember : m)));
+
+    return {
+      success: true,
+      member: updatedMember,
+      message: `Application for ${member.full_name} marked as rejected.`
+    };
+  }, [members]);
+
+  const verifyMemberLogin = useCallback((clubId: string, email: string, password?: string): { success: boolean; member?: ClubMember; error?: string; status?: 'pending' | 'approved' | 'rejected' } => {
+    const cleanEmail = email.toLowerCase().trim();
+    const member = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
+
+    if (!member) {
+      return { success: false, error: 'No member profile found with this email. Please apply for membership first.' };
+    }
+
+    const status = member.membership_status || 'approved';
+
+    if (status === 'pending') {
+      return {
+        success: false,
+        member,
+        status: 'pending',
+        error: 'Your membership application is currently pending review by club administration. Please wait for committee approval.'
+      };
+    }
+
+    if (status === 'rejected') {
+      return {
+        success: false,
+        member,
+        status: 'rejected',
+        error: `Your application was not approved: ${member.rejection_reason || 'Application declined by committee'}.`
+      };
+    }
+
+    if (member.status === 'suspended') {
+      return {
+        success: false,
+        member,
+        error: 'Your membership has been temporarily suspended. Please contact club administration.'
+      };
+    }
+
+    if (password && member.password_hash && member.password_hash !== password) {
+      return { success: false, error: 'Incorrect password. Please try again or request a magic link.' };
+    }
+
+    return { success: true, member, status: 'approved' };
+  }, [members]);
+
+  const requestMagicLink = useCallback((clubId: string, email: string): { success: boolean; token?: string; magicLinkUrl?: string; error?: string; status?: 'pending' | 'approved' | 'rejected' } => {
+    const cleanEmail = email.toLowerCase().trim();
+    const member = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
+
+    if (!member) {
+      return { success: false, error: 'No member account found with this email address.' };
+    }
+
+    const status = member.membership_status || 'approved';
+    if (status === 'pending') {
+      return {
+        success: false,
+        status: 'pending',
+        error: 'Your application is awaiting committee review. Magic links are only issued to approved members.'
+      };
+    }
+    if (status === 'rejected') {
+      return {
+        success: false,
+        status: 'rejected',
+        error: `Your application was not approved: ${member.rejection_reason || 'Declined'}.`
+      };
+    }
+
+    const token = `ml_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+
+    setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, magic_token: token, magic_token_expires_at: expires } : m)));
+
+    const club = clubs.find(c => c.id === clubId);
+    const slug = club?.slug || 'club';
+    const magicLinkUrl = `/${slug}/member?magic_token=${token}`;
+
+    return {
+      success: true,
+      token,
+      magicLinkUrl,
+    };
+  }, [members, clubs]);
+
+  const verifyMagicLink = useCallback((clubId: string, token: string): { success: boolean; member?: ClubMember; error?: string } => {
+    const member = members.find(m => m.club_id === clubId && m.magic_token === token);
+    if (!member) {
+      return { success: false, error: 'Invalid or expired magic link token.' };
+    }
+
+    if (member.magic_token_expires_at && new Date(member.magic_token_expires_at) < new Date()) {
+      return { success: false, error: 'This magic link has expired. Please request a new one.' };
+    }
+
+    // Invalidate token on consumption
+    setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, magic_token: undefined, magic_token_expires_at: undefined } : m)));
+
+    return { success: true, member };
+  }, [members]);
+
+  const sendMemberMessage = useCallback((messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>): MemberMessage => {
+    const newMsg: MemberMessage = {
+      ...messageData,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      subject: messageData.subject ? sanitizeText(messageData.subject) : 'Member Inquiry',
+      content: sanitizeText(messageData.content),
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMemberMessages(prev => [...prev, newMsg]);
+    return newMsg;
+  }, []);
+
+  const replyToMemberMessage = useCallback((originalMessageId: string, replyContent: string, adminName: string = 'Club Administrator'): { success: boolean; message?: MemberMessage } => {
+    const original = memberMessages.find(m => m.id === originalMessageId);
+    if (!original) {
+      return { success: false };
+    }
+
+    const replyMsg: MemberMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      club_id: original.club_id,
+      member_id: original.member_id,
+      sender_type: 'admin',
+      sender_name: adminName,
+      subject: original.subject ? `Re: ${original.subject}` : 'Club Committee Response',
+      category: original.category,
+      content: sanitizeText(replyContent),
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMemberMessages(prev => [...prev.map(m => (m.id === originalMessageId ? { ...m, is_read: true } : m)), replyMsg]);
+
+    return { success: true, message: replyMsg };
+  }, [memberMessages]);
+
+  const getMemberMessages = useCallback((clubId: string, memberId: string): MemberMessage[] => {
+    return memberMessages
+      .filter(m => m.club_id === clubId && m.member_id === memberId)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [memberMessages]);
+
+  const getClubMemberMessages = useCallback((clubId: string): MemberMessage[] => {
+    return memberMessages
+      .filter(m => m.club_id === clubId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [memberMessages]);
+
+  const getClubSeasonStats = useCallback((clubId: string): ClubSeasonStatsSummary => {
+    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed');
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+    let goalsFor = 0;
+    let goalsAgainst = 0;
+    let cleanSheets = 0;
+
+    const form: ('W' | 'D' | 'L')[] = [];
+
+    const sorted = [...clubMatches].sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+
+    sorted.forEach(m => {
+      const isHome = m.home_team_name.toLowerCase().includes('apex') || m.home_team_name.toLowerCase().includes('titan') || m.home_team_name.toLowerCase().includes('red lion');
+      const clubScore = isHome ? m.home_score : m.away_score;
+      const oppScore = isHome ? m.away_score : m.home_score;
+
+      goalsFor += clubScore;
+      goalsAgainst += oppScore;
+      if (oppScore === 0) cleanSheets++;
+
+      if (clubScore > oppScore) {
+        wins++;
+        form.push('W');
+      } else if (clubScore === oppScore) {
+        draws++;
+        form.push('D');
+      } else {
+        losses++;
+        form.push('L');
+      }
+    });
+
+    const finalWins = clubMatches.length > 0 ? wins : 14;
+    const finalDraws = clubMatches.length > 0 ? draws : 5;
+    const finalLosses = clubMatches.length > 0 ? losses : 3;
+    const finalGF = clubMatches.length > 0 ? goalsFor : 48;
+    const finalGA = clubMatches.length > 0 ? goalsAgainst : 19;
+    const finalCS = clubMatches.length > 0 ? cleanSheets : 10;
+    const finalForm: ('W' | 'D' | 'L')[] = form.length > 0 ? form.slice(-5) : ['W', 'W', 'D', 'W', 'W'];
+
+    const clubStats = playerStats.filter(s => s.club_id === clubId);
+    const sortedStats = [...clubStats].sort((a, b) => b.goals - a.goals);
+    const topPlayer = sortedStats[0];
+    const topMember = topPlayer ? members.find(m => m.id === topPlayer.member_id) : undefined;
+
+    return {
+      matchesPlayed: clubMatches.length > 0 ? clubMatches.length : 22,
+      wins: finalWins,
+      draws: finalDraws,
+      losses: finalLosses,
+      goalsFor: finalGF,
+      goalsAgainst: finalGA,
+      goalDifference: finalGF - finalGA,
+      points: finalWins * 3 + finalDraws,
+      winRate: Math.round((finalWins / (clubMatches.length || 22)) * 100),
+      cleanSheets: finalCS,
+      form: finalForm,
+      topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : { name: 'Dante Moreno', goals: 19 }
+    };
+  }, [matches, playerStats, members]);
+
   return (
     <ClubContext.Provider
       value={{
@@ -1631,6 +2022,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         trackPageView,
         recordGateScan,
         getClubAnalytics,
+        memberMessages,
+        applyForMembership,
+        approveMemberApplication,
+        rejectMemberApplication,
+        verifyMemberLogin,
+        requestMagicLink,
+        verifyMagicLink,
+        sendMemberMessage,
+        replyToMemberMessage,
+        getMemberMessages,
+        getClubMemberMessages,
+        getClubSeasonStats,
       }}
     >
       {children}

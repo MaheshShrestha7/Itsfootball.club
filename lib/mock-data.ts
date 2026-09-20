@@ -16,7 +16,8 @@ import {
   ClubBadge,
   PlayerAvailability,
   DraftLineup,
-  ClubSeason
+  ClubSeason,
+  MemberMessage
 } from './supabase/types';
 
 // ==============================================================================
@@ -457,6 +458,42 @@ export const INITIAL_MEMBERS: ClubMember[] = [
     qr_code_token: 'apex-player-pass-11',
     membership_tier: 'Senior Winger',
     membership_expires_at: '2026-11-30',
+    is_executive: false,
+  },
+  {
+    id: 'mem-apex-pending-01',
+    club_id: 'club-apex-01',
+    full_name: "Liam O'Connor",
+    email: 'liam.oconnor@grassrootsmail.com',
+    phone: '+1 (555) 432-8819',
+    role: 'supporter',
+    photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    status: 'active',
+    membership_status: 'pending',
+    applied_at: new Date(Date.now() - 86400000).toISOString(),
+    application_notes: 'Lifelong resident of Sector 4. Excited to support the first team and attend community matchdays.',
+    qr_code_token: 'apex-pending-liam-01',
+    membership_tier: 'Supporter Season Pass',
+    membership_expires_at: '2027-05-31',
+    is_executive: false,
+  },
+  {
+    id: 'mem-apex-pending-02',
+    club_id: 'club-apex-01',
+    full_name: 'Mateo Rossi',
+    email: 'mateo.rossi@striker.test',
+    phone: '+1 (555) 789-2144',
+    role: 'player',
+    player_position: 'ST',
+    jersey_number: 19,
+    photo_url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80',
+    status: 'active',
+    membership_status: 'pending',
+    applied_at: new Date(Date.now() - 172800000).toISOString(),
+    application_notes: 'Former varsity striker with 14 goals last season. Applying for Senior Roster trials.',
+    qr_code_token: 'apex-pending-mateo-02',
+    membership_tier: 'Senior Squad Player',
+    membership_expires_at: '2027-05-31',
     is_executive: false,
   }
 ];
@@ -1331,4 +1368,45 @@ export const INITIAL_DRAFT_LINEUPS: DraftLineup[] = [
   }
 ];
 
-
+// ==============================================================================
+// 14. MEMBER MESSAGES & ADMIN CORRESPONDENCE
+// ==============================================================================
+export const INITIAL_MEMBER_MESSAGES: MemberMessage[] = [
+  {
+    id: 'msg-01',
+    club_id: 'club-apex-01',
+    member_id: 'mem-apex-01', // Eleanor Vance
+    sender_type: 'admin',
+    sender_name: 'Apex City FC Committee',
+    subject: 'Welcome to Apex City FC Executive Board',
+    category: 'Committee',
+    content: 'Welcome Eleanor! Your executive accreditation and stadium master pass have been provisioned for the 2026/27 campaign.',
+    is_read: true,
+    created_at: '2026-08-01T10:00:00.000Z',
+  },
+  {
+    id: 'msg-02',
+    club_id: 'club-apex-01',
+    member_id: 'player-apex-01', // Julian Drake
+    sender_type: 'admin',
+    sender_name: 'Apex City FC Technical Staff',
+    subject: 'Tactical Briefing & Kit Fittings',
+    category: 'Kit & Gear',
+    content: 'Julian, reminder that new season match kits are available in the team room. Please confirm your boot sizing before Friday.',
+    is_read: true,
+    created_at: '2026-08-10T14:30:00.000Z',
+  },
+  {
+    id: 'msg-03',
+    club_id: 'club-apex-01',
+    member_id: 'player-apex-01', // Julian Drake
+    sender_type: 'member',
+    sender_name: 'Julian Drake (#10)',
+    sender_email: 'julian.drake@apexcityfc.club',
+    subject: 'Tactical Briefing & Kit Fittings',
+    category: 'Kit & Gear',
+    content: 'Thanks coach, tried them on today. Fit is perfect, ready for Saturday.',
+    is_read: false,
+    created_at: '2026-08-11T09:15:00.000Z',
+  }
+];

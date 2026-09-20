@@ -44,7 +44,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members } = useClub();
   const { user, logout, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -63,6 +63,7 @@ export default function AdminLayout({
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
+  const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
 
   interface NavItem {
     label: string;
@@ -96,6 +97,12 @@ export default function AdminLayout({
     {
       title: 'Squad & Governance',
       items: [
+        {
+          label: 'Member Approvals',
+          href: `/${club.slug}/admin/members`,
+          icon: UserCheck,
+          badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
+        },
         { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
         { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
         { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: CalendarDays, badge: activeSeason?.name },

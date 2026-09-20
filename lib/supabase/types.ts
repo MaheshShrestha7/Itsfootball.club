@@ -77,6 +77,8 @@ export interface Club {
   updated_at?: string;
 }
 
+export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+
 export interface ClubMember {
   id: string;
   club_id: string;
@@ -98,6 +100,16 @@ export interface ClubMember {
   height_cm?: number;
   weight_kg?: number;
   status: PlayerStatus;
+  membership_status?: MembershipStatus;
+  applied_at?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  rejection_reason?: string;
+  password_hash?: string;
+  magic_token?: string;
+  magic_token_expires_at?: string;
+  application_notes?: string;
+  emergency_contact?: string;
   qr_code_token: string;
   membership_tier: string;
   membership_expires_at: string;
@@ -426,4 +438,48 @@ export interface MatchAuditPayload {
   notes?: string;
 }
 
+// ==============================================================================
+// 22. MEMBER PORTAL & MESSAGING TYPES
+// ==============================================================================
+export type MemberMessageCategory = 'General' | 'Ticket / Pass' | 'Availability' | 'Medical' | 'Kit & Gear' | 'Committee';
 
+export interface MemberMessage {
+  id: string;
+  club_id: string;
+  member_id: string;
+  sender_type: 'member' | 'admin';
+  sender_name: string;
+  sender_email?: string;
+  subject?: string;
+  category?: MemberMessageCategory;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ClubSeasonStatsSummary {
+  matchesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  winRate: number;
+  cleanSheets: number;
+  form: ('W' | 'D' | 'L')[];
+  topScorer?: { name: string; goals: number };
+}
+
+export interface MemberApplicationInput {
+  full_name: string;
+  email: string;
+  phone?: string;
+  password?: string;
+  membership_tier: string;
+  player_position?: PlayerPosition;
+  jersey_number?: number;
+  application_notes?: string;
+  emergency_contact?: string;
+}
