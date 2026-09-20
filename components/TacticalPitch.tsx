@@ -539,9 +539,9 @@ export default function TacticalPitch({
 
           <div style={{ width: '1px', height: '22px', background: 'var(--border-subtle)' }} />
 
-          {/* Presets Button Group for Active Format */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginRight: '0.15rem' }}>
+          {/* Presets Button Group for Active Format: Horizontal Scroll Pill Strip */}
+          <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 0, paddingBottom: '2px' }}>
+            <span className="scroll-pill-item" style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginRight: '0.15rem' }}>
               Shape:
             </span>
             {Object.keys(FORMAT_PRESETS[activeFormat] || {}).map(key => (
@@ -549,7 +549,7 @@ export default function TacticalPitch({
                 key={key}
                 type="button"
                 onClick={() => handleSelectPreset(key)}
-                className="btn btn-sm"
+                className="scroll-pill-item btn btn-sm touch-target"
                 style={{
                   background: selectedFormationKey === key && !isFreeFormMode ? primaryColor : 'rgba(255, 255, 255, 0.05)',
                   color: selectedFormationKey === key && !isFreeFormMode ? 'var(--club-primary-contrast, #FFFFFF)' : 'var(--text-secondary)',
@@ -559,6 +559,7 @@ export default function TacticalPitch({
                   borderRadius: '6px',
                   border: '1px solid',
                   borderColor: selectedFormationKey === key && !isFreeFormMode ? primaryColor : 'var(--border-subtle)',
+                  minHeight: '36px',
                 }}
               >
                 {key}
@@ -741,32 +742,35 @@ export default function TacticalPitch({
               aria-label={`${pos.name}, number ${pos.number}, ${pos.position}. Use arrow keys to reposition.`}
             >
               {/* Jersey Node Pin */}
-              <div style={{
-                position: 'relative',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: pos.position === 'GK'
-                  ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
-                  : `linear-gradient(135deg, ${primaryColor} 0%, rgba(0,0,0,0.3) 100%), ${primaryColor}`,
-                border: isSelected
-                  ? '2.5px solid #FFFFFF'
-                  : '2px solid rgba(255, 255, 255, 0.85)',
-                boxShadow: isDragging
-                  ? '0 0 20px #F59E0B, 0 8px 20px rgba(0,0,0,0.7)'
-                  : isSelected
-                  ? '0 0 16px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.6)'
-                  : '0 4px 12px rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 900,
-                fontSize: '0.9rem',
-                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                transition: 'border-color 0.15s, box-shadow 0.15s',
-              }}>
+              <div
+                className="player-node-circle"
+                style={{
+                  position: 'relative',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: pos.position === 'GK'
+                    ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                    : `linear-gradient(135deg, ${primaryColor} 0%, rgba(0,0,0,0.3) 100%), ${primaryColor}`,
+                  border: isSelected
+                    ? '2.5px solid #FFFFFF'
+                    : '2px solid rgba(255, 255, 255, 0.85)',
+                  boxShadow: isDragging
+                    ? '0 0 20px #F59E0B, 0 8px 20px rgba(0,0,0,0.7)'
+                    : isSelected
+                    ? '0 0 16px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.6)'
+                    : '0 4px 12px rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  fontFamily: 'var(--font-heading)',
+                  fontWeight: 900,
+                  fontSize: '0.9rem',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+              >
                 {pos.number}
 
                 {/* Captain's Armband */}
@@ -840,20 +844,22 @@ export default function TacticalPitch({
               </div>
 
               {/* Player Name & Role Label Badge */}
-              <div style={{
-                marginTop: '4px',
-                background: 'rgba(8, 12, 18, 0.88)',
-                backdropFilter: 'blur(6px)',
-                padding: '2px 7px',
-                borderRadius: '5px',
-                border: isSelected ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                color: '#FFFFFF',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
+              <div
+                className="player-node-name"
+                style={{
+                  marginTop: '4px',
+                  background: 'rgba(8, 12, 18, 0.88)',
+                  backdropFilter: 'blur(6px)',
+                  padding: '2px 7px',
+                  borderRadius: '5px',
+                  border: isSelected ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
               }}>
                 <span>{pos.name.split(' ').pop()}</span>

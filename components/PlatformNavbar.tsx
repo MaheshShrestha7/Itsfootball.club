@@ -5,20 +5,28 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
-import { Shield, Trophy, Users, PlusCircle, ChevronDown, Radio, ExternalLink, User, LogOut } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Shield, Trophy, Users, PlusCircle, ChevronDown, Radio, ExternalLink, User, LogOut, Menu, X } from 'lucide-react';
 
 export default function PlatformNavbar() {
   const { clubs } = useClub();
   const { user, isAuthenticated, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
 
   return (
     <header style={{
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      background: 'rgba(7, 10, 15, 0.85)',
+      background: 'rgba(7, 10, 15, 0.9)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-subtle)',
@@ -30,23 +38,24 @@ export default function PlatformNavbar() {
         height: '70px',
       }}>
         {/* Brand Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
           <div style={{
-            width: '40px',
-            height: '40px',
+            width: '38px',
+            height: '38px',
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #10B981, #2563EB)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)',
+            boxShadow: '0 0 18px rgba(16, 185, 129, 0.4)',
+            flexShrink: 0,
           }}>
-            <Shield size={22} color="#FFFFFF" strokeWidth={2.4} />
+            <Shield size={20} color="#FFFFFF" strokeWidth={2.4} />
           </div>
           <div>
             <span style={{
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.25rem',
+              fontSize: '1.2rem',
               fontWeight: 800,
               letterSpacing: '-0.02em',
               background: 'linear-gradient(to right, #FFFFFF, #94A3B8)',
@@ -55,14 +64,14 @@ export default function PlatformNavbar() {
             }}>
               itsfootball<span style={{ color: '#10B981', WebkitTextFillColor: '#10B981' }}>.club</span>
             </span>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
               The Home of Football Clubs
             </div>
           </div>
         </Link>
 
-        {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        {/* Desktop Navigation Links */}
+        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem' }}>
           <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Trophy size={16} />
             Clubs Directory
@@ -204,10 +213,177 @@ export default function PlatformNavbar() {
             </button>
           )}
         </nav>
+
+        {/* Mobile Menu Trigger Button */}
+        <button
+          type="button"
+          onClick={() => setMobileDrawerOpen(true)}
+          className="mobile-platform-trigger touch-target"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#FFFFFF',
+            cursor: 'pointer',
+            padding: '0.5rem',
+            borderRadius: '8px',
+          }}
+          aria-label="Open Navigation Menu"
+        >
+          <Menu size={24} />
+        </button>
       </div>
 
+      {/* Mobile Slide-Over Drawer */}
+      {isMounted && mobileDrawerOpen && createPortal(
+        <div className="mobile-drawer-overlay" onClick={() => setMobileDrawerOpen(false)}>
+          <div
+            className="mobile-drawer-content"
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}
+          >
+            <div>
+              {/* Drawer Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <Shield size={20} color="#10B981" />
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>itsfootball<span style={{ color: '#10B981' }}>.club</span></span>
+                </div>
+                <button
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFFFFF', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  aria-label="Close Menu"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Drawer Action CTA */}
+              <Link
+                href="/create-club"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem' }}
+              >
+                <PlusCircle size={18} />
+                <span>Launch Your Club</span>
+              </Link>
+
+              {/* Navigation Links */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.75rem' }}>
+                <Link
+                  href="/clubs"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                  }}
+                >
+                  <Trophy size={18} color="#F59E0B" />
+                  <span>Clubs Directory</span>
+                </Link>
+              </div>
+
+              {/* League Featured Clubs */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+                  Explore League Clubs
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {clubs.map(c => (
+                    <Link
+                      key={c.id}
+                      href={`/${c.slug}`}
+                      onClick={() => setMobileDrawerOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.6rem 0.75rem',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        color: '#FFFFFF',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: c.primary_color, flexShrink: 0 }} />
+                        <span>{c.name}</span>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{c.short_name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Auth Section */}
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+              {isAuthenticated && user ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                        {user.full_name.substring(0, 1)}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>{user.full_name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user.email}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { logout(); setMobileDrawerOpen(false); }}
+                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: '#EF4444', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setMobileDrawerOpen(false); setAuthModalOpen(true); }}
+                  className="btn btn-secondary"
+                  style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <User size={16} />
+                  <span>Sign In</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+
+      <style jsx>{`
+        .desktop-platform-nav {
+          display: none;
+        }
+        .mobile-platform-trigger {
+          display: flex;
+        }
+        @media (min-width: 860px) {
+          .desktop-platform-nav {
+            display: flex !important;
+          }
+          .mobile-platform-trigger {
+            display: none !important;
+          }
+        }
+      `}</style>
     </header>
   );
 }
+
 

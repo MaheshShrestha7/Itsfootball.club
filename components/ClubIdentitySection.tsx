@@ -423,14 +423,7 @@ export default function ClubIdentitySection({
         </div>
 
         {/* DYNAMIC LIVE STATS 6-METRIC GRID WITH COUNT-UP TICKER & ENTRANCE STAGGER */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1.15rem',
-            marginBottom: '2rem',
-          }}
-        >
+        <div className="club-impact-grid">
           {statCards.map((card, idx) => {
             const Icon = card.icon;
             const isHovered = hoveredCardIndex === idx;
@@ -482,17 +475,20 @@ export default function ClubIdentitySection({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: '0.75rem',
+                    marginBottom: '0.65rem',
                   }}
                 >
                   <span
                     style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.68rem',
                       fontWeight: 800,
                       color: card.isHighlight ? '#F59E0B' : 'var(--text-muted)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       transition: 'color 0.2s ease',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {card.label}
@@ -501,7 +497,7 @@ export default function ClubIdentitySection({
                   {/* Icon badge with hover scale */}
                   <div
                     style={{
-                      padding: '6px',
+                      padding: '5px',
                       borderRadius: '8px',
                       background: card.isHighlight
                         ? 'rgba(245, 158, 11, 0.16)'
@@ -510,16 +506,18 @@ export default function ClubIdentitySection({
                         : 'rgba(255,255,255,0.06)',
                       transform: isHovered ? 'scale(1.12)' : 'scale(1)',
                       transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease',
+                      flexShrink: 0,
                     }}
                   >
-                    <Icon size={16} color={card.accentColor} />
+                    <Icon size={15} color={card.accentColor} />
                   </div>
                 </div>
 
                 {/* Number with smooth Eased Count-Up Ticker */}
                 <div
+                  className="impact-stat-value"
                   style={{
-                    fontSize: '2.1rem',
+                    fontSize: '2rem',
                     fontWeight: 900,
                     color: '#FFFFFF',
                     lineHeight: 1,
@@ -533,10 +531,11 @@ export default function ClubIdentitySection({
                 {/* Subtext */}
                 <div
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     color: card.isHighlight ? '#F59E0B' : 'var(--text-muted)',
-                    marginTop: '0.5rem',
+                    marginTop: '0.45rem',
                     fontWeight: card.isHighlight ? 700 : 500,
+                    lineHeight: 1.3,
                   }}
                 >
                   {card.sublabel}
@@ -548,7 +547,7 @@ export default function ClubIdentitySection({
 
         {/* HOME GROUND SPECIFICATIONS SUB-PANEL */}
         <div
-          className="glass-panel"
+          className="glass-panel stadium-subpanel"
           style={{
             padding: '1.25rem 1.75rem',
             display: 'flex',
@@ -575,18 +574,19 @@ export default function ClubIdentitySection({
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'transform 0.2s ease',
+                flexShrink: 0,
               }}
             >
               <MapPin size={20} color={primaryColor} />
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>
                 Official Home Ground
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
                 {club.stadium_name}
                 {club.stadium_address && (
-                  <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.6rem' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.6rem' }}>
                     • {club.stadium_address}
                   </span>
                 )}
@@ -594,24 +594,24 @@ export default function ClubIdentitySection({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div className="stadium-specs-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
             {club.stadium_capacity > 0 && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+              <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Spectator Capacity
                 </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#FFFFFF' }}>
                   {club.stadium_capacity.toLocaleString()} Covered Seats
                 </div>
               </div>
             )}
 
             {club.stadium_pitch_type && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+              <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Pitch Surface
                 </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: primaryColor }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: primaryColor }}>
                   {club.stadium_pitch_type}
                 </div>
               </div>
@@ -622,7 +622,7 @@ export default function ClubIdentitySection({
                 href={`https://maps.google.com/?q=${encodeURIComponent(club.stadium_address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm touch-target"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -642,6 +642,40 @@ export default function ClubIdentitySection({
             )}
           </div>
         </div>
+
+        <style jsx>{`
+          .club-impact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.15rem;
+            margin-bottom: 2rem;
+          }
+          @media (max-width: 640px) {
+            .club-impact-grid {
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 0.65rem !important;
+            }
+            .impact-stat-card {
+              padding: 0.9rem 0.8rem !important;
+            }
+            .impact-stat-value {
+              font-size: 1.55rem !important;
+            }
+            .stadium-subpanel {
+              padding: 1.1rem 1rem !important;
+              flex-direction: column !important;
+              align-items: flex-start !important;
+              gap: 1rem !important;
+            }
+            .stadium-specs-group {
+              width: 100% !important;
+              justify-content: space-between !important;
+            }
+            .stadium-spec-item {
+              text-align: left !important;
+            }
+          }
+        `}</style>
       </div>
     </section>
   );

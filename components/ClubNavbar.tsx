@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -17,11 +18,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const isAdmin = hasClubAdminAccess(club.id);
   const userRole = user ? getUserRoleForClub(club.id) : null;
 
   const [logoError, setLogoError] = useState(false);
+
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -44,13 +51,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         fontSize: '0.75rem',
       }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
+          <Link href="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <ArrowLeft size={12} />
-            <span>itsfootball.club network</span>
+            <span>itsfootball.club</span>
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
             {club.custom_domain && (
-              <span style={{ color: 'var(--text-secondary)' }}>Domain: {club.custom_domain}</span>
+              <span className="hide-on-mobile-xs" style={{ color: 'var(--text-secondary)' }}>{club.custom_domain}</span>
             )}
             <span>Est. {club.founded_year}</span>
           </div>
@@ -63,6 +70,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         height: '74px',
+        gap: '0.5rem',
       }}>
         {/* Club Crest & Title */}
         <Link
@@ -70,16 +78,16 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.9rem',
+            gap: '0.75rem',
             textDecoration: 'none',
-            flexShrink: 0,
-            maxWidth: '380px',
+            minWidth: 0,
+            flex: 1,
           }}
         >
           {/* Shield / Crest Container */}
           <div style={{
-            width: '46px',
-            height: '46px',
+            width: '44px',
+            height: '44px',
             borderRadius: '13px',
             border: `2px solid ${club.primary_color}`,
             background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(15,23,42,0.95) 100%)',
@@ -122,31 +130,33 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
               <span style={{
                 fontFamily: 'var(--font-heading)',
-                fontSize: '1.2rem',
+                fontSize: 'clamp(1rem, 3.8vw, 1.25rem)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 color: '#FFFFFF',
                 whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}>
                 {club.name}
               </span>
-              <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', fontSize: '0.65rem', flexShrink: 0 }}>
+              <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', fontSize: '0.62rem', flexShrink: 0 }}>
                 {club.short_name}
               </span>
             </div>
             {club.motto && (
               <div style={{
-                fontSize: '0.725rem',
+                fontSize: '0.7rem',
                 color: 'var(--text-muted)',
                 fontStyle: 'italic',
                 marginTop: '1px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: '260px',
+                maxWidth: '220px',
               }}>
                 &ldquo;{club.motto}&rdquo;
               </div>
@@ -213,7 +223,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             News
           </Link>
 
-          {/* Admin Portal Gateway - Only shown if authorized or with security badge */}
+          {/* Admin Portal Gateway */}
           {isAdmin && (
             <Link
               href={`/${club.slug}/admin`}
@@ -308,98 +318,214 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
         {/* Mobile menu trigger */}
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onClick={() => setMobileMenuOpen(true)}
           style={{
             background: 'transparent',
             border: 'none',
             color: '#FFFFFF',
             cursor: 'pointer',
             padding: '0.5rem',
-            display: 'block',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            borderRadius: '8px',
           }}
           aria-label="Toggle Menu"
-          className="mobile-trigger"
+          className="mobile-trigger touch-target"
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <Menu size={24} />
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div style={{
-          background: 'var(--bg-surface-elevated)',
-          borderBottom: '1px solid var(--border-medium)',
-          padding: '1.25rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-        }}>
-          <Link href={`/${club.slug}`} onClick={() => setMobileMenuOpen(false)} style={{ color: '#FFFFFF', fontWeight: 600 }}>
-            Club Home
-          </Link>
-          <Link
-            href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`}
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: '#EF4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+      {/* Mobile Menu Drawer via Portal */}
+      {isMounted && mobileMenuOpen && createPortal(
+        <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div
+            className="mobile-drawer-content"
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}
           >
-            <Radio size={16} /> Live Match-Day Center
-          </Link>
-          <Link
-            href={`/${club.slug}/member`}
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--club-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <CreditCard size={16} /> Digital Member Pass
-          </Link>
-          <Link href={`/${club.slug}#fixtures`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--text-secondary)' }}>
-            Fixtures & Results
-          </Link>
-          <Link href={`/${club.slug}#squad`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--text-secondary)' }}>
-            First Team Squad & Stats
-          </Link>
-          <Link href={`/${club.slug}#events`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--text-secondary)' }}>
-            Club Events & Trainings
-          </Link>
-          <Link href={`/${club.slug}#news`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--text-secondary)' }}>
-            Latest News & Media
-          </Link>
-          {isAdmin && (
-            <Link
-              href={`/${club.slug}/admin`}
-              onClick={() => setMobileMenuOpen(false)}
-              className="btn btn-primary btn-sm"
-              style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <Settings size={15} /> Club Admin Portal
-            </Link>
-          )}
-
-          {/* Mobile Auth Button */}
-          {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 600 }}>
-                {user.full_name} ({userRole || 'Member'})
+            <div>
+              {/* Drawer Club Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <img
+                    src={club.logo_url}
+                    alt={club.name}
+                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain' }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF' }}>{club.name}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Official Matchday Portal</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFFFFF', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  aria-label="Close Menu"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => { logout(); setMobileMenuOpen(false); }}
-                className="btn btn-secondary btn-sm"
-                style={{ fontSize: '0.75rem' }}
-              >
-                Sign Out
-              </button>
+
+              {/* Action Buttons: Match Center & Member Pass */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                <Link
+                  href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    background: liveMatch ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+                    color: liveMatch ? '#EF4444' : '#FFFFFF',
+                    border: `1px solid ${liveMatch ? 'rgba(239, 68, 68, 0.5)' : 'var(--border-subtle)'}`,
+                    padding: '0.65rem 1rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Radio size={16} color={liveMatch ? '#EF4444' : 'currentColor'} />
+                  <span>{liveMatch ? 'Watch Match Center (LIVE)' : 'Match-Day Center'}</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}/member`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem' }}
+                >
+                  <CreditCard size={16} />
+                  <span>Digital Member Pass</span>
+                </Link>
+              </div>
+
+              {/* Clubhouse Section Navigation Links */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <Link
+                  href={`/${club.slug}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    background: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  <Shield size={16} color={club.primary_color} />
+                  <span>Clubhouse Overview</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}#fixtures`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Calendar size={16} />
+                  <span>Fixtures & Results</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}#squad`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Users size={16} />
+                  <span>First Team Squad & Stats</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}#events`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Trophy size={16} />
+                  <span>Events & Trainings</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}#news`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Radio size={16} />
+                  <span>Latest News & Video</span>
+                </Link>
+
+                {isAdmin && (
+                  <Link
+                    href={`/${club.slug}/admin`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      color: '#10B981',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      fontWeight: 700,
+                      marginTop: '0.5rem',
+                    }}
+                  >
+                    <Settings size={16} />
+                    <span>Club Admin Control Room</span>
+                  </Link>
+                )}
+              </div>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => { setMobileMenuOpen(false); setAuthModalOpen(true); }}
-              className="btn btn-secondary btn-sm"
-              style={{ marginTop: '0.5rem' }}
-            >
-              Sign In to itsfootball.club
-            </button>
-          )}
-        </div>
+
+            {/* Mobile Auth Button */}
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+              {isAuthenticated && user ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                        {user.full_name.substring(0, 1)}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 700 }}>
+                        {user.full_name}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                        {userRole || 'Member'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: '#EF4444', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); setAuthModalOpen(true); }}
+                  className="btn btn-secondary"
+                  style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <User size={16} />
+                  <span>Sign In to itsfootball.club</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
@@ -413,7 +539,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             display: none !important;
           }
         }
+        @media (max-width: 480px) {
+          .hide-on-mobile-xs {
+            display: none !important;
+          }
+        }
       `}</style>
     </header>
   );
 }
+

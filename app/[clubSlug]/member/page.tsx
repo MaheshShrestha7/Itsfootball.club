@@ -87,16 +87,18 @@ export default function MemberPortalPage({
         </div>
 
         {/* Member Selector Switcher (Demonstration tool) */}
-        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              Viewing Club Member Profile:
+        <div className="glass-panel" style={{ padding: '0.85rem 1rem', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              Viewing Member Profile:
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {/* Horizontal Scroll Pill Strip on Mobile */}
+            <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 0 }}>
               {clubMembers.slice(0, 6).map(m => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMemberId(m.id)}
+                  className="scroll-pill-item touch-target"
                   style={{
                     padding: '0.35rem 0.75rem',
                     borderRadius: '8px',
@@ -106,9 +108,10 @@ export default function MemberPortalPage({
                     fontWeight: 700,
                     fontSize: '0.8rem',
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.4rem',
+                    minHeight: '38px',
                   }}
                 >
                   <span>{m.full_name}</span>
@@ -123,8 +126,8 @@ export default function MemberPortalPage({
         {currentMember && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: '3rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+            gap: '2.5rem',
             alignItems: 'flex-start',
           }}>
             {/* Left: The Tactile Virtual Member Pass */}

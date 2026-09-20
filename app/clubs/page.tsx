@@ -41,21 +41,21 @@ export default function ClubsDirectoryPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ position: 'relative', width: '280px' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', maxWidth: '520px' }}>
+            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '180px' }}>
               <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
                 placeholder="Search by club or stadium..."
-                className="form-input"
-                style={{ paddingLeft: '2.25rem' }}
+                className="form-input touch-target"
+                style={{ paddingLeft: '2.25rem', minHeight: '44px' }}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
 
-            <Link href="/create-club" className="btn btn-primary">
-              <PlusCircle size={16} /> Create Club
+            <Link href="/create-club" className="btn btn-primary touch-target" style={{ minHeight: '44px' }}>
+              <PlusCircle size={16} /> <span>Create Club</span>
             </Link>
           </div>
         </div>

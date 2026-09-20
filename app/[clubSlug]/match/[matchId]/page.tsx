@@ -132,23 +132,26 @@ export default function MatchCenterPage({
         {/* Top Breadcrumb & Live Controls */}
         <div style={{
           display: 'flex',
+          flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '0.85rem',
           marginBottom: '1.5rem',
         }}>
           <Link
             href={`/${club.slug}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}
+            className="touch-target"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}
           >
             <ArrowLeft size={16} />
             <span>Back to {club.name}</span>
           </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="scroll-pill-strip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', maxWidth: '100%' }}>
             <button
               onClick={handleSimulateGoal}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid rgba(245, 158, 11, 0.4)' }}
+              className="btn btn-secondary btn-sm scroll-pill-item touch-target"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid rgba(245, 158, 11, 0.4)', minHeight: '38px' }}
               title="Simulate a real-time goal scored"
             >
               <Flame size={14} color="#F59E0B" />
@@ -157,7 +160,8 @@ export default function MatchCenterPage({
 
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className="btn btn-secondary btn-sm"
+              className="btn btn-secondary btn-sm scroll-pill-item touch-target"
+              style={{ minHeight: '38px', minWidth: '38px' }}
               title={audioEnabled ? 'Mute commentary audio' : 'Enable commentary audio'}
             >
               {audioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
@@ -165,11 +169,11 @@ export default function MatchCenterPage({
 
             <Link
               href={`/${club.slug}/admin/match-center`}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              className="btn btn-secondary btn-sm scroll-pill-item touch-target"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '38px' }}
             >
               <Settings size={14} />
-              <span>Admin Controller</span>
+              <span>Admin</span>
             </Link>
           </div>
         </div>
@@ -243,7 +247,7 @@ export default function MatchCenterPage({
           )}
 
           {/* Status & Competition Tag */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
                 <span className="pulse-dot" /> LIVE • {match.current_minute}&apos;
@@ -268,22 +272,22 @@ export default function MatchCenterPage({
             display: 'grid',
             gridTemplateColumns: '1fr auto 1fr',
             alignItems: 'center',
-            gap: '2rem',
+            gap: 'clamp(0.5rem, 3vw, 2rem)',
             maxWidth: '850px',
             margin: '0 auto',
             position: 'relative',
             zIndex: 5,
           }}>
             {/* Home Team */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', minWidth: 0 }}>
               <div
                 className={goalAlert?.active && goalAlert.teamSide === 'home' ? 'crest-celebrating' : ''}
                 style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '18px',
+                  width: 'clamp(52px, 14vw, 80px)',
+                  height: 'clamp(52px, 14vw, 80px)',
+                  borderRadius: '16px',
                   overflow: 'hidden',
-                  margin: '0 auto 0.75rem auto',
+                  margin: '0 auto 0.5rem auto',
                   border: `2.5px solid ${match.is_club_home ? club.primary_color : 'var(--border-subtle)'}`,
                   boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(var(--club-primary-rgb), 0.35)`,
                   background: `linear-gradient(135deg, ${club.primary_color}, #064e3b)`,
@@ -294,15 +298,15 @@ export default function MatchCenterPage({
                   animation: goalAlert?.active && goalAlert.teamSide === 'home' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                <Shield size={38} color="#FFFFFF" strokeWidth={2.4} />
-                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                <Shield size={28} color="#FFFFFF" strokeWidth={2.4} />
+                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
                   {match.is_club_home ? club.short_name : 'HOME'}
                 </span>
               </div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem' }}>
+              <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
                 {match.home_team_name}
               </h2>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HOME</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>HOME</span>
             </div>
 
             {/* Stadium Mechanical Scoreboard Digit Display */}
@@ -310,18 +314,19 @@ export default function MatchCenterPage({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '1.25rem 2rem',
+              padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(0.75rem, 3vw, 2rem)',
               background: '#040609',
-              borderRadius: '22px',
+              borderRadius: '20px',
               border: `2px solid ${goalAlert?.active ? '#F59E0B' : 'rgba(255, 255, 255, 0.12)'}`,
               boxShadow: 'inset 0 0 30px rgba(0,0,0,0.95), 0 12px 30px rgba(0,0,0,0.7)',
               position: 'relative',
               transition: 'border-color 0.3s ease',
+              flexShrink: 0,
             }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem',
+                gap: 'clamp(0.4rem, 1.5vw, 0.75rem)',
               }}>
                 {/* Home Score Animated Digit */}
                 <ScoreboardDigitRoll
@@ -332,7 +337,7 @@ export default function MatchCenterPage({
 
                 <span style={{
                   color: 'var(--text-muted)',
-                  fontSize: '2.5rem',
+                  fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
                   fontWeight: 900,
                   lineHeight: 1,
                   fontFamily: 'var(--font-heading)',
@@ -349,27 +354,28 @@ export default function MatchCenterPage({
               </div>
 
               <div style={{
-                fontSize: '0.75rem',
+                fontSize: '0.68rem',
                 fontWeight: 700,
                 color: match.status === 'live' ? '#EF4444' : 'var(--text-muted)',
-                letterSpacing: '0.1em',
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                marginTop: '10px',
+                marginTop: '8px',
+                textAlign: 'center',
               }}>
-                {match.period === 'second_half' ? '2nd Half In Progress' : match.period}
+                {match.period === 'second_half' ? '2nd Half' : match.period}
               </div>
             </div>
 
             {/* Away Team */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', minWidth: 0 }}>
               <div
                 className={goalAlert?.active && goalAlert.teamSide === 'away' ? 'crest-celebrating' : ''}
                 style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '18px',
+                  width: 'clamp(52px, 14vw, 80px)',
+                  height: 'clamp(52px, 14vw, 80px)',
+                  borderRadius: '16px',
                   overflow: 'hidden',
-                  margin: '0 auto 0.75rem auto',
+                  margin: '0 auto 0.5rem auto',
                   border: `2.5px solid ${!match.is_club_home ? club.primary_color : '#3B82F6'}`,
                   boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(59, 130, 246, 0.35)',
                   background: 'linear-gradient(135deg, #2563EB, #1E3A8A)',
@@ -380,44 +386,46 @@ export default function MatchCenterPage({
                   animation: goalAlert?.active && goalAlert.teamSide === 'away' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                <Trophy size={36} color="#FFFFFF" strokeWidth={2.4} />
-                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                <Trophy size={28} color="#FFFFFF" strokeWidth={2.4} />
+                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
                   {!match.is_club_home ? club.short_name : 'AWAY'}
                 </span>
               </div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem' }}>
+              <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
                 {match.away_team_name}
               </h2>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>AWAY</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>AWAY</span>
             </div>
           </div>
         </div>
 
         {/* Tab Selector: Match Events Timeline, Lineups / Pitch, Stats */}
-        <div style={{
-          display: 'flex',
+        <div className="scroll-pill-strip" style={{
           borderBottom: '1px solid var(--border-subtle)',
           marginBottom: '2rem',
-          gap: '2rem',
+          gap: '1.25rem',
+          paddingBottom: '2px',
         }}>
           {[
-            { id: 'timeline', label: 'Live Timeline & Commentary' },
+            { id: 'timeline', label: 'Timeline & Commentary' },
             { id: 'lineups', label: 'Tactical Pitch & Lineups' },
             { id: 'stats', label: 'Match Statistics' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
+              className="scroll-pill-item touch-target"
               style={{
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab.id ? `3px solid var(--club-primary)` : '3px solid transparent',
-                padding: '0.75rem 0',
+                padding: '0.75rem 0.25rem',
                 color: activeTab === tab.id ? '#FFFFFF' : 'var(--text-muted)',
                 fontWeight: 800,
-                fontSize: '1rem',
+                fontSize: '0.92rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
               }}
             >
               {tab.label}

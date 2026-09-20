@@ -160,13 +160,32 @@ export default function CreateClubPage() {
           </p>
         </div>
 
-        {/* Multi-step progress bar */}
+        {/* Mobile Step Counter Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          background: 'rgba(255, 255, 255, 0.04)',
+          padding: '0.65rem 1rem',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '1.25rem',
+          border: '1px solid var(--border-subtle)',
+        }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--club-primary)', letterSpacing: '0.05em' }}>
+            STEP {step} OF 4
+          </span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>
+            {step === 1 ? 'Identity & Slug' : step === 2 ? 'Branding & Assets' : step === 3 ? 'Home Ground' : 'Domain & Launch'}
+          </span>
+        </div>
+
+        {/* Multi-step progress bar */}
+        <div className="scroll-pill-strip" style={{
+          alignItems: 'center',
+          gap: '1.5rem',
           marginBottom: '2rem',
           position: 'relative',
+          paddingBottom: '4px',
         }}>
           {[
             { num: 1, label: 'Identity & Slug' },
@@ -176,6 +195,7 @@ export default function CreateClubPage() {
           ].map(s => (
             <div
               key={s.num}
+              className="scroll-pill-item touch-target"
               onClick={() => {
                 if (s.num < step || (s.num === 2 && validateStep1()) || (s.num === 3 && validateStep1() && validateStep2())) {
                   setStep(s.num);
@@ -183,7 +203,7 @@ export default function CreateClubPage() {
                 }
               }}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.6rem',
                 cursor: s.num <= step ? 'pointer' : 'default',
@@ -202,10 +222,11 @@ export default function CreateClubPage() {
                 fontWeight: 800,
                 fontSize: '0.85rem',
                 transition: 'all 0.2s',
+                flexShrink: 0,
               }}>
                 {step > s.num ? <CheckCircle2 size={16} /> : s.num}
               </div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: step === s.num ? '#FFFFFF' : 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: step === s.num ? '#FFFFFF' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                 {s.label}
               </span>
             </div>
@@ -236,7 +257,7 @@ export default function CreateClubPage() {
         )}
 
         {/* Wizard Form Body */}
-        <div className="glass-panel" style={{ padding: '2.5rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(1.25rem, 4vw, 2.5rem)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)' }}>
           <form onSubmit={handleFinish}>
             {/* STEP 1: IDENTITY */}
             {step === 1 && (
@@ -248,7 +269,7 @@ export default function CreateClubPage() {
                   Define your official football club name, registered short acronym, and inspiring club motto.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+                <div className="form-row-2-1">
                   <div className="form-group">
                     <label className="form-label">Full Club Name *</label>
                     <input
@@ -277,7 +298,7 @@ export default function CreateClubPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+                <div className="form-row-2-1">
                   <div className="form-group">
                     <label className="form-label">Public URL Slug *</label>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -406,7 +427,7 @@ export default function CreateClubPage() {
                 {/* Side-by-Side: Palette Inputs & Uploads (Left) + Interactive Jersey Swatch Canvas (Right) */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
                   gap: '2rem',
                   alignItems: 'flex-start',
                   marginBottom: '2rem',
@@ -571,7 +592,7 @@ export default function CreateClubPage() {
                   Provide fans and visiting teams with venue directions, capacity, and surface specs.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+                <div className="form-row-2-1">
                   <div className="form-group">
                     <label className="form-label">Stadium / Ground Name *</label>
                     <input
@@ -609,7 +630,7 @@ export default function CreateClubPage() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div className="form-row-2">
                   <div className="form-group">
                     <label className="form-label">Pitch Surface</label>
                     <select
@@ -680,7 +701,7 @@ export default function CreateClubPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div className="form-row-2">
                   <div className="form-group">
                     <label className="form-label">Club Secretariat Email *</label>
                     <input

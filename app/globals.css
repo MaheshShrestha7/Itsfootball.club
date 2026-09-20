@@ -584,6 +584,22 @@ textarea {
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
 }
 
+@media (max-width: 640px) {
+  .pitch-player-node .player-node-circle {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.75rem !important;
+  }
+  .pitch-player-node .player-node-name {
+    font-size: 0.6rem !important;
+    padding: 1px 4px !important;
+    max-width: 68px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
 /* QR Turnstile Scanner & Holographic Laser System */
 .turnstile-scanner-box {
   position: relative;
@@ -873,12 +889,255 @@ textarea {
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 
   .grid-responsive-3,
   .grid-responsive-4 {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* Mobile-Friendly Horizontal Scroll Pill Strip */
+.scroll-pill-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 2px;
+}
+
+.scroll-pill-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-pill-item {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Touch Targets Standard (44px min touch area) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Drawer Overlay and Sheet */
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 99;
+  animation: drawerFadeIn 0.2s ease-out;
+}
+
+.mobile-drawer-content {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: min(88vw, 340px);
+  background: var(--bg-surface-elevated);
+  border-left: 1px solid var(--border-medium);
+  box-shadow: -8px 0 35px rgba(0, 0, 0, 0.85);
+  padding: 1.5rem 1.25rem;
+  z-index: 100;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: drawerSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-drawer-left {
+  left: 0;
+  right: auto;
+  border-left: none;
+  border-right: 1px solid var(--border-medium);
+  box-shadow: 8px 0 35px rgba(0, 0, 0, 0.85);
+  animation: drawerSlideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerSlideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes drawerSlideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes drawerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile-Friendly Tactical Pitch Adaptations */
+@media (max-width: 768px) {
+  .tactical-pitch {
+    min-height: 320px;
+    border-width: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tactical-pitch {
+    min-height: 270px;
+  }
+}
+
+/* Club Public Page Hero Responsive Layout */
+.club-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 3rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .club-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+/* Fixtures & Results Responsive Card */
+.fixture-card {
+  padding: 1.25rem 1.75rem;
+  display: grid;
+  grid-template-columns: 240px 1fr auto;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+@media (max-width: 860px) {
+  .fixture-card {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+  }
+
+  .fixture-meta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .fixture-teams {
+    justify-content: center !important;
+  }
+
+  .fixture-actions {
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  .fixture-actions .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+
+/* Admin Layout Mobile Adaptations */
+.admin-layout-container {
+  display: flex;
+  min-height: calc(100vh - 120px);
+  background: var(--bg-pitch);
+  position: relative;
+}
+
+.admin-desktop-sidebar {
+  width: 290px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem 1rem;
+  flex-shrink: 0;
+}
+
+.admin-mobile-subbar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(14, 20, 30, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 70px;
+  z-index: 30;
+  width: 100%;
+}
+
+.admin-main-canvas {
+  flex: 1;
+  padding: 2.5rem;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .admin-layout-container {
+    flex-direction: column;
+  }
+
+  .admin-desktop-sidebar {
+    display: none !important;
+  }
+
+  .admin-mobile-subbar {
+    display: flex !important;
+  }
+
+  .admin-main-canvas {
+    padding: 1.25rem 0.85rem !important;
+  }
+}
+
+/* Responsive Form Row Grids */
+.form-row-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .form-row-2-1,
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
 
 /* Stadium Scoreboard Digit Roll & Goal Strobe Animations */
 @keyframes digitRollInUp {
