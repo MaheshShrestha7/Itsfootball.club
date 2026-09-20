@@ -28,7 +28,8 @@ import {
   Zap,
   Pause,
   Newspaper,
-  Image as ImageIcon
+  Image as ImageIcon,
+  QrCode
 } from 'lucide-react';
 import { Match, ClubEvent, NewsArticle } from '@/lib/supabase/types';
 
@@ -1341,18 +1342,28 @@ export default function ClubPublicPage({
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
                       {match.competition}
                     </span>
+                    {match.match_type && (
+                      <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
+                        {match.match_type}
+                      </span>
+                    )}
                     {match.season && (
                       <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
                         {match.season}
                       </span>
                     )}
                   </div>
+                  {match.title && (
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#F59E0B', marginTop: '2px' }}>
+                      {match.title}
+                    </div>
+                  )}
                   <div style={{ fontSize: '0.9rem', color: '#FFFFFF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
                     <Calendar size={14} color="var(--text-muted)" />
                     {new Date(match.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {new Date(match.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {match.venue}
+                    {match.match_time || new Date(match.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {match.venue}
                   </div>
                 </div>
 
@@ -1401,6 +1412,27 @@ export default function ClubPublicPage({
                       }}
                     >
                       <span>RSVP Availability</span>
+                    </Link>
+                  )}
+
+                  {match.status === 'upcoming' && match.door_qr_checkin_enabled && (
+                    <Link
+                      href={`/${club.slug}/match/${match.id}/checkin`}
+                      className="btn btn-sm touch-target"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.3rem',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid #3B82F6',
+                        color: '#3B82F6',
+                        fontSize: '0.78rem',
+                        padding: '0.4rem 0.75rem',
+                      }}
+                    >
+                      <QrCode size={13} />
+                      <span>Door Check-In</span>
                     </Link>
                   )}
 

@@ -19,7 +19,9 @@ import {
   Share2,
   Volume2,
   VolumeX,
-  Sparkles
+  Sparkles,
+  QrCode,
+  Calendar
 } from 'lucide-react';
 
 export default function MatchCenterPage({
@@ -158,6 +160,27 @@ export default function MatchCenterPage({
               <span>Simulate Goal (+1)</span>
             </button>
 
+            {match.door_qr_checkin_enabled && (
+              <Link
+                href={`/${club.slug}/match/${match.id}/checkin`}
+                className="btn btn-sm scroll-pill-item touch-target"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid #3B82F6',
+                  color: '#3B82F6',
+                  minHeight: '38px',
+                  fontWeight: 700
+                }}
+                title="Door Turnstile Self-Check-in Station"
+              >
+                <QrCode size={14} />
+                <span>Door Check-In</span>
+              </Link>
+            )}
+
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
               className="btn btn-secondary btn-sm scroll-pill-item touch-target"
@@ -248,6 +271,11 @@ export default function MatchCenterPage({
 
           {/* Status & Competition Tag */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
+            {match.title && (
+              <div style={{ width: '100%', fontSize: '1.1rem', fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
+                {match.title}
+              </div>
+            )}
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
                 <span className="pulse-dot" /> LIVE • {match.current_minute}&apos;
@@ -260,6 +288,11 @@ export default function MatchCenterPage({
             ) : (
               <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}>
                 {match.status.toUpperCase()}
+              </span>
+            )}
+            {match.match_type && (
+              <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--club-primary)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
+                {match.match_type} FIXTURE
               </span>
             )}
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -398,6 +431,73 @@ export default function MatchCenterPage({
             </div>
           </div>
         </div>
+
+        {/* Matchday Briefing & Promotional Flyer */}
+        {(match.match_flyer_url || match.description || match.door_qr_checkin_enabled) && (
+          <div
+            className="glass-panel"
+            style={{
+              padding: '1.5rem',
+              marginBottom: '2rem',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-medium)',
+              display: 'grid',
+              gridTemplateColumns: match.match_flyer_url ? 'minmax(240px, 320px) 1fr' : '1fr',
+              gap: '1.5rem',
+              alignItems: 'center',
+            }}
+          >
+            {match.match_flyer_url && (
+              <div
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                  aspectRatio: '16/9',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'rgba(0,0,0,0.5)',
+                  boxShadow: 'var(--shadow-md)',
+                }}
+              >
+                <img
+                  src={match.match_flyer_url}
+                  alt={match.title || 'Official Match Flyer'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+            )}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <span className="badge badge-primary">MATCHDAY BRIEFING</span>
+                {match.match_type && (
+                  <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
+                    {match.match_type}
+                  </span>
+                )}
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                {match.title || `${match.home_team_name} vs ${match.away_team_name}`}
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1rem' }}>
+                {match.description || `Official match fixture scheduled at ${match.venue}. Gates open 60 minutes prior to kickoff.`}
+              </p>
+              {match.door_qr_checkin_enabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <Link
+                    href={`/${club.slug}/match/${match.id}/checkin`}
+                    className="btn btn-primary btn-sm touch-target"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
+                  >
+                    <QrCode size={14} />
+                    <span>Turnstile Gate Check-In</span>
+                  </Link>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Arriving at the stadium? Scan or validate your pass online.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tab Selector: Match Events Timeline, Lineups / Pitch, Stats */}
         <div className="scroll-pill-strip" style={{

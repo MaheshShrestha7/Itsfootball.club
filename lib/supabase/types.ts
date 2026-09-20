@@ -9,6 +9,7 @@ export type PlayerStatus = 'active' | 'inactive' | 'injured' | 'suspended' | 'al
 export type MatchStatus = 'upcoming' | 'live' | 'halftime' | 'completed' | 'postponed' | 'cancelled';
 export type MatchPeriod = 'pre_match' | 'first_half' | 'halftime' | 'second_half' | 'extra_time' | 'penalties' | 'full_time';
 export type MatchEventType = 'goal' | 'penalty' | 'own_goal' | 'yellow_card' | 'red_card' | 'sub' | 'var' | 'commentary' | 'whistle';
+export type MatchType = 'internal' | 'friendly' | 'tournament';
 
 export type EventCategory = 'match' | 'training' | 'social' | 'agm' | 'trial' | 'tournament';
 export type SponsorTier = 'platinum' | 'gold' | 'silver' | 'bronze' | 'grassroots';
@@ -152,16 +153,27 @@ export interface PitchPosition {
 export interface Match {
   id: string;
   club_id: string;
+  title?: string;
+  match_type?: MatchType;
   competition: string;
   season: string;
+  opponent_name?: string;
+  opponent_short_name?: string;
   home_team_name: string;
   away_team_name: string;
   home_team_logo: string;
   away_team_logo: string;
   is_club_home: boolean;
   match_date: string;
+  match_time?: string;
   venue: string;
+  match_flyer_url?: string;
+  description?: string;
   status: MatchStatus;
+  featured_on_hero?: boolean;
+  door_qr_checkin_enabled?: boolean;
+  door_qr_code?: string;
+  checkin_count?: number;
   home_score: number;
   away_score: number;
   current_minute: number;
@@ -270,12 +282,14 @@ export interface ClubAnalytics {
 export interface GateScanRecord {
   id: string;
   club_id: string;
-  scan_type: 'pass_verification' | 'event_checkin';
+  scan_type: 'pass_verification' | 'event_checkin' | 'match_checkin';
   token: string;
   member_id?: string;
   member_name: string;
   event_id?: string;
   event_title?: string;
+  match_id?: string;
+  match_title?: string;
   valid: boolean;
   scanned_at: string;
 }

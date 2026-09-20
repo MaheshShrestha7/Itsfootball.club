@@ -138,14 +138,14 @@ export default function AdminMatchCenterControllerPage({
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
           Schedule a match fixture associated with a season to operate live matchday reporting.
         </p>
-        <button
-          onClick={() => setIsCreateFixtureOpen(true)}
+        <Link
+          href={`/${club.slug}/admin/matches`}
           className="btn btn-primary"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <Plus size={16} />
           <span>Schedule First Fixture</span>
-        </button>
+        </Link>
 
         {isCreateFixtureOpen && (
           <div style={{
@@ -433,14 +433,14 @@ export default function AdminMatchCenterControllerPage({
                 +{match.added_time}&apos; Stoppage
               </span>
             )}
-            <button
-              onClick={() => setIsCreateFixtureOpen(true)}
+            <Link
+              href={`/${club.slug}/admin/matches`}
               className="btn btn-primary btn-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}
             >
-              <Plus size={14} />
-              <span>Schedule Fixture</span>
-            </button>
+              <CalendarDays size={14} />
+              <span>Schedule & Manage Matches</span>
+            </Link>
           </div>
         </div>
       </div>

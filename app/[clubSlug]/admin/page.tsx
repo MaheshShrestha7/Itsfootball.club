@@ -58,7 +58,11 @@ export default function AdminDashboardPage({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Calendar size={16} />
+            <span>Schedule Matches</span>
+          </Link>
           <Link href={`/${club.slug}/admin/scanner`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <QrCode size={16} />
             <span>Launch QR Scanner</span>
@@ -107,7 +111,11 @@ export default function AdminDashboardPage({
         </div>
 
         {/* KPI 2: Live Match or Fixtures */}
-        <div className="glass-panel" style={{ padding: '1.5rem', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}>
+        <Link
+          href={`/${club.slug}/admin/matches`}
+          className="glass-panel glass-panel-interactive"
+          style={{ padding: '1.5rem', textDecoration: 'none', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? '#EF4444' : 'var(--text-muted)', textTransform: 'uppercase' }}>
               {liveMatch ? 'LIVE MATCH STATUS' : 'SCHEDULED FIXTURES'}
@@ -117,10 +125,11 @@ export default function AdminDashboardPage({
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
             {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
           </div>
-          <div style={{ fontSize: '0.75rem', color: liveMatch ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            {liveMatch ? `${liveMatch.current_minute}' in progress` : 'Regular season active'}
+          <div style={{ fontSize: '0.75rem', color: liveMatch ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span>{liveMatch ? `${liveMatch.current_minute}' in progress` : 'Manage fixtures & schedules'}</span>
+            <ArrowRight size={12} />
           </div>
-        </div>
+        </Link>
 
         {/* KPI 3: Member Passes Issued & Turnstile Scans */}
         <Link href={`/${club.slug}/admin/scanner`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>

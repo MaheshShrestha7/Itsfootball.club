@@ -29,7 +29,8 @@ import {
   MatchAuditItem,
   MemberMessage,
   MemberApplicationInput,
-  ClubSeasonStatsSummary
+  ClubSeasonStatsSummary,
+  HeroSliderPinnedItem
 } from './supabase/types';
 import {
   INITIAL_CLUBS,
@@ -86,6 +87,7 @@ interface ClubContextType {
   addMatch: (matchData: Omit<Match, 'id' | 'created_at'>) => Match;
   deleteMatch: (matchId: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
+  selfCheckInMatch: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => { success: boolean; message: string; attendeeName?: string };
   addMatchEvent: (eventData: Omit<MatchEvent, 'id' | 'created_at'>) => void;
   deleteMatchEvent: (eventId: string) => void;
   
@@ -791,12 +793,49 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   // Fixtures CRUD
   const addMatch = useCallback((matchData: Omit<Match, 'id' | 'created_at'>): Match => {
+    const matchId = `match-${Date.now()}`;
+    const qrCode = matchData.door_qr_checkin_enabled
+      ? (matchData.door_qr_code || `door-match-${matchId.slice(-8)}-${Math.random().toString(36).substring(2, 7)}`)
+      : matchData.door_qr_code;
+
     const newMatch: Match = {
       ...matchData,
-      id: `match-${Date.now()}`,
+      id: matchId,
+      door_qr_code: qrCode,
+      checkin_count: matchData.checkin_count || 0,
       created_at: new Date().toISOString(),
     };
     setMatches(prev => [newMatch, ...prev]);
+
+    // Handle hero slider pinning if requested
+    if (newMatch.featured_on_hero) {
+      setClubs(prevClubs => prevClubs.map(c => {
+        if (c.id === newMatch.club_id) {
+          const existingPins = c.hero_pinned_items || [];
+          const pinId = `pin-fixture-${newMatch.id}`;
+          const newPin: HeroSliderPinnedItem = {
+            id: pinId,
+            type: 'fixture',
+            target_id: newMatch.id,
+            title: newMatch.title || `${newMatch.home_team_name} vs ${newMatch.away_team_name}`,
+            subtitle: `${newMatch.match_type ? newMatch.match_type.toUpperCase() + ' • ' : ''}${newMatch.venue}`,
+            badge: `FEATURED MATCH • ${(newMatch.match_type || 'FIXTURE').toUpperCase()}`,
+            image_url: newMatch.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+            cta_label: 'Match Preview & Details',
+            cta_link: `/${c.slug}/match/${newMatch.id}`,
+            is_active: true,
+            order: 1,
+          };
+          const filtered = existingPins.filter(p => p.target_id !== newMatch.id && p.id !== pinId);
+          return {
+            ...c,
+            hero_pinned_items: [newPin, ...filtered.map((item, idx) => ({ ...item, order: idx + 2 }))],
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return c;
+      }));
+    }
 
     if (isSupabaseConfigured) {
       const client = getSupabaseClient();
@@ -814,6 +853,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setMatches(prev => prev.filter(m => m.id !== matchId));
     setMatchEvents(prev => prev.filter(e => e.match_id !== matchId));
 
+    // Also remove from hero slider pinned items if present
+    setClubs(prevClubs => prevClubs.map(c => ({
+      ...c,
+      hero_pinned_items: (c.hero_pinned_items || []).filter(p => p.target_id !== matchId && p.id !== `pin-fixture-${matchId}`)
+    })));
+
     if (isSupabaseConfigured) {
       const client = getSupabaseClient();
       if (client) {
@@ -827,8 +872,71 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   // 3. Update Match
   const updateMatch = useCallback((matchId: string, updates: Partial<Match>) => {
     setMatches(prev =>
-      prev.map(m => (m.id === matchId ? { ...m, ...updates } : m))
+      prev.map(m => {
+        if (m.id === matchId) {
+          const updated = { ...m, ...updates };
+          if (updated.door_qr_checkin_enabled && !updated.door_qr_code) {
+            updated.door_qr_code = `door-match-${matchId.slice(-8)}-${Math.random().toString(36).substring(2, 7)}`;
+          }
+          return updated;
+        }
+        return m;
+      })
     );
+
+    // Sync hero slider if featured_on_hero was updated
+    if (updates.featured_on_hero !== undefined) {
+      setMatches(currentMatches => {
+        const targetMatch = currentMatches.find(m => m.id === matchId);
+        if (targetMatch) {
+          const clubId = targetMatch.club_id;
+          setClubs(prevClubs => prevClubs.map(c => {
+            if (c.id === clubId) {
+              const existingPins = c.hero_pinned_items || [];
+              const pinId = `pin-fixture-${matchId}`;
+              if (updates.featured_on_hero) {
+                const newPin: HeroSliderPinnedItem = {
+                  id: pinId,
+                  type: 'fixture',
+                  target_id: matchId,
+                  title: updates.title || targetMatch.title || `${targetMatch.home_team_name} vs ${targetMatch.away_team_name}`,
+                  subtitle: `${(updates.match_type || targetMatch.match_type) ? (updates.match_type || targetMatch.match_type)!.toUpperCase() + ' • ' : ''}${updates.venue || targetMatch.venue}`,
+                  badge: `FEATURED MATCH • ${(updates.match_type || targetMatch.match_type || 'FIXTURE').toUpperCase()}`,
+                  image_url: updates.match_flyer_url || targetMatch.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+                  cta_label: 'Match Preview & Details',
+                  cta_link: `/${c.slug}/match/${matchId}`,
+                  is_active: true,
+                  order: 1,
+                };
+                const filtered = existingPins.filter(p => p.target_id !== matchId && p.id !== pinId);
+                return {
+                  ...c,
+                  hero_pinned_items: [newPin, ...filtered.map((item, idx) => ({ ...item, order: idx + 2 }))],
+                  updated_at: new Date().toISOString(),
+                };
+              } else {
+                return {
+                  ...c,
+                  hero_pinned_items: existingPins.filter(p => p.target_id !== matchId && p.id !== pinId),
+                  updated_at: new Date().toISOString(),
+                };
+              }
+            }
+            return c;
+          }));
+        }
+        return currentMatches;
+      });
+    }
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('matches').update(updates).eq('id', matchId).then(({ error }) => {
+          if (error) console.warn('Could not sync updated match to Supabase:', error.message);
+        });
+      }
+    }
   }, []);
 
   // Tier calculation helper
@@ -1510,6 +1618,70 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setGateScans(prev => [newScan, ...prev.slice(0, 499)]);
   }, []);
 
+  const selfCheckInMatch = useCallback((
+    matchId: string,
+    attendee: { name?: string; email?: string; token?: string }
+  ) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {
+      return { success: false, message: 'Match fixture not found.' };
+    }
+    if (!match.door_qr_checkin_enabled) {
+      return { success: false, message: 'Door QR self check-in is not active for this fixture.' };
+    }
+
+    let attendeeName = (attendee.name || '').trim();
+    let memberId: string | undefined = undefined;
+
+    // If member pass token provided, verify member
+    if (attendee.token) {
+      const token = attendee.token.trim().toLowerCase();
+      const member = members.find(m =>
+        m.club_id === match.club_id &&
+        (m.qr_code_token?.toLowerCase() === token || m.id.toLowerCase() === token)
+      );
+      if (member) {
+        attendeeName = member.full_name;
+        memberId = member.id;
+        // Award attendance points
+        awardClubScorePoints(
+          member.id,
+          15,
+          'gate_attendance',
+          `Matchday Turnstile Check-in: ${match.title || match.home_team_name + ' vs ' + match.away_team_name}`,
+          match.id
+        );
+      } else if (!attendeeName) {
+        return { success: false, message: 'Invalid member pass token provided.' };
+      }
+    }
+
+    if (!attendeeName) {
+      attendeeName = 'General Supporter';
+    }
+
+    // Increment checkin count on match
+    setMatches(prev => prev.map(m => m.id === matchId ? { ...m, checkin_count: (m.checkin_count || 0) + 1 } : m));
+
+    // Record gate scan
+    recordGateScan({
+      club_id: match.club_id,
+      scan_type: 'match_checkin',
+      token: attendee.token || `door-guest-${Date.now()}`,
+      member_id: memberId,
+      member_name: attendeeName,
+      match_id: match.id,
+      match_title: match.title || `${match.home_team_name} vs ${match.away_team_name}`,
+      valid: true,
+    });
+
+    return {
+      success: true,
+      message: `Welcome to ${match.venue}! Entry check-in confirmed.`,
+      attendeeName
+    };
+  }, [matches, members, awardClubScorePoints, recordGateScan]);
+
   const getClubAnalytics = useCallback((clubId: string): ClubAnalyticsSummary => {
     const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
     const clubScans = gateScans.filter(s => s.club_id === clubId);
@@ -1990,6 +2162,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         addMatch,
         deleteMatch,
         updateMatch,
+        selfCheckInMatch,
         addMatchEvent,
         deleteMatchEvent,
         addEvent,
