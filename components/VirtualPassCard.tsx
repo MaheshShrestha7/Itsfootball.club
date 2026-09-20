@@ -223,8 +223,9 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                   <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.15rem', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
                     {club.name}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Official Matchday Pass
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>Official Matchday Pass</span>
+                    {club.founded_year && <span>• Est. {club.founded_year}</span>}
                   </div>
                 </div>
               </div>

@@ -112,7 +112,7 @@ export default function AdminLayout({
     {
       title: 'Brand & Media',
       items: [
-        { label: 'Interface & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
+        { label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
         { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
         { label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
         { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },

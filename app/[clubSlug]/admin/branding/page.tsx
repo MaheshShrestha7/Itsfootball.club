@@ -22,6 +22,7 @@ import {
   Mail,
   Phone,
   Shirt,
+  Calendar,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -45,6 +46,7 @@ export default function AdminBrandingPage({
     slug: club?.slug || 'apex-city-fc',
     short_name: club?.short_name || 'ACFC',
     motto: club?.motto || '',
+    founded_year: club?.founded_year || 2018,
     primary_color: club?.primary_color || '#10B981',
     secondary_color: club?.secondary_color || '#0F172A',
     accent_color: club?.accent_color || '#F59E0B',
@@ -69,6 +71,7 @@ export default function AdminBrandingPage({
         slug: club.slug || '',
         short_name: club.short_name || '',
         motto: club.motto || '',
+        founded_year: club.founded_year || 2018,
         primary_color: club.primary_color || '#10B981',
         secondary_color: club.secondary_color || '#0F172A',
         accent_color: club.accent_color || '#F59E0B',
@@ -124,6 +127,9 @@ export default function AdminBrandingPage({
     if (name === 'stadium_capacity') {
       const parsed = parseInt(value, 10);
       setFormData(prev => ({ ...prev, stadium_capacity: isNaN(parsed) ? 0 : parsed }));
+    } else if (name === 'founded_year') {
+      const parsed = parseInt(value, 10);
+      setFormData(prev => ({ ...prev, founded_year: isNaN(parsed) ? 1800 : parsed }));
     } else if (name === 'name' && autoSyncSlug) {
       const generatedSlug = slugify(value);
       setFormData(prev => ({ ...prev, name: value, slug: generatedSlug }));
@@ -183,12 +189,12 @@ export default function AdminBrandingPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>BRANDING & KIT DESIGN</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB CONFIGURATION & BRANDING</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
-          Club Branding & Visual Interface
+          Club Configuration & Visual Interface
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Configure your club crest, stadium banners, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
+          Configure your club identity, establishment year, stadium specs, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
         </p>
       </div>
 
@@ -351,9 +357,22 @@ export default function AdminBrandingPage({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
               <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: formData.primary_color }} />
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem' }}>{formData.name}</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>({formData.short_name})</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({formData.short_name})</span>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '4px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  Est. {formData.founded_year}
+                </span>
               </div>
             </div>
 
@@ -436,6 +455,27 @@ export default function AdminBrandingPage({
                 value={formData.short_name}
                 onChange={handleChange}
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Calendar size={15} color="var(--club-primary)" />
+                <span>Club Establishment Year *</span>
+              </label>
+              <input
+                type="number"
+                name="founded_year"
+                required
+                min={1800}
+                max={new Date().getFullYear() + 1}
+                className="form-input"
+                value={formData.founded_year}
+                onChange={handleChange}
+                placeholder="e.g. 2018"
+              />
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                Displayed on the club header (Est. {formData.founded_year}), stadium entry, match badges, and member passes.
+              </div>
             </div>
 
             {/* Club Web Address & URL Slug */}

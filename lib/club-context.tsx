@@ -631,6 +631,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (updates.short_name !== undefined) supabasePayload.short_name = updates.short_name;
           if (updates.motto !== undefined) supabasePayload.motto = updates.motto;
           if (updates.logo_url !== undefined) supabasePayload.logo_url = updates.logo_url;
+          if (updates.founded_year !== undefined) supabasePayload.founded_year = updates.founded_year;
           if (updates.custom_domain !== undefined) supabasePayload.custom_domain = updates.custom_domain || null;
           
           const targetClub = clubs.find(c => c.id === clubId);
@@ -650,6 +651,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               clubName: updates.name !== undefined ? updates.name : targetClub?.name,
               shortName: updates.short_name !== undefined ? updates.short_name : targetClub?.short_name,
               motto: updates.motto !== undefined ? updates.motto : targetClub?.motto,
+              founded_year: updates.founded_year !== undefined ? updates.founded_year : targetClub?.founded_year,
               logoUrl: updates.logo_url !== undefined ? updates.logo_url : targetClub?.logo_url,
               stadiumName: updates.stadium_name !== undefined ? updates.stadium_name : targetClub?.stadium_name,
               capacity: updates.stadium_capacity !== undefined ? updates.stadium_capacity : targetClub?.stadium_capacity,
