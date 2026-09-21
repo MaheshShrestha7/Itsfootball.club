@@ -215,7 +215,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
 
   // 3. Authenticated but Insufficient Permissions (e.g. Player or Supporter)
   const userRole = getUserRoleForClub(club.id);
-  const isAuthorized = hasClubAdminAccess(club.id);
+  const isAuthorized = hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id);
 
   if (!isAuthorized) {
     return (

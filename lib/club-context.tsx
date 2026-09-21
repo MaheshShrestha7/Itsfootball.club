@@ -343,6 +343,32 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Load clubs from Supabase (source of truth); local-only clubs are kept until synced
+  useEffect(() => {
+    if (!isHydrated || !isSupabaseConfigured) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+    let cancelled = false;
+    client
+      .from('clubs')
+      .select('*')
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn('Could not load clubs from Supabase:', error.message);
+          return;
+        }
+        if (!data?.length) return;
+        const remote = data as Club[];
+        const remoteIds = new Set(remote.map(c => c.id));
+        setClubs(prev => [...remote, ...prev.filter(c => !remoteIds.has(c.id))]);
+        setActiveClub(prev => remote.find(c => c.id === prev?.id) || prev || remote[0]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated]);
+
   // Listen to cross-tab storage changes for real-time multi-window sync
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -534,13 +560,14 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return found;
   }, [clubs]);
 
-  // 1. Create Club with validation, sanitization & starter kit
+  // 1. Create Club with validation & sanitization
   const createClub = useCallback((clubData: Partial<Club>): Club => {
     const rawSlug = clubData.slug || clubData.name || `club-${Date.now()}`;
     const slugResult = validateClubSlug(rawSlug, clubs);
     const finalSlug = slugResult.cleanSlug;
 
-    const clubId = `club-${Date.now()}`;
+    // Supabase `clubs.id` is a UUID, so generate one that can be synced as-is
+    const clubId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `club-${Date.now()}`;
     const cleanName = sanitizeText(clubData.name) || 'New Football Club';
 
     const newClub: Club = {
@@ -549,132 +576,27 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       slug: finalSlug,
       name: cleanName,
       short_name: sanitizeText(clubData.short_name) || cleanName.substring(0, 3).toUpperCase(),
-      motto: sanitizeText(clubData.motto) || 'Play with Passion',
+      motto: sanitizeText(clubData.motto),
       founded_year: clubData.founded_year || new Date().getFullYear(),
       logo_url: clubData.logo_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&auto=format&fit=crop&q=80',
       banner_url: clubData.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
       primary_color: clubData.primary_color || '#10B981',
       secondary_color: clubData.secondary_color || '#0F172A',
       accent_color: clubData.accent_color || '#F59E0B',
-      stadium_name: sanitizeText(clubData.stadium_name) || `${cleanName} Arena`,
-      stadium_address: sanitizeText(clubData.stadium_address) || '100 Stadium Way, Sports City',
-      stadium_capacity: clubData.stadium_capacity || 5000,
-      stadium_pitch_type: sanitizeText(clubData.stadium_pitch_type) || 'Natural Hybrid Turf',
-      stadium_parking_info: sanitizeText(clubData.stadium_parking_info) || 'Matchday spectator parking at North Gate.',
-      contact_email: sanitizeText(clubData.contact_email) || 'contact@footballclub.org',
-      contact_phone: sanitizeText(clubData.contact_phone) || '+1 (555) 019-2831',
+      stadium_name: sanitizeText(clubData.stadium_name),
+      stadium_address: sanitizeText(clubData.stadium_address),
+      stadium_capacity: clubData.stadium_capacity || 0,
+      stadium_pitch_type: sanitizeText(clubData.stadium_pitch_type),
+      stadium_parking_info: sanitizeText(clubData.stadium_parking_info),
+      contact_email: sanitizeText(clubData.contact_email),
+      contact_phone: sanitizeText(clubData.contact_phone),
       custom_domain: sanitizeText(clubData.custom_domain) || undefined,
       hero_pinned_items: clubData.hero_pinned_items || [],
       is_active: true,
       created_at: new Date().toISOString(),
     };
 
-    // Seed starter roster and match fixtures so new club public portal is immediately rich & operable
-    const starterMember1: ClubMember = {
-      id: `mem-${clubId}-1`,
-      club_id: clubId,
-      full_name: 'Mateo Rossi',
-      email: 'm.rossi@club.org',
-      role: 'player',
-      player_position: 'ST',
-      jersey_number: 9,
-      photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-      status: 'active',
-      qr_code_token: `pass-${clubId}-rossi`,
-      membership_tier: 'First Team Pro',
-      membership_expires_at: '2027-12-31',
-      is_executive: false,
-      created_at: new Date().toISOString(),
-    };
-
-    const starterMember2: ClubMember = {
-      id: `mem-${clubId}-2`,
-      club_id: clubId,
-      full_name: 'Coach David Vance',
-      email: 'coach@club.org',
-      role: 'staff',
-      photo_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80',
-      status: 'active',
-      qr_code_token: `pass-${clubId}-vance`,
-      membership_tier: 'Staff Accreditation',
-      membership_expires_at: '2027-12-31',
-      is_executive: true,
-      executive_title: 'Head Coach & Technical Director',
-      executive_bio: 'Licensed UEFA Pro Coach leading technical squad operations.',
-      executive_order: 1,
-      created_at: new Date().toISOString(),
-    };
-
-    const starterStats: PlayerStats = {
-      id: `stat-${starterMember1.id}`,
-      club_id: clubId,
-      member_id: starterMember1.id,
-      season: '2025/2026',
-      appearances: 12,
-      minutes_played: 1040,
-      goals: 8,
-      assists: 4,
-      clean_sheets: 0,
-      yellow_cards: 1,
-      red_cards: 0,
-      motm_awards: 3,
-    };
-
-    const starterMatch: Match = {
-      id: `match-${clubId}-1`,
-      club_id: clubId,
-      competition: 'Club Friendly',
-      season: '2026/27',
-      home_team_name: newClub.name,
-      away_team_name: 'United Athletic',
-      home_team_logo: newClub.logo_url,
-      away_team_logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80',
-      is_club_home: true,
-      match_date: new Date(Date.now() + 86400000 * 3).toISOString(), // 3 days in future
-      venue: newClub.stadium_name,
-      status: 'upcoming',
-      home_score: 0,
-      away_score: 0,
-      current_minute: 0,
-      added_time: 0,
-      period: 'pre_match',
-      home_formation: '4-3-3',
-      away_formation: '4-2-3-1',
-      created_at: new Date().toISOString(),
-    };
-
-    const starterSeason: ClubSeason = {
-      id: `season-${clubId}-1`,
-      club_id: clubId,
-      name: '2026/27',
-      start_date: '2026-08-01',
-      end_date: '2027-05-31',
-      is_current: true,
-      status: 'active',
-      notes: 'Inaugural championship season.',
-      created_at: new Date().toISOString(),
-    };
-
-    const starterNews: NewsArticle = {
-      id: `news-${clubId}-1`,
-      club_id: clubId,
-      title: `Welcome to the Official Portal of ${newClub.name}`,
-      slug: `welcome-to-${newClub.slug}`,
-      summary: `Official launch of our new digital club experience, member passes, and live matchday center.`,
-      content: `We are thrilled to welcome our supporters, players, and commercial partners to the new official online home of ${newClub.name}. Stay tuned for live fixtures, membership accreditation, and club announcements.`,
-      cover_image_url: newClub.banner_url,
-      author_name: 'Club Secretariat',
-      tags: ['Announcement', 'Season Launch'],
-      is_featured: true,
-      published_at: new Date().toISOString(),
-    };
-
     setClubs(prev => [...prev, newClub]);
-    setMembers(prev => [...prev, starterMember1, starterMember2]);
-    setPlayerStats(prev => [...prev, starterStats]);
-    setMatches(prev => [...prev, starterMatch]);
-    setSeasons(prev => [...prev, starterSeason]);
-    setNews(prev => [starterNews, ...prev]);
     setActiveClub(newClub);
 
     // If Supabase is connected, asynchronously insert the club
