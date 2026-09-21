@@ -134,6 +134,10 @@ interface ClubContextType {
   
   // Member & Squad Management
   addMember: (memberData: Omit<ClubMember, 'id' | 'created_at'>) => ClubMember;
+  bulkAddMembers: (
+    membersData: Omit<ClubMember, 'id' | 'created_at'>[],
+    options?: { updateDuplicates?: boolean }
+  ) => { added: number; updated: number };
   updateMember: (memberId: string, updates: Partial<ClubMember>) => void;
   deleteMember: (memberId: string) => void;
   appointExecutive: (memberId: string, title: string, bio?: string, order?: number, season?: string) => void;
@@ -1368,6 +1372,75 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return newMem;
   }, []);
 
+  const bulkAddMembers = useCallback(
+    (
+      membersData: Omit<ClubMember, 'id' | 'created_at'>[],
+      options?: { updateDuplicates?: boolean }
+    ): { added: number; updated: number } => {
+      let added = 0;
+      let updated = 0;
+      const updateDuplicates = options?.updateDuplicates ?? true;
+
+      setMembers(prev => {
+        const nextMembers = [...prev];
+        const newStats: PlayerStats[] = [];
+
+        membersData.forEach((memData, idx) => {
+          const emailLower = memData.email?.trim().toLowerCase();
+          const existingIdx = emailLower
+            ? nextMembers.findIndex(
+                m => m.club_id === memData.club_id && m.email?.trim().toLowerCase() === emailLower
+              )
+            : -1;
+
+          if (existingIdx !== -1 && updateDuplicates) {
+            nextMembers[existingIdx] = {
+              ...nextMembers[existingIdx],
+              ...memData,
+              updated_at: new Date().toISOString(),
+            };
+            updated++;
+          } else if (existingIdx === -1) {
+            const newMem: ClubMember = {
+              ...memData,
+              id: `mem-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+              qr_code_token:
+                memData.qr_code_token ||
+                `pass-${Math.random().toString(36).substring(2, 10)}`,
+              created_at: new Date().toISOString(),
+            };
+            nextMembers.push(newMem);
+            added++;
+
+            newStats.push({
+              id: `stat-${newMem.id}`,
+              club_id: newMem.club_id,
+              member_id: newMem.id,
+              season: '2025/2026',
+              appearances: 0,
+              minutes_played: 0,
+              goals: 0,
+              assists: 0,
+              clean_sheets: 0,
+              yellow_cards: 0,
+              red_cards: 0,
+              motm_awards: 0,
+            });
+          }
+        });
+
+        if (newStats.length > 0) {
+          setPlayerStats(statPrev => [...statPrev, ...newStats]);
+        }
+
+        return nextMembers;
+      });
+
+      return { added, updated };
+    },
+    []
+  );
+
   const updateMember = useCallback((memberId: string, updates: Partial<ClubMember>) => {
     setMembers(prev => prev.map(m => (m.id === memberId ? { ...m, ...updates } : m)));
   }, []);
@@ -2559,6 +2632,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         updateEvent,
         deleteEvent,
         addMember,
+        bulkAddMembers,
         updateMember,
         deleteMember,
         appointExecutive,

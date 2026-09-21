@@ -1219,49 +1219,176 @@ export default function ClubPublicPage({
       />
 
       {/* 4.3 SPONSORS SHOWCASE */}
-      {clubSponsors.length > 0 && (
-        <section style={{ padding: '2.5rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
-          <div className="container">
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.25rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                Official Club Sponsors & Commercial Partners
-              </span>
-              <button onClick={() => setContactModalOpen(true)} style={{ background: 'transparent', border: 'none', color: 'var(--club-primary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-                Become a Club Sponsor &rarr;
-              </button>
-            </div>
+      {clubSponsors.length > 0 && (() => {
+        const getSponsorScale = (sponsor: any): 'xl' | 'lg' | 'md' | 'sm' => {
+          if (sponsor.size_scale && sponsor.size_scale !== 'auto') {
+            return sponsor.size_scale;
+          }
+          switch (sponsor.tier) {
+            case 'platinum':
+              return 'xl';
+            case 'gold':
+              return 'lg';
+            case 'silver':
+              return 'md';
+            case 'bronze':
+            case 'grassroots':
+            default:
+              return 'sm';
+          }
+        };
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2rem', justifyContent: 'center' }}>
-              {clubSponsors.map(sponsor => (
-                <a
-                  key={sponsor.id}
-                  href={sponsor.website_url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="glass-panel"
+        const sortedSponsors = [...clubSponsors].sort((a, b) => {
+          const scaleRank = { xl: 4, lg: 3, md: 2, sm: 1 };
+          const diff = (scaleRank[getSponsorScale(b)] || 1) - (scaleRank[getSponsorScale(a)] || 1);
+          if (diff !== 0) return diff;
+          return (a.display_order ?? 0) - (b.display_order ?? 0);
+        });
+
+        return (
+          <section style={{ padding: '3rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,0,0,0.2) 100%)' }}>
+            <div className="container">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
+                    Commercial Backers &amp; Kit Partners
+                  </span>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                    Official Club Sponsors
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setContactModalOpen(true)}
                   style={{
-                    padding: '0.75rem 1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    textDecoration: 'none',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    color: 'var(--club-primary, #FFFFFF)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
                   }}
                 >
-                  <img src={sponsor.logo_url} alt={sponsor.name} style={{ height: '28px', maxWidth: '100px', objectFit: 'contain' }} />
-                  <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#FFFFFF' }}>{sponsor.name}</span>
-                  <span className="badge" style={{
-                    fontSize: '0.6rem',
-                    backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                    color: sponsor.tier === 'platinum' ? '#F59E0B' : 'var(--text-muted)'
-                  }}>
-                    {sponsor.tier}
-                  </span>
-                </a>
-              ))}
+                  Become a Club Sponsor &rarr;
+                </button>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'stretch',
+                gap: '1.25rem',
+                justifyContent: 'center',
+              }}>
+                {sortedSponsors.map(sponsor => {
+                  const scale = getSponsorScale(sponsor);
+                  const isXL = scale === 'xl';
+                  const isLG = scale === 'lg';
+                  const isMD = scale === 'md';
+
+                  const badgeText =
+                    sponsor.tier === 'platinum'
+                      ? '★ PRINCIPAL PARTNER'
+                      : sponsor.tier === 'gold'
+                      ? 'GOLD PARTNER'
+                      : sponsor.tier === 'silver'
+                      ? 'OFFICIAL SUPPLIER'
+                      : 'COMMUNITY SUPPORTER';
+
+                  return (
+                    <a
+                      key={sponsor.id}
+                      href={sponsor.website_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="glass-panel"
+                      style={{
+                        padding: isXL ? '1.35rem 2rem' : isLG ? '1.1rem 1.6rem' : isMD ? '0.85rem 1.25rem' : '0.65rem 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: isXL ? '1.5rem' : isLG ? '1.1rem' : isMD ? '0.85rem' : '0.65rem',
+                        textDecoration: 'none',
+                        borderRadius: isXL ? '16px' : isLG ? '14px' : '10px',
+                        minWidth: isXL ? '300px' : isLG ? '230px' : isMD ? '175px' : '135px',
+                        flex: isXL ? '2 1 340px' : isLG ? '1.5 1 250px' : isMD ? '1 1 180px' : '0.7 1 140px',
+                        maxWidth: isXL ? '560px' : isLG ? '440px' : isMD ? '320px' : '240px',
+                        background: isXL
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(15, 23, 42, 0.85))'
+                          : isLG
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.07), rgba(15, 23, 42, 0.65))'
+                          : 'rgba(255, 255, 255, 0.025)',
+                        border: isXL
+                          ? '1px solid rgba(245, 158, 11, 0.45)'
+                          : isLG
+                          ? '1px solid rgba(245, 158, 11, 0.22)'
+                          : isMD
+                          ? '1px solid rgba(255, 255, 255, 0.1)'
+                          : '1px solid rgba(255, 255, 255, 0.05)',
+                        boxShadow: isXL ? '0 10px 32px rgba(245, 158, 11, 0.14)' : isLG ? '0 6px 20px rgba(0, 0, 0, 0.25)' : 'none',
+                        transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        if (isXL) e.currentTarget.style.borderColor = '#F59E0B';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        if (isXL) e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                      }}
+                    >
+                      <img
+                        src={sponsor.logo_url}
+                        alt={sponsor.name}
+                        style={{
+                          height: isXL ? '54px' : isLG ? '40px' : isMD ? '30px' : '24px',
+                          maxWidth: isXL ? '170px' : isLG ? '130px' : isMD ? '95px' : '75px',
+                          objectFit: 'contain',
+                          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
+                        }}
+                      />
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{
+                          fontWeight: 900,
+                          fontSize: isXL ? '1.15rem' : isLG ? '0.98rem' : isMD ? '0.86rem' : '0.78rem',
+                          color: '#FFFFFF',
+                          whiteSpace: 'nowrap',
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          letterSpacing: '-0.01em',
+                        }}>
+                          {sponsor.name}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
+                          <span className="badge" style={{
+                            fontSize: isXL ? '0.65rem' : isLG ? '0.6rem' : '0.55rem',
+                            padding: isXL ? '0.2rem 0.55rem' : '0.15rem 0.4rem',
+                            fontWeight: 800,
+                            backgroundColor: sponsor.tier === 'platinum'
+                              ? 'rgba(245, 158, 11, 0.22)'
+                              : sponsor.tier === 'gold'
+                              ? 'rgba(234, 179, 8, 0.18)'
+                              : 'rgba(255, 255, 255, 0.08)',
+                            color: sponsor.tier === 'platinum'
+                              ? '#F59E0B'
+                              : sponsor.tier === 'gold'
+                              ? '#FBBF24'
+                              : 'var(--text-muted)',
+                            letterSpacing: '0.04em',
+                          }}>
+                            {badgeText}
+                          </span>
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* 4.3 FIXTURES & RESULTS */}
       <section id="fixtures" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>

@@ -21,9 +21,11 @@ import {
   Hash,
   AlertCircle,
   Loader2,
+  Briefcase,
   Award,
-  Briefcase
+  FileSpreadsheet
 } from 'lucide-react';
+import BulkMemberModal from '@/components/BulkMemberModal';
 
 const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = [
   { value: 'GK', label: 'GK', desc: 'Goalkeeper' },
@@ -52,12 +54,13 @@ export default function AdminSquadPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, addMember, updateMember, deleteMember, playerStats, updatePlayerStats } = useClub();
+  const { clubs, selectClubBySlug, members, addMember, bulkAddMembers, updateMember, deleteMember, playerStats, updatePlayerStats } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
   const [modalOpen, setModalOpen] = useState(false);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<ClubMember | null>(null);
 
   // Form State with Multi-Role support
@@ -428,14 +431,38 @@ export default function AdminSquadPage({
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem' }}
-        >
-          <Plus size={18} />
-          <span>Add Member / Player</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setBulkModalOpen(true)}
+            className="btn btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.65rem 1.15rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              background: 'rgba(16, 185, 129, 0.08)',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            <FileSpreadsheet size={17} color="#10B981" />
+            <span>Bulk Import / Export</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem' }}
+          >
+            <Plus size={18} />
+            <span>Add Member / Player</span>
+          </button>
+        </div>
       </div>
 
       {/* Success Feedback Alert */}
@@ -1316,6 +1343,19 @@ export default function AdminSquadPage({
           </div>
         </div>
       )}
+
+      {/* Bulk Import / Export Modal */}
+      <BulkMemberModal
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        club={club}
+        allMembers={members}
+        onImportMembers={bulkAddMembers}
+        onSuccessToast={msg => {
+          setFeedback(msg);
+          setTimeout(() => setFeedback(null), 4000);
+        }}
+      />
     </div>
   );
 }

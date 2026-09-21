@@ -13,6 +13,7 @@ export type MatchType = 'internal' | 'friendly' | 'tournament';
 
 export type EventCategory = 'match' | 'training' | 'social' | 'agm' | 'trial' | 'tournament';
 export type SponsorTier = 'platinum' | 'gold' | 'silver' | 'bronze' | 'grassroots';
+export type SponsorSizeScale = 'auto' | 'xl' | 'lg' | 'md' | 'sm';
 export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | 'Media Request' | 'Youth Academy';
 
 export type HeroPinType = 'event' | 'fixture' | 'news' | 'image';
@@ -251,6 +252,7 @@ export interface Sponsor {
   logo_url: string;
   website_url?: string;
   tier: SponsorTier;
+  size_scale?: SponsorSizeScale;
   display_order: number;
   is_active: boolean;
 }

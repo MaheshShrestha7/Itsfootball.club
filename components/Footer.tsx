@@ -48,50 +48,62 @@ export default function Footer({ club, sponsors }: FooterProps) {
               justifyContent: 'center',
               gap: '2.5rem',
             }}>
-              {sponsors.map(sponsor => (
-                <a
-                  key={sponsor.id}
-                  href={sponsor.website_url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    opacity: 0.75,
-                    transition: 'opacity 0.2s, transform 0.2s',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.opacity = '1';
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.opacity = '0.75';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                >
-                  <img
-                    src={sponsor.logo_url}
-                    alt={sponsor.name}
+              {sponsors.map(sponsor => {
+                const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
+                const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
+                return (
+                  <a
+                    key={sponsor.id}
+                    href={sponsor.website_url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      height: '32px',
-                      maxWidth: '120px',
-                      objectFit: 'contain',
-                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: isPlatinum ? '0.75rem' : '0.5rem',
+                      opacity: isPlatinum ? 0.95 : 0.75,
+                      padding: isPlatinum ? '0.35rem 0.75rem' : '0.2rem 0.4rem',
+                      background: isPlatinum ? 'rgba(245, 158, 11, 0.08)' : 'transparent',
+                      border: isPlatinum ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid transparent',
+                      borderRadius: '8px',
+                      transition: 'opacity 0.2s, transform 0.2s, border-color 0.2s',
                     }}
-                  />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    {sponsor.name}
-                  </span>
-                  <span className="badge" style={{
-                    fontSize: '0.6rem',
-                    backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                    color: sponsor.tier === 'platinum' ? '#F59E0B' : 'var(--text-muted)'
-                  }}>
-                    {sponsor.tier}
-                  </span>
-                </a>
-              ))}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.opacity = '1';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.opacity = isPlatinum ? '0.95' : '0.75';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    <img
+                      src={sponsor.logo_url}
+                      alt={sponsor.name}
+                      style={{
+                        height: isPlatinum ? '38px' : isGold ? '30px' : '24px',
+                        maxWidth: isPlatinum ? '140px' : isGold ? '110px' : '90px',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    <span style={{
+                      fontSize: isPlatinum ? '0.9rem' : '0.82rem',
+                      fontWeight: isPlatinum ? 800 : 600,
+                      color: isPlatinum ? '#FFFFFF' : 'var(--text-secondary)'
+                    }}>
+                      {sponsor.name}
+                    </span>
+                    <span className="badge" style={{
+                      fontSize: '0.6rem',
+                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      color: isPlatinum ? '#F59E0B' : 'var(--text-muted)'
+                    }}>
+                      {sponsor.tier}
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -27,8 +27,10 @@ import {
   ChevronRight,
   Reply,
   Award,
-  RotateCw
+  RotateCw,
+  FileSpreadsheet
 } from 'lucide-react';
+import BulkMemberModal from '@/components/BulkMemberModal';
 
 export default function AdminMembersPage({
   params,
@@ -43,7 +45,8 @@ export default function AdminMembersPage({
     approveMemberApplication,
     rejectMemberApplication,
     memberMessages,
-    replyToMemberMessage
+    replyToMemberMessage,
+    bulkAddMembers
   } = useClub();
   const { user } = useAuth();
 
@@ -52,6 +55,7 @@ export default function AdminMembersPage({
 
   const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'rejected' | 'messages'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedMessage, setSelectedMessage] = useState<MemberMessage | null>(null);
@@ -169,8 +173,30 @@ export default function AdminMembersPage({
           </p>
         </div>
 
-        {/* Quick KPI stats */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Actions & Quick KPI stats */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setBulkModalOpen(true)}
+            className="btn btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.65rem 1.15rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              background: 'rgba(16, 185, 129, 0.08)',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            <FileSpreadsheet size={17} color="#10B981" />
+            <span>Bulk Import / Export</span>
+          </button>
+
           <div style={{
             background: 'rgba(245, 158, 11, 0.08)',
             border: '1px solid rgba(245, 158, 11, 0.25)',
@@ -808,6 +834,16 @@ export default function AdminMembersPage({
           </div>
         </div>
       )}
+
+      {/* Bulk Import / Export Modal */}
+      <BulkMemberModal
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        club={club}
+        allMembers={members}
+        onImportMembers={bulkAddMembers}
+        onSuccessToast={showToast}
+      />
     </div>
   );
 }
