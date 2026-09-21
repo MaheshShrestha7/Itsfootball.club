@@ -19,6 +19,7 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminEventsPage({
   params,
@@ -83,7 +84,7 @@ export default function AdminEventsPage({
     title: '',
     description: '',
     category: 'training' as EventCategory,
-    season: activeSeason?.name || '2026/27',
+    season: activeSeason?.name || defaultSeasonLabel(),
     start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
     location: club.stadium_name,
     max_capacity: 150,
@@ -96,7 +97,7 @@ export default function AdminEventsPage({
       title: '',
       description: '',
       category: 'training',
-      season: activeSeason?.name || '2026/27',
+      season: activeSeason?.name || defaultSeasonLabel(),
       start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
       location: club.stadium_name,
       max_capacity: 150,
@@ -111,7 +112,7 @@ export default function AdminEventsPage({
       title: evt.title,
       description: evt.description,
       category: evt.category,
-      season: evt.season || activeSeason?.name || '2026/27',
+      season: evt.season || activeSeason?.name || defaultSeasonLabel(),
       start_time: new Date(evt.start_time).toISOString().slice(0, 16),
       location: evt.location,
       max_capacity: evt.max_capacity,
@@ -243,7 +244,7 @@ export default function AdminEventsPage({
                     {evt.category.toUpperCase()}
                   </span>
                   <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.7rem' }}>
-                    {evt.season || activeSeason?.name || '2026/27'} Season
+                    {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Capacity: {evt.rsvp_count} / {evt.max_capacity} RSVPs

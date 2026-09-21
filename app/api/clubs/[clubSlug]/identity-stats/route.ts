@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { defaultSeasonLabel } from '@/lib/season';
 
 // Server-side secure Supabase client initialization
 function getServerSupabaseClient() {
@@ -130,12 +131,12 @@ export async function GET(
       activeSeasonName = activeSeasonRow.name;
     }
 
-    // Determine current active season (e.g. from club_seasons, or latest match, or '2026/27')
+    // Determine current active season (e.g. from club_seasons, or latest match, or the calendar default)
     const currentSeason =
       activeSeasonName ||
       playedMatches[0]?.season ||
       matches?.[0]?.season ||
-      '2026/27';
+      defaultSeasonLabel();
 
     const currentSeasonMatches = playedMatches.filter(
       m => !m.season || m.season === currentSeason

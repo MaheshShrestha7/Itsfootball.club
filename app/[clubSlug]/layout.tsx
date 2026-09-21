@@ -17,10 +17,12 @@ export default function ClubLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, sponsors, trackPageView, isHydrated } = useClub();
+  const { clubs, selectClubBySlug, sponsors, trackPageView, isHydrated, syncStatus } = useClub();
+  // No fallback to "some other club": an unknown address must not show another club's site
   const club = selectClubBySlug(resolvedParams.clubSlug) ||
-    clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase()) ||
-    clubs[0];
+    clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase());
+  // Wait for the first load from Supabase before declaring a club missing
+  const finishedLoading = isHydrated && syncStatus.phase !== 'loading';
 
   // Track real public page visits for live club analytics
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function ClubLayout({
   if (!club) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', textAlign: 'center', padding: '2rem' }}>
-        {isHydrated ? (
+        {finishedLoading ? (
           <>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>Club not found</h1>
             <p style={{ color: 'var(--text-muted)' }}>No club exists at this address yet.</p>

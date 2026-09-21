@@ -34,6 +34,7 @@ import StatsAuditModal from '@/components/StatsAuditModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { getLiveMinute } from '@/lib/match-clock';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -81,7 +82,7 @@ export default function AdminMatchCenterControllerPage({
   const [isCreateFixtureOpen, setIsCreateFixtureOpen] = useState(false);
   const [fixtureOpponent, setFixtureOpponent] = useState('');
   const [fixtureCompetition, setFixtureCompetition] = useState('Club Friendly');
-  const [fixtureSeason, setFixtureSeason] = useState(activeSeason?.name || '2026/27');
+  const [fixtureSeason, setFixtureSeason] = useState(activeSeason?.name || defaultSeasonLabel());
   const [fixtureDate, setFixtureDate] = useState(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
   const [fixtureVenue, setFixtureVenue] = useState(club.stadium_name);
   const [fixtureIsHome, setFixtureIsHome] = useState(true);

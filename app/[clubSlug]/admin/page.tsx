@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminDashboardPage({
   params,
@@ -97,7 +98,7 @@ export default function AdminDashboardPage({
             <div style={{ color: '#10B981' }}><CalendarDays size={20} /></div>
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
-            {activeSeason?.name || '2026/27'}
+            {activeSeason?.name || defaultSeasonLabel()}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span>Manage campaign timeline</span>

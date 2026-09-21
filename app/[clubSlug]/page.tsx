@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use, useMemo } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
@@ -34,6 +35,7 @@ import {
 import { Match, ClubEvent, NewsArticle } from '@/lib/supabase/types';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
+import { defaultSeasonLabel } from '@/lib/season';
 
 interface HomeHeroSlide {
   id: string;
@@ -73,8 +75,12 @@ export default function ClubPublicPage({
   } = useClub();
 
   const matchedClub = selectClubBySlug(resolvedParams.clubSlug);
-  // During hydration wait, if matchedClub isn't found in mock data, wait for hydration before falling back
+  // Wait for hydration before falling back to a case-insensitive lookup
   const club = matchedClub || (isHydrated ? clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase()) || null : null);
+
+  // Squad availability is a coaching tool: only club admins are offered it
+  const { hasClubAdminAccess } = useAuth();
+  const isClubAdmin = !!club && hasClubAdminAccess(club.id);
 
   // Canonical URL sync ONLY if accessed via a confirmed older slug alias AND hydrated
   useEffect(() => {
@@ -118,7 +124,7 @@ export default function ClubPublicPage({
   const liveMatch = clubMatches.find(m => m.status === 'live');
 
   const resolvedSeasonName = fixturesSeasonFilter === 'CURRENT'
-    ? (activeSeason?.name || '2026/27')
+    ? (activeSeason?.name || defaultSeasonLabel())
     : fixturesSeasonFilter;
 
   const filteredClubMatches = clubMatches.filter(m => {
@@ -242,8 +248,10 @@ export default function ClubPublicPage({
         tabLabel: liveMatch ? 'Matchday Live' : 'Matchday Hub',
         badge: liveMatch
           ? `MATCHDAY LIVE • ${getLiveMinute(liveMatch)}' IN PLAY`
-          : `UPCOMING FIXTURE • ${(!upcomingMatches[0]?.competition || upcomingMatches[0]?.competition === 'Premier Regional League') ? (upcomingMatches[0]?.match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`,
-        bgImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+          : upcomingMatches[0]
+          ? `UPCOMING FIXTURE • ${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? (upcomingMatches[0].match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`
+          : 'MATCHDAY HUB',
+        bgImage: (club.slider_images && club.slider_images[0]) || club.banner_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
         title: liveMatch
           ? `${liveMatch.home_team_name} vs ${liveMatch.away_team_name}`
           : upcomingMatches[0]
@@ -271,7 +279,7 @@ export default function ClubPublicPage({
         category: 'event',
         tabLabel: 'Events & Trials',
         badge: `UPCOMING EVENT • ${clubEvents[0]?.category?.toUpperCase() || 'CALENDAR'}`,
-        bgImage: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+        bgImage: club.banner_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
         title: clubEvents[0]?.title || `${club.name} Open Training Session`,
         subtitle: clubEvents[0]?.description || 'Fan sessions, community training camps, and player trial opportunities.',
         targetEvent: clubEvents[0],
@@ -481,6 +489,8 @@ export default function ClubPublicPage({
                             <span>{currentSlide.ctaLabel || (activeSlideMatch?.status === 'live' ? 'Enter Match Center Live' : 'Full Fixture Center')}</span>
                           </Link>
 
+                          {isClubAdmin && (
+
                           <Link
                             href={`/${club.slug}/availability`}
                             className="btn btn-secondary"
@@ -489,6 +499,7 @@ export default function ClubPublicPage({
                             <Users size={16} color="var(--club-primary)" />
                             <span>Squad Availability</span>
                           </Link>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1421,7 +1432,7 @@ export default function ClubPublicPage({
                   }}
                 >
                   <option value="CURRENT" style={{ background: '#111827', color: '#FFFFFF' }}>
-                    Current Season ({activeSeason?.name || '2026/27'})
+                    Current Season ({activeSeason?.name || defaultSeasonLabel()})
                   </option>
                   <option value="ALL" style={{ background: '#111827', color: '#FFFFFF' }}>All Seasons</option>
                   {clubSeasons.map(s => (
@@ -1545,7 +1556,7 @@ export default function ClubPublicPage({
 
                 {/* Action Link */}
                 <div className="fixture-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {match.status === 'upcoming' && (
+                  {match.status === 'upcoming' && isClubAdmin && (
                     <Link
                       href={`/${club.slug}/availability`}
                       className="btn btn-sm touch-target"
@@ -1795,7 +1806,7 @@ export default function ClubPublicPage({
                 </div>
                 {(exec.executive_season || activeSeason) && (
                   <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
-                    Tenure: {exec.executive_season || activeSeason?.name || '2026/27'}
+                    Tenure: {exec.executive_season || activeSeason?.name || defaultSeasonLabel()}
                   </span>
                 )}
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>

@@ -1671,3 +1671,29 @@ textarea {
     transition: opacity 0.15s ease !important;
   }
 }
+/* ---- Public match page: scoreboard names and matchday briefing on small screens ---- */
+.team-name-short { display: none; }
+
+.scoreboard-team-name { line-height: 1.15; }
+
+.match-briefing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.5rem;
+}
+.match-briefing-grid > * { min-width: 0; }
+.match-briefing-grid.has-flyer { grid-template-columns: minmax(0, 320px) minmax(0, 1fr); }
+
+@media (max-width: 720px) {
+  .team-name-full { display: none; }
+  .team-name-short { display: inline; letter-spacing: 0.04em; }
+
+  .match-briefing-grid,
+  .match-briefing-grid.has-flyer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+  }
+}

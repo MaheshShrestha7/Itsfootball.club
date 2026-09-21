@@ -47,6 +47,8 @@ import {
 } from './tournament-engine';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
+import { defaultSeasonLabel } from './season';
+import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState } from './supabase/sync';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
@@ -149,6 +151,10 @@ interface ClubContextType {
   
   // QR Verification & Check-in
   verifyMemberPass: (token: string) => { valid: boolean; member?: ClubMember; message: string };
+  /** Public pass check, run on the server (visitors never receive pass tokens) */
+  verifyMemberPassPublic: (token: string) => Promise<{ valid: boolean; member?: ClubMember; message: string }>;
+  /** Public door check-in, run on the server */
+  publicMatchCheckin: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
   checkInMemberToEvent: (eventId: string, qrToken: string) => { success: boolean; message: string; attendeeName?: string };
   
   // Inquiries
@@ -303,6 +309,15 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // Label of a club's current season (falls back to the calendar-based default)
+  const seasonsRef = useRef<ClubSeason[]>([]);
+  seasonsRef.current = seasons;
+  const seasonLabelFor = useCallback((clubId: string): string => {
+    const clubSeasons = seasonsRef.current.filter(x => x.club_id === clubId);
+    const current = clubSeasons.find(x => x.is_current) || clubSeasons.find(x => x.status === 'active') || clubSeasons[0];
+    return current?.name || defaultSeasonLabel();
+  }, []);
 
   // Load from localStorage on mount if present
   useEffect(() => {
@@ -785,7 +800,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       short_name: sanitizeText(clubData.short_name) || cleanName.substring(0, 3).toUpperCase(),
       motto: sanitizeText(clubData.motto),
       founded_year: clubData.founded_year || new Date().getFullYear(),
-      logo_url: clubData.logo_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&auto=format&fit=crop&q=80',
+      logo_url: clubData.logo_url || DEFAULT_CREST,
       banner_url: clubData.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
       primary_color: clubData.primary_color || '#10B981',
       secondary_color: clubData.secondary_color || '#0F172A',
@@ -1129,7 +1144,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           id: existing?.id || newId(),
           club_id: member.club_id,
           member_id: memberId,
-          season: existing?.season || '2025/2026',
+          season: existing?.season || seasonLabelFor(member.club_id),
           total_points: newTotal,
           weekly_points: newWeekly,
           monthly_points: newMonthly,
@@ -1312,7 +1327,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
       club_id: newMem.club_id,
       member_id: newMem.id,
-      season: '2025/2026',
+      season: seasonLabelFor(newMem.club_id),
       appearances: 0,
       minutes_played: 0,
       goals: 0,
@@ -1371,7 +1386,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
               club_id: newMem.club_id,
               member_id: newMem.id,
-              season: '2025/2026',
+              season: seasonLabelFor(newMem.club_id),
               appearances: 0,
               minutes_played: 0,
               goals: 0,
@@ -1423,10 +1438,16 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updatePlayerStats = useCallback((memberId: string, stats: Partial<PlayerStats>) => {
-    setPlayerStats(prev =>
-      prev.map(s => (s.member_id === memberId ? { ...s, ...stats } : s))
-    );
-  }, []);
+    const clubId = members.find(m => m.id === memberId)?.club_id;
+    const label = clubId ? seasonLabelFor(clubId) : undefined;
+    setPlayerStats(prev => {
+      const rows = prev.filter(s => s.member_id === memberId);
+      // Edit only the current season's row; older seasons keep their history
+      const target = rows.find(s => s.season === label) || (rows.length === 1 ? rows[0] : undefined);
+      if (!target) return prev;
+      return prev.map(s => (s.id === target.id ? { ...s, ...stats, id: s.id, member_id: s.member_id, season: s.season } : s));
+    });
+  }, [members, seasonLabelFor]);
 
   // 7. Sponsors
   const addSponsor = useCallback((sponsorData: Omit<Sponsor, 'id'>) => {
@@ -1599,7 +1620,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
       const newAvail: PlayerAvailability = {
         id: newId(),
-        club_id: activeClub?.id || '',
+        club_id: matches.find(m => m.id === matchId)?.club_id || members.find(m => m.id === memberId)?.club_id || '',
         match_id: matchId,
         member_id: memberId,
         status,
@@ -1611,7 +1632,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       };
       return [...prev, newAvail];
     });
-  }, [activeClub]);
+  }, [matches, members]);
 
   const getMatchAvailabilities = useCallback((matchId: string): PlayerAvailability[] => {
     return availabilities.filter(a => a.match_id === matchId);
@@ -1978,7 +1999,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         awardClubScorePoints(
           member.id,
           15,
-          'gate_attendance',
+          'match_appearance',
           `Matchday Turnstile Check-in: ${match.title || match.home_team_name + ' vs ' + match.away_team_name}`,
           match.id
         );
@@ -2018,6 +2039,76 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       attendeeName
     };
   }, [matches, members, awardClubScorePoints, recordGateScan]);
+
+  const verifyMemberPassPublic = useCallback(async (token: string): Promise<{ valid: boolean; member?: ClubMember; message: string }> => {
+    // A scanned QR may carry a whole link (".../verify?token=abc"); pull the token out of it
+    let cleaned = token.trim();
+    try {
+      const fromUrl = new URL(cleaned).searchParams.get('token');
+      if (fromUrl) cleaned = fromUrl.trim();
+    } catch {
+      // not a URL: use as typed
+    }
+    if (!cleaned) return { valid: false, message: 'Please enter a pass token.' };
+
+    const client = getSupabaseClient();
+    if (!client) return { valid: false, message: 'Pass verification is unavailable right now.' };
+
+    const { data, error } = await client.rpc('verify_member_pass', { p_token: cleaned });
+    if (error) return { valid: false, message: 'Pass verification is unavailable right now. Please try again.' };
+
+    const row = Array.isArray(data) ? data[0] : undefined;
+    if (!row) return { valid: false, message: 'Invalid pass: No matching club member found for this QR token.' };
+
+    const member = {
+      id: row.id,
+      club_id: row.club_id,
+      full_name: row.full_name,
+      email: '',
+      role: row.role,
+      player_position: row.player_position || undefined,
+      jersey_number: row.jersey_number ?? undefined,
+      photo_url: row.photo_url || undefined,
+      status: row.status,
+      qr_code_token: '',
+      membership_tier: row.membership_tier,
+      membership_expires_at: row.membership_expires_at,
+      is_executive: row.is_executive,
+      executive_title: row.executive_title || undefined,
+      created_at: '',
+    } as ClubMember;
+
+    if (row.membership_status !== 'approved') {
+      return { valid: false, member, message: 'Pass not active: this membership has not been approved.' };
+    }
+    if (row.status === 'suspended') {
+      return { valid: false, member, message: 'Pass suspended: This member is currently suspended from club activities.' };
+    }
+    if (row.membership_expires_at && new Date(row.membership_expires_at) < new Date()) {
+      return { valid: false, member, message: `Pass expired: Membership expired on ${row.membership_expires_at}.` };
+    }
+    return { valid: true, member, message: 'Valid pass: this member is accredited and active.' };
+  }, []);
+
+  const publicMatchCheckin = useCallback(async (
+    matchId: string,
+    attendee: { name?: string; email?: string; token?: string }
+  ): Promise<{ success: boolean; message: string; attendeeName?: string }> => {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, message: 'Check-in is unavailable right now. Please try again.' };
+
+    const { data, error } = await client.rpc('public_match_checkin', {
+      p_match_id: matchId,
+      p_token: attendee.token || null,
+      p_name: attendee.name ? sanitizeText(attendee.name) : null,
+      p_email: attendee.email ? sanitizeText(attendee.email) : null,
+    });
+    if (error) return { success: false, message: 'Check-in failed. Please try again or ask a steward for help.' };
+
+    const row = Array.isArray(data) ? data[0] : undefined;
+    if (!row) return { success: false, message: 'Check-in failed. Please try again.' };
+    return { success: row.success, message: row.message, attendeeName: row.attendee_name || undefined };
+  }, []);
 
   const getClubAnalytics = useCallback((clubId: string): ClubAnalyticsSummary => {
     const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
@@ -2155,7 +2246,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
       club_id: clubId,
       member_id: newMem.id,
-      season: '2025/2026',
+      season: seasonLabelFor(clubId),
       appearances: 0,
       minutes_played: 0,
       goals: 0,
@@ -2626,6 +2717,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         deleteNewsArticle,
         addMediaItem,
         verifyMemberPass,
+        verifyMemberPassPublic,
+        publicMatchCheckin,
         checkInMemberToEvent,
         submitInquiry,
         setPlayerAvailability,

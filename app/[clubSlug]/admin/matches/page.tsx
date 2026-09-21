@@ -36,6 +36,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import { defaultSeasonLabel } from '@/lib/season';
 
 const FLYER_PRESETS = [
   {
@@ -125,7 +126,7 @@ export default function AdminMatchesPage({
     match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
     description: '',
     competition: 'Club Friendly',
-    season: activeSeason?.name || '2026/27',
+    season: activeSeason?.name || defaultSeasonLabel(),
     status: 'upcoming',
     is_completed: false,
     featured_on_hero: false,
@@ -154,7 +155,7 @@ export default function AdminMatchesPage({
       match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       description: 'Official club fixture. Gates open 60 minutes prior to kickoff.',
       competition: 'Club Friendly',
-      season: activeSeason?.name || '2026/27',
+      season: activeSeason?.name || defaultSeasonLabel(),
       status: 'upcoming',
       is_completed: false,
       featured_on_hero: false,
@@ -194,7 +195,7 @@ export default function AdminMatchesPage({
       match_flyer_url: m.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       description: m.description || '',
       competition: m.competition || (m.match_type === 'internal' ? 'Intra-Squad Match' : 'Club Friendly'),
-      season: m.season || activeSeason?.name || '2026/27',
+      season: m.season || activeSeason?.name || defaultSeasonLabel(),
       status: m.status || 'upcoming',
       is_completed: m.status === 'completed',
       featured_on_hero: !!m.featured_on_hero,
@@ -448,7 +449,7 @@ export default function AdminMatchesPage({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
             <span className="badge badge-primary">MATCHDAY OPERATIONS</span>
             <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
-              {activeSeason?.name || '2026/27'}
+              {activeSeason?.name || defaultSeasonLabel()}
             </span>
           </div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.15 }}>
@@ -1134,8 +1135,7 @@ export default function AdminMatchesPage({
                       ))
                     ) : (
                       <>
-                        <option value="2026/27">2026/27</option>
-                        <option value="2025/26">2025/26</option>
+                        <option value={defaultSeasonLabel()}>{defaultSeasonLabel()}</option>
                       </>
                     )}
                   </select>

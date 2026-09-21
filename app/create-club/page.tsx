@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
+import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
@@ -27,7 +28,8 @@ import {
 export default function CreateClubPage() {
   const router = useRouter();
   const { clubs, createClub } = useClub();
-  const { user, assignClubRole } = useAuth();
+  const { user, isLoading: authLoading, assignClubRole } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export default function CreateClubPage() {
     primary_color: '#059669', // Emerald
     secondary_color: '#090D16', // Obsidian
     accent_color: '#F59E0B', // Gold
-    logo_url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&auto=format&fit=crop&q=80',
+    logo_url: '',
     banner_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
     stadium_name: '',
     stadium_address: '',
@@ -140,13 +142,18 @@ export default function CreateClubPage() {
       setStep(1);
       return;
     }
+    // A club belongs to an account; without one it would only exist in this browser
+    if (!user) {
+      setStepError(authLoading ? 'Checking your sign-in, please try again in a moment.' : 'Please sign in or register to launch your club.');
+      if (!authLoading) setAuthModalOpen(true);
+      return;
+    }
+    setStepError(null);
     const newClub = createClub({
       ...formData,
-      owner_id: user?.id,
+      owner_id: user.id,
     });
-    if (user) {
-      assignClubRole(newClub.id, 'owner');
-    }
+    assignClubRole(newClub.id, 'owner');
     router.push('/my-clubs');
   };
 
@@ -286,7 +293,7 @@ export default function CreateClubPage() {
                       name="name"
                       required
                       className="form-input"
-                      placeholder="e.g. Vanguard FC"
+                      placeholder="e.g. Riverside FC"
                       value={formData.name}
                       onChange={handleChange}
                     />
@@ -329,7 +336,7 @@ export default function CreateClubPage() {
                         required
                         className="form-input"
                         style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                        placeholder="vanguard-fc"
+                        placeholder="riverside-fc"
                         value={formData.slug}
                         onChange={handleChange}
                       />
@@ -562,7 +569,7 @@ export default function CreateClubPage() {
                   {/* Right Column: Interactive 2D Vector Jersey Morphing Canvas */}
                   <div>
                     <KitDesignerPreview
-                      clubName={formData.name || 'Vanguard FC'}
+                      clubName={formData.name || "Your Club"}
                       shortName={formData.short_name || 'VFC'}
                       primaryColor={formData.primary_color}
                       secondaryColor={formData.secondary_color}
@@ -609,7 +616,7 @@ export default function CreateClubPage() {
                       name="stadium_name"
                       required
                       className="form-input"
-                      placeholder="e.g. Vanguard Arena"
+                      placeholder="e.g. Riverside Park"
                       value={formData.stadium_name}
                       onChange={handleChange}
                     />
@@ -700,7 +707,7 @@ export default function CreateClubPage() {
                       name="custom_domain"
                       className="form-input"
                       style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                      placeholder="vanguardfc.club"
+                      placeholder="yourclub.com"
                       value={formData.custom_domain}
                       onChange={handleChange}
                     />
@@ -758,6 +765,8 @@ export default function CreateClubPage() {
           </form>
         </div>
       </main>
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} redirectTo="" />
 
       <Footer />
     </div>

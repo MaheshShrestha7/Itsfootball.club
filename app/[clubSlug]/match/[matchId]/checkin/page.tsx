@@ -27,7 +27,7 @@ export default function MatchDoorCheckinPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, selfCheckInMatch } = useClub();
+  const { clubs, selectClubBySlug, matches, publicMatchCheckin } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const match = matches.find(m => m.id === resolvedParams.matchId);
@@ -63,11 +63,11 @@ export default function MatchDoorCheckinPage({
     );
   }
 
-  const executeCheckinWithToken = (token: string) => {
+  const executeCheckinWithToken = async (token: string) => {
     if (!token.trim()) return;
     setSubmitting(true);
 
-    const res = selfCheckInMatch(match.id, { token: token.trim() });
+    const res = await publicMatchCheckin(match.id, { token: token.trim() });
 
     if (res.success) {
       // Trigger festive stadium confetti
@@ -98,7 +98,7 @@ export default function MatchDoorCheckinPage({
     setSubmitting(false);
   };
 
-  const handleCheckIn = (e: React.FormEvent) => {
+  const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
@@ -106,7 +106,7 @@ export default function MatchDoorCheckinPage({
       ? { token: memberToken.trim() }
       : { name: guestName.trim(), email: guestEmail.trim() };
 
-    const res = selfCheckInMatch(match.id, payload);
+    const res = await publicMatchCheckin(match.id, payload);
 
     if (res.success) {
       // Trigger festive stadium confetti

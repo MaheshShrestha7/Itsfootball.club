@@ -3,6 +3,7 @@
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Award, Plus, Trash2, Edit2, Shield, CheckCircle2, CalendarDays, Filter } from 'lucide-react';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminCommitteePage({
   params,
@@ -22,7 +23,7 @@ export default function AdminCommitteePage({
   const [title, setTitle] = useState('Vice-President');
   const [bio, setBio] = useState('');
   const [order, setOrder] = useState(executiveMembers.length + 1);
-  const [selectedSeason, setSelectedSeason] = useState(activeSeason?.name || '2026/27');
+  const [selectedSeason, setSelectedSeason] = useState(activeSeason?.name || defaultSeasonLabel());
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
   const [feedback, setFeedback] = useState('');
 
@@ -250,7 +251,7 @@ export default function AdminCommitteePage({
                       </span>
                       <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <CalendarDays size={10} />
-                        {exec.executive_season || activeSeason?.name || '2026/27'} Tenure
+                        {exec.executive_season || activeSeason?.name || defaultSeasonLabel()} Tenure
                       </span>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--club-primary)', fontWeight: 700 }}>

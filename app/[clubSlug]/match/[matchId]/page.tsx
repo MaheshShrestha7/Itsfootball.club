@@ -40,6 +40,7 @@ export default function MatchCenterPage({
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
   const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
 
+  const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [liveSyncPulse, setLiveSyncPulse] = useState(false);
@@ -188,6 +189,21 @@ export default function MatchCenterPage({
       </div>
     );
   }
+
+  // Short team names for narrow screens: the club's / opponent's own short name, else initials
+  const abbreviate = (name: string) => {
+    const words = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length > 1) return words.map(w => w[0]).join('').slice(0, 4);
+    return (words[0] || '').slice(0, 4);
+  };
+  const shortTeamName = (side: 'home' | 'away') => {
+    const isClubSide = side === 'home' ? match.is_club_home : !match.is_club_home;
+    const explicit = isClubSide ? club.short_name : match.opponent_short_name;
+    return (explicit || abbreviate(side === 'home' ? match.home_team_name : match.away_team_name)).toUpperCase();
+  };
+  const homeShort = shortTeamName('home');
+  const awayShort = shortTeamName('away');
+  const titleIsTeams = match.title === `${match.home_team_name} vs ${match.away_team_name}`;
 
   return (
     <div style={{ padding: '2.5rem 0 5rem 0' }}>
@@ -346,8 +362,15 @@ export default function MatchCenterPage({
           {/* Status & Competition Tag */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
             {match.title && (
-              <div style={{ width: '100%', fontSize: '1.1rem', fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
-                {match.title}
+              <div style={{ width: '100%', fontSize: 'clamp(0.95rem, 4vw, 1.1rem)', fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+                {titleIsTeams ? (
+                  <>
+                    <span className="team-name-full">{match.title}</span>
+                    <span className="team-name-short">{homeShort} vs {awayShort}</span>
+                  </>
+                ) : (
+                  match.title
+                )}
               </div>
             )}
             {match.status === 'live' ? (
@@ -377,7 +400,7 @@ export default function MatchCenterPage({
           {/* Teams & Scoreboard Display */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
+            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
             alignItems: 'center',
             gap: 'clamp(0.5rem, 3vw, 2rem)',
             maxWidth: '850px',
@@ -406,10 +429,11 @@ export default function MatchCenterPage({
                   animation: goalAlert?.active && goalAlert.teamSide === 'home' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                {match.home_team_logo ? (
+                {match.home_team_logo && !logoFailed.home ? (
                   <img
                     src={match.home_team_logo}
                     alt={match.home_team_name}
+                    onError={() => setLogoFailed(prev => ({ ...prev, home: true }))}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : match.is_club_home && club.logo_url ? (
@@ -427,8 +451,9 @@ export default function MatchCenterPage({
                   </>
                 )}
               </div>
-              <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
-                {match.home_team_name}
+              <h2 className="scoreboard-team-name" title={match.home_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+                <span className="team-name-full">{match.home_team_name}</span>
+                <span className="team-name-short">{homeShort}</span>
               </h2>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>HOME</span>
             </div>
@@ -511,10 +536,11 @@ export default function MatchCenterPage({
                   animation: goalAlert?.active && goalAlert.teamSide === 'away' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                {match.away_team_logo ? (
+                {match.away_team_logo && !logoFailed.away ? (
                   <img
                     src={match.away_team_logo}
                     alt={match.away_team_name}
+                    onError={() => setLogoFailed(prev => ({ ...prev, away: true }))}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : !match.is_club_home && club.logo_url ? (
@@ -532,8 +558,9 @@ export default function MatchCenterPage({
                   </>
                 )}
               </div>
-              <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
-                {match.away_team_name}
+              <h2 className="scoreboard-team-name" title={match.away_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+                <span className="team-name-full">{match.away_team_name}</span>
+                <span className="team-name-short">{awayShort}</span>
               </h2>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>AWAY</span>
             </div>
@@ -543,16 +570,11 @@ export default function MatchCenterPage({
         {/* Matchday Briefing & Promotional Flyer */}
         {(match.match_flyer_url || match.description || match.door_qr_checkin_enabled) && (
           <div
-            className="glass-panel"
+            className={`glass-panel match-briefing-grid${match.match_flyer_url ? ' has-flyer' : ''}`}
             style={{
-              padding: '1.5rem',
               marginBottom: '2rem',
               borderRadius: 'var(--radius-xl)',
               border: '1px solid var(--border-medium)',
-              display: 'grid',
-              gridTemplateColumns: match.match_flyer_url ? 'minmax(240px, 320px) 1fr' : '1fr',
-              gap: '1.5rem',
-              alignItems: 'center',
             }}
           >
             {match.match_flyer_url && (
@@ -573,8 +595,8 @@ export default function MatchCenterPage({
                 />
               </div>
             )}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <span className="badge badge-primary">MATCHDAY BRIEFING</span>
                 {match.match_type && (
                   <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
@@ -582,7 +604,7 @@ export default function MatchCenterPage({
                   </span>
                 )}
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'clamp(1.05rem, 4.5vw, 1.25rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem', overflowWrap: 'anywhere' }}>
                 {match.title || `${match.home_team_name} vs ${match.away_team_name}`}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1rem' }}>

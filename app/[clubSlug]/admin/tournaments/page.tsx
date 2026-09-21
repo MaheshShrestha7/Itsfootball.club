@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminTournamentsPage({
   params,
@@ -58,7 +59,7 @@ export default function AdminTournamentsPage({
 
   // Wizard Form State
   const [name, setName] = useState('');
-  const [season, setSeason] = useState(activeSeason?.name || '2026/27');
+  const [season, setSeason] = useState(activeSeason?.name || defaultSeasonLabel());
   const [format, setFormat] = useState<TournamentFormat>('group_knockout');
   const [venue, setVenue] = useState(club.stadium_name || 'Apex Park Stadium Arena');
   const [bannerUrl, setBannerUrl] = useState('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
@@ -84,7 +85,7 @@ export default function AdminTournamentsPage({
 
   const handleOpenWizard = () => {
     setName('');
-    setSeason(activeSeason?.name || '2026/27');
+    setSeason(activeSeason?.name || defaultSeasonLabel());
     setFormat('group_knockout');
     setVenue(club.stadium_name || 'Home Stadium Arena');
     setBannerUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');

@@ -15,24 +15,29 @@ export default function VerifyPassPage({
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
 
-  const { clubs, selectClubBySlug, verifyMemberPass } = useClub();
+  const { clubs, selectClubBySlug, verifyMemberPassPublic } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const [inputToken, setInputToken] = useState(token);
   const [result, setResult] = useState<any>(null);
 
-  useEffect(() => {
-    if (token) {
-      const res = verifyMemberPass(token);
-      setResult(res);
-    }
-  }, [token, verifyMemberPass]);
+  const [checking, setChecking] = useState(false);
 
-  const handleVerify = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!token) return;
+    setChecking(true);
+    verifyMemberPassPublic(token).then(res => {
+      setResult(res);
+      setChecking(false);
+    });
+  }, [token, verifyMemberPassPublic]);
+
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputToken.trim()) return;
-    const res = verifyMemberPass(inputToken);
-    setResult(res);
+    setChecking(true);
+    setResult(await verifyMemberPassPublic(inputToken));
+    setChecking(false);
   };
 
   return (

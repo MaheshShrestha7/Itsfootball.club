@@ -32,6 +32,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { getLiveMinute } from '@/lib/match-clock';
+import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminHeroSliderPage({
   params,
@@ -67,7 +68,7 @@ export default function AdminHeroSliderPage({
   // Custom Image Banner Form
   const [customImageForm, setCustomImageForm] = useState({
     image_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
-    title: 'Official Season Pass 2026/27',
+    title: `Official Season Pass ${defaultSeasonLabel()}`,
     subtitle: 'Secure guaranteed entry to all home fixtures, VIP member lounge access, and exclusive kit discount.',
     badge: 'MEMBERSHIP SPOTLIGHT',
     cta_label: 'Get Season Pass',
