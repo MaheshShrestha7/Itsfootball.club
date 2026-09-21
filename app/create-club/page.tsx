@@ -190,10 +190,11 @@ export default function CreateClubPage() {
         {/* Multi-step progress bar */}
         <div className="scroll-pill-strip" style={{
           alignItems: 'center',
-          gap: '1.5rem',
+          gap: '0.75rem',
           marginBottom: '2rem',
           position: 'relative',
           paddingBottom: '4px',
+          flexWrap: 'wrap',
         }}>
           {[
             { num: 1, label: 'Identity & Slug' },
@@ -265,7 +266,7 @@ export default function CreateClubPage() {
         )}
 
         {/* Wizard Form Body */}
-        <div className="glass-panel" style={{ padding: 'clamp(1.25rem, 4vw, 2.5rem)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(1.25rem, 4vw, 2.5rem)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           <form onSubmit={handleFinish}>
             {/* STEP 1: IDENTITY */}
             {step === 1 && (
@@ -442,7 +443,7 @@ export default function CreateClubPage() {
                 }}>
                   {/* Left Column: Color Pickers & Media Uploaders */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 110px), 1fr))', gap: '0.75rem' }}>
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Primary Color</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

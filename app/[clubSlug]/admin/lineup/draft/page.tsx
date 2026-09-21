@@ -489,7 +489,7 @@ export default function DraftLineupPage() {
           
           {/* Tactical Pitch Sandbox */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
               <TacticalPitch
                 players={squadPlayers}
                 formation={formation}

@@ -328,39 +328,39 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             })));
           }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
-          if (parsed.matches?.length) {
+          if (Array.isArray(parsed.matches)) {
+            // Always merge any tournament-seeded matches that aren't in localStorage yet,
+            // but only add them — never re-add matches the user deleted.
             const loadedIds = new Set(parsed.matches.map((m: Match) => m.id));
             const missingTournMatches = INITIAL_TOURNAMENT_MATCHES.filter(m => !loadedIds.has(m.id));
             setMatches([...parsed.matches, ...missingTournMatches]);
           }
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
-          if (parsed.events?.length) setEvents(parsed.events);
-          if (parsed.sponsors?.length) setSponsors(parsed.sponsors);
-          if (parsed.news?.length) setNews(parsed.news);
+          // Use Array.isArray so empty arrays (all items deleted) are respected
+          if (Array.isArray(parsed.events)) setEvents(parsed.events);
+          if (Array.isArray(parsed.sponsors)) setSponsors(parsed.sponsors);
+          if (Array.isArray(parsed.news)) setNews(parsed.news);
           if (parsed.gallery?.length) setGallery(parsed.gallery);
           if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(parsed.clubScoreProfiles);
           if (parsed.activityLogs?.length) setActivityLogs(parsed.activityLogs);
           if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
-          if (parsed.seasons?.length) setSeasons(parsed.seasons);
+          if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
-          if (parsed.internalTeams?.length) {
-            const loadedTeamIds = new Set(parsed.internalTeams.map((t: InternalTeam) => t.id));
-            const missingTeams = INITIAL_INTERNAL_TEAMS.filter(t => !loadedTeamIds.has(t.id));
-            setInternalTeams([...parsed.internalTeams, ...missingTeams]);
+          // CRITICAL FIX: use Array.isArray so that empty arrays (all teams/tournaments deleted)
+          // are honoured. Previously `?.length` was falsy for [], causing seed data to resurface.
+          // Also removed the "merge missing seed items" pattern — deleted seed items stay deleted.
+          if (Array.isArray(parsed.internalTeams)) {
+            setInternalTeams(parsed.internalTeams);
           }
-          if (parsed.tournaments?.length) {
-            const loadedTournIds = new Set(parsed.tournaments.map((t: Tournament) => t.id));
-            const missingTournaments = INITIAL_TOURNAMENTS.filter(t => !loadedTournIds.has(t.id));
-            setTournaments([...parsed.tournaments, ...missingTournaments]);
+          if (Array.isArray(parsed.tournaments)) {
+            setTournaments(parsed.tournaments);
           }
-          if (parsed.tournamentParticipants?.length) {
-            const loadedPartIds = new Set(parsed.tournamentParticipants.map((p: TournamentParticipant) => p.id));
-            const missingParticipants = INITIAL_TOURNAMENT_PARTICIPANTS.filter(p => !loadedPartIds.has(p.id));
-            setTournamentParticipants([...parsed.tournamentParticipants, ...missingParticipants]);
+          if (Array.isArray(parsed.tournamentParticipants)) {
+            setTournamentParticipants(parsed.tournamentParticipants);
           }
         }
       } catch (err) {
@@ -368,6 +368,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setIsHydrated(true);
       }
+
     }
   }, []);
 
@@ -390,22 +391,22 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (parsed.matches?.length) setMatches(parsed.matches);
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
-          if (parsed.events?.length) setEvents(parsed.events);
-          if (parsed.sponsors?.length) setSponsors(parsed.sponsors);
-          if (parsed.news?.length) setNews(parsed.news);
+          if (Array.isArray(parsed.events)) setEvents(parsed.events);
+          if (Array.isArray(parsed.sponsors)) setSponsors(parsed.sponsors);
+          if (Array.isArray(parsed.news)) setNews(parsed.news);
           if (parsed.gallery?.length) setGallery(parsed.gallery);
           if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(parsed.clubScoreProfiles);
           if (parsed.activityLogs?.length) setActivityLogs(parsed.activityLogs);
           if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
-          if (parsed.seasons?.length) setSeasons(parsed.seasons);
+          if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
-          if (parsed.internalTeams?.length) setInternalTeams(parsed.internalTeams);
-          if (parsed.tournaments?.length) setTournaments(parsed.tournaments);
-          if (parsed.tournamentParticipants?.length) setTournamentParticipants(parsed.tournamentParticipants);
+          if (Array.isArray(parsed.internalTeams)) setInternalTeams(parsed.internalTeams);
+          if (Array.isArray(parsed.tournaments)) setTournaments(parsed.tournaments);
+          if (Array.isArray(parsed.tournamentParticipants)) setTournamentParticipants(parsed.tournamentParticipants);
         } catch (err) {
           console.warn('Cross-tab storage parse error', err);
         }

@@ -750,10 +750,9 @@ export default function MatchCenterPage({
         {/* TAB 2: TACTICAL LINEUPS & PITCH */}
         {activeTab === 'lineups' && (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: '2.5rem',
-            alignItems: 'flex-start',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2rem',
           }}>
             {/* The Tactical Pitch Component */}
             <div>
@@ -810,40 +809,82 @@ export default function MatchCenterPage({
         )}
 
         {/* TAB 3: MATCH STATISTICS */}
-        {activeTab === 'stats' && (
-          <div className="glass-panel" style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.5rem', textAlign: 'center' }}>
-              Match Statistics Breakdown
-            </h3>
+        {activeTab === 'stats' && (() => {
+          // Derive real stats from the logged event array
+          const homeGoals = match.home_score;
+          const awayGoals = match.away_score;
+          const homeYellows = events.filter(e => e.event_type === 'yellow_card' && e.team_side === 'home').length;
+          const awayYellows = events.filter(e => e.event_type === 'yellow_card' && e.team_side === 'away').length;
+          const homeReds = events.filter(e => e.event_type === 'red_card' && e.team_side === 'home').length;
+          const awayReds = events.filter(e => e.event_type === 'red_card' && e.team_side === 'away').length;
+          const homeSubs = events.filter(e => e.event_type === 'sub' && e.team_side === 'home').length;
+          const awaySubs = events.filter(e => e.event_type === 'sub' && e.team_side === 'away').length;
 
-            {[
-              { label: 'Possession %', home: 61, away: 39, isPercent: true },
-              { label: 'Total Shots', home: 14, away: 8 },
-              { label: 'Shots on Target', home: 6, away: 3 },
-              { label: 'Corner Kicks', home: 7, away: 4 },
-              { label: 'Fouls Committed', home: 9, away: 12 },
-              { label: 'Yellow Cards', home: 1, away: 2 },
-            ].map(s => {
-              const total = s.home + s.away || 1;
-              const homePercent = (s.home / total) * 100;
+          const trackedStats = [
+            { label: 'Goals Scored', home: homeGoals, away: awayGoals },
+            { label: 'Yellow Cards', home: homeYellows, away: awayYellows },
+            { label: 'Red Cards', home: homeReds, away: awayReds },
+            { label: 'Substitutions', home: homeSubs, away: awaySubs },
+          ];
 
-              return (
-                <div key={s.label} style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    <span style={{ color: '#10B981' }}>{s.home}{s.isPercent ? '%' : ''}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-                    <span style={{ color: '#3B82F6' }}>{s.away}{s.isPercent ? '%' : ''}</span>
+          return (
+            <div className="glass-panel" style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', textAlign: 'center' }}>
+                Match Statistics
+              </h3>
+              <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
+                Live-tracked from the official event log
+              </p>
+
+              {/* Home vs Away header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', padding: '0 0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {match.home_team_name}
+                </span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {match.away_team_name}
+                </span>
+              </div>
+
+              {trackedStats.map(s => {
+                const total = s.home + s.away || 1;
+                const homePercent = (s.home / total) * 100;
+
+                return (
+                  <div key={s.label} style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                      <span style={{ color: '#10B981', minWidth: '24px' }}>{s.home}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+                      <span style={{ color: '#3B82F6', minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
+                    </div>
+                    <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+                      <div style={{ width: `${homePercent}%`, background: '#10B981', transition: 'width 0.6s ease' }} />
+                      <div style={{ width: `${100 - homePercent}%`, background: '#3B82F6', transition: 'width 0.6s ease' }} />
+                    </div>
                   </div>
+                );
+              })}
 
-                  <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: `${homePercent}%`, background: '#10B981', transition: 'width 0.5s' }} />
-                    <div style={{ width: `${100 - homePercent}%`, background: '#3B82F6', transition: 'width 0.5s' }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+              {/* Honest disclaimer for untracked advanced stats */}
+              <div style={{
+                marginTop: '1.75rem',
+                padding: '0.85rem 1rem',
+                borderRadius: '10px',
+                background: 'rgba(245, 158, 11, 0.06)',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.6rem',
+              }}>
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  <strong style={{ color: '#F59E0B' }}>Advanced stats not available.</strong>{' '}
+                  Possession %, shots, corners, and fouls are not tracked in the event logger. Stats above are derived entirely from the official match event log.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

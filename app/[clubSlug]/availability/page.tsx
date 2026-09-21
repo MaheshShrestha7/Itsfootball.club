@@ -298,11 +298,11 @@ export default function PlayerAvailabilityPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Calendar size={15} color={club.primary_color} />
-                    <span>{new Date(targetMatch.match_date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{new Date(targetMatch.match_date).toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Clock size={15} color={club.primary_color} />
-                    <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <MapPin size={15} color={club.primary_color} />
