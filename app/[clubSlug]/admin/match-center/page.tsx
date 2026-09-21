@@ -519,10 +519,11 @@ export default function AdminMatchCenterControllerPage({
         <div>
           {/* Main Scoreboard Command Hub */}
           <div className="glass-panel" style={{
-            padding: '2rem',
-            marginBottom: '2.5rem',
+            padding: 'clamp(1rem, 2.5vw, 2rem)',
+            marginBottom: '2rem',
             background: 'linear-gradient(180deg, #0e1624 0%, #080d15 100%)',
             border: '2px solid rgba(255, 255, 255, 0.15)',
+            overflow: 'hidden',
           }}>
             {/* Quick Period & Minute Bar */}
             <div style={{
@@ -530,69 +531,69 @@ export default function AdminMatchCenterControllerPage({
               flexWrap: 'wrap',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '1rem',
-              marginBottom: '2rem',
+              gap: '0.75rem',
+              marginBottom: '1.5rem',
               borderBottom: '1px solid var(--border-subtle)',
-              paddingBottom: '1.25rem',
+              paddingBottom: '1rem',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <div style={{
                   fontFamily: 'var(--font-heading)',
-                  fontSize: '2.2rem',
+                  fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
                   fontWeight: 900,
                   color: match.status === 'live' ? '#EF4444' : '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.4rem',
                 }}>
-                  <Clock size={26} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
+                  <Clock size={22} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
                   <span>{match.current_minute}&apos;</span>
                   {match.added_time > 0 && (
-                    <span style={{ fontSize: '1.2rem', color: '#F59E0B' }}>
+                    <span style={{ fontSize: '1rem', color: '#F59E0B' }}>
                       (+{match.added_time}&apos;)
                     </span>
                   )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  <button onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" title="-1 minute">
-                    <Minus size={14} /> 1m
+                  <button onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem' }} title="-1 minute">
+                    <Minus size={13} /> 1m
                   </button>
-                  <button onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" title="+1 minute">
-                    <Plus size={14} /> 1m
+                  <button onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem' }} title="+1 minute">
+                    <Plus size={13} /> 1m
                   </button>
                 </div>
               </div>
 
               {/* Quick Period Status Indicators */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                 <button
                   onClick={() => handlePeriodTransition('first_half', 'live', 1)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'first_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                  style={{ background: match.period === 'first_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
-                  1st Half (Kickoff)
+                  1st Half
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'halftime' ? '#F59E0B' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                  style={{ background: match.period === 'halftime' ? '#F59E0B' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
-                  Half Time (HT)
+                  HT (45&apos;)
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('second_half', 'live', 46)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'second_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                  style={{ background: match.period === 'second_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
                   2nd Half
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('full_time', 'completed', 90)}
                   className="btn btn-sm"
-                  style={{ background: match.status === 'completed' ? '#3B82F6' : 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                  style={{ background: match.status === 'completed' ? '#3B82F6' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
-                  Full Time (FT)
+                  FT (90&apos;)
                 </button>
               </div>
             </div>
@@ -602,64 +603,80 @@ export default function AdminMatchCenterControllerPage({
               display: 'grid',
               gridTemplateColumns: '1fr auto 1fr',
               alignItems: 'center',
-              gap: '2rem',
+              gap: 'clamp(0.4rem, 2vw, 1.5rem)',
             }}>
               {/* Home Team Score */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <div style={{ textAlign: 'center', minWidth: 0 }}>
+                <div style={{
+                  fontWeight: 800,
+                  fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)',
+                  color: '#FFFFFF',
+                  marginBottom: '0.4rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
                   {match.home_team_name}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
                   <button
                     onClick={() => handleScoreAdjust('home', -1)}
                     className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0 }}
+                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, flexShrink: 0 }}
                     title="Subtract 1 goal"
                   >
-                    <Minus size={16} />
+                    <Minus size={15} />
                   </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '3.4rem', fontWeight: 900, color: '#FFFFFF', minWidth: '55px' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: '#FFFFFF', minWidth: '36px', textAlign: 'center' }}>
                     {match.home_score}
                   </span>
                   <button
                     onClick={() => handleScoreAdjust('home', 1)}
                     className="btn btn-primary btn-sm"
-                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0, background: club.primary_color }}
+                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, background: club.primary_color, flexShrink: 0 }}
                     title="Add 1 goal"
                   >
-                    <Plus size={16} />
+                    <Plus size={15} />
                   </button>
                 </div>
               </div>
 
-              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', fontWeight: 900, color: 'var(--text-muted)', userSelect: 'none' }}>
                 :
               </div>
 
               {/* Away Team Score */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <div style={{ textAlign: 'center', minWidth: 0 }}>
+                <div style={{
+                  fontWeight: 800,
+                  fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)',
+                  color: '#FFFFFF',
+                  marginBottom: '0.4rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
                   {match.away_team_name}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
                   <button
                     onClick={() => handleScoreAdjust('away', -1)}
                     className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0 }}
+                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, flexShrink: 0 }}
                     title="Subtract 1 goal"
                   >
-                    <Minus size={16} />
+                    <Minus size={15} />
                   </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '3.4rem', fontWeight: 900, color: '#FFFFFF', minWidth: '55px' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: '#FFFFFF', minWidth: '36px', textAlign: 'center' }}>
                     {match.away_score}
                   </span>
                   <button
                     onClick={() => handleScoreAdjust('away', 1)}
                     className="btn btn-primary btn-sm"
-                    style={{ borderRadius: '50%', width: '38px', height: '38px', padding: 0, background: '#3B82F6' }}
+                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, background: '#3B82F6', flexShrink: 0 }}
                     title="Add 1 goal"
                   >
-                    <Plus size={16} />
+                    <Plus size={15} />
                   </button>
                 </div>
               </div>
@@ -832,39 +849,41 @@ export default function AdminMatchCenterControllerPage({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '0.85rem 1.15rem',
+                      padding: 'clamp(0.6rem, 2vw, 0.85rem) clamp(0.75rem, 2.5vw, 1.15rem)',
                       borderRadius: '8px',
                       background: 'rgba(0, 0, 0, 0.35)',
                       border: '1px solid var(--border-subtle)',
+                      gap: '0.75rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
                       <span className="badge" style={{
                         backgroundColor: evt.event_type === 'goal' ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'rgba(255,255,255,0.1)',
                         color: evt.event_type === 'yellow_card' ? '#000000' : '#FFFFFF',
                         fontWeight: 900,
-                        minWidth: '40px',
+                        minWidth: '38px',
                         justifyContent: 'center',
+                        flexShrink: 0,
                       }}>
                         {evt.minute}&apos;
                       </span>
 
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, color: '#FFFFFF' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {evt.event_type.toUpperCase().replace('_', ' ')} • {evt.player_name}
                           </span>
                           {evt.assist_player_name && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               (Ast: {evt.assist_player_name})
                             </span>
                           )}
-                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', flexShrink: 0 }}>
                             {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                           </span>
                         </div>
                         {evt.detail_text && (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem', wordBreak: 'break-word' }}>
                             {evt.detail_text}
                           </div>
                         )}
@@ -874,7 +893,7 @@ export default function AdminMatchCenterControllerPage({
                     <button
                       onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
                       className="btn btn-secondary btn-sm"
-                      style={{ padding: '0.35rem 0.65rem', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                      style={{ padding: '0.35rem 0.65rem', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
                       title="Delete event and revert score if goal"
                     >
                       <Trash2 size={14} />
@@ -916,6 +935,7 @@ export default function AdminMatchCenterControllerPage({
               matchEvents={events}
               onSaveFormation={handleSaveTacticalLineup}
               teamName={match.home_team_name}
+              allowOrientationToggle={true}
             />
           </div>
         </div>
@@ -954,7 +974,7 @@ export default function AdminMatchCenterControllerPage({
             </div>
 
             {/* Quick Added Time Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.5rem' }}>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 10].map(mins => (
                 <button
                   key={mins}

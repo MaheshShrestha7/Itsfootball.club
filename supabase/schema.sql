@@ -807,6 +807,7 @@ CREATE TABLE IF NOT EXISTS internal_teams (
     short_name VARCHAR(16) NOT NULL,
     color VARCHAR(32) DEFAULT '#10B981',
     logo_url TEXT,
+    cover_url TEXT,
     captain_id UUID REFERENCES club_members(id) ON DELETE SET NULL,
     coach_name VARCHAR(128),
     player_ids JSONB DEFAULT '[]'::jsonb,

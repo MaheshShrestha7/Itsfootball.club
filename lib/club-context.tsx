@@ -491,8 +491,35 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             if (prev.some(e => e.id === data.event.id)) return prev;
             return [...prev, data.event];
           });
+          if (data.event.event_type === 'goal' || data.event.event_type === 'penalty') {
+            setMatches(prev => prev.map(m => {
+              if (m.id === data.matchId) {
+                return {
+                  ...m,
+                  home_score: data.event.team_side === 'home' ? m.home_score + 1 : m.home_score,
+                  away_score: data.event.team_side === 'away' ? m.away_score + 1 : m.away_score,
+                };
+              }
+              return m;
+            }));
+          }
         } else if (data.type === 'MATCH_EVENT_DELETED' && data.eventId) {
-          setMatchEvents(prev => prev.filter(e => e.id !== data.eventId));
+          setMatchEvents(prev => {
+            const target = prev.find(e => e.id === data.eventId);
+            if (target && (target.event_type === 'goal' || target.event_type === 'penalty')) {
+              setMatches(matchesPrev => matchesPrev.map(m => {
+                if (m.id === (data.matchId || target.match_id)) {
+                  return {
+                    ...m,
+                    home_score: target.team_side === 'home' ? Math.max(0, m.home_score - 1) : m.home_score,
+                    away_score: target.team_side === 'away' ? Math.max(0, m.away_score - 1) : m.away_score,
+                  };
+                }
+                return m;
+              }));
+            }
+            return prev.filter(e => e.id !== data.eventId);
+          });
         } else if (data.type === 'MATCH_CHECKIN' && data.matchId) {
           setMatches(prev => prev.map(m => m.id === data.matchId ? { ...m, checkin_count: (m.checkin_count || 0) + 1 } : m));
         }
@@ -1272,20 +1299,22 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           })
         );
       }
+
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const channel = new BroadcastChannel('itsfootball_live_matchday');
+          channel.postMessage({
+            type: 'MATCH_EVENT_DELETED',
+            eventId,
+            matchId: target?.match_id,
+            timestamp: Date.now(),
+          });
+          channel.close();
+        } catch {}
+      }
+
       return prev.filter(e => e.id !== eventId);
     });
-
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.postMessage({
-          type: 'MATCH_EVENT_DELETED',
-          eventId,
-          timestamp: Date.now(),
-        });
-        channel.close();
-      } catch {}
-    }
   }, []);
 
   // 5. Events Management
@@ -2448,6 +2477,26 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
       return finalMatches;
     });
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('itsfootball_live_matchday');
+        channel.postMessage({
+          type: 'MATCH_UPDATED',
+          matchId,
+          updates: {
+            home_score: homeScore,
+            away_score: awayScore,
+            home_penalty_score: homePens,
+            away_penalty_score: awayPens,
+            status: isCompleted ? 'completed' : 'live',
+            period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
+          },
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+    }
   }, [tournaments, tournamentParticipants]);
 
   const progressKnockoutStage = useCallback((tournamentId: string) => {

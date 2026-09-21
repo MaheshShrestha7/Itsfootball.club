@@ -32,11 +32,11 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members } = useClub();
+  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-  const match = matches.find(m => m.id === resolvedParams.matchId) || matches[0];
-  const events = matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute);
+  const match = matches.find(m => m.id === resolvedParams.matchId);
+  const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
   const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
@@ -50,8 +50,8 @@ export default function MatchCenterPage({
     teamSide: 'home' | 'away';
   } | null>(null);
 
-  const prevHomeScoreRef = useRef(match.home_score);
-  const prevAwayScoreRef = useRef(match.away_score);
+  const prevHomeScoreRef = useRef(match?.home_score ?? 0);
+  const prevAwayScoreRef = useRef(match?.away_score ?? 0);
   const isInitialMount = useRef(true);
 
   // Synthesized stadium goal chime using Web Audio API
@@ -110,8 +110,11 @@ export default function MatchCenterPage({
 
   // Watch for real-time score changes
   useEffect(() => {
+    if (!match) return;
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      prevHomeScoreRef.current = match.home_score;
+      prevAwayScoreRef.current = match.away_score;
       return;
     }
 
@@ -123,10 +126,11 @@ export default function MatchCenterPage({
 
     prevHomeScoreRef.current = match.home_score;
     prevAwayScoreRef.current = match.away_score;
-  }, [match.home_score, match.away_score, match.home_team_name, match.away_team_name, triggerGoalCelebration]);
+  }, [match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
 
   // Real-time live synchronization: BroadcastChannel + Supabase Realtime + Live Polling Heartbeat
   useEffect(() => {
+    if (!match) return;
     // 1. BroadcastChannel cross-tab synchronization
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
@@ -144,11 +148,11 @@ export default function MatchCenterPage({
         };
       } catch {}
     }
-  }, [match.id]);
+  }, [match?.id]);
 
   // 2. Supabase Realtime Channel Subscription
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!match || !isSupabaseConfigured) return;
     const client = getSupabaseClient();
     if (!client) return;
 
@@ -168,7 +172,39 @@ export default function MatchCenterPage({
         client.removeChannel(channel);
       };
     } catch {}
-  }, [match.id, updateMatch]);
+  }, [match?.id, updateMatch]);
+
+  if (!isHydrated) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', padding: '2rem' }}>
+        <div style={{
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          border: '3px solid rgba(255,255,255,0.1)',
+          borderTopColor: '#10B981',
+          animation: 'spin 0.8s linear infinite',
+          marginBottom: '1rem',
+        }} />
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading match fixture...</p>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', color: '#FFFFFF', padding: '6rem 1.5rem', textAlign: 'center' }}>
+        <Shield size={48} style={{ opacity: 0.3, margin: '0 auto 1.25rem auto' }} />
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>Match Fixture Not Found</h2>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
+          The requested fixture does not exist or may have been rescheduled.
+        </p>
+        <Link href={`/${club.slug}`} className="btn btn-primary">
+          Return to Club Headquarters
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '2.5rem 0 5rem 0' }}>
@@ -383,13 +419,30 @@ export default function MatchCenterPage({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  padding: '6px',
                   animation: goalAlert?.active && goalAlert.teamSide === 'home' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                <Shield size={28} color="#FFFFFF" strokeWidth={2.4} />
-                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
-                  {match.is_club_home ? club.short_name : 'HOME'}
-                </span>
+                {match.home_team_logo ? (
+                  <img
+                    src={match.home_team_logo}
+                    alt={match.home_team_name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : match.is_club_home && club.logo_url ? (
+                  <img
+                    src={club.logo_url}
+                    alt={match.home_team_name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <>
+                    <Shield size={28} color="#FFFFFF" strokeWidth={2.4} />
+                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                      {match.home_team_name ? match.home_team_name.slice(0, 3).toUpperCase() : 'HOM'}
+                    </span>
+                  </>
+                )}
               </div>
               <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
                 {match.home_team_name}
@@ -471,13 +524,30 @@ export default function MatchCenterPage({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  padding: '6px',
                   animation: goalAlert?.active && goalAlert.teamSide === 'away' ? 'crestGoalPulse 1.4s ease-out' : 'none',
                 }}
               >
-                <Trophy size={28} color="#FFFFFF" strokeWidth={2.4} />
-                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
-                  {!match.is_club_home ? club.short_name : 'AWAY'}
-                </span>
+                {match.away_team_logo ? (
+                  <img
+                    src={match.away_team_logo}
+                    alt={match.away_team_name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : !match.is_club_home && club.logo_url ? (
+                  <img
+                    src={club.logo_url}
+                    alt={match.away_team_name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <>
+                    <Trophy size={28} color="#FFFFFF" strokeWidth={2.4} />
+                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                      {match.away_team_name ? match.away_team_name.slice(0, 3).toUpperCase() : 'AWY'}
+                    </span>
+                  </>
+                )}
               </div>
               <h2 style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', wordBreak: 'break-word' }}>
                 {match.away_team_name}
@@ -686,7 +756,8 @@ export default function MatchCenterPage({
                 formation={match.home_formation || '4-3-3'}
                 savedPositions={match.home_lineup_coords}
                 primaryColor={club.primary_color}
-                isEditable={true}
+                isEditable={false}
+                allowOrientationToggle={true}
                 matchEvents={events}
                 teamName={match.home_team_name}
               />

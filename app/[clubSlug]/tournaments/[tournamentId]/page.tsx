@@ -76,9 +76,12 @@ export default function PublicTournamentDetailPage({
       {/* Tournament Header */}
       <section
         style={{
-          background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(9, 13, 22, 0.95) 100%)',
+          background: tournament.banner_url
+            ? `linear-gradient(180deg, rgba(9, 13, 22, 0.75) 0%, rgba(9, 13, 22, 0.96) 100%), url(${tournament.banner_url}) center/cover no-repeat`
+            : 'linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(9, 13, 22, 0.95) 100%)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           padding: '2.5rem 1.5rem 1.5rem 1.5rem',
+          position: 'relative',
         }}
       >
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>

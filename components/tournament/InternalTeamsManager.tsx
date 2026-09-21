@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { InternalTeam, ClubMember } from '@/lib/supabase/types';
-import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award, Image as ImageIcon } from 'lucide-react';
+import ImageUploadZone from '@/components/ImageUploadZone';
 
 interface InternalTeamsManagerProps {
   clubSlug: string;
@@ -42,6 +43,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
   const [shortName, setShortName] = useState('');
   const [color, setColor] = useState('#10B981');
   const [logoUrl, setLogoUrl] = useState('/crests/apex-city.svg');
+  const [coverUrl, setCoverUrl] = useState('');
   const [coachName, setCoachName] = useState('');
   const [captainId, setCaptainId] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
@@ -53,6 +55,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setShortName('');
     setColor('#10B981');
     setLogoUrl(club.logo_url || '/crests/apex-city.svg');
+    setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80');
     setCoachName('');
     setCaptainId('');
     setSelectedPlayerIds([]);
@@ -65,6 +68,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setShortName(team.short_name);
     setColor(team.color || '#10B981');
     setLogoUrl(team.logo_url || club.logo_url || '/crests/apex-city.svg');
+    setCoverUrl(team.cover_url || '');
     setCoachName(team.coach_name || '');
     setCaptainId(team.captain_id || '');
     setSelectedPlayerIds(team.player_ids || []);
@@ -86,7 +90,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         name: name.trim(),
         short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
         color,
-        logo_url: logoUrl,
+        logo_url: logoUrl || '/crests/apex-city.svg',
+        cover_url: coverUrl || undefined,
         coach_name: coachName.trim(),
         captain_id: captainId || undefined,
         player_ids: selectedPlayerIds,
@@ -98,7 +103,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         name: name.trim(),
         short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
         color,
-        logo_url: logoUrl,
+        logo_url: logoUrl || '/crests/apex-city.svg',
+        cover_url: coverUrl || undefined,
         coach_name: coachName.trim(),
         captain_id: captainId || undefined,
         player_ids: selectedPlayerIds,
@@ -214,97 +220,124 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               <div
                 key={team.id}
                 style={{
-                  background: 'rgba(15, 23, 42, 0.75)',
+                  background: 'rgba(15, 23, 42, 0.85)',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '14px',
+                  borderRadius: '16px',
                   overflow: 'hidden',
                   position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  transition: 'transform 0.2s ease, border-color 0.2s ease',
                 }}
               >
                 {/* Team Accent Color Bar */}
-                <div style={{ height: '4px', background: team.color || '#10B981' }} />
+                <div style={{ height: '4px', background: team.color || '#10B981', zIndex: 3 }} />
 
-                {/* Team Info Header */}
-                <div style={{ padding: '1.25rem', flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div
-                        style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '10px',
-                          background: 'rgba(0, 0, 0, 0.4)',
-                          border: `2px solid ${team.color || '#10B981'}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          overflow: 'hidden',
-                          padding: '3px',
-                        }}
-                      >
-                        <img
-                          src={team.logo_url || '/crests/apex-city.svg'}
-                          alt={team.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                        />
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
-                            {team.name}
-                          </h3>
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: 800,
-                              background: 'rgba(255, 255, 255, 0.08)',
-                              color: 'var(--text-secondary)',
-                              padding: '1px 5px',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            {team.short_name}
-                          </span>
-                        </div>
-                        {team.coach_name && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            Coach: {team.coach_name}
-                          </div>
-                        )}
-                      </div>
+                {/* Team Cover Photo Banner with Action Buttons */}
+                <div
+                  style={{
+                    height: '110px',
+                    width: '100%',
+                    background: team.cover_url
+                      ? `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(15, 23, 42, 0.95) 100%), url(${team.cover_url})`
+                      : `linear-gradient(135deg, ${team.color || '#10B981'}40 0%, #0B1120 100%)`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    position: 'relative',
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      backdropFilter: 'blur(8px)',
+                      color: team.color || '#10B981',
+                      border: `1px solid ${team.color || '#10B981'}50`,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {team.short_name}
+                  </span>
+
+                  <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(0,0,0,0.5)', padding: '3px', borderRadius: '8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button
+                      onClick={() => handleOpenEdit(team)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Edit Team"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(team.id, team.name)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#EF4444',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Delete Team"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Team Info Header with Overlaid Crest */}
+                <div style={{ padding: '0 1.25rem 1.25rem 1.25rem', flex: 1, marginTop: '-26px', position: 'relative', zIndex: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.85rem', marginBottom: '0.75rem' }}>
+                    <div
+                      style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '12px',
+                        background: '#080D15',
+                        border: `2px solid ${team.color || '#10B981'}`,
+                        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        padding: '4px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={team.logo_url || '/crests/apex-city.svg'}
+                        alt={team.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      />
                     </div>
-
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      <button
-                        onClick={() => handleOpenEdit(team)}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          border: 'none',
-                          color: '#FFFFFF',
-                          padding: '0.4rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                        }}
-                        title="Edit Team"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(team.id, team.name)}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.1)',
-                          border: 'none',
-                          color: '#EF4444',
-                          padding: '0.4rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                        }}
-                        title="Delete Team"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                    <div style={{ paddingBottom: '2px', minWidth: 0 }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {team.name}
+                      </h3>
+                      {team.coach_name && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Coach: {team.coach_name}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -525,6 +558,86 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     }}
                     title="Custom Color"
                   />
+                </div>
+              </div>
+
+              {/* Team Crest & Cover Photo Upload Zones */}
+              <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ImageIcon size={15} color={color} />
+                  <span>Team Identity & Media Assets</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '1rem' }}>
+                  {/* Team Crest / Logo */}
+                  <div>
+                    <ImageUploadZone
+                      label="Team Crest (Logo)"
+                      recommendedText="Square 500x500px PNG or SVG"
+                      currentImageUrl={logoUrl}
+                      onUploadComplete={url => setLogoUrl(url)}
+                      folder="crests"
+                      aspectRatio="1:1"
+                    />
+                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl(club.logo_url || '/crests/apex-city.svg')}
+                        className="btn btn-sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                      >
+                        Club Crest
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl('/crests/red-lions.svg')}
+                        className="btn btn-sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                      >
+                        Red Lions
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Team Cover Photo */}
+                  <div>
+                    <ImageUploadZone
+                      label="Team Cover Photo"
+                      recommendedText="Wide 16:9 banner for squad roster"
+                      currentImageUrl={coverUrl}
+                      onUploadComplete={url => setCoverUrl(url)}
+                      folder="banners"
+                      aspectRatio="16:9"
+                    />
+                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80')}
+                        className="btn btn-sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                      >
+                        Stadium
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80')}
+                        className="btn btn-sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                      >
+                        Floodlights
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1200&auto=format&fit=crop&q=80')}
+                        className="btn btn-sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                      >
+                        Pitch
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 

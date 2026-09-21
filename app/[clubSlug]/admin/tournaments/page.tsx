@@ -20,8 +20,10 @@ import {
   Settings,
   Sparkles,
   Shuffle,
-  Shield
+  Shield,
+  Image as ImageIcon
 } from 'lucide-react';
+import ImageUploadZone from '@/components/ImageUploadZone';
 
 export default function AdminTournamentsPage({
   params,
@@ -58,6 +60,7 @@ export default function AdminTournamentsPage({
   const [season, setSeason] = useState(activeSeason?.name || '2026/27');
   const [format, setFormat] = useState<TournamentFormat>('group_knockout');
   const [venue, setVenue] = useState(club.stadium_name || 'Apex Park Stadium Arena');
+  const [bannerUrl, setBannerUrl] = useState('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(
     new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
@@ -83,6 +86,7 @@ export default function AdminTournamentsPage({
     setSeason(activeSeason?.name || '2026/27');
     setFormat('group_knockout');
     setVenue(club.stadium_name || 'Home Stadium Arena');
+    setBannerUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
     setStartDate(new Date().toISOString().slice(0, 10));
     setEndDate(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
     setDescription('Championship cup featuring internal club teams and regional guest clubs.');
@@ -169,7 +173,7 @@ export default function AdminTournamentsPage({
         end_date: endDate,
         venue,
         description,
-        banner_url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80',
+        banner_url: bannerUrl.trim() || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80',
       },
       participantInputs
     );
@@ -689,6 +693,43 @@ export default function AdminTournamentsPage({
                       fontSize: '0.88rem',
                     }}
                   />
+                </div>
+              </div>
+
+              {/* Tournament Cover Photo / Banner */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <ImageUploadZone
+                  label="Tournament Cover Banner (16:9)"
+                  recommendedText="Wide 16:9 banner for bracket, spectator tiesheet, and matchday programs"
+                  currentImageUrl={bannerUrl}
+                  onUploadComplete={url => setBannerUrl(url)}
+                  folder="tournaments"
+                  aspectRatio="16:9"
+                />
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Stadium Presets:</span>
+                  {[
+                    { label: 'Champions Stadium', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80' },
+                    { label: 'Floodlit Arena', url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80' },
+                    { label: 'Derby Night', url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80' },
+                    { label: 'Metro Pitch', url: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=1600&auto=format&fit=crop&q=80' },
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setBannerUrl(p.url)}
+                      className="btn btn-sm"
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '2px 7px',
+                        background: bannerUrl === p.url ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
+                        color: bannerUrl === p.url ? '#10B981' : '#FFF',
+                        border: bannerUrl === p.url ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

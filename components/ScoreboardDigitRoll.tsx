@@ -22,6 +22,9 @@ export default function ScoreboardDigitRoll({
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
+      if (value !== displayValue) {
+        setDisplayValue(value);
+      }
       return;
     }
 

@@ -524,6 +524,7 @@ export interface InternalTeam {
   short_name: string;
   color: string;
   logo_url: string;
+  cover_url?: string;
   captain_id?: string;
   coach_name?: string;
   player_ids: string[];

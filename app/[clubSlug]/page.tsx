@@ -804,7 +804,17 @@ export default function ClubPublicPage({
                               {activeSlideMatch.home_score} : {activeSlideMatch.away_score}
                             </div>
                             <div style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
-                              2nd Half (In Play)
+                              {activeSlideMatch.period === 'first_half'
+                                ? '1st Half'
+                                : activeSlideMatch.period === 'halftime'
+                                ? 'Half Time'
+                                : activeSlideMatch.period === 'second_half'
+                                ? '2nd Half'
+                                : activeSlideMatch.period === 'extra_time'
+                                ? 'Extra Time'
+                                : activeSlideMatch.period === 'penalties'
+                                ? 'Penalties'
+                                : 'In Play'}
                             </div>
                           </div>
 
@@ -1390,7 +1400,13 @@ export default function ClubPublicPage({
                     textAlign: 'center',
                     flexShrink: 0,
                   }}>
-                    {match.status === 'completed' ? `${match.home_score} - ${match.away_score}` : 'VS'}
+                    {match.status === 'live' ? (
+                      <span style={{ color: '#EF4444' }}>{match.home_score} - {match.away_score}</span>
+                    ) : match.status === 'completed' ? (
+                      `${match.home_score} - ${match.away_score}`
+                    ) : (
+                      'VS'
+                    )}
                   </div>
 
                   <div style={{ textAlign: 'left', flex: 1, fontWeight: 700, color: '#FFFFFF', fontSize: '0.95rem' }}>

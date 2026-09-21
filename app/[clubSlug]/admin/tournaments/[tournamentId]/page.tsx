@@ -23,8 +23,10 @@ import {
   Clock,
   Sparkles,
   Settings,
-  X
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
+import ImageUploadZone from '@/components/ImageUploadZone';
 
 export default function AdminTournamentDetailPage({
   params,
@@ -59,6 +61,8 @@ export default function AdminTournamentDetailPage({
   const [editGroupCount, setEditGroupCount] = useState(tournament?.group_count ?? 1);
   const [editTeamsAdvancing, setEditTeamsAdvancing] = useState(tournament?.teams_advancing_per_group ?? 2);
   const [editThirdPlace, setEditThirdPlace] = useState(tournament?.has_third_place_match ?? false);
+  const [editBannerModalOpen, setEditBannerModalOpen] = useState(false);
+  const [editBannerUrl, setEditBannerUrl] = useState(tournament?.banner_url ?? '');
 
   if (!tournament) {
     return (
@@ -127,6 +131,16 @@ export default function AdminTournamentDetailPage({
     setTimeout(() => setFeedback(null), 4000);
   };
 
+  const handleSaveBanner = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateTournament(tournament.id, {
+      banner_url: editBannerUrl.trim(),
+    });
+    setEditBannerModalOpen(false);
+    setFeedback('✓ Updated tournament cover photo!');
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   const formatLabel =
     tournament.format === 'knockout'
       ? 'Single-Elimination Knockout'
@@ -178,6 +192,25 @@ export default function AdminTournamentDetailPage({
             <span>Spectator Hub</span>
             <ExternalLink size={13} />
           </Link>
+
+          <button
+            onClick={() => {
+              setEditBannerUrl(tournament.banner_url || '');
+              setEditBannerModalOpen(true);
+            }}
+            className="btn btn-sm btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.8rem',
+              borderRadius: '8px',
+            }}
+            title="Update tournament cover photo"
+          >
+            <ImageIcon size={14} />
+            <span>Cover Photo</span>
+          </button>
 
           <button
             onClick={handleProgressStage}
@@ -272,7 +305,11 @@ export default function AdminTournamentDetailPage({
       {/* Tournament Header Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          background: tournament.banner_url
+            ? `linear-gradient(135deg, rgba(17, 24, 39, 0.88) 0%, rgba(15, 23, 42, 0.94) 100%), url(${tournament.banner_url}) center/cover no-repeat`
+            : 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '16px',
           padding: '1.5rem',
@@ -891,6 +928,111 @@ export default function AdminTournamentDetailPage({
                   style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
                 >
                   Save & Regenerate Tiesheet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit Banner Modal */}
+      {editBannerModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '560px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.7)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ImageIcon size={20} color="#10B981" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                  Tournament Cover Photo
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditBannerModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBanner} style={{ padding: '1.5rem' }}>
+              <ImageUploadZone
+                label="Tournament Cover Photo (16:9)"
+                recommendedText="Wide 16:9 hero image for tournament bracket and spectator page"
+                currentImageUrl={editBannerUrl}
+                onUploadComplete={url => setEditBannerUrl(url)}
+                folder="tournaments"
+                aspectRatio="16:9"
+              />
+              <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Stadium Presets:</span>
+                {[
+                  { label: 'Champions Stadium', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80' },
+                  { label: 'Floodlit Arena', url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80' },
+                  { label: 'Derby Night', url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80' },
+                  { label: 'Metro Pitch', url: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=1600&auto=format&fit=crop&q=80' },
+                ].map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setEditBannerUrl(p.url)}
+                    className="btn btn-sm"
+                    style={{
+                      fontSize: '0.7rem',
+                      padding: '2px 7px',
+                      background: editBannerUrl === p.url ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
+                      color: editBannerUrl === p.url ? '#10B981' : '#FFF',
+                      border: editBannerUrl === p.url ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)'
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditBannerModalOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
+                >
+                  Save Cover Photo
                 </button>
               </div>
             </form>
