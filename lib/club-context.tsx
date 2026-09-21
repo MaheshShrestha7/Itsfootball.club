@@ -69,6 +69,26 @@ import {
 } from './tournament-engine';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 
+// Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
+let liveBroadcastChannel: BroadcastChannel | null = null;
+export function broadcastLiveMatchdayEvent(message: any) {
+  if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+  try {
+    if (!liveBroadcastChannel) {
+      liveBroadcastChannel = new BroadcastChannel('itsfootball_live_matchday');
+    }
+    liveBroadcastChannel.postMessage(message);
+  } catch {
+    try {
+      const ch = new BroadcastChannel('itsfootball_live_matchday');
+      ch.postMessage(message);
+      setTimeout(() => {
+        try { ch.close(); } catch {}
+      }, 1500);
+    } catch {}
+  }
+}
+
 interface ClubContextType {
   clubs: Club[];
   activeClub: Club | null;
@@ -1065,18 +1085,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Cross-tab broadcast for live match centre and public screens
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.postMessage({
-          type: 'MATCH_UPDATED',
-          matchId,
-          updates,
-          timestamp: Date.now(),
-        });
-        channel.close();
-      } catch {}
-    }
+    broadcastLiveMatchdayEvent({
+      type: 'MATCH_UPDATED',
+      matchId,
+      updates,
+      timestamp: Date.now(),
+    });
   }, []);
 
   // Tier calculation helper
@@ -1259,18 +1273,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Broadcast live event to public match centres and scoreboards
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.postMessage({
-          type: 'MATCH_EVENT_ADDED',
-          matchId: eventData.match_id,
-          event: newEvent,
-          timestamp: Date.now(),
-        });
-        channel.close();
-      } catch {}
-    }
+    broadcastLiveMatchdayEvent({
+      type: 'MATCH_EVENT_ADDED',
+      matchId: eventData.match_id,
+      event: newEvent,
+      timestamp: Date.now(),
+    });
 
     if (isSupabaseConfigured) {
       const client = getSupabaseClient();
@@ -1300,18 +1308,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        try {
-          const channel = new BroadcastChannel('itsfootball_live_matchday');
-          channel.postMessage({
-            type: 'MATCH_EVENT_DELETED',
-            eventId,
-            matchId: target?.match_id,
-            timestamp: Date.now(),
-          });
-          channel.close();
-        } catch {}
-      }
+      broadcastLiveMatchdayEvent({
+        type: 'MATCH_EVENT_DELETED',
+        eventId,
+        matchId: target?.match_id,
+        timestamp: Date.now(),
+      });
 
       return prev.filter(e => e.id !== eventId);
     });
@@ -1852,17 +1854,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       valid: true,
     });
 
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.postMessage({
-          type: 'MATCH_CHECKIN',
-          matchId,
-          timestamp: Date.now(),
-        });
-        channel.close();
-      } catch {}
-    }
+    broadcastLiveMatchdayEvent({
+      type: 'MATCH_CHECKIN',
+      matchId,
+      timestamp: Date.now(),
+    });
 
     return {
       success: true,
@@ -2478,25 +2474,19 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       return finalMatches;
     });
 
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.postMessage({
-          type: 'MATCH_UPDATED',
-          matchId,
-          updates: {
-            home_score: homeScore,
-            away_score: awayScore,
-            home_penalty_score: homePens,
-            away_penalty_score: awayPens,
-            status: isCompleted ? 'completed' : 'live',
-            period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
-          },
-          timestamp: Date.now(),
-        });
-        channel.close();
-      } catch {}
-    }
+    broadcastLiveMatchdayEvent({
+      type: 'MATCH_UPDATED',
+      matchId,
+      updates: {
+        home_score: homeScore,
+        away_score: awayScore,
+        home_penalty_score: homePens,
+        away_penalty_score: awayPens,
+        status: isCompleted ? 'completed' : 'live',
+        period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
+      },
+      timestamp: Date.now(),
+    });
   }, [tournaments, tournamentParticipants]);
 
   const progressKnockoutStage = useCallback((tournamentId: string) => {

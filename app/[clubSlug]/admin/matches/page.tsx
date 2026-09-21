@@ -93,9 +93,28 @@ export default function AdminMatchesPage({
 
   // Form State
   const defaultDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string;
+    match_type: MatchType;
+    opponent_name: string;
+    opponent_short_name: string;
+    is_club_home: boolean;
+    match_date: string;
+    match_time: string;
+    venue: string;
+    match_flyer_url: string;
+    description: string;
+    competition: string;
+    season: string;
+    status: MatchStatus;
+    is_completed: boolean;
+    featured_on_hero: boolean;
+    door_qr_checkin_enabled: boolean;
+    home_score: number;
+    away_score: number;
+  }>({
     title: '',
-    match_type: 'friendly' as MatchType,
+    match_type: 'friendly',
     opponent_name: '',
     opponent_short_name: '',
     is_club_home: true,
@@ -106,6 +125,7 @@ export default function AdminMatchesPage({
     description: '',
     competition: 'Club Friendly',
     season: activeSeason?.name || '2026/27',
+    status: 'upcoming',
     is_completed: false,
     featured_on_hero: false,
     door_qr_checkin_enabled: true,
@@ -134,6 +154,7 @@ export default function AdminMatchesPage({
       description: 'Official club fixture. Gates open 60 minutes prior to kickoff.',
       competition: 'Club Friendly',
       season: activeSeason?.name || '2026/27',
+      status: 'upcoming',
       is_completed: false,
       featured_on_hero: false,
       door_qr_checkin_enabled: true,
@@ -173,11 +194,12 @@ export default function AdminMatchesPage({
       description: m.description || '',
       competition: m.competition || (m.match_type === 'internal' ? 'Intra-Squad Match' : 'Club Friendly'),
       season: m.season || activeSeason?.name || '2026/27',
+      status: m.status || 'upcoming',
       is_completed: m.status === 'completed',
       featured_on_hero: !!m.featured_on_hero,
       door_qr_checkin_enabled: m.door_qr_checkin_enabled ?? true,
-      home_score: m.home_score || 0,
-      away_score: m.away_score || 0,
+      home_score: m.home_score ?? 0,
+      away_score: m.away_score ?? 0,
     });
     setIsFormModalOpen(true);
   };
@@ -229,10 +251,12 @@ export default function AdminMatchesPage({
       combinedDateIso = new Date(Date.now() + 3 * 86400000).toISOString();
     }
 
-    const resolvedStatus: MatchStatus = form.is_completed ? 'completed' : 'upcoming';
+    const resolvedStatus: MatchStatus = form.status;
+    const homeScore = Number(form.home_score) || 0;
+    const awayScore = Number(form.away_score) || 0;
 
     if (editingMatchId) {
-      // Update existing
+      // Update existing fixture - PRESERVE status & scores
       updateMatch(editingMatchId, {
         title: cleanTitle || `${homeTeam} vs ${awayTeam}`,
         match_type: form.match_type,
@@ -253,8 +277,9 @@ export default function AdminMatchesPage({
         status: resolvedStatus,
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
-        home_score: form.is_completed ? Number(form.home_score) : 0,
-        away_score: form.is_completed ? Number(form.away_score) : 0,
+        home_score: homeScore,
+        away_score: awayScore,
+        ...(resolvedStatus === 'completed' ? { period: 'full_time' } : {}),
       });
       showToast(`Updated fixture: ${cleanTitle || cleanOpponent}`);
     } else {
@@ -280,11 +305,11 @@ export default function AdminMatchesPage({
         status: resolvedStatus,
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
-        home_score: form.is_completed ? Number(form.home_score) : 0,
-        away_score: form.is_completed ? Number(form.away_score) : 0,
+        home_score: resolvedStatus === 'upcoming' ? 0 : homeScore,
+        away_score: resolvedStatus === 'upcoming' ? 0 : awayScore,
         current_minute: 0,
         added_time: 0,
-        period: 'pre_match',
+        period: resolvedStatus === 'completed' ? 'full_time' : 'pre_match',
       });
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
     }
@@ -295,7 +320,10 @@ export default function AdminMatchesPage({
   // 1-Click Status Switcher (Upcoming <-> Completed)
   const handleToggleCompleted = (m: Match) => {
     const nextStatus: MatchStatus = m.status === 'completed' ? 'upcoming' : 'completed';
-    updateMatch(m.id, { status: nextStatus });
+    updateMatch(m.id, {
+      status: nextStatus,
+      ...(nextStatus === 'completed' ? { period: 'full_time' } : {})
+    });
     if (nextStatus === 'completed') {
       showToast(`Marked "${m.title || m.opponent_name || 'Match'}" as Completed. Hidden from live site upcoming view.`);
     } else {
@@ -328,7 +356,7 @@ export default function AdminMatchesPage({
       // Status filter
       if (statusTab === 'upcoming' && m.status !== 'upcoming') return false;
       if (statusTab === 'completed' && m.status !== 'completed') return false;
-      if (statusTab === 'live' && m.status !== 'live') return false;
+      if (statusTab === 'live' && m.status !== 'live' && m.status !== 'halftime') return false;
 
       // Type filter
       if (typeFilter !== 'ALL') {
@@ -358,7 +386,7 @@ export default function AdminMatchesPage({
   const totalCount = clubMatches.length;
   const upcomingCount = clubMatches.filter(m => m.status === 'upcoming').length;
   const completedCount = clubMatches.filter(m => m.status === 'completed').length;
-  const liveCount = clubMatches.filter(m => m.status === 'live').length;
+  const liveCount = clubMatches.filter(m => m.status === 'live' || m.status === 'halftime').length;
   const heroFeaturedCount = clubMatches.filter(m => m.featured_on_hero).length;
   const qrEnabledCount = clubMatches.filter(m => m.door_qr_checkin_enabled).length;
 
@@ -608,7 +636,7 @@ export default function AdminMatchesPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filteredMatches.map(m => {
             const isCompleted = m.status === 'completed';
-            const isLive = m.status === 'live';
+            const isLive = m.status === 'live' || m.status === 'halftime';
             const matchType = m.match_type || 'friendly';
             const checkinUrl = getCheckinUrl(m);
 
@@ -676,7 +704,7 @@ export default function AdminMatchesPage({
                 </div>
 
                 {/* Match Details */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                     <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {m.competition}
@@ -688,14 +716,27 @@ export default function AdminMatchesPage({
                     )}
 
                     {/* Status Badge */}
-                    {isLive ? (
+                    {m.status === 'live' ? (
                       <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid #EF4444', fontWeight: 800 }}>
                         <Radio size={10} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
                         LIVE • {m.current_minute}&apos; IN PLAY
                       </span>
+                    ) : m.status === 'halftime' ? (
+                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', border: '1px solid #F59E0B', fontWeight: 800 }}>
+                        <Clock size={10} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                        HALF-TIME BREAK
+                      </span>
                     ) : isCompleted ? (
                       <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-muted)' }}>
-                        COMPLETED (Hides from upcoming view)
+                        COMPLETED
+                      </span>
+                    ) : m.status === 'postponed' ? (
+                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#EAB308', border: '1px solid #EAB308' }}>
+                        POSTPONED
+                      </span>
+                    ) : m.status === 'cancelled' ? (
+                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid #EF4444' }}>
+                        CANCELLED
                       </span>
                     ) : (
                       <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid #10B981' }}>
@@ -718,7 +759,7 @@ export default function AdminMatchesPage({
                     )}
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem', wordBreak: 'break-word' }}>
                     {m.title ? (
                       <span>{m.title} <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.95rem' }}>({m.home_team_name} vs {m.away_team_name})</span></span>
                     ) : (
@@ -739,9 +780,10 @@ export default function AdminMatchesPage({
                       <MapPin size={13} color="var(--club-primary)" />
                       {m.venue}
                     </span>
-                    {isCompleted && (
-                      <span style={{ fontWeight: 800, color: '#FFFFFF' }}>
-                        Score: {m.home_score} - {m.away_score}
+                    {(isCompleted || isLive || (m.home_score !== undefined && m.home_score !== null && (m.home_score > 0 || m.away_score > 0))) && (
+                      <span style={{ fontWeight: 800, color: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Trophy size={13} color="var(--club-primary)" />
+                        Score: {m.home_score ?? 0} - {m.away_score ?? 0}
                       </span>
                     )}
                   </div>
@@ -828,6 +870,30 @@ export default function AdminMatchesPage({
                     <CheckCircle2 size={13} />
                     <span>{isCompleted ? 'Mark as Upcoming' : 'Mark as Completed'}</span>
                   </button>
+
+                  {/* Live Controller Quick Shortcut */}
+                  {isLive && (
+                    <Link
+                      href={`/${club.slug}/admin/match-center`}
+                      style={{
+                        padding: '0.45rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid #EF4444',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: '#EF4444',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      <Radio size={13} className="animate-pulse" />
+                      <span>Live Controller</span>
+                    </Link>
+                  )}
 
                   {/* Edit / Delete / View Links */}
                   <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
@@ -1225,7 +1291,8 @@ export default function AdminMatchesPage({
                 />
               </div>
 
-              {/* Operational Toggles Section */}
+
+              {/* Operational Controls & Progression Status Section */}
               <div
                 style={{
                   background: 'rgba(0, 0, 0, 0.35)',
@@ -1235,93 +1302,149 @@ export default function AdminMatchesPage({
                   marginBottom: '1.75rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '1rem'
+                  gap: '1.25rem'
                 }}
               >
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Operational Controls & Visibility
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Match Status & Scoring
+                  </div>
+                  {(form.status === 'live' || form.status === 'halftime') && (
+                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid #EF4444', fontWeight: 800, fontSize: '0.72rem' }}>
+                      <Radio size={11} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                      MATCH IN PROGRESS • LIVE SCORES PRESERVED
+                    </span>
+                  )}
                 </div>
 
-                {/* 1. Completed Toggle */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <input
-                    id="toggle-completed"
-                    type="checkbox"
-                    checked={form.is_completed}
-                    onChange={e => setForm({ ...form, is_completed: e.target.checked })}
-                    style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: club.primary_color, cursor: 'pointer' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <label htmlFor="toggle-completed" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
-                      Mark Match as Completed
+                {/* Match Status Selector */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="form-status">
+                    Fixture Progression Status *
+                  </label>
+                  <select
+                    id="form-status"
+                    className="form-input"
+                    value={form.status}
+                    onChange={e => {
+                      const newStatus = e.target.value as MatchStatus;
+                      setForm(prev => ({
+                        ...prev,
+                        status: newStatus,
+                        is_completed: newStatus === 'completed'
+                      }));
+                    }}
+                    style={{
+                      background: form.status === 'live' ? 'rgba(239, 68, 68, 0.15)' : form.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : undefined,
+                      borderColor: form.status === 'live' ? '#EF4444' : form.status === 'completed' ? '#10B981' : undefined,
+                      fontWeight: 700
+                    }}
+                  >
+                    <option value="upcoming">Upcoming (Scheduled Fixture)</option>
+                    <option value="live">Live (Match In Play)</option>
+                    <option value="halftime">Half-Time Break</option>
+                    <option value="completed">Completed (Full-Time Final Result)</option>
+                    <option value="postponed">Postponed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                    {form.status === 'upcoming' && 'Fixture displays in Upcoming Matches with kickoff countdown.'}
+                    {form.status === 'live' && 'Fixture displays live badge and live score ticker on public pages.'}
+                    {form.status === 'halftime' && 'Fixture displays half-time interval status on public pages.'}
+                    {form.status === 'completed' && 'Fixture moves to Past Results with final scores recorded.'}
+                    {form.status === 'postponed' && 'Fixture marked as postponed.'}
+                    {form.status === 'cancelled' && 'Fixture marked as cancelled.'}
+                  </span>
+                </div>
+
+                {/* Score Controls */}
+                <div style={{
+                  padding: '0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-subtle)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF' }}>
+                      Current Match Score
                     </label>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
-                      Hides fixture from the public site&apos;s upcoming fixtures view and automatically files it under Past Results.
-                    </p>
-                    {form.is_completed && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.6rem' }}>
-                        <div>
-                          <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Home Score</label>
-                          <input
-                            type="number"
-                            min="0"
-                            className="form-input"
-                            style={{ width: '80px', padding: '0.35rem 0.5rem' }}
-                            value={form.home_score}
-                            onChange={e => setForm({ ...form, home_score: Number(e.target.value) })}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Away Score</label>
-                          <input
-                            type="number"
-                            min="0"
-                            className="form-input"
-                            style={{ width: '80px', padding: '0.35rem 0.5rem' }}
-                            value={form.away_score}
-                            onChange={e => setForm({ ...form, away_score: Number(e.target.value) })}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {form.is_club_home ? `${club.name} (Home) vs ${form.opponent_name || 'Opponent'} (Away)` : `${form.opponent_name || 'Opponent'} (Home) vs ${club.name} (Away)`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <label htmlFor="form-home-score" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>
+                        {form.is_club_home ? `${club.short_name || club.name} (Home)` : `${form.opponent_short_name || form.opponent_name || 'Opponent'} (Home)`}
+                      </label>
+                      <input
+                        id="form-home-score"
+                        type="number"
+                        min="0"
+                        className="form-input"
+                        style={{ width: '90px', padding: '0.45rem 0.6rem', fontSize: '1.1rem', fontWeight: 800, textAlign: 'center' }}
+                        value={form.home_score}
+                        onChange={e => setForm(prev => ({ ...prev, home_score: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      />
+                    </div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-muted)', paddingTop: '1.2rem' }}>
+                      :
+                    </div>
+                    <div>
+                      <label htmlFor="form-away-score" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>
+                        {form.is_club_home ? `${form.opponent_short_name || form.opponent_name || 'Opponent'} (Away)` : `${club.short_name || club.name} (Away)`}
+                      </label>
+                      <input
+                        id="form-away-score"
+                        type="number"
+                        min="0"
+                        className="form-input"
+                        style={{ width: '90px', padding: '0.45rem 0.6rem', fontSize: '1.1rem', fontWeight: 800, textAlign: 'center' }}
+                        value={form.away_score}
+                        onChange={e => setForm(prev => ({ ...prev, away_score: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* 2. Hero Slider Feature Toggle */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <input
-                    id="toggle-hero"
-                    type="checkbox"
-                    checked={form.featured_on_hero}
-                    onChange={e => setForm({ ...form, featured_on_hero: e.target.checked })}
-                    style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#F59E0B', cursor: 'pointer' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <label htmlFor="toggle-hero" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
-                      Feature on Home page hero slider
-                    </label>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
-                      Spotlights this match directly on the club&apos;s home page hero carousel with match flyer, title, and kickoff countdown.
-                    </p>
+                {/* Additional Visibility & Features */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  {/* Hero Slider Feature Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      id="toggle-hero"
+                      type="checkbox"
+                      checked={form.featured_on_hero}
+                      onChange={e => setForm({ ...form, featured_on_hero: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#F59E0B', cursor: 'pointer' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <label htmlFor="toggle-hero" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
+                        Feature on Home page hero slider
+                      </label>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
+                        Spotlights this match directly on the club&apos;s home page hero carousel with match flyer, title, and kickoff countdown.
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* 3. Door QR Self-Check-in Toggle */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <input
-                    id="toggle-door-qr"
-                    type="checkbox"
-                    checked={form.door_qr_checkin_enabled}
-                    onChange={e => setForm({ ...form, door_qr_checkin_enabled: e.target.checked })}
-                    style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#3B82F6', cursor: 'pointer' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <label htmlFor="toggle-door-qr" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
-                      Enable Door QR Code self-check-in
-                    </label>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
-                      Generates a turnstile gate QR code. Supporters and members arriving at the entrance can scan with their phone camera to self-check-in.
-                    </p>
+                  {/* Door QR Self-Check-in Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      id="toggle-door-qr"
+                      type="checkbox"
+                      checked={form.door_qr_checkin_enabled}
+                      onChange={e => setForm({ ...form, door_qr_checkin_enabled: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#3B82F6', cursor: 'pointer' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <label htmlFor="toggle-door-qr" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
+                        Enable Door QR Code self-check-in
+                      </label>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
+                        Generates a turnstile gate QR code. Supporters and members arriving at the entrance can scan with their phone camera to self-check-in.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -138,9 +138,15 @@ export default function MatchCenterPage({
         channel.onmessage = (e) => {
           const data = e.data;
           if (!data) return;
-          if (data.matchId === match.id || data.type === 'MATCH_EVENT_ADDED' || data.type === 'MATCH_UPDATED') {
+          if (data.matchId === match.id) {
             setLiveSyncPulse(true);
             setTimeout(() => setLiveSyncPulse(false), 2000);
+            if (data.type === 'MATCH_EVENT_ADDED' && data.event) {
+              if (data.event.event_type === 'goal' || data.event.event_type === 'penalty') {
+                const scoringTeam = data.event.team_side === 'home' ? match.home_team_name : match.away_team_name;
+                triggerGoalCelebration(data.event.team_side, scoringTeam);
+              }
+            }
           }
         };
         return () => {
@@ -148,7 +154,7 @@ export default function MatchCenterPage({
         };
       } catch {}
     }
-  }, [match?.id]);
+  }, [match?.id, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
 
   // 2. Supabase Realtime Channel Subscription
   useEffect(() => {
@@ -759,7 +765,7 @@ export default function MatchCenterPage({
                 isEditable={false}
                 allowOrientationToggle={true}
                 matchEvents={events}
-                teamName={match.home_team_name}
+                teamName={match.is_club_home ? match.home_team_name : match.away_team_name}
               />
             </div>
 

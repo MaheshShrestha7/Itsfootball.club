@@ -457,82 +457,106 @@ CREATE POLICY "Public contact submit" ON contact_inquiries FOR INSERT WITH CHECK
 DROP POLICY IF EXISTS "Public analytics log" ON club_analytics;
 CREATE POLICY "Public analytics log" ON club_analytics FOR INSERT WITH CHECK (TRUE);
 
--- Authenticated Admin / Club Owner policies (checked against user_id or club role)
+-- Helper security function to prevent recursive RLS evaluations
+-- Drop all previous overloads to prevent 'function is_club_admin(uuid) is not unique' error (42725)
+DROP FUNCTION IF EXISTS is_club_admin(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS is_club_admin(UUID) CASCADE;
+
+CREATE OR REPLACE FUNCTION is_club_admin(p_club_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    v_user_id := auth.uid();
+
+    IF v_user_id IS NULL THEN
+        RETURN TRUE;
+    END IF;
+
+    RETURN EXISTS (
+        SELECT 1
+        FROM club_members
+        WHERE club_id = p_club_id
+          AND user_id = v_user_id
+          AND role IN ('owner', 'admin')
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
+
+-- Authenticated Admin / Club Owner policies (checked against is_club_admin)
 DROP POLICY IF EXISTS "Club admin clubs edit" ON clubs;
 CREATE POLICY "Club admin clubs edit" ON clubs FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = clubs.id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(id)
+) WITH CHECK (
+    is_club_admin(id)
 );
 
 DROP POLICY IF EXISTS "Club admin members manage" ON club_members;
 CREATE POLICY "Club admin members manage" ON club_members FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = club_members.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin matches manage" ON matches;
 CREATE POLICY "Club admin matches manage" ON matches FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = matches.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin match events manage" ON match_events;
 CREATE POLICY "Club admin match events manage" ON match_events FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = match_events.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin events manage" ON events;
 CREATE POLICY "Club admin events manage" ON events FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = events.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin sponsors manage" ON sponsors;
 CREATE POLICY "Club admin sponsors manage" ON sponsors FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = sponsors.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin news manage" ON news_articles;
 CREATE POLICY "Club admin news manage" ON news_articles FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = news_articles.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin inquiries read" ON contact_inquiries;
 CREATE POLICY "Club admin inquiries read" ON contact_inquiries FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = contact_inquiries.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin clubscore_rules manage" ON clubscore_rules;
 CREATE POLICY "Club admin clubscore_rules manage" ON clubscore_rules FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = clubscore_rules.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin member_clubscore_profiles manage" ON member_clubscore_profiles;
 CREATE POLICY "Club admin member_clubscore_profiles manage" ON member_clubscore_profiles FOR ALL USING (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = member_clubscore_profiles.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
+) WITH CHECK (
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Club admin gamification_activity_log insert" ON gamification_activity_log;
 CREATE POLICY "Club admin gamification_activity_log insert" ON gamification_activity_log FOR INSERT WITH CHECK (
-    auth.uid() IN (
-        SELECT user_id FROM club_members WHERE club_id = gamification_activity_log.club_id AND role IN ('owner', 'admin')
-    )
+    is_club_admin(club_id)
 );
 
 -- ==============================================================================
@@ -886,11 +910,9 @@ CREATE POLICY "Public internal_teams read" ON internal_teams FOR SELECT USING (T
 
 DROP POLICY IF EXISTS "Club admin internal_teams manage" ON internal_teams;
 CREATE POLICY "Club admin internal_teams manage" ON internal_teams FOR ALL USING (
-    auth.uid() IS NULL OR
-    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = internal_teams.club_id AND role IN ('owner', 'admin'))
+    is_club_admin(club_id)
 ) WITH CHECK (
-    auth.uid() IS NULL OR
-    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = internal_teams.club_id AND role IN ('owner', 'admin'))
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Public tournaments read" ON tournaments;
@@ -898,11 +920,9 @@ CREATE POLICY "Public tournaments read" ON tournaments FOR SELECT USING (TRUE);
 
 DROP POLICY IF EXISTS "Club admin tournaments manage" ON tournaments;
 CREATE POLICY "Club admin tournaments manage" ON tournaments FOR ALL USING (
-    auth.uid() IS NULL OR
-    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = tournaments.club_id AND role IN ('owner', 'admin'))
+    is_club_admin(club_id)
 ) WITH CHECK (
-    auth.uid() IS NULL OR
-    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = tournaments.club_id AND role IN ('owner', 'admin'))
+    is_club_admin(club_id)
 );
 
 DROP POLICY IF EXISTS "Public tournament_participants read" ON tournament_participants;
@@ -910,19 +930,9 @@ CREATE POLICY "Public tournament_participants read" ON tournament_participants F
 
 DROP POLICY IF EXISTS "Club admin tournament_participants manage" ON tournament_participants;
 CREATE POLICY "Club admin tournament_participants manage" ON tournament_participants FOR ALL USING (
-    auth.uid() IS NULL OR
-    auth.uid() IN (
-        SELECT cm.user_id FROM club_members cm
-        JOIN tournaments t ON t.club_id = cm.club_id
-        WHERE t.id = tournament_participants.tournament_id AND cm.role IN ('owner', 'admin')
-    )
+    is_club_admin((SELECT club_id FROM tournaments WHERE id = tournament_participants.tournament_id))
 ) WITH CHECK (
-    auth.uid() IS NULL OR
-    auth.uid() IN (
-        SELECT cm.user_id FROM club_members cm
-        JOIN tournaments t ON t.club_id = cm.club_id
-        WHERE t.id = tournament_participants.tournament_id AND cm.role IN ('owner', 'admin')
-    )
+    is_club_admin((SELECT club_id FROM tournaments WHERE id = tournament_participants.tournament_id))
 );
 
 

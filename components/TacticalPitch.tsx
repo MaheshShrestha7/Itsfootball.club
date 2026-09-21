@@ -274,12 +274,15 @@ export default function TacticalPitch({
   // Orientation state (portrait/vertical optimized for mobile devices)
   const [isVertical, setIsVertical] = useState<boolean>(() => {
     if (orientation !== undefined) return orientation === 'vertical';
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return true;
     return false;
   });
 
   useEffect(() => {
     if (orientation !== undefined) {
       setIsVertical(orientation === 'vertical');
+    } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsVertical(true);
     }
   }, [orientation]);
 
@@ -652,17 +655,16 @@ export default function TacticalPitch({
       {/* Top Bar: Formation Switcher & Mode Badges */}
       <div style={{
         display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '0.75rem',
-        padding: '0.6rem 0.85rem',
+        flexDirection: 'column',
+        gap: '0.65rem',
+        padding: 'clamp(0.6rem, 2vw, 0.85rem)',
         borderRadius: 'var(--radius-md)',
         background: 'rgba(14, 20, 30, 0.7)',
         border: '1px solid var(--border-subtle)',
+        width: '100%',
       }}>
-        {/* Left: Format Switcher (11v11, 9v9, 7v7) + System Shapes */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
+        {/* Row 1: Format Switcher (11v11, 9v9, 7v7) & Shape Presets */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem', width: '100%' }}>
           {/* Format Tabs */}
           <div style={{
             display: 'flex',
@@ -671,6 +673,7 @@ export default function TacticalPitch({
             padding: '2px',
             borderRadius: '8px',
             border: '1px solid var(--border-subtle)',
+            flexShrink: 0,
           }}>
             {(['11v11', '9v9', '7v7'] as MatchFormat[]).map(fmt => (
               <button
@@ -678,7 +681,7 @@ export default function TacticalPitch({
                 type="button"
                 onClick={() => handleFormatChange(fmt)}
                 style={{
-                  padding: '0.28rem 0.65rem',
+                  padding: '0.28rem 0.55rem',
                   fontSize: '0.74rem',
                   fontWeight: activeFormat === fmt ? 800 : 600,
                   borderRadius: '6px',
@@ -689,16 +692,16 @@ export default function TacticalPitch({
                   transition: 'all 0.15s ease',
                 }}
               >
-                {fmt === '11v11' ? '11v11 Senior' : fmt === '9v9' ? '9v9 Academy' : '7v7 Junior'}
+                {fmt === '11v11' ? '11v11' : fmt === '9v9' ? '9v9' : '7v7'}
               </button>
             ))}
           </div>
 
-          <div style={{ width: '1px', height: '22px', background: 'var(--border-subtle)' }} />
+          <div style={{ width: '1px', height: '20px', background: 'var(--border-subtle)' }} />
 
-          {/* Presets Button Group for Active Format: Horizontal Scroll Pill Strip */}
-          <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 0, paddingBottom: '2px' }}>
-            <span className="scroll-pill-item" style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginRight: '0.15rem' }}>
+          {/* Presets Button Group for Active Format */}
+          <div className="scroll-pill-strip" style={{ flex: 1, minWidth: '140px', paddingBottom: '2px', display: 'flex', alignItems: 'center', gap: '0.35rem', overflowX: 'auto' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginRight: '0.15rem', flexShrink: 0 }}>
               Shape:
             </span>
             {Object.keys(FORMAT_PRESETS[activeFormat] || {}).map(key => (
@@ -712,82 +715,94 @@ export default function TacticalPitch({
                   color: selectedFormationKey === key && !isFreeFormMode ? 'var(--club-primary-contrast, #FFFFFF)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.78rem',
-                  padding: '0.3rem 0.6rem',
+                  padding: '0.25rem 0.55rem',
                   borderRadius: '6px',
                   border: '1px solid',
                   borderColor: selectedFormationKey === key && !isFreeFormMode ? primaryColor : 'var(--border-subtle)',
-                  minHeight: '36px',
+                  minHeight: '32px',
+                  flexShrink: 0,
                 }}
               >
                 {key}
               </button>
             ))}
           </div>
-
-          {/* Custom / Free-Form Mode Pill */}
-          <button
-            onClick={handleToggleFreeForm}
-            className="btn btn-sm"
-            style={{
-              background: isFreeFormMode ? '#F59E0B' : 'rgba(245, 158, 11, 0.12)',
-              color: isFreeFormMode ? '#000000' : '#F59E0B',
-              fontWeight: 800,
-              fontSize: '0.8rem',
-              padding: '0.35rem 0.75rem',
-              borderRadius: '6px',
-              border: '1px solid #F59E0B',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-            title="Freely drag and drop players into custom tactical positions"
-          >
-            <Move size={13} />
-            <span>Free-Form</span>
-          </button>
         </div>
 
-        {/* Action Controls: Reset & Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {allowOrientationToggle && (
+        {/* Row 2: Mode & Action Controls */}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+          width: '100%',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          paddingTop: '0.5rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+            {/* Custom / Free-Form Mode Pill */}
             <button
-              type="button"
-              onClick={() => setIsVertical(v => !v)}
-              className="btn btn-secondary btn-sm"
+              onClick={handleToggleFreeForm}
+              className="btn btn-sm touch-target"
               style={{
-                padding: '0.35rem 0.65rem',
+                background: isFreeFormMode ? '#F59E0B' : 'rgba(245, 158, 11, 0.12)',
+                color: isFreeFormMode ? '#000000' : '#F59E0B',
+                fontWeight: 800,
                 fontSize: '0.78rem',
-                display: 'flex',
+                padding: '0.35rem 0.65rem',
+                borderRadius: '6px',
+                border: '1px solid #F59E0B',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.35rem',
               }}
-              title={isVertical ? "Switch to Horizontal view" : "Switch to Vertical (Mobile) view"}
+              title="Freely drag and drop players into custom tactical positions"
             >
-              {isVertical ? <Monitor size={13} /> : <Smartphone size={13} />}
-              <span>{isVertical ? 'Horizontal' : 'Vertical'}</span>
+              <Move size={13} />
+              <span>{isFreeFormMode ? 'Free-Form Active' : 'Free-Form'}</span>
             </button>
-          )}
 
-          {isFreeFormMode && (
-            <button
-              onClick={handleResetToPreset}
-              className="btn btn-secondary btn-sm"
-              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              title="Reset player positions back to formation standard"
-            >
-              <RotateCcw size={13} />
-              <span>Reset</span>
-            </button>
-          )}
+            {allowOrientationToggle && (
+              <button
+                type="button"
+                onClick={() => setIsVertical(v => !v)}
+                className="btn btn-secondary btn-sm touch-target"
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.78rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+                title={isVertical ? "Switch to Horizontal view" : "Switch to Vertical (Mobile) view"}
+              >
+                {isVertical ? <Monitor size={13} /> : <Smartphone size={13} />}
+                <span>{isVertical ? 'Horizontal' : 'Vertical'}</span>
+              </button>
+            )}
+
+            {isFreeFormMode && (
+              <button
+                onClick={handleResetToPreset}
+                className="btn btn-secondary btn-sm touch-target"
+                style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                title="Reset player positions back to formation standard"
+              >
+                <RotateCcw size={13} />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
 
           {onSaveFormation && (
             <button
               onClick={handleSave}
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm touch-target"
               style={{
                 padding: '0.35rem 0.85rem',
                 fontSize: '0.78rem',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.35rem',
                 background: saveSuccess ? '#10B981' : primaryColor,
@@ -1112,7 +1127,7 @@ export default function TacticalPitch({
                   gap: '0.3rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
               }}>
-                <span>{pos.name.split(' ').pop()}</span>
+                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pos.name.split(' ').pop()}</span>
                 <span style={{
                   fontSize: '0.6rem',
                   color: primaryColor,

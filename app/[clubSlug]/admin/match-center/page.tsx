@@ -239,8 +239,11 @@ export default function AdminMatchCenterControllerPage({
   const handleLogEvent = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isClubHome = match?.is_club_home ?? true;
+    const isClubSelected = (isClubHome && teamSide === 'home') || (!isClubHome && teamSide === 'away');
+
     let resolvedPlayerName = '';
-    if (teamSide === 'home') {
+    if (isClubSelected) {
       if (selectedPlayerId === 'custom') {
         resolvedPlayerName = customPlayerName.trim();
       } else {
@@ -248,7 +251,8 @@ export default function AdminMatchCenterControllerPage({
         resolvedPlayerName = found ? found.full_name : customPlayerName.trim();
       }
     } else {
-      resolvedPlayerName = customPlayerName.trim() || `${match.away_team_name} Player`;
+      const oppTeamName = teamSide === 'home' ? match.home_team_name : match.away_team_name;
+      resolvedPlayerName = customPlayerName.trim() || `${oppTeamName} Player`;
     }
 
     if (!resolvedPlayerName) {
@@ -305,29 +309,30 @@ export default function AdminMatchCenterControllerPage({
         flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
+        gap: '1.25rem',
+        marginBottom: '1.75rem',
       }}>
-        <div>
+        <div style={{ minWidth: 0, maxWidth: '100%' }}>
           <span className="badge badge-live" style={{ marginBottom: '0.4rem' }}>
             <span className="pulse-dot" /> MATCHDAY COMMAND CENTER
           </span>
-          <h1 style={{ fontSize: '2.1rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.25 }}>
             Live Match-Day Reporting & Tactical Hub
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
             Broadcast real-time score updates, stoppage time, substitutions, and custom tactical formations.
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
+        <div className="admin-match-center-actions">
           <button
             type="button"
             onClick={() => setIsCheckinModalOpen(true)}
-            className="btn btn-sm"
+            className="btn btn-sm touch-target"
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.4rem',
               background: 'rgba(59, 130, 246, 0.16)',
               border: '1px solid #3B82F6',
@@ -343,10 +348,11 @@ export default function AdminMatchCenterControllerPage({
           <button
             type="button"
             onClick={() => setIsAuditModalOpen(true)}
-            className="btn btn-sm"
+            className="btn btn-sm touch-target"
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.4rem',
               background: match.is_audited
                 ? 'rgba(16, 185, 129, 0.15)'
@@ -358,13 +364,13 @@ export default function AdminMatchCenterControllerPage({
             }}
           >
             <ShieldCheck size={15} />
-            <span>{match.is_audited ? 'Stats Audited & Baked ✓' : 'Audit & Finalize Stats'}</span>
+            <span>{match.is_audited ? 'Stats Audited ✓' : 'Audit & Finalize'}</span>
           </button>
 
           <Link
             href={`/${club.slug}/admin/lineup/draft`}
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            className="btn btn-secondary btn-sm touch-target"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
           >
             <Layers size={14} color="#F59E0B" />
             <span>Draft Workbench</span>
@@ -373,10 +379,10 @@ export default function AdminMatchCenterControllerPage({
           <Link
             href={`/${club.slug}/match/${match.id}`}
             target="_blank"
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+            className="btn btn-secondary btn-sm touch-target"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(255, 255, 255, 0.15)' }}
           >
-            <span>Launch Public Match Center</span>
+            <span>Public Match Center</span>
             <ExternalLink size={14} />
           </Link>
         </div>
@@ -403,17 +409,17 @@ export default function AdminMatchCenterControllerPage({
       )}
 
       {/* Fixture Selector Dropdown & Season Controls */}
-      <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '2rem' }}>
+      <div className="glass-panel" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
             {/* Season Filter Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '160px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                 <CalendarDays size={14} color="var(--club-primary)" /> Season:
               </span>
               <select
                 className="form-select"
-                style={{ width: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
+                style={{ width: '100%', maxWidth: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
                 value={seasonFilter}
                 onChange={e => setSeasonFilter(e.target.value)}
               >
@@ -426,13 +432,13 @@ export default function AdminMatchCenterControllerPage({
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '200px', maxWidth: '100%' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 Fixture:
               </span>
               <select
                 className="form-select"
-                style={{ maxWidth: '340px' }}
+                style={{ width: '100%', maxWidth: '100%' }}
                 value={selectedMatchId}
                 onChange={e => setSelectedMatchId(e.target.value)}
               >
@@ -445,7 +451,7 @@ export default function AdminMatchCenterControllerPage({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
             <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <CalendarDays size={12} /> {match.season}
             </span>
@@ -459,11 +465,11 @@ export default function AdminMatchCenterControllerPage({
             )}
             <Link
               href={`/${club.slug}/admin/matches`}
-              className="btn btn-primary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}
+              className="btn btn-primary btn-sm touch-target"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
             >
               <CalendarDays size={14} />
-              <span>Schedule & Manage Matches</span>
+              <span>Schedule Fixture</span>
             </Link>
           </div>
         </div>
@@ -609,20 +615,23 @@ export default function AdminMatchCenterControllerPage({
               <div style={{ textAlign: 'center', minWidth: 0 }}>
                 <div style={{
                   fontWeight: 800,
-                  fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)',
+                  fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
                   color: '#FFFFFF',
                   marginBottom: '0.4rem',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  lineHeight: 1.2,
                 }}>
                   {match.home_team_name}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
                   <button
                     onClick={() => handleScoreAdjust('home', -1)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, flexShrink: 0 }}
+                    className="btn btn-secondary btn-sm touch-target"
+                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, flexShrink: 0 }}
                     title="Subtract 1 goal"
                   >
                     <Minus size={15} />
@@ -632,8 +641,8 @@ export default function AdminMatchCenterControllerPage({
                   </span>
                   <button
                     onClick={() => handleScoreAdjust('home', 1)}
-                    className="btn btn-primary btn-sm"
-                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, background: club.primary_color, flexShrink: 0 }}
+                    className="btn btn-primary btn-sm touch-target"
+                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, background: club.primary_color, flexShrink: 0 }}
                     title="Add 1 goal"
                   >
                     <Plus size={15} />
@@ -649,20 +658,23 @@ export default function AdminMatchCenterControllerPage({
               <div style={{ textAlign: 'center', minWidth: 0 }}>
                 <div style={{
                   fontWeight: 800,
-                  fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)',
+                  fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
                   color: '#FFFFFF',
                   marginBottom: '0.4rem',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  lineHeight: 1.2,
                 }}>
                   {match.away_team_name}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
                   <button
                     onClick={() => handleScoreAdjust('away', -1)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, flexShrink: 0 }}
+                    className="btn btn-secondary btn-sm touch-target"
+                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, flexShrink: 0 }}
                     title="Subtract 1 goal"
                   >
                     <Minus size={15} />
@@ -672,8 +684,8 @@ export default function AdminMatchCenterControllerPage({
                   </span>
                   <button
                     onClick={() => handleScoreAdjust('away', 1)}
-                    className="btn btn-primary btn-sm"
-                    style={{ borderRadius: '50%', width: 'clamp(32px, 4vw, 38px)', height: 'clamp(32px, 4vw, 38px)', padding: 0, background: '#3B82F6', flexShrink: 0 }}
+                    className="btn btn-primary btn-sm touch-target"
+                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, background: '#3B82F6', flexShrink: 0 }}
                     title="Add 1 goal"
                   >
                     <Plus size={15} />
@@ -684,154 +696,161 @@ export default function AdminMatchCenterControllerPage({
           </div>
 
           {/* Event Logger Form */}
-          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Radio size={18} color="#10B981" /> Broadcast Live Match Event
-            </h3>
+          {(() => {
+            const isClubHome = match?.is_club_home ?? true;
+            const isClubSelected = (isClubHome && teamSide === 'home') || (!isClubHome && teamSide === 'away');
 
-            <form onSubmit={handleLogEvent}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Event Type</label>
-                  <select
-                    className="form-select"
-                    value={eventType}
-                    onChange={e => setEventType(e.target.value as MatchEventType)}
-                  >
-                    <option value="goal">⚽ Goal (Regular)</option>
-                    <option value="penalty">🎯 Goal (Penalty)</option>
-                    <option value="yellow_card">🟨 Yellow Card</option>
-                    <option value="red_card">🟥 Red Card</option>
-                    <option value="sub">🔄 Substitution</option>
-                    <option value="var">🖥️ VAR Review</option>
-                    <option value="commentary">🎙️ Tactical Commentary</option>
-                    <option value="whistle">📢 Period Whistle</option>
-                  </select>
-                </div>
+            return (
+              <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)', marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Radio size={18} color="#10B981" /> Broadcast Live Match Event
+                </h3>
 
-                <div className="form-group">
-                  <label className="form-label">Team Side</label>
-                  <select
-                    className="form-select"
-                    value={teamSide}
-                    onChange={e => setTeamSide(e.target.value as any)}
-                  >
-                    <option value="home">{match.home_team_name} (Home)</option>
-                    <option value="away">{match.away_team_name} (Away)</option>
-                  </select>
-                </div>
+                <form onSubmit={handleLogEvent}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Event Type</label>
+                      <select
+                        className="form-select"
+                        value={eventType}
+                        onChange={e => setEventType(e.target.value as MatchEventType)}
+                      >
+                        <option value="goal">⚽ Goal (Regular)</option>
+                        <option value="penalty">🎯 Goal (Penalty)</option>
+                        <option value="yellow_card">🟨 Yellow Card</option>
+                        <option value="red_card">🟥 Red Card</option>
+                        <option value="sub">🔄 Substitution</option>
+                        <option value="var">🖥️ VAR Review</option>
+                        <option value="commentary">🎙️ Tactical Commentary</option>
+                        <option value="whistle">📢 Period Whistle</option>
+                      </select>
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">Match Minute</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={120}
-                    className="form-input"
-                    value={eventMinute}
-                    onChange={e => setEventMinute(Number(e.target.value))}
-                  />
-                </div>
-              </div>
+                    <div className="form-group">
+                      <label className="form-label">Team Side</label>
+                      <select
+                        className="form-select"
+                        value={teamSide}
+                        onChange={e => setTeamSide(e.target.value as any)}
+                      >
+                        <option value="home">{match.home_team_name} ({isClubHome ? 'Our Club - Home' : 'Opponent - Home'})</option>
+                        <option value="away">{match.away_team_name} ({!isClubHome ? 'Our Club - Away' : 'Opponent - Away'})</option>
+                      </select>
+                    </div>
 
-              {/* Dynamic Player Selector */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                {teamSide === 'home' ? (
-                  <div className="form-group">
-                    <label className="form-label">
-                      {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
-                    </label>
-                    <select
-                      className="form-select"
-                      value={selectedPlayerId}
-                      onChange={e => setSelectedPlayerId(e.target.value)}
-                    >
-                      {squadPlayers.map(p => (
-                        <option key={p.id} value={p.id}>
-                          #{p.jersey_number} {p.full_name} ({p.player_position})
-                        </option>
-                      ))}
-                      <option value="custom">-- Custom Name / Other Player --</option>
-                    </select>
-
-                    {selectedPlayerId === 'custom' && (
+                    <div className="form-group">
+                      <label className="form-label">Match Minute</label>
                       <input
-                        type="text"
-                        required
+                        type="number"
+                        min={0}
+                        max={120}
                         className="form-input"
-                        placeholder="Enter player name"
-                        style={{ marginTop: '0.5rem' }}
-                        value={customPlayerName}
-                        onChange={e => setCustomPlayerName(e.target.value)}
+                        value={eventMinute}
+                        onChange={e => setEventMinute(Number(e.target.value))}
                       />
+                    </div>
+                  </div>
+
+                  {/* Dynamic Player Selector */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    {isClubSelected ? (
+                      <div className="form-group">
+                        <label className="form-label">
+                          {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
+                        </label>
+                        <select
+                          className="form-select"
+                          value={selectedPlayerId}
+                          onChange={e => setSelectedPlayerId(e.target.value)}
+                        >
+                          {squadPlayers.map(p => (
+                            <option key={p.id} value={p.id}>
+                              #{p.jersey_number} {p.full_name} ({p.player_position})
+                            </option>
+                          ))}
+                          <option value="custom">-- Custom Name / Other Player --</option>
+                        </select>
+
+                        {selectedPlayerId === 'custom' && (
+                          <input
+                            type="text"
+                            required
+                            className="form-input"
+                            placeholder="Enter player name"
+                            style={{ marginTop: '0.5rem' }}
+                            value={customPlayerName}
+                            onChange={e => setCustomPlayerName(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="form-group">
+                        <label className="form-label">Opponent Player Name *</label>
+                        <input
+                          type="text"
+                          required
+                          className="form-input"
+                          placeholder="e.g. Leo Silva"
+                          value={customPlayerName}
+                          onChange={e => setCustomPlayerName(e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    {/* If Substitution: Select player coming OFF */}
+                    {eventType === 'sub' && isClubSelected ? (
+                      <div className="form-group">
+                        <label className="form-label">Player Coming OFF *</label>
+                        <select
+                          className="form-select"
+                          value={selectedSubOffId}
+                          onChange={e => setSelectedSubOffId(e.target.value)}
+                        >
+                          {squadPlayers.map(p => (
+                            <option key={p.id} value={p.id}>
+                              #{p.jersey_number} {p.full_name} ({p.player_position})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="form-group">
+                        <label className="form-label">Assist / Involved Secondary (Optional)</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="e.g. Julian Drake"
+                          value={assistName}
+                          onChange={e => setAssistName(e.target.value)}
+                        />
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div className="form-group">
-                    <label className="form-label">Opponent Player Name *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input"
-                      placeholder="e.g. Leo Silva"
-                      value={customPlayerName}
-                      onChange={e => setCustomPlayerName(e.target.value)}
-                    />
-                  </div>
-                )}
 
-                {/* If Substitution: Select player coming OFF */}
-                {eventType === 'sub' && teamSide === 'home' ? (
                   <div className="form-group">
-                    <label className="form-label">Player Coming OFF *</label>
-                    <select
-                      className="form-select"
-                      value={selectedSubOffId}
-                      onChange={e => setSelectedSubOffId(e.target.value)}
-                    >
-                      {squadPlayers.map(p => (
-                        <option key={p.id} value={p.id}>
-                          #{p.jersey_number} {p.full_name} ({p.player_position})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="form-group">
-                    <label className="form-label">Assist / Involved Secondary (Optional)</label>
+                    <label className="form-label">Event Detail / Tactical Notes</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. Julian Drake"
-                      value={assistName}
-                      onChange={e => setAssistName(e.target.value)}
+                      placeholder="e.g. Curling strike into top corner after neat combination play."
+                      value={eventDetail}
+                      onChange={e => setEventDetail(e.target.value)}
                     />
                   </div>
-                )}
-              </div>
 
-              <div className="form-group">
-                <label className="form-label">Event Detail / Tactical Notes</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Curling strike into top corner after neat combination play."
-                  value={eventDetail}
-                  onChange={e => setEventDetail(e.target.value)}
-                />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                    <button type="submit" className="btn btn-primary touch-target" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: club.primary_color, minWidth: '180px' }}>
+                      <Send size={16} />
+                      <span>Broadcast Event Live</span>
+                    </button>
+                  </div>
+                </form>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: club.primary_color }}>
-                  <Send size={16} />
-                  <span>Broadcast Event Live</span>
-                </button>
-              </div>
-            </form>
-          </div>
+            );
+          })()}
 
           {/* Logged Events List with Deletion */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
+          <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
               Logged Match Events ({events.length})
             </h3>
@@ -869,16 +888,20 @@ export default function AdminMatchCenterControllerPage({
                       </span>
 
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 800, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {evt.event_type.toUpperCase().replace('_', ' ')} • {evt.player_name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                            {evt.event_type.toUpperCase().replace('_', ' ')}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>•</span>
+                          <span style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                            {evt.player_name}
                           </span>
                           {evt.assist_player_name && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                               (Ast: {evt.assist_player_name})
                             </span>
                           )}
-                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', flexShrink: 0 }}>
+                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
                             {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                           </span>
                         </div>
@@ -892,7 +915,7 @@ export default function AdminMatchCenterControllerPage({
 
                     <button
                       onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
-                      className="btn btn-secondary btn-sm"
+                      className="btn btn-secondary btn-sm touch-target"
                       style={{ padding: '0.35rem 0.65rem', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
                       title="Delete event and revert score if goal"
                     >
@@ -911,7 +934,7 @@ export default function AdminMatchCenterControllerPage({
       {/* ========================================================================= */}
       {adminTab === 'tactics' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="glass-panel" style={{ padding: '1.5rem 2rem' }}>
+          <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 1.5rem) clamp(1rem, 3vw, 2rem)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -925,7 +948,7 @@ export default function AdminMatchCenterControllerPage({
           </div>
 
           {/* Interactive Tactical Pitch */}
-          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <div className="glass-panel" style={{ padding: 'clamp(0.75rem, 2vw, 1.75rem)' }}>
             <TacticalPitch
               players={squadPlayers}
               formation={match.home_formation || '4-3-3'}
@@ -934,7 +957,7 @@ export default function AdminMatchCenterControllerPage({
               isEditable={true}
               matchEvents={events}
               onSaveFormation={handleSaveTacticalLineup}
-              teamName={match.home_team_name}
+              teamName={match.is_club_home ? match.home_team_name : match.away_team_name}
               allowOrientationToggle={true}
             />
           </div>

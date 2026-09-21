@@ -1275,10 +1275,34 @@ textarea {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
-  position: sticky;
-  top: 70px;
+  position: relative;
   z-index: 30;
   width: 100%;
+}
+
+.admin-match-center-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+@media (max-width: 768px) {
+  .admin-match-center-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+  .admin-match-center-actions > * {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.6rem !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+  }
 }
 
 .admin-main-canvas {
@@ -1304,6 +1328,11 @@ textarea {
   gap: 1.25rem;
   align-items: center;
   position: relative;
+}
+
+.admin-match-card-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .lineup-workbench-layout {
@@ -1357,13 +1386,16 @@ textarea {
   }
 
   .admin-match-card-grid .match-card-actions {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
+    gap: 0.5rem !important;
   }
 
   .admin-match-card-grid .match-card-actions > * {
-    flex: 1 1 120px !important;
+    width: 100% !important;
+    flex: none !important;
+    min-width: 0 !important;
   }
 
   .admin-scoreboard-controls {
