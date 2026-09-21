@@ -755,7 +755,13 @@ export default function AdminTournamentsPage({
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Group Count</label>
                     <select
                       value={groupCount}
-                      onChange={e => setGroupCount(parseInt(e.target.value, 10))}
+                      onChange={e => {
+                        const newCount = parseInt(e.target.value, 10);
+                        setGroupCount(newCount);
+                        if (newCount === 1 && teamsAdvancing < 2) {
+                          setTeamsAdvancing(2);
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '0.5rem',
@@ -766,12 +772,17 @@ export default function AdminTournamentsPage({
                         marginTop: '3px',
                       }}
                     >
-                      <option value={2}>2 Groups (A & B)</option>
-                      <option value={4}>4 Groups (A, B, C, D)</option>
+                      <option value={1}>1 Group (Single Pool • Group A)</option>
+                      <option value={2}>2 Groups (Group A & B)</option>
+                      <option value={3}>3 Groups (Group A, B, C)</option>
+                      <option value={4}>4 Groups (Group A, B, C, D)</option>
+                      <option value={8}>8 Groups (Group A - H)</option>
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Teams Advance / Group</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {groupCount === 1 ? 'Teams Advancing to KO' : 'Teams Advance / Group'}
+                    </label>
                     <select
                       value={teamsAdvancing}
                       onChange={e => setTeamsAdvancing(parseInt(e.target.value, 10))}
@@ -785,8 +796,33 @@ export default function AdminTournamentsPage({
                         marginTop: '3px',
                       }}
                     >
-                      <option value={1}>Top 1 (Group Winners only)</option>
-                      <option value={2}>Top 2 (Winners & Runners-up)</option>
+                      {groupCount === 1 ? (
+                        <>
+                          <option value={2}>Min 2 Teams (Direct to Grand Final)</option>
+                          <option value={4}>4 Teams (Semi-Finals & Final)</option>
+                          <option value={8}>8 Teams (Quarter-Finals & Final)</option>
+                          <option value={16}>Max 16 Teams (Round of 16 & Final)</option>
+                        </>
+                      ) : groupCount === 2 ? (
+                        <>
+                          <option value={1}>Top 1 per Group (2 Teams Total • Grand Final)</option>
+                          <option value={2}>Top 2 per Group (4 Teams Total • Semi-Finals)</option>
+                          <option value={4}>Top 4 per Group (8 Teams Total • Quarter-Finals)</option>
+                          <option value={8}>Top 8 per Group (16 Teams Total • Round of 16)</option>
+                        </>
+                      ) : groupCount === 4 ? (
+                        <>
+                          <option value={1}>Top 1 per Group (4 Teams Total • Semi-Finals)</option>
+                          <option value={2}>Top 2 per Group (8 Teams Total • Quarter-Finals)</option>
+                          <option value={4}>Top 4 per Group (16 Teams Total • Round of 16)</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value={1}>Top 1 per Group</option>
+                          <option value={2}>Top 2 per Group</option>
+                          <option value={4}>Top 4 per Group</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
@@ -798,6 +834,26 @@ export default function AdminTournamentsPage({
                       />
                       Include 3rd Place Match
                     </label>
+                  </div>
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      fontSize: '0.72rem',
+                      color: '#10B981',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                    }}
+                  >
+                    Format Summary: {groupCount === 1 ? 'Single Group A (All squads play round-robin)' : `${groupCount} Groups (Squads play round-robin in group)`} &rarr;{' '}
+                    {groupCount * teamsAdvancing <= 2
+                      ? 'Min 2 teams advance straight to Championship Grand Final (1st vs 2nd)'
+                      : groupCount * teamsAdvancing <= 5
+                      ? '4 teams advance to Semi-Finals (1st vs 4th, 2nd vs 3rd) then Final'
+                      : groupCount * teamsAdvancing <= 11
+                      ? '8 teams advance to Quarter-Finals then Semi-Finals & Final'
+                      : '16 teams advance to Round of 16'}
                   </div>
                 </div>
               )}

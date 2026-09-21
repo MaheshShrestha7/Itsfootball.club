@@ -81,3 +81,86 @@ ALTER TABLE matches
 
 CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches (tournament_id);
 CREATE INDEX IF NOT EXISTS idx_matches_tournament_stage ON matches (tournament_id, tournament_stage);
+
+-- ------------------------------------------------------------------------------
+-- 5. ROW LEVEL SECURITY (RLS) POLICIES (Idempotent)
+-- ------------------------------------------------------------------------------
+ALTER TABLE internal_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournament_participants ENABLE ROW LEVEL SECURITY;
+
+-- 5.1 Internal Teams Policies
+DROP POLICY IF EXISTS "Public internal_teams read" ON internal_teams;
+CREATE POLICY "Public internal_teams read" ON internal_teams
+    FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin internal_teams manage" ON internal_teams;
+CREATE POLICY "Club admin internal_teams manage" ON internal_teams
+    FOR ALL USING (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT user_id FROM club_members
+            WHERE club_id = internal_teams.club_id
+            AND role IN ('owner', 'admin')
+        )
+    )
+    WITH CHECK (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT user_id FROM club_members
+            WHERE club_id = internal_teams.club_id
+            AND role IN ('owner', 'admin')
+        )
+    );
+
+-- 5.2 Tournaments Policies
+DROP POLICY IF EXISTS "Public tournaments read" ON tournaments;
+CREATE POLICY "Public tournaments read" ON tournaments
+    FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin tournaments manage" ON tournaments;
+CREATE POLICY "Club admin tournaments manage" ON tournaments
+    FOR ALL USING (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT user_id FROM club_members
+            WHERE club_id = tournaments.club_id
+            AND role IN ('owner', 'admin')
+        )
+    )
+    WITH CHECK (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT user_id FROM club_members
+            WHERE club_id = tournaments.club_id
+            AND role IN ('owner', 'admin')
+        )
+    );
+
+-- 5.3 Tournament Participants Policies
+DROP POLICY IF EXISTS "Public tournament_participants read" ON tournament_participants;
+CREATE POLICY "Public tournament_participants read" ON tournament_participants
+    FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin tournament_participants manage" ON tournament_participants;
+CREATE POLICY "Club admin tournament_participants manage" ON tournament_participants
+    FOR ALL USING (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT cm.user_id 
+            FROM club_members cm
+            JOIN tournaments t ON t.club_id = cm.club_id
+            WHERE t.id = tournament_participants.tournament_id
+            AND cm.role IN ('owner', 'admin')
+        )
+    )
+    WITH CHECK (
+        auth.uid() IS NULL OR
+        auth.uid() IN (
+            SELECT cm.user_id 
+            FROM club_members cm
+            JOIN tournaments t ON t.club_id = cm.club_id
+            WHERE t.id = tournament_participants.tournament_id
+            AND cm.role IN ('owner', 'admin')
+        )
+    );

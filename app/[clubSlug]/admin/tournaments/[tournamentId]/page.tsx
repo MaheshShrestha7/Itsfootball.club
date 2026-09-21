@@ -21,7 +21,9 @@ import {
   ExternalLink,
   Shield,
   Clock,
-  Sparkles
+  Sparkles,
+  Settings,
+  X
 } from 'lucide-react';
 
 export default function AdminTournamentDetailPage({
@@ -36,6 +38,7 @@ export default function AdminTournamentDetailPage({
     tournaments,
     tournamentParticipants,
     matches,
+    updateTournament,
     generateTournamentTiesheet,
     updateTournamentMatchScore,
     progressKnockoutStage,
@@ -52,6 +55,10 @@ export default function AdminTournamentDetailPage({
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamCode, setNewTeamCode] = useState('');
+  const [editFormatModalOpen, setEditFormatModalOpen] = useState(false);
+  const [editGroupCount, setEditGroupCount] = useState(tournament?.group_count ?? 1);
+  const [editTeamsAdvancing, setEditTeamsAdvancing] = useState(tournament?.teams_advancing_per_group ?? 2);
+  const [editThirdPlace, setEditThirdPlace] = useState(tournament?.has_third_place_match ?? false);
 
   if (!tournament) {
     return (
@@ -103,6 +110,20 @@ export default function AdminTournamentDetailPage({
     setNewTeamCode('');
     setAddTeamModalOpen(false);
     setFeedback(`✓ Added guest team "${newTeamName.trim()}"! Remember to regenerate tiesheet to include them.`);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleSaveFormat = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateTournament(tournament.id, {
+      group_count: editGroupCount,
+      teams_advancing_per_group: editTeamsAdvancing,
+      has_third_place_match: editThirdPlace,
+    });
+    // Regenerate tiesheet with new structure
+    generateTournamentTiesheet(tournament.id);
+    setEditFormatModalOpen(false);
+    setFeedback(`✓ Updated structure: ${editGroupCount === 1 ? '1 Group' : `${editGroupCount} Groups`} with ${editTeamsAdvancing} advancing teams per group!`);
     setTimeout(() => setFeedback(null), 4000);
   };
 
@@ -189,6 +210,29 @@ export default function AdminTournamentDetailPage({
             <Shuffle size={14} />
             <span>Shuffle Draw</span>
           </button>
+
+          {tournament.format === 'group_knockout' && (
+            <button
+              onClick={() => {
+                setEditGroupCount(tournament.group_count ?? 1);
+                setEditTeamsAdvancing(tournament.teams_advancing_per_group ?? 2);
+                setEditThirdPlace(tournament.has_third_place_match ?? false);
+                setEditFormatModalOpen(true);
+              }}
+              className="btn btn-sm btn-secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontSize: '0.8rem',
+                borderRadius: '8px',
+              }}
+              title="Configure group count and advancing rules"
+            >
+              <Settings size={14} />
+              <span>Format Rules</span>
+            </button>
+          )}
 
           <button
             onClick={() => handleGenerateTiesheet(false)}
@@ -440,14 +484,14 @@ export default function AdminTournamentDetailPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {tournament.format === 'group_knockout' ? (
             // Render each group
-            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count || 2).map(groupLetter => {
+            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count ?? 1).map(groupLetter => {
               const groupStandings = getTournamentStandings(tournament.id, groupLetter);
               return (
                 <div key={groupLetter}>
                   <TournamentStandingsTable
                     standings={groupStandings}
-                    groupTitle={`Group ${groupLetter} Standings`}
-                    advancingCount={tournament.teams_advancing_per_group || 2}
+                    groupTitle={tournament.group_count === 1 ? 'Group Stage Standings' : `Group ${groupLetter} Standings`}
+                    advancingCount={tournament.teams_advancing_per_group ?? 2}
                   />
                 </div>
               );
@@ -671,6 +715,182 @@ export default function AdminTournamentDetailPage({
                   style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
                 >
                   Enroll Team
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Group Stage & Knockout Rules */}
+      {editFormatModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setEditFormatModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#111827',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '14px',
+              width: '100%',
+              maxWidth: '480px',
+              padding: '1.75rem',
+              color: '#FFFFFF',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem' }}>Group Stage & Knockout Rules</h3>
+              <button
+                type="button"
+                onClick={() => setEditFormatModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFormat}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
+                  Number of Groups
+                </label>
+                <select
+                  value={editGroupCount}
+                  onChange={e => {
+                    const newCount = parseInt(e.target.value, 10);
+                    setEditGroupCount(newCount);
+                    if (newCount === 1 && editTeamsAdvancing < 2) {
+                      setEditTeamsAdvancing(2);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    color: '#FFFFFF',
+                    fontSize: '0.88rem',
+                  }}
+                >
+                  <option value={1}>1 Group (Single Pool • Group A)</option>
+                  <option value={2}>2 Groups (Group A & B)</option>
+                  <option value={3}>3 Groups (Group A, B, C)</option>
+                  <option value={4}>4 Groups (Group A, B, C, D)</option>
+                  <option value={8}>8 Groups (Group A - H)</option>
+                </select>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                  {editGroupCount === 1 ? 'All enrolled squads compete in one pool (Group A)' : `Squads are divided into ${editGroupCount} round-robin pools`}
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
+                  {editGroupCount === 1 ? 'Teams Advancing to Knockout' : 'Teams Advancing Per Group'}
+                </label>
+                <select
+                  value={editTeamsAdvancing}
+                  onChange={e => setEditTeamsAdvancing(parseInt(e.target.value, 10))}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    color: '#FFFFFF',
+                    fontSize: '0.88rem',
+                  }}
+                >
+                  {editGroupCount === 1 ? (
+                    <>
+                      <option value={2}>Min 2 Teams (Direct to Grand Final)</option>
+                      <option value={4}>4 Teams (Semi-Finals & Final)</option>
+                      <option value={8}>8 Teams (Quarter-Finals & Final)</option>
+                      <option value={16}>Max 16 Teams (Round of 16 & Final)</option>
+                    </>
+                  ) : editGroupCount === 2 ? (
+                    <>
+                      <option value={1}>Top 1 per Group (2 Teams Total • Grand Final)</option>
+                      <option value={2}>Top 2 per Group (4 Teams Total • Semi-Finals)</option>
+                      <option value={4}>Top 4 per Group (8 Teams Total • Quarter-Finals)</option>
+                      <option value={8}>Top 8 per Group (16 Teams Total • Round of 16)</option>
+                    </>
+                  ) : editGroupCount === 4 ? (
+                    <>
+                      <option value={1}>Top 1 per Group (4 Teams Total • Semi-Finals)</option>
+                      <option value={2}>Top 2 per Group (8 Teams Total • Quarter-Finals)</option>
+                      <option value={4}>Top 4 per Group (16 Teams Total • Round of 16)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={1}>Top 1 per Group</option>
+                      <option value={2}>Top 2 per Group</option>
+                      <option value={4}>Top 4 per Group</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={editThirdPlace}
+                    onChange={e => setEditThirdPlace(e.target.checked)}
+                  />
+                  <span>Include 3rd Place Playoff Match</span>
+                </label>
+              </div>
+
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#10B981',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                Knockout Pathway: {editGroupCount === 1 ? 'Single Group A' : `${editGroupCount} Groups`} &rarr;{' '}
+                {editGroupCount * editTeamsAdvancing <= 2
+                  ? 'Min 2 teams advance straight to Championship Grand Final (1st vs 2nd)'
+                  : editGroupCount * editTeamsAdvancing <= 5
+                  ? '4 teams advance to Semi-Finals (1st vs 4th, 2nd vs 3rd) then Grand Final'
+                  : editGroupCount * editTeamsAdvancing <= 11
+                  ? '8 teams advance to Quarter-Finals then Semi-Finals & Grand Final'
+                  : '16 teams advance to Round of 16'}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditFormatModalOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
+                >
+                  Save & Regenerate Tiesheet
                 </button>
               </div>
             </form>

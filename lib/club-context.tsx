@@ -2432,7 +2432,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         if (tourney && tourney.format === 'group_knockout') {
           const participants = tournamentParticipants.filter(p => p.tournament_id === tourney.id);
           const standingsByGroup: Record<string, TournamentStanding[]> = {};
-          const groupCount = tourney.group_count || 2;
+          const groupCount = tourney.group_count ?? 1;
           const groupLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, groupCount);
           groupLetters.forEach(letter => {
             standingsByGroup[letter] = computeStandings(finalMatches, participants, {

@@ -796,4 +796,132 @@ BEGIN
     END IF;
 END $$;
 
+-- ==============================================================================
+-- 23. TOURNAMENTS & INTERNAL TEAMS (Challonge Parity for Football)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS internal_teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    short_name VARCHAR(16) NOT NULL,
+    color VARCHAR(32) DEFAULT '#10B981',
+    logo_url TEXT,
+    captain_id UUID REFERENCES club_members(id) ON DELETE SET NULL,
+    coach_name VARCHAR(128),
+    player_ids JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_internal_teams_club ON internal_teams (club_id);
+
+CREATE TABLE IF NOT EXISTS tournaments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    season VARCHAR(32) DEFAULT '2026/27',
+    format VARCHAR(32) NOT NULL DEFAULT 'knockout' CHECK (format IN ('knockout', 'league', 'group_knockout')),
+    status VARCHAR(32) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'ongoing', 'completed')),
+    points_win INTEGER DEFAULT 3,
+    points_draw INTEGER DEFAULT 1,
+    points_loss INTEGER DEFAULT 0,
+    group_count INTEGER DEFAULT 2,
+    teams_advancing_per_group INTEGER DEFAULT 2,
+    has_third_place_match BOOLEAN DEFAULT FALSE,
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ,
+    venue VARCHAR(255),
+    description TEXT,
+    banner_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tournaments_club ON tournaments (club_id);
+CREATE INDEX IF NOT EXISTS idx_tournaments_slug ON tournaments (club_id, slug);
+
+CREATE TABLE IF NOT EXISTS tournament_participants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    team_type VARCHAR(16) NOT NULL DEFAULT 'internal' CHECK (team_type IN ('internal', 'external')),
+    internal_team_id UUID REFERENCES internal_teams(id) ON DELETE SET NULL,
+    name VARCHAR(128) NOT NULL,
+    short_name VARCHAR(16) NOT NULL,
+    logo_url TEXT,
+    color VARCHAR(32),
+    seed INTEGER,
+    "group" VARCHAR(8),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tournament_participants_tourn ON tournament_participants (tournament_id);
+
+ALTER TABLE matches
+    ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournaments(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS tournament_stage VARCHAR(32) CHECK (tournament_stage IN ('group', 'round_of_16', 'quarter_final', 'semi_final', 'final', 'third_place')),
+    ADD COLUMN IF NOT EXISTS tournament_group VARCHAR(16),
+    ADD COLUMN IF NOT EXISTS tournament_round INTEGER,
+    ADD COLUMN IF NOT EXISTS tournament_match_number INTEGER,
+    ADD COLUMN IF NOT EXISTS home_team_source VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS away_team_source VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS home_penalty_score INTEGER,
+    ADD COLUMN IF NOT EXISTS away_penalty_score INTEGER,
+    ADD COLUMN IF NOT EXISTS winner_side VARCHAR(8) CHECK (winner_side IN ('home', 'away')),
+    ADD COLUMN IF NOT EXISTS next_match_id UUID REFERENCES matches(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS next_match_slot VARCHAR(8) CHECK (next_match_slot IN ('home', 'away'));
+
+CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches (tournament_id);
+CREATE INDEX IF NOT EXISTS idx_matches_tournament_stage ON matches (tournament_id, tournament_stage);
+
+-- RLS
+ALTER TABLE internal_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournament_participants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public internal_teams read" ON internal_teams;
+CREATE POLICY "Public internal_teams read" ON internal_teams FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin internal_teams manage" ON internal_teams;
+CREATE POLICY "Club admin internal_teams manage" ON internal_teams FOR ALL USING (
+    auth.uid() IS NULL OR
+    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = internal_teams.club_id AND role IN ('owner', 'admin'))
+) WITH CHECK (
+    auth.uid() IS NULL OR
+    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = internal_teams.club_id AND role IN ('owner', 'admin'))
+);
+
+DROP POLICY IF EXISTS "Public tournaments read" ON tournaments;
+CREATE POLICY "Public tournaments read" ON tournaments FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin tournaments manage" ON tournaments;
+CREATE POLICY "Club admin tournaments manage" ON tournaments FOR ALL USING (
+    auth.uid() IS NULL OR
+    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = tournaments.club_id AND role IN ('owner', 'admin'))
+) WITH CHECK (
+    auth.uid() IS NULL OR
+    auth.uid() IN (SELECT user_id FROM club_members WHERE club_id = tournaments.club_id AND role IN ('owner', 'admin'))
+);
+
+DROP POLICY IF EXISTS "Public tournament_participants read" ON tournament_participants;
+CREATE POLICY "Public tournament_participants read" ON tournament_participants FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Club admin tournament_participants manage" ON tournament_participants;
+CREATE POLICY "Club admin tournament_participants manage" ON tournament_participants FOR ALL USING (
+    auth.uid() IS NULL OR
+    auth.uid() IN (
+        SELECT cm.user_id FROM club_members cm
+        JOIN tournaments t ON t.club_id = cm.club_id
+        WHERE t.id = tournament_participants.tournament_id AND cm.role IN ('owner', 'admin')
+    )
+) WITH CHECK (
+    auth.uid() IS NULL OR
+    auth.uid() IN (
+        SELECT cm.user_id FROM club_members cm
+        JOIN tournaments t ON t.club_id = cm.club_id
+        WHERE t.id = tournament_participants.tournament_id AND cm.role IN ('owner', 'admin')
+    )
+);
+
 

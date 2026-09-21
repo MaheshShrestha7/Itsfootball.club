@@ -398,8 +398,8 @@ export function generateGroupKnockoutSchedule(
   participants: TournamentParticipant[],
   options?: TiesheetOptions
 ): { matches: Match[]; updatedParticipants: TournamentParticipant[] } {
-  const groupCount = tournament.group_count || 2;
-  const advancingPerGroup = tournament.teams_advancing_per_group || 2;
+  const groupCount = Math.max(1, tournament.group_count ?? 1);
+  const advancingPerGroup = Math.max(1, tournament.teams_advancing_per_group ?? 2);
   const groupLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, groupCount);
 
   // Group assignment
@@ -438,18 +438,133 @@ export function generateGroupKnockoutSchedule(
   let matchSequence = allMatches.length + 1;
 
   // 2. Knockout Stage Setup
-  const totalAdvancing = groupCount * advancingPerGroup;
+  // Minimum 2 teams and maximum teams to progress to KO (bracket powers of 2: 2, 4, 8, 16)
+  const rawAdvancing = groupCount * advancingPerGroup;
+  let totalAdvancing = 2;
+  if (rawAdvancing <= 2) {
+    totalAdvancing = 2;
+  } else if (rawAdvancing <= 5) {
+    totalAdvancing = 4;
+  } else if (rawAdvancing <= 11) {
+    totalAdvancing = 8;
+  } else {
+    totalAdvancing = 16;
+  }
 
-  if (totalAdvancing === 4) {
-    // Semi-Finals & Final
-    // SF 1: 1st Group A vs 2nd Group B
-    // SF 2: 1st Group B vs 2nd Group A
+  if (totalAdvancing === 2) {
+    // --------------------------------------------------------------------------
+    // CASE A: 2 Teams Advance -> Direct Grand Final (+ optional 3rd Place Match)
+    // --------------------------------------------------------------------------
+    const finalId = `match-tourn-${tournament.id}-ko-final`;
+    const finalDate = new Date(koBaseDate.getTime() + 0 * 86400000);
+
+    const homeSource = '1st Group A';
+    const awaySource = groupCount === 1 ? '2nd Group A' : '1st Group B';
+
+    const finalMatch: Match = {
+      id: finalId,
+      club_id: tournament.club_id,
+      tournament_id: tournament.id,
+      competition: tournament.name,
+      season: tournament.season,
+      match_type: 'tournament',
+      title: 'Championship Grand Final',
+      tournament_stage: 'final',
+      tournament_round: 1,
+      tournament_match_number: matchSequence++,
+      home_team_name: homeSource,
+      away_team_name: awaySource,
+      home_team_logo: '/crests/apex-city.svg',
+      away_team_logo: '/crests/red-lions.svg',
+      home_team_source: homeSource,
+      away_team_source: awaySource,
+      is_club_home: true,
+      match_date: finalDate.toISOString().slice(0, 10),
+      match_time: defaultTime,
+      venue: defaultVenue,
+      status: 'upcoming',
+      home_score: 0,
+      away_score: 0,
+      current_minute: 0,
+      added_time: 0,
+      period: 'pre_match',
+      home_formation: '4-3-3',
+      away_formation: '4-3-3',
+      match_format: '11v11',
+      door_qr_checkin_enabled: true,
+      checkin_count: 0,
+    };
+
+    allMatches.push(finalMatch);
+
+    // Optional 3rd Place match
+    if (tournament.has_third_place_match) {
+      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      const tpHomeSource = groupCount === 1 ? '3rd Group A' : '2nd Group A';
+      const tpAwaySource = groupCount === 1 ? '4th Group A' : '2nd Group B';
+
+      allMatches.push({
+        id: thirdPlaceId,
+        club_id: tournament.club_id,
+        tournament_id: tournament.id,
+        competition: tournament.name,
+        season: tournament.season,
+        match_type: 'tournament',
+        title: '3rd Place Playoff',
+        tournament_stage: 'third_place',
+        tournament_round: 1,
+        tournament_match_number: matchSequence++,
+        home_team_name: tpHomeSource,
+        away_team_name: tpAwaySource,
+        home_team_logo: '/crests/apex-city.svg',
+        away_team_logo: '/crests/red-lions.svg',
+        home_team_source: tpHomeSource,
+        away_team_source: tpAwaySource,
+        is_club_home: true,
+        match_date: finalDate.toISOString().slice(0, 10),
+        match_time: '13:00',
+        venue: defaultVenue,
+        status: 'upcoming',
+        home_score: 0,
+        away_score: 0,
+        current_minute: 0,
+        added_time: 0,
+        period: 'pre_match',
+        home_formation: '4-3-3',
+        away_formation: '4-3-3',
+        match_format: '11v11',
+        door_qr_checkin_enabled: true,
+        checkin_count: 0,
+      });
+    }
+  } else if (totalAdvancing === 4) {
+    // --------------------------------------------------------------------------
+    // CASE B: 4 Teams Advance -> Semi-Finals & Grand Final
+    // --------------------------------------------------------------------------
     const sf1Id = `match-tourn-${tournament.id}-ko-sf1`;
     const sf2Id = `match-tourn-${tournament.id}-ko-sf2`;
     const finalId = `match-tourn-${tournament.id}-ko-final`;
 
     const sfDate = new Date(koBaseDate.getTime() + 0 * 86400000);
     const finalDate = new Date(koBaseDate.getTime() + 7 * 86400000);
+
+    let sf1Home = '1st Group A';
+    let sf1Away = '2nd Group B';
+    let sf2Home = '1st Group B';
+    let sf2Away = '2nd Group A';
+
+    if (groupCount === 1) {
+      // 1 Group: 1st plays 4th, 2nd plays 3rd
+      sf1Home = '1st Group A';
+      sf1Away = '4th Group A';
+      sf2Home = '2nd Group A';
+      sf2Away = '3rd Group A';
+    } else if (groupCount >= 4) {
+      sf1Home = '1st Group A';
+      sf1Away = '1st Group B';
+      sf2Home = '1st Group C';
+      sf2Away = '1st Group D';
+    }
 
     const sf1: Match = {
       id: sf1Id,
@@ -462,12 +577,12 @@ export function generateGroupKnockoutSchedule(
       tournament_stage: 'semi_final',
       tournament_round: 1,
       tournament_match_number: matchSequence++,
-      home_team_name: '1st Group A',
-      away_team_name: '2nd Group B',
+      home_team_name: sf1Home,
+      away_team_name: sf1Away,
       home_team_logo: '/crests/apex-city.svg',
       away_team_logo: '/crests/red-lions.svg',
-      home_team_source: '1st Group A',
-      away_team_source: '2nd Group B',
+      home_team_source: sf1Home,
+      away_team_source: sf1Away,
       next_match_id: finalId,
       next_match_slot: 'home',
       is_club_home: true,
@@ -498,12 +613,12 @@ export function generateGroupKnockoutSchedule(
       tournament_stage: 'semi_final',
       tournament_round: 1,
       tournament_match_number: matchSequence++,
-      home_team_name: '1st Group B',
-      away_team_name: '2nd Group A',
+      home_team_name: sf2Home,
+      away_team_name: sf2Away,
       home_team_logo: '/crests/apex-city.svg',
       away_team_logo: '/crests/red-lions.svg',
-      home_team_source: '1st Group B',
-      away_team_source: '2nd Group A',
+      home_team_source: sf2Home,
+      away_team_source: sf2Away,
       next_match_id: finalId,
       next_match_slot: 'away',
       is_club_home: true,
@@ -530,7 +645,7 @@ export function generateGroupKnockoutSchedule(
       competition: tournament.name,
       season: tournament.season,
       match_type: 'tournament',
-      title: 'Championship Final',
+      title: 'Championship Grand Final',
       tournament_stage: 'final',
       tournament_round: 2,
       tournament_match_number: matchSequence++,
@@ -597,11 +712,9 @@ export function generateGroupKnockoutSchedule(
       });
     }
   } else if (totalAdvancing === 8) {
-    // Quarter-Finals -> Semi-Finals -> Final
-    // QF 1: 1A vs 2B
-    // QF 2: 1C vs 2D
-    // QF 3: 1B vs 2A
-    // QF 4: 1D vs 2C
+    // --------------------------------------------------------------------------
+    // CASE C: 8 Teams Advance -> Quarter-Finals -> Semi-Finals -> Grand Final
+    // --------------------------------------------------------------------------
     const qfIds = [1, 2, 3, 4].map(i => `match-tourn-${tournament.id}-ko-qf${i}`);
     const sfIds = [1, 2].map(i => `match-tourn-${tournament.id}-ko-sf${i}`);
     const finalId = `match-tourn-${tournament.id}-ko-final`;
@@ -610,12 +723,29 @@ export function generateGroupKnockoutSchedule(
     const sfDate = new Date(koBaseDate.getTime() + 7 * 86400000);
     const finalDate = new Date(koBaseDate.getTime() + 14 * 86400000);
 
-    const qfPairs = [
+    let qfPairs = [
       { home: '1st Group A', away: '2nd Group B' },
       { home: '1st Group C', away: '2nd Group D' },
       { home: '1st Group B', away: '2nd Group A' },
       { home: '1st Group D', away: '2nd Group C' },
     ];
+
+    if (groupCount === 1) {
+      // 1 Group: 1st vs 8th, 4th vs 5th, 2nd vs 7th, 3rd vs 6th
+      qfPairs = [
+        { home: '1st Group A', away: '8th Group A' },
+        { home: '4th Group A', away: '5th Group A' },
+        { home: '2nd Group A', away: '7th Group A' },
+        { home: '3rd Group A', away: '6th Group A' },
+      ];
+    } else if (groupCount === 2) {
+      qfPairs = [
+        { home: '1st Group A', away: '4th Group B' },
+        { home: '2nd Group B', away: '3rd Group A' },
+        { home: '1st Group B', away: '4th Group A' },
+        { home: '2nd Group A', away: '3rd Group B' },
+      ];
+    }
 
     const qfMatches: Match[] = qfPairs.map((pair, idx) => ({
       id: qfIds[idx],
@@ -732,7 +862,7 @@ export function generateGroupKnockoutSchedule(
       competition: tournament.name,
       season: tournament.season,
       match_type: 'tournament',
-      title: 'Championship Final',
+      title: 'Championship Grand Final',
       tournament_stage: 'final',
       tournament_round: 3,
       tournament_match_number: matchSequence++,
@@ -760,6 +890,337 @@ export function generateGroupKnockoutSchedule(
     };
 
     allMatches.push(...qfMatches, sf1, sf2, finalMatch);
+
+    // 3rd place match
+    if (tournament.has_third_place_match) {
+      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      allMatches.push({
+        id: thirdPlaceId,
+        club_id: tournament.club_id,
+        tournament_id: tournament.id,
+        competition: tournament.name,
+        season: tournament.season,
+        match_type: 'tournament',
+        title: '3rd Place Playoff',
+        tournament_stage: 'third_place',
+        tournament_round: 3,
+        tournament_match_number: matchSequence++,
+        home_team_name: 'Loser Semi-Final 1',
+        away_team_name: 'Loser Semi-Final 2',
+        home_team_logo: '/crests/apex-city.svg',
+        away_team_logo: '/crests/red-lions.svg',
+        home_team_source: `Loser M#${sf1.tournament_match_number}`,
+        away_team_source: `Loser M#${sf2.tournament_match_number}`,
+        is_club_home: true,
+        match_date: finalDate.toISOString().slice(0, 10),
+        match_time: '13:00',
+        venue: defaultVenue,
+        status: 'upcoming',
+        home_score: 0,
+        away_score: 0,
+        current_minute: 0,
+        added_time: 0,
+        period: 'pre_match',
+        home_formation: '4-3-3',
+        away_formation: '4-3-3',
+        match_format: '11v11',
+        door_qr_checkin_enabled: true,
+        checkin_count: 0,
+      });
+    }
+  } else {
+    // --------------------------------------------------------------------------
+    // CASE D: 16 Teams Advance -> Round of 16 -> QF -> SF -> Grand Final
+    // --------------------------------------------------------------------------
+    const r16Ids = Array.from({ length: 8 }, (_, i) => `match-tourn-${tournament.id}-ko-r16-${i + 1}`);
+    const qfIds = [1, 2, 3, 4].map(i => `match-tourn-${tournament.id}-ko-qf${i}`);
+    const sfIds = [1, 2].map(i => `match-tourn-${tournament.id}-ko-sf${i}`);
+    const finalId = `match-tourn-${tournament.id}-ko-final`;
+
+    const r16Date = new Date(koBaseDate.getTime() + 0 * 86400000);
+    const qfDate = new Date(koBaseDate.getTime() + 7 * 86400000);
+    const sfDate = new Date(koBaseDate.getTime() + 14 * 86400000);
+    const finalDate = new Date(koBaseDate.getTime() + 21 * 86400000);
+
+    let r16Pairs: { home: string; away: string }[] = [];
+
+    if (groupCount === 1) {
+      // 1 Group: standard 16-seed bracket (1v16, 8v9, 4v13, 5v12, 2v15, 7v10, 3v14, 6v11)
+      r16Pairs = [
+        { home: '1st Group A', away: '16th Group A' },
+        { home: '8th Group A', away: '9th Group A' },
+        { home: '4th Group A', away: '13th Group A' },
+        { home: '5th Group A', away: '12th Group A' },
+        { home: '2nd Group A', away: '15th Group A' },
+        { home: '7th Group A', away: '10th Group A' },
+        { home: '3rd Group A', away: '14th Group A' },
+        { home: '6th Group A', away: '11th Group A' },
+      ];
+    } else if (groupCount === 2) {
+      // 2 Groups (8 advancing each)
+      r16Pairs = [
+        { home: '1st Group A', away: '8th Group B' },
+        { home: '4th Group B', away: '5th Group A' },
+        { home: '2nd Group B', away: '7th Group A' },
+        { home: '3rd Group A', away: '6th Group B' },
+        { home: '1st Group B', away: '8th Group A' },
+        { home: '4th Group A', away: '5th Group B' },
+        { home: '2nd Group A', away: '7th Group B' },
+        { home: '3rd Group B', away: '6th Group A' },
+      ];
+    } else if (groupCount === 4) {
+      // 4 Groups (4 advancing each)
+      r16Pairs = [
+        { home: '1st Group A', away: '4th Group B' },
+        { home: '2nd Group C', away: '3rd Group D' },
+        { home: '1st Group C', away: '4th Group D' },
+        { home: '2nd Group A', away: '3rd Group B' },
+        { home: '1st Group B', away: '4th Group A' },
+        { home: '2nd Group D', away: '3rd Group C' },
+        { home: '1st Group D', away: '4th Group C' },
+        { home: '2nd Group B', away: '3rd Group A' },
+      ];
+    } else {
+      // 8 Groups (2 advancing each - standard FIFA World Cup R16)
+      r16Pairs = [
+        { home: '1st Group A', away: '2nd Group B' },
+        { home: '1st Group C', away: '2nd Group D' },
+        { home: '1st Group E', away: '2nd Group F' },
+        { home: '1st Group G', away: '2nd Group H' },
+        { home: '1st Group B', away: '2nd Group A' },
+        { home: '1st Group D', away: '2nd Group C' },
+        { home: '1st Group F', away: '2nd Group E' },
+        { home: '1st Group H', away: '2nd Group G' },
+      ];
+    }
+
+    const r16Matches: Match[] = r16Ids.map((id, idx) => {
+      const matchNum = matchSequence++;
+      const pair = r16Pairs[idx] || { home: 'TBD', away: 'TBD' };
+      const homeSource = pair.home;
+      const awaySource = pair.away;
+
+      return {
+        id,
+        club_id: tournament.club_id,
+        tournament_id: tournament.id,
+        competition: tournament.name,
+        season: tournament.season,
+        match_type: 'tournament',
+        title: `Round of 16 • Match ${idx + 1}`,
+        tournament_stage: 'round_of_16',
+        tournament_round: 1,
+        tournament_match_number: matchNum,
+        home_team_name: homeSource,
+        away_team_name: awaySource,
+        home_team_logo: '/crests/apex-city.svg',
+        away_team_logo: '/crests/red-lions.svg',
+        home_team_source: homeSource,
+        away_team_source: awaySource,
+        next_match_id: qfIds[Math.floor(idx / 2)],
+        next_match_slot: idx % 2 === 0 ? 'home' : 'away',
+        is_club_home: true,
+        match_date: r16Date.toISOString().slice(0, 10),
+        match_time: defaultTime,
+        venue: defaultVenue,
+        status: 'upcoming',
+        home_score: 0,
+        away_score: 0,
+        current_minute: 0,
+        added_time: 0,
+        period: 'pre_match',
+        home_formation: '4-3-3',
+        away_formation: '4-3-3',
+        match_format: '11v11',
+        door_qr_checkin_enabled: true,
+        checkin_count: 0,
+      };
+    });
+
+    const qfMatches: Match[] = qfIds.map((id, idx) => {
+      const matchNum = matchSequence++;
+      return {
+        id,
+        club_id: tournament.club_id,
+        tournament_id: tournament.id,
+        competition: tournament.name,
+        season: tournament.season,
+        match_type: 'tournament',
+        title: `Quarter-Final ${idx + 1}`,
+        tournament_stage: 'quarter_final',
+        tournament_round: 2,
+        tournament_match_number: matchNum,
+        home_team_name: `Winner R16 #${idx * 2 + 1}`,
+        away_team_name: `Winner R16 #${idx * 2 + 2}`,
+        home_team_logo: '/crests/apex-city.svg',
+        away_team_logo: '/crests/red-lions.svg',
+        home_team_source: `Winner M#${r16Matches[idx * 2].tournament_match_number}`,
+        away_team_source: `Winner M#${r16Matches[idx * 2 + 1].tournament_match_number}`,
+        next_match_id: sfIds[Math.floor(idx / 2)],
+        next_match_slot: idx % 2 === 0 ? 'home' : 'away',
+        is_club_home: true,
+        match_date: qfDate.toISOString().slice(0, 10),
+        match_time: defaultTime,
+        venue: defaultVenue,
+        status: 'upcoming',
+        home_score: 0,
+        away_score: 0,
+        current_minute: 0,
+        added_time: 0,
+        period: 'pre_match',
+        home_formation: '4-3-3',
+        away_formation: '4-3-3',
+        match_format: '11v11',
+        door_qr_checkin_enabled: true,
+        checkin_count: 0,
+      };
+    });
+
+    const sf1: Match = {
+      id: sfIds[0],
+      club_id: tournament.club_id,
+      tournament_id: tournament.id,
+      competition: tournament.name,
+      season: tournament.season,
+      match_type: 'tournament',
+      title: 'Semi-Final 1',
+      tournament_stage: 'semi_final',
+      tournament_round: 3,
+      tournament_match_number: matchSequence++,
+      home_team_name: 'Winner QF 1',
+      away_team_name: 'Winner QF 2',
+      home_team_logo: '/crests/apex-city.svg',
+      away_team_logo: '/crests/red-lions.svg',
+      home_team_source: `Winner M#${qfMatches[0].tournament_match_number}`,
+      away_team_source: `Winner M#${qfMatches[1].tournament_match_number}`,
+      next_match_id: finalId,
+      next_match_slot: 'home',
+      is_club_home: true,
+      match_date: sfDate.toISOString().slice(0, 10),
+      match_time: defaultTime,
+      venue: defaultVenue,
+      status: 'upcoming',
+      home_score: 0,
+      away_score: 0,
+      current_minute: 0,
+      added_time: 0,
+      period: 'pre_match',
+      home_formation: '4-3-3',
+      away_formation: '4-3-3',
+      match_format: '11v11',
+      door_qr_checkin_enabled: true,
+      checkin_count: 0,
+    };
+
+    const sf2: Match = {
+      id: sfIds[1],
+      club_id: tournament.club_id,
+      tournament_id: tournament.id,
+      competition: tournament.name,
+      season: tournament.season,
+      match_type: 'tournament',
+      title: 'Semi-Final 2',
+      tournament_stage: 'semi_final',
+      tournament_round: 3,
+      tournament_match_number: matchSequence++,
+      home_team_name: 'Winner QF 3',
+      away_team_name: 'Winner QF 4',
+      home_team_logo: '/crests/apex-city.svg',
+      away_team_logo: '/crests/red-lions.svg',
+      home_team_source: `Winner M#${qfMatches[2].tournament_match_number}`,
+      away_team_source: `Winner M#${qfMatches[3].tournament_match_number}`,
+      next_match_id: finalId,
+      next_match_slot: 'away',
+      is_club_home: true,
+      match_date: sfDate.toISOString().slice(0, 10),
+      match_time: defaultTime,
+      venue: defaultVenue,
+      status: 'upcoming',
+      home_score: 0,
+      away_score: 0,
+      current_minute: 0,
+      added_time: 0,
+      period: 'pre_match',
+      home_formation: '4-3-3',
+      away_formation: '4-3-3',
+      match_format: '11v11',
+      door_qr_checkin_enabled: true,
+      checkin_count: 0,
+    };
+
+    const finalMatch: Match = {
+      id: finalId,
+      club_id: tournament.club_id,
+      tournament_id: tournament.id,
+      competition: tournament.name,
+      season: tournament.season,
+      match_type: 'tournament',
+      title: 'Championship Grand Final',
+      tournament_stage: 'final',
+      tournament_round: 4,
+      tournament_match_number: matchSequence++,
+      home_team_name: 'Winner Semi-Final 1',
+      away_team_name: 'Winner Semi-Final 2',
+      home_team_logo: '/crests/apex-city.svg',
+      away_team_logo: '/crests/red-lions.svg',
+      home_team_source: `Winner M#${sf1.tournament_match_number}`,
+      away_team_source: `Winner M#${sf2.tournament_match_number}`,
+      is_club_home: true,
+      match_date: finalDate.toISOString().slice(0, 10),
+      match_time: defaultTime,
+      venue: defaultVenue,
+      status: 'upcoming',
+      home_score: 0,
+      away_score: 0,
+      current_minute: 0,
+      added_time: 0,
+      period: 'pre_match',
+      home_formation: '4-3-3',
+      away_formation: '4-3-3',
+      match_format: '11v11',
+      door_qr_checkin_enabled: true,
+      checkin_count: 0,
+    };
+
+    allMatches.push(...r16Matches, ...qfMatches, sf1, sf2, finalMatch);
+
+    // 3rd place match
+    if (tournament.has_third_place_match) {
+      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      allMatches.push({
+        id: thirdPlaceId,
+        club_id: tournament.club_id,
+        tournament_id: tournament.id,
+        competition: tournament.name,
+        season: tournament.season,
+        match_type: 'tournament',
+        title: '3rd Place Playoff',
+        tournament_stage: 'third_place',
+        tournament_round: 4,
+        tournament_match_number: matchSequence++,
+        home_team_name: 'Loser Semi-Final 1',
+        away_team_name: 'Loser Semi-Final 2',
+        home_team_logo: '/crests/apex-city.svg',
+        away_team_logo: '/crests/red-lions.svg',
+        home_team_source: `Loser M#${sf1.tournament_match_number}`,
+        away_team_source: `Loser M#${sf2.tournament_match_number}`,
+        is_club_home: true,
+        match_date: finalDate.toISOString().slice(0, 10),
+        match_time: '13:00',
+        venue: defaultVenue,
+        status: 'upcoming',
+        home_score: 0,
+        away_score: 0,
+        current_minute: 0,
+        added_time: 0,
+        period: 'pre_match',
+        home_formation: '4-3-3',
+        away_formation: '4-3-3',
+        match_format: '11v11',
+        door_qr_checkin_enabled: true,
+        checkin_count: 0,
+      });
+    }
   }
 
   return { matches: allMatches, updatedParticipants: participantsCopy };

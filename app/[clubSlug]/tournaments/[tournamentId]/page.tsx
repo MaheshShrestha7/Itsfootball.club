@@ -313,14 +313,14 @@ export default function PublicTournamentDetailPage({
         {activeTab === 'standings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {tournament.format === 'group_knockout' ? (
-              ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count || 2).map(groupLetter => {
+              ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count ?? 1).map(groupLetter => {
                 const groupStandings = getTournamentStandings(tournament.id, groupLetter);
                 return (
                   <div key={groupLetter}>
                     <TournamentStandingsTable
                       standings={groupStandings}
-                      groupTitle={`Group ${groupLetter} Standings`}
-                      advancingCount={tournament.teams_advancing_per_group || 2}
+                      groupTitle={tournament.group_count === 1 ? 'Group Stage Standings' : `Group ${groupLetter} Standings`}
+                      advancingCount={tournament.teams_advancing_per_group ?? 2}
                     />
                   </div>
                 );
