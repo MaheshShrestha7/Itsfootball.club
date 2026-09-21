@@ -1,0 +1,685 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useClub } from '@/lib/club-context';
+import { InternalTeam, ClubMember } from '@/lib/supabase/types';
+import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award } from 'lucide-react';
+
+interface InternalTeamsManagerProps {
+  clubSlug: string;
+}
+
+const COLOR_PRESETS = [
+  { label: 'Emerald', value: '#10B981' },
+  { label: 'Cobalt', value: '#2563EB' },
+  { label: 'Crimson', value: '#EF4444' },
+  { label: 'Gold', value: '#F59E0B' },
+  { label: 'Purple', value: '#8B5CF6' },
+  { label: 'Cyan', value: '#06B6D4' },
+  { label: 'Obsidian', value: '#334155' },
+];
+
+export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerProps) {
+  const {
+    clubs,
+    selectClubBySlug,
+    members,
+    internalTeams,
+    createInternalTeam,
+    updateInternalTeam,
+    deleteInternalTeam,
+  } = useClub();
+
+  const club = selectClubBySlug(clubSlug) || clubs[0];
+  const clubMembers = members.filter(m => m.club_id === club.id);
+  const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<InternalTeam | null>(null);
+
+  // Form State
+  const [name, setName] = useState('');
+  const [shortName, setShortName] = useState('');
+  const [color, setColor] = useState('#10B981');
+  const [logoUrl, setLogoUrl] = useState('/crests/apex-city.svg');
+  const [coachName, setCoachName] = useState('');
+  const [captainId, setCaptainId] = useState('');
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleOpenAdd = () => {
+    setEditingTeam(null);
+    setName('');
+    setShortName('');
+    setColor('#10B981');
+    setLogoUrl(club.logo_url || '/crests/apex-city.svg');
+    setCoachName('');
+    setCaptainId('');
+    setSelectedPlayerIds([]);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (team: InternalTeam) => {
+    setEditingTeam(team);
+    setName(team.name);
+    setShortName(team.short_name);
+    setColor(team.color || '#10B981');
+    setLogoUrl(team.logo_url || club.logo_url || '/crests/apex-city.svg');
+    setCoachName(team.coach_name || '');
+    setCaptainId(team.captain_id || '');
+    setSelectedPlayerIds(team.player_ids || []);
+    setModalOpen(true);
+  };
+
+  const handleTogglePlayer = (memberId: string) => {
+    setSelectedPlayerIds(prev =>
+      prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    if (editingTeam) {
+      updateInternalTeam(editingTeam.id, {
+        name: name.trim(),
+        short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
+        color,
+        logo_url: logoUrl,
+        coach_name: coachName.trim(),
+        captain_id: captainId || undefined,
+        player_ids: selectedPlayerIds,
+      });
+      setFeedback(`✓ Updated ${name.trim()} successfully!`);
+    } else {
+      createInternalTeam({
+        club_id: club.id,
+        name: name.trim(),
+        short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
+        color,
+        logo_url: logoUrl,
+        coach_name: coachName.trim(),
+        captain_id: captainId || undefined,
+        player_ids: selectedPlayerIds,
+      });
+      setFeedback(`✓ Created internal team "${name.trim()}"!`);
+    }
+
+    setModalOpen(false);
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleDelete = (teamId: string, teamName: string) => {
+    if (confirm(`Are you sure you want to delete internal team "${teamName}"?`)) {
+      deleteInternalTeam(teamId);
+      setFeedback(`✓ Removed ${teamName}`);
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  return (
+    <div>
+      {/* Action Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', margin: '0 0 0.25rem 0' }}>
+            Internal Teams & Squads
+          </h2>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            Configure intra-club rosters (First Team, U-21 Academy, Staff & Legends) to include in tournaments.
+          </p>
+        </div>
+
+        <button
+          onClick={handleOpenAdd}
+          className="btn btn-primary"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.1rem',
+            fontWeight: 700,
+            borderRadius: '8px',
+          }}
+        >
+          <Plus size={16} />
+          <span>Create Internal Team</span>
+        </button>
+      </div>
+
+      {feedback && (
+        <div
+          style={{
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            color: '#10B981',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            marginBottom: '1.25rem',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+          }}
+        >
+          {feedback}
+        </div>
+      )}
+
+      {/* Teams Grid */}
+      {clubInternalTeams.length === 0 ? (
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            padding: '3rem',
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <Shield size={36} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#FFFFFF', fontWeight: 800 }}>
+            No Internal Teams Created
+          </h3>
+          <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem' }}>
+            Build your internal squads to organize intra-club cups and friendly tournament matches.
+          </p>
+          <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Plus size={15} />
+            <span>Create First Internal Team</span>
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
+            gap: '1.25rem',
+          }}
+        >
+          {clubInternalTeams.map(team => {
+            const captain = clubMembers.find(m => m.id === team.captain_id);
+            const teamPlayers = clubMembers.filter(m => (team.player_ids || []).includes(m.id));
+
+            return (
+              <div
+                key={team.id}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '14px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {/* Team Accent Color Bar */}
+                <div style={{ height: '4px', background: team.color || '#10B981' }} />
+
+                {/* Team Info Header */}
+                <div style={{ padding: '1.25rem', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '10px',
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          border: `2px solid ${team.color || '#10B981'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                          padding: '3px',
+                        }}
+                      >
+                        <img
+                          src={team.logo_url || '/crests/apex-city.svg'}
+                          alt={team.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                            {team.name}
+                          </h3>
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              color: 'var(--text-secondary)',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {team.short_name}
+                          </span>
+                        </div>
+                        {team.coach_name && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            Coach: {team.coach_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <button
+                        onClick={() => handleOpenEdit(team)}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          padding: '0.4rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                        title="Edit Team"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(team.id, team.name)}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: 'none',
+                          color: '#EF4444',
+                          padding: '0.4rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                        title="Delete Team"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Captain & Stats Row */}
+                  <div
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.75rem',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Captain: </span>
+                      <span style={{ color: '#FFFFFF', fontWeight: 700 }}>
+                        {captain ? captain.full_name : 'Unassigned'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Squad Size: </span>
+                      <span style={{ color: '#10B981', fontWeight: 800 }}>
+                        {teamPlayers.length} Athletes
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Assigned Roster Preview */}
+                  <div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Assigned Athletes ({teamPlayers.length})
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.4rem' }}>
+                      {teamPlayers.slice(0, 8).map(player => (
+                        <span
+                          key={player.id}
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '2px 7px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '12px',
+                            color: '#E2E8F0',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          {player.player_position && (
+                            <span style={{ color: team.color || '#10B981', fontWeight: 800, fontSize: '0.65rem' }}>
+                              {player.player_position}
+                            </span>
+                          )}
+                          {player.full_name.split(' ')[0]}
+                        </span>
+                      ))}
+                      {teamPlayers.length > 8 && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
+                          +{teamPlayers.length - 8} more
+                        </span>
+                      )}
+                      {teamPlayers.length === 0 && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No players assigned yet.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create / Edit Team Modal */}
+      {modalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 10, 20, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#111827',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+              color: '#FFFFFF',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Shield size={18} color="#10B981" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                  {editingTeam ? 'Edit Internal Team' : 'Create Internal Team'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    Team Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Apex U-21 Academy"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    Short Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="e.g. U21"
+                    value={shortName}
+                    onChange={e => setShortName(e.target.value.toUpperCase())}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Accent Color Presets */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  Kit / Accent Color
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {COLOR_PRESETS.map(c => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setColor(c.value)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: c.value,
+                        border: color === c.value ? '3px solid #FFFFFF' : '2px solid rgba(0,0,0,0.5)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title={c.label}
+                    >
+                      {color === c.value && <Check size={14} color="#000" />}
+                    </button>
+                  ))}
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={e => setColor(e.target.value)}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: 'none',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      background: 'transparent',
+                    }}
+                    title="Custom Color"
+                  />
+                </div>
+              </div>
+
+              {/* Coach & Captain */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    Coach / Manager
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Diego Morales"
+                    value={coachName}
+                    onChange={e => setCoachName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    Team Captain
+                  </label>
+                  <select
+                    value={captainId}
+                    onChange={e => setCaptainId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: '#1F2937',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                    }}
+                  >
+                    <option value="">-- Select Captain --</option>
+                    {clubMembers.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} {m.player_position ? `(${m.player_position})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Squad Member Selection */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                    Allocate Club Members ({selectedPlayerIds.length} Selected)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedPlayerIds(
+                        selectedPlayerIds.length === clubMembers.length
+                          ? []
+                          : clubMembers.map(m => m.id)
+                      )
+                    }
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--club-primary)',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {selectedPlayerIds.length === clubMembers.length ? 'Clear All' : 'Select All Squad'}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    background: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gap: '0.4rem',
+                  }}
+                >
+                  {clubMembers.map(member => {
+                    const isChecked = selectedPlayerIds.includes(member.id);
+                    return (
+                      <div
+                        key={member.id}
+                        onClick={() => handleTogglePlayer(member.id)}
+                        style={{
+                          padding: '0.45rem 0.6rem',
+                          borderRadius: '6px',
+                          background: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                          border: isChecked ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.06)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {member.full_name}
+                          </div>
+                          {member.player_position && (
+                            <span style={{ fontSize: '0.65rem', color: '#10B981', fontWeight: 800 }}>
+                              {member.player_position}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.65rem 1.25rem', borderRadius: '8px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', fontWeight: 800 }}
+                >
+                  {editingTeam ? 'Save Changes' : 'Create Team'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

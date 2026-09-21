@@ -218,6 +218,20 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Fixtures
           </Link>
+          <Link
+            href={`/${club.slug}/tournaments`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              color: 'var(--text-secondary)',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+            }}
+          >
+            <Trophy size={15} color="#F59E0B" />
+            <span>Tournaments</span>
+          </Link>
           <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Squad
           </Link>
@@ -434,6 +448,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 >
                   <Calendar size={16} />
                   <span>Fixtures & Results</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}/tournaments`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Trophy size={16} color="#F59E0B" />
+                  <span>Tournaments & Cups</span>
                 </Link>
 
                 <Link

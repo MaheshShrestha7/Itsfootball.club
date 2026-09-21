@@ -30,7 +30,11 @@ import {
   MemberMessage,
   MemberApplicationInput,
   ClubSeasonStatsSummary,
-  HeroSliderPinnedItem
+  HeroSliderPinnedItem,
+  InternalTeam,
+  Tournament,
+  TournamentParticipant,
+  TournamentStanding
 } from './supabase/types';
 import {
   INITIAL_CLUBS,
@@ -49,8 +53,20 @@ import {
   INITIAL_AVAILABILITIES,
   INITIAL_DRAFT_LINEUPS,
   INITIAL_SEASONS,
-  INITIAL_MEMBER_MESSAGES
+  INITIAL_MEMBER_MESSAGES,
+  INITIAL_INTERNAL_TEAMS,
+  INITIAL_TOURNAMENTS,
+  INITIAL_TOURNAMENT_PARTICIPANTS,
+  INITIAL_TOURNAMENT_MATCHES
 } from './mock-data';
+import {
+  generateKnockoutBracket,
+  generateRoundRobinSchedule,
+  generateGroupKnockoutSchedule,
+  computeStandings,
+  progressKnockoutMatch,
+  seedKnockoutFromGroups
+} from './tournament-engine';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 
 interface ClubContextType {
@@ -165,6 +181,24 @@ interface ClubContextType {
   getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
   getClubMemberMessages: (clubId: string) => MemberMessage[];
   getClubSeasonStats: (clubId: string) => ClubSeasonStatsSummary;
+
+  // Tournaments & Internal Teams Engine (Challonge for Football)
+  internalTeams: InternalTeam[];
+  tournaments: Tournament[];
+  tournamentParticipants: TournamentParticipant[];
+  createInternalTeam: (teamData: Omit<InternalTeam, 'id' | 'created_at' | 'updated_at'>) => InternalTeam;
+  updateInternalTeam: (teamId: string, updates: Partial<InternalTeam>) => void;
+  deleteInternalTeam: (teamId: string) => void;
+  createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => Tournament;
+  updateTournament: (tournamentId: string, updates: Partial<Tournament>) => void;
+  deleteTournament: (tournamentId: string) => void;
+  addTournamentParticipant: (participantData: Omit<TournamentParticipant, 'id'>) => TournamentParticipant;
+  deleteTournamentParticipant: (participantId: string) => void;
+  generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean }) => Match[];
+  updateTournamentMatchScore: (matchId: string, homeScore: number, awayScore: number, homePens?: number, awayPens?: number, isCompleted?: boolean) => void;
+  progressKnockoutStage: (tournamentId: string) => void;
+  getTournamentStandings: (tournamentId: string, group?: string) => TournamentStanding[];
+  getTournamentMatches: (tournamentId: string) => Match[];
 }
 
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
@@ -227,7 +261,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [activeClub, setActiveClub] = useState<Club | null>(INITIAL_CLUBS[0]);
   const [members, setMembers] = useState<ClubMember[]>(INITIAL_MEMBERS);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>(INITIAL_PLAYER_STATS);
-  const [matches, setMatches] = useState<Match[]>(INITIAL_MATCHES);
+  const [matches, setMatches] = useState<Match[]>(() => {
+    const matchIds = new Set(INITIAL_MATCHES.map(m => m.id));
+    const extra = INITIAL_TOURNAMENT_MATCHES.filter(m => !matchIds.has(m.id));
+    return [...INITIAL_MATCHES, ...extra];
+  });
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>(INITIAL_MATCH_EVENTS);
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
   const [sponsors, setSponsors] = useState<Sponsor[]>(INITIAL_SPONSORS);
@@ -242,6 +280,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
   const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
   const [memberMessages, setMemberMessages] = useState<MemberMessage[]>(INITIAL_MEMBER_MESSAGES);
+  const [internalTeams, setInternalTeams] = useState<InternalTeam[]>(INITIAL_INTERNAL_TEAMS);
+  const [tournaments, setTournaments] = useState<Tournament[]>(INITIAL_TOURNAMENTS);
+  const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>(INITIAL_TOURNAMENT_PARTICIPANTS);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load from localStorage on mount if present
@@ -267,7 +308,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             })));
           }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
-          if (parsed.matches?.length) setMatches(parsed.matches);
+          if (parsed.matches?.length) {
+            const loadedIds = new Set(parsed.matches.map((m: Match) => m.id));
+            const missingTournMatches = INITIAL_TOURNAMENT_MATCHES.filter(m => !loadedIds.has(m.id));
+            setMatches([...parsed.matches, ...missingTournMatches]);
+          }
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
           if (parsed.events?.length) setEvents(parsed.events);
           if (parsed.sponsors?.length) setSponsors(parsed.sponsors);
@@ -282,6 +327,21 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
+          if (parsed.internalTeams?.length) {
+            const loadedTeamIds = new Set(parsed.internalTeams.map((t: InternalTeam) => t.id));
+            const missingTeams = INITIAL_INTERNAL_TEAMS.filter(t => !loadedTeamIds.has(t.id));
+            setInternalTeams([...parsed.internalTeams, ...missingTeams]);
+          }
+          if (parsed.tournaments?.length) {
+            const loadedTournIds = new Set(parsed.tournaments.map((t: Tournament) => t.id));
+            const missingTournaments = INITIAL_TOURNAMENTS.filter(t => !loadedTournIds.has(t.id));
+            setTournaments([...parsed.tournaments, ...missingTournaments]);
+          }
+          if (parsed.tournamentParticipants?.length) {
+            const loadedPartIds = new Set(parsed.tournamentParticipants.map((p: TournamentParticipant) => p.id));
+            const missingParticipants = INITIAL_TOURNAMENT_PARTICIPANTS.filter(p => !loadedPartIds.has(p.id));
+            setTournamentParticipants([...parsed.tournamentParticipants, ...missingParticipants]);
+          }
         }
       } catch (err) {
         console.warn('Could not read state from localStorage', err);
@@ -323,6 +383,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
+          if (parsed.internalTeams?.length) setInternalTeams(parsed.internalTeams);
+          if (parsed.tournaments?.length) setTournaments(parsed.tournaments);
+          if (parsed.tournamentParticipants?.length) setTournamentParticipants(parsed.tournamentParticipants);
         } catch (err) {
           console.warn('Cross-tab storage parse error', err);
         }
@@ -358,6 +421,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           analyticsEvents,
           gateScans,
           memberMessages,
+          internalTeams,
+          tournaments,
+          tournamentParticipants,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch (err) {
@@ -385,6 +451,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     analyticsEvents,
     gateScans,
     memberMessages,
+    internalTeams,
+    tournaments,
+    tournamentParticipants,
   ]);
 
   // Realtime match timer tick simulation for live matches
@@ -2220,6 +2289,196 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [matches, playerStats, members]);
 
+  // ==============================================================================
+  // TOURNAMENTS & INTERNAL TEAMS ENGINE (Challonge for Football)
+  // ==============================================================================
+
+  const createInternalTeam = useCallback((teamData: Omit<InternalTeam, 'id' | 'created_at' | 'updated_at'>) => {
+    const newTeam: InternalTeam = {
+      ...teamData,
+      id: `team-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setInternalTeams(prev => [newTeam, ...prev]);
+    return newTeam;
+  }, []);
+
+  const updateInternalTeam = useCallback((teamId: string, updates: Partial<InternalTeam>) => {
+    setInternalTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+  }, []);
+
+  const deleteInternalTeam = useCallback((teamId: string) => {
+    setInternalTeams(prev => prev.filter(t => t.id !== teamId));
+  }, []);
+
+  const createTournament = useCallback((
+    tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
+    participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]
+  ) => {
+    const tournId = `tourn-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const newTournament: Tournament = {
+      ...tournamentData,
+      id: tournId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setTournaments(prev => [newTournament, ...prev]);
+
+    if (participantInputs && participantInputs.length > 0) {
+      const newParticipants: TournamentParticipant[] = participantInputs.map((p, idx) => ({
+        ...p,
+        id: `part-${tournId}-${idx + 1}`,
+        tournament_id: tournId,
+      }));
+      setTournamentParticipants(prev => [...prev, ...newParticipants]);
+    }
+
+    return newTournament;
+  }, []);
+
+  const updateTournament = useCallback((tournamentId: string, updates: Partial<Tournament>) => {
+    setTournaments(prev => prev.map(t => t.id === tournamentId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+  }, []);
+
+  const deleteTournament = useCallback((tournamentId: string) => {
+    setTournaments(prev => prev.filter(t => t.id !== tournamentId));
+    setTournamentParticipants(prev => prev.filter(p => p.tournament_id !== tournamentId));
+    setMatches(prev => prev.filter(m => m.tournament_id !== tournamentId));
+  }, []);
+
+  const addTournamentParticipant = useCallback((participantData: Omit<TournamentParticipant, 'id'>) => {
+    const newParticipant: TournamentParticipant = {
+      ...participantData,
+      id: `part-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+    };
+    setTournamentParticipants(prev => [...prev, newParticipant]);
+    return newParticipant;
+  }, []);
+
+  const deleteTournamentParticipant = useCallback((participantId: string) => {
+    setTournamentParticipants(prev => prev.filter(p => p.id !== participantId));
+  }, []);
+
+  const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean }) => {
+    const tournament = tournaments.find(t => t.id === tournamentId);
+    if (!tournament) return [];
+
+    const participants = tournamentParticipants.filter(p => p.tournament_id === tournamentId);
+    if (participants.length < 2) return [];
+
+    let generatedMatches: Match[] = [];
+
+    if (tournament.format === 'knockout') {
+      generatedMatches = generateKnockoutBracket(tournament, participants, options);
+    } else if (tournament.format === 'league') {
+      generatedMatches = generateRoundRobinSchedule(tournament, participants, options);
+    } else if (tournament.format === 'group_knockout') {
+      const res = generateGroupKnockoutSchedule(tournament, participants, options);
+      generatedMatches = res.matches;
+      // Update group assignments on participants
+      setTournamentParticipants(prev => {
+        const others = prev.filter(p => p.tournament_id !== tournamentId);
+        return [...others, ...res.updatedParticipants];
+      });
+    }
+
+    // Replace old matches for this tournament with new ones
+    setMatches(prev => {
+      const nonTournament = prev.filter(m => m.tournament_id !== tournamentId);
+      return [...nonTournament, ...generatedMatches];
+    });
+
+    // Mark tournament as ongoing if draft
+    if (tournament.status === 'draft') {
+      updateTournament(tournamentId, { status: 'ongoing' });
+    }
+
+    return generatedMatches;
+  }, [tournaments, tournamentParticipants, updateTournament]);
+
+  const updateTournamentMatchScore = useCallback((
+    matchId: string,
+    homeScore: number,
+    awayScore: number,
+    homePens?: number,
+    awayPens?: number,
+    isCompleted = true
+  ) => {
+    setMatches(prevMatches => {
+      const targetMatch = prevMatches.find(m => m.id === matchId);
+      if (!targetMatch) return prevMatches;
+
+      const updated: Match = {
+        ...targetMatch,
+        home_score: homeScore,
+        away_score: awayScore,
+        home_penalty_score: homePens,
+        away_penalty_score: awayPens,
+        status: isCompleted ? 'completed' : 'live',
+        period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
+      };
+
+      // Progress knockout bracket if this match has downstream linkage
+      let finalMatches = prevMatches.map(m => m.id === matchId ? updated : m);
+
+      if (updated.tournament_id && updated.tournament_stage && updated.tournament_stage !== 'group') {
+        finalMatches = progressKnockoutMatch(finalMatches, updated);
+      }
+
+      // If this was a group match, check if group stage is ready to seed knockouts
+      if (updated.tournament_id && updated.tournament_stage === 'group') {
+        const tourney = tournaments.find(t => t.id === updated.tournament_id);
+        if (tourney && tourney.format === 'group_knockout') {
+          const participants = tournamentParticipants.filter(p => p.tournament_id === tourney.id);
+          const standingsByGroup: Record<string, TournamentStanding[]> = {};
+          const groupCount = tourney.group_count || 2;
+          const groupLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, groupCount);
+          groupLetters.forEach(letter => {
+            standingsByGroup[letter] = computeStandings(finalMatches, participants, {
+              group: letter,
+              pointsWin: tourney.points_win,
+              pointsDraw: tourney.points_draw,
+              pointsLoss: tourney.points_loss,
+            });
+          });
+          finalMatches = seedKnockoutFromGroups(finalMatches, standingsByGroup);
+        }
+      }
+
+      return finalMatches;
+    });
+  }, [tournaments, tournamentParticipants]);
+
+  const progressKnockoutStage = useCallback((tournamentId: string) => {
+    setMatches(prevMatches => {
+      const tourneyMatches = prevMatches.filter(m => m.tournament_id === tournamentId);
+      let updatedList = [...prevMatches];
+      tourneyMatches.forEach(m => {
+        if (m.status === 'completed' && m.next_match_id) {
+          updatedList = progressKnockoutMatch(updatedList, m);
+        }
+      });
+      return updatedList;
+    });
+  }, []);
+
+  const getTournamentStandings = useCallback((tournamentId: string, group?: string) => {
+    const tourney = tournaments.find(t => t.id === tournamentId);
+    const tourneyMatches = matches.filter(m => m.tournament_id === tournamentId);
+    const participants = tournamentParticipants.filter(p => p.tournament_id === tournamentId);
+    return computeStandings(tourneyMatches, participants, {
+      group,
+      pointsWin: tourney?.points_win ?? 3,
+      pointsDraw: tourney?.points_draw ?? 1,
+      pointsLoss: tourney?.points_loss ?? 0,
+    });
+  }, [tournaments, matches, tournamentParticipants]);
+
+  const getTournamentMatches = useCallback((tournamentId: string) => {
+    return matches.filter(m => m.tournament_id === tournamentId);
+  }, [matches]);
+
   return (
     <ClubContext.Provider
       value={{
@@ -2300,6 +2559,23 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         getMemberMessages,
         getClubMemberMessages,
         getClubSeasonStats,
+        // Tournaments & Internal Teams
+        internalTeams,
+        tournaments,
+        tournamentParticipants,
+        createInternalTeam,
+        updateInternalTeam,
+        deleteInternalTeam,
+        createTournament,
+        updateTournament,
+        deleteTournament,
+        addTournamentParticipant,
+        deleteTournamentParticipant,
+        generateTournamentTiesheet,
+        updateTournamentMatchScore,
+        progressKnockoutStage,
+        getTournamentStandings,
+        getTournamentMatches,
       }}
     >
       {children}

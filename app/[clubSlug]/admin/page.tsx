@@ -17,7 +17,8 @@ import {
   Activity,
   Plus,
   Sparkles,
-  CalendarDays
+  CalendarDays,
+  Trophy
 } from 'lucide-react';
 
 export default function AdminDashboardPage({
@@ -26,7 +27,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, getActiveSeason, getClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, getActiveSeason, getClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
@@ -241,6 +242,20 @@ export default function AdminDashboardPage({
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Hero Slider Pins</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Curate pinned slides</div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/${club.slug}/admin/tournaments`}
+            className="glass-panel glass-panel-interactive"
+            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+          >
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}>
+              <Trophy size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Tournaments & Cups</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Brackets & Tiesheets</div>
             </div>
           </Link>
         </div>

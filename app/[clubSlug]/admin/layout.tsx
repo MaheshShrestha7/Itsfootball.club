@@ -89,6 +89,7 @@ export default function AdminLayout({
       items: [
         { label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
         { label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
+        { label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
         { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
         { label: 'Player Availability', href: `/${club.slug}/availability`, icon: UserCheck },
         { label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },

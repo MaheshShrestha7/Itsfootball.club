@@ -186,6 +186,19 @@ export interface Match {
   match_format?: MatchFormat;
   is_audited?: boolean;
   audited_at?: string;
+  // Tournament bracket & tiesheet fields
+  tournament_id?: string;
+  tournament_stage?: 'group' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | 'third_place';
+  tournament_group?: string;
+  tournament_round?: number;
+  tournament_match_number?: number;
+  home_team_source?: string;
+  away_team_source?: string;
+  home_penalty_score?: number;
+  away_penalty_score?: number;
+  winner_side?: 'home' | 'away';
+  next_match_id?: string;
+  next_match_slot?: 'home' | 'away';
   created_at?: string;
 }
 
@@ -497,3 +510,77 @@ export interface MemberApplicationInput {
   application_notes?: string;
   emergency_contact?: string;
 }
+
+// ==============================================================================
+// 23. TOURNAMENTS & INTERNAL TEAMS ENGINE (Challonge for Football)
+// ==============================================================================
+export type TournamentFormat = 'knockout' | 'league' | 'group_knockout';
+export type TournamentStatus = 'draft' | 'ongoing' | 'completed';
+
+export interface InternalTeam {
+  id: string;
+  club_id: string;
+  name: string;
+  short_name: string;
+  color: string;
+  logo_url: string;
+  captain_id?: string;
+  coach_name?: string;
+  player_ids: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Tournament {
+  id: string;
+  club_id: string;
+  name: string;
+  slug: string;
+  season: string;
+  format: TournamentFormat;
+  status: TournamentStatus;
+  points_win: number;
+  points_draw: number;
+  points_loss: number;
+  group_count?: number;
+  teams_advancing_per_group?: number;
+  has_third_place_match?: boolean;
+  start_date: string;
+  end_date?: string;
+  venue?: string;
+  description?: string;
+  banner_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TournamentParticipant {
+  id: string;
+  tournament_id: string;
+  team_type: 'internal' | 'external';
+  internal_team_id?: string;
+  name: string;
+  short_name: string;
+  logo_url: string;
+  color?: string;
+  seed?: number;
+  group?: string; // 'A', 'B', 'C', etc.
+}
+
+export interface TournamentStanding {
+  team_id: string;
+  name: string;
+  short_name: string;
+  logo_url: string;
+  group?: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+  form: ('W' | 'D' | 'L')[];
+}
+
