@@ -10,8 +10,8 @@ export default function AdminBrandingRedirect() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    const targetSlug = activeClub?.slug || clubs[0]?.slug || 'apex-city-fc';
-    router.replace(`/${targetSlug}/admin/branding`);
+    const targetSlug = activeClub?.slug || clubs[0]?.slug;
+    router.replace(targetSlug ? `/${targetSlug}/admin/branding` : '/my-clubs');
   }, [router, isHydrated, activeClub?.slug, clubs]);
 
   return (

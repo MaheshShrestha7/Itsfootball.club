@@ -17,6 +17,7 @@ import {
   Clock,
   Sparkles
 } from 'lucide-react';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 export default function PublicTournamentDetailPage({
   params,
@@ -370,7 +371,7 @@ export default function PublicTournamentDetailPage({
                 }}
               >
                 <img
-                  src={part.logo_url || '/crests/apex-city.svg'}
+                  src={part.logo_url || DEFAULT_CREST}
                   alt=""
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}
                 />

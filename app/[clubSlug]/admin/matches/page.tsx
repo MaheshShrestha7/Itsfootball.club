@@ -214,7 +214,7 @@ export default function AdminMatchesPage({
       title: `${club.name} Intra-Squad: First Team vs ${presetName}`,
       competition: 'Intra-Squad Friendly',
       is_club_home: true,
-      venue: club.stadium_name || 'Apex Training Ground'
+      venue: club.stadium_name || 'Training Ground'
     }));
   };
 
@@ -1060,7 +1060,7 @@ export default function AdminMatchesPage({
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <button
                         type="button"
-                        onClick={() => handleInternalPreset('Apex Blue Squad', 'BLU')}
+                        onClick={() => handleInternalPreset('Blue Squad', 'BLU')}
                         className="btn btn-secondary btn-sm"
                         style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
                       >
@@ -1228,7 +1228,7 @@ export default function AdminMatchesPage({
                     id="form-venue"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Apex Park Stadium"
+                    placeholder="e.g. Riverside Park Stadium"
                     value={form.venue}
                     onChange={e => setForm({ ...form, venue: e.target.value })}
                     required

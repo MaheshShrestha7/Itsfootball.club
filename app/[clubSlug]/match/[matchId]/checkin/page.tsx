@@ -484,7 +484,7 @@ export default function MatchDoorCheckinPage({
                     id="member-token-input"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. apex-player-pass-10 or player ID"
+                    placeholder="Pass token or player ID"
                     value={memberToken}
                     onChange={e => setMemberToken(e.target.value)}
                     required

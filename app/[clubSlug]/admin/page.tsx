@@ -27,7 +27,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, getActiveSeason, getClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
@@ -36,6 +36,10 @@ export default function AdminDashboardPage({
   const liveMatch = clubMatches.find(m => m.status === 'live');
   const analytics = getClubAnalytics(club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
+  const recentActivity = activityLogs
+    .filter(l => l.club_id === club.id)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 5);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
 
   return (
@@ -323,14 +327,14 @@ export default function AdminDashboardPage({
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {[
-              { text: 'Goal logged: Dante Moreno (18\')', time: '12 mins ago', type: 'goal' },
-              { text: 'Pass verified: Julian Drake (#10)', time: '45 mins ago', type: 'scan' },
-              { text: 'New RSVP recorded for First Team Open Training', time: '2 hours ago', type: 'event' },
-              { text: 'Branding configuration saved', time: 'Yesterday', type: 'settings' },
-            ].map((act, idx) => (
+            {recentActivity.length === 0 && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.825rem', textAlign: 'center', padding: '1rem' }}>
+                No activity yet.
+              </div>
+            )}
+            {recentActivity.map(act => (
               <div
-                key={idx}
+                key={act.id}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -341,8 +345,8 @@ export default function AdminDashboardPage({
                   fontSize: '0.825rem',
                 }}
               >
-                <div style={{ color: '#FFFFFF' }}>{act.text}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{act.time}</div>
+                <div style={{ color: '#FFFFFF' }}>{act.description}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(act.created_at).toLocaleString()}</div>
               </div>
             ))}
           </div>

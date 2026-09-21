@@ -95,8 +95,8 @@ function getContrastRatio(hex1: string, hex2: string): number {
 }
 
 export default function KitDesignerPreview({
-  clubName = 'Apex City FC',
-  shortName = 'ACFC',
+  clubName = 'Your Club',
+  shortName = 'YCF',
   primaryColor = '#059669',
   secondaryColor = '#0F172A',
   accentColor = '#F59E0B',

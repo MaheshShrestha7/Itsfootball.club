@@ -167,7 +167,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
               {club ? (
                 <>
-                  <Link href={`/${club.slug}/match/match-live-01`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
+                  <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
                   <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Fixtures &amp; Results</Link>
                   <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)' }}>First Team Squad</Link>
                   <Link href={`/${club.slug}#leaderboard`} style={{ color: 'var(--text-secondary)' }}>Player Leaderboards</Link>
@@ -177,7 +177,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
                 <>
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Explore Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Launch a New Club</Link>
-                  <Link href={`/${fallbackSlug}/match/match-live-01`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
+                  <Link href={`/${fallbackSlug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}

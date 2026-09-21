@@ -36,29 +36,7 @@ import {
   TournamentParticipant,
   TournamentStanding
 } from './supabase/types';
-import {
-  INITIAL_CLUBS,
-  INITIAL_MEMBERS,
-  INITIAL_PLAYER_STATS,
-  INITIAL_MATCHES,
-  INITIAL_MATCH_EVENTS,
-  INITIAL_EVENTS,
-  INITIAL_SPONSORS,
-  INITIAL_NEWS,
-  INITIAL_GALLERY,
-  INITIAL_CLUBSCORE_PROFILES,
-  INITIAL_ACTIVITY_LOGS,
-  DEFAULT_CLUBSCORE_RULES,
-  STANDARD_BADGES,
-  INITIAL_AVAILABILITIES,
-  INITIAL_DRAFT_LINEUPS,
-  INITIAL_SEASONS,
-  INITIAL_MEMBER_MESSAGES,
-  INITIAL_INTERNAL_TEAMS,
-  INITIAL_TOURNAMENTS,
-  INITIAL_TOURNAMENT_PARTICIPANTS,
-  INITIAL_TOURNAMENT_MATCHES
-} from './mock-data';
+import { STANDARD_BADGES, getDefaultClubScoreRules } from './clubscore-defaults';
 import {
   generateKnockoutBracket,
   generateRoundRobinSchedule,
@@ -281,32 +259,28 @@ export function validateClubSlug(
 }
 
 export function ClubProvider({ children }: { children: React.ReactNode }) {
-  const [clubs, setClubs] = useState<Club[]>(INITIAL_CLUBS);
-  const [activeClub, setActiveClub] = useState<Club | null>(INITIAL_CLUBS[0]);
-  const [members, setMembers] = useState<ClubMember[]>(INITIAL_MEMBERS);
-  const [playerStats, setPlayerStats] = useState<PlayerStats[]>(INITIAL_PLAYER_STATS);
-  const [matches, setMatches] = useState<Match[]>(() => {
-    const matchIds = new Set(INITIAL_MATCHES.map(m => m.id));
-    const extra = INITIAL_TOURNAMENT_MATCHES.filter(m => !matchIds.has(m.id));
-    return [...INITIAL_MATCHES, ...extra];
-  });
-  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>(INITIAL_MATCH_EVENTS);
-  const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
-  const [sponsors, setSponsors] = useState<Sponsor[]>(INITIAL_SPONSORS);
-  const [news, setNews] = useState<NewsArticle[]>(INITIAL_NEWS);
-  const [gallery, setGallery] = useState<MediaGalleryItem[]>(INITIAL_GALLERY);
-  const [clubScoreProfiles, setClubScoreProfiles] = useState<ClubScoreProfile[]>(INITIAL_CLUBSCORE_PROFILES);
-  const [activityLogs, setActivityLogs] = useState<GamificationActivityLog[]>(INITIAL_ACTIVITY_LOGS);
-  const [clubScoreRules, setClubScoreRules] = useState<Record<string, ClubScoreRuleConfig>>(DEFAULT_CLUBSCORE_RULES);
-  const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>(INITIAL_AVAILABILITIES);
-  const [draftLineups, setDraftLineups] = useState<DraftLineup[]>(INITIAL_DRAFT_LINEUPS);
-  const [seasons, setSeasons] = useState<ClubSeason[]>(INITIAL_SEASONS);
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [activeClub, setActiveClub] = useState<Club | null>(null);
+  const [members, setMembers] = useState<ClubMember[]>([]);
+  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [gallery, setGallery] = useState<MediaGalleryItem[]>([]);
+  const [clubScoreProfiles, setClubScoreProfiles] = useState<ClubScoreProfile[]>([]);
+  const [activityLogs, setActivityLogs] = useState<GamificationActivityLog[]>([]);
+  const [clubScoreRules, setClubScoreRules] = useState<Record<string, ClubScoreRuleConfig>>({});
+  const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>([]);
+  const [draftLineups, setDraftLineups] = useState<DraftLineup[]>([]);
+  const [seasons, setSeasons] = useState<ClubSeason[]>([]);
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
   const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
-  const [memberMessages, setMemberMessages] = useState<MemberMessage[]>(INITIAL_MEMBER_MESSAGES);
-  const [internalTeams, setInternalTeams] = useState<InternalTeam[]>(INITIAL_INTERNAL_TEAMS);
-  const [tournaments, setTournaments] = useState<Tournament[]>(INITIAL_TOURNAMENTS);
-  const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>(INITIAL_TOURNAMENT_PARTICIPANTS);
+  const [memberMessages, setMemberMessages] = useState<MemberMessage[]>([]);
+  const [internalTeams, setInternalTeams] = useState<InternalTeam[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load from localStorage on mount if present
@@ -333,11 +307,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (Array.isArray(parsed.matches)) {
-            // Always merge any tournament-seeded matches that aren't in localStorage yet,
-            // but only add them — never re-add matches the user deleted.
-            const loadedIds = new Set(parsed.matches.map((m: Match) => m.id));
-            const missingTournMatches = INITIAL_TOURNAMENT_MATCHES.filter(m => !loadedIds.has(m.id));
-            setMatches([...parsed.matches, ...missingTournMatches]);
+            setMatches(parsed.matches);
           }
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
           // Use Array.isArray so empty arrays (all items deleted) are respected
@@ -354,9 +324,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
-          // CRITICAL FIX: use Array.isArray so that empty arrays (all teams/tournaments deleted)
-          // are honoured. Previously `?.length` was falsy for [], causing seed data to resurface.
-          // Also removed the "merge missing seed items" pattern — deleted seed items stay deleted.
           if (Array.isArray(parsed.internalTeams)) {
             setInternalTeams(parsed.internalTeams);
           }
@@ -495,7 +462,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           return m;
         })
       );
-    }, 45000); // Increment every 45s for demo realism
+    }, 45000); // Advance live match clocks every 45s
 
     return () => clearInterval(interval);
   }, []);
@@ -1190,24 +1157,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setClubScoreRules(prev => ({
       ...prev,
       [clubId]: {
-        ...(prev[clubId] || DEFAULT_CLUBSCORE_RULES[clubId] || {
-          club_id: clubId,
-          points_training_checkin: 10,
-          points_social_checkin: 5,
-          points_match_appearance: 5,
-          points_goal_forward: 10,
-          points_goal_midfielder: 12,
-          points_goal_defender: 15,
-          points_assist: 7,
-          points_clean_sheet_gk_def: 10,
-          points_motm: 15,
-          points_yellow_card_penalty: -3,
-          points_red_card_penalty: -10,
-          streak_multiplier_3w: 1.15,
-          streak_multiplier_5w: 1.25,
-          streak_multiplier_10w: 1.50,
-          is_active: true,
-        }),
+        ...(prev[clubId] || getDefaultClubScoreRules(clubId)),
         ...rules,
       },
     }));
@@ -1618,7 +1568,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
       const newAvail: PlayerAvailability = {
         id: `avail-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        club_id: activeClub?.id || 'club-apex-01',
+        club_id: activeClub?.id || '',
         match_id: matchId,
         member_id: memberId,
         status,
@@ -1732,7 +1682,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     let totalXP = 0;
-    const rules = clubScoreRules[targetMatch.club_id] || DEFAULT_CLUBSCORE_RULES;
+    const rules = clubScoreRules[targetMatch.club_id] || getDefaultClubScoreRules(targetMatch.club_id);
 
     // 1. Process and award Clean Sheet points to GK & Defenders
     payload.clean_sheet_member_ids.forEach((memId: string) => {
@@ -1945,19 +1895,13 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
     const clubScans = gateScans.filter(s => s.club_id === clubId);
 
-    // Realistic baseline for demo clubs (e.g. Apex City FC: 8,420 base + real live views)
-    const baseVisits = clubId === 'club-apex-01' ? 8420 : clubId === 'club-red-lions-01' ? 4210 : 250;
-    const totalVisits = baseVisits + clubViews.length;
+    const totalVisits = clubViews.length;
 
     // Day of week buckets (Mon -> Sun)
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat (Matchday)', 'Sun'];
-    // Base weekly curve with matchday surge
-    const baseWeekly = clubId === 'club-apex-01' 
-      ? [640, 720, 890, 810, 1420, 2980, 1120] 
-      : [320, 410, 480, 450, 780, 1540, 620];
-    
+    const weeklyVisits = [0, 0, 0, 0, 0, 0, 0];
+
     // Add real views into corresponding days
-    const weeklyVisits = [...baseWeekly];
     clubViews.forEach(v => {
       const dayIdx = new Date(v.created_at).getDay(); // 0 is Sun, 1 is Mon...
       const mappedIdx = dayIdx === 0 ? 6 : dayIdx - 1; // map to 0=Mon, ..., 6=Sun
@@ -1965,32 +1909,29 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Gate Scans
-    const baseScans = clubId === 'club-apex-01' ? 1248 : 310;
-    const gateScansCount = baseScans + clubScans.length;
+    const gateScansCount = clubScans.length;
 
     // Match Center peak viewers
     const liveMatch = matches.find(m => m.club_id === clubId && m.status === 'live');
     const matchViews = clubViews.filter(v => v.page_path.includes('/match') || v.page_path.includes('match-center')).length;
-    const matchCenterFans = liveMatch ? (3410 + matchViews * 8) : 0;
+    const matchCenterFans = liveMatch ? matchViews : 0;
 
     // Device breakdown
     const mobileCount = clubViews.filter(v => (v.metadata as any)?.device === 'Mobile').length;
     const desktopCount = clubViews.filter(v => (v.metadata as any)?.device === 'Desktop').length;
     const tabletCount = clubViews.filter(v => (v.metadata as any)?.device === 'Tablet').length;
     const totalRecorded = clubViews.length || 1;
-
-    // Weighted with realistic baseline (68% mobile, 24% desktop, 8% tablet)
-    const mobilePct = Math.round(((mobileCount / totalRecorded) * 0.4 + 0.684 * 0.6) * 100);
-    const desktopPct = Math.round(((desktopCount / totalRecorded) * 0.4 + 0.242 * 0.6) * 100);
-    const tabletPct = Math.max(1, 100 - mobilePct - desktopPct);
+    const mobilePct = Math.round((mobileCount / totalRecorded) * 100);
+    const desktopPct = Math.round((desktopCount / totalRecorded) * 100);
+    const tabletPct = Math.round((tabletCount / totalRecorded) * 100);
 
     // Section breakdown
     const sectionHits: Record<string, number> = {
-      'Live Match-Day Center': 412 + clubViews.filter(v => v.page_path.includes('/match')).length * 5,
-      'First Team Squad & Stats': 268 + clubViews.filter(v => v.page_path.includes('/squad') || v.page_path.includes('#squad')).length * 5,
-      'Fixtures & Results': 154 + clubViews.filter(v => v.page_path.includes('/events') || v.page_path.includes('#fixtures')).length * 5,
-      'Digital Member Pass Portal': 110 + clubViews.filter(v => v.page_path.includes('/member')).length * 5,
-      'Home Ground & Stadium Guide': 56 + clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
+      'Live Match-Day Center': clubViews.filter(v => v.page_path.includes('/match')).length * 5,
+      'First Team Squad & Stats': clubViews.filter(v => v.page_path.includes('/squad') || v.page_path.includes('#squad')).length * 5,
+      'Fixtures & Results': clubViews.filter(v => v.page_path.includes('/events') || v.page_path.includes('#fixtures')).length * 5,
+      'Digital Member Pass Portal': clubViews.filter(v => v.page_path.includes('/member')).length * 5,
+      'Home Ground & Stadium Guide': clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
     };
     const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
 
@@ -2015,7 +1956,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       weeklyDays: days,
       matchCenterFans,
       gateScansCount,
-      avgDuration: '4m 32s',
+      avgDuration: '—',
       topSections,
       deviceBreakdown: [
         { name: 'Mobile Phones (Smartphones)', percentage: `${mobilePct}%`, color: '#10B981' },
@@ -2339,7 +2280,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const sorted = [...clubMatches].sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
 
     sorted.forEach(m => {
-      const isHome = m.home_team_name.toLowerCase().includes('apex') || m.home_team_name.toLowerCase().includes('titan') || m.home_team_name.toLowerCase().includes('red lion');
+      const isHome = m.is_club_home;
       const clubScore = isHome ? m.home_score : m.away_score;
       const oppScore = isHome ? m.away_score : m.home_score;
 

@@ -81,7 +81,7 @@ export default function VerifyPassPage({
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Enter QR token e.g. apex-player-pass-10"
+                  placeholder="Enter QR token Enter the pass QR token"
                   value={inputToken}
                   onChange={e => setInputToken(e.target.value)}
                   style={{ fontFamily: 'var(--font-mono)' }}

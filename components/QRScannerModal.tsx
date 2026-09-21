@@ -258,12 +258,6 @@ export default function QRScannerModal({
     handleProcessToken(manualCode);
   };
 
-  // Demo Scan Shortcut
-  const handleSimulateDemoScan = (token: string) => {
-    setManualCode(token);
-    handleProcessToken(token);
-  };
-
   return (
     <div style={{
       position: 'fixed',
@@ -412,61 +406,6 @@ export default function QRScannerModal({
               isActive={isOpen && activeTab === 'camera'}
               scannerId="modal-gate-qr-scanner"
             />
-
-            {/* Quick Simulation Bar directly below scanner */}
-            <div style={{
-              width: '100%',
-              background: 'rgba(255, 255, 255, 0.03)',
-              padding: '0.85rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}>
-              <div style={{
-                fontSize: '0.7rem',
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-                marginBottom: '0.5rem',
-                fontWeight: 800,
-                letterSpacing: '0.05em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}>
-                <Sparkles size={12} color="#F59E0B" />
-                <span>Simulate Turnstile Gate Scans:</span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                <button
-                  type="button"
-                  onClick={() => handleSimulateDemoScan(members[0]?.qr_code_token || 'apex-player-pass-10')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: '1px solid rgba(16, 185, 129, 0.4)' }}
-                >
-                  <span style={{ color: '#10B981', fontWeight: 800 }}>✓</span>
-                  <span>{members[0]?.full_name || 'Julian Drake'} (VIP / Player)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSimulateDemoScan(members[1]?.qr_code_token || 'apex-player-pass-09')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
-                >
-                  <span style={{ color: '#10B981', fontWeight: 800 }}>✓</span>
-                  <span>{members[1]?.full_name || 'Dante Moreno'} (Starting XI)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSimulateDemoScan('invalid-expired-token-999')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: '1px solid rgba(239, 68, 68, 0.4)' }}
-                >
-                  <span style={{ color: '#EF4444', fontWeight: 800 }}>✗</span>
-                  <span>Expired / Counterfeit Pass</span>
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
@@ -479,7 +418,7 @@ export default function QRScannerModal({
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. apex-player-pass-10"
+                  placeholder="Paste or type the pass token"
                   value={manualCode}
                   onChange={e => setManualCode(e.target.value)}
                   style={{ fontFamily: 'var(--font-mono)' }}

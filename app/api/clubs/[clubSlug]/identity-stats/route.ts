@@ -61,14 +61,13 @@ export async function GET(
       club = data;
     }
 
-    // Check previous slugs alias fallback (e.g. apex-city-fc -> red-lions-fc)
+    // Check previous slugs alias fallback
     if (!club) {
       const { data: allClubs } = await supabase.from('clubs').select('*');
       if (allClubs) {
         club = allClubs.find(c =>
           c.slug?.toLowerCase() === cleanSlug ||
-          (Array.isArray(c.previous_slugs) && c.previous_slugs.some((p: string) => p.toLowerCase() === cleanSlug)) ||
-          (cleanSlug === 'apex-city-fc' && (c.slug === 'red-lions-fc' || c.short_name === 'ACFC' || c.short_name === 'RLFC'))
+          (Array.isArray(c.previous_slugs) && c.previous_slugs.some((p: string) => p.toLowerCase() === cleanSlug))
         ) || null;
       }
     }

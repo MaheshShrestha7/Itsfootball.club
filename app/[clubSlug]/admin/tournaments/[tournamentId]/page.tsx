@@ -27,6 +27,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 export default function AdminTournamentDetailPage({
   params,
@@ -105,7 +106,7 @@ export default function AdminTournamentDetailPage({
       team_type: 'external',
       name: newTeamName.trim(),
       short_name: newTeamCode.trim() || newTeamName.slice(0, 3).toUpperCase(),
-      logo_url: '/crests/red-lions.svg',
+      logo_url: DEFAULT_CREST,
       color: '#3B82F6',
       seed: participants.length + 1,
     });
@@ -606,7 +607,7 @@ export default function AdminTournamentDetailPage({
                   }}
                 >
                   <img
-                    src={part.logo_url || '/crests/apex-city.svg'}
+                    src={part.logo_url || DEFAULT_CREST}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />

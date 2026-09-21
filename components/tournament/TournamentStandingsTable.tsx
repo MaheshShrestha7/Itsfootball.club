@@ -3,6 +3,7 @@
 import React from 'react';
 import { TournamentStanding } from '@/lib/supabase/types';
 import { Trophy, CheckCircle2 } from 'lucide-react';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 interface TournamentStandingsTableProps {
   standings: TournamentStanding[];
@@ -162,7 +163,7 @@ export default function TournamentStandingsTable({
                   <td style={{ padding: '0.85rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                       <img
-                        src={team.logo_url || '/crests/apex-city.svg'}
+                        src={team.logo_url || DEFAULT_CREST}
                         alt={team.name}
                         style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
                       />

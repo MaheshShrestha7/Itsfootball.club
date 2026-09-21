@@ -819,7 +819,7 @@ export default function AdminMatchCenterControllerPage({
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="e.g. Julian Drake"
+                          placeholder="Player name"
                           value={assistName}
                           onChange={e => setAssistName(e.target.value)}
                         />

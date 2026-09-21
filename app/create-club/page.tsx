@@ -33,24 +33,24 @@ export default function CreateClubPage() {
   const [stepError, setStepError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: 'Vanguard FC',
-    short_name: 'VFC',
-    slug: 'vanguard-fc',
-    motto: 'Victory Through Precision',
+    name: '',
+    short_name: '',
+    slug: '',
+    motto: '',
     founded_year: 2025,
     primary_color: '#059669', // Emerald
     secondary_color: '#090D16', // Obsidian
     accent_color: '#F59E0B', // Gold
     logo_url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&auto=format&fit=crop&q=80',
     banner_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
-    stadium_name: 'Vanguard Arena',
-    stadium_address: '88 Olympic Boulevard, Metro City',
+    stadium_name: '',
+    stadium_address: '',
     stadium_capacity: 7500,
     stadium_pitch_type: 'Hybrid Grass (FIFA Pro Quality)',
-    stadium_parking_info: 'North & South gates open on matchdays.',
-    contact_email: 'secretariat@vanguardfc.com',
-    contact_phone: '+1 (555) 789-0123',
-    custom_domain: 'vanguardfc.club',
+    stadium_parking_info: '',
+    contact_email: '',
+    contact_phone: '',
+    custom_domain: '',
   });
 
   // Real-time slug validation

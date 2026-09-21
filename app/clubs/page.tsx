@@ -133,7 +133,7 @@ export default function ClubsDirectoryPage() {
                     <Link href={`/${club.slug}`} className="btn btn-primary btn-sm">
                       Public Page
                     </Link>
-                    <Link href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Link href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Radio size={14} color="#EF4444" /> Match Center
                     </Link>
                     <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>

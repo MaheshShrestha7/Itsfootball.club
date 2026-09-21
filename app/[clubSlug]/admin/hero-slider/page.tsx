@@ -70,7 +70,7 @@ export default function AdminHeroSliderPage({
     subtitle: 'Secure guaranteed entry to all home fixtures, VIP member lounge access, and exclusive kit discount.',
     badge: 'MEMBERSHIP SPOTLIGHT',
     cta_label: 'Get Season Pass',
-    cta_link: `/${club?.slug || 'apex-city-fc'}#membership`,
+    cta_link: `/${club?.slug || ''}#membership`,
   });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);

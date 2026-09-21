@@ -35,8 +35,7 @@ async function resolveClubId(supabase: any, clubSlug: string): Promise<string | 
   if (allClubs) {
     const matched = allClubs.find((c: any) =>
       c.slug?.toLowerCase() === cleanSlug ||
-      (Array.isArray(c.previous_slugs) && c.previous_slugs.some((p: string) => p.toLowerCase() === cleanSlug)) ||
-      (cleanSlug === 'apex-city-fc' && (c.slug === 'red-lions-fc' || c.short_name === 'RLFC'))
+      (Array.isArray(c.previous_slugs) && c.previous_slugs.some((p: string) => p.toLowerCase() === cleanSlug))
     );
     if (matched?.id) return matched.id;
   }

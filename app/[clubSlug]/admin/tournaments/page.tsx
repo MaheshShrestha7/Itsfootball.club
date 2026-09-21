@@ -24,6 +24,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 export default function AdminTournamentsPage({
   params,
@@ -131,7 +132,7 @@ export default function AdminTournamentsPage({
           internal_team_id: team.id,
           name: team.name,
           short_name: team.short_name,
-          logo_url: team.logo_url || '/crests/apex-city.svg',
+          logo_url: team.logo_url || DEFAULT_CREST,
           color: team.color || '#10B981',
           seed: idx + 1,
         });
@@ -144,7 +145,7 @@ export default function AdminTournamentsPage({
         team_type: 'external',
         name: ext.name,
         short_name: ext.short_name,
-        logo_url: '/crests/red-lions.svg',
+        logo_url: DEFAULT_CREST,
         color: '#2563EB',
         seed: selectedInternalTeamIds.length + idx + 1,
       });
@@ -938,7 +939,7 @@ export default function AdminTournamentsPage({
                           }}
                         >
                           <input type="checkbox" checked={isSelected} onChange={() => {}} />
-                          <img src={t.logo_url || '/crests/apex-city.svg'} alt="" style={{ width: '20px', height: '20px' }} />
+                          <img src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {t.name}
                           </span>

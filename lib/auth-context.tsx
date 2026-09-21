@@ -14,42 +14,6 @@ export interface UserProfile {
   created_at: string;
 }
 
-// Pre-configured demonstration personas for instant evaluation
-export const DEMO_PERSONAS: Record<'owner' | 'player' | 'supporter', UserProfile> = {
-  owner: {
-    id: 'user-elena-vance-admin',
-    email: 'admin@apexcityfc.club',
-    full_name: 'Elena Vance',
-    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-    club_roles: {
-      'club-apex-01': 'owner',
-      'club-vanguard-01': 'owner',
-      'all': 'owner', // Grants owner accreditation to newly created clubs in demo mode
-    },
-    created_at: '2024-01-01T00:00:00.000Z',
-  },
-  player: {
-    id: 'user-julian-drake-player',
-    email: 'julian.drake@apexcityfc.club',
-    full_name: 'Julian Drake (#10)',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-    club_roles: {
-      'club-apex-01': 'player',
-    },
-    created_at: '2024-01-15T00:00:00.000Z',
-  },
-  supporter: {
-    id: 'user-lucas-fan',
-    email: 'lucas.fan@football.club',
-    full_name: 'Lucas Bennett',
-    avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-    club_roles: {
-      'club-apex-01': 'supporter',
-    },
-    created_at: '2024-02-01T00:00:00.000Z',
-  },
-};
-
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
@@ -59,7 +23,6 @@ interface AuthContextType {
   logout: () => void;
   getUserRoleForClub: (clubId: string) => ClubRole | null;
   hasClubAdminAccess: (clubId: string) => boolean;
-  loginDemoUser: (role: 'owner' | 'player' | 'supporter') => void;
   assignClubRole: (clubId: string, role: ClubRole) => void;
 }
 
@@ -175,18 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Please enter a valid email address.' };
     }
 
-    // 1. Demo Persona lookup first for immediate testing
-    if (trimmedEmail.includes('admin') || trimmedEmail.includes('vance') || trimmedEmail.includes('owner')) {
-      persistUser(DEMO_PERSONAS.owner);
-      return { success: true };
-    }
-
-    if (trimmedEmail.includes('player') || trimmedEmail.includes('drake')) {
-      persistUser(DEMO_PERSONAS.player);
-      return { success: true };
-    }
-
-    // 2. Supabase integration if configured
+    // 1. Supabase integration if configured
     if (isSupabaseConfigured && password) {
       const supabase = getSupabaseClient();
       if (supabase) {
@@ -215,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 3. Default registered local user
+    // 2. Default registered local user
     const defaultUser: UserProfile = {
       id: `user-${Date.now()}`,
       email: trimmedEmail,
@@ -288,11 +240,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persistUser(null);
   }, [persistUser]);
 
-  // Quick 1-click persona switch for testing
-  const loginDemoUser = useCallback((role: 'owner' | 'player' | 'supporter') => {
-    persistUser(DEMO_PERSONAS[role]);
-  }, [persistUser]);
-
   // Role resolution for a specific club
   const getUserRoleForClub = useCallback((clubId: string): ClubRole | null => {
     if (!user) return null;
@@ -331,7 +278,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         getUserRoleForClub,
         hasClubAdminAccess,
-        loginDemoUser,
         assignClubRole,
       }}
     >

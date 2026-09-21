@@ -5,6 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { InternalTeam, ClubMember } from '@/lib/supabase/types';
 import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award, Image as ImageIcon } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 interface InternalTeamsManagerProps {
   clubSlug: string;
@@ -42,7 +43,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [color, setColor] = useState('#10B981');
-  const [logoUrl, setLogoUrl] = useState('/crests/apex-city.svg');
+  const [logoUrl, setLogoUrl] = useState(DEFAULT_CREST);
   const [coverUrl, setCoverUrl] = useState('');
   const [coachName, setCoachName] = useState('');
   const [captainId, setCaptainId] = useState('');
@@ -54,7 +55,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setName('');
     setShortName('');
     setColor('#10B981');
-    setLogoUrl(club.logo_url || '/crests/apex-city.svg');
+    setLogoUrl(club.logo_url || DEFAULT_CREST);
     setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80');
     setCoachName('');
     setCaptainId('');
@@ -67,7 +68,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setName(team.name);
     setShortName(team.short_name);
     setColor(team.color || '#10B981');
-    setLogoUrl(team.logo_url || club.logo_url || '/crests/apex-city.svg');
+    setLogoUrl(team.logo_url || club.logo_url || DEFAULT_CREST);
     setCoverUrl(team.cover_url || '');
     setCoachName(team.coach_name || '');
     setCaptainId(team.captain_id || '');
@@ -90,7 +91,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         name: name.trim(),
         short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
         color,
-        logo_url: logoUrl || '/crests/apex-city.svg',
+        logo_url: logoUrl || DEFAULT_CREST,
         cover_url: coverUrl || undefined,
         coach_name: coachName.trim(),
         captain_id: captainId || undefined,
@@ -103,7 +104,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         name: name.trim(),
         short_name: shortName.trim() || name.slice(0, 4).toUpperCase(),
         color,
-        logo_url: logoUrl || '/crests/apex-city.svg',
+        logo_url: logoUrl || DEFAULT_CREST,
         cover_url: coverUrl || undefined,
         coach_name: coachName.trim(),
         captain_id: captainId || undefined,
@@ -324,7 +325,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       }}
                     >
                       <img
-                        src={team.logo_url || '/crests/apex-city.svg'}
+                        src={team.logo_url || DEFAULT_CREST}
                         alt={team.name}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
@@ -479,7 +480,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Apex U-21 Academy"
+                    placeholder="e.g. U-21 Academy"
                     value={name}
                     onChange={e => setName(e.target.value)}
                     style={{
@@ -580,22 +581,13 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       aspectRatio="1:1"
                     />
                     <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Presets:</span>
                       <button
                         type="button"
-                        onClick={() => setLogoUrl(club.logo_url || '/crests/apex-city.svg')}
+                        onClick={() => setLogoUrl(club.logo_url || DEFAULT_CREST)}
                         className="btn btn-sm"
                         style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
                       >
                         Club Crest
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLogoUrl('/crests/red-lions.svg')}
-                        className="btn btn-sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
-                      >
-                        Red Lions
                       </button>
                     </div>
                   </div>
@@ -611,7 +603,6 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       aspectRatio="16:9"
                     />
                     <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Presets:</span>
                       <button
                         type="button"
                         onClick={() => setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80')}

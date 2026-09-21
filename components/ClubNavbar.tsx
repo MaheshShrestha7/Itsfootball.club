@@ -177,7 +177,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
           {/* Live Match-Day Center Link */}
           <Link
-            href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`}
+            href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -391,7 +391,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               {/* Action Buttons: Match Center & Member Pass */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 <Link
-                  href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`}
+                  href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-sm"
                   style={{

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
 import { Calendar, MapPin, Radio, CheckCircle2, Trophy, Clock, Edit3, ArrowRight } from 'lucide-react';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 interface TournamentMatchesListProps {
   matches: Match[];
@@ -249,7 +250,7 @@ export default function TournamentMatchesList({
                   {/* Home Team */}
                   <div style={{ textAlign: 'center' }}>
                     <img
-                      src={match.home_team_logo || '/crests/apex-city.svg'}
+                      src={match.home_team_logo || DEFAULT_CREST}
                       alt={match.home_team_name}
                       style={{ width: '38px', height: '38px', objectFit: 'contain', margin: '0 auto 0.4rem auto' }}
                     />
@@ -299,7 +300,7 @@ export default function TournamentMatchesList({
                   {/* Away Team */}
                   <div style={{ textAlign: 'center' }}>
                     <img
-                      src={match.away_team_logo || '/crests/red-lions.svg'}
+                      src={match.away_team_logo || DEFAULT_CREST}
                       alt={match.away_team_name}
                       style={{ width: '38px', height: '38px', objectFit: 'contain', margin: '0 auto 0.4rem auto' }}
                     />

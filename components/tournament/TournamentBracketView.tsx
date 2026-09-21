@@ -4,6 +4,7 @@ import React from 'react';
 import { Match } from '@/lib/supabase/types';
 import { STAGE_TITLES } from '@/lib/tournament-engine';
 import { Trophy, Calendar, Radio, Edit3, Shield, Award } from 'lucide-react';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 interface TournamentBracketViewProps {
   matches: Match[];
@@ -262,7 +263,7 @@ export default function TournamentBracketView({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                               <img
-                                src={match.home_team_logo || '/crests/apex-city.svg'}
+                                src={match.home_team_logo || DEFAULT_CREST}
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
                               />
@@ -322,7 +323,7 @@ export default function TournamentBracketView({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                               <img
-                                src={match.away_team_logo || '/crests/red-lions.svg'}
+                                src={match.away_team_logo || DEFAULT_CREST}
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
                               />

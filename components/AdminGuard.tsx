@@ -24,7 +24,7 @@ interface AdminGuardProps {
 }
 
 export default function AdminGuard({ club, children }: AdminGuardProps) {
-  const { user, isLoading, isAuthenticated, login, loginDemoUser, hasClubAdminAccess, getUserRoleForClub, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, login, hasClubAdminAccess, getUserRoleForClub, logout } = useAuth();
   
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -164,7 +164,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           )}
 
           {/* Credential Login Form */}
-          <form onSubmit={handleFormSubmit} style={{ textAlign: 'left', marginBottom: '2rem' }}>
+          <form onSubmit={handleFormSubmit} style={{ textAlign: 'left', marginBottom: '0.5rem' }}>
             <div className="form-group">
               <label className="form-label" style={{ fontSize: '0.8rem' }}>Secretariat Email Address</label>
               <input
@@ -198,73 +198,6 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
               <span>{submitting ? 'Authenticating...' : 'Sign In & Access Control Room'}</span>
             </button>
           </form>
-
-          {/* Instant Evaluation Quick Personas */}
-          <div style={{
-            borderTop: '1px solid var(--border-subtle)',
-            paddingTop: '1.5rem',
-            textAlign: 'left',
-          }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-              Instant Demo Accreditation Roles:
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              <button
-                type="button"
-                onClick={() => loginDemoUser('owner')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  color: '#10B981',
-                  cursor: 'pointer',
-                  fontSize: '0.825rem',
-                  fontWeight: 700,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <UserCheck size={16} />
-                  <span>Sign In as Club Owner (Elena Vance)</span>
-                </div>
-                <span className="badge" style={{ background: '#10B981', color: '#FFFFFF', fontSize: '0.65rem' }}>
-                  FULL ACCESS
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => loginDemoUser('player')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CreditCard size={16} />
-                  <span>Sign In as Player (Julian Drake)</span>
-                </div>
-                <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', fontSize: '0.65rem' }}>
-                  403 RESTRICTED
-                </span>
-              </button>
-            </div>
-          </div>
 
           <div style={{ marginTop: '1.75rem', textAlign: 'center' }}>
             <Link

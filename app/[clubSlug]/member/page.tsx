@@ -200,16 +200,6 @@ export default function MemberPortalPage({
     }
   };
 
-  // Instant 1-Click Demo Persona Login
-  const handleDemoLogin = (member: ClubMember) => {
-    setActiveMember(member);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(sessionKey, JSON.stringify(member));
-    }
-    setLoginNotice(null);
-    setLoginError(null);
-  };
-
   // Handle Membership Application Submit
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,9 +257,6 @@ export default function MemberPortalPage({
   const memberActivityLogs = activeMember ? getMemberActivityLogs(activeMember.id) : [];
   const memberMessagesList = activeMember ? getMemberMessages(club.id, activeMember.id) : [];
   const clubSeasonStats = getClubSeasonStats(club.id);
-
-  // Filter approved demo members for quick evaluation
-  const approvedDemoMembers = clubMembers.filter(m => !m.membership_status || m.membership_status === 'approved');
 
   return (
     <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
@@ -627,40 +614,6 @@ export default function MemberPortalPage({
                     </Link>
                   </div>
                 )}
-
-                {/* 1-Click Demo Personas Strip */}
-                <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem', textAlign: 'center' }}>
-                    Or Test With Approved Demonstration Members:
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-                    {approvedDemoMembers.slice(0, 4).map(m => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => handleDemoLogin(m)}
-                        style={{
-                          padding: '0.4rem 0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-subtle)',
-                          background: 'rgba(255, 255, 255, 0.04)',
-                          color: '#FFFFFF',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                        }}
-                      >
-                        <User size={13} color="var(--club-primary)" />
-                        <span>{m.full_name}</span>
-                        <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>({m.membership_tier.split(' ')[0]})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
 

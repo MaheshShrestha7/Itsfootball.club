@@ -16,20 +16,16 @@ import {
   CreditCard,
   Users,
   MapPin,
-  Sparkles,
   Trophy,
   ArrowRight,
   User,
   Lock,
-  CheckCircle2,
-  Check
 } from 'lucide-react';
 
 export default function MyClubsPage() {
   const { clubs, matches } = useClub();
-  const { user, isAuthenticated, isLoading, assignClubRole, loginDemoUser } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [claimSuccessMsg, setClaimSuccessMsg] = useState<string | null>(null);
 
   // Determine clubs owned by the active user
   const ownedClubs = useMemo(() => {
@@ -39,23 +35,9 @@ export default function MyClubsPage() {
       if (c.owner_id && c.owner_id === user.id) return true;
       // 2. Explicit role in user's club_roles
       if (user.club_roles?.[c.id] === 'owner') return true;
-      // 3. Demo Admin persona ownership
-      if (user.id === 'user-elena-vance-admin' && c.id === 'club-apex-01') return true;
       return false;
     });
   }, [clubs, user]);
-
-  // Handler to claim demo ownership for rapid testing
-  const handleClaimDemoClub = (clubId: string) => {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-    assignClubRole(clubId, 'owner');
-    const targetClub = clubs.find(c => c.id === clubId);
-    setClaimSuccessMsg(`You now hold ownership accreditation for ${targetClub?.name || 'Apex City FC'}!`);
-    setTimeout(() => setClaimSuccessMsg(null), 4000);
-  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -114,25 +96,12 @@ export default function MyClubsPage() {
                 type="button"
                 onClick={() => setAuthModalOpen(true)}
                 className="btn btn-primary btn-lg"
-                style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}
+                style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0' }}
               >
                 <User size={18} />
                 <span>Sign In to Your Account</span>
               </button>
 
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  Or Quick Demo Access:
-                </div>
-                <button
-                  type="button"
-                  onClick={() => loginDemoUser('owner')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', justifyContent: 'center' }}
-                >
-                  Sign In as Elena Vance (Demo Club Owner)
-                </button>
-              </div>
             </div>
           </div>
         ) : (
@@ -170,29 +139,6 @@ export default function MyClubsPage() {
                 </Link>
               </div>
             </div>
-
-            {/* Notification Toast */}
-            {claimSuccessMsg && (
-              <div
-                style={{
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid #10B981',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1.25rem',
-                  color: '#10B981',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  marginBottom: '2rem',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  animation: 'fadeIn 0.3s ease-out',
-                }}
-              >
-                <CheckCircle2 size={18} />
-                <span>{claimSuccessMsg}</span>
-              </div>
-            )}
 
             {/* Tiled Grid of Owned Clubs */}
             {ownedClubs.length > 0 ? (
@@ -324,7 +270,7 @@ export default function MyClubsPage() {
                               <span>Public</span>
                             </Link>
                             <Link
-                              href={`/${club.slug}/match/${liveMatch ? liveMatch.id : 'match-live-01'}`}
+                              href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}/admin/match-center`}
                               className="btn btn-secondary touch-target"
                               style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
                               title="Live Match Center"
@@ -422,7 +368,7 @@ export default function MyClubsPage() {
                   No Football Clubs Registered Yet
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 2rem auto' }}>
-                  You haven&apos;t launched or claimed ownership of any football clubs on this account. Launch your official club website in minutes with our 4-step wizard, or claim demo ownership of our sample club to test the control room immediately.
+                  You haven&apos;t launched or claimed ownership of any football clubs on this account. Launch your official club website in minutes with our 4-step wizard.
                 </p>
 
                 <div style={{
@@ -438,15 +384,6 @@ export default function MyClubsPage() {
                     <span>Launch Your First Club</span>
                   </Link>
 
-                  <button
-                    type="button"
-                    onClick={() => handleClaimDemoClub('club-apex-01')}
-                    className="btn btn-secondary btn-lg touch-target"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                  >
-                    <Sparkles size={18} color="#F59E0B" />
-                    <span>Claim Demo Ownership (Apex City FC)</span>
-                  </button>
                 </div>
 
                 {/* Highlight Features */}

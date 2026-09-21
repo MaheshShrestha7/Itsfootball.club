@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
 import { X, Trophy, Radio, CheckCircle2 } from 'lucide-react';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 interface TournamentScoreModalProps {
   match: Match;
@@ -157,7 +158,7 @@ export default function TournamentScoreModal({
             {/* Home Team */}
             <div style={{ textAlign: 'center' }}>
               <img
-                src={match.home_team_logo || '/crests/apex-city.svg'}
+                src={match.home_team_logo || DEFAULT_CREST}
                 alt={match.home_team_name}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />
@@ -193,7 +194,7 @@ export default function TournamentScoreModal({
             {/* Away Team */}
             <div style={{ textAlign: 'center' }}>
               <img
-                src={match.away_team_logo || '/crests/red-lions.svg'}
+                src={match.away_team_logo || DEFAULT_CREST}
                 alt={match.away_team_name}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />

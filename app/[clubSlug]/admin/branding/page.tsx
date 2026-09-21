@@ -42,9 +42,9 @@ export default function AdminBrandingPage({
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: club?.name || 'Apex City FC',
-    slug: club?.slug || 'apex-city-fc',
-    short_name: club?.short_name || 'ACFC',
+    name: club?.name || '',
+    slug: club?.slug || '',
+    short_name: club?.short_name || '',
     motto: club?.motto || '',
     founded_year: club?.founded_year || 2018,
     primary_color: club?.primary_color || '#10B981',
@@ -760,7 +760,7 @@ export default function AdminBrandingPage({
             <Globe size={20} color="var(--club-primary)" /> Custom Domain Linking & DNS Guide
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            Link your own top-level domain (e.g. <code>apexcityfc.club</code>) or keep your default <code>itsfootball.club/{club?.slug}</code> subpath.
+            Link your own top-level domain (e.g. <code>yourclub.com</code>) or keep your default <code>itsfootball.club/{club?.slug}</code> subpath.
           </p>
 
           <div className="form-group">
@@ -782,7 +782,7 @@ export default function AdminBrandingPage({
                 name="custom_domain"
                 className="form-input"
                 style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                placeholder="e.g. apexcityfc.club"
+                placeholder="e.g. yourclub.com"
                 value={formData.custom_domain}
                 onChange={handleChange}
               />
