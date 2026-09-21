@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
-import { ClubMember, ClubEvent } from '@/lib/supabase/types';
+import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
+import CameraQRScanner from './CameraQRScanner';
 import {
   Shield,
   CheckCircle2,
@@ -24,16 +25,18 @@ interface QRScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetEvent?: ClubEvent | null;
-  mode?: 'verify_pass' | 'event_checkin';
+  targetMatch?: Match | null;
+  mode?: 'verify_pass' | 'event_checkin' | 'match_checkin';
 }
 
 export default function QRScannerModal({
   isOpen,
   onClose,
   targetEvent,
+  targetMatch,
   mode = 'verify_pass',
 }: QRScannerModalProps) {
-  const { verifyMemberPass, checkInMemberToEvent, members } = useClub();
+  const { verifyMemberPass, checkInMemberToEvent, selfCheckInMatch, members } = useClub();
   const [manualCode, setManualCode] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -143,7 +146,38 @@ export default function QRScannerModal({
         second: '2-digit',
       });
 
-      if (mode === 'event_checkin' && targetEvent) {
+      if (mode === 'match_checkin' && targetMatch) {
+        const res = selfCheckInMatch(targetMatch.id, { token });
+        if (res.success) {
+          playTurnstileAudio('grant');
+          try {
+            confetti({
+              particleCount: 60,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#10B981', '#F59E0B', '#FFFFFF'],
+            });
+          } catch {}
+
+          setScanResult({
+            status: 'success',
+            message: res.message,
+            attendeeName: res.attendeeName,
+            timestamp: currentTimeStr,
+            gate: 'Stadium Main Entrance',
+            turnstile: 'Gate Turnstile 01',
+          });
+        } else {
+          playTurnstileAudio('deny');
+          setScanResult({
+            status: 'error',
+            message: res.message,
+            timestamp: currentTimeStr,
+            gate: 'Stadium Main Entrance',
+            turnstile: 'Gate Turnstile 01',
+          });
+        }
+      } else if (mode === 'event_checkin' && targetEvent) {
         const res = checkInMemberToEvent(targetEvent.id, token);
         if (res.success) {
           playTurnstileAudio('grant');
@@ -260,11 +294,17 @@ export default function QRScannerModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
               <Shield size={20} color="#10B981" />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
-                {mode === 'event_checkin' ? 'Turnstile Gate Check-In' : 'Matchday Turnstile Scanner'}
+                {mode === 'match_checkin'
+                  ? 'Matchday Gate Check-In'
+                  : mode === 'event_checkin'
+                  ? 'Turnstile Gate Check-In'
+                  : 'Matchday Turnstile Scanner'}
               </h3>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-              {mode === 'event_checkin' && targetEvent
+              {mode === 'match_checkin' && targetMatch
+                ? `Scanning gate passes & tickets for: ${targetMatch.home_team_name} vs ${targetMatch.away_team_name}`
+                : mode === 'event_checkin' && targetEvent
                 ? `Scanning gate tickets for: ${targetEvent.title}`
                 : 'Present digital season pass or member QR code at stadium gates'}
             </p>
@@ -339,7 +379,7 @@ export default function QRScannerModal({
               transition: 'all 0.2s ease',
             }}
           >
-            <Camera size={16} /> Live Scanner
+            <Camera size={16} /> Camera Scanner
           </button>
           <button
             onClick={() => { setActiveTab('manual'); setScanResult({ status: 'idle', message: '' }); }}
@@ -364,74 +404,14 @@ export default function QRScannerModal({
           </button>
         </div>
 
-        {/* 1. Live Holographic Laser Scanner Reticle */}
+        {/* 1. Live Camera QR Optical Scanner */}
         {activeTab === 'camera' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div
-              className={`turnstile-scanner-box ${
-                isProcessing
-                  ? 'is-processing'
-                  : scanResult.status === 'success'
-                  ? 'is-authorized'
-                  : scanResult.status === 'error'
-                  ? 'is-denied'
-                  : ''
-              }`}
-            >
-              {/* 4 Optical Corner Brackets */}
-              <div className="turnstile-corner turnstile-corner-tl" />
-              <div className="turnstile-corner turnstile-corner-tr" />
-              <div className="turnstile-corner turnstile-corner-bl" />
-              <div className="turnstile-corner turnstile-corner-br" />
-
-              {/* Matrix Grid & Laser Sweeper */}
-              <div className="scanner-optical-grid" />
-              <div className="scanner-laser-line" />
-              <div className="scanner-laser-glow" />
-
-              {/* Camera Video Stream or Simulated QR Pass Target */}
-              {cameraActive ? (
-                <video
-                  ref={videoRef}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  muted
-                  playsInline
-                />
-              ) : (
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '1.5rem',
-                  textAlign: 'center',
-                  zIndex: 3,
-                }}>
-                  <div style={{
-                    width: '90px',
-                    height: '90px',
-                    borderRadius: '16px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '0.85rem',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                  }}>
-                    <QrCode size={52} color={isProcessing ? '#F59E0B' : '#10B981'} />
-                  </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>
-                    {isProcessing ? 'READING BARCODE...' : 'Optical Gate Ready'}
-                  </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Aim device camera or tap simulated matchday pass below
-                  </span>
-                </div>
-              )}
-            </div>
+            <CameraQRScanner
+              onScanSuccess={handleProcessToken}
+              isActive={isOpen && activeTab === 'camera'}
+              scannerId="modal-gate-qr-scanner"
+            />
 
             {/* Quick Simulation Bar directly below scanner */}
             <div style={{

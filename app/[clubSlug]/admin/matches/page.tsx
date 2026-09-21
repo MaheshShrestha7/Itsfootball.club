@@ -104,7 +104,7 @@ export default function AdminMatchesPage({
     venue: club.stadium_name || 'Home Stadium',
     match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
     description: '',
-    competition: 'Premier Regional League',
+    competition: 'Club Friendly',
     season: activeSeason?.name || '2026/27',
     is_completed: false,
     featured_on_hero: false,
@@ -132,7 +132,7 @@ export default function AdminMatchesPage({
       venue: club.stadium_name || 'Home Stadium',
       match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       description: 'Official club fixture. Gates open 60 minutes prior to kickoff.',
-      competition: 'Premier Regional League',
+      competition: 'Club Friendly',
       season: activeSeason?.name || '2026/27',
       is_completed: false,
       featured_on_hero: false,
@@ -171,7 +171,7 @@ export default function AdminMatchesPage({
       venue: m.venue || club.stadium_name,
       match_flyer_url: m.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       description: m.description || '',
-      competition: m.competition || 'Premier Regional League',
+      competition: m.competition || (m.match_type === 'internal' ? 'Intra-Squad Match' : 'Club Friendly'),
       season: m.season || activeSeason?.name || '2026/27',
       is_completed: m.status === 'completed',
       featured_on_hero: !!m.featured_on_hero,
@@ -190,6 +190,7 @@ export default function AdminMatchesPage({
       opponent_name: presetName,
       opponent_short_name: shortName,
       title: `${club.name} Intra-Squad: First Team vs ${presetName}`,
+      competition: 'Intra-Squad Friendly',
       is_club_home: true,
       venue: club.stadium_name || 'Apex Training Ground'
     }));
@@ -205,6 +206,7 @@ export default function AdminMatchesPage({
     const cleanOpponentShort = form.opponent_short_name.replace(/<[^>]*>?/gm, '').trim().toUpperCase().slice(0, 8);
     const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim() || club.stadium_name;
     const cleanDescription = form.description.replace(/<[^>]*>?/gm, '').trim();
+    const cleanCompetition = form.competition.replace(/<[^>]*>?/gm, '').trim() || (form.match_type === 'internal' ? 'Intra-Squad Match' : form.match_type === 'tournament' ? 'Cup Tournament' : 'Club Friendly');
 
     if (!cleanOpponent) {
       alert('Please provide an Opponent Name or internal squad name.');
@@ -236,7 +238,7 @@ export default function AdminMatchesPage({
         match_type: form.match_type,
         opponent_name: cleanOpponent,
         opponent_short_name: cleanOpponentShort,
-        competition: form.competition || 'Premier Regional League',
+        competition: cleanCompetition,
         season: form.season,
         home_team_name: homeTeam,
         away_team_name: awayTeam,
@@ -263,7 +265,7 @@ export default function AdminMatchesPage({
         match_type: form.match_type,
         opponent_name: cleanOpponent,
         opponent_short_name: cleanOpponentShort,
-        competition: form.competition || 'Premier Regional League',
+        competition: cleanCompetition,
         season: form.season,
         home_team_name: homeTeam,
         away_team_name: awayTeam,
@@ -613,20 +615,17 @@ export default function AdminMatchesPage({
             return (
               <div
                 key={m.id}
-                className="glass-panel"
+                className="glass-panel admin-match-card-grid"
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
                   border: isLive ? '1px solid #EF4444' : m.featured_on_hero ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-medium)',
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(120px, 160px) 1fr auto',
-                  gap: '1.25rem',
-                  alignItems: 'center',
                   position: 'relative'
                 }}
               >
                 {/* Flyer Thumbnail or Visual Badge */}
                 <div
+                  className="match-flyer-thumb"
                   style={{
                     height: '100px',
                     borderRadius: 'var(--radius-md)',
@@ -755,7 +754,7 @@ export default function AdminMatchesPage({
                 </div>
 
                 {/* Operations & Quick Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '170px' }}>
+                <div className="match-card-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 'min(100%, 170px)' }}>
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     {/* Hero Slider Feature Toggle */}
                     <button
@@ -892,11 +891,11 @@ export default function AdminMatchesPage({
           <div
             className="glass-panel"
             style={{
-              maxWidth: '780px',
+              maxWidth: 'min(780px, calc(100vw - 2rem))',
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
-              padding: '2rem',
+              padding: 'clamp(1rem, 3vw, 2rem)',
               borderRadius: 'var(--radius-xl)',
               border: '1px solid var(--border-medium)',
               background: 'var(--bg-surface-elevated)'
@@ -944,12 +943,23 @@ export default function AdminMatchesPage({
                 <label className="form-label">
                   Match Type *
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 100px), 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   {(['internal', 'friendly', 'tournament'] as MatchType[]).map(type => (
                     <button
                       key={type}
                       type="button"
-                      onClick={() => setForm({ ...form, match_type: type })}
+                      onClick={() => {
+                        const newComp = type === 'internal'
+                          ? 'Intra-Squad Match'
+                          : type === 'tournament'
+                          ? 'Cup Tournament'
+                          : 'Club Friendly';
+                        setForm({
+                          ...form,
+                          match_type: type,
+                          competition: form.competition === 'Premier Regional League' || form.competition === 'Club Friendly' || form.competition === 'Intra-Squad Match' || form.competition === 'Cup Tournament' ? newComp : form.competition
+                        });
+                      }}
                       style={{
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-md)',
@@ -1011,8 +1021,62 @@ export default function AdminMatchesPage({
                 )}
               </div>
 
+              {/* Field: Competition / League & Season */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="form-competition">
+                    Competition / Tournament *
+                  </label>
+                  <input
+                    id="form-competition"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Club Friendly, Championship League, State Cup"
+                    value={form.competition}
+                    onChange={e => setForm({ ...form, competition: e.target.value })}
+                    required
+                  />
+                  <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    {['Club Friendly', 'League Match', 'Cup Tournament', 'Intra-Squad'].map(preset => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setForm({ ...form, competition: preset })}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', height: 'auto' }}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="form-season">
+                    Campaign Season
+                  </label>
+                  <select
+                    id="form-season"
+                    value={form.season}
+                    onChange={e => setForm({ ...form, season: e.target.value })}
+                    className="form-input"
+                  >
+                    {clubSeasons.length > 0 ? (
+                      clubSeasons.map(s => (
+                        <option key={s.id} value={s.name}>{s.name} {s.is_current ? '(Current)' : ''}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="2026/27">2026/27</option>
+                        <option value="2025/26">2025/26</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
               {/* Opponent Details & Home/Away */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label className="form-label" htmlFor="form-opponent-name">
                     Opponent Name *
@@ -1061,7 +1125,7 @@ export default function AdminMatchesPage({
               </div>
 
               {/* Date, Time & Venue */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label className="form-label" htmlFor="form-date">
                     Match Date *

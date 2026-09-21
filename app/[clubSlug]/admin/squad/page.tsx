@@ -458,8 +458,8 @@ export default function AdminSquadPage({
       )}
 
       {/* Members Grid / Table */}
-      <div className="glass-panel" style={{ overflowX: 'auto', padding: '1rem' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+      <div className="glass-panel admin-table-container" style={{ overflowX: 'auto', padding: '1rem' }}>
+        <table style={{ minWidth: '780px', width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
               <th style={{ padding: '0.75rem 1rem' }}>Member & Contact</th>
@@ -691,13 +691,13 @@ export default function AdminSquadPage({
         }}>
           <div className="glass-panel" style={{
             width: '100%',
-            maxWidth: '680px',
+            maxWidth: 'min(680px, calc(100vw - 2rem))',
             maxHeight: '90vh',
             overflowY: 'auto',
             background: 'var(--bg-surface-elevated)',
             border: '1px solid var(--border-medium)',
             borderRadius: 'var(--radius-xl)',
-            padding: '2rem',
+            padding: 'clamp(1rem, 3vw, 2rem)',
             margin: 'auto',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
@@ -1203,11 +1203,11 @@ export default function AdminSquadPage({
         }}>
           <div className="glass-panel" style={{
             width: '100%',
-            maxWidth: '480px',
+            maxWidth: 'min(480px, calc(100vw - 2rem))',
             background: 'var(--bg-surface-elevated)',
             border: '1px solid var(--border-medium)',
             borderRadius: 'var(--radius-xl)',
-            padding: '2rem',
+            padding: 'clamp(1.2rem, 3vw, 2rem)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>

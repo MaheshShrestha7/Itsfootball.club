@@ -33,7 +33,7 @@ export default function AdminAnalyticsPage({
       {/* KPI Overview */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
         gap: '1.25rem',
         marginBottom: '2.5rem',
       }}>
@@ -98,36 +98,38 @@ export default function AdminAnalyticsPage({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '220px', gap: '1rem', paddingTop: '1rem' }}>
-          {trafficData.map((val, idx) => {
-            const heightPct = Math.max(12, Math.round((val / maxTraffic) * 100));
-            const isMatchday = idx === 5;
+        <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '220px', minWidth: '460px', gap: '1rem', paddingTop: '1rem' }}>
+            {trafficData.map((val, idx) => {
+              const heightPct = Math.max(12, Math.round((val / maxTraffic) * 100));
+              const isMatchday = idx === 5;
 
-            return (
-              <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isMatchday ? '#EF4444' : 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                  {val.toLocaleString()}
-                </span>
-                <div style={{
-                  width: '100%',
-                  maxWidth: '48px',
-                  height: `${heightPct}%`,
-                  background: isMatchday ? 'linear-gradient(180deg, #EF4444, #991B1B)' : 'linear-gradient(180deg, var(--club-primary), rgba(16, 185, 129, 0.4))',
-                  borderRadius: '6px 6px 0 0',
-                  boxShadow: isMatchday ? '0 0 15px rgba(239, 68, 68, 0.4)' : 'none',
-                  transition: 'height 0.4s ease',
-                }} />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.6rem', textAlign: 'center' }}>
-                  {days[idx]}
-                </span>
-              </div>
-            );
-          })}
+              return (
+                <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isMatchday ? '#EF4444' : 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                    {val.toLocaleString()}
+                  </span>
+                  <div style={{
+                    width: '100%',
+                    maxWidth: '48px',
+                    height: `${heightPct}%`,
+                    background: isMatchday ? 'linear-gradient(180deg, #EF4444, #991B1B)' : 'linear-gradient(180deg, var(--club-primary), rgba(16, 185, 129, 0.4))',
+                    borderRadius: '6px 6px 0 0',
+                    boxShadow: isMatchday ? '0 0 15px rgba(239, 68, 68, 0.4)' : 'none',
+                    transition: 'height 0.4s ease',
+                  }} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.6rem', textAlign: 'center' }}>
+                    {days[idx]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Breakdown Grid: Top Sections & Devices */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem' }}>
         {/* Most Viewed Sections */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>

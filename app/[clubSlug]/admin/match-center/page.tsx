@@ -27,9 +27,11 @@ import {
   ShieldCheck,
   CalendarDays,
   X,
-  Calendar
+  Calendar,
+  QrCode
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
+import QRScannerModal from '@/components/QRScannerModal';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -76,11 +78,14 @@ export default function AdminMatchCenterControllerPage({
   // New Fixture Modal state
   const [isCreateFixtureOpen, setIsCreateFixtureOpen] = useState(false);
   const [fixtureOpponent, setFixtureOpponent] = useState('');
-  const [fixtureCompetition, setFixtureCompetition] = useState('Premier Regional League');
+  const [fixtureCompetition, setFixtureCompetition] = useState('Club Friendly');
   const [fixtureSeason, setFixtureSeason] = useState(activeSeason?.name || '2026/27');
   const [fixtureDate, setFixtureDate] = useState(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
   const [fixtureVenue, setFixtureVenue] = useState(club.stadium_name);
   const [fixtureIsHome, setFixtureIsHome] = useState(true);
+
+  // Match Check-in & Scanner Modal
+  const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
 
   // Quick event form states
   const [eventType, setEventType] = useState<MatchEventType>('goal');
@@ -318,6 +323,25 @@ export default function AdminMatchCenterControllerPage({
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
           <button
             type="button"
+            onClick={() => setIsCheckinModalOpen(true)}
+            className="btn btn-sm"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'rgba(59, 130, 246, 0.16)',
+              border: '1px solid #3B82F6',
+              color: '#3B82F6',
+              fontWeight: 800,
+            }}
+            title="Scan pass QR code via camera or enter token to check in attendees"
+          >
+            <QrCode size={15} />
+            <span>Turnstile Check-In ({match.checkin_count || 0})</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsAuditModalOpen(true)}
             className="btn btn-sm"
             style={{
@@ -446,12 +470,14 @@ export default function AdminMatchCenterControllerPage({
       </div>
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
-      <div style={{
+      <div className="scroll-pill-strip" style={{
         display: 'flex',
         gap: '0.5rem',
         marginBottom: '2rem',
         borderBottom: '1px solid var(--border-subtle)',
         paddingBottom: '0.75rem',
+        overflowX: 'auto',
+        maxWidth: '100%',
       }}>
         {[
           { id: 'events', label: 'Score & Event Console', icon: Radio },
@@ -1029,6 +1055,14 @@ export default function AdminMatchCenterControllerPage({
         onAuditCompleted={() => {
           showFeedback('Match stats successfully verified and baked into season records!');
         }}
+      />
+
+      {/* Matchday Turnstile Gate Check-In & Scanner Modal */}
+      <QRScannerModal
+        isOpen={isCheckinModalOpen}
+        onClose={() => setIsCheckinModalOpen(false)}
+        mode="match_checkin"
+        targetMatch={match}
       />
 
       {/* Schedule Fixture Modal */}

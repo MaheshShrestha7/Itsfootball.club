@@ -166,14 +166,17 @@ export default function ClubPublicPage({
         if (item.type === 'fixture') {
           const matchItem = matches.find(m => m.id === item.target_id) || liveMatch || upcomingMatches[0];
           const isLive = matchItem?.status === 'live';
+          const compClean = (!matchItem?.competition || matchItem.competition === 'Premier Regional League')
+            ? (matchItem?.match_type ? `${matchItem.match_type.charAt(0).toUpperCase() + matchItem.match_type.slice(1)} Match` : 'Club Friendly')
+            : matchItem.competition;
           return {
             id: item.id || `pin-fixture-${idx}`,
             category: 'match',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
-            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${matchItem?.current_minute}' IN PLAY` : `FIXTURE • ${matchItem?.competition || 'MATCH'}`),
+            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${matchItem?.current_minute}' IN PLAY` : `FIXTURE • ${compClean}`),
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
-            subtitle: item.subtitle || (matchItem ? `${matchItem.competition} • ${matchItem.venue}` : 'Official League Match Schedule'),
+            subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
             ctaLabel: item.cta_label || (isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups'),
             ctaLink: item.cta_link || (matchItem ? `/${club.slug}/match/${matchItem.id}` : `/${club.slug}`),
             targetMatch: matchItem,
@@ -237,7 +240,7 @@ export default function ClubPublicPage({
         tabLabel: liveMatch ? 'Matchday Live' : 'Matchday Hub',
         badge: liveMatch
           ? `MATCHDAY LIVE • ${liveMatch.current_minute}' IN PLAY`
-          : `UPCOMING FIXTURE • ${upcomingMatches[0]?.competition || 'CHAMPIONSHIP'}`,
+          : `UPCOMING FIXTURE • ${(!upcomingMatches[0]?.competition || upcomingMatches[0]?.competition === 'Premier Regional League') ? (upcomingMatches[0]?.match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`,
         bgImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
         title: liveMatch
           ? `${liveMatch.home_team_name} vs ${liveMatch.away_team_name}`
@@ -245,10 +248,10 @@ export default function ClubPublicPage({
           ? `${upcomingMatches[0].home_team_name} vs ${upcomingMatches[0].away_team_name}`
           : `${club.name} Matchday Hub`,
         subtitle: liveMatch
-          ? `${liveMatch.competition} • In Play at ${liveMatch.venue}`
+          ? `${(!liveMatch.competition || liveMatch.competition === 'Premier Regional League') ? 'Club Match' : liveMatch.competition} • In Play at ${liveMatch.venue}`
           : upcomingMatches[0]
-          ? `${upcomingMatches[0].competition} • Kickoff Countdown`
-          : 'Official League Match Schedule & Match Reports',
+          ? `${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? 'Club Fixture' : upcomingMatches[0].competition} • Kickoff Countdown`
+          : 'Official Match Schedule & Match Reports',
         targetMatch: liveMatch || upcomingMatches[0],
       },
       {
@@ -758,7 +761,9 @@ export default function ClubPublicPage({
                           <span className="badge badge-live">
                             <span className="pulse-dot" /> MATCHDAY LIVE • {activeSlideMatch.current_minute}&apos;
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{activeSlideMatch.competition}</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' MATCH' : 'CLUB FRIENDLY') : activeSlideMatch.competition}
+                          </span>
                         </div>
 
                         <div style={{
@@ -835,7 +840,7 @@ export default function ClubPublicPage({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span className="badge badge-primary">FIXTURE SPOTLIGHT</span>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            {activeSlideMatch.competition || 'Championship Match'}
+                            {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' FIXTURE' : 'CLUB FRIENDLY') : (activeSlideMatch.competition || 'Club Match')}
                           </span>
                         </div>
 
@@ -1340,7 +1345,7 @@ export default function ClubPublicPage({
                 <div className="fixture-meta">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'inherit' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
-                      {match.competition}
+                      {match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition}
                     </span>
                     {match.match_type && (
                       <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>

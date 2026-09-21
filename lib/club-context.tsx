@@ -406,6 +406,36 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Cross-tab live synchronization via BroadcastChannel
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    try {
+      const channel = new BroadcastChannel('itsfootball_live_matchday');
+      channel.onmessage = (event) => {
+        const data = event.data;
+        if (!data || !data.type) return;
+
+        if (data.type === 'MATCH_UPDATED' && data.matchId && data.updates) {
+          setMatches(prev => prev.map(m => m.id === data.matchId ? { ...m, ...data.updates } : m));
+        } else if (data.type === 'MATCH_EVENT_ADDED' && data.event) {
+          setMatchEvents(prev => {
+            if (prev.some(e => e.id === data.event.id)) return prev;
+            return [...prev, data.event];
+          });
+        } else if (data.type === 'MATCH_EVENT_DELETED' && data.eventId) {
+          setMatchEvents(prev => prev.filter(e => e.id !== data.eventId));
+        } else if (data.type === 'MATCH_CHECKIN' && data.matchId) {
+          setMatches(prev => prev.map(m => m.id === data.matchId ? { ...m, checkin_count: (m.checkin_count || 0) + 1 } : m));
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    } catch {
+      // BroadcastChannel unavailable
+    }
+  }, []);
+
   // Helper to select active club by slug (with previous_slugs alias support for redirects)
   const selectClubBySlug = useCallback((slug: string): Club | null => {
     if (!slug) return null;
@@ -505,7 +535,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const starterMatch: Match = {
       id: `match-${clubId}-1`,
       club_id: clubId,
-      competition: 'Premier Regional League',
+      competition: 'Club Friendly',
       season: '2026/27',
       home_team_name: newClub.name,
       away_team_name: 'United Athletic',
@@ -937,6 +967,20 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    // Cross-tab broadcast for live match centre and public screens
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('itsfootball_live_matchday');
+        channel.postMessage({
+          type: 'MATCH_UPDATED',
+          matchId,
+          updates,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+    }
   }, []);
 
   // Tier calculation helper
@@ -1117,6 +1161,29 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         awardClubScorePoints(player.id, -10, 'disciplinary_card', `Red Card (${eventData.minute}') penalty`, eventData.match_id);
       }
     }
+
+    // Broadcast live event to public match centres and scoreboards
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('itsfootball_live_matchday');
+        channel.postMessage({
+          type: 'MATCH_EVENT_ADDED',
+          matchId: eventData.match_id,
+          event: newEvent,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+    }
+
+    if (isSupabaseConfigured) {
+      const client = getSupabaseClient();
+      if (client) {
+        client.from('match_events').insert(newEvent).then(({ error }) => {
+          if (error) console.warn('Could not sync match event to Supabase:', error.message);
+        });
+      }
+    }
   }, [members, awardClubScorePoints]);
 
   const deleteMatchEvent = useCallback((eventId: string) => {
@@ -1138,6 +1205,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
       return prev.filter(e => e.id !== eventId);
     });
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('itsfootball_live_matchday');
+        channel.postMessage({
+          type: 'MATCH_EVENT_DELETED',
+          eventId,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+    }
   }, []);
 
   // 5. Events Management
@@ -1674,6 +1753,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       match_title: match.title || `${match.home_team_name} vs ${match.away_team_name}`,
       valid: true,
     });
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('itsfootball_live_matchday');
+        channel.postMessage({
+          type: 'MATCH_CHECKIN',
+          matchId,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+    }
 
     return {
       success: true,

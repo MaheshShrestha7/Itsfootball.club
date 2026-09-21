@@ -4,6 +4,7 @@ import React, { useState, use } from 'react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
+import CameraQRScanner from '@/components/CameraQRScanner';
 import {
   Shield,
   CheckCircle2,
@@ -16,7 +17,8 @@ import {
   UserCheck,
   Ticket,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Camera
 } from 'lucide-react';
 
 export default function MatchDoorCheckinPage({
@@ -30,7 +32,7 @@ export default function MatchDoorCheckinPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const match = matches.find(m => m.id === resolvedParams.matchId);
 
-  const [mode, setMode] = useState<'member' | 'guest'>('member');
+  const [mode, setMode] = useState<'camera' | 'member' | 'guest'>('camera');
   const [memberToken, setMemberToken] = useState('');
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -60,6 +62,41 @@ export default function MatchDoorCheckinPage({
       </div>
     );
   }
+
+  const executeCheckinWithToken = (token: string) => {
+    if (!token.trim()) return;
+    setSubmitting(true);
+
+    const res = selfCheckInMatch(match.id, { token: token.trim() });
+
+    if (res.success) {
+      // Trigger festive stadium confetti
+      try {
+        confetti({
+          particleCount: 90,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: [club.primary_color || '#10B981', '#F59E0B', '#3B82F6', '#FFFFFF']
+        });
+      } catch (err) {
+        console.error('Confetti error:', err);
+      }
+
+      setResult({
+        success: true,
+        message: res.message,
+        attendeeName: res.attendeeName,
+        checkedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
+    } else {
+      setResult({
+        success: false,
+        message: res.message,
+      });
+    }
+
+    setSubmitting(false);
+  };
 
   const handleCheckIn = (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,8 +362,8 @@ export default function MatchDoorCheckinPage({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.5rem',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '0.4rem',
                 background: 'rgba(0, 0, 0, 0.35)',
                 padding: '0.3rem',
                 borderRadius: 'var(--radius-lg)',
@@ -336,9 +373,32 @@ export default function MatchDoorCheckinPage({
             >
               <button
                 type="button"
+                onClick={() => { setMode('camera'); setResult(null); }}
+                style={{
+                  padding: '0.65rem 0.4rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: mode === 'camera' ? club.primary_color : 'transparent',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <Camera size={14} />
+                <span>Camera Scan</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => { setMode('member'); setResult(null); }}
                 style={{
-                  padding: '0.65rem',
+                  padding: '0.65rem 0.4rem',
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'member' ? club.primary_color : 'transparent',
@@ -349,19 +409,19 @@ export default function MatchDoorCheckinPage({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
+                  gap: '0.35rem',
                   transition: 'background 0.2s'
                 }}
               >
                 <Shield size={14} />
-                <span>Member Pass</span>
+                <span>Pass Token</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setMode('guest'); setResult(null); }}
                 style={{
-                  padding: '0.65rem',
+                  padding: '0.65rem 0.4rem',
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'guest' ? club.primary_color : 'transparent',
@@ -372,12 +432,12 @@ export default function MatchDoorCheckinPage({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
+                  gap: '0.35rem',
                   transition: 'background 0.2s'
                 }}
               >
                 <Ticket size={14} />
-                <span>Guest / Supporter</span>
+                <span>Guest</span>
               </button>
             </div>
 
@@ -402,7 +462,19 @@ export default function MatchDoorCheckinPage({
               </div>
             )}
 
-            <form onSubmit={handleCheckIn}>
+            {mode === 'camera' ? (
+              <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <CameraQRScanner
+                  onScanSuccess={executeCheckinWithToken}
+                  isActive={mode === 'camera' && !result?.success}
+                  scannerId="door-camera-station"
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
+                  Point your camera at your digital membership QR code or printed matchday pass.
+                </span>
+              </div>
+            ) : (
+              <form onSubmit={handleCheckIn}>
               {mode === 'member' ? (
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                   <label className="form-label" htmlFor="member-token-input">
@@ -473,6 +545,7 @@ export default function MatchDoorCheckinPage({
                 <span>{submitting ? 'Validating Entry...' : 'Complete Door Check-In'}</span>
               </button>
             </form>
+            )}
           </div>
         )}
       </div>

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, use } from 'react';
+import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
-import { ClubMember, ClubEvent } from '@/lib/supabase/types';
+import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
+import CameraQRScanner from '@/components/CameraQRScanner';
 import {
   QrCode,
   Camera,
@@ -13,7 +14,8 @@ import {
   Search,
   Calendar,
   History,
-  Shield
+  Shield,
+  Ticket
 } from 'lucide-react';
 
 interface ScanLogEntry {
@@ -32,54 +34,59 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, events, verifyMemberPass, checkInMemberToEvent, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, members, events, matches, verifyMemberPass, checkInMemberToEvent, selfCheckInMatch, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
+  const clubMatches = matches.filter(m => m.club_id === club.id);
 
-  const [mode, setMode] = useState<'verify' | 'checkin'>('verify');
+  const [mode, setMode] = useState<'verify' | 'checkin' | 'match_checkin'>('verify');
   const [selectedEventId, setSelectedEventId] = useState(clubEvents[0]?.id || '');
+  const [selectedMatchId, setSelectedMatchId] = useState(clubMatches[0]?.id || '');
   const [manualCode, setManualCode] = useState('');
   const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
-  const [cameraActive, setCameraActive] = useState(false);
   const [scanLogs, setScanLogs] = useState<ScanLogEntry[]>([]);
   const [currentResult, setCurrentResult] = useState<any>(null);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Initialize camera stream when camera tab is selected
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    if (activeTab === 'camera') {
-      navigator.mediaDevices?.getUserMedia?.({ video: { facingMode: 'environment' } })
-        .then(s => {
-          stream = s;
-          if (videoRef.current) {
-            videoRef.current.srcObject = s;
-            videoRef.current.play();
-            setCameraActive(true);
-          }
-        })
-        .catch(err => {
-          console.warn('Camera stream error:', err);
-          setCameraActive(false);
-        });
-    }
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [activeTab]);
 
   const processToken = (token: string) => {
     if (!token.trim()) return;
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    if (mode === 'checkin') {
+    if (mode === 'match_checkin') {
+      const selectedMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+      if (!selectedMatch) return;
+      const res = selfCheckInMatch(selectedMatch.id, { token });
+
+      const newLog: ScanLogEntry = {
+        id: `log-${Date.now()}`,
+        timestamp: timeStr,
+        token,
+        status: res.success ? 'valid' : 'invalid',
+        memberName: res.attendeeName || 'Match Attendee',
+        detail: res.message,
+      };
+
+      setCurrentResult({
+        valid: res.success,
+        message: res.message,
+        memberName: res.attendeeName,
+      });
+
+      setScanLogs(prev => [newLog, ...prev]);
+
+      // Record to live club analytics engine
+      recordGateScan({
+        club_id: club.id,
+        scan_type: 'event_checkin',
+        token,
+        member_name: res.attendeeName || 'Match Attendee',
+        event_id: selectedMatch.id,
+        event_title: `${selectedMatch.home_team_name} vs ${selectedMatch.away_team_name}`,
+        valid: res.success,
+      });
+    } else if (mode === 'checkin') {
       const selectedEvent = clubEvents.find(e => e.id === selectedEventId) || clubEvents[0];
       const res = checkInMemberToEvent(selectedEvent?.id || '', token);
 
@@ -170,6 +177,17 @@ export default function AdminScannerPage({
             </button>
 
             <button
+              onClick={() => { setMode('match_checkin'); setCurrentResult(null); }}
+              className="btn btn-sm"
+              style={{
+                background: mode === 'match_checkin' ? '#10B981' : 'rgba(255,255,255,0.06)',
+                color: mode === 'match_checkin' ? '#FFFFFF' : 'var(--text-secondary)',
+              }}
+            >
+              <span>Matchday Gate Check-In</span>
+            </button>
+
+            <button
               onClick={() => { setMode('checkin'); setCurrentResult(null); }}
               className="btn btn-sm"
               style={{
@@ -181,8 +199,26 @@ export default function AdminScannerPage({
             </button>
           </div>
 
+          {mode === 'match_checkin' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Match:</span>
+              <select
+                className="form-select"
+                style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                value={selectedMatchId}
+                onChange={e => setSelectedMatchId(e.target.value)}
+              >
+                {clubMatches.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.home_team_name} vs {m.away_team_name} ({m.checkin_count || 0} checked in)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {mode === 'checkin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Event:</span>
               <select
                 className="form-select"
@@ -204,7 +240,7 @@ export default function AdminScannerPage({
       {/* Main Scanner Canvas Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
         gap: '2rem',
         alignItems: 'flex-start',
       }}>
@@ -236,7 +272,7 @@ export default function AdminScannerPage({
                 gap: '0.4rem',
               }}
             >
-              <Camera size={16} /> Camera Reticle
+              <Camera size={16} /> Live Scanner
             </button>
 
             <button
@@ -263,23 +299,11 @@ export default function AdminScannerPage({
 
           {activeTab === 'camera' ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
-              <div className="scanner-reticle" style={{ background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <video
-                  ref={videoRef}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  muted
-                  playsInline
-                />
-                <div className="scanner-laser" />
-                {!cameraActive && (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center' }}>
-                    <Camera size={42} color="var(--text-muted)" style={{ marginBottom: '0.75rem' }} />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Center camera over any physical or digital QR member pass.
-                    </span>
-                  </div>
-                )}
-              </div>
+              <CameraQRScanner
+                onScanSuccess={processToken}
+                isActive={activeTab === 'camera'}
+                scannerId="admin-scanner-main"
+              />
             </div>
           ) : (
             <form onSubmit={handleManualSubmit} style={{ marginBottom: '1.5rem' }}>

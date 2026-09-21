@@ -280,7 +280,7 @@ export default function AdminBrandingPage({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1.5rem' }}>
             <div className="form-group">
               <label className="form-label">Primary Color</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -431,7 +431,7 @@ export default function AdminBrandingPage({
             <Shield size={20} color="var(--club-primary)" /> Club Identity & Media Assets
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
             <div className="form-group">
               <label className="form-label">Official Club Name *</label>
               <input
@@ -587,7 +587,7 @@ export default function AdminBrandingPage({
           </div>
 
           {/* Real Drag-and-Drop & Direct URL Upload Zones */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
             <ImageUploadZone
               label="Official Club Crest / Logo"
               recommendedText="Square 500x500px PNG or SVG (transparent background recommended)"
@@ -650,7 +650,7 @@ export default function AdminBrandingPage({
             <MapPin size={20} color="var(--club-primary)" /> Home Ground & Matchday Venue
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Stadium / Ground Name</label>
               <input
@@ -721,7 +721,7 @@ export default function AdminBrandingPage({
             These official contact details are published on your public club footer and displayed in inquiry confirmations.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Mail size={14} color="var(--club-primary)" />

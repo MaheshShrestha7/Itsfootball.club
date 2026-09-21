@@ -73,7 +73,7 @@ export default function AdminDashboardPage({
       {/* KPI Cards Row */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
         gap: '1.25rem',
         marginBottom: '2.5rem',
       }}>
@@ -173,7 +173,7 @@ export default function AdminDashboardPage({
           Quick Management Actions
         </h3>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem' }}>
           <Link
             href={`/${club.slug}/admin/match-center`}
             className="glass-panel glass-panel-interactive"
@@ -247,7 +247,7 @@ export default function AdminDashboardPage({
       </div>
 
       {/* Two Column Section: Live Match Ops + Recent Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem' }}>
         {/* Live Match Operation Overview */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>

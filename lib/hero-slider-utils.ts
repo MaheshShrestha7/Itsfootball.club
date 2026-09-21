@@ -23,13 +23,16 @@ export function getDefaultHeroPinnedItems(
   const liveOrUpcoming = clubMatches.find(m => m.status === 'live') || clubMatches[0];
   if (liveOrUpcoming) {
     const isLive = liveOrUpcoming.status === 'live';
+    const compLabel = (!liveOrUpcoming.competition || liveOrUpcoming.competition === 'Premier Regional League')
+      ? (liveOrUpcoming.match_type ? `${liveOrUpcoming.match_type.charAt(0).toUpperCase() + liveOrUpcoming.match_type.slice(1)} Match` : 'Club Friendly')
+      : liveOrUpcoming.competition;
     defaults.push({
       id: `pin-fixture-${liveOrUpcoming.id}`,
       type: 'fixture',
       target_id: liveOrUpcoming.id,
       title: `${liveOrUpcoming.home_team_name} vs ${liveOrUpcoming.away_team_name}`,
-      subtitle: `${liveOrUpcoming.competition} • ${liveOrUpcoming.venue}`,
-      badge: isLive ? `MATCHDAY LIVE • ${liveOrUpcoming.current_minute}' IN PLAY` : `PINNED FIXTURE • ${liveOrUpcoming.competition.toUpperCase()}`,
+      subtitle: `${compLabel} • ${liveOrUpcoming.venue}`,
+      badge: isLive ? `MATCHDAY LIVE • ${liveOrUpcoming.current_minute}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
       image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       cta_label: isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${liveOrUpcoming.id}`,
