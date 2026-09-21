@@ -1,7 +1,9 @@
 'use client';
 
+import { getAccessToken } from '@/lib/supabase/client';
 import React, { useState, use, useRef } from 'react';
 import Link from 'next/link';
+import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
 import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
 import {
@@ -220,8 +222,10 @@ export default function AdminSquadPage({
       formData.append('file', file);
       formData.append('folder', 'members');
 
+      const token = await getAccessToken();
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
 
@@ -340,23 +344,8 @@ export default function AdminSquadPage({
     } else {
       addMember({
         ...memberPayload,
-        qr_code_token: `${club.slug}-pass-${Math.random().toString(36).substring(2, 8)}`,
+        qr_code_token: secureToken('pass'),
       });
-    }
-
-    // Sync to Supabase server-side API in background
-    try {
-      fetch(`/api/clubs/${encodeURIComponent(club.slug)}/members`, {
-        method: editingMember ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingMember?.id,
-          ...memberPayload,
-          is_active: form.status === 'active',
-        }),
-      }).catch(err => console.warn('[Squad Admin] Supabase member sync notice:', err));
-    } catch (err) {
-      // Non-blocking local storage guarantee
     }
 
     setFeedback(editingMember ? `Updated ${fullName}` : `Registered ${fullName} successfully`);
@@ -364,19 +353,10 @@ export default function AdminSquadPage({
     setModalOpen(false);
   };
 
-  const handleDeleteMember = async (memberId: string, memberName: string) => {
+  const handleDeleteMember = (memberId: string, memberName: string) => {
     if (!confirm(`Are you sure you want to remove ${memberName} from the club registry?`)) return;
 
     deleteMember(memberId);
-
-    // Sync deletion to Supabase
-    try {
-      fetch(`/api/clubs/${encodeURIComponent(club.slug)}/members?id=${encodeURIComponent(memberId)}`, {
-        method: 'DELETE',
-      }).catch(err => console.warn('[Squad Admin] Supabase delete notice:', err));
-    } catch (e) {
-      // ignore
-    }
 
     setFeedback(`Removed ${memberName}`);
     setTimeout(() => setFeedback(null), 3000);

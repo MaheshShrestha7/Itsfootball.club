@@ -4,6 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { ClubMember, MemberMessageCategory, PlayerPosition } from '@/lib/supabase/types';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import QRScannerModal from '@/components/QRScannerModal';
 import {
@@ -51,9 +52,7 @@ export default function MemberPortalPage({
     getMemberClubScore,
     getMemberActivityLogs,
     applyForMembership,
-    verifyMemberLogin,
-    requestMagicLink,
-    verifyMagicLink,
+    reloadFromServer,
     sendMemberMessage,
     getMemberMessages,
     getClubSeasonStats
@@ -68,21 +67,18 @@ export default function MemberPortalPage({
 
   // Gateway View Tabs & Sub-Modes
   const [gatewayTab, setGatewayTab] = useState<'signin' | 'signup'>('signin');
-  const [signInMode, setSignInMode] = useState<'magic' | 'password'>('magic');
 
   // Sign-In Form State
   const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
-  const [magicLinkResult, setMagicLinkResult] = useState<{ token: string; url: string } | null>(null);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
 
   // Sign-Up Application Form State
   const [signupForm, setSignupForm] = useState({
     fullName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     phone: '',
     tier: 'Supporter Season Pass',
     position: '' as PlayerPosition | '',
@@ -103,51 +99,54 @@ export default function MemberPortalPage({
   const [messageContent, setMessageContent] = useState('');
   const [messageSentToast, setMessageSentToast] = useState(false);
 
-  // Local storage session key per club
-  const sessionKey = `itsfootball_member_session_${club.id}`;
 
-  // 1. Session Restoration & Magic Link Token Detection on Mount
+  // 1. Follow the Supabase session; once signed in, link it to this club's member record
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const client = getSupabaseClient();
+    if (!client) {
+      setAuthChecked(true);
+      return;
+    }
 
-    // Check URL for magic_token
-    const urlParams = new URLSearchParams(window.location.search);
-    const magicToken = urlParams.get('magic_token');
-
-    if (magicToken) {
-      const res = verifyMagicLink(club.id, magicToken);
-      if (res.success && res.member) {
-        setActiveMember(res.member);
-        localStorage.setItem(sessionKey, JSON.stringify(res.member));
-        window.history.replaceState({}, '', window.location.pathname);
-        setLoginNotice('✓ Signed in successfully via Magic Link!');
+    let cancelled = false;
+    const resolveMember = async (userId: string | null, email: string | null) => {
+      if (cancelled) return;
+      if (!userId) {
+        setActiveMember(null);
+        setSignedInEmail(null);
         setAuthChecked(true);
         return;
-      } else {
-        setLoginError(res.error || 'Magic link is invalid or has expired.');
       }
-    }
-
-    // Otherwise check saved localStorage member session
-    try {
-      const saved = localStorage.getItem(sessionKey);
-      if (saved) {
-        const parsed: ClubMember = JSON.parse(saved);
-        // Verify member still exists in context and is approved
-        const fresh = clubMembers.find(m => m.id === parsed.id || m.email.toLowerCase() === parsed.email.toLowerCase());
-        if (fresh && (!fresh.membership_status || fresh.membership_status === 'approved')) {
-          setActiveMember(fresh);
-        } else if (fresh && fresh.membership_status === 'pending') {
-          localStorage.removeItem(sessionKey);
-          setLoginNotice('Your membership application is currently pending admin review.');
+      setSignedInEmail(email);
+      const { data, error } = await client.rpc('claim_member_profile', { p_club_id: club.id });
+      if (cancelled) return;
+      const row = Array.isArray(data) ? (data[0] as ClubMember | undefined) : undefined;
+      if (error || !row) {
+        setActiveMember(null);
+        if (!error) {
+          setLoginNotice(null);
+          setLoginError(`No approved membership was found for ${email || 'this email'} at ${club.name}. If you have applied, the committee still needs to approve you.`);
         }
+      } else {
+        setActiveMember(row);
+        setLoginError(null);
+        reloadFromServer();
       }
-    } catch {
-      localStorage.removeItem(sessionKey);
-    } finally {
       setAuthChecked(true);
-    }
-  }, [club.id, clubMembers, verifyMagicLink, sessionKey]);
+    };
+
+    client.auth.getSession().then(({ data }) => resolveMember(data.session?.user.id ?? null, data.session?.user.email ?? null));
+    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
+      // Deferred so Supabase calls never run inside the auth callback
+      setTimeout(() => resolveMember(session?.user.id ?? null, session?.user.email ?? null), 0);
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [club.id]);
 
   // Keep activeMember in sync with live members state (e.g. after approval)
   useEffect(() => {
@@ -160,44 +159,34 @@ export default function MemberPortalPage({
   }, [clubMembers, activeMember?.id]);
 
   // Handle Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setActiveMember(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(sessionKey);
-    }
+    await getSupabaseClient()?.auth.signOut();
   };
 
-  // Handle Password Login
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  // Email a one-time sign-in link (Supabase Auth)
+  const handleRequestMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setLoginNotice(null);
 
-    const res = verifyMemberLogin(club.id, loginEmail, loginPassword);
-    if (res.success && res.member) {
-      setActiveMember(res.member);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(sessionKey, JSON.stringify(res.member));
-      }
-    } else {
-      setLoginError(res.error || 'Sign in failed. Please check credentials.');
+    const client = getSupabaseClient();
+    if (!client) {
+      setLoginError('Sign-in is unavailable right now.');
+      return;
     }
-  };
-
-  // Handle Magic Link Request
-  const handleRequestMagicLink = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-    setLoginNotice(null);
-    setMagicLinkResult(null);
-
-    const res = requestMagicLink(club.id, loginEmail);
-    if (res.success && res.token && res.magicLinkUrl) {
-      setMagicLinkResult({ token: res.token, url: res.magicLinkUrl });
-      setLoginNotice('✓ Magic sign-in link generated! In production this is sent via email.');
-    } else {
-      setLoginError(res.error || 'Could not send magic link.');
+    setSendingLink(true);
+    const { error } = await client.auth.signInWithOtp({
+      email: loginEmail.trim().toLowerCase(),
+      options: { emailRedirectTo: `${window.location.origin}/${club.slug}/member` },
+    });
+    setSendingLink(false);
+    if (error) {
+      setLoginError(error.message.toLowerCase().includes('rate') ? 'Too many requests. Please wait a minute and try again.' : 'Could not send the sign-in link. Please try again.');
+      return;
     }
+    // Same message whether or not the email belongs to a member (no account enumeration)
+    setLoginNotice('If this email belongs to an approved member, a sign-in link is on its way. Check your inbox.');
   };
 
   // Handle Membership Application Submit
@@ -205,15 +194,9 @@ export default function MemberPortalPage({
     e.preventDefault();
     setSignupError(null);
 
-    if (signupForm.password && signupForm.password !== signupForm.confirmPassword) {
-      setSignupError('Passwords do not match. Please verify your password.');
-      return;
-    }
-
     const res = applyForMembership(club.id, {
       full_name: signupForm.fullName,
       email: signupForm.email,
-      password: signupForm.password,
       phone: signupForm.phone,
       membership_tier: signupForm.tier,
       player_position: signupForm.position ? signupForm.position : undefined,
@@ -427,191 +410,52 @@ export default function MemberPortalPage({
             {/* TAB 1: MEMBER SIGN IN */}
             {gatewayTab === 'signin' && (
               <div className="glass-panel" style={{ padding: '2rem' }}>
-                {/* Method selector: Magic Link vs Password */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '1.5rem',
-                  marginBottom: '1.75rem',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                  paddingBottom: '0.75rem',
-                }}>
+                <form onSubmit={handleRequestMagicLink}>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+                      Member Email Address:
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="email"
+                        required
+                        value={loginEmail}
+                        onChange={e => setLoginEmail(e.target.value)}
+                        placeholder="e.g. member@email.com"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                          borderRadius: '8px',
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          border: '1px solid var(--border-subtle)',
+                          color: '#FFFFFF',
+                          fontSize: '0.9rem',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      We&apos;ll email you a single-use link. Use the same address your membership was registered with.
+                    </div>
+                  </div>
+
                   <button
-                    type="button"
-                    onClick={() => { setSignInMode('magic'); setLoginError(null); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: signInMode === 'magic' ? '#10B981' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      borderBottom: signInMode === 'magic' ? '2px solid #10B981' : '2px solid transparent',
-                      paddingBottom: '0.5rem',
-                    }}
+                    type="submit"
+                    disabled={sendingLink}
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                   >
-                    <Sparkles size={16} />
-                    <span>Magic Link (Passwordless)</span>
+                    <Sparkles size={18} />
+                    <span>{sendingLink ? 'Sending...' : 'Email Me a Sign-In Link'}</span>
                   </button>
+                </form>
 
-                  <button
-                    type="button"
-                    onClick={() => { setSignInMode('password'); setLoginError(null); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: signInMode === 'password' ? '#10B981' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      borderBottom: signInMode === 'password' ? '2px solid #10B981' : '2px solid transparent',
-                      paddingBottom: '0.5rem',
-                    }}
-                  >
-                    <Lock size={16} />
-                    <span>Email &amp; Password</span>
-                  </button>
-                </div>
-
-                {signInMode === 'magic' ? (
-                  /* Magic Link Form */
-                  <form onSubmit={handleRequestMagicLink}>
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
-                        Member Email Address:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input
-                          type="email"
-                          required
-                          value={loginEmail}
-                          onChange={e => setLoginEmail(e.target.value)}
-                          placeholder="e.g. member@email.com"
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
-                            fontSize: '0.9rem',
-                          }}
-                        />
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                        Approved members will receive a single-use login token to enter directly.
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Sparkles size={18} />
-                      <span>Send Magic Sign-In Link</span>
+                {signedInEmail && !activeMember && (
+                  <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Signed in as {signedInEmail}.{' '}
+                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#10B981', cursor: 'pointer', fontWeight: 700 }}>
+                      Use a different email
                     </button>
-                  </form>
-                ) : (
-                  /* Email & Password Form */
-                  <form onSubmit={handlePasswordLogin}>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
-                        Member Email Address:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input
-                          type="email"
-                          required
-                          value={loginEmail}
-                          onChange={e => setLoginEmail(e.target.value)}
-                          placeholder="e.g. member@email.com"
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
-                            fontSize: '0.9rem',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
-                        Password:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Lock size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input
-                          type="password"
-                          required
-                          value={loginPassword}
-                          onChange={e => setLoginPassword(e.target.value)}
-                          placeholder="••••••••"
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
-                            fontSize: '0.9rem',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Lock size={18} />
-                      <span>Sign In to Member Portal</span>
-                    </button>
-                  </form>
-                )}
-
-                {/* Simulated Magic Link Drawer */}
-                {magicLinkResult && (
-                  <div style={{
-                    marginTop: '1.5rem',
-                    background: 'rgba(16, 185, 129, 0.08)',
-                    border: '1px solid #10B981',
-                    borderRadius: '10px',
-                    padding: '1.25rem',
-                    animation: 'fadeIn 0.3s ease',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <Sparkles size={18} color="#10B981" />
-                      <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF' }}>
-                        Magic Link Ready (Dev Simulator)
-                      </span>
-                    </div>
-
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.4 }}>
-                      Click below to immediately authorize and enter the digital clubhouse using your single-use cryptographic token:
-                    </p>
-
-                    <Link
-                      href={magicLinkResult.url}
-                      className="btn btn-primary btn-sm"
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-                    >
-                      <CheckCircle2 size={16} />
-                      <span>Authorize &amp; Enter Member Clubhouse</span>
-                    </Link>
                   </div>
                 )}
               </div>
@@ -736,52 +580,6 @@ export default function MemberPortalPage({
                           value={signupForm.email}
                           onChange={e => setSignupForm({ ...signupForm, email: e.target.value })}
                           placeholder="e.g. liam@email.com"
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
-                            fontSize: '0.85rem',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
-                          Password *
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={signupForm.password}
-                          onChange={e => setSignupForm({ ...signupForm, password: e.target.value })}
-                          placeholder="••••••••"
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
-                            fontSize: '0.85rem',
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
-                          Confirm Password *
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={signupForm.confirmPassword}
-                          onChange={e => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
-                          placeholder="••••••••"
                           style={{
                             width: '100%',
                             padding: '0.65rem 0.75rem',

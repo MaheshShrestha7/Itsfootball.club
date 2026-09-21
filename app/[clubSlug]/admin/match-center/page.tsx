@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import QRScannerModal from '@/components/QRScannerModal';
+import LiveMinute from '@/components/LiveMinute';
+import { getLiveMinute } from '@/lib/match-clock';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -94,7 +96,7 @@ export default function AdminMatchCenterControllerPage({
   const [customPlayerName, setCustomPlayerName] = useState('');
   const [selectedSubOffId, setSelectedSubOffId] = useState<string>(squadPlayers[0]?.id || '');
   const [assistName, setAssistName] = useState('');
-  const [eventMinute, setEventMinute] = useState(match ? match.current_minute : 75);
+  const [eventMinute, setEventMinute] = useState(match ? getLiveMinute(match) : 75);
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
@@ -224,7 +226,7 @@ export default function AdminMatchCenterControllerPage({
 
   // Adjust match minute
   const handleMinuteAdjust = (delta: number) => {
-    const newMin = Math.max(0, Math.min(120, match.current_minute + delta));
+    const newMin = Math.max(0, Math.min(120, getLiveMinute(match) + delta));
     updateMatch(match.id, { current_minute: newMin });
     setEventMinute(newMin);
   };
@@ -553,7 +555,7 @@ export default function AdminMatchCenterControllerPage({
                   gap: '0.4rem',
                 }}>
                   <Clock size={22} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
-                  <span>{match.current_minute}&apos;</span>
+                  <span><LiveMinute match={match} />&apos;</span>
                   {match.added_time > 0 && (
                     <span style={{ fontSize: '1rem', color: '#F59E0B' }}>
                       (+{match.added_time}&apos;)

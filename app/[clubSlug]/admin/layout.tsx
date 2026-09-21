@@ -30,7 +30,8 @@ import {
   Sparkles,
   CalendarDays,
   Menu,
-  X
+  X,
+  Mail
 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
@@ -44,7 +45,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries } = useClub();
   const { user, logout, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -63,6 +64,7 @@ export default function AdminLayout({
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
+  const unreadInquiries = inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
 
   interface NavItem {
@@ -104,6 +106,12 @@ export default function AdminLayout({
           href: `/${club.slug}/admin/members`,
           icon: UserCheck,
           badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
+        },
+        {
+          label: 'Inbox',
+          href: `/${club.slug}/admin/inquiries`,
+          icon: Mail,
+          badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
         },
         { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
         { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
@@ -378,6 +386,34 @@ export default function AdminLayout({
         {/* Main Admin Content Canvas */}
         <main className="admin-main-canvas">
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            {(syncStatus.phase === 'error' || (syncStatus.phase === 'readonly' && (syncStatus.pending || 0) > 0)) && (
+              <div
+                role="alert"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                  marginBottom: '1.25rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.825rem',
+                  background: syncStatus.phase === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                  border: `1px solid ${syncStatus.phase === 'error' ? '#EF4444' : '#F59E0B'}`,
+                  color: syncStatus.phase === 'error' ? '#FCA5A5' : '#FCD34D',
+                }}
+              >
+                <span>
+                  {syncStatus.phase === 'error'
+                    ? `Some changes are not saved to the database. ${syncStatus.message || ''}`
+                    : `${syncStatus.pending} change(s) are only saved in this browser. ${syncStatus.message || ''}`}
+                </span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={retrySync}>
+                  Retry
+                </button>
+              </div>
+            )}
             {children}
           </div>
         </main>

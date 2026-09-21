@@ -5,6 +5,7 @@ import { Match } from '@/lib/supabase/types';
 import { STAGE_TITLES } from '@/lib/tournament-engine';
 import { Trophy, Calendar, Radio, Edit3, Shield, Award } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
+import LiveMinute from '@/components/LiveMinute';
 
 interface TournamentBracketViewProps {
   matches: Match[];
@@ -228,7 +229,7 @@ export default function TournamentBracketView({
                                     animation: 'pulse 1.5s infinite',
                                   }}
                                 />
-                                {match.current_minute}&apos; LIVE
+                                <LiveMinute match={match} />&apos; LIVE
                               </span>
                             )}
                             {isCompleted && (

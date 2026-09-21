@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import { AvailabilityStatus } from '@/lib/supabase/types';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
@@ -27,7 +28,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-export default function PlayerAvailabilityPage() {
+function AvailabilityHub() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params?.clubSlug as string;
@@ -41,6 +42,7 @@ export default function PlayerAvailabilityPage() {
     availabilities,
     setPlayerAvailability,
     getAvailabilityByToken,
+    ensureAvailability,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -90,6 +92,13 @@ export default function PlayerAvailabilityPage() {
 
   const targetMatch = matches.find(m => m.id === selectedMatchId) || matches[0];
 
+  // Give every squad player a personal, unguessable RSVP link for this match
+  useEffect(() => {
+    if (!targetMatch) return;
+    squadPlayers.forEach(p => ensureAvailability(targetMatch.id, p.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetMatch?.id, squadPlayers.length]);
+
   // Match Availabilities
   const matchAvailabilities = useMemo(() => {
     if (!targetMatch) return [];
@@ -108,7 +117,7 @@ export default function PlayerAvailabilityPage() {
           match_id: targetMatch?.id,
           member_id: player.id,
           status: 'pending' as AvailabilityStatus,
-          response_token: `tok-${player.id}`,
+          response_token: '',
         },
       };
     });
@@ -156,7 +165,7 @@ export default function PlayerAvailabilityPage() {
     : `https://itsfootball.club/${club.slug}/availability`;
 
   const playerMagicLink = currentPlayer
-    ? `${shareableUrl}?token=${currentRecord?.response_token || `tok-${currentPlayer.id}`}`
+    ? `${shareableUrl}?token=${currentRecord?.response_token || ''}`
     : shareableUrl;
 
   const whatsappMessage = encodeURIComponent(
@@ -652,4 +661,148 @@ export default function PlayerAvailabilityPage() {
       <Footer club={club} />
     </div>
   );
+}
+
+
+// ---------------------------------------------------------------------------
+// Player view: a personal link (?token=...) lets one player answer for themselves
+// ---------------------------------------------------------------------------
+function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
+  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken } = useClub();
+  const club = selectClubBySlug(slug);
+
+  const [state, setState] = useState<'loading' | 'invalid' | 'ready'>('loading');
+  const [record, setRecord] = useState<Awaited<ReturnType<typeof resolveAvailabilityToken>>>(null);
+  const [status, setStatus] = useState<AvailabilityStatus>('pending');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!token) {
+      setState('invalid');
+      return;
+    }
+    resolveAvailabilityToken(token).then(res => {
+      if (cancelled) return;
+      if (!res) {
+        setState('invalid');
+        return;
+      }
+      setRecord(res);
+      setStatus(res.availability.status);
+      setNote(res.availability.note || '');
+      setState('ready');
+    });
+    return () => {
+      cancelled = true;
+    };
+    // resolve once per link; the context lookups it uses change as data loads
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, club?.id]);
+
+  const respond = async (next: AvailabilityStatus) => {
+    setSaving(true);
+    setMessage(null);
+    const res = await respondToAvailabilityToken(token, next, note);
+    setSaving(false);
+    if (res.success) {
+      setStatus(next);
+      setMessage({ ok: true, text: 'Thanks, your answer has been saved.' });
+    } else {
+      setMessage({ ok: false, text: res.error || 'Could not save your answer.' });
+    }
+  };
+
+  const match = record?.match;
+  const options: { value: AvailabilityStatus; label: string }[] = [
+    { value: 'available', label: "I'm available" },
+    { value: 'maybe', label: 'Maybe' },
+    { value: 'unavailable', label: "Can't make it" },
+  ];
+
+  return (
+    <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+      <div className="glass-panel" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
+        {state === 'loading' && <p style={{ color: 'var(--text-muted)' }}>Checking your link...</p>}
+
+        {state === 'invalid' && (
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>Link not recognised</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              This availability link is missing or no longer valid. Ask your club for your personal link.
+            </p>
+          </div>
+        )}
+
+        {state === 'ready' && record && (
+          <>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+              {record.member ? `Hi ${record.member.full_name.split(' ')[0]}, are you in?` : 'Are you available?'}
+            </h2>
+            {match && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                {match.home_team_name} vs {match.away_team_name}
+                <br />
+                {new Date(match.match_date).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · {match.venue}
+              </p>
+            )}
+
+            <div style={{ display: 'grid', gap: '0.6rem', marginBottom: '1rem' }}>
+              {options.map(o => (
+                <button
+                  key={o.value}
+                  type="button"
+                  disabled={saving}
+                  onClick={() => respond(o.value)}
+                  className={status === o.value ? 'btn btn-primary' : 'btn btn-secondary'}
+                  style={{ justifyContent: 'center' }}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              className="form-textarea"
+              rows={2}
+              maxLength={500}
+              placeholder="Add a note (optional)"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+            />
+
+            {message && (
+              <div role="status" style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: message.ok ? '#6EE7B7' : '#FCA5A5' }}>
+                {message.text}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function PlayerAvailabilityPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const slug = params?.clubSlug as string;
+  const token = searchParams?.get('token') || '';
+  const { selectClubBySlug } = useClub();
+  const { isLoading, hasClubAdminAccess } = useAuth();
+  const club = selectClubBySlug(slug);
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // Coaches / admins get the full squad hub; everyone else only their own personal link
+  if (club && hasClubAdminAccess(club.id)) return <AvailabilityHub />;
+  return <PlayerRsvp slug={slug} token={token} />;
 }

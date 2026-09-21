@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
 import { Calendar, MapPin, Radio, CheckCircle2, Trophy, Clock, Edit3, ArrowRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
+import LiveMinute from '@/components/LiveMinute';
 
 interface TournamentMatchesListProps {
   matches: Match[];
@@ -215,7 +216,7 @@ export default function TournamentMatchesList({
                           animation: 'pulse 1.5s infinite',
                         }}
                       />
-                      {match.current_minute}&apos; LIVE
+                      <LiveMinute match={match} />&apos; LIVE
                     </span>
                   )}
                   {isCompleted && (

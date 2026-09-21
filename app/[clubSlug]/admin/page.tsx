@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import {
@@ -20,6 +20,8 @@ import {
   CalendarDays,
   Trophy
 } from 'lucide-react';
+import { getLiveMinute } from '@/lib/match-clock';
+import LiveMinute from '@/components/LiveMinute';
 
 export default function AdminDashboardPage({
   params,
@@ -27,8 +29,12 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  useEffect(() => {
+    loadClubAnalytics(club.id);
+  }, [club.id, loadClubAnalytics]);
 
   const clubMembers = members.filter(m => m.club_id === club.id);
   const squadPlayers = clubMembers.filter(m => m.role === 'player');
@@ -131,7 +137,7 @@ export default function AdminDashboardPage({
             {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
           </div>
           <div style={{ fontSize: '0.75rem', color: liveMatch ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{liveMatch ? `${liveMatch.current_minute}' in progress` : 'Manage fixtures & schedules'}</span>
+            <span>{liveMatch ? `${getLiveMinute(liveMatch)}' in progress` : 'Manage fixtures & schedules'}</span>
             <ArrowRight size={12} />
           </div>
         </Link>
@@ -274,7 +280,7 @@ export default function AdminDashboardPage({
               Matchday Command
             </h3>
             {liveMatch ? (
-              <span className="badge badge-live">LIVE • {liveMatch.current_minute}&apos;</span>
+              <span className="badge badge-live">LIVE • <LiveMinute match={liveMatch} />&apos;</span>
             ) : (
               <span className="badge" style={{ background: 'rgba(255,255,255,0.06)' }}>STANDBY</span>
             )}

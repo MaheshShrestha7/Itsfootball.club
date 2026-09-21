@@ -31,6 +31,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { getLiveMinute } from '@/lib/match-clock';
 
 export default function AdminHeroSliderPage({
   params,
@@ -178,7 +179,7 @@ export default function AdminHeroSliderPage({
       target_id: m.id,
       title: `${m.home_team_name} vs ${m.away_team_name}`,
       subtitle: `${m.competition} • ${m.venue}`,
-      badge: isLive ? `MATCHDAY LIVE • ${m.current_minute}'` : `FIXTURE • ${m.competition.toUpperCase()}`,
+      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(m)}'` : `FIXTURE • ${m.competition.toUpperCase()}`,
       image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       cta_label: isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${m.id}`,
@@ -871,7 +872,7 @@ export default function AdminHeroSliderPage({
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                           <span className={`badge ${isLive ? 'badge-live' : 'badge-gold'}`} style={{ fontSize: '0.65rem' }}>
-                            {isLive ? `LIVE ${m.current_minute}'` : m.status.toUpperCase()}
+                            {isLive ? `LIVE ${getLiveMinute(m)}'` : m.status.toUpperCase()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             {m.competition}

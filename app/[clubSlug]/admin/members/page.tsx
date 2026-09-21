@@ -31,6 +31,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
+import { newId } from '@/lib/ids';
 
 export default function AdminMembersPage({
   params,
@@ -711,7 +712,7 @@ export default function AdminMembersPage({
                             type="button"
                             onClick={() => {
                               setSelectedMessage({
-                                id: `msg-direct-${Date.now()}`,
+                                id: newId(),
                                 club_id: club.id,
                                 member_id: member.id,
                                 sender_type: 'member',

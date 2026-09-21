@@ -10,6 +10,7 @@ import {
   MatchStatus
 } from './supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { stableId } from './ids';
 
 // Human-readable stage titles
 export const STAGE_TITLES: Record<string, string> = {
@@ -117,7 +118,7 @@ export function generateKnockoutBracket(
 
     const matchDate = new Date(baseDate.getTime() + 0 * 86400000);
 
-    const matchId = `match-tourn-${tournament.id}-r1-m${m + 1}`;
+    const matchId = stableId(`match-tourn-${tournament.id}-r1-m${m + 1}`);
     const newMatch: Match = {
       id: matchId,
       club_id: tournament.club_id,
@@ -181,7 +182,7 @@ export function generateKnockoutBracket(
     const roundDate = new Date(baseDate.getTime() + (r - 1) * 2 * 86400000);
 
     for (let m = 0; m < currMatchCount; m++) {
-      const matchId = `match-tourn-${tournament.id}-r${r}-m${m + 1}`;
+      const matchId = stableId(`match-tourn-${tournament.id}-r${r}-m${m + 1}`);
       const parent1 = prevMatches[m * 2];
       const parent2 = prevMatches[m * 2 + 1];
 
@@ -250,7 +251,7 @@ export function generateKnockoutBracket(
   if (tournament.has_third_place_match && totalRounds >= 2) {
     const semiMatches = roundMatches[totalRounds - 2];
     if (semiMatches && semiMatches.length === 2) {
-      const matchId = `match-tourn-${tournament.id}-third-place`;
+      const matchId = stableId(`match-tourn-${tournament.id}-third-place`);
       const semiDate = new Date(baseDate.getTime() + (totalRounds - 1) * 2 * 86400000);
       const thirdPlaceMatch: Match = {
         id: matchId,
@@ -347,7 +348,7 @@ export function generateRoundRobinSchedule(
         away = tmp;
       }
 
-      const matchId = `match-tourn-${tournament.id}${options?.group ? `-g${options.group}` : ''}-r${roundNumber}-m${m + 1}`;
+      const matchId = stableId(`match-tourn-${tournament.id}${options?.group ? `-g${options.group}` : ''}-r${roundNumber}-m${m + 1}`);
       const groupLabel = options?.group ? `Group ${options.group}` : 'League';
 
       matches.push({
@@ -456,7 +457,7 @@ export function generateGroupKnockoutSchedule(
     // --------------------------------------------------------------------------
     // CASE A: 2 Teams Advance -> Direct Grand Final (+ optional 3rd Place Match)
     // --------------------------------------------------------------------------
-    const finalId = `match-tourn-${tournament.id}-ko-final`;
+    const finalId = stableId(`match-tourn-${tournament.id}-ko-final`);
     const finalDate = new Date(koBaseDate.getTime() + 0 * 86400000);
 
     const homeSource = '1st Group A';
@@ -500,7 +501,7 @@ export function generateGroupKnockoutSchedule(
 
     // Optional 3rd Place match
     if (tournament.has_third_place_match) {
-      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      const thirdPlaceId = stableId(`match-tourn-${tournament.id}-ko-third-place`);
       const tpHomeSource = groupCount === 1 ? '3rd Group A' : '2nd Group A';
       const tpAwaySource = groupCount === 1 ? '4th Group A' : '2nd Group B';
 
@@ -542,9 +543,9 @@ export function generateGroupKnockoutSchedule(
     // --------------------------------------------------------------------------
     // CASE B: 4 Teams Advance -> Semi-Finals & Grand Final
     // --------------------------------------------------------------------------
-    const sf1Id = `match-tourn-${tournament.id}-ko-sf1`;
-    const sf2Id = `match-tourn-${tournament.id}-ko-sf2`;
-    const finalId = `match-tourn-${tournament.id}-ko-final`;
+    const sf1Id = stableId(`match-tourn-${tournament.id}-ko-sf1`);
+    const sf2Id = stableId(`match-tourn-${tournament.id}-ko-sf2`);
+    const finalId = stableId(`match-tourn-${tournament.id}-ko-final`);
 
     const sfDate = new Date(koBaseDate.getTime() + 0 * 86400000);
     const finalDate = new Date(koBaseDate.getTime() + 7 * 86400000);
@@ -677,7 +678,7 @@ export function generateGroupKnockoutSchedule(
 
     // 3rd place match
     if (tournament.has_third_place_match) {
-      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      const thirdPlaceId = stableId(`match-tourn-${tournament.id}-ko-third-place`);
       allMatches.push({
         id: thirdPlaceId,
         club_id: tournament.club_id,
@@ -716,9 +717,9 @@ export function generateGroupKnockoutSchedule(
     // --------------------------------------------------------------------------
     // CASE C: 8 Teams Advance -> Quarter-Finals -> Semi-Finals -> Grand Final
     // --------------------------------------------------------------------------
-    const qfIds = [1, 2, 3, 4].map(i => `match-tourn-${tournament.id}-ko-qf${i}`);
-    const sfIds = [1, 2].map(i => `match-tourn-${tournament.id}-ko-sf${i}`);
-    const finalId = `match-tourn-${tournament.id}-ko-final`;
+    const qfIds = [1, 2, 3, 4].map(i => stableId(`match-tourn-${tournament.id}-ko-qf${i}`));
+    const sfIds = [1, 2].map(i => stableId(`match-tourn-${tournament.id}-ko-sf${i}`));
+    const finalId = stableId(`match-tourn-${tournament.id}-ko-final`);
 
     const qfDate = new Date(koBaseDate.getTime() + 0 * 86400000);
     const sfDate = new Date(koBaseDate.getTime() + 7 * 86400000);
@@ -894,7 +895,7 @@ export function generateGroupKnockoutSchedule(
 
     // 3rd place match
     if (tournament.has_third_place_match) {
-      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      const thirdPlaceId = stableId(`match-tourn-${tournament.id}-ko-third-place`);
       allMatches.push({
         id: thirdPlaceId,
         club_id: tournament.club_id,
@@ -933,10 +934,10 @@ export function generateGroupKnockoutSchedule(
     // --------------------------------------------------------------------------
     // CASE D: 16 Teams Advance -> Round of 16 -> QF -> SF -> Grand Final
     // --------------------------------------------------------------------------
-    const r16Ids = Array.from({ length: 8 }, (_, i) => `match-tourn-${tournament.id}-ko-r16-${i + 1}`);
-    const qfIds = [1, 2, 3, 4].map(i => `match-tourn-${tournament.id}-ko-qf${i}`);
-    const sfIds = [1, 2].map(i => `match-tourn-${tournament.id}-ko-sf${i}`);
-    const finalId = `match-tourn-${tournament.id}-ko-final`;
+    const r16Ids = Array.from({ length: 8 }, (_, i) => stableId(`match-tourn-${tournament.id}-ko-r16-${i + 1}`));
+    const qfIds = [1, 2, 3, 4].map(i => stableId(`match-tourn-${tournament.id}-ko-qf${i}`));
+    const sfIds = [1, 2].map(i => stableId(`match-tourn-${tournament.id}-ko-sf${i}`));
+    const finalId = stableId(`match-tourn-${tournament.id}-ko-final`);
 
     const r16Date = new Date(koBaseDate.getTime() + 0 * 86400000);
     const qfDate = new Date(koBaseDate.getTime() + 7 * 86400000);
@@ -1187,7 +1188,7 @@ export function generateGroupKnockoutSchedule(
 
     // 3rd place match
     if (tournament.has_third_place_match) {
-      const thirdPlaceId = `match-tourn-${tournament.id}-ko-third-place`;
+      const thirdPlaceId = stableId(`match-tourn-${tournament.id}-ko-third-place`);
       allMatches.push({
         id: thirdPlaceId,
         club_id: tournament.club_id,

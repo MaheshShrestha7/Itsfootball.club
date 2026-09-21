@@ -1,4 +1,5 @@
 import { Club, Match, NewsArticle, ClubEvent, HeroSliderPinnedItem } from './supabase/types';
+import { getLiveMinute } from './match-clock';
 
 /**
  * Returns default hero pinned slides for a club if none have been explicitly customized.
@@ -32,7 +33,7 @@ export function getDefaultHeroPinnedItems(
       target_id: liveOrUpcoming.id,
       title: `${liveOrUpcoming.home_team_name} vs ${liveOrUpcoming.away_team_name}`,
       subtitle: `${compLabel} • ${liveOrUpcoming.venue}`,
-      badge: isLive ? `MATCHDAY LIVE • ${liveOrUpcoming.current_minute}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
+      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(liveOrUpcoming)}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
       image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       cta_label: isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${liveOrUpcoming.id}`,

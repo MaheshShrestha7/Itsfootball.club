@@ -25,6 +25,7 @@ import {
   Calendar,
   Wifi
 } from 'lucide-react';
+import LiveMinute from '@/components/LiveMinute';
 
 export default function MatchCenterPage({
   params,
@@ -155,30 +156,6 @@ export default function MatchCenterPage({
       } catch {}
     }
   }, [match?.id, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
-
-  // 2. Supabase Realtime Channel Subscription
-  useEffect(() => {
-    if (!match || !isSupabaseConfigured) return;
-    const client = getSupabaseClient();
-    if (!client) return;
-
-    try {
-      const channel = client
-        .channel(`public_match_${match.id}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${match.id}` }, payload => {
-          if (payload.new) {
-            updateMatch(match.id, payload.new as any);
-            setLiveSyncPulse(true);
-            setTimeout(() => setLiveSyncPulse(false), 2000);
-          }
-        })
-        .subscribe();
-
-      return () => {
-        client.removeChannel(channel);
-      };
-    } catch {}
-  }, [match?.id, updateMatch]);
 
   if (!isHydrated) {
     return (
@@ -375,7 +352,7 @@ export default function MatchCenterPage({
             )}
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
-                <span className="pulse-dot" /> LIVE • {match.current_minute}&apos;
+                <span className="pulse-dot" /> LIVE • <LiveMinute match={match} />&apos;
                 {match.added_time > 0 && <span style={{ color: '#F59E0B', marginLeft: '0.25rem' }}>(+{match.added_time}&apos;)</span>}
               </span>
             ) : match.status === 'halftime' ? (

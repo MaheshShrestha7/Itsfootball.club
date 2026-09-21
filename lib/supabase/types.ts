@@ -95,7 +95,7 @@ export interface ClubMember {
   player_position?: PlayerPosition;
   secondary_positions?: PlayerPosition[];
   jersey_number?: number;
-  photo_url: string;
+  photo_url?: string;
   date_of_birth?: string;
   nationality?: string;
   preferred_foot?: 'Right' | 'Left' | 'Both';
@@ -107,9 +107,6 @@ export interface ClubMember {
   reviewed_at?: string;
   reviewed_by?: string;
   rejection_reason?: string;
-  password_hash?: string;
-  magic_token?: string;
-  magic_token_expires_at?: string;
   application_notes?: string;
   emergency_contact?: string;
   qr_code_token: string;
@@ -178,6 +175,8 @@ export interface Match {
   home_score: number;
   away_score: number;
   current_minute: number;
+  /** When the current period (re)started; the live minute is current_minute + time elapsed since */
+  period_started_at?: string;
   added_time: number;
   period: MatchPeriod;
   home_formation?: string;
@@ -505,7 +504,6 @@ export interface MemberApplicationInput {
   full_name: string;
   email: string;
   phone?: string;
-  password?: string;
   membership_tier: string;
   player_position?: PlayerPosition;
   jersey_number?: number;

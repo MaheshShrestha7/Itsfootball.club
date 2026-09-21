@@ -35,3 +35,11 @@ export function getSupabaseClient(): SupabaseClient | null {
 }
 
 export const supabase = getSupabaseClient();
+
+/** Access token of the signed-in user, for calls to our own API routes */
+export async function getAccessToken(): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}

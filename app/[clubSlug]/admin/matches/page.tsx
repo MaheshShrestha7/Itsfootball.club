@@ -35,6 +35,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
+import LiveMinute from '@/components/LiveMinute';
 
 const FLYER_PRESETS = [
   {
@@ -719,7 +720,7 @@ export default function AdminMatchesPage({
                     {m.status === 'live' ? (
                       <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid #EF4444', fontWeight: 800 }}>
                         <Radio size={10} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                        LIVE • {m.current_minute}&apos; IN PLAY
+                        LIVE • <LiveMinute match={m} />&apos; IN PLAY
                       </span>
                     ) : m.status === 'halftime' ? (
                       <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', border: '1px solid #F59E0B', fontWeight: 800 }}>

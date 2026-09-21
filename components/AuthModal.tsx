@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
@@ -21,13 +22,28 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [noticeMsg, setNoticeMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Lock page scroll behind the dialog while it is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setNoticeMsg(null);
     setSubmitting(true);
 
     try {
@@ -45,6 +61,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         const res = await signup(email, fullName, password);
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to register account.');
+        } else if (res.needsEmailConfirmation) {
+          setNoticeMsg('Account created. Check your inbox and click the confirmation link, then sign in.');
         } else {
           onClose();
           if (redirectTo) {
@@ -59,7 +77,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     }
   };
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -67,14 +85,14 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 1000,
+        zIndex: 10000,
         background: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
-        padding: '1.5rem',
+        overflowY: 'auto',
+        padding: '1.5rem 1rem',
       }}
       onClick={onClose}
     >
@@ -89,6 +107,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           borderRadius: 'var(--radius-xl)',
           boxShadow: 'var(--shadow-lg)',
           position: 'relative',
+          margin: 'auto',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -187,26 +206,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         </div>
 
         {/* Error Alert */}
-        {errorMsg && (
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid #EF4444',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.65rem 0.85rem',
-              color: '#EF4444',
-              fontSize: '0.78rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '1.25rem',
-            }}
-            role="alert"
-          >
-            <AlertCircle size={15} style={{ flexShrink: 0 }} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -217,7 +216,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
                 type="text"
                 required
                 className="form-input"
-                placeholder="Elena Vance"
+                placeholder="Your full name"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
               />
@@ -240,12 +239,42 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             <label className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
             <input
               type="password"
+              required
+              minLength={mode === 'signup' ? 8 : undefined}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               className="form-input"
-              placeholder="••••••••••••"
+              placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••••••'}
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
           </div>
+
+    {errorMsg && (
+      <div
+        style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid #EF4444',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.65rem 0.85rem',
+          color: '#EF4444',
+          fontSize: '0.78rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: 0,
+        }}
+        role="alert"
+      >
+        <AlertCircle size={15} style={{ flexShrink: 0 }} />
+        <span>{errorMsg}</span>
+      </div>
+    )}
+
+          {noticeMsg && (
+            <div role="status" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10B981', color: '#6EE7B7', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.8rem' }}>
+              {noticeMsg}
+            </div>
+          )}
 
           <button
             type="submit"
@@ -258,6 +287,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -4,10 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 // Server-side secure Supabase client initialization
 function getServerSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Use service secret key on server for safe administrative access bypassing RLS recursion
+  // Public figures only, so use the public key and let row-level security apply
   const supabaseKey =
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -86,10 +84,10 @@ export async function GET(
 
     const clubId = club.id;
 
-    // 2. Query raw Members table
+    // 2. Approved members (public-safe view: personal details are not exposed)
     const { data: members, error: membersError } = await supabase
-      .from('members')
-      .select('id, role, position, is_active')
+      .from('club_members_public')
+      .select('id, role, player_position, status')
       .eq('club_id', clubId);
 
     const totalMembers = members ? members.length : 0;
@@ -97,7 +95,7 @@ export async function GET(
       ? members.filter(
           m =>
             (m.role && (m.role.toLowerCase() === 'player' || m.role.toLowerCase().includes('player'))) ||
-            Boolean(m.position)
+            Boolean(m.player_position)
         ).length
       : 0;
 
@@ -176,7 +174,7 @@ export async function GET(
         short_name: club.short_name,
         motto: club.motto || club.config?.identity?.motto || '',
         founded_year: club.config?.identity?.founded_year || club.founded_year || 2018,
-        stadium_name: club.config?.identity?.stadium_name || club.stadium_name || 'Home Stadium',
+        stadium_name: club.config?.identity?.stadium_name || club.stadium_name || '',
         stadium_address: club.config?.contact?.address || club.stadium_address || '',
       },
       stats: {

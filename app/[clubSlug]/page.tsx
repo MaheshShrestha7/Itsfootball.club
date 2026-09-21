@@ -32,6 +32,8 @@ import {
   QrCode
 } from 'lucide-react';
 import { Match, ClubEvent, NewsArticle } from '@/lib/supabase/types';
+import { getLiveMinute } from '@/lib/match-clock';
+import LiveMinute from '@/components/LiveMinute';
 
 interface HomeHeroSlide {
   id: string;
@@ -173,7 +175,7 @@ export default function ClubPublicPage({
             id: item.id || `pin-fixture-${idx}`,
             category: 'match',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
-            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${matchItem?.current_minute}' IN PLAY` : `FIXTURE • ${compClean}`),
+            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinute(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
             subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
@@ -239,7 +241,7 @@ export default function ClubPublicPage({
         category: 'match',
         tabLabel: liveMatch ? 'Matchday Live' : 'Matchday Hub',
         badge: liveMatch
-          ? `MATCHDAY LIVE • ${liveMatch.current_minute}' IN PLAY`
+          ? `MATCHDAY LIVE • ${getLiveMinute(liveMatch)}' IN PLAY`
           : `UPCOMING FIXTURE • ${(!upcomingMatches[0]?.competition || upcomingMatches[0]?.competition === 'Premier Regional League') ? (upcomingMatches[0]?.match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`,
         bgImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
         title: liveMatch
@@ -759,7 +761,7 @@ export default function ClubPublicPage({
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span className="badge badge-live">
-                            <span className="pulse-dot" /> MATCHDAY LIVE • {activeSlideMatch.current_minute}&apos;
+                            <span className="pulse-dot" /> MATCHDAY LIVE • <LiveMinute match={activeSlideMatch} />&apos;
                           </span>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' MATCH' : 'CLUB FRIENDLY') : activeSlideMatch.competition}

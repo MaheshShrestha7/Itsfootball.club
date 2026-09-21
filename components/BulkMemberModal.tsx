@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { secureToken } from '@/lib/ids';
 import { Club, ClubMember, PlayerPosition, PlayerStatus, ClubRole, MembershipStatus } from '@/lib/supabase/types';
 import {
   Download,
@@ -319,7 +320,7 @@ export default function BulkMemberModal({
             membership_status: (item.membership_status || 'approved') as MembershipStatus,
             membership_tier: item.membership_tier || 'Full Senior Member',
             membership_expires_at: item.membership_expires_at || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            qr_code_token: item.qr_code_token || `pass-${Math.random().toString(36).substring(2, 10)}`,
+            qr_code_token: item.qr_code_token || secureToken('pass'),
             is_executive: Boolean(item.is_executive || item.role === 'Executive Committee'),
             executive_title: item.executive_title || undefined,
             emergency_contact: item.emergency_contact || undefined,
@@ -402,7 +403,7 @@ export default function BulkMemberModal({
         membership_status: (rawObj['membershipstatus'] || 'approved') as MembershipStatus,
         membership_tier: rawObj['membershiptier'] || rawObj['tier'] || 'Full Senior Member',
         membership_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        qr_code_token: `pass-${Math.random().toString(36).substring(2, 10)}`,
+        qr_code_token: secureToken('pass'),
         is_executive: (rawObj['role'] || '').toLowerCase().includes('exec') || Boolean(rawObj['isexecutive']),
         executive_title: rawObj['executivetitle'] || undefined,
         emergency_contact: rawObj['emergencycontact'] || undefined,

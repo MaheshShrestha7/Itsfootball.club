@@ -20,14 +20,18 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
   const [inquiryType, setInquiryType] = useState<InquiryType>(defaultType);
   const [message, setMessage] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senderName || !senderEmail || !message) return;
 
-    submitInquiry({
+    setSending(true);
+    setSendError(null);
+    const result = await submitInquiry({
       club_id: club.id,
       sender_name: senderName,
       sender_email: senderEmail,
@@ -35,7 +39,12 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       inquiry_type: inquiryType,
       message,
     });
+    setSending(false);
 
+    if (!result.success) {
+      setSendError(result.error || 'Your message could not be sent.');
+      return;
+    }
     setIsSubmitted(true);
   };
 
@@ -56,11 +65,12 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       background: 'rgba(0, 0, 0, 0.85)',
       backdropFilter: 'blur(12px)',
       display: 'flex',
-      alignItems: 'center',
       justifyContent: 'center',
+      overflowY: 'auto',
       padding: '1rem',
     }}>
       <div className="glass-panel" style={{
+        margin: 'auto',
         width: '100%',
         maxWidth: '540px',
         background: 'var(--bg-surface-elevated)',
@@ -204,6 +214,12 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               />
             </div>
 
+            {sendError && (
+              <div role="alert" style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #EF4444', background: 'rgba(239, 68, 68, 0.12)', color: '#FCA5A5', fontSize: '0.8rem' }}>
+                {sendError}
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Club Office: {club.contact_email}
@@ -212,8 +228,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                 <button type="button" onClick={handleResetAndClose} className="btn btn-secondary btn-sm">
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Send size={14} /> Send Message
+                <button type="submit" disabled={sending} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Send size={14} /> {sending ? 'Sending...' : 'Send Message'}
                 </button>
               </div>
             </div>

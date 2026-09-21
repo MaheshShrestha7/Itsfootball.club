@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   Club,
   ClubMember,
@@ -46,6 +46,8 @@ import {
   seedKnockoutFromGroups
 } from './tournament-engine';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
+import { newId, stableId, secureToken, isUuid } from './ids';
+import { SupabaseSync, SyncState } from './supabase/sync';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -67,6 +69,13 @@ export function broadcastLiveMatchdayEvent(message: any) {
   }
 }
 
+export interface SyncStatus {
+  /** off = Supabase not configured; readonly = changes are waiting for a sign-in */
+  phase: 'off' | 'loading' | 'idle' | 'saving' | 'readonly' | 'error';
+  message?: string;
+  pending?: number;
+}
+
 interface ClubContextType {
   clubs: Club[];
   activeClub: Club | null;
@@ -82,6 +91,12 @@ interface ClubContextType {
   
   // Hydration state
   isHydrated: boolean;
+
+  // Supabase sync
+  syncStatus: SyncStatus;
+  retrySync: () => void;
+  /** Re-read everything from Supabase (e.g. after a member profile was linked) */
+  reloadFromServer: () => void;
 
   // Selection
   selectClubBySlug: (slug: string) => Club | null;
@@ -137,7 +152,9 @@ interface ClubContextType {
   checkInMemberToEvent: (eventId: string, qrToken: string) => { success: boolean; message: string; attendeeName?: string };
   
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>) => void;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>) => Promise<{ success: boolean; error?: string }>;
+  inquiries: ContactInquiry[];
+  updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
   // Gamification & ClubScore Engine
   clubScoreProfiles: ClubScoreProfile[];
@@ -153,6 +170,11 @@ interface ClubContextType {
   setPlayerAvailability: (matchId: string, memberId: string, status: AvailabilityStatus, note?: string) => void;
   getMatchAvailabilities: (matchId: string) => PlayerAvailability[];
   getAvailabilityByToken: (token: string) => { availability: PlayerAvailability; member: ClubMember; match?: Match; event?: ClubEvent } | null;
+  /** Player-facing: look up a personal RSVP link (works for signed-out visitors) */
+  resolveAvailabilityToken: (token: string) => Promise<{ availability: PlayerAvailability; member?: ClubMember; match?: Match; event?: ClubEvent } | null>;
+  respondToAvailabilityToken: (token: string, status: AvailabilityStatus, note?: string) => Promise<{ success: boolean; error?: string }>;
+  /** Admin: make sure a player has a personal RSVP link for this match */
+  ensureAvailability: (matchId: string, memberId: string) => PlayerAvailability | undefined;
 
   // Draft Lineups (Coach Workbench)
   draftLineups: DraftLineup[];
@@ -167,6 +189,7 @@ interface ClubContextType {
   analyticsEvents: ClubAnalytics[];
   gateScans: GateScanRecord[];
   trackPageView: (clubId: string, path: string) => void;
+  loadClubAnalytics: (clubId: string) => Promise<void>;
   recordGateScan: (scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => void;
   getClubAnalytics: (clubId: string) => ClubAnalyticsSummary;
 
@@ -175,9 +198,6 @@ interface ClubContextType {
   applyForMembership: (clubId: string, input: MemberApplicationInput) => { success: boolean; member?: ClubMember; message: string; error?: string };
   approveMemberApplication: (memberId: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
-  verifyMemberLogin: (clubId: string, email: string, password?: string) => { success: boolean; member?: ClubMember; error?: string; status?: 'pending' | 'approved' | 'rejected' };
-  requestMagicLink: (clubId: string, email: string) => { success: boolean; token?: string; magicLinkUrl?: string; error?: string; status?: 'pending' | 'approved' | 'rejected' };
-  verifyMagicLink: (clubId: string, token: string) => { success: boolean; member?: ClubMember; error?: string };
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
   getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
@@ -277,6 +297,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [seasons, setSeasons] = useState<ClubSeason[]>([]);
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
   const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
+  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [memberMessages, setMemberMessages] = useState<MemberMessage[]>([]);
   const [internalTeams, setInternalTeams] = useState<InternalTeam[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -321,7 +342,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
           if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
-          if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
           if (Array.isArray(parsed.internalTeams)) {
@@ -343,31 +363,241 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load clubs from Supabase (source of truth); local-only clubs are kept until synced
+  // ---------------------------------------------------------------------------
+  // Supabase sync: the database is the source of truth, localStorage is a cache
+  // ---------------------------------------------------------------------------
+  const syncRef = useRef<SupabaseSync | null>(null);
+  const syncStateRef = useRef<Partial<SyncState>>({});
+  const flushingRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const [syncReady, setSyncReady] = useState(false);
+  const [loadNonce, setLoadNonce] = useState(0);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    phase: isSupabaseConfigured ? 'loading' : 'off',
+  });
+
+  syncStateRef.current = {
+    clubs,
+    members,
+    seasons,
+    internalTeams,
+    tournaments,
+    tournamentParticipants,
+    playerStats,
+    matches,
+    matchEvents,
+    events,
+    sponsors,
+    news,
+    gallery,
+    clubScoreRules,
+    clubScoreProfiles,
+    activityLogs,
+    availabilities,
+    draftLineups,
+    memberMessages,
+    gateScans,
+    inquiries,
+  };
+
+  // Reload when the signed-in user changes (admins see more rows than visitors)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+    let lastUid: string | null | undefined;
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id ?? null;
+      if (lastUid === undefined) {
+        lastUid = uid;
+        return;
+      }
+      if (uid !== lastUid) {
+        lastUid = uid;
+        setLoadNonce(n => n + 1);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  // Initial / repeat load from Supabase
   useEffect(() => {
     if (!isHydrated || !isSupabaseConfigured) return;
     const client = getSupabaseClient();
     if (!client) return;
+
     let cancelled = false;
-    client
-      .from('clubs')
-      .select('*')
-      .then(({ data, error }) => {
+    const engine = new SupabaseSync(client);
+    syncRef.current = engine;
+    setSyncReady(false);
+    setSyncStatus({ phase: 'loading' });
+
+    engine
+      .load()
+      .then(({ data, errors }) => {
         if (cancelled) return;
-        if (error) {
-          console.warn('Could not load clubs from Supabase:', error.message);
-          return;
+        const local = syncStateRef.current;
+
+        // Remote wins field-by-field; rows that exist only locally are kept and uploaded later
+        const mergeById = (localRows: any[] = [], remoteRows: any[]) => {
+          const localById = new Map(localRows.map(r => [r.id, r]));
+          const remoteIds = new Set(remoteRows.map(r => r.id));
+          return [
+            ...remoteRows.map(r => ({ ...(localById.get(r.id) || {}), ...r })),
+            ...localRows.filter(r => !remoteIds.has(r.id)),
+          ];
+        };
+
+        engine.seed(data);
+
+        if (data.clubs) {
+          const merged = mergeById(local.clubs, data.clubs) as Club[];
+          setClubs(merged);
+          setActiveClub(prev => merged.find(c => c.id === prev?.id) || prev || merged[0] || null);
         }
-        if (!data?.length) return;
-        const remote = data as Club[];
-        const remoteIds = new Set(remote.map(c => c.id));
-        setClubs(prev => [...remote, ...prev.filter(c => !remoteIds.has(c.id))]);
-        setActiveClub(prev => remote.find(c => c.id === prev?.id) || prev || remote[0]);
+        if (data.members) setMembers(mergeById(local.members, data.members));
+        if (data.seasons) setSeasons(mergeById(local.seasons, data.seasons));
+        if (data.internalTeams) setInternalTeams(mergeById(local.internalTeams, data.internalTeams));
+        if (data.tournaments) setTournaments(mergeById(local.tournaments, data.tournaments));
+        if (data.tournamentParticipants) setTournamentParticipants(mergeById(local.tournamentParticipants, data.tournamentParticipants));
+        if (data.playerStats) setPlayerStats(mergeById(local.playerStats, data.playerStats));
+        if (data.matches) setMatches(mergeById(local.matches, data.matches));
+        if (data.matchEvents) setMatchEvents(mergeById(local.matchEvents, data.matchEvents));
+        if (data.events) setEvents(mergeById(local.events, data.events));
+        if (data.sponsors) setSponsors(mergeById(local.sponsors, data.sponsors));
+        if (data.news) setNews(mergeById(local.news, data.news));
+        if (data.gallery) setGallery(mergeById(local.gallery, data.gallery));
+        if (data.clubScoreProfiles) setClubScoreProfiles(mergeById(local.clubScoreProfiles, data.clubScoreProfiles));
+        if (data.activityLogs) setActivityLogs(mergeById(local.activityLogs, data.activityLogs));
+        if (data.availabilities) setAvailabilities(mergeById(local.availabilities, data.availabilities));
+        if (data.draftLineups) setDraftLineups(mergeById(local.draftLineups, data.draftLineups));
+        if (data.memberMessages) setMemberMessages(mergeById(local.memberMessages, data.memberMessages));
+        if (data.gateScans) setGateScans(mergeById(local.gateScans, data.gateScans));
+        if (data.inquiries) setInquiries(mergeById(local.inquiries, data.inquiries));
+        if (data.clubScoreRules) {
+          const rules: Record<string, ClubScoreRuleConfig> = { ...(local.clubScoreRules || {}) };
+          (data.clubScoreRules as ClubScoreRuleConfig[]).forEach(r => {
+            rules[r.club_id] = { ...(rules[r.club_id] || {}), ...r };
+          });
+          setClubScoreRules(rules);
+        }
+
+        setSyncReady(true);
+        setSyncStatus(
+          errors.length > 0
+            ? { phase: 'error', message: `Could not load: ${errors.join('; ')}` }
+            : { phase: 'idle' }
+        );
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setSyncStatus({ phase: 'error', message: `Could not reach Supabase: ${err?.message || err}` });
       });
+
     return () => {
       cancelled = true;
     };
-  }, [isHydrated]);
+  }, [isHydrated, loadNonce]);
+
+
+  // Live matchday: Supabase pushes match and event changes to every open screen
+  const clubIdsKey = clubs.map(c => c.id).filter(id => /^[0-9a-f-]{36}$/i.test(id)).sort().join(',');
+  useEffect(() => {
+    if (!syncReady || !isSupabaseConfigured || !clubIdsKey) return;
+    const client = getSupabaseClient();
+    const engine = syncRef.current;
+    if (!client || !engine) return;
+
+    const ids = clubIdsKey.split(',').slice(0, 100);
+    const filter = `club_id=in.(${ids.join(',')})`;
+
+    const apply = <T extends { id: string }>(
+      key: 'matches' | 'matchEvents',
+      setter: React.Dispatch<React.SetStateAction<T[]>>,
+      payload: any
+    ) => {
+      if (payload.eventType === 'DELETE') {
+        const id = payload.old?.id;
+        if (!id) return;
+        engine.removeRemote(key, id);
+        setter(prev => prev.filter(r => r.id !== id));
+        return;
+      }
+      const row = payload.new;
+      if (!row?.id) return;
+      setter(prev => {
+        const existing = prev.find(r => r.id === row.id);
+        const merged = engine.applyRemote(key, existing as any, row) as T;
+        return existing ? prev.map(r => (r.id === row.id ? merged : r)) : [...prev, merged];
+      });
+    };
+
+    const channel = client
+      .channel('live-matchday')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter }, payload =>
+        apply<Match>('matches', setMatches, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter }, payload =>
+        apply<MatchEvent>('matchEvents', setMatchEvents, payload)
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [syncReady, clubIdsKey]);
+
+  const runFlush = useCallback(async () => {
+    const engine = syncRef.current;
+    if (!engine) return;
+    if (flushingRef.current) {
+      dirtyRef.current = true;
+      return;
+    }
+    flushingRef.current = true;
+    try {
+      const result = await engine.flush(syncStateRef.current);
+      if (result.errors.length > 0) {
+        setSyncStatus({ phase: 'error', message: Array.from(new Set(result.errors)).slice(0, 3).join('; ') });
+      } else if (result.pendingReadonly > 0) {
+        setSyncStatus({
+          phase: 'readonly',
+          pending: result.pendingReadonly,
+          message: 'Sign in to save your changes to the cloud.',
+        });
+      } else {
+        setSyncStatus({ phase: 'idle' });
+      }
+    } catch (err: any) {
+      setSyncStatus({ phase: 'error', message: `Sync failed: ${err?.message || err}` });
+    } finally {
+      flushingRef.current = false;
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        runFlush();
+      }
+    }
+  }, []);
+
+  // Push local changes shortly after the last edit
+  useEffect(() => {
+    if (!syncReady) return;
+    const timer = setTimeout(runFlush, 800);
+    return () => clearTimeout(timer);
+  }, [
+    syncReady, runFlush,
+    clubs, members, seasons, internalTeams, tournaments, tournamentParticipants, playerStats,
+    matches, matchEvents, events, sponsors, news, gallery, clubScoreRules, clubScoreProfiles,
+    activityLogs, availabilities, draftLineups, memberMessages, gateScans, inquiries,
+  ]);
+
+  const reloadFromServer = useCallback(() => setLoadNonce(n => n + 1), []);
+
+  const retrySync = useCallback(() => {
+    syncRef.current?.clearFailures();
+    if (syncReady) runFlush();
+    else setLoadNonce(n => n + 1);
+  }, [syncReady, runFlush]);
 
   // Listen to cross-tab storage changes for real-time multi-window sync
   useEffect(() => {
@@ -398,7 +628,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
           if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
-          if (parsed.analyticsEvents?.length) setAnalyticsEvents(parsed.analyticsEvents);
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
           if (Array.isArray(parsed.internalTeams)) setInternalTeams(parsed.internalTeams);
@@ -436,7 +665,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           availabilities,
           draftLineups,
           seasons,
-          analyticsEvents,
           gateScans,
           memberMessages,
           internalTeams,
@@ -466,32 +694,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     availabilities,
     draftLineups,
     seasons,
-    analyticsEvents,
     gateScans,
     memberMessages,
     internalTeams,
     tournaments,
     tournamentParticipants,
   ]);
-
-  // Realtime match timer tick simulation for live matches
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMatches(prevMatches =>
-        prevMatches.map(m => {
-          if (m.status === 'live' && m.current_minute < 90) {
-            return {
-              ...m,
-              current_minute: m.current_minute + 1,
-            };
-          }
-          return m;
-        })
-      );
-    }, 45000); // Advance live match clocks every 45s
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Cross-tab live synchronization via BroadcastChannel
   useEffect(() => {
@@ -566,8 +774,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const slugResult = validateClubSlug(rawSlug, clubs);
     const finalSlug = slugResult.cleanSlug;
 
-    // Supabase `clubs.id` is a UUID, so generate one that can be synced as-is
-    const clubId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `club-${Date.now()}`;
+    const clubId = newId();
     const cleanName = sanitizeText(clubData.name) || 'New Football Club';
 
     const newClub: Club = {
@@ -600,14 +807,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setActiveClub(newClub);
 
     // If Supabase is connected, asynchronously insert the club
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('clubs').insert(newClub).then(({ error }) => {
-          if (error) console.warn('Could not sync created club to Supabase:', error.message);
-        });
-      }
-    }
 
     return newClub;
   }, [clubs]);
@@ -660,66 +859,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        try {
-          // Prepare sanitized payload: only top-level columns that exist in Supabase clubs table
-          const supabasePayload: Record<string, any> = {
-            updated_at: new Date().toISOString(),
-          };
-          if (updates.name !== undefined) supabasePayload.name = updates.name;
-          if (updates.slug !== undefined) supabasePayload.slug = updates.slug;
-          if (updates.short_name !== undefined) supabasePayload.short_name = updates.short_name;
-          if (updates.motto !== undefined) supabasePayload.motto = updates.motto;
-          if (updates.logo_url !== undefined) supabasePayload.logo_url = updates.logo_url;
-          if (updates.founded_year !== undefined) supabasePayload.founded_year = updates.founded_year;
-          if (updates.custom_domain !== undefined) supabasePayload.custom_domain = updates.custom_domain || null;
-          
-          const targetClub = clubs.find(c => c.id === clubId);
-          // Embed rich theme, contact, stadium specs, and hero_pinned_items into config JSONB column
-          supabasePayload.config = {
-            theme: {
-              primaryColor: updates.primary_color !== undefined ? updates.primary_color : targetClub?.primary_color,
-              secondaryColor: updates.secondary_color !== undefined ? updates.secondary_color : targetClub?.secondary_color,
-              accentColor: updates.accent_color !== undefined ? updates.accent_color : targetClub?.accent_color,
-            },
-            contact: {
-              email: updates.contact_email !== undefined ? updates.contact_email : targetClub?.contact_email,
-              phone: updates.contact_phone !== undefined ? updates.contact_phone : targetClub?.contact_phone,
-              address: updates.stadium_address !== undefined ? updates.stadium_address : targetClub?.stadium_address,
-            },
-            identity: {
-              clubName: updates.name !== undefined ? updates.name : targetClub?.name,
-              shortName: updates.short_name !== undefined ? updates.short_name : targetClub?.short_name,
-              motto: updates.motto !== undefined ? updates.motto : targetClub?.motto,
-              founded_year: updates.founded_year !== undefined ? updates.founded_year : targetClub?.founded_year,
-              logoUrl: updates.logo_url !== undefined ? updates.logo_url : targetClub?.logo_url,
-              stadiumName: updates.stadium_name !== undefined ? updates.stadium_name : targetClub?.stadium_name,
-              capacity: updates.stadium_capacity !== undefined ? updates.stadium_capacity : targetClub?.stadium_capacity,
-              pitchType: updates.stadium_pitch_type !== undefined ? updates.stadium_pitch_type : targetClub?.stadium_pitch_type,
-            },
-            hero_pinned_items: updates.hero_pinned_items !== undefined ? updates.hero_pinned_items : targetClub?.hero_pinned_items,
-          };
-
-          client
-            .from('clubs')
-            .update(supabasePayload)
-            .eq('id', clubId)
-            .then(
-              ({ error }) => {
-                if (error) console.warn('Supabase sync notice (local storage preserved):', error.message);
-              },
-              (err: any) => {
-                console.warn('Supabase update catch:', err);
-              }
-            );
-        } catch (e) {
-          console.warn('Error formatting Supabase payload:', e);
-        }
-      }
-    }
-
     if (typeof window !== 'undefined') {
       try {
         const currentSaved = localStorage.getItem(STORAGE_KEY);
@@ -748,7 +887,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addSeason = useCallback((seasonData: Omit<ClubSeason, 'id' | 'created_at' | 'updated_at'>): ClubSeason => {
     const newSeason: ClubSeason = {
       ...seasonData,
-      id: `season-${Date.now()}`,
+      id: newId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -759,15 +898,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, newSeason];
     });
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('club_seasons').insert(newSeason).then(({ error }) => {
-          if (error) console.warn('Could not sync created season to Supabase:', error.message);
-        });
-      }
-    }
 
     return newSeason;
   }, []);
@@ -788,28 +918,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         return s;
       });
     });
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('club_seasons').update(updates).eq('id', seasonId).then(({ error }) => {
-          if (error) console.warn('Could not sync updated season to Supabase:', error.message);
-        });
-      }
-    }
   }, []);
 
   const deleteSeason = useCallback((seasonId: string) => {
     setSeasons(prev => prev.filter(s => s.id !== seasonId));
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('club_seasons').delete().eq('id', seasonId).then(({ error }) => {
-          if (error) console.warn('Could not sync deleted season to Supabase:', error.message);
-        });
-      }
-    }
   }, []);
 
   const setCurrentSeason = useCallback((clubId: string, seasonId: string) => {
@@ -833,9 +945,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   // Fixtures CRUD
   const addMatch = useCallback((matchData: Omit<Match, 'id' | 'created_at'>): Match => {
-    const matchId = `match-${Date.now()}`;
+    const matchId = newId();
     const qrCode = matchData.door_qr_checkin_enabled
-      ? (matchData.door_qr_code || `door-match-${matchId.slice(-8)}-${Math.random().toString(36).substring(2, 7)}`)
+      ? (matchData.door_qr_code || secureToken('door-match'))
       : matchData.door_qr_code;
 
     const newMatch: Match = {
@@ -877,15 +989,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }));
     }
 
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('matches').insert(newMatch).then(({ error }) => {
-          if (error) console.warn('Could not sync created match to Supabase:', error.message);
-        });
-      }
-    }
-
     return newMatch;
   }, []);
 
@@ -898,15 +1001,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       ...c,
       hero_pinned_items: (c.hero_pinned_items || []).filter(p => p.target_id !== matchId && p.id !== `pin-fixture-${matchId}`)
     })));
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('matches').delete().eq('id', matchId).then(({ error }) => {
-          if (error) console.warn('Could not sync deleted match to Supabase:', error.message);
-        });
-      }
-    }
   }, []);
 
   // 3. Update Match
@@ -915,8 +1009,15 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       prev.map(m => {
         if (m.id === matchId) {
           const updated = { ...m, ...updates };
+          // Any change to the period / status / minute restarts the shared match clock
+          if (
+            updates.period_started_at === undefined &&
+            (updates.period !== undefined || updates.status !== undefined || updates.current_minute !== undefined)
+          ) {
+            updated.period_started_at = new Date().toISOString();
+          }
           if (updated.door_qr_checkin_enabled && !updated.door_qr_code) {
-            updated.door_qr_code = `door-match-${matchId.slice(-8)}-${Math.random().toString(36).substring(2, 7)}`;
+            updated.door_qr_code = secureToken('door-match');
           }
           return updated;
         }
@@ -967,15 +1068,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         }
         return currentMatches;
       });
-    }
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('matches').update(updates).eq('id', matchId).then(({ error }) => {
-          if (error) console.warn('Could not sync updated match to Supabase:', error.message);
-        });
-      }
     }
 
     // Cross-tab broadcast for live match centre and public screens
@@ -1034,7 +1126,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         }
 
         const updatedProfile: ClubScoreProfile = {
-          id: existing?.id || `score-${Date.now()}`,
+          id: existing?.id || newId(),
           club_id: member.club_id,
           member_id: memberId,
           season: existing?.season || '2025/2026',
@@ -1051,7 +1143,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
         // Create Activity Log
         const newLog: GamificationActivityLog = {
-          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          id: newId(),
           club_id: member.club_id,
           member_id: memberId,
           event_type: eventType,
@@ -1097,7 +1189,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addMatchEvent = useCallback((eventData: Omit<MatchEvent, 'id' | 'created_at'>) => {
     const newEvent: MatchEvent = {
       ...eventData,
-      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: newId(),
       created_at: new Date().toISOString(),
     };
 
@@ -1156,15 +1248,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       event: newEvent,
       timestamp: Date.now(),
     });
-
-    if (isSupabaseConfigured) {
-      const client = getSupabaseClient();
-      if (client) {
-        client.from('match_events').insert(newEvent).then(({ error }) => {
-          if (error) console.warn('Could not sync match event to Supabase:', error.message);
-        });
-      }
-    }
   }, [members, awardClubScorePoints]);
 
   const deleteMatchEvent = useCallback((eventId: string) => {
@@ -1200,7 +1283,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addEvent = useCallback((eventData: Omit<ClubEvent, 'id' | 'created_at'>) => {
     const newEvt: ClubEvent = {
       ...eventData,
-      id: `event-${Date.now()}`,
+      id: newId(),
       created_at: new Date().toISOString(),
     };
     setEvents(prev => [newEvt, ...prev]);
@@ -1218,15 +1301,15 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addMember = useCallback((memberData: Omit<ClubMember, 'id' | 'created_at'>): ClubMember => {
     const newMem: ClubMember = {
       ...memberData,
-      id: `mem-${Date.now()}`,
-      qr_code_token: memberData.qr_code_token || `pass-${Math.random().toString(36).substring(2, 10)}`,
+      id: newId(),
+      qr_code_token: memberData.qr_code_token || secureToken('pass'),
       created_at: new Date().toISOString(),
     };
     setMembers(prev => [...prev, newMem]);
 
     // Initialize stats
     const newStats: PlayerStats = {
-      id: `stat-${newMem.id}`,
+      id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
       club_id: newMem.club_id,
       member_id: newMem.id,
       season: '2025/2026',
@@ -1275,17 +1358,17 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           } else if (existingIdx === -1) {
             const newMem: ClubMember = {
               ...memData,
-              id: `mem-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+              id: newId(),
               qr_code_token:
                 memData.qr_code_token ||
-                `pass-${Math.random().toString(36).substring(2, 10)}`,
+                secureToken('pass'),
               created_at: new Date().toISOString(),
             };
             nextMembers.push(newMem);
             added++;
 
             newStats.push({
-              id: `stat-${newMem.id}`,
+              id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
               club_id: newMem.club_id,
               member_id: newMem.id,
               season: '2025/2026',
@@ -1349,7 +1432,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addSponsor = useCallback((sponsorData: Omit<Sponsor, 'id'>) => {
     const newSpon: Sponsor = {
       ...sponsorData,
-      id: `spon-${Date.now()}`,
+      id: newId(),
     };
     setSponsors(prev => [...prev, newSpon]);
   }, []);
@@ -1366,7 +1449,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addNewsArticle = useCallback((articleData: Omit<NewsArticle, 'id' | 'published_at'>) => {
     const newArticle: NewsArticle = {
       ...articleData,
-      id: `news-${Date.now()}`,
+      id: newId(),
       published_at: new Date().toISOString(),
     };
     setNews(prev => [newArticle, ...prev]);
@@ -1383,7 +1466,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addMediaItem = useCallback((mediaData: Omit<MediaGalleryItem, 'id' | 'created_at'>) => {
     const newMedia: MediaGalleryItem = {
       ...mediaData,
-      id: `media-${Date.now()}`,
+      id: newId(),
       created_at: new Date().toISOString(),
     };
     setGallery(prev => [newMedia, ...prev]);
@@ -1461,9 +1544,35 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [verifyMemberPass, events, awardClubScorePoints]);
 
   // 11. Inquiries
-  const submitInquiry = useCallback((inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>) => {
-    // Stored / logged
-    console.log('Inquiry submitted:', inquiryData);
+  const submitInquiry = useCallback(async (
+    inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>
+  ): Promise<{ success: boolean; error?: string }> => {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'Messages cannot be sent right now. Please try again later.' };
+
+    const message = sanitizeText(inquiryData.message);
+    const name = sanitizeText(inquiryData.sender_name);
+    const email = sanitizeText(inquiryData.sender_email);
+    if (!name || !email || !message) return { success: false, error: 'Please fill in your name, email and message.' };
+    if (message.length > 4000) return { success: false, error: 'Your message is too long (4000 characters maximum).' };
+
+    // Straight to the database (visitors have no local copy); club admins read it in their inbox
+    const { error } = await client.from('contact_inquiries').insert({
+      id: newId(),
+      club_id: inquiryData.club_id,
+      sender_name: name,
+      sender_email: email,
+      sender_phone: inquiryData.sender_phone ? sanitizeText(inquiryData.sender_phone) : null,
+      inquiry_type: inquiryData.inquiry_type,
+      message,
+      status: 'unread',
+    });
+    if (error) return { success: false, error: 'Your message could not be sent. Please try again in a moment.' };
+    return { success: true };
+  }, []);
+
+  const updateInquiryStatus = useCallback((inquiryId: string, status: ContactInquiry['status']) => {
+    setInquiries(prev => prev.map(i => (i.id === inquiryId ? { ...i, status } : i)));
   }, []);
 
   // 12. Pre-Match Availability & RSVP Hub
@@ -1489,13 +1598,13 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         );
       }
       const newAvail: PlayerAvailability = {
-        id: `avail-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: newId(),
         club_id: activeClub?.id || '',
         match_id: matchId,
         member_id: memberId,
         status,
         note: note ? sanitizeText(note) : undefined,
-        response_token: `tok-${memberId}-${Date.now().toString(36)}`,
+        response_token: secureToken('rsvp'),
         responded_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -1507,6 +1616,55 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const getMatchAvailabilities = useCallback((matchId: string): PlayerAvailability[] => {
     return availabilities.filter(a => a.match_id === matchId);
   }, [availabilities]);
+
+  const ensureAvailability = useCallback((matchId: string, memberId: string): PlayerAvailability | undefined => {
+    const existing = availabilities.find(a => a.match_id === matchId && a.member_id === memberId);
+    if (existing) return existing;
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return undefined;
+    const created: PlayerAvailability = {
+      id: newId(),
+      club_id: match.club_id,
+      match_id: matchId,
+      member_id: memberId,
+      status: 'pending',
+      response_token: secureToken('rsvp'),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setAvailabilities(prev =>
+      prev.some(a => a.match_id === matchId && a.member_id === memberId) ? prev : [...prev, created]
+    );
+    return created;
+  }, [availabilities, matches]);
+
+  const resolveAvailabilityToken = useCallback(async (token: string) => {
+    const client = getSupabaseClient();
+    if (!client || !token) return null;
+    const { data, error } = await client.rpc('get_availability_by_token', { p_token: token });
+    const availability = Array.isArray(data) ? (data[0] as PlayerAvailability | undefined) : undefined;
+    if (error || !availability) return null;
+    return {
+      availability,
+      member: members.find(m => m.id === availability.member_id),
+      match: matches.find(m => m.id === availability.match_id),
+      event: events.find(e => e.id === availability.event_id),
+    };
+  }, [members, matches, events]);
+
+  const respondToAvailabilityToken = useCallback(async (token: string, status: AvailabilityStatus, note?: string) => {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'Responses cannot be saved right now.' };
+    const { data, error } = await client.rpc('respond_availability', {
+      p_token: token,
+      p_status: status,
+      p_note: note ? sanitizeText(note) : null,
+    });
+    if (error || !Array.isArray(data) || data.length === 0) {
+      return { success: false, error: 'This link is no longer valid. Please ask your club for a new one.' };
+    }
+    return { success: true };
+  }, []);
 
   const getAvailabilityByToken = useCallback((token: string) => {
     if (!token) return null;
@@ -1535,7 +1693,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         );
       }
       const newDraft: DraftLineup = {
-        id: `draft-${Date.now()}`,
+        id: newId(),
         club_id: draft.club_id,
         match_id: draft.match_id,
         format: draft.format || '11v11',
@@ -1710,6 +1868,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
     if (typeof window === 'undefined') return;
+    const client = getSupabaseClient();
+    if (!client || !isUuid(clubId)) return;
+
+    try {
+      // One count per page per 30 minutes for the same browser
+      const key = `itsfootball_pv_${clubId}_${path}`;
+      const last = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      sessionStorage.setItem(key, String(Date.now()));
+    } catch {
+      // storage unavailable: count it anyway
+    }
 
     let device = 'Desktop';
     const ua = navigator.userAgent || '';
@@ -1719,24 +1889,60 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       device = 'Mobile';
     }
 
-    const newEvent: ClubAnalytics = {
-      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      club_id: clubId,
-      event_type: 'page_view',
-      page_path: path,
-      visitor_hash: `${device.toLowerCase()}-${Math.random().toString(36).substring(2, 9)}`,
-      referrer: document.referrer || undefined,
-      metadata: { device, screenWidth: window.innerWidth },
-      created_at: new Date().toISOString(),
-    };
+    // Anonymous, stable per browser so unique visitors can be counted
+    let visitor = '';
+    try {
+      visitor = localStorage.getItem('itsfootball_vid') || '';
+      if (!visitor) {
+        visitor = secureToken('v').slice(0, 24);
+        localStorage.setItem('itsfootball_vid', visitor);
+      }
+    } catch {
+      visitor = 'anon';
+    }
 
-    setAnalyticsEvents(prev => [newEvent, ...prev.slice(0, 999)]);
+    client
+      .from('club_analytics')
+      .insert({
+        id: newId(),
+        club_id: clubId,
+        event_type: 'page_view',
+        page_path: path.slice(0, 255),
+        visitor_hash: visitor,
+        referrer: document.referrer || null,
+        metadata: { device, screenWidth: window.innerWidth },
+      })
+      .then(({ error }) => {
+        if (error) console.warn('Could not record page view:', error.message);
+      });
+  }, []);
+
+  // Admin dashboards read the last 90 days of visits straight from the database
+  const loadClubAnalytics = useCallback(async (clubId: string) => {
+    const client = getSupabaseClient();
+    if (!client || !isUuid(clubId)) return;
+    const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const { data, error } = await client
+      .from('club_analytics')
+      .select('*')
+      .eq('club_id', clubId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (error) {
+      console.warn('Could not load analytics:', error.message);
+      return;
+    }
+    setAnalyticsEvents(prev => [
+      ...(data as ClubAnalytics[]),
+      ...prev.filter(e => e.club_id !== clubId),
+    ]);
   }, []);
 
   const recordGateScan = useCallback((scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => {
     const newScan: GateScanRecord = {
       ...scan,
-      id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: newId(),
       scanned_at: new Date().toISOString(),
     };
 
@@ -1918,8 +2124,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     const role: ClubRole = input.membership_tier.toLowerCase().includes('supporter') ? 'supporter' : 'player';
-    const newMemberId = `mem-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-    const pendingToken = `pass-pending-${clubId.replace('club-', '')}-${Date.now().toString(36)}`;
+    const newMemberId = newId();
+    const pendingToken = secureToken('pass-pending');
 
     const newMem: ClubMember = {
       id: newMemberId,
@@ -1935,10 +2141,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       membership_tier: input.membership_tier || 'Supporter Season Pass',
       membership_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       qr_code_token: pendingToken,
-      photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
       is_executive: false,
       applied_at: new Date().toISOString(),
-      password_hash: input.password ? input.password : undefined,
       application_notes: input.application_notes ? sanitizeText(input.application_notes) : undefined,
       emergency_contact: input.emergency_contact ? sanitizeText(input.emergency_contact) : undefined,
       created_at: new Date().toISOString(),
@@ -1948,7 +2152,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     // Initialize stats
     const newStats: PlayerStats = {
-      id: `stat-${newMem.id}`,
+      id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
       club_id: clubId,
       member_id: newMem.id,
       season: '2025/2026',
@@ -1976,7 +2180,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: 'Member record not found.' };
     }
 
-    const activeToken = `pass-${member.club_id.replace('club-', '')}-${Date.now().toString(36)}`;
+    const activeToken = secureToken('pass');
 
     const updatedMember: ClubMember = {
       ...member,
@@ -1994,7 +2198,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     // Automated welcome message
     const welcomeMsg: MemberMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: newId(),
       club_id: member.club_id,
       member_id: member.id,
       sender_type: 'admin',
@@ -2039,109 +2243,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [members]);
 
-  const verifyMemberLogin = useCallback((clubId: string, email: string, password?: string): { success: boolean; member?: ClubMember; error?: string; status?: 'pending' | 'approved' | 'rejected' } => {
-    const cleanEmail = email.toLowerCase().trim();
-    const member = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
-
-    if (!member) {
-      return { success: false, error: 'No member profile found with this email. Please apply for membership first.' };
-    }
-
-    const status = member.membership_status || 'approved';
-
-    if (status === 'pending') {
-      return {
-        success: false,
-        member,
-        status: 'pending',
-        error: 'Your membership application is currently pending review by club administration. Please wait for committee approval.'
-      };
-    }
-
-    if (status === 'rejected') {
-      return {
-        success: false,
-        member,
-        status: 'rejected',
-        error: `Your application was not approved: ${member.rejection_reason || 'Application declined by committee'}.`
-      };
-    }
-
-    if (member.status === 'suspended') {
-      return {
-        success: false,
-        member,
-        error: 'Your membership has been temporarily suspended. Please contact club administration.'
-      };
-    }
-
-    if (password && member.password_hash && member.password_hash !== password) {
-      return { success: false, error: 'Incorrect password. Please try again or request a magic link.' };
-    }
-
-    return { success: true, member, status: 'approved' };
-  }, [members]);
-
-  const requestMagicLink = useCallback((clubId: string, email: string): { success: boolean; token?: string; magicLinkUrl?: string; error?: string; status?: 'pending' | 'approved' | 'rejected' } => {
-    const cleanEmail = email.toLowerCase().trim();
-    const member = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
-
-    if (!member) {
-      return { success: false, error: 'No member account found with this email address.' };
-    }
-
-    const status = member.membership_status || 'approved';
-    if (status === 'pending') {
-      return {
-        success: false,
-        status: 'pending',
-        error: 'Your application is awaiting committee review. Magic links are only issued to approved members.'
-      };
-    }
-    if (status === 'rejected') {
-      return {
-        success: false,
-        status: 'rejected',
-        error: `Your application was not approved: ${member.rejection_reason || 'Declined'}.`
-      };
-    }
-
-    const token = `ml_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
-
-    setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, magic_token: token, magic_token_expires_at: expires } : m)));
-
-    const club = clubs.find(c => c.id === clubId);
-    const slug = club?.slug || 'club';
-    const magicLinkUrl = `/${slug}/member?magic_token=${token}`;
-
-    return {
-      success: true,
-      token,
-      magicLinkUrl,
-    };
-  }, [members, clubs]);
-
-  const verifyMagicLink = useCallback((clubId: string, token: string): { success: boolean; member?: ClubMember; error?: string } => {
-    const member = members.find(m => m.club_id === clubId && m.magic_token === token);
-    if (!member) {
-      return { success: false, error: 'Invalid or expired magic link token.' };
-    }
-
-    if (member.magic_token_expires_at && new Date(member.magic_token_expires_at) < new Date()) {
-      return { success: false, error: 'This magic link has expired. Please request a new one.' };
-    }
-
-    // Invalidate token on consumption
-    setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, magic_token: undefined, magic_token_expires_at: undefined } : m)));
-
-    return { success: true, member };
-  }, [members]);
-
   const sendMemberMessage = useCallback((messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>): MemberMessage => {
     const newMsg: MemberMessage = {
       ...messageData,
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: newId(),
       subject: messageData.subject ? sanitizeText(messageData.subject) : 'Member Inquiry',
       content: sanitizeText(messageData.content),
       is_read: false,
@@ -2159,7 +2264,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
 
     const replyMsg: MemberMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: newId(),
       club_id: original.club_id,
       member_id: original.member_id,
       sender_type: 'admin',
@@ -2258,7 +2363,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const createInternalTeam = useCallback((teamData: Omit<InternalTeam, 'id' | 'created_at' | 'updated_at'>) => {
     const newTeam: InternalTeam = {
       ...teamData,
-      id: `team-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: newId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -2278,7 +2383,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
     participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]
   ) => {
-    const tournId = `tourn-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const tournId = newId();
     const newTournament: Tournament = {
       ...tournamentData,
       id: tournId,
@@ -2290,7 +2395,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     if (participantInputs && participantInputs.length > 0) {
       const newParticipants: TournamentParticipant[] = participantInputs.map((p, idx) => ({
         ...p,
-        id: `part-${tournId}-${idx + 1}`,
+        id: newId(),
         tournament_id: tournId,
       }));
       setTournamentParticipants(prev => [...prev, ...newParticipants]);
@@ -2312,7 +2417,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const addTournamentParticipant = useCallback((participantData: Omit<TournamentParticipant, 'id'>) => {
     const newParticipant: TournamentParticipant = {
       ...participantData,
-      id: `part-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: newId(),
     };
     setTournamentParticipants(prev => [...prev, newParticipant]);
     return newParticipant;
@@ -2460,6 +2565,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       value={{
         clubs,
         isHydrated,
+        syncStatus,
+        retrySync,
+        reloadFromServer,
         activeClub,
         members,
         playerStats,
@@ -2477,6 +2585,12 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         draftLineups,
         analyticsEvents,
         gateScans,
+        inquiries,
+        updateInquiryStatus,
+        loadClubAnalytics,
+        resolveAvailabilityToken,
+        respondToAvailabilityToken,
+        ensureAvailability,
         selectClubBySlug,
         createClub,
         updateClubBranding,
@@ -2528,9 +2642,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         applyForMembership,
         approveMemberApplication,
         rejectMemberApplication,
-        verifyMemberLogin,
-        requestMagicLink,
-        verifyMagicLink,
         sendMemberMessage,
         replyToMemberMessage,
         getMemberMessages,

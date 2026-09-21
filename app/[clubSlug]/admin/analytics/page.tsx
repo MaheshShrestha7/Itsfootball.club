@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useEffect } from 'react';
 import { useClub } from '@/lib/club-context';
 import { BarChart3, TrendingUp, Users, QrCode, Radio, Eye } from 'lucide-react';
 
@@ -10,8 +10,12 @@ export default function AdminAnalyticsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, getClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, getClubAnalytics, loadClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  useEffect(() => {
+    loadClubAnalytics(club.id);
+  }, [club.id, loadClubAnalytics]);
 
   const analytics = getClubAnalytics(club.id);
   const days = analytics.weeklyDays;

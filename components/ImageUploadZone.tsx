@@ -1,5 +1,6 @@
 'use client';
 
+import { getAccessToken } from '@/lib/supabase/client';
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, RefreshCw, X, Link2 } from 'lucide-react';
 
@@ -59,7 +60,7 @@ const compressImage = async (file: File, maxDim: number): Promise<File> => {
 
 export default function ImageUploadZone({
   label,
-  recommendedText = 'PNG, JPG, WebP or SVG up to 5MB',
+  recommendedText = 'PNG, JPG, WebP or GIF up to 5MB',
   currentImageUrl,
   onUploadComplete,
   folder = 'uploads',
@@ -84,9 +85,9 @@ export default function ImageUploadZone({
   }, [currentImageUrl]);
 
   const validateFile = (file: File): string | null => {
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      return 'Invalid file type. Please upload a PNG, JPG, WebP, or SVG file.';
+      return 'Invalid file type. Please upload a PNG, JPG, WebP, or GIF file.';
     }
     if (file.size > maxSizeBytes) {
       const maxMb = Math.round(maxSizeBytes / (1024 * 1024));
@@ -117,8 +118,10 @@ export default function ImageUploadZone({
 
       setUploadProgress(50);
 
+      const token = await getAccessToken();
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
 
