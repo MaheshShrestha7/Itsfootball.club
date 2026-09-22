@@ -130,7 +130,7 @@ interface ClubContextType {
   // Member & Squad Management
   addMember: (memberData: Omit<ClubMember, 'id' | 'created_at'>) => ClubMember;
   bulkAddMembers: (
-    membersData: Omit<ClubMember, 'id' | 'created_at'>[],
+    membersData: Partial<Omit<ClubMember, 'id' | 'created_at'>>[],
     options?: { updateDuplicates?: boolean }
   ) => { added: number; updated: number };
   updateMember: (memberId: string, updates: Partial<ClubMember>) => void;
@@ -1496,7 +1496,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const bulkAddMembers = useCallback(
     (
-      membersData: Omit<ClubMember, 'id' | 'created_at'>[],
+      membersData: Partial<Omit<ClubMember, 'id' | 'created_at'>>[],
       options?: { updateDuplicates?: boolean }
     ): { added: number; updated: number } => {
       let added = 0;
@@ -1523,9 +1523,21 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             };
             updated++;
           } else if (existingIdx === -1) {
+            // memData is Partial here (bulk import may only send the columns a CSV/JSON row
+            // actually had); a brand-new member still needs every required field filled in.
             const newMem: ClubMember = {
               ...memData,
               id: newId(),
+              club_id: memData.club_id!,
+              full_name: memData.full_name || 'Member',
+              email: memData.email || '',
+              role: memData.role || 'Player',
+              status: memData.status || 'active',
+              membership_tier: memData.membership_tier || 'Full Senior Member',
+              membership_expires_at:
+                memData.membership_expires_at ||
+                new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              is_executive: memData.is_executive ?? false,
               qr_code_token:
                 memData.qr_code_token ||
                 secureToken('pass'),

@@ -25,7 +25,7 @@ interface BulkMemberModalProps {
   club: Club;
   allMembers: ClubMember[];
   onImportMembers: (
-    members: Omit<ClubMember, 'id' | 'created_at'>[],
+    members: Partial<Omit<ClubMember, 'id' | 'created_at'>>[],
     options?: { updateDuplicates?: boolean }
   ) => { added: number; updated: number };
   onSuccessToast?: (msg: string) => void;
@@ -37,7 +37,27 @@ interface ParsedRow {
   isValid: boolean;
   errors: string[];
   isDuplicate: boolean;
-  memberData?: Omit<ClubMember, 'id' | 'created_at'>;
+  memberData?: Partial<Omit<ClubMember, 'id' | 'created_at'>>;
+}
+
+const DEFAULT_MEMBER_PHOTO_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80';
+
+// Fields with a sensible default only get that default on a brand-new member. On an update
+// (matched by email) a column left blank in the source data must not reset what's already saved,
+// so the field is left undefined and dropped by pruneUndefined() instead.
+function withDefault<T>(raw: T | undefined | null | '', isDuplicate: boolean, fallback: T): T | undefined {
+  if (raw !== undefined && raw !== null && raw !== ('' as any)) return raw as T;
+  return isDuplicate ? undefined : fallback;
+}
+
+// Object spread copies a key even when its value is undefined, which would still blank out an
+// existing field during a duplicate merge. Strip those keys so only real values survive.
+function pruneUndefined<T extends Record<string, any>>(obj: T): T {
+  const out = {} as T;
+  (Object.keys(obj) as (keyof T)[]).forEach(k => {
+    if (obj[k] !== undefined) out[k] = obj[k];
+  });
+  return out;
 }
 
 // Sanitizes CSV cell output against CSV formula injection attacks (=, +, -, @)
@@ -344,33 +364,50 @@ export default function BulkMemberModal({
           const isDuplicate = existingEmails.has(email);
           const isValid = errors.length === 0;
 
-          const memberData: Omit<ClubMember, 'id' | 'created_at'> = {
+          const memberData: Partial<Omit<ClubMember, 'id' | 'created_at'>> = pruneUndefined({
             club_id: club.id,
             full_name: fullName,
             first_name: item.first_name || fullName.split(' ')[0] || '',
             last_name: item.last_name || fullName.split(' ').slice(1).join(' ') || '',
             email: email,
             phone: item.phone ? String(item.phone) : undefined,
-            role: normalizeRole(item.role || 'Player'),
-            roles: Array.isArray(item.roles) ? item.roles : [normalizeRole(item.role || 'Player')],
-            player_position: normalizePosition(item.player_position || item.position || 'SUB'),
+            role: item.role ? normalizeRole(item.role) : (isDuplicate ? undefined : 'Player'),
+            roles: Array.isArray(item.roles)
+              ? item.roles
+              : item.role
+              ? [normalizeRole(item.role)]
+              : (isDuplicate ? undefined : ['Player']),
+            player_position: (item.player_position || item.position)
+              ? normalizePosition(item.player_position || item.position)
+              : (isDuplicate ? undefined : 'SUB'),
             jersey_number: item.jersey_number ? Number(item.jersey_number) : undefined,
-            photo_url: item.photo_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80`,
+            photo_url: withDefault(item.photo_url, isDuplicate, DEFAULT_MEMBER_PHOTO_URL),
             date_of_birth: item.date_of_birth ? String(item.date_of_birth) : undefined,
-            nationality: item.nationality ? String(item.nationality) : 'Australia',
-            preferred_foot: item.preferred_foot === 'Left' ? 'Left' : item.preferred_foot === 'Both' ? 'Both' : 'Right',
+            nationality: withDefault(item.nationality ? String(item.nationality) : undefined, isDuplicate, 'Australia'),
+            preferred_foot: item.preferred_foot === 'Left' || item.preferred_foot === 'Both' || item.preferred_foot === 'Right'
+              ? item.preferred_foot
+              : (isDuplicate ? undefined : 'Right'),
             height_cm: item.height_cm ? Number(item.height_cm) : undefined,
             weight_kg: item.weight_kg ? Number(item.weight_kg) : undefined,
-            status: normalizeStatus(item.status || 'active'),
-            membership_status: (item.membership_status || 'approved') as MembershipStatus,
-            membership_tier: item.membership_tier || 'Full Senior Member',
-            membership_expires_at: item.membership_expires_at || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            qr_code_token: item.qr_code_token || secureToken('pass'),
-            is_executive: Boolean(item.is_executive || item.role === 'Executive Committee'),
+            status: item.status ? normalizeStatus(item.status) : (isDuplicate ? undefined : 'active'),
+            membership_status: withDefault(item.membership_status as MembershipStatus | undefined, isDuplicate, 'approved' as MembershipStatus),
+            membership_tier: withDefault(item.membership_tier, isDuplicate, 'Full Senior Member'),
+            membership_expires_at: withDefault(
+              item.membership_expires_at,
+              isDuplicate,
+              new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+            ),
+            qr_code_token: withDefault(item.qr_code_token, isDuplicate, secureToken('pass')),
+            is_executive:
+              item.is_executive !== undefined
+                ? Boolean(item.is_executive)
+                : item.role
+                ? item.role === 'Executive Committee'
+                : (isDuplicate ? undefined : false),
             executive_title: item.executive_title || undefined,
             emergency_contact: item.emergency_contact || undefined,
             application_notes: item.application_notes || undefined,
-          };
+          });
 
           return {
             index: idx + 1,
@@ -423,34 +460,42 @@ export default function BulkMemberModal({
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email address is required.');
 
       const isDuplicate = existingEmails.has(email);
+      const roleCol = rawObj['role'];
+      const positionCol = rawObj['position'] || rawObj['playerposition'];
+      const statusCol = rawObj['status'] || rawObj['playerstatus'];
+      const preferredFootCol = rawObj['preferredfoot'];
 
-      const memberData: Omit<ClubMember, 'id' | 'created_at'> = {
+      const memberData: Partial<Omit<ClubMember, 'id' | 'created_at'>> = pruneUndefined({
         club_id: club.id,
         full_name: fullName,
         first_name: rawObj['firstname'] || fullName.split(' ')[0] || '',
         last_name: rawObj['lastname'] || fullName.split(' ').slice(1).join(' ') || '',
         email: email,
         phone: rawObj['phone'] || rawObj['phonenumber'] || rawObj['mobile'] || undefined,
-        role: normalizeRole(rawObj['role'] || 'Player'),
-        roles: [normalizeRole(rawObj['role'] || 'Player')],
-        player_position: normalizePosition(rawObj['position'] || rawObj['playerposition'] || 'SUB'),
+        role: roleCol ? normalizeRole(roleCol) : (isDuplicate ? undefined : 'Player'),
+        roles: roleCol ? [normalizeRole(roleCol)] : (isDuplicate ? undefined : ['Player']),
+        player_position: positionCol ? normalizePosition(positionCol) : (isDuplicate ? undefined : 'SUB'),
         jersey_number: parseOptionalNumber(rawObj['jerseynumber'] || rawObj['number'], 'Jersey number', errors),
-        photo_url: rawObj['photourl'] || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80`,
+        photo_url: withDefault(rawObj['photourl'], isDuplicate, DEFAULT_MEMBER_PHOTO_URL),
         date_of_birth: rawObj['dateofbirth'] || rawObj['dob'] || undefined,
-        nationality: rawObj['nationality'] || 'Australia',
-        preferred_foot: rawObj['preferredfoot'] === 'Left' ? 'Left' : rawObj['preferredfoot'] === 'Both' ? 'Both' : 'Right',
+        nationality: withDefault(rawObj['nationality'], isDuplicate, 'Australia'),
+        preferred_foot: preferredFootCol
+          ? (preferredFootCol === 'Left' ? 'Left' : preferredFootCol === 'Both' ? 'Both' : 'Right')
+          : (isDuplicate ? undefined : 'Right'),
         height_cm: parseOptionalNumber(rawObj['heightcm'] || rawObj['height'], 'Height', errors),
         weight_kg: parseOptionalNumber(rawObj['weightkg'] || rawObj['weight'], 'Weight', errors),
-        status: normalizeStatus(rawObj['status'] || rawObj['playerstatus'] || 'active'),
-        membership_status: (rawObj['membershipstatus'] || 'approved') as MembershipStatus,
-        membership_tier: rawObj['membershiptier'] || rawObj['tier'] || 'Full Senior Member',
-        membership_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        qr_code_token: secureToken('pass'),
-        is_executive: (rawObj['role'] || '').toLowerCase().includes('exec') || Boolean(rawObj['isexecutive']),
+        status: statusCol ? normalizeStatus(statusCol) : (isDuplicate ? undefined : 'active'),
+        membership_status: withDefault(rawObj['membershipstatus'] as MembershipStatus | undefined, isDuplicate, 'approved' as MembershipStatus),
+        membership_tier: withDefault(rawObj['membershiptier'] || rawObj['tier'], isDuplicate, 'Full Senior Member'),
+        membership_expires_at: isDuplicate ? undefined : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        qr_code_token: isDuplicate ? undefined : secureToken('pass'),
+        is_executive: (roleCol || rawObj['isexecutive'])
+          ? (roleCol || '').toLowerCase().includes('exec') || Boolean(rawObj['isexecutive'])
+          : (isDuplicate ? undefined : false),
         executive_title: rawObj['executivetitle'] || undefined,
         emergency_contact: rawObj['emergencycontact'] || undefined,
         application_notes: rawObj['applicationnotes'] || rawObj['notes'] || undefined,
-      };
+      });
 
       // Computed after memberData so numeric-field validation (jersey/height/weight)
       // pushed into `errors` during construction is reflected in isValid.
