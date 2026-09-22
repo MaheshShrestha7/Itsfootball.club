@@ -135,7 +135,8 @@ export default function ClubPublicPage({
   const upcomingMatches = filteredClubMatches.filter(m => m.status === 'upcoming');
   const pastMatches = filteredClubMatches.filter(m => m.status === 'completed');
   const clubEvents = events.filter(e => e.club_id === clubId);
-  const clubSponsors = sponsors.filter(s => s.club_id === clubId);
+  // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
+  const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
   const clubNews = news.filter(n => n.club_id === clubId);
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 
@@ -1643,7 +1644,7 @@ export default function ClubPublicPage({
                   </p>
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Calendar size={14} color="var(--club-primary)" />
                     <span style={{ color: '#FFFFFF' }}>{new Date(evt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -1653,6 +1654,15 @@ export default function ClubPublicPage({
                     <span>{evt.location}</span>
                   </div>
                 </div>
+
+                <Link
+                  href={`/${club.slug}/events/${evt.id}`}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
+                >
+                  <span>View Details</span>
+                  <ChevronRight size={14} />
+                </Link>
               </div>
             ))}
           </div>

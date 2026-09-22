@@ -35,7 +35,8 @@ export default function PlatformHomePage() {
   const allSponsors = useMemo(() => {
     const clubById = new Map(clubs.map(c => [c.id, c]));
     return sponsors
-      .filter(s => s.is_active)
+      // Club-wide only - event-scoped sponsors show on their own event's page instead.
+      .filter(s => s.is_active && !s.event_id)
       .map(s => ({ sponsor: s, club: clubById.get(s.club_id) }))
       .filter((entry): entry is { sponsor: typeof entry.sponsor; club: NonNullable<typeof entry.club> } => !!entry.club)
       .sort((a, b) => {

@@ -14,6 +14,7 @@ export type MatchType = 'internal' | 'friendly' | 'tournament';
 export type EventCategory = 'match' | 'training' | 'social' | 'agm' | 'trial' | 'tournament';
 export type SponsorTier = 'platinum' | 'gold' | 'silver' | 'bronze' | 'grassroots';
 export type SponsorSizeScale = 'auto' | 'xl' | 'lg' | 'md' | 'sm';
+export type SponsorPackageStatus = 'prospect' | 'confirmed' | 'paid' | 'expired' | 'cancelled';
 export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | 'Media Request' | 'Youth Academy';
 
 export type HeroPinType = 'event' | 'fixture' | 'news' | 'image';
@@ -249,6 +250,9 @@ export interface EventAttendee {
 export interface Sponsor {
   id: string;
   club_id: string;
+  /** When set, this sponsor is scoped to one event instead of the whole club - it only
+   * appears on that event's detail page, not the club's general sponsor showcase. */
+  event_id?: string;
   name: string;
   logo_url: string;
   website_url?: string;
@@ -256,6 +260,14 @@ export interface Sponsor {
   size_scale?: SponsorSizeScale;
   display_order: number;
   is_active: boolean;
+  // Sponsorship deal / CRM fields - admin-only, never exposed on the public site
+  // (see sponsors_public view / "Club admin sponsors read own club" RLS policy).
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  package_value?: number;
+  package_status?: SponsorPackageStatus;
+  season?: string;
 }
 
 export interface NewsArticle {

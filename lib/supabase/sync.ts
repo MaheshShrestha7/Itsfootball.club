@@ -61,7 +61,7 @@ const ENTITIES: EntityConfig[] = [
   { key: 'matches', table: 'matches' },
   { key: 'matchEvents', table: 'match_events' },
   { key: 'events', table: 'events' },
-  { key: 'sponsors', table: 'sponsors' },
+  { key: 'sponsors', table: 'sponsors', extraReadSources: ['sponsors_public'] },
   { key: 'news', table: 'news_articles' },
   { key: 'gallery', table: 'media_gallery' },
   { key: 'clubScoreRules', table: 'clubscore_rules' },

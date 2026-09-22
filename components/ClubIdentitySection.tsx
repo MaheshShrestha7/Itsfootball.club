@@ -125,7 +125,7 @@ export default function ClubIdentitySection({
   }, 0);
 
   const rawEventsCount = events.filter(e => e.club_id === clubId).length;
-  const rawSponsorsCount = sponsors.filter(s => s.club_id === clubId && s.is_active !== false).length;
+  const rawSponsorsCount = sponsors.filter(s => s.club_id === clubId && s.is_active !== false && !s.event_id).length;
 
   // Real-time dynamic stats state initialized with exact raw counts
   const [stats, setStats] = useState<DynamicIdentityStats>({

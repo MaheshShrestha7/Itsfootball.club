@@ -55,7 +55,8 @@ export default function ClubLayoutClient({
   // WCAG 2.2 AA Contrast calculation
   const contrastEval = evaluateColorContrast(club?.primary_color || '#10B981');
 
-  const clubSponsors = club ? sponsors.filter(s => s.club_id === club.id) : [];
+  // Club-wide only - event-scoped sponsors show on their own event's page instead.
+  const clubSponsors = club ? sponsors.filter(s => s.club_id === club.id && !s.event_id) : [];
 
   return (
     <div

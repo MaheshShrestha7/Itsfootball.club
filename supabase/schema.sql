@@ -238,16 +238,27 @@ CREATE INDEX IF NOT EXISTS idx_attendees_qr ON event_attendees (qr_ticket_code);
 CREATE TABLE IF NOT EXISTS sponsors (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    -- When set, this sponsor is scoped to one event instead of the whole club.
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     logo_url TEXT NOT NULL,
     website_url TEXT,
     tier VARCHAR(32) NOT NULL DEFAULT 'gold' CHECK (tier IN ('platinum', 'gold', 'silver', 'bronze', 'grassroots')),
+    size_scale VARCHAR(16) DEFAULT 'auto',
     display_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
+    -- Sponsorship deal / CRM fields - admin-only, see sponsors_public view below.
+    contact_name VARCHAR(255),
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(64),
+    package_value NUMERIC(12, 2),
+    package_status VARCHAR(32) DEFAULT 'confirmed' CHECK (package_status IN ('prospect', 'confirmed', 'paid', 'expired', 'cancelled')),
+    season VARCHAR(32),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_sponsors_club ON sponsors (club_id, tier, display_order);
+CREATE INDEX IF NOT EXISTS idx_sponsors_event ON sponsors (event_id);
 
 -- ------------------------------------------------------------------------------
 -- 11. NEWS & CONTENT TABLE (CMS)
@@ -449,8 +460,10 @@ CREATE POLICY "Public match_events read" ON match_events FOR SELECT USING (TRUE)
 DROP POLICY IF EXISTS "Public events read" ON events;
 CREATE POLICY "Public events read" ON events FOR SELECT USING (is_public = TRUE);
 
+-- Sponsorship deal details (contact info, package value/status) are admin-only;
+-- the public site instead reads sponsors_public (defined further below), which
+-- excludes those columns entirely.
 DROP POLICY IF EXISTS "Public sponsors read" ON sponsors;
-CREATE POLICY "Public sponsors read" ON sponsors FOR SELECT USING (is_active = TRUE);
 
 DROP POLICY IF EXISTS "Public news read" ON news_articles;
 CREATE POLICY "Public news read" ON news_articles FOR SELECT USING (TRUE);
@@ -613,6 +626,16 @@ CREATE POLICY "Club admin sponsors manage" ON sponsors FOR ALL USING (
 ) WITH CHECK (
     is_club_admin(club_id)
 );
+
+-- What the public site may show: active sponsors, without contact/package deal details.
+CREATE OR REPLACE VIEW sponsors_public AS
+    SELECT
+        id, club_id, event_id, name, logo_url, website_url, tier, size_scale,
+        display_order, is_active, season
+    FROM sponsors
+    WHERE is_active = TRUE;
+
+GRANT SELECT ON sponsors_public TO anon, authenticated;
 
 DROP POLICY IF EXISTS "Club admin news manage" ON news_articles;
 CREATE POLICY "Club admin news manage" ON news_articles FOR ALL USING (

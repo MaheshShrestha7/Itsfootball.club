@@ -2,8 +2,18 @@
 
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
-import { Sponsor, SponsorTier, SponsorSizeScale } from '@/lib/supabase/types';
-import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2 } from 'lucide-react';
+import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
+import { defaultSeasonLabel } from '@/lib/season';
+import ImageUploadZone from '@/components/ImageUploadZone';
+import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
+
+const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
+  prospect: 'Prospect (In Talks)',
+  confirmed: 'Confirmed',
+  paid: 'Paid',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+};
 
 function getSponsorEffectiveScale(s: Sponsor): 'xl' | 'lg' | 'md' | 'sm' {
   if (s.size_scale && s.size_scale !== 'auto') {
@@ -29,41 +39,47 @@ export default function AdminSponsorsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, sponsors, addSponsor, updateSponsor, deleteSponsor } = useClub();
+  const { clubs, selectClubBySlug, sponsors, events, addSponsor, updateSponsor, deleteSponsor } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubSponsors = sponsors.filter(s => s.club_id === club.id);
+  const clubWideSponsors = clubSponsors.filter(s => !s.event_id);
+  const clubEvents = events.filter(e => e.club_id === club.id);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showLivePreview, setShowLivePreview] = useState(true);
 
-  const [form, setForm] = useState({
+  const blankForm = {
+    scope: 'club' as 'club' | 'event',
+    event_id: '',
     name: '',
     logo_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
     website_url: 'https://example.com',
     tier: 'gold' as SponsorTier,
     size_scale: 'auto' as SponsorSizeScale,
-    display_order: clubSponsors.length + 1,
+    display_order: clubWideSponsors.length + 1,
     is_active: true,
-  });
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    package_value: '' as number | '',
+    package_status: 'confirmed' as SponsorPackageStatus,
+    season: defaultSeasonLabel(),
+  };
+
+  const [form, setForm] = useState(blankForm);
 
   const handleOpenAdd = () => {
     setEditingId(null);
-    setForm({
-      name: '',
-      logo_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
-      website_url: 'https://example.com',
-      tier: 'gold',
-      size_scale: 'auto',
-      display_order: clubSponsors.length + 1,
-      is_active: true,
-    });
+    setForm({ ...blankForm, display_order: clubWideSponsors.length + 1 });
     setModalOpen(true);
   };
 
   const handleOpenEdit = (s: Sponsor) => {
     setEditingId(s.id);
     setForm({
+      scope: s.event_id ? 'event' : 'club',
+      event_id: s.event_id || '',
       name: s.name,
       logo_url: s.logo_url,
       website_url: s.website_url || '',
@@ -71,6 +87,12 @@ export default function AdminSponsorsPage({
       size_scale: s.size_scale || 'auto',
       display_order: s.display_order,
       is_active: s.is_active,
+      contact_name: s.contact_name || '',
+      contact_email: s.contact_email || '',
+      contact_phone: s.contact_phone || '',
+      package_value: s.package_value ?? '',
+      package_status: s.package_status || 'confirmed',
+      season: s.season || defaultSeasonLabel(),
     });
     setModalOpen(true);
   };
@@ -78,13 +100,21 @@ export default function AdminSponsorsPage({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.logo_url) return;
+    if (form.scope === 'event' && !form.event_id) return;
+
+    const { scope, ...rest } = form;
+    const payload = {
+      ...rest,
+      event_id: scope === 'event' ? form.event_id : undefined,
+      package_value: form.package_value === '' ? undefined : Number(form.package_value),
+    };
 
     if (editingId) {
-      updateSponsor(editingId, form);
+      updateSponsor(editingId, payload);
     } else {
       addSponsor({
         club_id: club.id,
-        ...form,
+        ...payload,
       });
     }
     setModalOpen(false);
@@ -147,8 +177,8 @@ export default function AdminSponsorsPage({
         </button>
       </div>
 
-      {/* Live Public Scaling Preview */}
-      {showLivePreview && clubSponsors.length > 0 && (
+      {/* Live Public Scaling Preview (club-wide sponsors only - event sponsors show on their event's page) */}
+      {showLivePreview && clubWideSponsors.length > 0 && (
         <div style={{
           marginBottom: '2rem',
           padding: '1.25rem',
@@ -166,7 +196,7 @@ export default function AdminSponsorsPage({
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', justifyContent: 'flex-start' }}>
-            {clubSponsors.map(sponsor => {
+            {clubWideSponsors.map(sponsor => {
               const scale = getSponsorEffectiveScale(sponsor);
               const isXL = scale === 'xl';
               const isLG = scale === 'lg';
@@ -229,10 +259,11 @@ export default function AdminSponsorsPage({
       )}
 
       {/* Sponsors List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {clubSponsors.map(sponsor => {
+      {(() => {
+        const renderSponsorRow = (sponsor: Sponsor) => {
           const scale = getSponsorEffectiveScale(sponsor);
           const isCustomScale = sponsor.size_scale && sponsor.size_scale !== 'auto';
+          const linkedEvent = sponsor.event_id ? clubEvents.find(e => e.id === sponsor.event_id) : undefined;
           return (
             <div
               key={sponsor.id}
@@ -281,22 +312,51 @@ export default function AdminSponsorsPage({
                       {scale.toUpperCase()} Space Allocation
                       {isCustomScale && ' (Custom)'}
                     </span>
+                    {sponsor.package_status && (
+                      <span className="badge" style={{
+                        backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                        color: sponsor.package_status === 'paid' ? '#10B981' : sponsor.package_status === 'prospect' ? '#3B82F6' : 'var(--text-muted)',
+                        fontSize: '0.65rem',
+                      }}>
+                        {PACKAGE_STATUS_LABEL[sponsor.package_status]}
+                      </span>
+                    )}
                   </div>
-                  {sponsor.website_url && (
-                    <a
-                      href={sponsor.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '3px' }}
-                    >
-                      <span>{sponsor.website_url}</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', marginTop: '4px' }}>
+                    {sponsor.website_url && (
+                      <a
+                        href={sponsor.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        <span>{sponsor.website_url}</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
+                    {sponsor.package_value != null && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <DollarSign size={11} />
+                        {sponsor.package_value.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                        {sponsor.season ? ` • ${sponsor.season}` : ''}
+                      </span>
+                    )}
+                    {sponsor.contact_name && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <User size={11} />
+                        {sponsor.contact_name}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {linkedEvent && (
+                  <span className="badge badge-primary" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Calendar size={11} /> {linkedEvent.title}
+                  </span>
+                )}
                 <button onClick={() => handleOpenEdit(sponsor)} className="btn btn-secondary btn-sm">
                   <Edit2 size={14} />
                 </button>
@@ -306,8 +366,62 @@ export default function AdminSponsorsPage({
               </div>
             </div>
           );
-        })}
-      </div>
+        };
+
+        // Group event-scoped sponsors under the event they belong to; sponsors whose
+        // event was since deleted still show under a "Former Event" fallback group.
+        const eventGroups = clubEvents
+          .map(evt => ({ event: evt, list: clubSponsors.filter(s => s.event_id === evt.id) }))
+          .filter(g => g.list.length > 0);
+        const orphanedEventSponsors = clubSponsors.filter(
+          s => s.event_id && !clubEvents.some(e => e.id === s.event_id)
+        );
+
+        if (clubSponsors.length === 0) {
+          return (
+            <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No sponsors yet. Click &ldquo;Add New Sponsor&rdquo; to add your first club or event partner.
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {clubWideSponsors.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Shield size={14} /> Club-Wide Sponsors
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {clubWideSponsors.map(renderSponsorRow)}
+                </div>
+              </div>
+            )}
+
+            {eventGroups.map(({ event, list }) => (
+              <div key={event.id}>
+                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Calendar size={14} /> Event Sponsors • {event.title}
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {list.map(renderSponsorRow)}
+                </div>
+              </div>
+            ))}
+
+            {orphanedEventSponsors.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
+                  Former Event Sponsors
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {orphanedEventSponsors.map(renderSponsorRow)}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Add / Edit Sponsor Modal */}
       {modalOpen && (
@@ -340,6 +454,69 @@ export default function AdminSponsorsPage({
             </div>
 
             <form onSubmit={handleSave}>
+              <div className="form-group">
+                <label className="form-label">Sponsor Scope</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, scope: 'club', event_id: '' })}
+                    className="btn btn-sm"
+                    style={{
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      background: form.scope === 'club' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)',
+                      border: form.scope === 'club' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                      color: form.scope === 'club' ? '#10B981' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <Shield size={14} /> Club Sponsor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, scope: 'event' })}
+                    className="btn btn-sm"
+                    style={{
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      background: form.scope === 'event' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)',
+                      border: form.scope === 'event' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                      color: form.scope === 'event' ? '#10B981' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <Calendar size={14} /> Event Sponsor
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  {form.scope === 'club'
+                    ? 'Shown on the club\'s public sponsor showcase.'
+                    : 'Shown only on the selected event\'s detail page.'}
+                </p>
+              </div>
+
+              {form.scope === 'event' && (
+                <div className="form-group">
+                  <label className="form-label">Event *</label>
+                  <select
+                    className="form-select"
+                    required={form.scope === 'event'}
+                    value={form.event_id}
+                    onChange={e => setForm({ ...form, event_id: e.target.value })}
+                  >
+                    <option value="">Select an event…</option>
+                    {clubEvents.map(evt => (
+                      <option key={evt.id} value={evt.id}>
+                        {evt.title} ({new Date(evt.start_time).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                  {clubEvents.length === 0 && (
+                    <p style={{ fontSize: '0.75rem', color: '#F59E0B', marginTop: '0.35rem' }}>
+                      No events yet - add one under Events first.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Sponsor / Partner Name *</label>
                 <input
@@ -401,13 +578,13 @@ export default function AdminSponsorsPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Logo Image URL *</label>
-                <input
-                  type="url"
-                  required
-                  className="form-input"
-                  value={form.logo_url}
-                  onChange={e => setForm({ ...form, logo_url: e.target.value })}
+                <ImageUploadZone
+                  label="Sponsor Logo *"
+                  recommendedText="Transparent PNG or square logo, up to 5MB"
+                  currentImageUrl={form.logo_url}
+                  onUploadComplete={url => setForm({ ...form, logo_url: url })}
+                  folder="sponsors"
+                  aspectRatio="1:1"
                 />
               </div>
 
@@ -419,6 +596,100 @@ export default function AdminSponsorsPage({
                   value={form.website_url}
                   onChange={e => setForm({ ...form, website_url: e.target.value })}
                 />
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <User size={14} color="var(--club-primary)" /> Sponsor Contact
+                </h4>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                  Internal only - never shown on the public site.
+                </p>
+
+                <div className="form-group">
+                  <label className="form-label">Contact Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Sarah Whitfield"
+                    value={form.contact_name}
+                    onChange={e => setForm({ ...form, contact_name: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Mail size={12} /> Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="sarah@sponsor.com"
+                      value={form.contact_email}
+                      onChange={e => setForm({ ...form, contact_email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Phone size={12} /> Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      placeholder="+1 (555) 000-0000"
+                      value={form.contact_phone}
+                      onChange={e => setForm({ ...form, contact_phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <DollarSign size={14} color="var(--club-primary)" /> Sponsorship Package
+                </h4>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                  Internal only - never shown on the public site.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Package Value</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="form-input"
+                      placeholder="e.g. 5000"
+                      value={form.package_value}
+                      onChange={e => setForm({ ...form, package_value: e.target.value === '' ? '' : Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Package Status</label>
+                    <select
+                      className="form-select"
+                      value={form.package_status}
+                      onChange={e => setForm({ ...form, package_status: e.target.value as SponsorPackageStatus })}
+                    >
+                      {(Object.keys(PACKAGE_STATUS_LABEL) as SponsorPackageStatus[]).map(status => (
+                        <option key={status} value={status}>{PACKAGE_STATUS_LABEL[status]}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Season</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder={defaultSeasonLabel()}
+                    value={form.season}
+                    onChange={e => setForm({ ...form, season: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
