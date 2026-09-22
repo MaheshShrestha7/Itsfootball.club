@@ -201,7 +201,8 @@ export default function AdminTournamentsPage({
   // KPIs
   const totalTournaments = clubTournaments.length;
   const activeTournaments = clubTournaments.filter(t => t.status === 'ongoing').length;
-  const totalMatchesInTourneys = matches.filter(m => !!m.tournament_id).length;
+  const clubTournamentIds = new Set(clubTournaments.map(t => t.id));
+  const totalMatchesInTourneys = matches.filter(m => m.tournament_id && clubTournamentIds.has(m.tournament_id)).length;
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>

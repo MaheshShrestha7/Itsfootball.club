@@ -476,7 +476,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         if (data.tournaments) setTournaments(mergeById(local.tournaments, data.tournaments));
         if (data.tournamentParticipants) setTournamentParticipants(mergeById(local.tournamentParticipants, data.tournamentParticipants));
         if (data.playerStats) setPlayerStats(mergeById(local.playerStats, data.playerStats));
-        if (data.matches) setMatches(mergeById(local.matches, data.matches));
+        // Matches are always shown exactly as they are in the database: unlike the other
+        // entities above, a match that only exists in a stale local cache (e.g. left over from
+        // a tiesheet generation that never made it to Supabase, or deleted remotely by someone
+        // else) must not keep being displayed as if it were real.
+        if (data.matches) setMatches(data.matches);
         if (data.matchEvents) setMatchEvents(mergeById(local.matchEvents, data.matchEvents));
         if (data.events) setEvents(mergeById(local.events, data.events));
         if (data.sponsors) setSponsors(mergeById(local.sponsors, data.sponsors));
