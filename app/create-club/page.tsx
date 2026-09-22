@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -28,8 +28,16 @@ import {
 export default function CreateClubPage() {
   const router = useRouter();
   const { clubs, createClub } = useClub();
-  const { user, isLoading: authLoading, assignClubRole } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, assignClubRole } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Require sign-in/sign-up before the wizard is usable at all, rather than only
+  // catching it at the final "Finish" step after the user has filled everything in.
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setAuthModalOpen(true);
+    }
+  }, [authLoading, isAuthenticated]);
 
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -156,6 +164,93 @@ export default function CreateClubPage() {
     assignClubRole(newClub.id, 'owner');
     router.push('/my-clubs');
   };
+
+  // 1. Still resolving the current session: avoid flashing the sign-in checkpoint
+  // before we actually know whether the visitor is authenticated.
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <PlatformNavbar />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            border: '3px solid rgba(16, 185, 129, 0.2)',
+            borderTopColor: '#10B981',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated: a club belongs to an account, so sign-in/sign-up is required
+  // before the wizard is usable at all - not just checked at the final "Finish" step.
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <PlatformNavbar />
+
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              padding: '2.5rem',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: 'var(--radius-xl)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '18px',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '2px solid #10B981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem auto',
+            }}>
+              <Shield size={32} color="#10B981" />
+            </div>
+
+            <span className="badge badge-primary" style={{ marginBottom: '0.6rem' }}>
+              ACCOUNT REQUIRED
+            </span>
+
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+              Sign In to Launch Your Club
+            </h1>
+
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.5 }}>
+              A club belongs to your account, so we need you signed in first. Create an account or sign in, then you&apos;ll land right back here to configure your club.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setAuthModalOpen(true)}
+              className="btn btn-primary btn-lg"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              <Sparkles size={18} />
+              <span>Sign Up or Sign In</span>
+            </button>
+          </div>
+        </main>
+
+        <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} redirectTo="" />
+
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
