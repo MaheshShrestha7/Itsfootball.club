@@ -1116,6 +1116,29 @@ textarea {
   white-space: nowrap;
 }
 
+/* Horizontally Scrollable Sponsor Strip (home page) */
+.sponsor-scroll-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.5rem 0.25rem 1.25rem;
+}
+
+.sponsor-scroll-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.sponsor-scroll-card {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
 /* Touch Targets Standard (44px min touch area) */
 .touch-target {
   min-height: 44px;

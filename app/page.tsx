@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -22,11 +22,28 @@ import {
   User
 } from 'lucide-react';
 
+const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
+
 export default function PlatformHomePage() {
-  const { clubs } = useClub();
+  const { clubs, sponsors } = useClub();
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  // Every active sponsor across every club, paired with the club that carries them,
+  // sorted so higher tiers surface first within the scrollable strip.
+  const allSponsors = useMemo(() => {
+    const clubById = new Map(clubs.map(c => [c.id, c]));
+    return sponsors
+      .filter(s => s.is_active)
+      .map(s => ({ sponsor: s, club: clubById.get(s.club_id) }))
+      .filter((entry): entry is { sponsor: typeof entry.sponsor; club: NonNullable<typeof entry.club> } => !!entry.club)
+      .sort((a, b) => {
+        const tierDiff = (SPONSOR_TIER_WEIGHT[a.sponsor.tier] ?? 99) - (SPONSOR_TIER_WEIGHT[b.sponsor.tier] ?? 99);
+        if (tierDiff !== 0) return tierDiff;
+        return a.sponsor.display_order - b.sponsor.display_order;
+      });
+  }, [clubs, sponsors]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -303,6 +320,87 @@ export default function PlatformHomePage() {
           </div>
         </div>
       </section>
+
+      {/* Club Sponsors Showcase (scrollable strip, aggregated across every club) */}
+      {allSponsors.length > 0 && (
+        <section style={{ padding: '4rem 0', background: 'rgba(255, 255, 255, 0.015)' }}>
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+              <span className="badge badge-gold" style={{ marginBottom: '0.75rem' }}>CLUB PARTNERS</span>
+              <h2 style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>
+                Trusted by Sponsors Across the Network
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
+                Official partners backing the clubs on itsfootball.club, from kit sponsors to home ground naming rights.
+              </p>
+            </div>
+
+            <div className="sponsor-scroll-strip">
+              {allSponsors.map(({ sponsor, club }) => {
+                const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
+                const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
+                return (
+                  <a
+                    key={sponsor.id}
+                    href={sponsor.website_url || `/${club.slug}`}
+                    target={sponsor.website_url ? '_blank' : undefined}
+                    rel={sponsor.website_url ? 'noopener noreferrer' : undefined}
+                    className="glass-panel glass-panel-interactive sponsor-scroll-card"
+                    style={{
+                      width: '220px',
+                      padding: '1.5rem 1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '0.75rem',
+                      borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
+                    }}
+                  >
+                    <img
+                      src={sponsor.logo_url}
+                      alt={sponsor.name}
+                      style={{
+                        height: isPlatinum ? '56px' : isGold ? '46px' : '38px',
+                        maxWidth: '100%',
+                        objectFit: 'contain',
+                      }}
+                    />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      {sponsor.name}
+                    </div>
+                    <span className="badge" style={{
+                      fontSize: '0.62rem',
+                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+                      color: isPlatinum ? '#F59E0B' : 'var(--text-muted)',
+                      textTransform: 'capitalize',
+                    }}>
+                      {sponsor.tier}
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      marginTop: '0.25rem',
+                      paddingTop: '0.6rem',
+                      borderTop: '1px solid var(--border-subtle)',
+                      width: '100%',
+                      justifyContent: 'center',
+                    }}>
+                      <img
+                        src={club.logo_url}
+                        alt={club.name}
+                        style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'cover' }}
+                      />
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{club.short_name}</span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       <AuthModal
         isOpen={authModalOpen}
