@@ -261,7 +261,7 @@ export default function PlatformHomePage() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                       <div>Home Ground: <strong style={{ color: '#FFFFFF' }}>{club.stadium_name}</strong></div>
-                      <div>Club Website: <code style={{ color: club.primary_color }}>{club.custom_domain || `${club.slug}.itsfootball.club`}</code></div>
+                      <div>Club Website: <code style={{ color: club.primary_color }}>{club.custom_domain || `itsfootball.club/${club.slug}`}</code></div>
                     </div>
                   </div>
 
