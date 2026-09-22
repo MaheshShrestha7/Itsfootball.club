@@ -500,39 +500,68 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           ];
         };
 
-        engine.seed(data);
+        // Seeded against the same *merged* rows that become app state (not the raw remote
+        // rows) - otherwise a merged-in local field the fresh fetch doesn't echo back (e.g. a
+        // column that's NULL server-side and so absent from the stripped remote row) hashes
+        // differently from what seed() recorded, so flush() sees a phantom "unsaved change" on
+        // every load, even for a read-only visitor who never edited anything.
+        const mergedState: Partial<SyncState> = {};
 
         if (data.clubs) {
           const merged = mergeById('clubs', local.clubs, data.clubs) as Club[];
+          mergedState.clubs = merged;
           setClubs(merged);
           setActiveClub(prev => merged.find(c => c.id === prev?.id) || prev || merged[0] || null);
         }
-        if (data.members) setMembers(mergeById('members', local.members, data.members));
-        if (data.seasons) setSeasons(mergeById('seasons', local.seasons, data.seasons));
-        if (data.internalTeams) setInternalTeams(mergeById('internalTeams', local.internalTeams, data.internalTeams));
-        if (data.tournaments) setTournaments(mergeById('tournaments', local.tournaments, data.tournaments));
-        if (data.tournamentParticipants) setTournamentParticipants(mergeById('tournamentParticipants', local.tournamentParticipants, data.tournamentParticipants));
-        if (data.playerStats) setPlayerStats(mergeById('playerStats', local.playerStats, data.playerStats));
-        if (data.matches) setMatches(mergeById('matches', local.matches, data.matches));
-        if (data.matchEvents) setMatchEvents(mergeById('matchEvents', local.matchEvents, data.matchEvents));
-        if (data.events) setEvents(mergeById('events', local.events, data.events));
-        if (data.sponsors) setSponsors(mergeById('sponsors', local.sponsors, data.sponsors));
-        if (data.news) setNews(mergeById('news', local.news, data.news));
-        if (data.gallery) setGallery(mergeById('gallery', local.gallery, data.gallery));
-        if (data.clubScoreProfiles) setClubScoreProfiles(mergeById('clubScoreProfiles', local.clubScoreProfiles, data.clubScoreProfiles));
-        if (data.activityLogs) setActivityLogs(mergeById('activityLogs', local.activityLogs, data.activityLogs));
-        if (data.availabilities) setAvailabilities(mergeById('availabilities', local.availabilities, data.availabilities));
-        if (data.draftLineups) setDraftLineups(mergeById('draftLineups', local.draftLineups, data.draftLineups));
-        if (data.memberMessages) setMemberMessages(mergeById('memberMessages', local.memberMessages, data.memberMessages));
-        if (data.gateScans) setGateScans(mergeById('gateScans', local.gateScans, data.gateScans));
-        if (data.inquiries) setInquiries(mergeById('inquiries', local.inquiries, data.inquiries));
+        if (data.members) mergedState.members = mergeById('members', local.members, data.members);
+        if (data.seasons) mergedState.seasons = mergeById('seasons', local.seasons, data.seasons);
+        if (data.internalTeams) mergedState.internalTeams = mergeById('internalTeams', local.internalTeams, data.internalTeams);
+        if (data.tournaments) mergedState.tournaments = mergeById('tournaments', local.tournaments, data.tournaments);
+        if (data.tournamentParticipants) mergedState.tournamentParticipants = mergeById('tournamentParticipants', local.tournamentParticipants, data.tournamentParticipants);
+        if (data.playerStats) mergedState.playerStats = mergeById('playerStats', local.playerStats, data.playerStats);
+        if (data.matches) mergedState.matches = mergeById('matches', local.matches, data.matches);
+        if (data.matchEvents) mergedState.matchEvents = mergeById('matchEvents', local.matchEvents, data.matchEvents);
+        if (data.events) mergedState.events = mergeById('events', local.events, data.events);
+        if (data.sponsors) mergedState.sponsors = mergeById('sponsors', local.sponsors, data.sponsors);
+        if (data.news) mergedState.news = mergeById('news', local.news, data.news);
+        if (data.gallery) mergedState.gallery = mergeById('gallery', local.gallery, data.gallery);
+        if (data.clubScoreProfiles) mergedState.clubScoreProfiles = mergeById('clubScoreProfiles', local.clubScoreProfiles, data.clubScoreProfiles);
+        if (data.activityLogs) mergedState.activityLogs = mergeById('activityLogs', local.activityLogs, data.activityLogs);
+        if (data.availabilities) mergedState.availabilities = mergeById('availabilities', local.availabilities, data.availabilities);
+        if (data.draftLineups) mergedState.draftLineups = mergeById('draftLineups', local.draftLineups, data.draftLineups);
+        if (data.memberMessages) mergedState.memberMessages = mergeById('memberMessages', local.memberMessages, data.memberMessages);
+        if (data.gateScans) mergedState.gateScans = mergeById('gateScans', local.gateScans, data.gateScans);
+        if (data.inquiries) mergedState.inquiries = mergeById('inquiries', local.inquiries, data.inquiries);
         if (data.clubScoreRules) {
           const rules: Record<string, ClubScoreRuleConfig> = { ...(local.clubScoreRules || {}) };
           (data.clubScoreRules as ClubScoreRuleConfig[]).forEach(r => {
             rules[r.club_id] = { ...(rules[r.club_id] || {}), ...r };
           });
-          setClubScoreRules(rules);
+          mergedState.clubScoreRules = rules;
         }
+
+        engine.seed(mergedState);
+
+        if (mergedState.members) setMembers(mergedState.members);
+        if (mergedState.seasons) setSeasons(mergedState.seasons);
+        if (mergedState.internalTeams) setInternalTeams(mergedState.internalTeams);
+        if (mergedState.tournaments) setTournaments(mergedState.tournaments);
+        if (mergedState.tournamentParticipants) setTournamentParticipants(mergedState.tournamentParticipants);
+        if (mergedState.playerStats) setPlayerStats(mergedState.playerStats);
+        if (mergedState.matches) setMatches(mergedState.matches);
+        if (mergedState.matchEvents) setMatchEvents(mergedState.matchEvents);
+        if (mergedState.events) setEvents(mergedState.events);
+        if (mergedState.sponsors) setSponsors(mergedState.sponsors);
+        if (mergedState.news) setNews(mergedState.news);
+        if (mergedState.gallery) setGallery(mergedState.gallery);
+        if (mergedState.clubScoreProfiles) setClubScoreProfiles(mergedState.clubScoreProfiles);
+        if (mergedState.activityLogs) setActivityLogs(mergedState.activityLogs);
+        if (mergedState.availabilities) setAvailabilities(mergedState.availabilities);
+        if (mergedState.draftLineups) setDraftLineups(mergedState.draftLineups);
+        if (mergedState.memberMessages) setMemberMessages(mergedState.memberMessages);
+        if (mergedState.gateScans) setGateScans(mergedState.gateScans);
+        if (mergedState.inquiries) setInquiries(mergedState.inquiries);
+        if (mergedState.clubScoreRules) setClubScoreRules(mergedState.clubScoreRules);
 
         syncedIdsRef.current = nextSyncedIds;
         try {
