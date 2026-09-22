@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
+import SyncStatusBanner from '@/components/SyncStatusBanner';
 
 export const metadata: Metadata = {
   title: 'itsfootball.club - The Premier Digital Platform for Football Clubs',
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <ClubProvider>
+            <SyncStatusBanner />
             {children}
           </ClubProvider>
         </AuthProvider>

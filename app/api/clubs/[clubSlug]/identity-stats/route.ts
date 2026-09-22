@@ -189,7 +189,10 @@ export async function GET(
       },
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        // Was s-maxage=10/SWR=30 (up to ~40s of a CDN-cached snapshot); this endpoint backs a
+        // periodically-refetched widget, so keep it live rather than trading freshness for
+        // hit rate at the edge.
+        'Cache-Control': 'no-store',
       }
     });
   } catch (err: any) {

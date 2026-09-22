@@ -159,7 +159,11 @@ export default function ClubIdentitySection({
     return () => observer.disconnect();
   }, []);
 
-  // Fetch verified raw dataset directly from server-side Supabase API
+  // Fetch verified raw dataset directly from server-side Supabase API. This ran only once on
+  // mount, so once it landed the section was permanently frozen at that snapshot - it never
+  // reflected further edits even though the rest of the page updates live. Re-fetch on an
+  // interval (and whenever the tab regains focus) so it stays within a few seconds of the DB,
+  // matching the API route's own cache freshness window.
   useEffect(() => {
     let isMounted = true;
     async function fetchSupabaseStats() {
@@ -185,12 +189,22 @@ export default function ClubIdentitySection({
     }
 
     fetchSupabaseStats();
+    const REFRESH_INTERVAL_MS = 30 * 1000;
+    const interval = setInterval(fetchSupabaseStats, REFRESH_INTERVAL_MS);
+    const onFocus = () => { if (document.visibilityState === 'visible') fetchSupabaseStats(); };
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
     return () => {
       isMounted = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
     };
   }, [club.slug, club.id, rawCurrentSeason]);
 
-  // Keep stats reactive if local context updates
+  // Fall back to the (now realtime-synced) client context counts until the first server
+  // fetch above lands - once it has, that snapshot is kept fresh by the interval/focus
+  // refetch above instead, so it's no longer overridden here.
   useEffect(() => {
     if (stats.source !== 'supabase_raw_dataset') {
       setStats({

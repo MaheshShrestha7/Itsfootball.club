@@ -49,7 +49,7 @@ import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
-import { SupabaseSync, SyncState } from './supabase/sync';
+import { SupabaseSync, SyncState, EntityKey } from './supabase/sync';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -451,6 +451,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Initial / repeat load from Supabase
+  const lastLoadAtRef = useRef(0);
   useEffect(() => {
     if (!isHydrated || !isSupabaseConfigured) return;
     const client = getSupabaseClient();
@@ -459,6 +460,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const engine = new SupabaseSync(client);
     syncRef.current = engine;
+    lastLoadAtRef.current = Date.now();
     setSyncReady(false);
     setSyncStatus({ phase: 'loading' });
 
@@ -471,8 +473,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         // A local-only row with no created_at (or one older than this) that has never been
         // confirmed synced is treated as abandoned rather than "still pending offline sync" -
         // long enough to comfortably cover a real offline editing session, short enough that
-        // one-off local test data doesn't linger forever.
-        const NEVER_SYNCED_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+        // stale local data doesn't keep masking what's actually in the database for days.
+        const NEVER_SYNCED_MAX_AGE_MS = 6 * 60 * 60 * 1000;
         const nowMs = Date.now();
 
         // Remote wins field-by-field. A local-only row (no matching remote row) survives
@@ -560,7 +562,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [isHydrated, loadNonce]);
 
 
-  // Live matchday: Supabase pushes match and event changes to every open screen
+  // Live sync: Supabase pushes changes on the core, frequently-edited tables to every open
+  // screen, so a club/member/sponsor/etc. edited from another tab, device, or admin session
+  // shows up here without waiting for the next full page load.
   const clubIdsKey = clubs.map(c => c.id).filter(id => /^[0-9a-f-]{36}$/i.test(id)).sort().join(',');
   useEffect(() => {
     if (!syncReady || !isSupabaseConfigured || !clubIdsKey) return;
@@ -569,10 +573,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     if (!client || !engine) return;
 
     const ids = clubIdsKey.split(',').slice(0, 100);
-    const filter = `club_id=in.(${ids.join(',')})`;
+    const filterOn = (column: string) => `${column}=in.(${ids.join(',')})`;
 
     const apply = <T extends { id: string }>(
-      key: 'matches' | 'matchEvents',
+      key: EntityKey,
       setter: React.Dispatch<React.SetStateAction<T[]>>,
       payload: any
     ) => {
@@ -594,10 +598,31 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     const channel = client
       .channel('live-matchday')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter }, payload =>
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clubs', filter: filterOn('id') }, payload =>
+        apply<Club>('clubs', setClubs, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_members', filter: filterOn('club_id') }, payload =>
+        apply<ClubMember>('members', setMembers, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_seasons', filter: filterOn('club_id') }, payload =>
+        apply<ClubSeason>('seasons', setSeasons, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: filterOn('club_id') }, payload =>
+        apply<ClubEvent>('events', setEvents, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors', filter: filterOn('club_id') }, payload =>
+        apply<Sponsor>('sponsors', setSponsors, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news_articles', filter: filterOn('club_id') }, payload =>
+        apply<NewsArticle>('news', setNews, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_gallery', filter: filterOn('club_id') }, payload =>
+        apply<MediaGalleryItem>('gallery', setGallery, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: filterOn('club_id') }, payload =>
         apply<Match>('matches', setMatches, payload)
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter }, payload =>
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: filterOn('club_id') }, payload =>
         apply<MatchEvent>('matchEvents', setMatchEvents, payload)
       )
       .subscribe();
@@ -658,6 +683,46 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     if (syncReady) runFlush();
     else setLoadNonce(n => n + 1);
   }, [syncReady, runFlush]);
+
+  // Re-pull from Supabase when a long-lived tab regains focus, so a page left open for a
+  // while (or backgrounded on mobile) doesn't keep showing data that's drifted from the
+  // database - the initial load effect above only runs once per mount / auth change.
+  useEffect(() => {
+    if (typeof document === 'undefined' || !isSupabaseConfigured) return;
+    const REFRESH_AFTER_MS = 60 * 1000;
+    const maybeRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastLoadAtRef.current > REFRESH_AFTER_MS) {
+        setLoadNonce(n => n + 1);
+      }
+    };
+    document.addEventListener('visibilitychange', maybeRefresh);
+    window.addEventListener('focus', maybeRefresh);
+    return () => {
+      document.removeEventListener('visibilitychange', maybeRefresh);
+      window.removeEventListener('focus', maybeRefresh);
+    };
+  }, []);
+
+  // Auto-retry with exponential backoff while sync is in an error state, so a transient
+  // network blip or a Supabase hiccup self-heals instead of leaving the UI stuck showing
+  // (possibly stale) local data with no visible recovery until someone clicks Retry.
+  const syncStatusRef = useRef(syncStatus);
+  syncStatusRef.current = syncStatus;
+  useEffect(() => {
+    if (syncStatus.phase !== 'error') return;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      if (syncStatusRef.current.phase !== 'error') return;
+      retrySync();
+      attempt += 1;
+      const delayMs = Math.min(5000 * 2 ** attempt, 60000);
+      timer = setTimeout(tick, delayMs);
+    };
+    timer = setTimeout(tick, 5000);
+    return () => clearTimeout(timer);
+  }, [syncStatus.phase, retrySync]);
 
   // Listen to cross-tab storage changes for real-time multi-window sync
   useEffect(() => {
