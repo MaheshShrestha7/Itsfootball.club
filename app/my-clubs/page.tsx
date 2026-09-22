@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { DEFAULT_BANNER } from '@/lib/crest';
 import {
   Shield,
   PlusCircle,
@@ -179,8 +180,9 @@ export default function MyClubsPage() {
                       {/* Banner Header */}
                       <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
                         <img
-                          src={club.banner_url}
+                          src={club.banner_url || DEFAULT_BANNER}
                           alt={club.name}
+                          onError={e => { if (e.currentTarget.src !== DEFAULT_BANNER) e.currentTarget.src = DEFAULT_BANNER; }}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                         <div style={{
@@ -381,8 +383,9 @@ export default function MyClubsPage() {
                         {/* Banner Header */}
                         <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
                           <img
-                            src={club.banner_url}
+                            src={club.banner_url || DEFAULT_BANNER}
                             alt={club.name}
+                            onError={e => { if (e.currentTarget.src !== DEFAULT_BANNER) e.currentTarget.src = DEFAULT_BANNER; }}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                           <div style={{
