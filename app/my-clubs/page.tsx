@@ -233,7 +233,6 @@ export default function MyClubsPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                               <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
                               <span style={{ color: '#E2E8F0' }}>{club.stadium_name}</span>
-                              <span>({club.stadium_capacity.toLocaleString()} seats)</span>
                             </div>
                             <div>
                               Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
@@ -400,7 +399,7 @@ export default function MyClubsPage() {
                       ⚡ 60-Second Setup
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Identity, crest, stadium, and team colours ready out of the box.
+                      Identity, crest, home ground, and team colours ready out of the box.
                     </div>
                   </div>
                   <div>

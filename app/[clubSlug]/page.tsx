@@ -287,11 +287,11 @@ export default function ClubPublicPage({
       {
         id: 'stadium-atmosphere',
         category: 'stadium',
-        tabLabel: 'Stadium & Fortress',
+        tabLabel: 'Home Ground & Fortress',
         badge: `HOME FORTRESS • ${club.stadium_name}`,
         bgImage: (club.slider_images && club.slider_images[1]) || gallery[0]?.media_url || 'https://images.unsplash.com/photo-1489944445391-11dd35366433?w=1600&auto=format&fit=crop&q=80',
         title: club.stadium_name,
-        subtitle: `${club.stadium_capacity.toLocaleString()} Covered Seats • ${club.stadium_pitch_type}`,
+        subtitle: club.stadium_pitch_type,
       }
     ];
   }, [club, club?.hero_pinned_items, matches, liveMatch, upcomingMatches, news, featuredArticle, events, clubEvents, gallery]);
@@ -728,7 +728,7 @@ export default function ClubPublicPage({
                     marginBottom: '1.75rem',
                     lineHeight: 1.6,
                   }}>
-                    The official home pitch of {club.name}. Built with {club.stadium_pitch_type} and {club.stadium_capacity.toLocaleString()} spectator seats.
+                    The official home pitch of {club.name}. Built with {club.stadium_pitch_type}.
                   </p>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
@@ -738,7 +738,7 @@ export default function ClubPublicPage({
                       style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
                       <MapPin size={16} />
-                      <span>View Stadium Map & Directions</span>
+                      <span>View Home Ground Map & Directions</span>
                     </a>
 
                     <a
@@ -772,7 +772,7 @@ export default function ClubPublicPage({
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span className="badge badge-live">
-                            <span className="pulse-dot" /> MATCHDAY LIVE • <LiveMinute match={activeSlideMatch} />&apos;
+                            <span className="pulse-dot" /> {activeSlideMatch.is_paused ? 'MATCHDAY PAUSED' : 'MATCHDAY LIVE'} • <LiveMinute match={activeSlideMatch} />&apos;
                           </span>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' MATCH' : 'CLUB FRIENDLY') : activeSlideMatch.competition}
@@ -1025,14 +1025,6 @@ export default function ClubPublicPage({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                      <Users size={18} color="var(--club-primary)" />
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Spectator Capacity</div>
-                        <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.9rem' }}>{club.stadium_capacity.toLocaleString()} Covered Seats</div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                       <Shield size={18} color="var(--club-primary)" />
                       <div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pitch Surface</div>
@@ -1048,7 +1040,7 @@ export default function ClubPublicPage({
                     className="btn btn-primary btn-sm"
                     style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                   >
-                    <span>Get Stadium Directions</span>
+                    <span>Get Home Ground Directions</span>
                     <ExternalLink size={14} />
                   </a>
                 </div>
@@ -2110,14 +2102,6 @@ export default function ClubPublicPage({
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location Address</div>
                     <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{club.stadium_address}</div>
-                  </div>
-                </div>
-
-                <div className="glass-panel" style={{ padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <Users size={20} color="var(--club-primary)" />
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Certified Capacity</div>
-                    <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{club.stadium_capacity.toLocaleString()} Covered Seats</div>
                   </div>
                 </div>
 

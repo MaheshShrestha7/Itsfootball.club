@@ -87,7 +87,7 @@ export default function AdminTournamentsPage({
     setName('');
     setSeason(activeSeason?.name || defaultSeasonLabel());
     setFormat('group_knockout');
-    setVenue(club.stadium_name || 'Home Stadium Arena');
+    setVenue(club.stadium_name || 'Home Ground Arena');
     setBannerUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
     setStartDate(new Date().toISOString().slice(0, 10));
     setEndDate(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));

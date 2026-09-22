@@ -33,7 +33,7 @@ import {
 import StatsAuditModal from '@/components/StatsAuditModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
-import { getLiveMinute } from '@/lib/match-clock';
+import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminMatchCenterControllerPage({
@@ -232,6 +232,18 @@ export default function AdminMatchCenterControllerPage({
     setEventMinute(newMin);
   };
 
+  // Pause/resume the live clock in place (injury, VAR check, etc.) without
+  // leaving the 'live' status/period the way switching to halftime would.
+  const handleTogglePause = () => {
+    if (match.is_paused) {
+      updateMatch(match.id, { is_paused: false });
+      showFeedback('Clock resumed');
+    } else {
+      updateMatch(match.id, { current_minute: getLiveMinute(match), is_paused: true });
+      showFeedback('Clock paused');
+    }
+  };
+
   // Set stoppage time
   const handleSetAddedTime = (minutes: number) => {
     updateMatch(match.id, { added_time: minutes });
@@ -264,7 +276,7 @@ export default function AdminMatchCenterControllerPage({
     }
 
     let detail = eventDetail.trim();
-    let assist = assistName.trim();
+    const assist = assistName.trim();
 
     if (eventType === 'sub') {
       const offPlayer = squadPlayers.find(p => p.id === selectedSubOffId);
@@ -571,6 +583,22 @@ export default function AdminMatchCenterControllerPage({
                   <button onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem' }} title="+1 minute">
                     <Plus size={13} /> 1m
                   </button>
+                  {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
+                    <button
+                      onClick={handleTogglePause}
+                      className="btn btn-sm"
+                      style={{
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.78rem',
+                        background: match.is_paused ? '#F59E0B' : 'rgba(255,255,255,0.06)',
+                        color: match.is_paused ? '#000000' : '#FFFFFF',
+                        fontWeight: 800,
+                      }}
+                      title={match.is_paused ? 'Resume clock' : 'Pause clock (injury, VAR check, etc.)'}
+                    >
+                      {match.is_paused ? <><Play size={13} /> Resume</> : <><Pause size={13} /> Pause</>}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1029,6 +1057,28 @@ export default function AdminMatchCenterControllerPage({
               Trigger whistle transitions to control live status on supporter feeds.
             </p>
 
+            {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
+              <button
+                onClick={handleTogglePause}
+                className="btn"
+                style={{
+                  width: '100%',
+                  justifyContent: 'space-between',
+                  padding: '0.85rem 1.25rem',
+                  marginBottom: '1rem',
+                  background: match.is_paused ? '#F59E0B' : 'rgba(255,255,255,0.06)',
+                  color: match.is_paused ? '#000000' : '#FFFFFF',
+                  fontWeight: 800,
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {match.is_paused ? <Play size={16} /> : <Pause size={16} />}
+                  {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury, VAR check, etc.)'}
+                </span>
+                {match.is_paused && <span className="badge" style={{ background: 'rgba(0,0,0,0.2)', color: '#000' }}>PAUSED</span>}
+              </button>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button
                 onClick={() => handlePeriodTransition('first_half', 'live', 1)}
@@ -1202,7 +1252,7 @@ export default function AdminMatchCenterControllerPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Venue / Stadium</label>
+                  <label className="form-label">Venue / Home Ground</label>
                   <input
                     type="text"
                     className="form-input"

@@ -53,30 +53,75 @@ function sanitizeCsvCell(value: any): string {
   return str;
 }
 
-// Standard CSV line parser handling quotes and commas
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+// Full CSV parser: tokenizes the whole text (not line-by-line) so a quoted cell
+// containing an embedded newline (e.g. a multi-line pasted address) stays one field
+// instead of splitting into two malformed rows.
+function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
   let inQuotes = false;
+  let i = 0;
+  const len = text.length;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++; // skip escaped quote
-      } else {
-        inQuotes = !inQuotes;
+  while (i < len) {
+    const char = text[i];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+        i++;
+        continue;
       }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+      field += char;
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+      i++;
+    } else if (char === ',') {
+      row.push(field.trim());
+      field = '';
+      i++;
+    } else if (char === '\r' || char === '\n') {
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      row.push(field.trim());
+      field = '';
+      rows.push(row);
+      row = [];
+      i++;
     } else {
-      current += char;
+      field += char;
+      i++;
     }
   }
-  result.push(current.trim());
-  return result;
+
+  if (field.length > 0 || row.length > 0) {
+    row.push(field.trim());
+    rows.push(row);
+  }
+
+  // Drop blank trailing/interior lines produced by the tokenizer
+  return rows.filter(r => !(r.length === 1 && r[0] === ''));
+}
+
+// Parses a raw cell into a number, flagging non-numeric values instead of
+// silently discarding them (an empty cell stays optional and produces no error).
+function parseOptionalNumber(raw: string | undefined, label: string, errors: string[]): number | undefined {
+  if (!raw || !raw.trim()) return undefined;
+  const num = Number(raw.trim());
+  if (Number.isNaN(num)) {
+    errors.push(`${label} "${raw.trim()}" is not a valid number.`);
+    return undefined;
+  }
+  return num;
 }
 
 // Normalize position values
@@ -345,23 +390,21 @@ export default function BulkMemberModal({
     }
 
     // 2. Parse CSV
-    const lines = trimmed.split(/\r?\n/).filter(line => line.trim().length > 0);
-    if (lines.length < 2) {
+    const csvRows = parseCsvRows(trimmed);
+    if (csvRows.length < 2) {
       setParsedRows([]);
       return;
     }
 
-    const headerLine = lines[0];
-    const rawHeaders = parseCsvLine(headerLine);
+    const rawHeaders = csvRows[0];
     const cleanHeaders = rawHeaders.map(h =>
       h.toLowerCase().replace(/[^a-z0-9]/g, '')
     );
 
     const rows: ParsedRow[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      const cells = parseCsvLine(line);
+    for (let i = 1; i < csvRows.length; i++) {
+      const cells = csvRows[i];
       const rawObj: Record<string, string> = {};
 
       cleanHeaders.forEach((header, idx) => {
@@ -380,7 +423,6 @@ export default function BulkMemberModal({
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email address is required.');
 
       const isDuplicate = existingEmails.has(email);
-      const isValid = errors.length === 0;
 
       const memberData: Omit<ClubMember, 'id' | 'created_at'> = {
         club_id: club.id,
@@ -392,13 +434,13 @@ export default function BulkMemberModal({
         role: normalizeRole(rawObj['role'] || 'Player'),
         roles: [normalizeRole(rawObj['role'] || 'Player')],
         player_position: normalizePosition(rawObj['position'] || rawObj['playerposition'] || 'SUB'),
-        jersey_number: rawObj['jerseynumber'] || rawObj['number'] ? Number(rawObj['jerseynumber'] || rawObj['number']) : undefined,
+        jersey_number: parseOptionalNumber(rawObj['jerseynumber'] || rawObj['number'], 'Jersey number', errors),
         photo_url: rawObj['photourl'] || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80`,
         date_of_birth: rawObj['dateofbirth'] || rawObj['dob'] || undefined,
         nationality: rawObj['nationality'] || 'Australia',
         preferred_foot: rawObj['preferredfoot'] === 'Left' ? 'Left' : rawObj['preferredfoot'] === 'Both' ? 'Both' : 'Right',
-        height_cm: rawObj['heightcm'] || rawObj['height'] ? Number(rawObj['heightcm'] || rawObj['height']) : undefined,
-        weight_kg: rawObj['weightkg'] || rawObj['weight'] ? Number(rawObj['weightkg'] || rawObj['weight']) : undefined,
+        height_cm: parseOptionalNumber(rawObj['heightcm'] || rawObj['height'], 'Height', errors),
+        weight_kg: parseOptionalNumber(rawObj['weightkg'] || rawObj['weight'], 'Weight', errors),
         status: normalizeStatus(rawObj['status'] || rawObj['playerstatus'] || 'active'),
         membership_status: (rawObj['membershipstatus'] || 'approved') as MembershipStatus,
         membership_tier: rawObj['membershiptier'] || rawObj['tier'] || 'Full Senior Member',
@@ -409,6 +451,10 @@ export default function BulkMemberModal({
         emergency_contact: rawObj['emergencycontact'] || undefined,
         application_notes: rawObj['applicationnotes'] || rawObj['notes'] || undefined,
       };
+
+      // Computed after memberData so numeric-field validation (jersey/height/weight)
+      // pushed into `errors` during construction is reflected in isValid.
+      const isValid = errors.length === 0;
 
       rows.push({
         index: i,

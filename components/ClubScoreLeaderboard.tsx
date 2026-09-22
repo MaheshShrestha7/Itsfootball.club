@@ -150,7 +150,7 @@ export default function ClubScoreLeaderboard({
             }}
           >
             <TrendingUp size={13} />
-            <span>This Week's MVP</span>
+            <span>This Week&apos;s MVP</span>
           </button>
 
           <button

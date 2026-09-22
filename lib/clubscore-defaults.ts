@@ -1,4 +1,26 @@
-import { ClubBadge, ClubScoreRuleConfig } from './supabase/types';
+import { ClubBadge, ClubScoreRuleConfig, PlayerPosition } from './supabase/types';
+
+const MIDFIELDER_POSITIONS: PlayerPosition[] = ['CDM', 'CM', 'CAM'];
+const DEFENDER_POSITIONS: PlayerPosition[] = ['GK', 'CB', 'LB', 'RB'];
+
+/**
+ * Resolves the configured ClubScore points for a goal based on the scorer's position
+ * (clubs can reward defenders/midfielders more than forwards for finding the net).
+ * Forwards, subs, and members with no recorded position fall back to the forward rate,
+ * matching this app's long-standing default when position is unknown.
+ */
+export function getGoalPointsForPosition(
+  rules: ClubScoreRuleConfig,
+  position?: PlayerPosition
+): number {
+  if (position && DEFENDER_POSITIONS.includes(position)) {
+    return rules.points_goal_defender ?? 15;
+  }
+  if (position && MIDFIELDER_POSITIONS.includes(position)) {
+    return rules.points_goal_midfielder ?? 12;
+  }
+  return rules.points_goal_forward ?? 10;
+}
 
 export const STANDARD_BADGES: ClubBadge[] = [
   {

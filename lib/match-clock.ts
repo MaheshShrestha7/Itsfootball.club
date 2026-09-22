@@ -4,12 +4,17 @@ import type { Match } from './supabase/types';
 // A live match stores the minute it was at (`current_minute`) and when that period (re)started
 // (`period_started_at`). Every screen derives the same minute from those two values, so nobody's
 // browser timer can drift from the referee's clock.
-const RUNNING_PERIODS = new Set(['first_half', 'second_half', 'extra_time']);
+export const RUNNING_PERIODS = new Set(['first_half', 'second_half', 'extra_time']);
 const MAX_MINUTE = 130;
 
 export function getLiveMinute(match: Match | null | undefined, now: number = Date.now()): number {
   if (!match) return 0;
-  if (match.status !== 'live' || !RUNNING_PERIODS.has(match.period) || !match.period_started_at) {
+  if (
+    match.status !== 'live' ||
+    match.is_paused ||
+    !RUNNING_PERIODS.has(match.period) ||
+    !match.period_started_at
+  ) {
     return match.current_minute;
   }
   const started = Date.parse(match.period_started_at);

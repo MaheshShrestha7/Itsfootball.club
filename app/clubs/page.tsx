@@ -46,7 +46,7 @@ export default function ClubsDirectoryPage() {
               <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
-                placeholder="Search by club or stadium..."
+                placeholder="Search by club or home ground..."
                 className="form-input touch-target"
                 style={{ paddingLeft: '2.25rem', minHeight: '44px' }}
                 value={searchTerm}
@@ -120,7 +120,7 @@ export default function ClubsDirectoryPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <MapPin size={14} color={club.primary_color} />
-                        <span>{club.stadium_name} ({club.stadium_capacity.toLocaleString()} cap)</span>
+                        <span>{club.stadium_name}</span>
                       </div>
                       <div>
                         Web: <code style={{ color: club.primary_color }}>/{club.slug}</code>

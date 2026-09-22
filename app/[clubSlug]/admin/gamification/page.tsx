@@ -202,6 +202,19 @@ export default function AdminGamificationPage({
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
+                  Goal (Midfielder)
+                </label>
+                <input
+                  type="number"
+                  value={rulesForm.points_goal_midfielder}
+                  onChange={e => setRulesForm({ ...rulesForm, points_goal_midfielder: Number(e.target.value) })}
+                  className="input-field"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
                   Goal (Defender/GK)
                 </label>
                 <input

@@ -595,17 +595,6 @@ export default function ClubIdentitySection({
           </div>
 
           <div className="stadium-specs-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {club.stadium_capacity > 0 && (
-              <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Spectator Capacity
-                </div>
-                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  {club.stadium_capacity.toLocaleString()} Covered Seats
-                </div>
-              </div>
-            )}
-
             {club.stadium_pitch_type && (
               <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>

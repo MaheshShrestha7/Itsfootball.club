@@ -267,7 +267,7 @@ export default function AdminHeroSliderPage({
             Hero Slider & Pinned Content Manager
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px' }}>
-            Pin multiple events, live or upcoming fixtures, news articles, and promotional image banners to rotate on your club's public home page hero carousel.
+            Pin multiple events, live or upcoming fixtures, news articles, and promotional image banners to rotate on your club&apos;s public home page hero carousel.
           </p>
         </div>
 

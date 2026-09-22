@@ -106,7 +106,7 @@ export default function AdminSponsorsPage({
             Club Sponsors & Commercial Partners
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Manage commercial kit partners, stadium naming rights, and grassroots sponsors.
+            Manage commercial kit partners, home ground naming rights, and grassroots sponsors.
           </p>
         </div>
 

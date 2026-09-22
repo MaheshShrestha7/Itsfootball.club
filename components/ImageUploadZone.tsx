@@ -286,7 +286,7 @@ export default function ImageUploadZone({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png, image/jpeg, image/webp, image/svg+xml"
+        accept="image/png, image/jpeg, image/webp, image/gif"
         style={{ display: 'none' }}
         onChange={handleFileChange}
         aria-label={label}

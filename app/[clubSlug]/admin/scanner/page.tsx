@@ -118,7 +118,7 @@ export default function AdminScannerPage({
         valid: res.success,
       });
     } else {
-      const res = verifyMemberPass(token);
+      const res = verifyMemberPass(token, club.id);
       const newLog: ScanLogEntry = {
         id: `log-${Date.now()}`,
         timestamp: timeStr,

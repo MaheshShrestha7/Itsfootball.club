@@ -25,6 +25,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clubs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID, -- Supabase auth.users id of the club creator; recognised as admin by is_club_admin()
     slug VARCHAR(64) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     short_name VARCHAR(16) NOT NULL,
@@ -62,10 +63,14 @@ CREATE TABLE IF NOT EXISTS club_members (
     club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
     user_id UUID, -- Optional link to Supabase auth.users
     full_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
     email VARCHAR(255),
     phone VARCHAR(64),
     role VARCHAR(32) DEFAULT 'player' CHECK (role IN ('owner', 'admin', 'staff', 'player', 'member', 'supporter')),
+    roles JSONB DEFAULT '[]'::jsonb,
     player_position VARCHAR(32) CHECK (player_position IN ('GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST', 'SUB', NULL)),
+    secondary_positions JSONB DEFAULT '[]'::jsonb,
     jersey_number INTEGER,
     photo_url TEXT,
     date_of_birth DATE,
@@ -77,12 +82,20 @@ CREATE TABLE IF NOT EXISTS club_members (
     qr_code_token VARCHAR(128) UNIQUE NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
     membership_tier VARCHAR(32) DEFAULT 'Senior Player',
     membership_expires_at DATE DEFAULT (CURRENT_DATE + INTERVAL '1 year'),
-    
+    membership_status VARCHAR(16) DEFAULT 'approved',
+    applied_at TIMESTAMPTZ,
+    reviewed_at TIMESTAMPTZ,
+    reviewed_by VARCHAR(255),
+    rejection_reason TEXT,
+    application_notes TEXT,
+    emergency_contact TEXT,
+
     -- Executive committee fields
     is_executive BOOLEAN DEFAULT FALSE,
     executive_title VARCHAR(128), -- e.g. "Club President", "Head Coach", "General Secretary"
     executive_bio TEXT,
     executive_order INTEGER DEFAULT 99,
+    executive_season VARCHAR(64),
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -146,6 +159,8 @@ CREATE TABLE IF NOT EXISTS matches (
     home_score INTEGER DEFAULT 0,
     away_score INTEGER DEFAULT 0,
     current_minute INTEGER DEFAULT 0,
+    period_started_at TIMESTAMPTZ, -- when the current period (re)started; live minute = current_minute + elapsed
+    is_paused BOOLEAN DEFAULT FALSE, -- freezes the live clock at current_minute without leaving 'live' status/period
     added_time INTEGER DEFAULT 0,
     period VARCHAR(32) DEFAULT 'pre_match' CHECK (period IN ('pre_match', 'first_half', 'halftime', 'second_half', 'extra_time', 'penalties', 'full_time')),
     home_formation VARCHAR(16) DEFAULT '4-3-3',
@@ -417,8 +432,10 @@ ALTER TABLE gamification_activity_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public clubs read" ON clubs;
 CREATE POLICY "Public clubs read" ON clubs FOR SELECT USING (is_active = TRUE);
 
+-- Member personal details (email, phone, QR pass token) are NOT public read.
+-- The "Members read own or admin" policy (needs is_club_admin(), defined further
+-- below) replaces this once that function exists.
 DROP POLICY IF EXISTS "Public members read" ON club_members;
-CREATE POLICY "Public members read" ON club_members FOR SELECT USING (TRUE);
 
 DROP POLICY IF EXISTS "Public player_stats read" ON player_stats;
 CREATE POLICY "Public player_stats read" ON player_stats FOR SELECT USING (TRUE);
@@ -457,39 +474,88 @@ CREATE POLICY "Public contact submit" ON contact_inquiries FOR INSERT WITH CHECK
 DROP POLICY IF EXISTS "Public analytics log" ON club_analytics;
 CREATE POLICY "Public analytics log" ON club_analytics FOR INSERT WITH CHECK (TRUE);
 
+-- Both public INSERT policies above have no volume limit of their own, so a durable,
+-- deployment-topology-independent cooldown is enforced here in Postgres (the app's
+-- /api/contact route and client-side sessionStorage throttle are the first line of
+-- defense, but this holds even against a direct REST call bypassing the app).
+CREATE OR REPLACE FUNCTION enforce_contact_inquiry_cooldown()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM contact_inquiries
+        WHERE club_id = NEW.club_id
+          AND sender_email = NEW.sender_email
+          AND created_at > NOW() - INTERVAL '2 minutes'
+    ) THEN
+        RAISE EXCEPTION 'rate limit: a message from this email was already submitted to this club in the last 2 minutes';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_contact_inquiry_cooldown ON contact_inquiries;
+CREATE TRIGGER trg_contact_inquiry_cooldown
+    BEFORE INSERT ON contact_inquiries
+    FOR EACH ROW
+    EXECUTE FUNCTION enforce_contact_inquiry_cooldown();
+
+CREATE OR REPLACE FUNCTION enforce_club_analytics_rate_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.event_type = 'page_view' AND (
+        SELECT COUNT(*) FROM club_analytics
+        WHERE club_id = NEW.club_id
+          AND visitor_hash = NEW.visitor_hash
+          AND event_type = 'page_view'
+          AND created_at > NOW() - INTERVAL '1 minute'
+    ) >= 20 THEN
+        RAISE EXCEPTION 'rate limit: too many page view events from this visitor';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_club_analytics_rate_limit ON club_analytics;
+CREATE TRIGGER trg_club_analytics_rate_limit
+    BEFORE INSERT ON club_analytics
+    FOR EACH ROW
+    EXECUTE FUNCTION enforce_club_analytics_rate_limit();
+
 -- Helper security function to prevent recursive RLS evaluations
 -- Drop all previous overloads to prevent 'function is_club_admin(uuid) is not unique' error (42725)
 DROP FUNCTION IF EXISTS is_club_admin(UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS is_club_admin(UUID) CASCADE;
 
+-- Who counts as a club admin: the club's owner, or a member with an owner/admin role.
+-- Signed-out visitors are NEVER admins (auth.uid() IS NOT NULL is required first).
 CREATE OR REPLACE FUNCTION is_club_admin(p_club_id UUID)
 RETURNS BOOLEAN AS $$
-DECLARE
-    v_user_id UUID;
-BEGIN
-    v_user_id := auth.uid();
-
-    IF v_user_id IS NULL THEN
-        RETURN TRUE;
-    END IF;
-
-    RETURN EXISTS (
-        SELECT 1
-        FROM club_members
-        WHERE club_id = p_club_id
-          AND user_id = v_user_id
-          AND role IN ('owner', 'admin')
+    SELECT auth.uid() IS NOT NULL AND (
+        EXISTS (SELECT 1 FROM clubs c WHERE c.id = p_club_id AND c.owner_id = auth.uid())
+        OR EXISTS (
+            SELECT 1 FROM club_members m
+            WHERE m.club_id = p_club_id
+              AND m.user_id = auth.uid()
+              AND m.role IN ('owner', 'admin')
+        )
     );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
--- Authenticated Admin / Club Owner policies (checked against is_club_admin)
+-- Authenticated Admin / Club Owner policies (checked against is_club_admin).
+-- WITH CHECK also allows owner_id = auth.uid() so a brand-new club (not yet
+-- linked via club_members) can still be inserted by the user creating it.
 DROP POLICY IF EXISTS "Club admin clubs edit" ON clubs;
 CREATE POLICY "Club admin clubs edit" ON clubs FOR ALL USING (
     is_club_admin(id)
 ) WITH CHECK (
-    is_club_admin(id)
+    is_club_admin(id) OR owner_id = auth.uid()
 );
+
+-- A member may read their own row; club admins may read every member of their club.
+-- The public site instead reads the club_members_public view (below).
+DROP POLICY IF EXISTS "Members read own or admin" ON club_members;
+CREATE POLICY "Members read own or admin" ON club_members FOR SELECT
+    USING (is_club_admin(club_id) OR user_id = auth.uid());
 
 DROP POLICY IF EXISTS "Club admin members manage" ON club_members;
 CREATE POLICY "Club admin members manage" ON club_members FOR ALL USING (
@@ -497,6 +563,28 @@ CREATE POLICY "Club admin members manage" ON club_members FOR ALL USING (
 ) WITH CHECK (
     is_club_admin(club_id)
 );
+
+-- Anyone may submit a membership application (it stays 'pending' until an admin approves it)
+DROP POLICY IF EXISTS "Public membership applications" ON club_members;
+CREATE POLICY "Public membership applications" ON club_members FOR INSERT
+    WITH CHECK (
+        membership_status = 'pending'
+        AND user_id IS NULL
+        AND COALESCE(is_executive, FALSE) = FALSE
+        AND role NOT IN ('owner', 'admin', 'staff')
+    );
+
+-- What the public site may show: approved members, without contact details or pass tokens
+CREATE OR REPLACE VIEW club_members_public AS
+    SELECT
+        id, club_id, full_name, first_name, last_name, role, roles, player_position,
+        secondary_positions, jersey_number, photo_url, nationality, preferred_foot, status,
+        membership_tier, is_executive, executive_title, executive_bio, executive_order,
+        executive_season, membership_status, created_at
+    FROM club_members
+    WHERE COALESCE(membership_status, 'approved') = 'approved';
+
+GRANT SELECT ON club_members_public TO anon, authenticated;
 
 DROP POLICY IF EXISTS "Club admin matches manage" ON matches;
 CREATE POLICY "Club admin matches manage" ON matches FOR ALL USING (
@@ -719,11 +807,33 @@ CREATE INDEX IF NOT EXISTS idx_availabilities_member ON player_availabilities(me
 
 ALTER TABLE player_availabilities ENABLE ROW LEVEL SECURITY;
 
+-- No direct public read/write policy: an unauthenticated player answers their
+-- availability request through their personal link, which calls these
+-- SECURITY DEFINER functions instead of touching the table directly. This avoids
+-- ever exposing the whole table (with everyone's response_token) to anonymous reads,
+-- and stops an anonymous caller from updating an arbitrary row via a guessed id.
 DROP POLICY IF EXISTS "Public availability read" ON player_availabilities;
-CREATE POLICY "Public availability read" ON player_availabilities FOR SELECT USING (TRUE);
-
 DROP POLICY IF EXISTS "Public availability respond by token" ON player_availabilities;
-CREATE POLICY "Public availability respond by token" ON player_availabilities FOR UPDATE USING (TRUE) WITH CHECK (TRUE);
+
+CREATE OR REPLACE FUNCTION get_availability_by_token(p_token TEXT)
+RETURNS SETOF player_availabilities AS $$
+    SELECT * FROM player_availabilities WHERE response_token = p_token LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+CREATE OR REPLACE FUNCTION respond_availability(p_token TEXT, p_status TEXT, p_note TEXT DEFAULT NULL)
+RETURNS SETOF player_availabilities AS $$
+    UPDATE player_availabilities
+       SET status = p_status,
+           note = LEFT(p_note, 500),
+           responded_at = NOW(),
+           updated_at = NOW()
+     WHERE response_token = p_token
+       AND p_status IN ('available', 'unavailable', 'maybe')
+    RETURNING *;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION get_availability_by_token(TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION respond_availability(TEXT, TEXT, TEXT) TO anon, authenticated;
 
 DROP POLICY IF EXISTS "Club admin availabilities manage" ON player_availabilities;
 CREATE POLICY "Club admin availabilities manage" ON player_availabilities FOR ALL USING (

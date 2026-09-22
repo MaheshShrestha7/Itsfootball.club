@@ -55,6 +55,7 @@ export default function AdminTournamentDetailPage({
   const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>('bracket');
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamCode, setNewTeamCode] = useState('');
@@ -81,18 +82,26 @@ export default function AdminTournamentDetailPage({
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
 
   const handleGenerateTiesheet = (shuffle = false) => {
+    if (participants.length < 2) {
+      setFeedbackTone('error');
+      setFeedback('⚠ Add at least 2 teams before generating a tiesheet.');
+      setTimeout(() => setFeedback(null), 3500);
+      return;
+    }
     if (tourneyMatches.length > 0) {
       if (!confirm('Regenerating the tiesheet will reset current tournament fixtures and scores. Proceed?')) {
         return;
       }
     }
     const generated = generateTournamentTiesheet(tournament.id, { shuffle });
+    setFeedbackTone('success');
     setFeedback(`✓ Tiesheet generated! Created ${generated.length} tournament fixtures.`);
     setTimeout(() => setFeedback(null), 3500);
   };
 
   const handleProgressStage = () => {
     progressKnockoutStage(tournament.id);
+    setFeedbackTone('success');
     setFeedback('✓ Evaluated completed matches and advanced winners in knockout bracket!');
     setTimeout(() => setFeedback(null), 3500);
   };
@@ -114,6 +123,7 @@ export default function AdminTournamentDetailPage({
     setNewTeamName('');
     setNewTeamCode('');
     setAddTeamModalOpen(false);
+    setFeedbackTone('success');
     setFeedback(`✓ Added guest team "${newTeamName.trim()}"! Remember to regenerate tiesheet to include them.`);
     setTimeout(() => setFeedback(null), 4000);
   };
@@ -128,6 +138,7 @@ export default function AdminTournamentDetailPage({
     // Regenerate tiesheet with new structure
     generateTournamentTiesheet(tournament.id);
     setEditFormatModalOpen(false);
+    setFeedbackTone('success');
     setFeedback(`✓ Updated structure: ${editGroupCount === 1 ? '1 Group' : `${editGroupCount} Groups`} with ${editTeamsAdvancing} advancing teams per group!`);
     setTimeout(() => setFeedback(null), 4000);
   };
@@ -138,6 +149,7 @@ export default function AdminTournamentDetailPage({
       banner_url: editBannerUrl.trim(),
     });
     setEditBannerModalOpen(false);
+    setFeedbackTone('success');
     setFeedback('✓ Updated tournament cover photo!');
     setTimeout(() => setFeedback(null), 3500);
   };
@@ -289,9 +301,9 @@ export default function AdminTournamentDetailPage({
       {feedback && (
         <div
           style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: '#10B981',
+            background: feedbackTone === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+            border: feedbackTone === 'error' ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+            color: feedbackTone === 'error' ? '#EF4444' : '#10B981',
             padding: '0.85rem 1.25rem',
             borderRadius: '10px',
             marginBottom: '1.25rem',
@@ -659,6 +671,7 @@ export default function AdminTournamentDetailPage({
           onClose={() => setSelectedMatch(null)}
           onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, isCompleted) => {
             updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, isCompleted);
+            setFeedbackTone('success');
             setFeedback('✓ Match score updated and points table / knockout progression recomputed!');
             setTimeout(() => setFeedback(null), 3500);
           }}

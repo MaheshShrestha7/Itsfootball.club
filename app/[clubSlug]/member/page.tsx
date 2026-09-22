@@ -1368,6 +1368,7 @@ export default function MemberPortalPage({
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         mode="verify_pass"
+        clubId={club.id}
       />
     </div>
   );

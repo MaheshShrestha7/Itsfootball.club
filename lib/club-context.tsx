@@ -36,7 +36,7 @@ import {
   TournamentParticipant,
   TournamentStanding
 } from './supabase/types';
-import { STANDARD_BADGES, getDefaultClubScoreRules } from './clubscore-defaults';
+import { STANDARD_BADGES, getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import {
   generateKnockoutBracket,
   generateRoundRobinSchedule,
@@ -150,7 +150,7 @@ interface ClubContextType {
   addMediaItem: (mediaData: Omit<MediaGalleryItem, 'id' | 'created_at'>) => void;
   
   // QR Verification & Check-in
-  verifyMemberPass: (token: string) => { valid: boolean; member?: ClubMember; message: string };
+  verifyMemberPass: (token: string, clubId?: string) => { valid: boolean; member?: ClubMember; message: string };
   /** Public pass check, run on the server (visitors never receive pass tokens) */
   verifyMemberPassPublic: (token: string) => Promise<{ valid: boolean; member?: ClubMember; message: string }>;
   /** Public door check-in, run on the server */
@@ -158,7 +158,7 @@ interface ClubContextType {
   checkInMemberToEvent: (eventId: string, qrToken: string) => { success: boolean; message: string; attendeeName?: string };
   
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>) => Promise<{ success: boolean; error?: string }>;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string) => Promise<{ success: boolean; error?: string }>;
   inquiries: ContactInquiry[];
   updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
@@ -232,6 +232,12 @@ interface ClubContextType {
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'itsfootball_state_v1';
+// Tracks, per entity type, which ids were confirmed present on the server the last
+// time this browser successfully loaded from Supabase. Lets the merge below tell
+// "never synced yet, still pending" apart from "was on the server, now deleted" -
+// the former must survive indefinitely for offline support, the latter should not
+// keep reappearing forever just because a stale local copy remains in localStorage.
+const SYNCED_IDS_KEY = 'itsfootball_synced_ids_v1';
 
 export const RESERVED_SLUGS = [
   'api', 'admin', 'clubs', 'create-club', 'verify', 'match', 'member',
@@ -309,6 +315,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const syncedIdsRef = useRef<Record<string, string[]>>({});
 
   // Label of a club's current season (falls back to the calendar-based default)
   const seasonsRef = useRef<ClubSeason[]>([]);
@@ -371,6 +378,14 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.warn('Could not read state from localStorage', err);
+      }
+
+      try {
+        const savedIds = localStorage.getItem(SYNCED_IDS_KEY);
+        if (savedIds) syncedIdsRef.current = JSON.parse(savedIds);
+      } catch {
+        // Not fatal: worst case this run treats every local-only row as still-pending,
+        // same as before this fix existed.
       } finally {
         setIsHydrated(true);
       }
@@ -452,49 +467,79 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       .then(({ data, errors }) => {
         if (cancelled) return;
         const local = syncStateRef.current;
+        const nextSyncedIds: Record<string, string[]> = {};
+        // A local-only row with no created_at (or one older than this) that has never been
+        // confirmed synced is treated as abandoned rather than "still pending offline sync" -
+        // long enough to comfortably cover a real offline editing session, short enough that
+        // one-off local test data doesn't linger forever.
+        const NEVER_SYNCED_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+        const nowMs = Date.now();
 
-        // Remote wins field-by-field; rows that exist only locally are kept and uploaded later
-        const mergeById = (localRows: any[] = [], remoteRows: any[]) => {
+        // Remote wins field-by-field. A local-only row (no matching remote row) survives
+        // only if it was never confirmed on the server before (still pending its first sync -
+        // offline support) AND is recent enough to plausibly still be mid-sync. One that WAS
+        // previously confirmed synced but is now absent from the server response has been
+        // deleted there, so it's dropped instead of resurrecting forever from a stale local
+        // cache (see SYNCED_IDS_KEY above); one that was NEVER confirmed synced and is older
+        // than the window above is treated as abandoned local test/demo data.
+        const mergeById = (entityName: string, localRows: any[] = [], remoteRows: any[]) => {
           const localById = new Map(localRows.map(r => [r.id, r]));
           const remoteIds = new Set(remoteRows.map(r => r.id));
+          const previouslySynced = new Set(syncedIdsRef.current[entityName] || []);
+          nextSyncedIds[entityName] = Array.from(remoteIds);
           return [
             ...remoteRows.map(r => ({ ...(localById.get(r.id) || {}), ...r })),
-            ...localRows.filter(r => !remoteIds.has(r.id)),
+            ...localRows.filter(r => {
+              if (remoteIds.has(r.id) || previouslySynced.has(r.id)) return false;
+              const createdAt = r.created_at ? Date.parse(r.created_at) : NaN;
+              if (Number.isNaN(createdAt)) return true; // no timestamp: can't judge age, keep it
+              return nowMs - createdAt < NEVER_SYNCED_MAX_AGE_MS;
+            }),
           ];
         };
 
         engine.seed(data);
 
         if (data.clubs) {
-          const merged = mergeById(local.clubs, data.clubs) as Club[];
+          const merged = mergeById('clubs', local.clubs, data.clubs) as Club[];
           setClubs(merged);
           setActiveClub(prev => merged.find(c => c.id === prev?.id) || prev || merged[0] || null);
         }
-        if (data.members) setMembers(mergeById(local.members, data.members));
-        if (data.seasons) setSeasons(mergeById(local.seasons, data.seasons));
-        if (data.internalTeams) setInternalTeams(mergeById(local.internalTeams, data.internalTeams));
-        if (data.tournaments) setTournaments(mergeById(local.tournaments, data.tournaments));
-        if (data.tournamentParticipants) setTournamentParticipants(mergeById(local.tournamentParticipants, data.tournamentParticipants));
-        if (data.playerStats) setPlayerStats(mergeById(local.playerStats, data.playerStats));
-        if (data.matches) setMatches(mergeById(local.matches, data.matches));
-        if (data.matchEvents) setMatchEvents(mergeById(local.matchEvents, data.matchEvents));
-        if (data.events) setEvents(mergeById(local.events, data.events));
-        if (data.sponsors) setSponsors(mergeById(local.sponsors, data.sponsors));
-        if (data.news) setNews(mergeById(local.news, data.news));
-        if (data.gallery) setGallery(mergeById(local.gallery, data.gallery));
-        if (data.clubScoreProfiles) setClubScoreProfiles(mergeById(local.clubScoreProfiles, data.clubScoreProfiles));
-        if (data.activityLogs) setActivityLogs(mergeById(local.activityLogs, data.activityLogs));
-        if (data.availabilities) setAvailabilities(mergeById(local.availabilities, data.availabilities));
-        if (data.draftLineups) setDraftLineups(mergeById(local.draftLineups, data.draftLineups));
-        if (data.memberMessages) setMemberMessages(mergeById(local.memberMessages, data.memberMessages));
-        if (data.gateScans) setGateScans(mergeById(local.gateScans, data.gateScans));
-        if (data.inquiries) setInquiries(mergeById(local.inquiries, data.inquiries));
+        if (data.members) setMembers(mergeById('members', local.members, data.members));
+        if (data.seasons) setSeasons(mergeById('seasons', local.seasons, data.seasons));
+        if (data.internalTeams) setInternalTeams(mergeById('internalTeams', local.internalTeams, data.internalTeams));
+        if (data.tournaments) setTournaments(mergeById('tournaments', local.tournaments, data.tournaments));
+        if (data.tournamentParticipants) setTournamentParticipants(mergeById('tournamentParticipants', local.tournamentParticipants, data.tournamentParticipants));
+        if (data.playerStats) setPlayerStats(mergeById('playerStats', local.playerStats, data.playerStats));
+        if (data.matches) setMatches(mergeById('matches', local.matches, data.matches));
+        if (data.matchEvents) setMatchEvents(mergeById('matchEvents', local.matchEvents, data.matchEvents));
+        if (data.events) setEvents(mergeById('events', local.events, data.events));
+        if (data.sponsors) setSponsors(mergeById('sponsors', local.sponsors, data.sponsors));
+        if (data.news) setNews(mergeById('news', local.news, data.news));
+        if (data.gallery) setGallery(mergeById('gallery', local.gallery, data.gallery));
+        if (data.clubScoreProfiles) setClubScoreProfiles(mergeById('clubScoreProfiles', local.clubScoreProfiles, data.clubScoreProfiles));
+        if (data.activityLogs) setActivityLogs(mergeById('activityLogs', local.activityLogs, data.activityLogs));
+        if (data.availabilities) setAvailabilities(mergeById('availabilities', local.availabilities, data.availabilities));
+        if (data.draftLineups) setDraftLineups(mergeById('draftLineups', local.draftLineups, data.draftLineups));
+        if (data.memberMessages) setMemberMessages(mergeById('memberMessages', local.memberMessages, data.memberMessages));
+        if (data.gateScans) setGateScans(mergeById('gateScans', local.gateScans, data.gateScans));
+        if (data.inquiries) setInquiries(mergeById('inquiries', local.inquiries, data.inquiries));
         if (data.clubScoreRules) {
           const rules: Record<string, ClubScoreRuleConfig> = { ...(local.clubScoreRules || {}) };
           (data.clubScoreRules as ClubScoreRuleConfig[]).forEach(r => {
             rules[r.club_id] = { ...(rules[r.club_id] || {}), ...r };
           });
           setClubScoreRules(rules);
+        }
+
+        syncedIdsRef.current = nextSyncedIds;
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(SYNCED_IDS_KEY, JSON.stringify(nextSyncedIds));
+          }
+        } catch {
+          // Non-fatal: worst case the next load can't distinguish stale-vs-pending
+          // for this run and falls back to the old "keep everything local" behavior.
         }
 
         setSyncReady(true);
@@ -1024,10 +1069,14 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       prev.map(m => {
         if (m.id === matchId) {
           const updated = { ...m, ...updates };
-          // Any change to the period / status / minute restarts the shared match clock
+          // Any change to the period / status / minute / pause state restarts the shared
+          // match clock's reference point. While paused, getLiveMinute ignores this value
+          // entirely, so resetting it here just means the clock resumes cleanly from
+          // current_minute the moment is_paused flips back to false.
           if (
             updates.period_started_at === undefined &&
-            (updates.period !== undefined || updates.status !== undefined || updates.current_minute !== undefined)
+            (updates.period !== undefined || updates.status !== undefined ||
+              updates.current_minute !== undefined || updates.is_paused !== undefined)
           ) {
             updated.period_started_at = new Date().toISOString();
           }
@@ -1210,6 +1259,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     setMatchEvents(prev => [...prev, newEvent]);
 
+    const eventMatch = matches.find(m => m.id === eventData.match_id);
+    const rules = eventMatch
+      ? clubScoreRules[eventMatch.club_id] || getDefaultClubScoreRules(eventMatch.club_id)
+      : null;
+
     // Update match score if event is a goal
     if (eventData.event_type === 'goal' || eventData.event_type === 'penalty') {
       setMatches(prev =>
@@ -1230,7 +1284,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         const pName = eventData.player_name.toLowerCase();
         const scorer = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
         if (scorer) {
-          awardClubScorePoints(scorer.id, 10, 'match_goal', `Goal (${eventData.minute}') in match`, eventData.match_id);
+          const pts = rules ? getGoalPointsForPosition(rules, scorer.player_position) : 10;
+          awardClubScorePoints(scorer.id, pts, 'match_goal', `Goal (${eventData.minute}') in match`, eventData.match_id);
         }
       }
 
@@ -1239,20 +1294,23 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         const aName = eventData.assist_player_name.toLowerCase();
         const assister = members.find(m => aName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(aName));
         if (assister) {
-          awardClubScorePoints(assister.id, 7, 'match_assist', `Assist (${eventData.minute}') in match`, eventData.match_id);
+          const pts = rules?.points_assist ?? 7;
+          awardClubScorePoints(assister.id, pts, 'match_assist', `Assist (${eventData.minute}') in match`, eventData.match_id);
         }
       }
     } else if (eventData.event_type === 'yellow_card' && eventData.player_name) {
       const pName = eventData.player_name.toLowerCase();
       const player = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
       if (player) {
-        awardClubScorePoints(player.id, -3, 'disciplinary_card', `Yellow Card (${eventData.minute}') penalty`, eventData.match_id);
+        const pts = rules?.points_yellow_card_penalty ?? -3;
+        awardClubScorePoints(player.id, pts, 'disciplinary_card', `Yellow Card (${eventData.minute}') penalty`, eventData.match_id);
       }
     } else if (eventData.event_type === 'red_card' && eventData.player_name) {
       const pName = eventData.player_name.toLowerCase();
       const player = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
       if (player) {
-        awardClubScorePoints(player.id, -10, 'disciplinary_card', `Red Card (${eventData.minute}') penalty`, eventData.match_id);
+        const pts = rules?.points_red_card_penalty ?? -10;
+        awardClubScorePoints(player.id, pts, 'disciplinary_card', `Red Card (${eventData.minute}') penalty`, eventData.match_id);
       }
     }
 
@@ -1263,7 +1321,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       event: newEvent,
       timestamp: Date.now(),
     });
-  }, [members, awardClubScorePoints]);
+  }, [members, matches, clubScoreRules, awardClubScorePoints]);
 
   const deleteMatchEvent = useCallback((eventId: string) => {
     setMatchEvents(prev => {
@@ -1494,10 +1552,21 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // 9. QR Verification & Check-in
-  const verifyMemberPass = useCallback((token: string): { valid: boolean; member?: ClubMember; message: string } => {
+  const recordGateScan = useCallback((scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => {
+    const newScan: GateScanRecord = {
+      ...scan,
+      id: newId(),
+      scanned_at: new Date().toISOString(),
+    };
+
+    setGateScans(prev => [newScan, ...prev.slice(0, 499)]);
+  }, []);
+
+  const verifyMemberPass = useCallback((token: string, clubId?: string): { valid: boolean; member?: ClubMember; message: string } => {
     const cleaned = token.trim();
     const member = members.find(
-      m => m.qr_code_token === cleaned || m.id === cleaned || cleaned.includes(m.qr_code_token)
+      m => (!clubId || m.club_id === clubId) &&
+        (m.qr_code_token === cleaned || m.id === cleaned || cleaned.includes(m.qr_code_token))
     );
 
     if (!member) {
@@ -1532,11 +1601,26 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [members]);
 
   const checkInMemberToEvent = useCallback((eventId: string, qrToken: string) => {
-    const verification = verifyMemberPass(qrToken);
+    const targetEvent = events.find(e => e.id === eventId);
+    // Scope the pass lookup to this event's club so a valid pass from a different
+    // club (relevant to admins who manage more than one club) can't check in here.
+    const verification = verifyMemberPass(qrToken, targetEvent?.club_id);
     if (!verification.valid || !verification.member) {
       return {
         success: false,
         message: verification.message
+      };
+    }
+
+    // Idempotency guard: this member's pass was already scanned for this event.
+    const alreadyCheckedIn = gateScans.some(
+      s => s.scan_type === 'event_checkin' && s.event_id === eventId && s.member_id === verification.member!.id
+    );
+    if (alreadyCheckedIn) {
+      return {
+        success: false,
+        attendeeName: verification.member.full_name,
+        message: `${verification.member.full_name} is already checked in to ${targetEvent?.title || 'this event'}. No duplicate points awarded.`
       };
     }
 
@@ -1546,7 +1630,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Auto-award ClubScore points for verified check-in
-    const targetEvent = events.find(e => e.id === eventId);
     const category = targetEvent?.category || 'training';
     const basePts = category === 'training' ? 10 : 5;
     awardClubScorePoints(
@@ -1557,39 +1640,59 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       eventId
     );
 
+    recordGateScan({
+      club_id: verification.member.club_id,
+      scan_type: 'event_checkin',
+      token: qrToken,
+      member_id: verification.member.id,
+      member_name: verification.member.full_name,
+      event_id: eventId,
+      event_title: targetEvent?.title,
+      valid: true,
+    });
+
     return {
       success: true,
       attendeeName: verification.member.full_name,
       message: `Successfully checked in ${verification.member.full_name} (+${basePts} ClubScore pts awarded)`
     };
-  }, [verifyMemberPass, events, awardClubScorePoints]);
+  }, [verifyMemberPass, events, gateScans, awardClubScorePoints, recordGateScan]);
 
   // 11. Inquiries
   const submitInquiry = useCallback(async (
-    inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>
+    inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
+    honeypot?: string
   ): Promise<{ success: boolean; error?: string }> => {
-    const client = getSupabaseClient();
-    if (!client) return { success: false, error: 'Messages cannot be sent right now. Please try again later.' };
-
     const message = sanitizeText(inquiryData.message);
     const name = sanitizeText(inquiryData.sender_name);
     const email = sanitizeText(inquiryData.sender_email);
     if (!name || !email || !message) return { success: false, error: 'Please fill in your name, email and message.' };
     if (message.length > 4000) return { success: false, error: 'Your message is too long (4000 characters maximum).' };
 
-    // Straight to the database (visitors have no local copy); club admins read it in their inbox
-    const { error } = await client.from('contact_inquiries').insert({
-      id: newId(),
-      club_id: inquiryData.club_id,
-      sender_name: name,
-      sender_email: email,
-      sender_phone: inquiryData.sender_phone ? sanitizeText(inquiryData.sender_phone) : null,
-      inquiry_type: inquiryData.inquiry_type,
-      message,
-      status: 'unread',
-    });
-    if (error) return { success: false, error: 'Your message could not be sent. Please try again in a moment.' };
-    return { success: true };
+    // Routed through /api/contact (not a direct Supabase insert) so the server can
+    // apply the honeypot check and a per-IP throttle ahead of the DB's own cooldown.
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          club_id: inquiryData.club_id,
+          sender_name: name,
+          sender_email: email,
+          sender_phone: inquiryData.sender_phone ? sanitizeText(inquiryData.sender_phone) : undefined,
+          inquiry_type: inquiryData.inquiry_type,
+          message,
+          website: honeypot,
+        }),
+      });
+      const data = await res.json().catch(() => ({ success: false }));
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Your message could not be sent. Please try again in a moment.' };
+      }
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Your message could not be sent. Please try again in a moment.' };
+    }
   }, []);
 
   const updateInquiryStatus = useCallback((inquiryId: string, status: ContactInquiry['status']) => {
@@ -1823,7 +1926,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     payload.audited_events.forEach((evt: MatchAuditItem) => {
       if (evt.player_id) {
         if (evt.event_type === 'goal' || evt.event_type === 'penalty') {
-          const pts = rules.points_goal_forward || 10;
+          const scorer = members.find(m => m.id === evt.player_id);
+          const pts = getGoalPointsForPosition(rules, scorer?.player_position);
           awardClubScorePoints(evt.player_id, pts, 'match_goal', `Match Goal (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId);
           totalXP += pts;
           setPlayerStats(prev =>
@@ -1884,7 +1988,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       totalPointsAwarded: totalXP,
       message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad.`,
     };
-  }, [matches, clubScoreRules, awardClubScorePoints]);
+  }, [matches, members, clubScoreRules, awardClubScorePoints]);
 
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
@@ -1960,16 +2064,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, []);
 
-  const recordGateScan = useCallback((scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => {
-    const newScan: GateScanRecord = {
-      ...scan,
-      id: newId(),
-      scanned_at: new Date().toISOString(),
-    };
-
-    setGateScans(prev => [newScan, ...prev.slice(0, 499)]);
-  }, []);
-
   const selfCheckInMatch = useCallback((
     matchId: string,
     attendee: { name?: string; email?: string; token?: string }
@@ -1993,6 +2087,18 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         (m.qr_code_token?.toLowerCase() === token || m.id.toLowerCase() === token)
       );
       if (member) {
+        // Idempotency guard: this member's pass was already scanned at this match's door.
+        const alreadyCheckedIn = gateScans.some(
+          s => s.scan_type === 'match_checkin' && s.match_id === matchId && s.member_id === member.id
+        );
+        if (alreadyCheckedIn) {
+          return {
+            success: false,
+            attendeeName: member.full_name,
+            message: `${member.full_name} is already checked in to this fixture. No duplicate points awarded.`
+          };
+        }
+
         attendeeName = member.full_name;
         memberId = member.id;
         // Award attendance points
@@ -2038,7 +2144,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       message: `Welcome to ${match.venue}! Entry check-in confirmed.`,
       attendeeName
     };
-  }, [matches, members, awardClubScorePoints, recordGateScan]);
+  }, [matches, members, gateScans, awardClubScorePoints, recordGateScan]);
 
   const verifyMemberPassPublic = useCallback(async (token: string): Promise<{ valid: boolean; member?: ClubMember; message: string }> => {
     // A scanned QR may carry a whole link (".../verify?token=abc"); pull the token out of it
@@ -2150,7 +2256,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       'First Team Squad & Stats': clubViews.filter(v => v.page_path.includes('/squad') || v.page_path.includes('#squad')).length * 5,
       'Fixtures & Results': clubViews.filter(v => v.page_path.includes('/events') || v.page_path.includes('#fixtures')).length * 5,
       'Digital Member Pass Portal': clubViews.filter(v => v.page_path.includes('/member')).length * 5,
-      'Home Ground & Stadium Guide': clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
+      'Home Ground Guide': clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
     };
     const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
 
@@ -2159,7 +2265,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       'First Team Squad & Stats': 'var(--club-primary)',
       'Fixtures & Results': '#3B82F6',
       'Digital Member Pass Portal': '#F59E0B',
-      'Home Ground & Stadium Guide': '#A855F7',
+      'Home Ground Guide': '#A855F7',
     };
 
     const topSections = Object.entries(sectionHits).map(([name, count]) => ({

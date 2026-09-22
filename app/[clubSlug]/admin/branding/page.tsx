@@ -124,10 +124,7 @@ export default function AdminBrandingPage({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setHasUserEdited(true);
     const { name, value } = e.target;
-    if (name === 'stadium_capacity') {
-      const parsed = parseInt(value, 10);
-      setFormData(prev => ({ ...prev, stadium_capacity: isNaN(parsed) ? 0 : parsed }));
-    } else if (name === 'founded_year') {
+    if (name === 'founded_year') {
       const parsed = parseInt(value, 10);
       setFormData(prev => ({ ...prev, founded_year: isNaN(parsed) ? 1800 : parsed }));
     } else if (name === 'name' && autoSyncSlug) {
@@ -194,7 +191,7 @@ export default function AdminBrandingPage({
           Club Configuration & Visual Interface
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Configure your club identity, establishment year, stadium specs, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
+          Configure your club identity, establishment year, home ground specs, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
         </p>
       </div>
 
@@ -474,7 +471,7 @@ export default function AdminBrandingPage({
                 placeholder="e.g. 2018"
               />
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                Displayed on the club header (Est. {formData.founded_year}), stadium entry, match badges, and member passes.
+                Displayed on the club header (Est. {formData.founded_year}), home ground entry, match badges, and member passes.
               </div>
             </div>
 
@@ -601,8 +598,8 @@ export default function AdminBrandingPage({
             />
 
             <ImageUploadZone
-              label="Hero Stadium Banner"
-              recommendedText="Wide 1920x1080px (16:9) stadium photography for public hero showcase"
+              label="Hero Home Ground Banner"
+              recommendedText="Wide 1920x1080px (16:9) home ground photography for public hero showcase"
               currentImageUrl={formData.banner_url}
               onUploadComplete={(url) => {
                 setHasUserEdited(true);
@@ -630,7 +627,7 @@ export default function AdminBrandingPage({
               </Link>
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-              Add additional stadium photography, match celebrations, or banner graphics to cycle through on the public home page slider, or use the pinned content manager to pin fixtures, news, and events.
+              Add additional home ground photography, match celebrations, or banner graphics to cycle through on the public home page slider, or use the pinned content manager to pin fixtures, news, and events.
             </p>
             <textarea
               name="slider_images_text"
@@ -652,23 +649,12 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Stadium / Ground Name</label>
+              <label className="form-label">Home Ground Name</label>
               <input
                 type="text"
                 name="stadium_name"
                 className="form-input"
                 value={formData.stadium_name}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Seating Capacity</label>
-              <input
-                type="number"
-                name="stadium_capacity"
-                className="form-input"
-                value={formData.stadium_capacity}
                 onChange={handleChange}
               />
             </div>

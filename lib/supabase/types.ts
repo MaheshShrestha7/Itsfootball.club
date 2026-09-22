@@ -177,6 +177,8 @@ export interface Match {
   current_minute: number;
   /** When the current period (re)started; the live minute is current_minute + time elapsed since */
   period_started_at?: string;
+  /** Freezes the live clock at current_minute (e.g. injury, VAR check) without leaving the 'live' status/period */
+  is_paused?: boolean;
   added_time: number;
   period: MatchPeriod;
   home_formation?: string;

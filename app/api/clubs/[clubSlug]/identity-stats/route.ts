@@ -79,7 +79,7 @@ export async function GET(
           message: `Club with slug "${cleanSlug}" not found in Supabase`,
           source: 'supabase_not_found',
         },
-        { status: 200 }
+        { status: 404 }
       );
     }
 

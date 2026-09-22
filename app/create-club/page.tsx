@@ -122,7 +122,7 @@ export default function CreateClubPage() {
 
   const validateStep3 = () => {
     if (!formData.stadium_name.trim()) {
-      setStepError('Please provide your home ground stadium name.');
+      setStepError('Please provide your home ground name.');
       return false;
     }
     setStepError(null);
@@ -403,7 +403,7 @@ export default function CreateClubPage() {
                   2. Dynamic Visual Branding & Official Kit Design
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Upload official club crest and stadium hero banner, select WCAG-tested team colors, and customize the matchday kit.
+                  Upload official club crest and home ground hero banner, select WCAG-tested team colors, and customize the matchday kit.
                 </p>
 
                 {/* Color Preset Quick Pickers */}
@@ -557,8 +557,8 @@ export default function CreateClubPage() {
                     />
 
                     <ImageUploadZone
-                      label="Hero Stadium Banner"
-                      recommendedText="Wide 1920x1080px (16:9) stadium or arena photography"
+                      label="Hero Home Ground Banner"
+                      recommendedText="Wide 1920x1080px (16:9) home ground or arena photography"
                       currentImageUrl={formData.banner_url}
                       onUploadComplete={(url) => setFormData(prev => ({ ...prev, banner_url: url }))}
                       folder="banners"
@@ -602,36 +602,23 @@ export default function CreateClubPage() {
             {step === 3 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
-                  3. Stadium & Matchday Venue
+                  3. Home Ground & Matchday Venue
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                  Provide fans and visiting teams with venue directions, capacity, and surface specs.
+                  Provide fans and visiting teams with venue directions and surface specs.
                 </p>
 
-                <div className="form-row-2-1">
-                  <div className="form-group">
-                    <label className="form-label">Stadium / Ground Name *</label>
-                    <input
-                      type="text"
-                      name="stadium_name"
-                      required
-                      className="form-input"
-                      placeholder="e.g. Riverside Park"
-                      value={formData.stadium_name}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Capacity (Seats)</label>
-                    <input
-                      type="number"
-                      name="stadium_capacity"
-                      className="form-input"
-                      value={formData.stadium_capacity}
-                      onChange={handleChange}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Home Ground Name *</label>
+                  <input
+                    type="text"
+                    name="stadium_name"
+                    required
+                    className="form-input"
+                    placeholder="e.g. Riverside Park"
+                    value={formData.stadium_name}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div className="form-group">

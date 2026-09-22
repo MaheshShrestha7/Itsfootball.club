@@ -27,6 +27,10 @@ interface QRScannerModalProps {
   targetEvent?: ClubEvent | null;
   targetMatch?: Match | null;
   mode?: 'verify_pass' | 'event_checkin' | 'match_checkin';
+  // Scopes plain pass verification to one club; falls back to the target event/match's
+  // own club when set. Without either, an admin of multiple clubs could verify a pass
+  // belonging to any club on the platform.
+  clubId?: string;
 }
 
 export default function QRScannerModal({
@@ -35,8 +39,10 @@ export default function QRScannerModal({
   targetEvent,
   targetMatch,
   mode = 'verify_pass',
+  clubId,
 }: QRScannerModalProps) {
   const { verifyMemberPass, checkInMemberToEvent, selfCheckInMatch, members } = useClub();
+  const verifyClubId = targetEvent?.club_id ?? targetMatch?.club_id ?? clubId;
   const [manualCode, setManualCode] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -209,7 +215,7 @@ export default function QRScannerModal({
           });
         }
       } else {
-        const res = verifyMemberPass(token);
+        const res = verifyMemberPass(token, verifyClubId);
         if (res.valid && res.member) {
           playTurnstileAudio('grant');
           try {

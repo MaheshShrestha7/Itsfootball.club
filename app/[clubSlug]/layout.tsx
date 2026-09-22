@@ -1,84 +1,57 @@
-'use client';
+import React from 'react';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { clubSlugExists, findClubBySlug } from '@/lib/supabase/club-lookup';
+import ClubLayoutClient from './ClubLayoutClient';
 
-import React, { use, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useClub } from '@/lib/club-context';
-import ClubNavbar from '@/components/ClubNavbar';
-import Footer from '@/components/Footer';
-import { hexToRgb, evaluateColorContrast } from '@/lib/theme-utils';
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ clubSlug: string }>;
+}): Promise<Metadata> {
+  const { clubSlug } = await params;
+  const club = await findClubBySlug(clubSlug);
+  if (!club) return {};
 
-export default function ClubLayout({
+  const title = `${club.name} | itsfootball.club`;
+  const description = club.motto || `Official club hub for ${club.name} — live match center, squad, fixtures, and news.`;
+  const image = club.banner_url || club.logo_url || undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: 'itsfootball.club',
+      type: 'website',
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+  };
+}
+
+export default async function ClubLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Promise<{ clubSlug: string }>;
 }) {
-  const resolvedParams = use(params);
-  const pathname = usePathname();
-  const { clubs, selectClubBySlug, sponsors, trackPageView, isHydrated, syncStatus } = useClub();
-  // No fallback to "some other club": an unknown address must not show another club's site
-  const club = selectClubBySlug(resolvedParams.clubSlug) ||
-    clubs.find(c => c.slug.toLowerCase() === resolvedParams.clubSlug.toLowerCase());
-  // Wait for the first load from Supabase before declaring a club missing
-  const finishedLoading = isHydrated && syncStatus.phase !== 'loading';
+  const { clubSlug } = await params;
 
-  // Track real public page visits for live club analytics
-  useEffect(() => {
-    if (club?.id && pathname && !pathname.includes('/admin')) {
-      trackPageView(club.id, pathname);
-    }
-  }, [club?.id, pathname, trackPageView]);
-
-  if (!club) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', textAlign: 'center', padding: '2rem' }}>
-        {finishedLoading ? (
-          <>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>Club not found</h1>
-            <p style={{ color: 'var(--text-muted)' }}>No club exists at this address yet.</p>
-            <Link href="/create-club" className="btn btn-primary">Launch a Club</Link>
-          </>
-        ) : (
-          <div style={{ color: 'var(--text-muted)' }}>Loading...</div>
-        )}
-      </div>
-    );
+  // Server-side existence check so unknown club slugs return a real HTTP 404
+  // instead of a client-rendered 200 "not found" page. This intentionally fails
+  // open on a transient Supabase error (see clubSlugExists), unlike a plain
+  // "club not found" lookup - a network blip shouldn't 404 every club page.
+  if (!(await clubSlugExists(clubSlug))) {
+    notFound();
   }
 
-  // Dynamic CSS variables injected for this club tenant
-  const primaryRgb = hexToRgb(club?.primary_color || '#10B981');
-  const secondaryRgb = hexToRgb(club?.secondary_color || '#0F172A');
-  const accentRgb = hexToRgb(club?.accent_color || '#F59E0B');
-
-  // WCAG 2.2 AA Contrast calculation
-  const contrastEval = evaluateColorContrast(club?.primary_color || '#10B981');
-
-  const clubSponsors = club ? sponsors.filter(s => s.club_id === club.id) : [];
-
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        // Injected Dynamic Branding Variables & WCAG Compliant Contrast Text
-        ['--club-primary' as any]: club.primary_color,
-        ['--club-primary-rgb' as any]: primaryRgb.rgbString,
-        ['--club-primary-contrast' as any]: contrastEval.bestTextColor,
-        ['--club-secondary' as any]: club.secondary_color,
-        ['--club-secondary-rgb' as any]: secondaryRgb.rgbString,
-        ['--club-accent' as any]: club.accent_color,
-        ['--club-accent-rgb' as any]: accentRgb.rgbString,
-      }}
-    >
-      <ClubNavbar club={club} />
-      <div style={{ flex: 1 }}>
-        {children}
-      </div>
-      <Footer club={club} sponsors={clubSponsors} />
-    </div>
-  );
+  return <ClubLayoutClient params={params}>{children}</ClubLayoutClient>;
 }
-

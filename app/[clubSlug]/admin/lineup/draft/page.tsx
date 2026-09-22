@@ -107,6 +107,7 @@ export default function DraftLineupPage() {
   const [swappingPitchPlayerId, setSwappingPitchPlayerId] = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [isBenchOver, setIsBenchOver] = useState<boolean>(false);
 
   // Sync draft when active match changes
   useEffect(() => {
@@ -182,8 +183,6 @@ export default function DraftLineupPage() {
 
     showFeedback('Draft lineup saved successfully! (Private to coaches)');
   };
-
-  const [isBenchOver, setIsBenchOver] = useState<boolean>(false);
 
   // Drag-and-drop replacement / swap handler (buildlineup.com style)
   const handlePlayerDropReplace = (targetPitchPosId: string, source: PlayerDragPayload) => {

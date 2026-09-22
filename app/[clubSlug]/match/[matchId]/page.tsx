@@ -375,7 +375,7 @@ export default function MatchCenterPage({
             )}
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
-                <span className="pulse-dot" /> LIVE • <LiveMinute match={match} />&apos;
+                <span className="pulse-dot" /> {match.is_paused ? 'PAUSED' : 'LIVE'} • <LiveMinute match={match} />&apos;
                 {match.added_time > 0 && <span style={{ color: '#F59E0B', marginLeft: '0.25rem' }}>(+{match.added_time}&apos;)</span>}
               </span>
             ) : match.status === 'halftime' ? (

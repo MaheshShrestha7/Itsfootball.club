@@ -22,6 +22,9 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Honeypot: hidden from real visitors via CSS + aria-hidden; bots that fill
+  // every field they find trip it, and the submission is silently dropped.
+  const [website, setWebsite] = useState('');
 
   if (!isOpen) return null;
 
@@ -38,7 +41,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       sender_phone: senderPhone,
       inquiry_type: inquiryType,
       message,
-    });
+    }, website);
     setSending(false);
 
     if (!result.success) {
@@ -54,6 +57,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
     setSenderEmail('');
     setSenderPhone('');
     setMessage('');
+    setWebsite('');
     onClose();
   };
 
@@ -148,6 +152,20 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {/* Honeypot field: real visitors never see this (off-screen + aria-hidden) */}
+            <div style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }} aria-hidden="true">
+              <label htmlFor="contact-website">Website</label>
+              <input
+                id="contact-website"
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={e => setWebsite(e.target.value)}
+              />
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">Your Full Name *</label>
