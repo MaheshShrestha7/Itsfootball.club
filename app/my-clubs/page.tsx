@@ -39,6 +39,16 @@ export default function MyClubsPage() {
     });
   }, [clubs, user]);
 
+  // Clubs where the user has a membership (player, staff, admin, supporter, etc.)
+  // but isn't the owner - owned clubs already have their own section above this.
+  const memberClubs = useMemo(() => {
+    if (!user) return [];
+    return clubs.filter(c => {
+      const role = user.club_roles?.[c.id];
+      return !!role && role !== 'owner' && !ownedClubs.some(oc => oc.id === c.id);
+    });
+  }, [clubs, user, ownedClubs]);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <PlatformNavbar />
@@ -141,7 +151,13 @@ export default function MyClubsPage() {
             </div>
 
             {/* Tiled Grid of Owned Clubs */}
-            {ownedClubs.length > 0 ? (
+            {(ownedClubs.length > 0 || memberClubs.length > 0) ? (
+              <>
+              {ownedClubs.length > 0 && (
+              <section style={{ marginBottom: memberClubs.length > 0 ? '3rem' : 0 }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Shield size={18} color="#F59E0B" /> Clubs You Own
+                </h2>
               <div className="grid-responsive-3" style={{ gap: '1.75rem' }}>
                 {ownedClubs.map(club => {
                   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -333,8 +349,159 @@ export default function MyClubsPage() {
                   </Link>
                 </div>
               </div>
+              </section>
+              )}
+
+              {/* Tiled Grid of Clubs You're a Member Of (not owned) */}
+              {memberClubs.length > 0 && (
+              <section>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Users size={18} color="var(--club-primary, #10B981)" /> Clubs You&apos;re In
+                </h2>
+                <div className="grid-responsive-3" style={{ gap: '1.75rem' }}>
+                  {memberClubs.map(club => {
+                    const role = user.club_roles?.[club.id];
+                    const isClubAdmin = role === 'admin';
+                    const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
+
+                    return (
+                      <div
+                        key={club.id}
+                        className="glass-panel glass-panel-interactive"
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'hidden',
+                          borderTop: `4px solid ${club.primary_color}`,
+                          borderRadius: 'var(--radius-lg)',
+                          background: 'var(--bg-surface-elevated)',
+                          position: 'relative',
+                        }}
+                      >
+                        {/* Banner Header */}
+                        <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
+                          <img
+                            src={club.banner_url}
+                            alt={club.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(to top, rgba(14, 20, 30, 0.95), rgba(7, 10, 15, 0.2))',
+                          }} />
+
+                          {/* Role Badge */}
+                          <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
+                            <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                              {role || 'Member'}
+                            </span>
+                          </div>
+
+                          {liveMatch && (
+                            <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                              <span className="badge badge-live" style={{ fontSize: '0.7rem' }}>
+                                <span className="pulse-dot" /> LIVE MATCH
+                              </span>
+                            </div>
+                          )}
+
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            left: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                          }}>
+                            <img
+                              src={club.logo_url}
+                              alt={club.name}
+                              style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '12px',
+                                border: `2px solid ${club.primary_color}`,
+                                objectFit: 'cover',
+                                background: '#070A0F',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                              }}
+                            />
+                            <div>
+                              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+                                {club.name}
+                              </h3>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {club.short_name} • Founded {club.founded_year}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Body */}
+                        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontStyle: 'italic', fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                              &ldquo;{club.motto}&rdquo;
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
+                                <span style={{ color: '#E2E8F0' }}>{club.stadium_name}</span>
+                              </div>
+                              <div>
+                                Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            <Link
+                              href={isClubAdmin ? `/${club.slug}/admin` : `/${club.slug}/member`}
+                              className="btn btn-primary touch-target"
+                              style={{
+                                width: '100%',
+                                justifyContent: 'center',
+                                minHeight: '44px',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                              }}
+                            >
+                              {isClubAdmin ? <Settings size={16} /> : <CreditCard size={16} />}
+                              <span>{isClubAdmin ? 'Admin Control Room' : 'My Member Pass'}</span>
+                            </Link>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                              <Link
+                                href={`/${club.slug}`}
+                                className="btn btn-secondary touch-target"
+                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
+                                title="Public Clubhouse View"
+                              >
+                                <ExternalLink size={13} />
+                                <span>Public</span>
+                              </Link>
+                              <Link
+                                href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
+                                className="btn btn-secondary touch-target"
+                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
+                                title="Live Match Center"
+                              >
+                                <Radio size={13} color="#EF4444" />
+                                <span>Match</span>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+              )}
+              </>
             ) : (
-              /* Empty State When No Clubs Owned */
+              /* Empty State When No Clubs Owned or Joined */
               <div
                 className="glass-panel"
                 style={{
@@ -367,7 +534,7 @@ export default function MyClubsPage() {
                   No Football Clubs Registered Yet
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 2rem auto' }}>
-                  You haven&apos;t launched or claimed ownership of any football clubs on this account. Launch your official club website in minutes with our 4-step wizard.
+                  You haven&apos;t launched a club and aren&apos;t a member of one yet on this account. Launch your official club website in minutes with our 4-step wizard.
                 </p>
 
                 <div style={{
