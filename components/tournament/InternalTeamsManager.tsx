@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { InternalTeam, ClubMember } from '@/lib/supabase/types';
-import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award, Image as ImageIcon } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award, Image as ImageIcon, Search } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { DEFAULT_CREST } from '@/lib/crest';
 
@@ -49,6 +49,11 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
   const [captainId, setCaptainId] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [playerSearch, setPlayerSearch] = useState('');
+
+  const filteredMembers = clubMembers.filter(m =>
+    m.full_name.toLowerCase().includes(playerSearch.trim().toLowerCase())
+  );
 
   const handleOpenAdd = () => {
     setEditingTeam(null);
@@ -60,6 +65,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setCoachName('');
     setCaptainId('');
     setSelectedPlayerIds([]);
+    setPlayerSearch('');
     setModalOpen(true);
   };
 
@@ -73,6 +79,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setCoachName(team.coach_name || '');
     setCaptainId(team.captain_id || '');
     setSelectedPlayerIds(team.player_ids || []);
+    setPlayerSearch('');
     setModalOpen(true);
   };
 
@@ -709,6 +716,25 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   </button>
                 </div>
 
+                <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search players..."
+                    value={playerSearch}
+                    onChange={e => setPlayerSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem 0.5rem 2rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.8rem',
+                    }}
+                  />
+                </div>
+
                 <div
                   style={{
                     maxHeight: '180px',
@@ -722,7 +748,12 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     gap: '0.4rem',
                   }}
                 >
-                  {clubMembers.map(member => {
+                  {filteredMembers.length === 0 && (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', padding: '0.4rem' }}>
+                      No players match "{playerSearch}".
+                    </span>
+                  )}
+                  {filteredMembers.map(member => {
                     const isChecked = selectedPlayerIds.includes(member.id);
                     return (
                       <div
