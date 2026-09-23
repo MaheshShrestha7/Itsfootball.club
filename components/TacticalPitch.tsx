@@ -40,6 +40,8 @@ export interface TacticalPitchProps {
   onPlayerDropReplace?: (targetPitchPosId: string, source: PlayerDragPayload) => void;
   orientation?: 'vertical' | 'horizontal';
   allowOrientationToggle?: boolean;
+  /** Set false to hide the format/shape preset switcher and free-form/reset controls (read-only published lineup views) */
+  showFormationControls?: boolean;
 }
 
 // Standard preset formation configurations grouped by match format
@@ -265,6 +267,7 @@ export default function TacticalPitch({
   onPlayerDropReplace,
   orientation,
   allowOrientationToggle = true,
+  showFormationControls = true,
 }: TacticalPitchProps) {
   // Orientation state (portrait/vertical optimized for mobile devices)
   const [isVertical, setIsVertical] = useState<boolean>(() => {
@@ -659,6 +662,7 @@ export default function TacticalPitch({
         width: '100%',
       }}>
         {/* Row 1: Format Switcher (11v11, 9v9, 7v7) & Shape Presets */}
+        {showFormationControls && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem', width: '100%' }}>
           {/* Format Tabs */}
           <div style={{
@@ -723,6 +727,7 @@ export default function TacticalPitch({
             ))}
           </div>
         </div>
+        )}
 
         {/* Row 2: Mode & Action Controls */}
         <div style={{
@@ -737,26 +742,28 @@ export default function TacticalPitch({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             {/* Custom / Free-Form Mode Pill */}
-            <button
-              onClick={handleToggleFreeForm}
-              className="btn btn-sm touch-target"
-              style={{
-                background: isFreeFormMode ? '#F59E0B' : 'rgba(245, 158, 11, 0.12)',
-                color: isFreeFormMode ? '#000000' : '#F59E0B',
-                fontWeight: 800,
-                fontSize: '0.78rem',
-                padding: '0.35rem 0.65rem',
-                borderRadius: '6px',
-                border: '1px solid #F59E0B',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-              title="Freely drag and drop players into custom tactical positions"
-            >
-              <Move size={13} />
-              <span>{isFreeFormMode ? 'Free-Form Active' : 'Free-Form'}</span>
-            </button>
+            {showFormationControls && (
+              <button
+                onClick={handleToggleFreeForm}
+                className="btn btn-sm touch-target"
+                style={{
+                  background: isFreeFormMode ? '#F59E0B' : 'rgba(245, 158, 11, 0.12)',
+                  color: isFreeFormMode ? '#000000' : '#F59E0B',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  padding: '0.35rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #F59E0B',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+                title="Freely drag and drop players into custom tactical positions"
+              >
+                <Move size={13} />
+                <span>{isFreeFormMode ? 'Free-Form Active' : 'Free-Form'}</span>
+              </button>
+            )}
 
             {allowOrientationToggle && (
               <button
@@ -788,7 +795,7 @@ export default function TacticalPitch({
               <span>{nameDisplay === 'first' ? 'First Name' : 'Last Name'}</span>
             </button>
 
-            {isFreeFormMode && (
+            {showFormationControls && isFreeFormMode && (
               <button
                 onClick={handleResetToPreset}
                 className="btn btn-secondary btn-sm touch-target"

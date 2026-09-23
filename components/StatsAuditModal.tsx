@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
+import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import {
   ShieldCheck,
   Star,
@@ -417,19 +418,13 @@ export default function StatsAuditModal({
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Star size={16} color="#F59E0B" /> 3. Man of the Match Award (+15 XP)
                 </h4>
-                <select
-                  className="form-select"
+                <PlayerSearchSelect
+                  id="motm-search"
+                  players={squadPlayers}
                   value={motmMemberId}
-                  onChange={e => setMotmMemberId(e.target.value)}
-                  style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.88rem' }}
-                >
-                  <option value="">-- Select Official MOTM --</option>
-                  {squadPlayers.map(p => (
-                    <option key={p.id} value={p.id}>
-                      #{p.jersey_number || '-'} {p.full_name} ({p.player_position || 'Player'})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setMotmMemberId}
+                  extraOptions={[{ value: '', label: '-- Select Official MOTM --' }]}
+                />
               </div>
 
               {/* 4. Match Appearances Verification */}

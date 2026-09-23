@@ -8,6 +8,7 @@ import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
+import { extractCrestTextColor } from '@/lib/image-color';
 import {
   Shield,
   Radio,
@@ -24,7 +25,9 @@ import {
   Sparkles,
   QrCode,
   Calendar,
-  Wifi
+  Wifi,
+  Star,
+  Target
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 
@@ -34,17 +37,35 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated } = useClub();
+  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const match = matches.find(m => m.id === resolvedParams.matchId);
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
-  const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+  const allSquadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+
+  // Only players explicitly marked "available" for this fixture count as the matchday squad.
+  // If the club never used the availability/RSVP feature for this match, fall back to the full
+  // squad rather than showing an empty pitch.
+  const matchAvailabilities = match ? getMatchAvailabilities(match.id) : [];
+  const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
+  const squadPlayers = matchAvailabilities.length > 0
+    ? allSquadPlayers.filter(p => attendingIds.has(p.id))
+    : allSquadPlayers;
+
+  // Man of the Match, resolved from the verified audit ledger for this fixture
+  const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
+  const motmMember = motmLog ? members.find(m => m.id === motmLog.member_id) : undefined;
+  const goalEvents = events.filter(e => e.event_type === 'goal' || e.event_type === 'penalty').slice().sort((a, b) => a.minute - b.minute);
 
   const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [liveSyncPulse, setLiveSyncPulse] = useState(false);
+  const [titleColors, setTitleColors] = useState<{ home: string; away: string }>({
+    home: match?.is_club_home !== false ? (club.primary_color || '#10B981') : '#3B82F6',
+    away: match?.is_club_home === false ? (club.primary_color || '#10B981') : '#3B82F6',
+  });
 
   // Goal Strobe Alert State
   const [goalAlert, setGoalAlert] = useState<{
@@ -158,6 +179,18 @@ export default function MatchCenterPage({
       } catch {}
     }
   }, [match?.id, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
+
+  // Derive each team's title/scoreboard text color from its crest; falls back to the club's
+  // brand color (for our own side) or a neutral blue (opponent) if the crest can't be sampled.
+  useEffect(() => {
+    if (!match) return;
+    let cancelled = false;
+    const homeLogo = match.home_team_logo || (match.is_club_home ? club.logo_url : undefined);
+    const awayLogo = match.away_team_logo || (!match.is_club_home ? club.logo_url : undefined);
+    extractCrestTextColor(homeLogo).then(c => { if (!cancelled && c) setTitleColors(prev => ({ ...prev, home: c })); });
+    extractCrestTextColor(awayLogo).then(c => { if (!cancelled && c) setTitleColors(prev => ({ ...prev, away: c })); });
+    return () => { cancelled = true; };
+  }, [match?.id, match?.home_team_logo, match?.away_team_logo, match?.is_club_home, club.logo_url]);
 
   if (!isHydrated) {
     return (
@@ -363,14 +396,22 @@ export default function MatchCenterPage({
           {/* Status & Competition Tag */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
             {match.title && (
-              <div style={{ width: '100%', fontSize: 'clamp(0.95rem, 4vw, 1.1rem)', fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+              <div style={{ width: '100%', fontSize: 'clamp(0.95rem, 4vw, 1.1rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
                 {titleIsTeams ? (
                   <>
-                    <span className="team-name-full">{match.title}</span>
-                    <span className="team-name-short">{homeShort} vs {awayShort}</span>
+                    <span className="team-name-full">
+                      <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}> vs </span>
+                      <span style={{ color: titleColors.away }}>{match.away_team_name}</span>
+                    </span>
+                    <span className="team-name-short">
+                      <span style={{ color: titleColors.home }}>{homeShort}</span>
+                      <span style={{ color: 'var(--text-muted)' }}> vs </span>
+                      <span style={{ color: titleColors.away }}>{awayShort}</span>
+                    </span>
                   </>
                 ) : (
-                  match.title
+                  <span style={{ color: '#F59E0B' }}>{match.title}</span>
                 )}
               </div>
             )}
@@ -393,6 +434,16 @@ export default function MatchCenterPage({
                 {match.match_type} FIXTURE
               </span>
             )}
+            <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <Calendar size={12} />
+              {new Date(match.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              {match.match_time && (
+                <>
+                  <Clock size={12} style={{ marginLeft: '0.2rem' }} />
+                  {match.match_time}
+                </>
+              )}
+            </span>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               {(!match.competition || match.competition === 'Premier Regional League') ? (match.match_type ? `${match.match_type.toUpperCase()} FIXTURE` : 'CLUB FRIENDLY') : match.competition} • {match.venue}
             </span>
@@ -568,8 +619,75 @@ export default function MatchCenterPage({
           </div>
         </div>
 
+        {/* Player of the Match & Goal Scorers */}
+        {(motmMember || goalEvents.length > 0) && (
+          <div
+            className="glass-panel"
+            style={{
+              padding: '1.5rem',
+              marginBottom: '2rem',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-medium)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+            }}
+          >
+            {motmMember && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 220px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Star size={20} color="#040609" fill="#040609" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Player of the Match
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', overflowWrap: 'anywhere' }}>
+                    {motmMember.full_name}
+                    {motmMember.jersey_number ? ` (#${motmMember.jersey_number})` : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {goalEvents.length > 0 && (
+              <div style={{ flex: '2 1 320px', minWidth: 0 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Target size={13} />
+                  <span>Goal Scorers</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {goalEvents.map(evt => (
+                    <div key={evt.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{evt.minute}&apos;</span>
+                      <span style={{ color: '#FFFFFF', fontWeight: 700 }}>
+                        {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
+                      </span>
+                      {evt.assist_player_name && (
+                        <span style={{ color: 'var(--text-secondary)' }}>(Assist: {evt.assist_player_name})</span>
+                      )}
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                        {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Matchday Briefing & Promotional Flyer */}
-        {(match.match_flyer_url || match.description || match.door_qr_checkin_enabled) && (
+        {(match.match_flyer_url || match.description) && (
           <div
             className={`glass-panel match-briefing-grid${match.match_flyer_url ? ' has-flyer' : ''}`}
             style={{
@@ -611,21 +729,6 @@ export default function MatchCenterPage({
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1rem' }}>
                 {match.description || `Official match fixture scheduled at ${match.venue}. Gates open 60 minutes prior to kickoff.`}
               </p>
-              {match.door_qr_checkin_enabled && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <Link
-                    href={`/${club.slug}/match/${match.id}/checkin`}
-                    className="btn btn-primary btn-sm touch-target"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
-                  >
-                    <QrCode size={14} />
-                    <span>Turnstile Gate Check-In</span>
-                  </Link>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Arriving at the stadium? Scan or validate your pass online.
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -763,6 +866,7 @@ export default function MatchCenterPage({
                 primaryColor={club.primary_color}
                 isEditable={false}
                 allowOrientationToggle={true}
+                showFormationControls={false}
                 matchEvents={events}
                 teamName={match.is_club_home ? match.home_team_name : match.away_team_name}
               />
@@ -775,6 +879,11 @@ export default function MatchCenterPage({
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {squadPlayers.length === 0 && (
+                  <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No confirmed matchday squad yet.
+                  </p>
+                )}
                 {squadPlayers.map(p => (
                   <div
                     key={p.id}
@@ -864,27 +973,42 @@ export default function MatchCenterPage({
                   </div>
                 );
               })}
-
-              {/* Honest disclaimer for untracked advanced stats */}
-              <div style={{
-                marginTop: '1.75rem',
-                padding: '0.85rem 1rem',
-                borderRadius: '10px',
-                background: 'rgba(245, 158, 11, 0.06)',
-                border: '1px solid rgba(245, 158, 11, 0.2)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.6rem',
-              }}>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                  <strong style={{ color: '#F59E0B' }}>Advanced stats not available.</strong>{' '}
-                  Possession %, shots, corners, and fouls are not tracked in the event logger. Stats above are derived entirely from the official match event log.
-                </p>
-              </div>
             </div>
           );
         })()}
+
+        {/* Turnstile Gate Self Check-In */}
+        {match.door_qr_checkin_enabled && (
+          <div
+            className="glass-panel"
+            style={{
+              marginTop: '2.5rem',
+              padding: '1.75rem',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-medium)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>TURNSTILE GATE CHECK-IN</span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                Arriving at the stadium? Scan or validate your pass online for a faster entry.
+              </p>
+            </div>
+            <Link
+              href={`/${club.slug}/match/${match.id}/checkin`}
+              className="btn btn-primary btn-sm touch-target"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, flexShrink: 0 }}
+            >
+              <QrCode size={14} />
+              <span>Turnstile Gate Check-In</span>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

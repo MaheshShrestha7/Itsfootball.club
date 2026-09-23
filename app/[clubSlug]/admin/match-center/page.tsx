@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { MatchEventType, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
+import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import {
   Radio,
   Play,
@@ -54,7 +55,8 @@ export default function AdminMatchCenterControllerPage({
     deleteMatchEvent,
     members,
     seasons,
-    getActiveSeason
+    getActiveSeason,
+    getMatchAvailabilities
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -74,6 +76,14 @@ export default function AdminMatchCenterControllerPage({
   const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
   const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+
+  // Post-match verification only offers players explicitly marked "available" for this fixture.
+  // If attendance was never tracked for it, fall back to the full squad.
+  const matchAvailabilities = match ? getMatchAvailabilities(match.id) : [];
+  const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
+  const attendingSquadPlayers = matchAvailabilities.length > 0
+    ? squadPlayers.filter(p => attendingIds.has(p.id))
+    : squadPlayers;
 
   // Active Admin Sub-Tab
   const [adminTab, setAdminTab] = useState<'events' | 'tactics' | 'clock'>('events');
@@ -801,18 +811,13 @@ export default function AdminMatchCenterControllerPage({
                         <label className="form-label">
                           {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
                         </label>
-                        <select
-                          className="form-select"
+                        <PlayerSearchSelect
+                          id="player-involved-search"
+                          players={squadPlayers}
                           value={selectedPlayerId}
-                          onChange={e => setSelectedPlayerId(e.target.value)}
-                        >
-                          {squadPlayers.map(p => (
-                            <option key={p.id} value={p.id}>
-                              #{p.jersey_number} {p.full_name} ({p.player_position})
-                            </option>
-                          ))}
-                          <option value="custom">-- Custom Name / Other Player --</option>
-                        </select>
+                          onChange={setSelectedPlayerId}
+                          extraOptions={[{ value: 'custom', label: '-- Custom Name / Other Player --' }]}
+                        />
 
                         {selectedPlayerId === 'custom' && (
                           <input
@@ -844,36 +849,28 @@ export default function AdminMatchCenterControllerPage({
                     {eventType === 'sub' && isClubSelected ? (
                       <div className="form-group">
                         <label className="form-label">Player Coming OFF *</label>
-                        <select
-                          className="form-select"
+                        <PlayerSearchSelect
+                          id="player-sub-off-search"
+                          players={squadPlayers}
                           value={selectedSubOffId}
-                          onChange={e => setSelectedSubOffId(e.target.value)}
-                        >
-                          {squadPlayers.map(p => (
-                            <option key={p.id} value={p.id}>
-                              #{p.jersey_number} {p.full_name} ({p.player_position})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={setSelectedSubOffId}
+                        />
                       </div>
                     ) : (
                       <div className="form-group">
                         <label className="form-label">Assist / Involved Secondary (Optional)</label>
                         {isClubSelected ? (
                           <>
-                            <select
-                              className="form-select"
+                            <PlayerSearchSelect
+                              id="player-assist-search"
+                              players={squadPlayers}
                               value={selectedAssistId}
-                              onChange={e => setSelectedAssistId(e.target.value)}
-                            >
-                              <option value="none">-- None --</option>
-                              {squadPlayers.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  #{p.jersey_number} {p.full_name} ({p.player_position})
-                                </option>
-                              ))}
-                              <option value="custom">-- Custom Name / Other Player --</option>
-                            </select>
+                              onChange={setSelectedAssistId}
+                              extraOptions={[
+                                { value: 'none', label: '-- None --' },
+                                { value: 'custom', label: '-- Custom Name / Other Player --' },
+                              ]}
+                            />
                             {selectedAssistId === 'custom' && (
                               <input
                                 type="text"
@@ -1185,7 +1182,7 @@ export default function AdminMatchCenterControllerPage({
       <StatsAuditModal
         match={match}
         events={events}
-        squadPlayers={squadPlayers}
+        squadPlayers={attendingSquadPlayers}
         isOpen={isAuditModalOpen}
         onClose={() => setIsAuditModalOpen(false)}
         onAuditCompleted={() => {

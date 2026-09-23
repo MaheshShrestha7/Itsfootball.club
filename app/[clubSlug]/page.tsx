@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
+import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
   Radio,
@@ -790,8 +791,9 @@ export default function ClubPublicPage({
                           {/* Home Team */}
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
                             <img
-                              src={activeSlideMatch.home_team_logo}
+                              src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
                               alt={activeSlideMatch.home_team_name}
+                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
@@ -835,8 +837,9 @@ export default function ClubPublicPage({
                           {/* Away Team */}
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
                             <img
-                              src={activeSlideMatch.away_team_logo}
+                              src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
                               alt={activeSlideMatch.away_team_name}
+                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
@@ -870,12 +873,22 @@ export default function ClubPublicPage({
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img src={activeSlideMatch.home_team_logo} alt={activeSlideMatch.home_team_name} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }} />
+                            <img
+                              src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
+                              alt={activeSlideMatch.home_team_name}
+                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
+                            />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
                           </div>
                           <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-muted)', padding: '0 0.5rem', flexShrink: 0 }}>VS</div>
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img src={activeSlideMatch.away_team_logo} alt={activeSlideMatch.away_team_name} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }} />
+                            <img
+                              src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
+                              alt={activeSlideMatch.away_team_name}
+                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
+                            />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
                           </div>
                         </div>
