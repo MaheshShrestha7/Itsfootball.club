@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { MatchFormat, PitchPosition, ClubMember, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch, { PlayerDragPayload, FORMAT_PRESETS } from '@/components/TacticalPitch';
 import AdminGuard from '@/components/AdminGuard';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import {
   Layers,
   Sparkles,
@@ -635,11 +636,7 @@ export default function DraftLineupPage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                         <GripVertical size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-                        <img
-                          src={player.photo_url}
-                          alt={player.full_name}
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                        />
+                        <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {player.full_name}
@@ -750,7 +747,7 @@ export default function DraftLineupPage() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <img src={benchP.photo_url} alt={benchP.full_name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                        <PlayerAvatar photoUrl={benchP.photo_url} name={benchP.full_name} size={32} />
                         <div>
                           <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{benchP.full_name}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>

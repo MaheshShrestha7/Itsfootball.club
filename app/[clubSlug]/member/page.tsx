@@ -979,6 +979,9 @@ export default function MemberPortalPage({
                     {/* Form Pills */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, marginRight: '0.2rem' }}>FORM:</span>
+                      {clubSeasonStats.form.length === 0 && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>No completed matches yet</span>
+                      )}
                       {clubSeasonStats.form.map((res, i) => (
                         <span
                           key={i}
@@ -1051,9 +1054,9 @@ export default function MemberPortalPage({
                     <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Club Top Scorer</div>
                       <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: '#A855F7', marginTop: '4px' }}>
-                        {clubSeasonStats.topScorer?.name || 'Dante Moreno'}
+                        {clubSeasonStats.topScorer?.name || 'No goals yet'}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: 700 }}>{clubSeasonStats.topScorer?.goals || 19} Goals</div>
+                      <div style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: 700 }}>{clubSeasonStats.topScorer?.goals || 0} Goals</div>
                     </div>
                   </div>
                 </div>

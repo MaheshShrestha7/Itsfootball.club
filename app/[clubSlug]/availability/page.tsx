@@ -6,8 +6,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { AvailabilityStatus, isPlayerMember } from '@/lib/supabase/types';
-import ClubNavbar from '@/components/ClubNavbar';
-import Footer from '@/components/Footer';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import {
   Calendar,
   Clock,
@@ -53,14 +52,18 @@ function AvailabilityHub() {
     return members.filter(m => m.club_id === club.id && isPlayerMember(m));
   }, [club, members]);
 
-  // Find next upcoming match or default to first match
-  const upcomingMatches = useMemo(() => {
+  // Every fixture for this club, soonest first, so the coach can pick which one to RSVP for
+  const clubMatches = useMemo(() => {
     if (!club) return [];
-    return matches.filter(m => m.club_id === club.id && m.status === 'upcoming');
+    return matches
+      .filter(m => m.club_id === club.id)
+      .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [club, matches]);
 
+  const upcomingMatches = useMemo(() => clubMatches.filter(m => m.status === 'upcoming'), [clubMatches]);
+
   const [selectedMatchId, setSelectedMatchId] = useState<string>(() => {
-    return upcomingMatches[0]?.id || matches[0]?.id || '';
+    return upcomingMatches[0]?.id || clubMatches[0]?.id || '';
   });
 
   // Selected player state
@@ -90,7 +93,7 @@ function AvailabilityHub() {
     }
   }, [token, getAvailabilityByToken, squadPlayers, activePlayerId]);
 
-  const targetMatch = matches.find(m => m.id === selectedMatchId) || matches[0];
+  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
 
   // Give every squad player a personal, unguessable RSVP link for this match
   useEffect(() => {
@@ -160,6 +163,18 @@ function AvailabilityHub() {
     setTimeout(() => setFeedbackToast(null), 3500);
   };
 
+  // Admin-only manual override: mark a player available/unavailable directly from the roster,
+  // regardless of what (or whether) that player has responded themselves.
+  const handleAdminSetStatus = (memberId: string, status: AvailabilityStatus) => {
+    if (!targetMatch) return;
+    const player = squadPlayers.find(p => p.id === memberId);
+    const existingNote = matchAvailabilities.find(a => a.member_id === memberId)?.note;
+    setPlayerAvailability(targetMatch.id, memberId, status, existingNote);
+    if (memberId === activePlayerId) setRsvpStatus(status);
+    setFeedbackToast(`${player?.full_name || 'Player'} manually marked ${status.toUpperCase()} by admin`);
+    setTimeout(() => setFeedbackToast(null), 3500);
+  };
+
   const shareableUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/${club.slug}/availability`
     : `https://itsfootball.club/${club.slug}/availability`;
@@ -201,10 +216,8 @@ function AvailabilityHub() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
-      <ClubNavbar club={club} />
-
-      <main style={{ flex: 1, padding: '2rem 1rem 4rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+    <div style={{ minHeight: '100vh' }}>
+      <main style={{ padding: '2rem 1rem 4rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         {/* Header Breadcrumbs & Title */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
@@ -215,9 +228,8 @@ function AvailabilityHub() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span>Pre-Match Availability Hub</span>
-                <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>SquadGod RSVP</span>
+              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: '#FFFFFF' }}>
+                Pre-Match Availability Hub
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginTop: '0.35rem' }}>
                 One-tap availability responses for squad members without chaotic WhatsApp group clutter.
@@ -279,7 +291,28 @@ function AvailabilityHub() {
           
           {/* LEFT COLUMN: Fixture Details & 1-Tap Response */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
+
+            {/* Match Selector */}
+            {clubMatches.length > 0 && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                  Availability For:
+                </label>
+                <select
+                  className="form-select"
+                  value={selectedMatchId}
+                  onChange={e => setSelectedMatchId(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
+                >
+                  {clubMatches.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.home_team_name} vs {m.away_team_name} — {new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} ({m.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* 1. Upcoming Fixture Card */}
             {targetMatch && (
               <div className="glass-panel" style={{ padding: '1.5rem', border: `1.5px solid ${club.primary_color}40`, position: 'relative', overflow: 'hidden' }}>
@@ -605,11 +638,7 @@ function AvailabilityHub() {
                     >
                       {/* Player Info */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                        <img
-                          src={player.photo_url}
-                          alt={player.full_name}
-                          style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                        />
+                        <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={36} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -648,6 +677,48 @@ function AvailabilityHub() {
                         <Icon size={13} />
                         <span>{cfg.label}</span>
                       </div>
+
+                      {/* Admin Manual Override */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleAdminSetStatus(player.id, 'available')}
+                          title={`Mark ${player.full_name} available`}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '8px',
+                            border: `1px solid ${availability.status === 'available' ? '#10B981' : 'var(--border-subtle)'}`,
+                            background: availability.status === 'available' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                            color: '#10B981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAdminSetStatus(player.id, 'unavailable')}
+                          title={`Mark ${player.full_name} unavailable`}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '8px',
+                            border: `1px solid ${availability.status === 'unavailable' ? '#EF4444' : 'var(--border-subtle)'}`,
+                            background: availability.status === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                            color: '#EF4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <XCircle size={14} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })
@@ -657,8 +728,6 @@ function AvailabilityHub() {
 
         </div>
       </main>
-
-      <Footer club={club} />
     </div>
   );
 }

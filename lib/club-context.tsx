@@ -2509,32 +2509,24 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const finalWins = clubMatches.length > 0 ? wins : 14;
-    const finalDraws = clubMatches.length > 0 ? draws : 5;
-    const finalLosses = clubMatches.length > 0 ? losses : 3;
-    const finalGF = clubMatches.length > 0 ? goalsFor : 48;
-    const finalGA = clubMatches.length > 0 ? goalsAgainst : 19;
-    const finalCS = clubMatches.length > 0 ? cleanSheets : 10;
-    const finalForm: ('W' | 'D' | 'L')[] = form.length > 0 ? form.slice(-5) : ['W', 'W', 'D', 'W', 'W'];
-
     const clubStats = playerStats.filter(s => s.club_id === clubId);
     const sortedStats = [...clubStats].sort((a, b) => b.goals - a.goals);
     const topPlayer = sortedStats[0];
-    const topMember = topPlayer ? members.find(m => m.id === topPlayer.member_id) : undefined;
+    const topMember = topPlayer && topPlayer.goals > 0 ? members.find(m => m.id === topPlayer.member_id) : undefined;
 
     return {
-      matchesPlayed: clubMatches.length > 0 ? clubMatches.length : 22,
-      wins: finalWins,
-      draws: finalDraws,
-      losses: finalLosses,
-      goalsFor: finalGF,
-      goalsAgainst: finalGA,
-      goalDifference: finalGF - finalGA,
-      points: finalWins * 3 + finalDraws,
-      winRate: Math.round((finalWins / (clubMatches.length || 22)) * 100),
-      cleanSheets: finalCS,
-      form: finalForm,
-      topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : { name: 'Dante Moreno', goals: 19 }
+      matchesPlayed: clubMatches.length,
+      wins,
+      draws,
+      losses,
+      goalsFor,
+      goalsAgainst,
+      goalDifference: goalsFor - goalsAgainst,
+      points: wins * 3 + draws,
+      winRate: clubMatches.length > 0 ? Math.round((wins / clubMatches.length) * 100) : 0,
+      cleanSheets,
+      form: form.slice(-5),
+      topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : undefined
     };
   }, [matches, playerStats, members]);
 

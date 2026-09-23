@@ -6,10 +6,12 @@ interface PlayerAvatarProps {
   photoUrl?: string;
   name: string;
   size?: number;
+  /** Extra styling merged in, e.g. a border/shadow to match the surrounding design */
+  style?: React.CSSProperties;
 }
 
 /** Circular player photo, falling back to their initials when no photo is on file. */
-export default function PlayerAvatar({ photoUrl, name, size = 32 }: PlayerAvatarProps) {
+export default function PlayerAvatar({ photoUrl, name, size = 32, style }: PlayerAvatarProps) {
   if (photoUrl) {
     return (
       <img
@@ -21,6 +23,7 @@ export default function PlayerAvatar({ photoUrl, name, size = 32 }: PlayerAvatar
           borderRadius: '50%',
           objectFit: 'cover',
           flexShrink: 0,
+          ...style,
         }}
       />
     );
@@ -42,6 +45,7 @@ export default function PlayerAvatar({ photoUrl, name, size = 32 }: PlayerAvatar
         justifyContent: 'center',
         fontSize: Math.round(size * 0.38),
         fontWeight: 800,
+        ...style,
       }}
     >
       {initials || '?'}

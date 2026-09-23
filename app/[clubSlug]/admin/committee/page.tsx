@@ -2,6 +2,7 @@
 
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import { Award, Plus, Trash2, Edit2, Shield, CheckCircle2, CalendarDays, Filter } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 
@@ -238,10 +239,11 @@ export default function AdminCommitteePage({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <img
-                    src={exec.photo_url}
-                    alt={exec.full_name}
-                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--club-primary)' }}
+                  <PlayerAvatar
+                    photoUrl={exec.photo_url}
+                    name={exec.full_name}
+                    size={48}
+                    style={{ border: '2px solid var(--club-primary)' }}
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

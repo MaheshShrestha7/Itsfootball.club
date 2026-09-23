@@ -693,53 +693,6 @@ export default function MatchCenterPage({
           </div>
         )}
 
-        {/* Matchday Briefing & Promotional Flyer */}
-        {(match.match_flyer_url || match.description) && (
-          <div
-            className={`glass-panel match-briefing-grid${match.match_flyer_url ? ' has-flyer' : ''}`}
-            style={{
-              marginBottom: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--border-medium)',
-            }}
-          >
-            {match.match_flyer_url && (
-              <div
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
-                  aspectRatio: '16/9',
-                  border: '1px solid var(--border-subtle)',
-                  background: 'rgba(0,0,0,0.5)',
-                  boxShadow: 'var(--shadow-md)',
-                }}
-              >
-                <img
-                  src={match.match_flyer_url}
-                  alt={match.title || 'Official Match Flyer'}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-            )}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <span className="badge badge-primary">MATCHDAY BRIEFING</span>
-                {match.match_type && (
-                  <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
-                    {match.match_type}
-                  </span>
-                )}
-              </div>
-              <h3 style={{ fontSize: 'clamp(1.05rem, 4.5vw, 1.25rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem', overflowWrap: 'anywhere' }}>
-                {match.title || `${match.home_team_name} vs ${match.away_team_name}`}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1rem' }}>
-                {match.description || `Official match fixture scheduled at ${match.venue}. Gates open 60 minutes prior to kickoff.`}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Tab Selector: Match Events Timeline, Lineups / Pitch, Stats */}
         <div className="scroll-pill-strip" style={{
           borderBottom: '1px solid var(--border-subtle)',

@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
@@ -1800,14 +1801,11 @@ export default function ClubPublicPage({
           <div className="grid-responsive-4">
             {executiveStaff.map(exec => (
               <div key={exec.id} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <img
-                  src={exec.photo_url}
-                  alt={exec.full_name}
+                <PlayerAvatar
+                  photoUrl={exec.photo_url}
+                  name={exec.full_name}
+                  size={96}
                   style={{
-                    width: '96px',
-                    height: '96px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
                     border: `2px solid var(--club-primary)`,
                     boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
                     marginBottom: '1rem',
@@ -2145,7 +2143,7 @@ export default function ClubPublicPage({
             {/* Interactive Map Embed / Visual Map Presentation */}
             <div className="glass-panel" style={{ overflow: 'hidden', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)' }}>
               <div style={{ height: '380px', position: 'relative', background: '#131b26' }}>
-                {/* Embedded Map Representation */}
+                {/* Embedded Map Representation, geocoded live from the club's own stadium address */}
                 <iframe
                   title="Home Ground Map"
                   width="100%"
@@ -2154,8 +2152,10 @@ export default function ClubPublicPage({
                   scrolling="no"
                   marginHeight={0}
                   marginWidth={0}
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=-74.015%2C40.705%2C-73.995%2C40.720&amp;layer=mapnik&amp;marker=40.7128%2C-74.006"
-                  style={{ border: 'none', filter: 'invert(90%) hue-rotate(180deg)' }}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                    [club.stadium_name, club.stadium_address].filter(Boolean).join(', ')
+                  )}&z=15&output=embed`}
+                  style={{ border: 'none' }}
                 />
                 <div style={{
                   position: 'absolute',
