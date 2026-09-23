@@ -1679,7 +1679,7 @@ export default function ClubPublicPage({
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
             gap: '2rem',
             marginBottom: '3rem',
           }}>
@@ -2092,7 +2092,7 @@ export default function ClubPublicPage({
         <div className="container">
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
             gap: '3rem',
             alignItems: 'center',
           }}>

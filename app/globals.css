@@ -61,6 +61,7 @@
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -72,6 +73,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  max-width: 100%;
   overflow-x: hidden;
   position: relative;
 }
@@ -1065,13 +1067,13 @@ textarea {
 /* Grid Utilities */
 .grid-responsive-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 1.5rem;
 }
 
 .grid-responsive-4 {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -1217,7 +1219,7 @@ textarea {
 /* Club Public Page Hero Responsive Layout */
 .club-hero-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 3rem;
   align-items: center;
 }

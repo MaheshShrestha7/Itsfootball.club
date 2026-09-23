@@ -113,7 +113,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
       <div className="container" style={{ padding: '3.5rem 1.5rem 2.5rem 1.5rem' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
           gap: '2.5rem',
           marginBottom: '3rem',
         }}>

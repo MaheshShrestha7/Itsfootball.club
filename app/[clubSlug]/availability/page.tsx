@@ -275,7 +275,7 @@ function AvailabilityHub() {
         )}
 
         {/* Main Grid: Left = Fixture & RSVP Card, Right = Roster Breakdown */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '1.75rem', alignItems: 'start' }}>
           
           {/* LEFT COLUMN: Fixture Details & 1-Tap Response */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

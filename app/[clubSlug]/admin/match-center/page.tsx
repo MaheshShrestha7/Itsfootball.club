@@ -1039,7 +1039,7 @@ export default function AdminMatchCenterControllerPage({
       {/* TAB 3: CLOCK & STOPPAGE TIME BOARD */}
       {/* ========================================================================= */}
       {adminTab === 'clock' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '2rem' }}>
           {/* Stoppage Time Board (4th Official LED) */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
