@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { AvailabilityStatus } from '@/lib/supabase/types';
+import { AvailabilityStatus, isPlayerMember } from '@/lib/supabase/types';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
 import {
@@ -50,7 +50,7 @@ function AvailabilityHub() {
   // Filter squad players for this club
   const squadPlayers = useMemo(() => {
     if (!club) return [];
-    return members.filter(m => m.club_id === club.id && m.role === 'player');
+    return members.filter(m => m.club_id === club.id && isPlayerMember(m));
   }, [club, members]);
 
   // Find next upcoming match or default to first match

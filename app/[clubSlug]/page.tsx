@@ -32,7 +32,7 @@ import {
   Image as ImageIcon,
   QrCode
 } from 'lucide-react';
-import { Match, ClubEvent, NewsArticle } from '@/lib/supabase/types';
+import { Match, ClubEvent, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
@@ -118,7 +118,7 @@ export default function ClubPublicPage({
   const clubSeasons = seasons.filter(s => s.club_id === clubId);
   const activeSeason = getActiveSeason ? getActiveSeason(clubId) : null;
   const clubMembers = members.filter(m => m.club_id === clubId);
-  const squadPlayers = clubMembers.filter(m => m.role === 'player');
+  const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
   const liveMatch = clubMatches.find(m => m.status === 'live');

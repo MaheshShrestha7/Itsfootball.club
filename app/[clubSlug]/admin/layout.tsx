@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
+import AdminSearch from '@/components/AdminSearch';
 
 export default function AdminLayout({
   children,
@@ -162,6 +163,8 @@ export default function AdminLayout({
             </div>
           </div>
         </div>
+
+        <AdminSearch clubSlug={club.slug} clubId={club.id} />
 
         {/* Categorized Nav Sections */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

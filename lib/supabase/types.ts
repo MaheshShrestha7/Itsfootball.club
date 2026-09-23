@@ -122,6 +122,16 @@ export interface ClubMember {
   updated_at?: string;
 }
 
+// Squad management stores roles as a capitalized multi-select array (e.g. ['Player', 'Manager'])
+// while legacy `role` is a comma-joined string in the same casing. Always check both, case-insensitively.
+export function isPlayerMember(member: Pick<ClubMember, 'role' | 'roles'>): boolean {
+  if (Array.isArray(member.roles) && member.roles.length > 0) {
+    return member.roles.some(r => r.toLowerCase() === 'player');
+  }
+  if (!member.role) return false;
+  return member.role.split(',').some(r => r.trim().toLowerCase() === 'player');
+}
+
 export interface PlayerStats {
   id: string;
   club_id: string;

@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
+import { isPlayerMember } from '@/lib/supabase/types';
 import {
   Shield,
   Radio,
@@ -38,7 +39,7 @@ export default function MatchCenterPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const match = matches.find(m => m.id === resolvedParams.matchId);
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
-  const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
+  const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
 
   const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');

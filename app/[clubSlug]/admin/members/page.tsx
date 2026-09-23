@@ -3,7 +3,7 @@
 import React, { use, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { ClubMember, MemberMessage } from '@/lib/supabase/types';
+import { ClubMember, MemberMessage, isPlayerMember } from '@/lib/supabase/types';
 import {
   UserCheck,
   Users,
@@ -585,7 +585,7 @@ export default function AdminMembersPage({
                               {member.full_name}
                             </h3>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                              {member.role === 'player' ? `Player • ${member.player_position || 'Roster'}` : 'Supporter Member'}
+                              {isPlayerMember(member) ? `Player • ${member.player_position || 'Roster'}` : 'Supporter Member'}
                             </div>
                           </div>
                         </div>

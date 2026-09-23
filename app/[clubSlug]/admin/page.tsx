@@ -3,6 +3,7 @@
 import React, { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { isPlayerMember } from '@/lib/supabase/types';
 import {
   Users,
   Radio,
@@ -38,7 +39,7 @@ export default function AdminDashboardPage({
   }, [club.id, loadClubAnalytics]);
 
   const clubMembers = members.filter(m => m.club_id === club.id);
-  const squadPlayers = clubMembers.filter(m => m.role === 'player');
+  const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const liveMatch = clubMatches.find(m => m.status === 'live');
   const analytics = getClubAnalytics(club.id);

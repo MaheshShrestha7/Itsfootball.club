@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Database
 } from 'lucide-react';
-import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats } from '@/lib/supabase/types';
+import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember } from '@/lib/supabase/types';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -106,7 +106,7 @@ export default function ClubIdentitySection({
   const rawClubMembers = members.filter(m => m.club_id === clubId);
   const rawTotalMembers = rawClubMembers.length;
   const rawTotalPlayers = rawClubMembers.filter(
-    m => m.role === 'player' || Boolean(m.player_position)
+    m => isPlayerMember(m) || Boolean(m.player_position)
   ).length;
 
   const rawClubMatches = matches.filter(m => m.club_id === clubId);

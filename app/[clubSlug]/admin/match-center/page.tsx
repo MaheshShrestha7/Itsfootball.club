@@ -3,7 +3,7 @@
 import React, { useState, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { MatchEventType, MatchPeriod, PitchPosition } from '@/lib/supabase/types';
+import { MatchEventType, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
 import {
   Radio,
@@ -73,7 +73,7 @@ export default function AdminMatchCenterControllerPage({
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
-  const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
+  const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
 
   // Active Admin Sub-Tab
   const [adminTab, setAdminTab] = useState<'events' | 'tactics' | 'clock'>('events');
@@ -96,6 +96,7 @@ export default function AdminMatchCenterControllerPage({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(squadPlayers[1]?.id || 'custom');
   const [customPlayerName, setCustomPlayerName] = useState('');
   const [selectedSubOffId, setSelectedSubOffId] = useState<string>(squadPlayers[0]?.id || '');
+  const [selectedAssistId, setSelectedAssistId] = useState<string>('none');
   const [assistName, setAssistName] = useState('');
   const [eventMinute, setEventMinute] = useState(match ? getLiveMinute(match) : 75);
   const [eventDetail, setEventDetail] = useState('');
@@ -276,7 +277,17 @@ export default function AdminMatchCenterControllerPage({
     }
 
     let detail = eventDetail.trim();
-    const assist = assistName.trim();
+    let assist = '';
+    if (isClubSelected) {
+      if (selectedAssistId === 'custom') {
+        assist = assistName.trim();
+      } else if (selectedAssistId !== 'none') {
+        const foundAssist = squadPlayers.find(p => p.id === selectedAssistId);
+        assist = foundAssist ? foundAssist.full_name : '';
+      }
+    } else {
+      assist = assistName.trim();
+    }
 
     if (eventType === 'sub') {
       const offPlayer = squadPlayers.find(p => p.id === selectedSubOffId);
@@ -298,6 +309,7 @@ export default function AdminMatchCenterControllerPage({
     showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${eventMinute}')`);
     setEventDetail('');
     setAssistName('');
+    setSelectedAssistId('none');
     if (selectedPlayerId === 'custom') setCustomPlayerName('');
   };
 
@@ -847,13 +859,41 @@ export default function AdminMatchCenterControllerPage({
                     ) : (
                       <div className="form-group">
                         <label className="form-label">Assist / Involved Secondary (Optional)</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Player name"
-                          value={assistName}
-                          onChange={e => setAssistName(e.target.value)}
-                        />
+                        {isClubSelected ? (
+                          <>
+                            <select
+                              className="form-select"
+                              value={selectedAssistId}
+                              onChange={e => setSelectedAssistId(e.target.value)}
+                            >
+                              <option value="none">-- None --</option>
+                              {squadPlayers.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  #{p.jersey_number} {p.full_name} ({p.player_position})
+                                </option>
+                              ))}
+                              <option value="custom">-- Custom Name / Other Player --</option>
+                            </select>
+                            {selectedAssistId === 'custom' && (
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Enter player name"
+                                style={{ marginTop: '0.5rem' }}
+                                value={assistName}
+                                onChange={e => setAssistName(e.target.value)}
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Player name"
+                            value={assistName}
+                            onChange={e => setAssistName(e.target.value)}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

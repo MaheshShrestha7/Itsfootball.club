@@ -2,6 +2,7 @@
 
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
+import { isPlayerMember } from '@/lib/supabase/types';
 import {
   Trophy,
   Flame,
@@ -35,7 +36,7 @@ export default function AdminGamificationPage({
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-  const squadPlayers = members.filter(m => m.club_id === club.id && m.role === 'player');
+  const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
   const clubProfiles = clubScoreProfiles.filter(p => p.club_id === club.id);
   const currentRules = clubScoreRules[club.id] || {
     club_id: club.id,

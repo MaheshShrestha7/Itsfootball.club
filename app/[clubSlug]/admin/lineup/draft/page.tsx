@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { MatchFormat, PitchPosition, ClubMember } from '@/lib/supabase/types';
+import { MatchFormat, PitchPosition, ClubMember, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch, { PlayerDragPayload, FORMAT_PRESETS } from '@/components/TacticalPitch';
 import AdminGuard from '@/components/AdminGuard';
 import {
@@ -46,7 +46,7 @@ export default function DraftLineupPage() {
   // Filter squad players
   const squadPlayers = useMemo(() => {
     if (!club) return [];
-    return members.filter(m => m.club_id === club.id && m.role === 'player');
+    return members.filter(m => m.club_id === club.id && isPlayerMember(m));
   }, [club, members]);
 
   // Upcoming matches for this club
@@ -88,7 +88,7 @@ export default function DraftLineupPage() {
         x: coord.x,
         y: coord.y,
         role: coord.role,
-        is_captain: squadPlayer?.is_executive && squadPlayer?.role === 'player',
+        is_captain: squadPlayer?.is_executive && !!squadPlayer && isPlayerMember(squadPlayer),
       };
     });
   }, [squadPlayers]);
@@ -238,7 +238,7 @@ export default function DraftLineupPage() {
               name: source.name || benchPlayer?.full_name || 'Player',
               number: source.number ?? benchPlayer?.jersey_number ?? p.number,
               position: source.position ?? benchPlayer?.player_position ?? p.position,
-              is_captain: benchPlayer?.is_executive && benchPlayer?.role === 'player',
+              is_captain: benchPlayer?.is_executive && !!benchPlayer && isPlayerMember(benchPlayer),
             };
           }
           return p;
@@ -291,7 +291,7 @@ export default function DraftLineupPage() {
             name: benchPlayer.full_name,
             number: benchPlayer.jersey_number || p.number,
             position: benchPlayer.player_position || p.position,
-            is_captain: benchPlayer.is_executive && benchPlayer.role === 'player',
+            is_captain: benchPlayer.is_executive && isPlayerMember(benchPlayer),
           };
         }
         return p;

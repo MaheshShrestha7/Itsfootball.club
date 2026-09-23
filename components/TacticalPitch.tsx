@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ClubMember, MatchEvent, PitchPosition, MatchFormat } from '@/lib/supabase/types';
+import { ClubMember, MatchEvent, PitchPosition, MatchFormat, isPlayerMember } from '@/lib/supabase/types';
 import {
   Move,
   RotateCcw,
@@ -385,7 +385,7 @@ export default function TacticalPitch({
         x: coord.x,
         y: coord.y,
         role: coord.role,
-        is_captain: squadPlayer?.is_executive && squadPlayer?.role === 'player',
+        is_captain: squadPlayer?.is_executive && !!squadPlayer && isPlayerMember(squadPlayer),
       };
     });
   }, [players]);

@@ -25,7 +25,9 @@ import {
   Loader2,
   Briefcase,
   Award,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Search,
+  XCircle
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 
@@ -64,6 +66,12 @@ export default function AdminSquadPage({
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<ClubMember | null>(null);
+
+  // Roster Filters (Role / Position / Status) & Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [positionFilter, setPositionFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Form State with Multi-Role support
   const [form, setForm] = useState({
@@ -382,6 +390,47 @@ export default function AdminSquadPage({
     return ['Player'];
   };
 
+  // Apply Role / Position / Status filters plus free-text search on top of the club's roster
+  const filteredMembers = clubMembers.filter(member => {
+    if (roleFilter !== 'all') {
+      const roles = getMemberRoles(member);
+      if (!roles.some(r => r.toLowerCase() === roleFilter.toLowerCase())) return false;
+    }
+
+    if (positionFilter !== 'all' && member.player_position !== positionFilter) return false;
+
+    if (statusFilter !== 'all') {
+      const isActive = member.status === 'active' || (member as any).is_active !== false;
+      if (statusFilter === 'active' && !isActive) return false;
+      if (statusFilter === 'inactive' && isActive) return false;
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      const haystack = [
+        member.full_name,
+        member.email,
+        member.phone,
+        member.executive_title,
+        member.jersey_number != null ? `#${member.jersey_number}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+
+    return true;
+  });
+
+  const filtersActive = searchQuery.trim() !== '' || roleFilter !== 'all' || positionFilter !== 'all' || statusFilter !== 'all';
+  const clearFilters = () => {
+    setSearchQuery('');
+    setRoleFilter('all');
+    setPositionFilter('all');
+    setStatusFilter('all');
+  };
+
   return (
     <div>
       {/* Top Banner */}
@@ -445,6 +494,79 @@ export default function AdminSquadPage({
         </div>
       </div>
 
+      {/* Roster Filters & Search */}
+      <div className="glass-panel" style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '1rem 1.25rem',
+        marginBottom: '1.5rem',
+      }}>
+        <div style={{ position: 'relative', flex: '2 1 220px', minWidth: '200px' }}>
+          <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Search by name, email, phone, jersey #..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ paddingLeft: '2.1rem' }}
+          />
+        </div>
+
+        <select
+          className="form-select"
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value)}
+          style={{ flex: '1 1 150px', minWidth: '150px' }}
+        >
+          <option value="all">All Roles</option>
+          {AVAILABLE_ROLES.map(r => (
+            <option key={r.id} value={r.id}>{r.label}</option>
+          ))}
+        </select>
+
+        <select
+          className="form-select"
+          value={positionFilter}
+          onChange={e => setPositionFilter(e.target.value)}
+          style={{ flex: '1 1 150px', minWidth: '150px' }}
+        >
+          <option value="all">All Positions</option>
+          {ALL_POSITIONS.map(pos => (
+            <option key={pos.value} value={pos.value}>{pos.value} — {pos.desc}</option>
+          ))}
+        </select>
+
+        <select
+          className="form-select"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          style={{ flex: '1 1 130px', minWidth: '130px' }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="btn btn-secondary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
+          >
+            <XCircle size={14} />
+            <span>Clear</span>
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+          Showing <strong style={{ color: '#FFFFFF' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
+        </span>
+      </div>
+
       {/* Success Feedback Alert */}
       {feedback && (
         <div style={{
@@ -479,7 +601,16 @@ export default function AdminSquadPage({
             </tr>
           </thead>
           <tbody>
-            {clubMembers.map(member => {
+            {filteredMembers.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  {clubMembers.length === 0
+                    ? 'No members registered yet.'
+                    : 'No members match the current filters.'}
+                </td>
+              </tr>
+            )}
+            {filteredMembers.map(member => {
               const roles = getMemberRoles(member);
               const isPlayer = roles.some(r => r.toLowerCase().includes('player')) || Boolean(member.player_position);
 
