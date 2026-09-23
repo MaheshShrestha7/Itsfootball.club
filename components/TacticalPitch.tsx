@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ClubMember, MatchEvent, PitchPosition, MatchFormat, isPlayerMember } from '@/lib/supabase/types';
+import PlayerAvatar from './PlayerAvatar';
 import {
   Move,
   RotateCcw,
@@ -927,6 +928,7 @@ export default function TacticalPitch({
           const isDragging = draggingPlayerId === pos.id || draggingPitchPosId === pos.id;
           const isSelected = selectedPlayerId === pos.id;
           const isDropTarget = hoveredDropTargetId === pos.id && draggingPitchPosId !== pos.id;
+          const photoUrl = players.find(p => p.id === pos.member_id)?.photo_url;
 
           return (
             <div
@@ -1020,7 +1022,9 @@ export default function TacticalPitch({
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  background: pos.position === 'GK'
+                  background: photoUrl
+                    ? '#0B0F14'
+                    : pos.position === 'GK'
                     ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
                     : `linear-gradient(135deg, ${primaryColor} 0%, rgba(0,0,0,0.3) 100%), ${primaryColor}`,
                   border: isDropTarget
@@ -1046,7 +1050,37 @@ export default function TacticalPitch({
                   transition: 'border-color 0.15s, box-shadow 0.15s',
                 }}
               >
-                {pos.number}
+                {photoUrl ? (
+                  <>
+                    <img
+                      src={photoUrl}
+                      alt={pos.name}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      bottom: '-3px',
+                      right: '-3px',
+                      background: pos.position === 'GK' ? '#F59E0B' : primaryColor,
+                      color: '#FFFFFF',
+                      fontSize: '0.55rem',
+                      fontWeight: 900,
+                      minWidth: '14px',
+                      height: '14px',
+                      padding: '0 2px',
+                      borderRadius: '7px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1.5px solid rgba(0,0,0,0.6)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                    }}>
+                      {pos.number}
+                    </span>
+                  </>
+                ) : (
+                  pos.number
+                )}
 
                 {/* Captain's Armband */}
                 {pos.is_captain && (
@@ -1177,8 +1211,8 @@ export default function TacticalPitch({
         </div>
       </div>
 
-      {/* Selected Player Detail & Tactical Role Card */}
-      {activePlayer && (
+      {/* Selected Player Detail & Tactical Role Card (editors only; not shown on read-only public views) */}
+      {activePlayer && isEditable && (
         <div
           className="glass-panel"
           style={{
@@ -1196,26 +1230,16 @@ export default function TacticalPitch({
         >
           {/* Player Info Left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              background: activePlayer.position === 'GK' ? '#F59E0B' : primaryColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.2rem',
-              fontWeight: 900,
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-            }}>
-              #{activePlayer.number}
-            </div>
+            <PlayerAvatar
+              photoUrl={players.find(p => p.id === activePlayer.member_id)?.photo_url}
+              name={activePlayer.name}
+              size={46}
+            />
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  {activePlayer.name}
+                  #{activePlayer.number} {activePlayer.name}
                 </h4>
                 {activePlayer.is_captain && (
                   <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>

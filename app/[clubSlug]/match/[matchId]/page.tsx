@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
 import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { extractCrestTextColor } from '@/lib/image-color';
@@ -635,17 +636,23 @@ export default function MatchCenterPage({
           >
             {motmMember && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 220px' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <Star size={20} color="#040609" fill="#040609" />
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <PlayerAvatar photoUrl={motmMember.photo_url} name={motmMember.full_name} size={44} />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-4px',
+                    right: '-4px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    border: '2px solid #0A0F17',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Star size={11} color="#040609" fill="#040609" />
+                  </div>
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -897,6 +904,7 @@ export default function MatchCenterPage({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={32} />
                       <span style={{
                         fontFamily: 'var(--font-heading)',
                         fontWeight: 900,

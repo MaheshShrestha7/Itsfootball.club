@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import {
   ShieldCheck,
   Star,
@@ -405,6 +406,7 @@ export default function StatsAuditModal({
                           color: isChecked ? '#10B981' : 'var(--text-muted)',
                         }}
                       >
+                        <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={20} />
                         {isChecked ? <Check size={12} /> : null}
                         <span>#{p.jersey_number || '-'} {p.full_name} ({p.player_position})</span>
                       </button>
@@ -458,6 +460,7 @@ export default function StatsAuditModal({
                           color: isChecked ? '#93C5FD' : 'var(--text-muted)',
                         }}
                       >
+                        <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={18} />
                         {isChecked ? <Check size={11} /> : null}
                         <span>#{p.jersey_number || '-'} {p.full_name}</span>
                       </button>
