@@ -370,6 +370,7 @@ export default function TacticalPitch({
   const [isFreeFormMode, setIsFreeFormMode] = useState<boolean>(
     formation.toLowerCase().includes('custom') || !!savedPositions?.length
   );
+  const [nameDisplay, setNameDisplay] = useState<'first' | 'last'>('first');
 
   // Initialize Pitch Positions from saved coordinates, or preset mapped with squad players
   const generatePositions = useCallback((presetKey: string): PitchPosition[] => {
@@ -782,6 +783,17 @@ export default function TacticalPitch({
               </button>
             )}
 
+            <button
+              type="button"
+              onClick={() => setNameDisplay(d => (d === 'first' ? 'last' : 'first'))}
+              className="btn btn-secondary btn-sm touch-target"
+              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Toggle between showing player first or last name on the pitch"
+            >
+              <User size={13} />
+              <span>{nameDisplay === 'first' ? 'First Name' : 'Last Name'}</span>
+            </button>
+
             {isFreeFormMode && (
               <button
                 onClick={handleResetToPreset}
@@ -834,9 +846,6 @@ export default function TacticalPitch({
             <Crosshair size={14} />
             <span>Repositioning: <strong>{dragCoordinateFeedback.zone}</strong></span>
           </div>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>
-            X: {dragCoordinateFeedback.x}% • Y: {dragCoordinateFeedback.y}%
-          </span>
         </div>
       )}
 
@@ -1127,7 +1136,9 @@ export default function TacticalPitch({
                   gap: '0.3rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
               }}>
-                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pos.name.split(' ').pop()}</span>
+                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()}
+                </span>
                 <span style={{
                   fontSize: '0.6rem',
                   color: primaryColor,
@@ -1216,7 +1227,6 @@ export default function TacticalPitch({
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                 Tactical Zone: <strong style={{ color: '#FFFFFF' }}>{getSectorZone(activePlayer.x, activePlayer.y)}</strong>
-                {' '}(X: {activePlayer.x}%, Y: {activePlayer.y}%)
               </p>
             </div>
           </div>
