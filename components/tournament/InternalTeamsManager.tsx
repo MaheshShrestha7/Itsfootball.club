@@ -750,7 +750,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                 >
                   {filteredMembers.length === 0 && (
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', padding: '0.4rem' }}>
-                      No players match "{playerSearch}".
+                      No players match &quot;{playerSearch}&quot;.
                     </span>
                   )}
                   {filteredMembers.map(member => {
