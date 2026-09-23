@@ -242,6 +242,7 @@ export interface ClubEvent {
   max_capacity: number;
   rsvp_count: number;
   is_public: boolean;
+  door_qr_checkin_enabled?: boolean;
   created_at?: string;
 }
 

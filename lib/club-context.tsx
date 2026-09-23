@@ -155,6 +155,7 @@ interface ClubContextType {
   verifyMemberPassPublic: (token: string) => Promise<{ valid: boolean; member?: ClubMember; message: string }>;
   /** Public door check-in, run on the server */
   publicMatchCheckin: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
+  publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
   checkInMemberToEvent: (eventId: string, qrToken: string) => { success: boolean; message: string; attendeeName?: string };
   
   // Inquiries
@@ -2322,6 +2323,26 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return { success: row.success, message: row.message, attendeeName: row.attendee_name || undefined };
   }, []);
 
+  const publicEventCheckin = useCallback(async (
+    eventId: string,
+    attendee: { name?: string; email?: string; token?: string }
+  ): Promise<{ success: boolean; message: string; attendeeName?: string }> => {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, message: 'Check-in is unavailable right now. Please try again.' };
+
+    const { data, error } = await client.rpc('public_event_checkin', {
+      p_event_id: eventId,
+      p_token: attendee.token || null,
+      p_name: attendee.name ? sanitizeText(attendee.name) : null,
+      p_email: attendee.email ? sanitizeText(attendee.email) : null,
+    });
+    if (error) return { success: false, message: 'Check-in failed. Please try again or ask an organizer for help.' };
+
+    const row = Array.isArray(data) ? data[0] : undefined;
+    if (!row) return { success: false, message: 'Check-in failed. Please try again.' };
+    return { success: row.success, message: row.message, attendeeName: row.attendee_name || undefined };
+  }, []);
+
   const getClubAnalytics = useCallback((clubId: string): ClubAnalyticsSummary => {
     const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
     const clubScans = gateScans.filter(s => s.club_id === clubId);
@@ -2931,6 +2952,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         verifyMemberPass,
         verifyMemberPassPublic,
         publicMatchCheckin,
+        publicEventCheckin,
         checkInMemberToEvent,
         submitInquiry,
         setPlayerAvailability,
