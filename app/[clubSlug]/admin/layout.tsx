@@ -31,7 +31,10 @@ import {
   CalendarDays,
   Menu,
   X,
-  Mail
+  Mail,
+  ClipboardCheck,
+  Flag,
+  Flame
 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
@@ -88,40 +91,49 @@ export default function AdminLayout({
       ],
     },
     {
-      title: 'Matchday Operations',
+      // Tools you reach for on the day itself, at the ground
+      title: 'Matchday Live',
       items: [
         { label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
-        { label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
-        { label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
-        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
-        { label: 'Player Availability', href: `/${club.slug}/availability`, icon: UserCheck },
         { label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
-        { label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
+        { label: 'Player Availability', href: `/${club.slug}/availability`, icon: ClipboardCheck },
       ],
     },
     {
-      title: 'Squad & Governance',
+      // Planning ahead of matchday: what's on, who's playing, when
+      title: 'Fixtures & Events',
       items: [
+        { label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
+        { label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
+        { label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
+        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
+        { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, badge: activeSeason?.name },
+      ],
+    },
+    {
+      // Squad, membership, and club communication
+      title: 'People & Squad',
+      items: [
+        { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
         {
           label: 'Member Approvals',
           href: `/${club.slug}/admin/members`,
           icon: UserCheck,
           badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
         },
+        { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
+        { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
         {
           label: 'Inbox',
           href: `/${club.slug}/admin/inquiries`,
           icon: Mail,
           badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
         },
-        { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
-        { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
-        { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: CalendarDays, badge: activeSeason?.name },
-        { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Trophy },
       ],
     },
     {
-      title: 'Brand & Media',
+      // The public-facing site: look, content, and its numbers
+      title: 'Website & Marketing',
       items: [
         { label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
         { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
