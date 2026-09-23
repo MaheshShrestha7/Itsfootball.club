@@ -6,8 +6,7 @@ import {
   Tournament,
   TournamentParticipant,
   TournamentStanding,
-  Match,
-  MatchStatus
+  Match
 } from './supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';

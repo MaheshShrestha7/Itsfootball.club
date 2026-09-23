@@ -2,7 +2,7 @@
 
 import { getAccessToken } from '@/lib/supabase/client';
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
-import { UploadCloud, CheckCircle2, AlertCircle, RefreshCw, X, Link2 } from 'lucide-react';
+import { UploadCloud, AlertCircle, RefreshCw, X, Link2 } from 'lucide-react';
 
 interface ImageUploadZoneProps {
   label: string;

@@ -5,7 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
-import { QRCodeSVG } from 'qrcode.react';
+import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import {
   Calendar,
   Plus,
@@ -14,13 +14,8 @@ import {
   CheckCircle2,
   QrCode,
   MapPin,
-  Clock,
-  Users,
   X,
   Sparkles,
-  Check,
-  Copy,
-  ExternalLink
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 
@@ -39,7 +34,6 @@ export default function AdminEventsPage({
 
   const [scannerEvent, setScannerEvent] = useState<ClubEvent | null>(null);
   const [qrModalEvent, setQrModalEvent] = useState<ClubEvent | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -50,12 +44,6 @@ export default function AdminEventsPage({
       return `${window.location.origin}/${club.slug}/events/${evt.id}/checkin`;
     }
     return `/${club.slug}/events/${evt.id}/checkin`;
-  };
-
-  const copyQrLink = (url: string) => {
-    navigator.clipboard?.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   const filteredEvents = clubEvents.filter(e => {
@@ -504,134 +492,14 @@ export default function AdminEventsPage({
 
       {/* Self Check-In QR Code Modal */}
       {qrModalEvent && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 999,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setQrModalEvent(null);
-          }}
-        >
-          <div
-            className="glass-panel"
-            style={{
-              maxWidth: '520px',
-              width: '100%',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--border-medium)',
-              background: 'var(--bg-surface-elevated)',
-              textAlign: 'center'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setQrModalEvent(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
-              SELF CHECK-IN STATION
-            </span>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
-              {qrModalEvent.title}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              {qrModalEvent.location} • {new Date(qrModalEvent.start_time).toLocaleDateString()} at {new Date(qrModalEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </p>
-
-            {!qrModalEvent.door_qr_checkin_enabled && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid #EF4444',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.65rem 1rem',
-                marginBottom: '1.25rem',
-                color: '#EF4444',
-                fontSize: '0.8rem',
-              }}>
-                Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.
-              </div>
-            )}
-
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '1.5rem',
-                borderRadius: '16px',
-                display: 'inline-block',
-                margin: '0 auto 1.5rem auto',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
-              }}
-            >
-              <QRCodeSVG
-                value={getCheckinUrl(qrModalEvent)}
-                size={220}
-                level="H"
-                includeMargin={false}
-              />
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                border: '1px solid var(--border-subtle)'
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-secondary)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {getCheckinUrl(qrModalEvent)}
-              </span>
-              <button
-                type="button"
-                onClick={() => copyQrLink(getCheckinUrl(qrModalEvent))}
-                className="btn btn-secondary btn-sm"
-                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              >
-                {copiedLink ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
-                <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
-              </button>
-            </div>
-
-            <a
-              href={`/${club.slug}/events/${qrModalEvent.id}/checkin`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <ExternalLink size={14} />
-              <span>Open Check-In Page</span>
-            </a>
-          </div>
-        </div>
+        <DoorCheckinQrModal
+          badgeLabel="SELF CHECK-IN STATION"
+          title={qrModalEvent.title}
+          subtitle={`${qrModalEvent.location} • ${new Date(qrModalEvent.start_time).toLocaleDateString()} at ${new Date(qrModalEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+          checkinUrl={getCheckinUrl(qrModalEvent)}
+          disabledNotice={!qrModalEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.' : undefined}
+          onClose={() => setQrModalEvent(null)}
+        />
       )}
 
       {/* QR Scanner Check-in Reticle Modal */}

@@ -34,7 +34,7 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, events, matches, verifyMemberPass, checkInMemberToEvent, selfCheckInMatch, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, members, events, matches, verifyMemberPass, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
@@ -49,7 +49,7 @@ export default function AdminScannerPage({
   const [scanLogs, setScanLogs] = useState<ScanLogEntry[]>([]);
   const [currentResult, setCurrentResult] = useState<any>(null);
 
-  const processToken = (token: string) => {
+  const processToken = async (token: string) => {
     if (!token.trim()) return;
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -57,7 +57,7 @@ export default function AdminScannerPage({
     if (mode === 'match_checkin') {
       const selectedMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
       if (!selectedMatch) return;
-      const res = selfCheckInMatch(selectedMatch.id, { token });
+      const res = await publicMatchCheckin(selectedMatch.id, { token });
 
       const newLog: ScanLogEntry = {
         id: `log-${Date.now()}`,
@@ -75,20 +75,11 @@ export default function AdminScannerPage({
       });
 
       setScanLogs(prev => [newLog, ...prev]);
-
-      // Record to live club analytics engine
-      recordGateScan({
-        club_id: club.id,
-        scan_type: 'event_checkin',
-        token,
-        member_name: res.attendeeName || 'Match Attendee',
-        event_id: selectedMatch.id,
-        event_title: `${selectedMatch.home_team_name} vs ${selectedMatch.away_team_name}`,
-        valid: res.success,
-      });
+      // publicMatchCheckin already persists the scan server-side; no separate recordGateScan needed.
     } else if (mode === 'checkin') {
       const selectedEvent = clubEvents.find(e => e.id === selectedEventId) || clubEvents[0];
-      const res = checkInMemberToEvent(selectedEvent?.id || '', token);
+      if (!selectedEvent) return;
+      const res = await publicEventCheckin(selectedEvent.id, { token });
 
       const newLog: ScanLogEntry = {
         id: `log-${Date.now()}`,
@@ -106,17 +97,7 @@ export default function AdminScannerPage({
       });
 
       setScanLogs(prev => [newLog, ...prev]);
-
-      // Record to live club analytics engine
-      recordGateScan({
-        club_id: club.id,
-        scan_type: 'event_checkin',
-        token,
-        member_name: res.attendeeName || 'Event Attendee',
-        event_id: selectedEvent?.id,
-        event_title: selectedEvent?.title,
-        valid: res.success,
-      });
+      // publicEventCheckin already persists the scan server-side; no separate recordGateScan needed.
     } else {
       const res = verifyMemberPass(token, club.id);
       const newLog: ScanLogEntry = {

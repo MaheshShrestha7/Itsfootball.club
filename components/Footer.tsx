@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
-import { Shield, ExternalLink, MapPin, Mail, Phone, Heart } from 'lucide-react';
+import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 
 interface FooterProps {
   club?: Club | null;

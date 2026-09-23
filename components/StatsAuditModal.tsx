@@ -5,15 +5,12 @@ import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from
 import { useClub } from '@/lib/club-context';
 import {
   ShieldCheck,
-  Award,
   Star,
   CheckCircle2,
-  AlertTriangle,
   Flame,
   User,
   Check,
   X,
-  Plus,
   Trash2,
   Sparkles
 } from 'lucide-react';
@@ -35,7 +32,7 @@ export default function StatsAuditModal({
   onClose,
   onAuditCompleted,
 }: StatsAuditModalProps) {
-  const { auditAndBakeMatchStats, clubScoreRules } = useClub();
+  const { auditAndBakeMatchStats } = useClub();
 
   // Filter home events (club's own events)
   const initialAuditEvents: MatchAuditItem[] = useMemo(() => {
@@ -88,7 +85,7 @@ export default function StatsAuditModal({
     return squadPlayers.slice(0, 14).map(p => p.id);
   });
 
-  const [auditNotes, setAuditNotes] = useState<string>('');
+  const auditNotes = '';
   const [isBaking, setIsBaking] = useState<boolean>(false);
   const [auditResult, setAuditResult] = useState<{ totalXP: number; message: string } | null>(null);
 

@@ -9,9 +9,7 @@ import {
   CheckCircle2,
   RotateCw,
   Download,
-  Sparkles,
-  MapPin,
-  Calendar
+  Sparkles
 } from 'lucide-react';
 
 interface VirtualPassCardProps {

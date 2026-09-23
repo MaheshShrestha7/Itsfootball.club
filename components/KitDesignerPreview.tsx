@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Shield, Sparkles, Shirt, RotateCw, Check, Palette } from 'lucide-react';
+import { Shirt, RotateCw, Check, Palette } from 'lucide-react';
 
 export type KitType = 'home' | 'away' | 'third';
 export type KitPattern = 'solid' | 'stripes' | 'hoops' | 'sash' | 'halves' | 'gradient';

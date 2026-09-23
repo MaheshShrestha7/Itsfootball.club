@@ -7,15 +7,11 @@ import {
   RotateCcw,
   Save,
   Check,
-  Sparkles,
   Info,
-  Shield,
-  Layers,
   ArrowLeftRight,
   Crosshair,
   User,
   Flame,
-  AlertTriangle,
   Smartphone,
   Monitor
 } from 'lucide-react';
@@ -225,8 +221,8 @@ export const FORMAT_PRESETS: Record<MatchFormat, Record<string, { name: string; 
   },
 };
 
-// Flattened presets for direct backwards compatibility
-export const FORMATION_PRESETS: Record<string, { name: string; description: string; coords: Omit<PitchPosition, 'name' | 'number' | 'id'>[] }> = {
+// Flattened presets, keyed by shape name regardless of format (e.g. "4-3-3" -> its 11v11 coords)
+const FORMATION_PRESETS: Record<string, { name: string; description: string; coords: Omit<PitchPosition, 'name' | 'number' | 'id'>[] }> = {
   ...FORMAT_PRESETS['11v11'],
   ...FORMAT_PRESETS['9v9'],
   ...FORMAT_PRESETS['7v7'],
@@ -265,7 +261,6 @@ export default function TacticalPitch({
   isEditable = true,
   matchEvents = [],
   onSaveFormation,
-  teamName,
   onSwapWithBench,
   onPlayerDropReplace,
   orientation,
@@ -635,7 +630,6 @@ export default function TacticalPitch({
 
   // Selected player details
   const activePlayer = positions.find(p => p.id === selectedPlayerId);
-  const activeSquadMember = players.find(p => p.id === activePlayer?.member_id);
 
   // Check card/substitution status from live match events
   const getPlayerMatchBadges = (playerName: string) => {

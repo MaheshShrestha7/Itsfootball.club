@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
 import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
@@ -15,10 +15,7 @@ import {
   X,
   Volume2,
   VolumeX,
-  Sparkles,
-  QrCode,
-  Ticket,
-  ArrowRight
+  Ticket
 } from 'lucide-react';
 
 interface QRScannerModalProps {
@@ -41,7 +38,7 @@ export default function QRScannerModal({
   mode = 'verify_pass',
   clubId,
 }: QRScannerModalProps) {
-  const { verifyMemberPass, checkInMemberToEvent, selfCheckInMatch, members } = useClub();
+  const { verifyMemberPass, publicEventCheckin, publicMatchCheckin, members } = useClub();
   const verifyClubId = targetEvent?.club_id ?? targetMatch?.club_id ?? clubId;
   const [manualCode, setManualCode] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -57,8 +54,6 @@ export default function QRScannerModal({
   }>({ status: 'idle', message: '' });
 
   const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
-  const [cameraActive, setCameraActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Turnstile RFID audio synthesizer using Web Audio API
   const playTurnstileAudio = useCallback((type: 'grant' | 'deny') => {
@@ -110,153 +105,86 @@ export default function QRScannerModal({
     }
   }, [audioEnabled]);
 
-  // Initialize camera stream when camera tab is active
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    if (isOpen && activeTab === 'camera') {
-      navigator.mediaDevices?.getUserMedia?.({ video: { facingMode: 'environment' } })
-        .then(s => {
-          stream = s;
-          if (videoRef.current) {
-            videoRef.current.srcObject = s;
-            videoRef.current.play();
-            setCameraActive(true);
-          }
-        })
-        .catch(() => {
-          setCameraActive(false);
-        });
-    }
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [isOpen, activeTab]);
-
   if (!isOpen) return null;
 
-  const handleProcessToken = (token: string) => {
+  const handleProcessToken = async (token: string) => {
     if (!token.trim()) return;
 
     setIsProcessing(true);
     setScanResult({ status: 'idle', message: '' });
 
-    // Simulate optical scan recognition delay (400ms)
-    setTimeout(() => {
+    const currentTimeStr = new Date().toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+
+    if (mode === 'match_checkin' && targetMatch) {
+      const res = await publicMatchCheckin(targetMatch.id, { token });
       setIsProcessing(false);
-      const currentTimeStr = new Date().toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-
-      if (mode === 'match_checkin' && targetMatch) {
-        const res = selfCheckInMatch(targetMatch.id, { token });
-        if (res.success) {
-          playTurnstileAudio('grant');
-          try {
-            confetti({
-              particleCount: 60,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10B981', '#F59E0B', '#FFFFFF'],
-            });
-          } catch {}
-
-          setScanResult({
-            status: 'success',
-            message: res.message,
-            attendeeName: res.attendeeName,
-            timestamp: currentTimeStr,
-            gate: 'Stadium Main Entrance',
-            turnstile: 'Gate Turnstile 01',
-          });
-        } else {
-          playTurnstileAudio('deny');
-          setScanResult({
-            status: 'error',
-            message: res.message,
-            timestamp: currentTimeStr,
-            gate: 'Stadium Main Entrance',
-            turnstile: 'Gate Turnstile 01',
-          });
-        }
-      } else if (mode === 'event_checkin' && targetEvent) {
-        const res = checkInMemberToEvent(targetEvent.id, token);
-        if (res.success) {
-          playTurnstileAudio('grant');
-          try {
-            confetti({
-              particleCount: 50,
-              spread: 60,
-              origin: { y: 0.6 },
-              colors: ['#10B981', '#F59E0B', '#FFFFFF'],
-            });
-          } catch {}
-
-          setScanResult({
-            status: 'success',
-            message: res.message,
-            attendeeName: res.attendeeName,
-            timestamp: currentTimeStr,
-            gate: 'Gate B',
-            turnstile: 'Turnstile 04',
-          });
-        } else {
-          playTurnstileAudio('deny');
-          setScanResult({
-            status: 'error',
-            message: res.message,
-            timestamp: currentTimeStr,
-            gate: 'Gate B',
-            turnstile: 'Turnstile 04',
-          });
-        }
+      if (res.success) {
+        playTurnstileAudio('grant');
+        try {
+          confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: ['#10B981', '#F59E0B', '#FFFFFF'] });
+        } catch {}
       } else {
-        const res = verifyMemberPass(token, verifyClubId);
-        if (res.valid && res.member) {
-          playTurnstileAudio('grant');
-          try {
-            confetti({
-              particleCount: 60,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10B981', '#F59E0B', '#FFFFFF'],
-            });
-          } catch {}
-
-          setScanResult({
-            status: 'success',
-            message: res.message,
-            member: res.member,
-            timestamp: currentTimeStr,
-            gate: 'North Gate A',
-            turnstile: 'Turnstile 12',
-          });
-        } else if (res.member) {
-          playTurnstileAudio('deny');
-          setScanResult({
-            status: 'warning',
-            message: res.message,
-            member: res.member,
-            timestamp: currentTimeStr,
-            gate: 'North Gate A',
-            turnstile: 'Turnstile 12',
-          });
-        } else {
-          playTurnstileAudio('deny');
-          setScanResult({
-            status: 'error',
-            message: res.message || 'Unknown barcode token. Pass rejected by turnstile controller.',
-            timestamp: currentTimeStr,
-            gate: 'North Gate A',
-            turnstile: 'Turnstile 12',
-          });
-        }
+        playTurnstileAudio('deny');
       }
-    }, 450);
+      setScanResult({
+        status: res.success ? 'success' : 'error',
+        message: res.message,
+        attendeeName: res.attendeeName,
+        timestamp: currentTimeStr,
+        gate: 'Stadium Main Entrance',
+        turnstile: 'Gate Turnstile 01',
+      });
+    } else if (mode === 'event_checkin' && targetEvent) {
+      const res = await publicEventCheckin(targetEvent.id, { token });
+      setIsProcessing(false);
+      if (res.success) {
+        playTurnstileAudio('grant');
+        try {
+          confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#10B981', '#F59E0B', '#FFFFFF'] });
+        } catch {}
+      } else {
+        playTurnstileAudio('deny');
+      }
+      setScanResult({
+        status: res.success ? 'success' : 'error',
+        message: res.message,
+        attendeeName: res.attendeeName,
+        timestamp: currentTimeStr,
+        gate: 'Gate B',
+        turnstile: 'Turnstile 04',
+      });
+    } else {
+      const res = verifyMemberPass(token, verifyClubId);
+      setIsProcessing(false);
+      if (res.valid && res.member) {
+        playTurnstileAudio('grant');
+        try {
+          confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: ['#10B981', '#F59E0B', '#FFFFFF'] });
+        } catch {}
+        setScanResult({
+          status: 'success',
+          message: res.message,
+          member: res.member,
+          timestamp: currentTimeStr,
+          gate: 'North Gate A',
+          turnstile: 'Turnstile 12',
+        });
+      } else {
+        playTurnstileAudio('deny');
+        setScanResult({
+          status: res.member ? 'warning' : 'error',
+          message: res.message || 'Unknown barcode token. Pass rejected by turnstile controller.',
+          member: res.member,
+          timestamp: currentTimeStr,
+          gate: 'North Gate A',
+          turnstile: 'Turnstile 12',
+        });
+      }
+    }
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {

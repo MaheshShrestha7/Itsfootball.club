@@ -15,7 +15,6 @@ import {
   TrendingUp,
   History,
   X,
-  CheckCircle2,
   Zap
 } from 'lucide-react';
 

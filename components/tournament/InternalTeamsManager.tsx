@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
-import { InternalTeam, ClubMember } from '@/lib/supabase/types';
-import { Users, Plus, Edit2, Trash2, Shield, User, Check, X, Award, Image as ImageIcon, Search } from 'lucide-react';
+import { InternalTeam } from '@/lib/supabase/types';
+import { Plus, Edit2, Trash2, Shield, Check, X, Image as ImageIcon, Search } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { DEFAULT_CREST } from '@/lib/crest';
 

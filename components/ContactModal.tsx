@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
-import { Mail, CheckCircle2, Send, X, Shield, Phone } from 'lucide-react';
+import { Mail, CheckCircle2, Send, X } from 'lucide-react';
 
 interface ContactModalProps {
   club: Club;

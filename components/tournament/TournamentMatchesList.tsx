@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
-import { Calendar, MapPin, Radio, CheckCircle2, Trophy, Clock, Edit3, ArrowRight } from 'lucide-react';
+import { Calendar, MapPin, Edit3, ArrowRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LiveMinute from '@/components/LiveMinute';
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Match, MatchType, MatchStatus } from '@/lib/supabase/types';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Calendar,
@@ -20,14 +21,12 @@ import {
   Filter,
   Star,
   ExternalLink,
-  Copy,
   Printer,
   Shield,
   Radio,
   Trophy,
   Users,
   Eye,
-  Check,
   X,
   AlertTriangle,
   Info,
@@ -91,7 +90,6 @@ export default function AdminMatchesPage({
   const [qrModalMatch, setQrModalMatch] = useState<Match | null>(null);
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Form State
   const defaultDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
@@ -397,12 +395,6 @@ export default function AdminMatchesPage({
       return `${window.location.origin}/${club.slug}/match/${m.id}/checkin`;
     }
     return `/${club.slug}/match/${m.id}/checkin`;
-  };
-
-  const copyQrLink = (url: string) => {
-    navigator.clipboard?.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   return (
@@ -1476,136 +1468,27 @@ export default function AdminMatchesPage({
       {/* 2. DOOR QR GATE MODAL                                                     */}
       {/* ========================================================================= */}
       {qrModalMatch && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1.5rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setQrModalMatch(null);
-          }}
-        >
-          <div
-            className="glass-panel"
-            style={{
-              maxWidth: '520px',
-              width: '100%',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--border-medium)',
-              background: 'var(--bg-surface-elevated)',
-              textAlign: 'center'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setQrModalMatch(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
-              TURNSTILE DOOR STATION
-            </span>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
-              {qrModalMatch.title || `${qrModalMatch.home_team_name} vs ${qrModalMatch.away_team_name}`}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              {qrModalMatch.venue} • {new Date(qrModalMatch.match_date).toLocaleDateString()} at {qrModalMatch.match_time || '15:00'}
-            </p>
-
-            {/* Live QR Code Box */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '1.5rem',
-                borderRadius: '16px',
-                display: 'inline-block',
-                margin: '0 auto 1.5rem auto',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
+        <DoorCheckinQrModal
+          title={qrModalMatch.title || `${qrModalMatch.home_team_name} vs ${qrModalMatch.away_team_name}`}
+          subtitle={`${qrModalMatch.venue} • ${new Date(qrModalMatch.match_date).toLocaleDateString()} at ${qrModalMatch.match_time || '15:00'}`}
+          checkinUrl={getCheckinUrl(qrModalMatch)}
+          onClose={() => setQrModalMatch(null)}
+          extraActions={
+            <button
+              type="button"
+              onClick={() => {
+                const target = qrModalMatch;
+                setQrModalMatch(null);
+                setPrintPosterMatch(target);
               }}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <QRCodeSVG
-                value={getCheckinUrl(qrModalMatch)}
-                size={220}
-                level="H"
-                includeMargin={false}
-              />
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                border: '1px solid var(--border-subtle)'
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-secondary)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {getCheckinUrl(qrModalMatch)}
-              </span>
-              <button
-                type="button"
-                onClick={() => copyQrLink(getCheckinUrl(qrModalMatch))}
-                className="btn btn-secondary btn-sm"
-                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              >
-                {copiedLink ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
-                <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <Link
-                href={`/${club.slug}/match/${qrModalMatch.id}/checkin`}
-                target="_blank"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                <ExternalLink size={14} />
-                <span>Test Check-in</span>
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const target = qrModalMatch;
-                  setQrModalMatch(null);
-                  setPrintPosterMatch(target);
-                }}
-                className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                <Printer size={14} />
-                <span>Print Gate Poster</span>
-              </button>
-            </div>
-          </div>
-        </div>
+              <Printer size={14} />
+              <span>Print Gate Poster</span>
+            </button>
+          }
+        />
       )}
 
       {/* ========================================================================= */}

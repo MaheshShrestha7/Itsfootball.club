@@ -118,7 +118,6 @@ interface ClubContextType {
   addMatch: (matchData: Omit<Match, 'id' | 'created_at'>) => Match;
   deleteMatch: (matchId: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
-  selfCheckInMatch: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => { success: boolean; message: string; attendeeName?: string };
   addMatchEvent: (eventData: Omit<MatchEvent, 'id' | 'created_at'>) => void;
   deleteMatchEvent: (eventId: string) => void;
   
@@ -156,8 +155,7 @@ interface ClubContextType {
   /** Public door check-in, run on the server */
   publicMatchCheckin: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
   publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
-  checkInMemberToEvent: (eventId: string, qrToken: string) => { success: boolean; message: string; attendeeName?: string };
-  
+
   // Inquiries
   submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string) => Promise<{ success: boolean; error?: string }>;
   inquiries: ContactInquiry[];
@@ -1707,64 +1705,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [members]);
 
-  const checkInMemberToEvent = useCallback((eventId: string, qrToken: string) => {
-    const targetEvent = events.find(e => e.id === eventId);
-    // Scope the pass lookup to this event's club so a valid pass from a different
-    // club (relevant to admins who manage more than one club) can't check in here.
-    const verification = verifyMemberPass(qrToken, targetEvent?.club_id);
-    if (!verification.valid || !verification.member) {
-      return {
-        success: false,
-        message: verification.message
-      };
-    }
-
-    // Idempotency guard: this member's pass was already scanned for this event.
-    const alreadyCheckedIn = gateScans.some(
-      s => s.scan_type === 'event_checkin' && s.event_id === eventId && s.member_id === verification.member!.id
-    );
-    if (alreadyCheckedIn) {
-      return {
-        success: false,
-        attendeeName: verification.member.full_name,
-        message: `${verification.member.full_name} is already checked in to ${targetEvent?.title || 'this event'}. No duplicate points awarded.`
-      };
-    }
-
-    // Increment event RSVP / attendance count
-    setEvents(prev =>
-      prev.map(e => (e.id === eventId ? { ...e, rsvp_count: e.rsvp_count + 1 } : e))
-    );
-
-    // Auto-award ClubScore points for verified check-in
-    const category = targetEvent?.category || 'training';
-    const basePts = category === 'training' ? 10 : 5;
-    awardClubScorePoints(
-      verification.member.id,
-      basePts,
-      category === 'training' ? 'training_checkin' : 'social_checkin',
-      `Verified QR Check-In: ${targetEvent?.title || 'Club Event'}`,
-      eventId
-    );
-
-    recordGateScan({
-      club_id: verification.member.club_id,
-      scan_type: 'event_checkin',
-      token: qrToken,
-      member_id: verification.member.id,
-      member_name: verification.member.full_name,
-      event_id: eventId,
-      event_title: targetEvent?.title,
-      valid: true,
-    });
-
-    return {
-      success: true,
-      attendeeName: verification.member.full_name,
-      message: `Successfully checked in ${verification.member.full_name} (+${basePts} ClubScore pts awarded)`
-    };
-  }, [verifyMemberPass, events, gateScans, awardClubScorePoints, recordGateScan]);
-
   // 11. Inquiries
   const submitInquiry = useCallback(async (
     inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
@@ -2170,88 +2110,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       ...prev.filter(e => e.club_id !== clubId),
     ]);
   }, []);
-
-  const selfCheckInMatch = useCallback((
-    matchId: string,
-    attendee: { name?: string; email?: string; token?: string }
-  ) => {
-    const match = matches.find(m => m.id === matchId);
-    if (!match) {
-      return { success: false, message: 'Match fixture not found.' };
-    }
-    if (!match.door_qr_checkin_enabled) {
-      return { success: false, message: 'Door QR self check-in is not active for this fixture.' };
-    }
-
-    let attendeeName = (attendee.name || '').trim();
-    let memberId: string | undefined = undefined;
-
-    // If member pass token provided, verify member
-    if (attendee.token) {
-      const token = attendee.token.trim().toLowerCase();
-      const member = members.find(m =>
-        m.club_id === match.club_id &&
-        (m.qr_code_token?.toLowerCase() === token || m.id.toLowerCase() === token)
-      );
-      if (member) {
-        // Idempotency guard: this member's pass was already scanned at this match's door.
-        const alreadyCheckedIn = gateScans.some(
-          s => s.scan_type === 'match_checkin' && s.match_id === matchId && s.member_id === member.id
-        );
-        if (alreadyCheckedIn) {
-          return {
-            success: false,
-            attendeeName: member.full_name,
-            message: `${member.full_name} is already checked in to this fixture. No duplicate points awarded.`
-          };
-        }
-
-        attendeeName = member.full_name;
-        memberId = member.id;
-        // Award attendance points
-        awardClubScorePoints(
-          member.id,
-          15,
-          'match_appearance',
-          `Matchday Turnstile Check-in: ${match.title || match.home_team_name + ' vs ' + match.away_team_name}`,
-          match.id
-        );
-      } else if (!attendeeName) {
-        return { success: false, message: 'Invalid member pass token provided.' };
-      }
-    }
-
-    if (!attendeeName) {
-      attendeeName = 'General Supporter';
-    }
-
-    // Increment checkin count on match
-    setMatches(prev => prev.map(m => m.id === matchId ? { ...m, checkin_count: (m.checkin_count || 0) + 1 } : m));
-
-    // Record gate scan
-    recordGateScan({
-      club_id: match.club_id,
-      scan_type: 'match_checkin',
-      token: attendee.token || `door-guest-${Date.now()}`,
-      member_id: memberId,
-      member_name: attendeeName,
-      match_id: match.id,
-      match_title: match.title || `${match.home_team_name} vs ${match.away_team_name}`,
-      valid: true,
-    });
-
-    broadcastLiveMatchdayEvent({
-      type: 'MATCH_CHECKIN',
-      matchId,
-      timestamp: Date.now(),
-    });
-
-    return {
-      success: true,
-      message: `Welcome to ${match.venue}! Entry check-in confirmed.`,
-      attendeeName
-    };
-  }, [matches, members, gateScans, awardClubScorePoints, recordGateScan]);
 
   const verifyMemberPassPublic = useCallback(async (token: string): Promise<{ valid: boolean; member?: ClubMember; message: string }> => {
     // A scanned QR may carry a whole link (".../verify?token=abc"); pull the token out of it
@@ -2926,7 +2784,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         addMatch,
         deleteMatch,
         updateMatch,
-        selfCheckInMatch,
         addMatchEvent,
         deleteMatchEvent,
         addEvent,
@@ -2953,7 +2810,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         verifyMemberPassPublic,
         publicMatchCheckin,
         publicEventCheckin,
-        checkInMemberToEvent,
         submitInquiry,
         setPlayerAvailability,
         getMatchAvailabilities,

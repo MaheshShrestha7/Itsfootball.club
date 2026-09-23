@@ -6,7 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
-import { Shield, Trophy, Users, PlusCircle, ChevronDown, Radio, ExternalLink, User, LogOut, Menu, X } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X } from 'lucide-react';
 
 export default function PlatformNavbar() {
   const { clubs } = useClub();
