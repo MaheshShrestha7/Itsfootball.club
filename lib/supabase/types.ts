@@ -362,6 +362,8 @@ export interface SponsorAnalyticsEvent {
 
 export interface SponsorPlacementStats {
   sponsorId: string;
+  /** Placements this sponsor was actually seen in, e.g. 'footer_marquee', 'match_center_marquee' */
+  placements: string[];
   impressions: number;
   viewableImpressions: number;
   clicks: number;

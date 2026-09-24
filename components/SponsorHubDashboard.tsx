@@ -20,6 +20,14 @@ function startOfQuarter(now: Date): Date {
   return new Date(now.getFullYear(), q, 1);
 }
 
+const PLACEMENT_NAMES: Record<string, string> = {
+  footer_marquee: 'Footer Sponsor Bar',
+  match_center_marquee: 'Match Center Scroll',
+};
+
+const placementLabel = (placements?: string[]) =>
+  placements?.length ? placements.map(p => PLACEMENT_NAMES[p] || p).join(' · ') : 'Not seen yet';
+
 const statusColor = (status?: Sponsor['package_status']) =>
   status === 'paid' || status === 'confirmed' ? '#10B981' : status === 'prospect' ? '#F59E0B' : '#EF4444';
 
@@ -90,7 +98,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
     const header = ['Creative / Slot', 'Placement', 'Impressions', 'Viewable Impressions', 'Viewability %', 'Clicks', 'CTR %', 'Avg. Time in View (s)', 'Status'];
     const lines = rows.map(({ sponsor, stats }) => [
       sponsor.name,
-      'footer_marquee',
+      `"${placementLabel(stats?.placements)}"`,
       stats?.impressions || 0,
       stats?.viewableImpressions || 0,
       (stats?.viewabilityRate || 0).toFixed(2),
@@ -188,7 +196,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem' }}>Placement Performance</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Impressions and clicks over the last 7 days, recorded live from footer placements.</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Impressions and clicks over the last 7 days, recorded live from every sponsor placement on the site.</p>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', height: '180px' }}>
                 {data.byDay.map(d => {
                   const heightPct = Math.max(4, Math.round((d.impressions / maxDayImpressions) * 100));
@@ -275,7 +283,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     <tr key={sponsor.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '0.65rem 0.6rem', fontWeight: 700, color: '#FFFFFF' }}>
                         {sponsor.name}
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }}>Footer Sponsor Bar</div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }}>{placementLabel(stats?.placements)}</div>
                       </td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>{(stats?.impressions || 0).toLocaleString()}</td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>

@@ -768,6 +768,96 @@ textarea {
   }
 }
 
+/* Scrolling sponsor strip (two identical rows; the track slides by one row width, so the loop is seamless) */
+.sponsor-marquee {
+  padding: 1.1rem 0;
+  overflow: hidden;
+}
+
+.sponsor-marquee-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 0.85rem;
+}
+
+.sponsor-marquee-viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.sponsor-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: sponsorMarquee linear infinite;
+}
+
+.sponsor-marquee-viewport:hover .sponsor-marquee-track,
+.sponsor-marquee-viewport:focus-within .sponsor-marquee-track {
+  animation-play-state: paused;
+}
+
+.sponsor-marquee-row {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding-right: 2rem;
+}
+
+.sponsor-marquee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0.4rem 0.8rem;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.sponsor-marquee-item:hover,
+.sponsor-marquee-item:focus-visible {
+  border-color: var(--club-primary);
+  color: #FFFFFF;
+}
+
+.sponsor-marquee-item img {
+  height: 30px;
+  max-width: 110px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+@keyframes sponsorMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-marquee-track {
+    animation: none;
+    width: auto;
+  }
+  .sponsor-marquee-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 1rem;
+  }
+  .sponsor-marquee-row[aria-hidden] {
+    display: none;
+  }
+}
+
 /* Drop targets on the bench while a pitch player is dragged off the pitch */
 .bench-dropzone.is-drop-hover,
 .bench-card.is-drop-hover {

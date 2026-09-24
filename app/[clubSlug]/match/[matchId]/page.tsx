@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import SponsorMarquee from '@/components/SponsorMarquee';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { extractCrestTextColor } from '@/lib/image-color';
@@ -38,21 +39,20 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs } = useClub();
+  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs, sponsors } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const match = matches.find(m => m.id === resolvedParams.matchId);
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
   const allSquadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
 
-  // Only players explicitly marked "available" for this fixture count as the matchday squad.
-  // If the club never used the availability/RSVP feature for this match, fall back to the full
-  // squad rather than showing an empty pitch.
+  // Only players explicitly marked "available" for this fixture are shown as the matchday squad
   const matchAvailabilities = match ? getMatchAvailabilities(match.id) : [];
   const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
-  const squadPlayers = matchAvailabilities.length > 0
-    ? allSquadPlayers.filter(p => attendingIds.has(p.id))
-    : allSquadPlayers;
+  const squadPlayers = allSquadPlayers.filter(p => attendingIds.has(p.id));
+
+  // Club-wide partners (event-scoped sponsors belong to their event's page)
+  const matchSponsors = sponsors.filter(s => s.club_id === club.id && !s.event_id && s.is_active);
 
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
@@ -841,7 +841,7 @@ export default function MatchCenterPage({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {squadPlayers.length === 0 && (
                   <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    No confirmed matchday squad yet.
+                    No players have confirmed their availability for this match yet.
                   </p>
                 )}
                 {squadPlayers.map(p => (
@@ -875,6 +875,8 @@ export default function MatchCenterPage({
                 ))}
               </div>
             </div>
+
+            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
           </div>
         )}
 
@@ -938,38 +940,6 @@ export default function MatchCenterPage({
           );
         })()}
 
-        {/* Turnstile Gate Self Check-In */}
-        {match.door_qr_checkin_enabled && (
-          <div
-            className="glass-panel"
-            style={{
-              marginTop: '2.5rem',
-              padding: '1.75rem',
-              borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--border-medium)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>TURNSTILE GATE CHECK-IN</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                Arriving at the stadium? Scan or validate your pass online for a faster entry.
-              </p>
-            </div>
-            <Link
-              href={`/${club.slug}/match/${match.id}/checkin`}
-              className="btn btn-primary btn-sm touch-target"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, flexShrink: 0 }}
-            >
-              <QrCode size={14} />
-              <span>Turnstile Gate Check-In</span>
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ const ENTITIES: EntityConfig[] = [
   { key: 'clubScoreRules', table: 'clubscore_rules' },
   { key: 'clubScoreProfiles', table: 'member_clubscore_profiles' },
   { key: 'activityLogs', table: 'gamification_activity_log' },
-  { key: 'availabilities', table: 'player_availabilities' },
+  { key: 'availabilities', table: 'player_availabilities', extraReadSources: ['player_availabilities_public'] },
   { key: 'draftLineups', table: 'draft_lineups' },
   { key: 'memberMessages', table: 'member_messages' },
   { key: 'gateScans', table: 'gate_scans' },

@@ -29,9 +29,13 @@ function r2PublicOrigin(): string | null {
 
 const R2_PUBLIC_ORIGIN = r2PublicOrigin();
 
+// `next dev` evaluates its hot-reload bundles with eval(); without this the dev app never hydrates.
+// Production builds don't use eval, so it stays blocked there.
+const IS_DEV = process.env.NODE_ENV === 'development';
+
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline'" + (IS_DEV ? " 'unsafe-eval'" : ''),
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.cloudflare.com" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +

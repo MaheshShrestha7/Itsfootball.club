@@ -2304,10 +2304,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (typeof window === 'undefined' || !isUuid(clubId) || !isUuid(sponsorId)) return;
 
-    // One impression per sponsor per browser per 30 minutes; clicks are never deduped.
+    // One impression per sponsor per placement per browser per 30 minutes; clicks are never deduped.
     if (eventType !== 'click') {
       try {
-        const key = `itsfootball_sp_${eventType}_${sponsorId}`;
+        const key = `itsfootball_sp_${eventType}_${sponsorId}_${opts?.placement || ''}`;
         const last = Number(sessionStorage.getItem(key) || 0);
         if (Date.now() - last < 30 * 60 * 1000) return;
         sessionStorage.setItem(key, String(Date.now()));
@@ -2442,6 +2442,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       const dwellValues = sViewable.map(r => r.dwell_ms || 0).filter(v => v > 0);
       bySponsor[sponsorId] = {
         sponsorId,
+        placements: [...new Set(sImpr.map(r => r.placement).filter((p): p is string => !!p))],
         impressions: sImpr.length,
         viewableImpressions: sViewable.length,
         clicks: sClicks.length,
