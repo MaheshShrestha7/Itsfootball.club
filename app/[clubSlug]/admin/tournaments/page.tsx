@@ -940,7 +940,7 @@ export default function AdminTournamentsPage({
                           }}
                         >
                           <input type="checkbox" checked={isSelected} onChange={() => {}} />
-                          <img src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
+                          <img loading="lazy" decoding="async" width={20} height={20} src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {t.name}
                           </span>

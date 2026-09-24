@@ -569,9 +569,9 @@ export default function AdminMembersPage({
                       {/* Top Header of Card */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <img
+                          <img loading="lazy" decoding="async" width={46} height={46}
                             src={member.photo_url}
-                            alt={member.full_name}
+                            alt={`${member.full_name} photo`}
                             style={{
                               width: '46px',
                               height: '46px',

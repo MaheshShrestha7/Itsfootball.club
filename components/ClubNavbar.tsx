@@ -85,9 +85,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             position: 'relative',
           }}>
             {club.logo_url && !logoError ? (
-              <img
+              <img loading="eager" decoding="async"
                 src={club.logo_url}
-                alt={club.name}
+                alt={`${club.name} crest`}
                 onError={() => setLogoError(true)}
                 style={{
                   width: '100%',
@@ -258,9 +258,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 }}
               >
                 {user.avatar_url ? (
-                  <img
+                  <img loading="lazy" decoding="async" width={24} height={24}
                     src={user.avatar_url}
-                    alt={user.full_name}
+                    alt={`${user.full_name} photo`}
                     style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
                   />
                 ) : (
@@ -348,9 +348,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               {/* Drawer Club Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <img
+                  <img loading="lazy" decoding="async" width={32} height={32}
                     src={club.logo_url}
-                    alt={club.name}
+                    alt={`${club.name} crest`}
                     style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain' }}
                   />
                   <div>
@@ -495,7 +495,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
                         {user.full_name.substring(0, 1)}

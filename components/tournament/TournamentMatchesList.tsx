@@ -250,9 +250,9 @@ export default function TournamentMatchesList({
                 >
                   {/* Home Team */}
                   <div style={{ textAlign: 'center' }}>
-                    <img
+                    <img loading="lazy" decoding="async" width={38} height={38}
                       src={match.home_team_logo || DEFAULT_CREST}
-                      alt={match.home_team_name}
+                      alt={`${match.home_team_name} crest`}
                       style={{ width: '38px', height: '38px', objectFit: 'contain', margin: '0 auto 0.4rem auto' }}
                     />
                     <div
@@ -300,9 +300,9 @@ export default function TournamentMatchesList({
 
                   {/* Away Team */}
                   <div style={{ textAlign: 'center' }}>
-                    <img
+                    <img loading="lazy" decoding="async" width={38} height={38}
                       src={match.away_team_logo || DEFAULT_CREST}
-                      alt={match.away_team_name}
+                      alt={`${match.away_team_name} crest`}
                       style={{ width: '38px', height: '38px', objectFit: 'contain', margin: '0 auto 0.4rem auto' }}
                     />
                     <div

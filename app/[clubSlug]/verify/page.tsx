@@ -143,9 +143,9 @@ export default function VerifyPassPage({
                   alignItems: 'center',
                   gap: '1.25rem',
                 }}>
-                  <img
+                  <img loading="eager" decoding="async" width={72} height={72}
                     src={result.member.photo_url}
-                    alt={result.member.full_name}
+                    alt={`${result.member.full_name} photo`}
                     style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover' }}
                   />
                   <div>

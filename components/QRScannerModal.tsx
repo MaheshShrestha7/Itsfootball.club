@@ -457,9 +457,9 @@ export default function QRScannerModal({
               {/* Member Profile Snapshot if verified */}
               {scanResult.member ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem' }}>
-                  <img
+                  <img loading="eager" decoding="async" width={54} height={54}
                     src={scanResult.member.photo_url}
-                    alt={scanResult.member.full_name}
+                    alt={`${scanResult.member.full_name} photo`}
                     style={{
                       width: '54px',
                       height: '54px',

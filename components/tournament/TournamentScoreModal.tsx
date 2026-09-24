@@ -157,9 +157,9 @@ export default function TournamentScoreModal({
           >
             {/* Home Team */}
             <div style={{ textAlign: 'center' }}>
-              <img
+              <img loading="lazy" decoding="async" width={44} height={44}
                 src={match.home_team_logo || DEFAULT_CREST}
-                alt={match.home_team_name}
+                alt={`${match.home_team_name} crest`}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -193,9 +193,9 @@ export default function TournamentScoreModal({
 
             {/* Away Team */}
             <div style={{ textAlign: 'center' }}>
-              <img
+              <img loading="lazy" decoding="async" width={44} height={44}
                 src={match.away_team_logo || DEFAULT_CREST}
-                alt={match.away_team_name}
+                alt={`${match.away_team_name} crest`}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

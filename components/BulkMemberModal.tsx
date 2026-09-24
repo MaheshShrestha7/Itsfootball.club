@@ -40,8 +40,6 @@ interface ParsedRow {
   memberData?: Partial<Omit<ClubMember, 'id' | 'created_at'>>;
 }
 
-const DEFAULT_MEMBER_PHOTO_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80';
-
 // Fields with a sensible default only get that default on a brand-new member. On an update
 // (matched by email) a column left blank in the source data must not reset what's already saved,
 // so the field is left undefined and dropped by pruneUndefined() instead.
@@ -381,7 +379,7 @@ export default function BulkMemberModal({
               ? normalizePosition(item.player_position || item.position)
               : (isDuplicate ? undefined : 'SUB'),
             jersey_number: item.jersey_number ? Number(item.jersey_number) : undefined,
-            photo_url: withDefault(item.photo_url, isDuplicate, DEFAULT_MEMBER_PHOTO_URL),
+            photo_url: item.photo_url || undefined,
             date_of_birth: item.date_of_birth ? String(item.date_of_birth) : undefined,
             nationality: withDefault(item.nationality ? String(item.nationality) : undefined, isDuplicate, 'Australia'),
             preferred_foot: item.preferred_foot === 'Left' || item.preferred_foot === 'Both' || item.preferred_foot === 'Right'
@@ -476,7 +474,7 @@ export default function BulkMemberModal({
         roles: roleCol ? [normalizeRole(roleCol)] : (isDuplicate ? undefined : ['Player']),
         player_position: positionCol ? normalizePosition(positionCol) : (isDuplicate ? undefined : 'SUB'),
         jersey_number: parseOptionalNumber(rawObj['jerseynumber'] || rawObj['number'], 'Jersey number', errors),
-        photo_url: withDefault(rawObj['photourl'], isDuplicate, DEFAULT_MEMBER_PHOTO_URL),
+        photo_url: rawObj['photourl'] || undefined,
         date_of_birth: rawObj['dateofbirth'] || rawObj['dob'] || undefined,
         nationality: withDefault(rawObj['nationality'], isDuplicate, 'Australia'),
         preferred_foot: preferredFootCol

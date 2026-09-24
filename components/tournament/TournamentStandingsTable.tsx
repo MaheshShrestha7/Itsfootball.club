@@ -162,9 +162,9 @@ export default function TournamentStandingsTable({
                   {/* Team Crest & Name */}
                   <td style={{ padding: '0.85rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <img
+                      <img loading="lazy" decoding="async" width={26} height={26}
                         src={team.logo_url || DEFAULT_CREST}
-                        alt={team.name}
+                        alt={`${team.name} crest`}
                         style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
                       />
                       <span style={{ fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap' }}>

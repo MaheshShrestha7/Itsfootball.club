@@ -71,7 +71,9 @@ export default function PlatformNavbar() {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem' }}>
+        {/* nowrap: items briefly wrapped to two lines under the (slightly wider) fallback font, then
+            snapped back when the webfont loaded - a visible layout shift on every platform page */}
+        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem', whiteSpace: 'nowrap' }}>
           <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Trophy size={16} />
             Clubs Directory
@@ -185,9 +187,9 @@ export default function PlatformNavbar() {
                 border: '1px solid var(--border-subtle)',
               }}>
                 {user.avatar_url ? (
-                  <img
+                  <img loading="eager" decoding="async" width={24} height={24}
                     src={user.avatar_url}
-                    alt={user.full_name}
+                    alt={`${user.full_name} photo`}
                     style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
                   />
                 ) : (
@@ -372,7 +374,7 @@ export default function PlatformNavbar() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
                         {user.full_name.substring(0, 1)}

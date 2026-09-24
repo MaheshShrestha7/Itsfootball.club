@@ -337,7 +337,7 @@ export default function ImageUploadZone({
                 justifyContent: 'center',
               }}
             >
-              <img
+              <img loading="eager" decoding="async"
                 src={previewUrl}
                 alt={label}
                 style={{

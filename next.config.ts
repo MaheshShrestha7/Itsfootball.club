@@ -36,15 +36,17 @@ const IS_DEV = process.env.NODE_ENV === 'development';
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'" + (IS_DEV ? " 'unsafe-eval'" : ''),
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.cloudflare.com" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +
     (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
-  "font-src 'self' data: https://fonts.gstatic.com",
+  // Fonts are self-hosted by next/font, so no Google Fonts hosts are needed
+  "font-src 'self' data:",
   "connect-src 'self'" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST} wss://${SUPABASE_HOST}` : ' https://*.supabase.co wss://*.supabase.co') +
     " https://*.r2.cloudflarestorage.com",
-  "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com",
+  // www.google.com: the stadium map embed on club home pages (www.google.com/maps -> /maps/embed)
+  "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -62,6 +64,11 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Render generateMetadata output inside <head> for every client. By default Next streams it into
+  // the body for anything it doesn't recognise as a bot (including Googlebot), so crawlers and SEO
+  // tools that don't run JavaScript saw club pages with no title, description or canonical. The club
+  // layout already waits on the same cached club lookup, so this costs next to nothing.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [
       {

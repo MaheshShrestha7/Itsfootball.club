@@ -9,6 +9,7 @@ import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
+import { sortSponsorsByTier } from '@/lib/sponsors';
 import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
@@ -418,7 +419,7 @@ export default function ClubPublicPage({
           zIndex: 0,
         }}>
           {club.logo_url && !heroLogoError ? (
-            <img src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(100%)' }} />
+            <img loading="eager" decoding="async" fetchPriority="high" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(100%)' }} />
           ) : (
             <Shield size={400} color="#FFFFFF" />
           )}
@@ -451,7 +452,7 @@ export default function ClubPublicPage({
                         }}>
                           <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: `1.5px solid ${club.primary_color}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {club.logo_url && !heroLogoError ? (
-                              <img src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              <img loading="eager" decoding="async" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             ) : (
                               <Shield size={13} color={club.primary_color} />
                             )}
@@ -792,9 +793,9 @@ export default function ClubPublicPage({
                         }}>
                           {/* Home Team */}
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img
+                            <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
-                              alt={activeSlideMatch.home_team_name}
+                              alt={`${activeSlideMatch.home_team_name} crest`}
                               onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
@@ -838,9 +839,9 @@ export default function ClubPublicPage({
 
                           {/* Away Team */}
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img
+                            <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
-                              alt={activeSlideMatch.away_team_name}
+                              alt={`${activeSlideMatch.away_team_name} crest`}
                               onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
@@ -875,9 +876,9 @@ export default function ClubPublicPage({
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img
+                            <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
-                              alt={activeSlideMatch.home_team_name}
+                              alt={`${activeSlideMatch.home_team_name} crest`}
                               onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
                             />
@@ -885,9 +886,9 @@ export default function ClubPublicPage({
                           </div>
                           <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-muted)', padding: '0 0.5rem', flexShrink: 0 }}>VS</div>
                           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img
+                            <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
-                              alt={activeSlideMatch.away_team_name}
+                              alt={`${activeSlideMatch.away_team_name} crest`}
                               onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
                             />
@@ -929,7 +930,7 @@ export default function ClubPublicPage({
                         }}
                       >
                         <div style={{ height: '200px', position: 'relative' }}>
-                          <img
+                          <img loading="eager" decoding="async"
                             src={activeSlideNews.cover_image_url || club.banner_url}
                             alt={activeSlideNews.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1072,7 +1073,7 @@ export default function ClubPublicPage({
                   flexDirection: 'column',
                 }}>
                   <div style={{ height: '220px', position: 'relative' }}>
-                    <img
+                    <img loading="eager" decoding="async"
                       src={currentSlide.bgImage}
                       alt={currentSlide.title}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1259,12 +1260,8 @@ export default function ClubPublicPage({
           }
         };
 
-        const sortedSponsors = [...clubSponsors].sort((a, b) => {
-          const scaleRank = { xl: 4, lg: 3, md: 2, sm: 1 };
-          const diff = (scaleRank[getSponsorScale(b)] || 1) - (scaleRank[getSponsorScale(a)] || 1);
-          if (diff !== 0) return diff;
-          return (a.display_order ?? 0) - (b.display_order ?? 0);
-        });
+        // Highest tier first (a size override changes a card's size, not its place in the order)
+        const sortedSponsors = sortSponsorsByTier(clubSponsors);
 
         return (
           <section style={{ padding: '3rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,0,0,0.2) 100%)' }}>
@@ -1361,9 +1358,9 @@ export default function ClubPublicPage({
                         if (isXL) e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
                       }}
                     >
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={sponsor.logo_url}
-                        alt={sponsor.name}
+                        alt={`${sponsor.name} logo`}
                         draggable={false}
                         style={{
                           height: isXL ? '100px' : isLG ? '76px' : isMD ? '58px' : '44px',
@@ -1704,9 +1701,11 @@ export default function ClubPublicPage({
             {/* Featured Article */}
             {featuredArticle && (
               <div
+                id={`news-${featuredArticle.slug}`}
                 onClick={() => setActiveNewsModal(featuredArticle)}
                 className="glass-panel glass-panel-interactive"
                 style={{
+                  scrollMarginTop: '6rem',
                   cursor: 'pointer',
                   overflow: 'hidden',
                   display: 'flex',
@@ -1714,7 +1713,7 @@ export default function ClubPublicPage({
                 }}
               >
                 <div style={{ height: '240px', position: 'relative' }}>
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={featuredArticle.cover_image_url}
                     alt={featuredArticle.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1747,9 +1746,11 @@ export default function ClubPublicPage({
               {clubNews.filter(n => n.id !== featuredArticle?.id).map(article => (
                 <div
                   key={article.id}
+                  id={`news-${article.slug}`}
                   onClick={() => setActiveNewsModal(article)}
                   className="glass-panel glass-panel-interactive"
                   style={{
+                    scrollMarginTop: '6rem',
                     padding: '1.25rem',
                     display: 'flex',
                     gap: '1.25rem',
@@ -1757,7 +1758,7 @@ export default function ClubPublicPage({
                     cursor: 'pointer',
                   }}
                 >
-                  <img
+                  <img loading="lazy" decoding="async" width={90} height={90}
                     src={article.cover_image_url}
                     alt={article.title}
                     style={{ width: '90px', height: '90px', borderRadius: '10px', objectFit: 'cover' }}
@@ -1889,9 +1890,9 @@ export default function ClubPublicPage({
                 >
                   {/* Photo & Number Banner */}
                   <div style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={player.photo_url}
-                      alt={player.full_name}
+                      alt={`${player.full_name} photo`}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.9), transparent)' }} />
@@ -2077,9 +2078,9 @@ export default function ClubPublicPage({
                         {index + 1}
                       </div>
 
-                      <img
+                      <img loading="lazy" decoding="async" width={36} height={36}
                         src={item.player?.photo_url}
-                        alt={item.player?.full_name}
+                        alt={`${(item.player?.full_name || 'Player')} photo`}
                         style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }}
                       />
 
@@ -2156,7 +2157,9 @@ export default function ClubPublicPage({
                   scrolling="no"
                   marginHeight={0}
                   marginWidth={0}
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
                     [club.stadium_name, club.stadium_address].filter(Boolean).join(', ')
                   )}&z=15&output=embed`}
                   style={{ border: 'none' }}
@@ -2226,7 +2229,7 @@ export default function ClubPublicPage({
             borderRadius: 'var(--radius-xl)',
             padding: '2rem',
           }}>
-            <img
+            <img loading="lazy" decoding="async"
               src={activeNewsModal.cover_image_url}
               alt={activeNewsModal.title}
               style={{ width: '100%', height: '220px', borderRadius: '12px', objectFit: 'cover', marginBottom: '1.25rem' }}

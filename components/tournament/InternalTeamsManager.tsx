@@ -331,9 +331,9 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         flexShrink: 0,
                       }}
                     >
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={team.logo_url || DEFAULT_CREST}
-                        alt={team.name}
+                        alt={`${team.name} crest`}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     </div>

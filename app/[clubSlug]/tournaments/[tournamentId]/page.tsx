@@ -370,7 +370,7 @@ export default function PublicTournamentDetailPage({
                   gap: '0.85rem',
                 }}
               >
-                <img
+                <img loading="lazy" decoding="async" width={42} height={42}
                   src={part.logo_url || DEFAULT_CREST}
                   alt=""
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}

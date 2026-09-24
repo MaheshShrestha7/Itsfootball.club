@@ -1,0 +1,31 @@
+# itsfootball.club
+
+> itsfootball.club is a platform that gives amateur and community football (soccer) clubs their own official website: a live match center with real-time scores and events, published starting lineups, fixtures and results, club news, tournaments, sponsor showcases and digital member passes. Each club lives at its own path, e.g. https://itsfootball.club/ancc.
+
+Every club site is built from the same set of pages, so once you know the URL pattern you can find the same information for any club. Club content is written by each club's own admins, so it reflects that club, not the platform. Match pages update live during a game (score, goals, cards, substitutions), so treat scores on a live or recently finished match as time-sensitive.
+
+URL patterns (replace `{club}` with a club's slug, e.g. `ancc`):
+
+- `/{club}`: the club's home page: club profile, stadium, upcoming fixtures and recent results, news articles (each at `/{club}#news-{article-slug}`), committee and sponsors.
+- `/{club}/match/{matchId}`: a single match: teams, kick-off time, venue, competition, live score and event timeline, the published lineup on a tactical pitch, the matchday squad (players confirmed available) and match statistics.
+- `/{club}/events/{eventId}`: a public club event (social, AGM, training day) with date, venue and event sponsors.
+- `/{club}/tournaments` and `/{club}/tournaments/{tournamentId}`: club-run tournaments and cups with fixtures, group tables and knockout brackets.
+- `/{club}/member`: how to become a member of the club and get a digital member pass.
+
+Pages are marked up with schema.org JSON-LD (`SportsTeam` for clubs, `SportsEvent` for matches and tournaments, `Event` for club events, `BlogPosting` for news), which is the most reliable machine-readable source for names, dates and scores.
+
+## Platform
+
+- [Home](https://itsfootball.club/): what the platform offers football clubs.
+- [Clubs directory](https://itsfootball.club/clubs): every club on the platform, with links to each club site. Supports search: https://itsfootball.club/clubs?q={name}
+- [Create a club](https://itsfootball.club/create-club): how a club registers and launches its website.
+
+## Discovery
+
+- [Sitemap](https://itsfootball.club/sitemap.xml): every public club, match, event and tournament page, regenerated hourly from live data.
+- [robots.txt](https://itsfootball.club/robots.txt): crawl rules.
+
+## Optional
+
+- [Example club site](https://itsfootball.club/ancc): Austral Nepalese Community Club, a live club on the platform.
+- Private areas are not content: `/{club}/admin/*` (club admin console), `/admin`, `/my-clubs`, `/api/*`, check-in pages (`.../checkin`), `/{club}/availability` (player responses) and `/{club}/verify` (member pass checks) require a login or are single-purpose tools.

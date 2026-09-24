@@ -490,16 +490,16 @@ export default function MatchCenterPage({
                 }}
               >
                 {match.home_team_logo && !logoFailed.home ? (
-                  <img
+                  <img loading="eager" decoding="async"
                     src={match.home_team_logo}
-                    alt={match.home_team_name}
+                    alt={`${match.home_team_name} crest`}
                     onError={() => setLogoFailed(prev => ({ ...prev, home: true }))}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : match.is_club_home && club.logo_url ? (
-                  <img
+                  <img loading="eager" decoding="async"
                     src={club.logo_url}
-                    alt={match.home_team_name}
+                    alt={`${match.home_team_name} crest`}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : (
@@ -597,16 +597,16 @@ export default function MatchCenterPage({
                 }}
               >
                 {match.away_team_logo && !logoFailed.away ? (
-                  <img
+                  <img loading="eager" decoding="async"
                     src={match.away_team_logo}
-                    alt={match.away_team_name}
+                    alt={`${match.away_team_name} crest`}
                     onError={() => setLogoFailed(prev => ({ ...prev, away: true }))}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : !match.is_club_home && club.logo_url ? (
-                  <img
+                  <img loading="eager" decoding="async"
                     src={club.logo_url}
-                    alt={match.away_team_name}
+                    alt={`${match.away_team_name} crest`}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : (

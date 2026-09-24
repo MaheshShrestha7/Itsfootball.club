@@ -263,7 +263,7 @@ export default function TournamentBracketView({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                              <img
+                              <img loading="lazy" decoding="async" width={22} height={22}
                                 src={match.home_team_logo || DEFAULT_CREST}
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
@@ -323,7 +323,7 @@ export default function TournamentBracketView({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                              <img
+                              <img loading="lazy" decoding="async" width={22} height={22}
                                 src={match.away_team_logo || DEFAULT_CREST}
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}

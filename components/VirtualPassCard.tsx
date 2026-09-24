@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { Club, ClubMember } from '@/lib/supabase/types';
+import PlayerAvatar from './PlayerAvatar';
 import {
   Shield,
   CheckCircle2,
@@ -212,7 +213,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                   }}
                 >
                   {club.logo_url ? (
-                    <img src={club.logo_url} alt={club.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img loading="eager" decoding="async" src={club.logo_url} alt={`${club.name} crest`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Shield size={24} color={club.primary_color} />
                   )}
@@ -255,16 +256,17 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               }}
             >
               <div style={{ position: 'relative' }}>
-                <img
-                  src={member.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'}
-                  alt={member.full_name}
+                <PlayerAvatar
+                  photoUrl={member.photo_url}
+                  name={member.full_name}
+                  size={86}
                   style={{
-                    width: '86px',
-                    height: '86px',
                     borderRadius: '16px',
-                    objectFit: 'cover',
                     border: `2.5px solid rgba(255, 255, 255, 0.35)`,
                     boxShadow: '0 12px 24px rgba(0,0,0,0.6)',
+                    fontSize: 30,
+                    color: '#FFFFFF',
+                    background: 'rgba(255, 255, 255, 0.12)',
                   }}
                 />
                 {member.jersey_number && (

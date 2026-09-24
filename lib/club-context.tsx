@@ -53,7 +53,7 @@ import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
-import { SupabaseSync, SyncState, EntityKey } from './supabase/sync';
+import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -353,10 +353,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             }
           }
           if (parsed.members?.length) {
-            setMembers(parsed.members.map((m: ClubMember) => ({
+            setMembers(dropSharedPhotos(parsed.members.map((m: ClubMember) => ({
               ...m,
               membership_status: m.membership_status || 'approved'
-            })));
+            }))));
           }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (Array.isArray(parsed.matches)) {
@@ -523,7 +523,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           setClubs(merged);
           setActiveClub(prev => merged.find(c => c.id === prev?.id) || prev || merged[0] || null);
         }
-        if (data.members) mergedState.members = mergeById('members', local.members, data.members);
+        if (data.members) mergedState.members = dropSharedPhotos(mergeById('members', local.members, data.members));
         if (data.seasons) mergedState.seasons = mergeById('seasons', local.seasons, data.seasons);
         if (data.internalTeams) mergedState.internalTeams = mergeById('internalTeams', local.internalTeams, data.internalTeams);
         if (data.tournaments) mergedState.tournaments = mergeById('tournaments', local.tournaments, data.tournaments);
@@ -778,7 +778,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               setActiveClub(found || parsed.clubs[0]);
             }
           }
-          if (parsed.members?.length) setMembers(parsed.members);
+          if (parsed.members?.length) setMembers(dropSharedPhotos(parsed.members as ClubMember[]));
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (parsed.matches?.length) setMatches(parsed.matches);
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
@@ -2155,7 +2155,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       role: row.role,
       player_position: row.player_position || undefined,
       jersey_number: row.jersey_number ?? undefined,
-      photo_url: row.photo_url || undefined,
+      photo_url: cleanPhotoUrl(row.photo_url),
       status: row.status,
       qr_code_token: '',
       membership_tier: row.membership_tier,

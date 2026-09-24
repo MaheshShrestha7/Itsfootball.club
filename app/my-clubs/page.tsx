@@ -179,9 +179,9 @@ export default function MyClubsPage() {
                     >
                       {/* Banner Header */}
                       <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={club.banner_url || DEFAULT_BANNER}
-                          alt={club.name}
+                          alt={`${club.name} banner`}
                           onError={e => { if (e.currentTarget.src !== DEFAULT_BANNER) e.currentTarget.src = DEFAULT_BANNER; }}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
@@ -216,9 +216,9 @@ export default function MyClubsPage() {
                           alignItems: 'center',
                           gap: '0.75rem',
                         }}>
-                          <img
+                          <img loading="lazy" decoding="async" width={48} height={48}
                             src={club.logo_url}
-                            alt={club.name}
+                            alt={`${club.name} crest`}
                             style={{
                               width: '48px',
                               height: '48px',
@@ -382,9 +382,9 @@ export default function MyClubsPage() {
                       >
                         {/* Banner Header */}
                         <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
-                          <img
+                          <img loading="lazy" decoding="async"
                             src={club.banner_url || DEFAULT_BANNER}
-                            alt={club.name}
+                            alt={`${club.name} banner`}
                             onError={e => { if (e.currentTarget.src !== DEFAULT_BANNER) e.currentTarget.src = DEFAULT_BANNER; }}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -417,9 +417,9 @@ export default function MyClubsPage() {
                             alignItems: 'center',
                             gap: '0.75rem',
                           }}>
-                            <img
+                            <img loading="lazy" decoding="async" width={48} height={48}
                               src={club.logo_url}
-                              alt={club.name}
+                              alt={`${club.name} crest`}
                               style={{
                                 width: '48px',
                                 height: '48px',

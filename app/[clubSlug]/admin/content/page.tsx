@@ -166,7 +166,7 @@ export default function AdminContentPage({
             }}
           >
             <div style={{ display: 'flex', gap: '1.25rem', flex: 1, minWidth: '300px' }}>
-              <img
+              <img loading="lazy" decoding="async" width={120} height={80}
                 src={article.cover_image_url}
                 alt={article.title}
                 style={{ width: '120px', height: '80px', borderRadius: '10px', objectFit: 'cover' }}

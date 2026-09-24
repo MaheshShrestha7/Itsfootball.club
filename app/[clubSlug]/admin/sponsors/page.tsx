@@ -225,9 +225,9 @@ export default function AdminSponsorsPage({
                     boxShadow: isXL ? '0 6px 24px rgba(245, 158, 11, 0.12)' : 'none',
                   }}
                 >
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={sponsor.logo_url}
-                    alt={sponsor.name}
+                    alt={`${sponsor.name} logo`}
                     style={{
                       height: isXL ? '48px' : isLG ? '36px' : isMD ? '28px' : '22px',
                       maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px',
@@ -279,9 +279,9 @@ export default function AdminSponsorsPage({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                <img
+                <img loading="lazy" decoding="async"
                   src={sponsor.logo_url}
-                  alt={sponsor.name}
+                  alt={`${sponsor.name} logo`}
                   style={{
                     width: scale === 'xl' ? '70px' : '55px',
                     height: scale === 'xl' ? '46px' : '38px',

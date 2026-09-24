@@ -423,9 +423,9 @@ export default function AdminGamificationPage({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <img
+                      <img loading="lazy" decoding="async" width={30} height={30}
                         src={player.photo_url}
-                        alt={player.full_name}
+                        alt={`${player.full_name} photo`}
                         style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }}
                       />
                       <div>

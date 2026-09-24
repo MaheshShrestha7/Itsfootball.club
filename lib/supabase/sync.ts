@@ -133,10 +133,32 @@ function clubPrepare(o: Row): Row {
   };
 }
 
+// Stock photo older builds saved for every player added without one (every player looked identical)
+const PLACEHOLDER_PHOTO = /^https:\/\/images\.unsplash\.com\/photo-1534528741775-53994a69daeb/;
+
+/** A real photo URL, or undefined for none/the old stock placeholder (avatars then show initials) */
+export function cleanPhotoUrl(url: unknown): string | undefined {
+  return typeof url === 'string' && url && !PLACEHOLDER_PHOTO.test(url) ? url : undefined;
+}
+
+/** A photo shared by several members of the same club is a placeholder, not anyone's picture.
+ *  photo_url is set to an explicit undefined (not deleted) so it also overrides a cached copy
+ *  when fresh rows are merged over the locally stored ones. */
+export function dropSharedPhotos<T extends { club_id?: string; photo_url?: string }>(members: T[]): T[] {
+  const key = (m: T) => `${m.club_id}|${m.photo_url}`;
+  const counts = new Map<string, number>();
+  for (const m of members) if (m.photo_url) counts.set(key(m), (counts.get(key(m)) || 0) + 1);
+  return members.map(m => ({
+    ...m,
+    photo_url: m.photo_url && (counts.get(key(m)) || 0) < 2 ? cleanPhotoUrl(m.photo_url) : undefined,
+  }));
+}
+
 function memberFromRow(r: Row): Row {
   const name = r.full_name ?? [r.first_name, r.last_name].filter(Boolean).join(' ');
   return {
     ...r,
+    photo_url: cleanPhotoUrl(r.photo_url),
     full_name: name || 'Member',
     // Hidden from the public view; only club admins receive these
     email: r.email ?? '',

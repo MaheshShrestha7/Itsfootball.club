@@ -327,12 +327,12 @@ function AvailabilityHub() {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <img src={targetMatch.home_team_logo} alt={targetMatch.home_team_name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                     <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>{targetMatch.home_team_name}</span>
                   </div>
                   <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-muted)' }}>VS</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: 'row-reverse' }}>
-                    <img src={targetMatch.away_team_logo} alt={targetMatch.away_team_name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.away_team_logo} alt={`${targetMatch.away_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                     <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>{targetMatch.away_team_name}</span>
                   </div>
                 </div>

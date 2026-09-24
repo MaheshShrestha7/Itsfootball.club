@@ -16,7 +16,11 @@ export default function PlayerAvatar({ photoUrl, name, size = 32, style }: Playe
     return (
       <img
         src={photoUrl}
-        alt={name}
+        alt={name ? `${name} photo` : 'Player photo'}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
         style={{
           width: size,
           height: size,

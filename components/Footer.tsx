@@ -86,9 +86,9 @@ export default function Footer({ club, sponsors }: FooterProps) {
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={sponsor.logo_url}
-                      alt={sponsor.name}
+                      alt={`${sponsor.name} logo`}
                       draggable={false}
                       style={{
                         height: isPlatinum ? '68px' : isGold ? '54px' : '42px',

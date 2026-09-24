@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -10,6 +10,12 @@ import { Shield, Search, Radio, CreditCard, Settings, PlusCircle, MapPin, Users 
 export default function ClubsDirectoryPage() {
   const { clubs, matches } = useClub();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // /clubs?q=... is the search URL advertised to search engines (WebSite SearchAction on the homepage)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearchTerm(q);
+  }, []);
 
   const filteredClubs = clubs.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -21,7 +27,9 @@ export default function ClubsDirectoryPage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <PlatformNavbar />
 
-      <main className="container" style={{ padding: '3.5rem 1.5rem', flex: 1 }}>
+      {/* minHeight keeps the footer below the fold while the club list loads in the browser; otherwise it
+          rendered mid-screen and jumped down when the list arrived (CLS ~0.13) */}
+      <main className="container" style={{ padding: '3.5rem 1.5rem', flex: 1, minHeight: '100vh' }}>
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -78,9 +86,9 @@ export default function ClubsDirectoryPage() {
               >
                 {/* Banner & Crest */}
                 <div style={{ height: '130px', position: 'relative' }}>
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={club.banner_url}
-                    alt={club.name}
+                    alt={`${club.name} banner`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.9), transparent)' }} />
@@ -92,9 +100,9 @@ export default function ClubsDirectoryPage() {
                     </div>
                   )}
                   <div style={{ position: 'absolute', bottom: '12px', left: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <img
+                    <img loading="lazy" decoding="async" width={44} height={44}
                       src={club.logo_url}
-                      alt={club.name}
+                      alt={`${club.name} crest`}
                       style={{
                         width: '44px',
                         height: '44px',

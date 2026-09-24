@@ -285,9 +285,9 @@ export default function MemberPortalPage({
               }} />
 
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                <img
+                <img loading="eager" decoding="async" width={74} height={74}
                   src={club.logo_url}
-                  alt={club.name}
+                  alt={`${club.name} crest`}
                   style={{
                     width: '74px',
                     height: '74px',
@@ -761,9 +761,9 @@ export default function MemberPortalPage({
               borderTop: `4px solid ${club.primary_color}`,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img
+                <img loading="lazy" decoding="async" width={52} height={52}
                   src={activeMember.photo_url}
-                  alt={activeMember.full_name}
+                  alt={`${activeMember.full_name} photo`}
                   style={{
                     width: '52px',
                     height: '52px',

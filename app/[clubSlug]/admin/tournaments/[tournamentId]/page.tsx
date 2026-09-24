@@ -618,7 +618,7 @@ export default function AdminTournamentDetailPage({
                     padding: '3px',
                   }}
                 >
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={part.logo_url || DEFAULT_CREST}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}

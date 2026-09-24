@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
 import { hexToRgb, evaluateColorContrast } from '@/lib/theme-utils';
+import { sortSponsorsByTier } from '@/lib/sponsors';
 
 export default function ClubLayoutClient({
   children,
@@ -56,7 +57,7 @@ export default function ClubLayoutClient({
   const contrastEval = evaluateColorContrast(club?.primary_color || '#10B981');
 
   // Club-wide only - event-scoped sponsors show on their own event's page instead.
-  const clubSponsors = club ? sponsors.filter(s => s.club_id === club.id && !s.event_id) : [];
+  const clubSponsors = club ? sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id)) : [];
 
   return (
     <div

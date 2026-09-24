@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-
+/* Fonts are self-hosted by next/font in app/layout.tsx (--font-outfit, --font-jakarta, --font-jetbrains) */
 :root {
   /* Dynamic Club Branding Variables - Overridden per club */
   --club-primary: #10B981;
@@ -41,9 +40,9 @@
   --radius-full: 9999px;
 
   /* Font Families */
-  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-heading: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: var(--font-jakarta), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
 
   /* Container */
   --max-width: 1280px;
@@ -766,6 +765,67 @@ textarea {
       "notes";
     gap: 1.25rem;
   }
+}
+
+/* Admin squad roster: list view (table-like rows that reflow into cards on phones) and grid view */
+.squad-list { padding: 0.5rem; }
+.squad-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.5fr) minmax(0, 1.7fr) 64px 96px auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.875rem;
+}
+.squad-list-row:last-child { border-bottom: none; }
+.squad-list-row:not(.squad-list-head):hover { background: rgba(255, 255, 255, 0.03); }
+.squad-list-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.squad-cell-member { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.squad-cell-actions, .squad-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem; }
+.squad-cell-actions .btn, .squad-card-actions .btn { padding: 0.35rem 0.6rem; }
+.squad-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; }
+
+.squad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.squad-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem;
+  min-width: 0;
+}
+.squad-card-actions { margin-top: auto; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+
+@media (max-width: 860px) {
+  .squad-list-head { display: none; }
+  .squad-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "member actions"
+      "roles roles"
+      "position position"
+      "jersey status";
+    row-gap: 0.55rem;
+    padding: 0.85rem 0.6rem;
+  }
+  .squad-cell-member { grid-area: member; }
+  .squad-cell-actions { grid-area: actions; }
+  .squad-cell-roles { grid-area: roles; }
+  .squad-cell-position { grid-area: position; }
+  .squad-cell-jersey { grid-area: jersey; }
+  .squad-cell-status { grid-area: status; justify-self: end; }
+  .squad-cell-actions .btn, .squad-card-actions .btn { min-width: 40px; min-height: 40px; }
 }
 
 /* Scrolling sponsor strip (two identical rows; the track slides by one row width, so the loop is seamless) */

@@ -59,7 +59,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             animation: 'spin 0.8s linear infinite',
           }} />
           {club.logo_url ? (
-            <img src={club.logo_url} alt={club.name} style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '50%' }} />
+            <img loading="eager" decoding="async" width={36} height={36} src={club.logo_url} alt={`${club.name} crest`} style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '50%' }} />
           ) : (
             <Shield size={26} color={club.primary_color} />
           )}
@@ -122,7 +122,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             overflow: 'hidden',
           }}>
             {club.logo_url ? (
-              <img src={club.logo_url} alt={club.name} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+              <img loading="eager" decoding="async" width={48} height={48} src={club.logo_url} alt={`${club.name} crest`} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
             ) : (
               <Shield size={34} color={club.primary_color} />
             )}

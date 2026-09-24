@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
+import { sortSponsorsByTier } from '@/lib/sponsors';
 import {
   Shield,
   Calendar,
@@ -55,9 +56,7 @@ export default function EventDetailsPage({
 
   // Sponsors scoped to this specific event - separate from the club's general
   // sponsor showcase, which only shows club-wide (non-event) sponsors.
-  const eventSponsors = sponsors
-    .filter(s => s.event_id === event.id && s.is_active)
-    .sort((a, b) => a.display_order - b.display_order);
+  const eventSponsors = sortSponsorsByTier(sponsors.filter(s => s.event_id === event.id && s.is_active));
 
   const categoryColor = CATEGORY_COLOR[event.category] || 'var(--club-primary)';
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;
@@ -180,9 +179,9 @@ export default function EventDetailsPage({
                       borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
                     }}
                   >
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={sponsor.logo_url}
-                      alt={sponsor.name}
+                      alt={`${sponsor.name} logo`}
                       draggable={false}
                       style={{
                         height: isPlatinum ? '96px' : isGold ? '76px' : '60px',

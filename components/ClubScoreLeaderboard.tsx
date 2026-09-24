@@ -223,9 +223,9 @@ export default function ClubScoreLeaderboard({
                 </div>
 
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <img
+                  <img loading="lazy" decoding="async" width={42} height={42}
                     src={player.photo_url}
-                    alt={player.full_name}
+                    alt={`${player.full_name} photo`}
                     style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
                   />
                   {profile.current_streak >= 3 && (
@@ -393,9 +393,9 @@ export default function ClubScoreLeaderboard({
 
             {/* Player Profile Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <img
+              <img loading="lazy" decoding="async" width={64} height={64}
                 src={selectedPlayerModal.member.photo_url}
-                alt={selectedPlayerModal.member.full_name}
+                alt={`${selectedPlayerModal.member.full_name} photo`}
                 style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', border: '2px solid var(--club-primary)' }}
               />
               <div>

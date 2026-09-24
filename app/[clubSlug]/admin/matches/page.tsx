@@ -657,7 +657,7 @@ export default function AdminMatchesPage({
                     border: '1px solid var(--border-subtle)'
                   }}
                 >
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={m.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80'}
                     alt={m.title || 'Match Flyer'}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}

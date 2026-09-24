@@ -3,8 +3,7 @@
 import React from 'react';
 import { Sponsor } from '@/lib/supabase/types';
 import SponsorTrackedLink from './SponsorTrackedLink';
-
-const TIER_ORDER: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
+import { sortSponsorsByTier } from '@/lib/sponsors';
 
 interface SponsorMarqueeProps {
   sponsors: Sponsor[];
@@ -17,9 +16,7 @@ interface SponsorMarqueeProps {
 export default function SponsorMarquee({ sponsors, placement, title = 'Matchday Partners' }: SponsorMarqueeProps) {
   if (sponsors.length === 0) return null;
 
-  const ordered = [...sponsors].sort(
-    (a, b) => (TIER_ORDER[a.tier] ?? 9) - (TIER_ORDER[b.tier] ?? 9) || (a.display_order ?? 0) - (b.display_order ?? 0)
-  );
+  const ordered = sortSponsorsByTier(sponsors);
   // Slow the loop down as the list grows so each logo stays on screen long enough to read
   const duration = `${Math.max(18, ordered.length * 5)}s`;
 
@@ -34,7 +31,7 @@ export default function SponsorMarquee({ sponsors, placement, title = 'Matchday 
           href={s.website_url || '#'}
           className="sponsor-marquee-item"
         >
-          <img src={s.logo_url} alt={s.name} draggable={false} />
+          <img loading="lazy" decoding="async" src={s.logo_url} alt={`${s.name} logo`} draggable={false} />
           <span>{s.name}</span>
         </SponsorTrackedLink>
       ))}

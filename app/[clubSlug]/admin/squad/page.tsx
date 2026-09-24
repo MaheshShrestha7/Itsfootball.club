@@ -1,7 +1,7 @@
 'use client';
 
 import { getAccessToken } from '@/lib/supabase/client';
-import React, { useState, use, useRef } from 'react';
+import React, { useState, use, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
@@ -27,9 +27,12 @@ import {
   Award,
   FileSpreadsheet,
   Search,
-  XCircle
+  XCircle,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
+import SquadRoster from '@/components/SquadRoster';
 
 const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = [
   { value: 'GK', label: 'GK', desc: 'Goalkeeper' },
@@ -69,6 +72,17 @@ export default function AdminSquadPage({
 
   // Roster Filters (Role / Position / Status) & Search
   const [searchQuery, setSearchQuery] = useState('');
+  // List or grid; remembered per browser
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('itsfootball_squad_view') === 'grid') setViewMode('grid');
+    } catch { /* storage unavailable: default list */ }
+  }, []);
+  const changeViewMode = (mode: 'list' | 'grid') => {
+    setViewMode(mode);
+    try { localStorage.setItem('itsfootball_squad_view', mode); } catch { /* not persisted */ }
+  };
   const [roleFilter, setRoleFilter] = useState('all');
   const [positionFilter, setPositionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -339,7 +353,8 @@ export default function AdminSquadPage({
       secondary_positions: isPlayer ? form.secondary_positions : [],
       jersey_number: isPlayer ? Number(form.jersey_number) || undefined : undefined,
       status: form.status,
-      photo_url: form.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      // No photo = no photo: avatars fall back to the player's initials (a shared stock image made every player look identical)
+      photo_url: form.photo_url || undefined,
       nationality: form.nationality.trim(),
       membership_tier: isPlayer ? 'Senior Player' : isExec ? 'Executive Board' : 'Club Staff',
       membership_expires_at: '2026-12-31',
@@ -562,9 +577,31 @@ export default function AdminSquadPage({
           </button>
         )}
 
-        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-          Showing <strong style={{ color: '#FFFFFF' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            Showing <strong style={{ color: '#FFFFFF' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
+          </span>
+          <div role="group" aria-label="Roster layout" style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
+            {([['list', List, 'List view'], ['grid', LayoutGrid, 'Grid view']] as const).map(([mode, Icon, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => changeViewMode(mode)}
+                aria-pressed={viewMode === mode}
+                aria-label={label}
+                title={label}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: '40px', minHeight: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                  background: viewMode === mode ? 'var(--club-primary)' : 'transparent',
+                  color: viewMode === mode ? '#FFFFFF' : 'var(--text-muted)',
+                }}
+              >
+                <Icon size={16} />
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Success Feedback Alert */}
@@ -586,232 +623,16 @@ export default function AdminSquadPage({
         </div>
       )}
 
-      {/* Members Grid / Table */}
-      <div className="glass-panel admin-table-container" style={{ overflowX: 'auto', padding: '1rem' }}>
-        <table style={{ minWidth: '780px', width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
-              <th style={{ padding: '0.75rem 1rem' }}>Member & Contact</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Assigned Roles</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Positions / Post</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Jersey</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-              <th style={{ padding: '0.75rem 1rem' }}>QR Token</th>
-              <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMembers.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  {clubMembers.length === 0
-                    ? 'No members registered yet.'
-                    : 'No members match the current filters.'}
-                </td>
-              </tr>
-            )}
-            {filteredMembers.map(member => {
-              const roles = getMemberRoles(member);
-              const isPlayer = roles.some(r => r.toLowerCase().includes('player')) || Boolean(member.player_position);
-
-              return (
-                <tr
-                  key={member.id}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  {/* Photo & Name */}
-                  <td style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ position: 'relative', width: '42px', height: '42px', flexShrink: 0 }}>
-                      <img
-                        src={member.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'}
-                        alt={member.full_name}
-                        style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
-                      />
-                      {member.photo_url?.includes('r2.dev') && (
-                        <span
-                          title="Cloudflare R2 Stored"
-                          style={{
-                            position: 'absolute',
-                            bottom: '-4px',
-                            right: '-4px',
-                            width: '14px',
-                            height: '14px',
-                            borderRadius: '50%',
-                            background: '#F59E0B',
-                            border: '2px solid #0E141E',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{member.full_name}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {member.email && <span>{member.email}</span>}
-                        {member.phone && <span>• {member.phone}</span>}
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Multi-Role Badges */}
-                  <td style={{ padding: '0.75rem 1rem' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
-                      {roles.map(r => {
-                        const isExec = r.toLowerCase().includes('executive');
-                        const isMgr = r.toLowerCase().includes('manager') || r.toLowerCase().includes('coach');
-                        const isAdmin = r.toLowerCase().includes('admin') || r.toLowerCase().includes('owner');
-
-                        const bg = isExec
-                          ? 'rgba(245, 158, 11, 0.15)'
-                          : isMgr
-                          ? 'rgba(168, 85, 247, 0.15)'
-                          : isAdmin
-                          ? 'rgba(239, 68, 68, 0.15)'
-                          : 'rgba(59, 130, 246, 0.15)';
-
-                        const color = isExec
-                          ? '#F59E0B'
-                          : isMgr
-                          ? '#C084FC'
-                          : isAdmin
-                          ? '#F87171'
-                          : '#60A5FA';
-
-                        const border = isExec
-                          ? 'rgba(245, 158, 11, 0.3)'
-                          : isMgr
-                          ? 'rgba(168, 85, 247, 0.3)'
-                          : isAdmin
-                          ? 'rgba(239, 68, 68, 0.3)'
-                          : 'rgba(59, 130, 246, 0.3)';
-
-                        return (
-                          <span
-                            key={r}
-                            className="badge"
-                            style={{
-                              backgroundColor: bg,
-                              color: color,
-                              border: `1px solid ${border}`,
-                              fontWeight: 700,
-                              fontSize: '0.72rem',
-                              padding: '0.15rem 0.5rem',
-                            }}
-                          >
-                            {r}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-
-                  {/* Positions / Post */}
-                  <td style={{ padding: '0.75rem 1rem' }}>
-                    {isPlayer ? (
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.3rem' }}>
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor: 'var(--club-primary)',
-                            color: '#FFFFFF',
-                            fontWeight: 800,
-                            padding: '0.15rem 0.45rem',
-                          }}
-                        >
-                          {member.player_position || 'ST'} (Primary)
-                        </span>
-                        {member.secondary_positions && member.secondary_positions.length > 0 && (
-                          member.secondary_positions.map((secPos) => (
-                            <span
-                              key={secPos}
-                              className="badge"
-                              style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                color: 'var(--text-secondary)',
-                                padding: '0.15rem 0.4rem',
-                                fontSize: '0.7rem',
-                              }}
-                            >
-                              {secPos}
-                            </span>
-                          ))
-                        )}
-                        {member.executive_title && (
-                          <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontStyle: 'italic', marginLeft: '0.2rem' }}>
-                            ({member.executive_title})
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span style={{ color: member.executive_title ? '#F59E0B' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: member.executive_title ? 600 : 400 }}>
-                        {member.executive_title || 'Non-playing Staff'}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Jersey Number */}
-                  <td style={{ padding: '0.75rem 1rem', fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--club-primary)' }}>
-                    {isPlayer && member.jersey_number ? `#${member.jersey_number}` : '-'}
-                  </td>
-
-                  {/* Status */}
-                  <td style={{ padding: '0.75rem 1rem' }}>
-                    <span className="badge" style={{
-                      backgroundColor: member.status === 'active' || (member as any).is_active !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                      color: member.status === 'active' || (member as any).is_active !== false ? '#10B981' : '#EF4444',
-                      border: `1px solid ${member.status === 'active' || (member as any).is_active !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                      fontWeight: 700,
-                    }}>
-                      {member.status === 'active' || (member as any).is_active !== false ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-
-                  {/* QR Token */}
-                  <td style={{ padding: '0.75rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {member.qr_code_token ? `${member.qr_code_token.substring(0, 12)}...` : '-'}
-                  </td>
-
-                  {/* Actions */}
-                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                      {isPlayer && (
-                        <button
-                          onClick={() => handleOpenStats(member)}
-                          className="btn btn-secondary btn-sm"
-                          title="Update Match Stats"
-                          style={{ padding: '0.35rem 0.6rem' }}
-                        >
-                          <Activity size={14} color="#F59E0B" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleOpenEdit(member)}
-                        className="btn btn-secondary btn-sm"
-                        title="Edit Member"
-                        style={{ padding: '0.35rem 0.6rem' }}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMember(member.id, member.full_name)}
-                        className="btn btn-danger btn-sm"
-                        title="Delete Member"
-                        style={{ padding: '0.35rem 0.6rem' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Members: list or grid */}
+      <SquadRoster
+        members={filteredMembers}
+        totalCount={clubMembers.length}
+        viewMode={viewMode}
+        getMemberRoles={getMemberRoles}
+        onStats={handleOpenStats}
+        onEdit={handleOpenEdit}
+        onDelete={handleDeleteMember}
+      />
 
       {/* Member Details Add / Edit Modal */}
       {modalOpen && (
@@ -896,7 +717,7 @@ export default function AdminSquadPage({
                   {/* Avatar Preview */}
                   <div style={{ position: 'relative', width: '74px', height: '74px', flexShrink: 0 }}>
                     {form.photo_url ? (
-                      <img
+                      <img loading="eager" decoding="async"
                         src={form.photo_url}
                         alt="Preview"
                         style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover', border: '2px solid var(--club-primary)' }}

@@ -1139,9 +1139,9 @@ export default function TacticalPitch({
                   '+'
                 ) : photoUrl ? (
                   <>
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={photoUrl}
-                      alt={pos.name}
+                      alt={`${pos.name} photo`}
                       draggable={false}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                     />
