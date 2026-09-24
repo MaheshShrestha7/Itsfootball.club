@@ -767,6 +767,16 @@ textarea {
   }
 }
 
+/* Save confirmation toast (admin forms): full-width along the bottom on phones */
+@media (max-width: 640px) {
+  .admin-save-toast {
+    left: 1rem !important;
+    right: 1rem !important;
+    bottom: 1rem !important;
+    max-width: none !important;
+  }
+}
+
 /* Admin squad roster: list view (table-like rows that reflow into cards on phones) and grid view */
 .squad-list { padding: 0.5rem; }
 .squad-list-row {

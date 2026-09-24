@@ -5,6 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { InternalTeam } from '@/lib/supabase/types';
 import { Plus, Edit2, Trash2, Shield, Check, X, Image as ImageIcon, Search } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { DEFAULT_CREST } from '@/lib/crest';
 
 interface InternalTeamsManagerProps {
@@ -662,29 +663,25 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                    Team Captain
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    <span>Team Captain</span>
+                    {captainId && (
+                      <button
+                        type="button"
+                        onClick={() => setCaptainId('')}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        Clear
+                      </button>
+                    )}
                   </label>
-                  <select
+                  <PlayerSearchSelect
+                    id="internal-team-captain"
+                    players={clubMembers}
                     value={captainId}
-                    onChange={e => setCaptainId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: '#1F2937',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '8px',
-                      color: '#FFFFFF',
-                      fontSize: '0.88rem',
-                    }}
-                  >
-                    <option value="">-- Select Captain --</option>
-                    {clubMembers.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name} {m.player_position ? `(${m.player_position})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setCaptainId}
+                    placeholder="Search captain by name or number..."
+                  />
                 </div>
               </div>
 

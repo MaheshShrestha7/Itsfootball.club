@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use, useMemo } from 'react';
+import React, { useState, useEffect, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClub, validateClubSlug } from '@/lib/club-context';
@@ -8,6 +8,7 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import {
+  AlertTriangle,
   Palette,
   CheckCircle2,
   Save,
@@ -145,11 +146,24 @@ export default function AdminBrandingPage({
     }));
   };
 
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slugValidation.valid || !club) {
+    if (!club) return;
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    if (!slugValidation.valid) {
+      // Previously this returned silently, so Save looked like it did nothing
+      setSavedMessage(false);
+      setSaveError(`Not saved: ${slugValidation.error || 'the club URL is invalid.'}`);
+      const slugInput = document.querySelector<HTMLInputElement>('input[name="slug"]');
+      slugInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      slugInput?.focus({ preventScroll: true });
+      savedTimerRef.current = setTimeout(() => setSaveError(null), 5000);
       return;
     }
+    setSaveError(null);
 
     const newSlug = slugValidation.cleanSlug;
     const isSlugChanged = newSlug !== club.slug;
@@ -177,10 +191,10 @@ export default function AdminBrandingPage({
       }, 750);
     }
 
-    setTimeout(() => {
+    savedTimerRef.current = setTimeout(() => {
       setSavedMessage(false);
       setRedirectNotice(null);
-    }, 3500);
+    }, 4000);
   };
 
   return (
@@ -195,26 +209,45 @@ export default function AdminBrandingPage({
         </p>
       </div>
 
-      {savedMessage && (
-        <div style={{
-          background: redirectNotice ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-          border: `1px solid ${redirectNotice ? '#F59E0B' : '#10B981'}`,
-          padding: '1rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          color: redirectNotice ? '#F59E0B' : '#10B981',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          marginBottom: '1.5rem',
-        }}>
-          {redirectNotice ? <Sparkles size={20} /> : <CheckCircle2 size={20} />}
+      {/* Save feedback: a fixed toast, because the Save button sits at the bottom of this long form
+          and an inline banner at the top was scrolled out of view when it appeared */}
+      {(savedMessage || saveError) && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="admin-save-toast"
+          style={{
+            position: 'fixed',
+            bottom: '2rem',
+            right: '2rem',
+            zIndex: 9999,
+            maxWidth: 'min(420px, calc(100vw - 2rem))',
+            background: 'var(--bg-surface-elevated, #121a26)',
+            border: `1px solid ${saveError ? '#EF4444' : redirectNotice ? '#F59E0B' : '#10B981'}`,
+            borderRadius: 'var(--radius-lg)',
+            padding: '0.9rem 1.2rem',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.65rem',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          {saveError
+            ? <AlertTriangle size={20} color="#EF4444" style={{ flexShrink: 0 }} />
+            : redirectNotice
+            ? <Sparkles size={20} color="#F59E0B" style={{ flexShrink: 0 }} />
+            : <CheckCircle2 size={20} color="#10B981" style={{ flexShrink: 0 }} />}
           <div>
-            <div>{redirectNotice || 'Branding and visual interface updated successfully!'}</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-              {redirectNotice
-                ? 'Your browser URL and navigation paths are being smoothly migrated to the new club path.'
-                : 'Updates have been saved and broadcasted to all active subscriber tabs.'}
+            <div style={{ fontWeight: 800, color: saveError ? '#F87171' : redirectNotice ? '#F59E0B' : '#10B981', fontSize: '0.9rem' }}>
+              {saveError || redirectNotice || 'Branding saved'}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+              {saveError
+                ? 'Fix the highlighted Club URL field, then save again.'
+                : redirectNotice
+                ? 'Moving you to the new club address...'
+                : 'Your changes are live on the public club site.'}
             </div>
           </div>
         </div>
