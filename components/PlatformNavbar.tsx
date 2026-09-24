@@ -38,34 +38,30 @@ export default function PlatformNavbar() {
         height: '70px',
       }}>
         {/* Brand Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #10B981, #2563EB)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 18px rgba(16, 185, 129, 0.4)',
-            flexShrink: 0,
-          }}>
-            <Shield size={20} color="#FFFFFF" strokeWidth={2.4} />
-          </div>
+        <Link href="/" aria-label="itsfootball.club home" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', flexShrink: 0 }}>
+          <img
+            src="/logo-96.png"
+            alt="itsfootball.club logo"
+            width={46}
+            height={46}
+            loading="eager"
+            decoding="async"
+            style={{ width: '46px', height: '46px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45))' }}
+          />
           <div>
             <span style={{
               fontFamily: 'var(--font-heading)',
               fontSize: '1.2rem',
               fontWeight: 800,
               letterSpacing: '-0.02em',
-              background: 'linear-gradient(to right, #FFFFFF, #94A3B8)',
+              background: 'linear-gradient(to right, #FFFFFF, #CBD5E1)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              itsfootball<span style={{ color: '#10B981', WebkitTextFillColor: '#10B981' }}>.club</span>
+              itsfootball<span style={{ color: '#C9A467', WebkitTextFillColor: '#C9A467' }}>.club</span>
             </span>
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
-              The Home of Football Clubs
+            <div style={{ fontSize: '0.62rem', color: '#C9A467', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
+              Home of Football Clubs
             </div>
           </div>
         </Link>
@@ -267,8 +263,8 @@ export default function PlatformNavbar() {
               {/* Drawer Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <Shield size={20} color="#10B981" />
-                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>itsfootball<span style={{ color: '#10B981' }}>.club</span></span>
+                  <img src="/logo-96.png" alt="itsfootball.club logo" width={34} height={34} loading="lazy" decoding="async" style={{ width: '34px', height: '34px' }} />
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>itsfootball<span style={{ color: '#C9A467' }}>.club</span></span>
                 </div>
                 <button
                   onClick={() => setMobileDrawerOpen(false)}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Shield, Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -134,20 +134,15 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           <X size={16} />
         </button>
 
-        {/* Header Icon */}
-        <div style={{
-          width: '52px',
-          height: '52px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #10B981, #2563EB)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 1.25rem auto',
-          boxShadow: '0 0 20px rgba(16, 185, 129, 0.3)',
-        }}>
-          <Shield size={26} color="#FFFFFF" />
-        </div>
+        {/* Header Logo */}
+        <img
+          src="/logo-96.png"
+          alt="itsfootball.club logo"
+          width={72}
+          height={72}
+          decoding="async"
+          style={{ display: 'block', width: '72px', height: '72px', margin: '0 auto 1rem auto', filter: 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5))' }}
+        />
 
         <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: '#FFFFFF', marginBottom: '0.4rem' }}>
           {mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}

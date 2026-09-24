@@ -130,17 +130,21 @@ export default function Footer({ club, sponsors }: FooterProps) {
           {/* Col 1: Club Info / Platform Info */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: club ? club.primary_color : '#10B981',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Shield size={18} color="#FFFFFF" />
-              </div>
+              {club ? (
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: club.primary_color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Shield size={18} color="#FFFFFF" />
+                </div>
+              ) : (
+                <img src="/logo-96.png" alt="itsfootball.club logo" width={48} height={48} loading="lazy" decoding="async" style={{ width: '48px', height: '48px' }} />
+              )}
               <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem' }}>
                 {club ? club.name : 'itsfootball.club'}
               </span>
@@ -257,7 +261,10 @@ export default function Footer({ club, sponsors }: FooterProps) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <span>Powered by</span>
-            <Link href="/" style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>ItsFootball.club</Link>
+            <Link href="/" style={{ color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <img src="/logo-96.png" alt="" width={20} height={20} loading="lazy" decoding="async" style={{ width: '20px', height: '20px' }} />
+              ItsFootball.club
+            </Link>
             <Heart size={13} color="#EF4444" fill="#EF4444" />
           </div>
         </div>
