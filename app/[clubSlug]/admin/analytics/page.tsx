@@ -1,8 +1,9 @@
 'use client';
 
-import React, { use, useEffect } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import { useClub } from '@/lib/club-context';
-import { BarChart3, TrendingUp, Users, QrCode, Radio, Eye } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, QrCode, Radio, Eye, Megaphone } from 'lucide-react';
+import SponsorHubDashboard from '@/components/SponsorHubDashboard';
 
 export default function AdminAnalyticsPage({
   params,
@@ -10,8 +11,9 @@ export default function AdminAnalyticsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, getClubAnalytics, loadClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, getClubAnalytics, loadClubAnalytics, sponsors } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  const [view, setView] = useState<'overview' | 'sponsors'>('overview');
 
   useEffect(() => {
     loadClubAnalytics(club.id);
@@ -24,7 +26,7 @@ export default function AdminAnalyticsPage({
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>AUDIENCE & CLUB ANALYTICS</span>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
           Club Public Page Analytics
@@ -34,6 +36,38 @@ export default function AdminAnalyticsPage({
         </p>
       </div>
 
+      {/* View toggle */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-subtle)' }}>
+        <button
+          type="button"
+          onClick={() => setView('overview')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.7rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer',
+            fontSize: '0.85rem', fontWeight: 700,
+            color: view === 'overview' ? '#FFFFFF' : 'var(--text-muted)',
+            borderBottom: view === 'overview' ? '2px solid var(--club-primary)' : '2px solid transparent',
+          }}
+        >
+          <BarChart3 size={15} /> Club Overview
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('sponsors')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.7rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer',
+            fontSize: '0.85rem', fontWeight: 700,
+            color: view === 'sponsors' ? '#FFFFFF' : 'var(--text-muted)',
+            borderBottom: view === 'sponsors' ? '2px solid var(--club-primary)' : '2px solid transparent',
+          }}
+        >
+          <Megaphone size={15} /> Sponsor Hub / Media Kit
+        </button>
+      </div>
+
+      {view === 'sponsors' ? (
+        <SponsorHubDashboard club={club} sponsors={sponsors} analytics={analytics} />
+      ) : (
+      <>
       {/* KPI Overview */}
       <div style={{
         display: 'grid',
@@ -176,6 +210,8 @@ export default function AdminAnalyticsPage({
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

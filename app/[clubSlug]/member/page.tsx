@@ -899,65 +899,9 @@ export default function MemberPortalPage({
 
             {/* SUB-TAB 1: VIRTUAL PASS */}
             {activeClubhouseTab === 'pass' && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-                gap: '2.5rem',
-                alignItems: 'flex-start',
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ width: '100%', maxWidth: '400px' }}>
-                    <VirtualPassCard club={club} member={activeMember} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* Turnstile Access Card */}
-                  <div className="glass-panel" style={{ padding: '2rem' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <CheckCircle2 size={20} color="#10B981" />
-                      <span>Matchday Gate Entry Verification</span>
-                    </h3>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                      {[
-                        { title: 'Championship Match vs Metro Rovers', venue: club.stadium_name, date: 'Saturday • Gate 2 Turnstile', status: 'Accredited Entry' },
-                        { title: 'Weekly Squad Tactical Training', venue: 'Pitchside Training Grounds', date: 'Tuesday • 18:30', status: 'Coach Stamp' },
-                        { title: 'Annual General Meeting & Committee Forum', venue: 'Executive Lounge', date: '14 Oct 2026', status: 'Member Pass Verified' },
-                      ].map((log, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.75rem 1rem',
-                            background: 'rgba(0, 0, 0, 0.25)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-subtle)',
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>{log.title}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.venue} • {log.date}</div>
-                          </div>
-                          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '0.7rem' }}>
-                            {log.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setScannerOpen(true)}
-                      className="btn btn-secondary"
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <QrCode size={18} color="var(--club-primary)" />
-                      <span>Simulate Ground Gate Camera Scan</span>
-                    </button>
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: '400px' }}>
+                  <VirtualPassCard club={club} member={activeMember} />
                 </div>
               </div>
             )}

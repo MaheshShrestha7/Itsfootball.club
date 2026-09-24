@@ -357,10 +357,20 @@ export default function AdminSponsorsPage({
                     <Calendar size={11} /> {linkedEvent.title}
                   </span>
                 )}
-                <button onClick={() => handleOpenEdit(sponsor)} className="btn btn-secondary btn-sm">
+                <button onClick={() => handleOpenEdit(sponsor)} title={`Edit ${sponsor.name}`} aria-label={`Edit ${sponsor.name}`} className="btn btn-secondary btn-sm" style={{ minWidth: '40px', minHeight: '40px' }}>
                   <Edit2 size={14} />
                 </button>
-                <button onClick={() => deleteSponsor(sponsor.id)} className="btn btn-danger btn-sm">
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete sponsor "${sponsor.name}"? This cannot be undone.`)) {
+                      deleteSponsor(sponsor.id);
+                    }
+                  }}
+                  title={`Delete ${sponsor.name}`}
+                  aria-label={`Delete ${sponsor.name}`}
+                  className="btn btn-danger btn-sm"
+                  style={{ minWidth: '40px', minHeight: '40px' }}
+                >
                   <Trash2 size={14} />
                 </button>
               </div>

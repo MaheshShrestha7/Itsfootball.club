@@ -331,14 +331,24 @@ export default function AdminEventsPage({
 
               <button
                 onClick={() => handleOpenEdit(evt)}
+                title={`Edit ${evt.title}`}
+                aria-label={`Edit ${evt.title}`}
                 className="btn btn-secondary btn-sm"
+                style={{ minWidth: '40px', minHeight: '40px' }}
               >
                 <Edit2 size={14} />
               </button>
 
               <button
-                onClick={() => deleteEvent(evt.id)}
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete event "${evt.title}"? This cannot be undone.`)) {
+                    deleteEvent(evt.id);
+                  }
+                }}
+                title={`Delete ${evt.title}`}
+                aria-label={`Delete ${evt.title}`}
                 className="btn btn-danger btn-sm"
+                style={{ minWidth: '40px', minHeight: '40px' }}
               >
                 <Trash2 size={14} />
               </button>
