@@ -65,7 +65,7 @@ export default function AdminAnalyticsPage({
       </div>
 
       {view === 'sponsors' ? (
-        <SponsorHubDashboard club={club} sponsors={sponsors} analytics={analytics} />
+        <SponsorHubDashboard club={club} sponsors={sponsors} />
       ) : (
       <>
       {/* KPI Overview */}

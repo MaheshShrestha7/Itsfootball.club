@@ -103,10 +103,10 @@ export default function AdminMatchCenterControllerPage({
   // Quick event form states
   const [eventType, setEventType] = useState<MatchEventType>('goal');
   const [teamSide, setTeamSide] = useState<'home' | 'away'>('home');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(squadPlayers[1]?.id || 'custom');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [customPlayerName, setCustomPlayerName] = useState('');
   const [selectedSubOffId, setSelectedSubOffId] = useState<string>(squadPlayers[0]?.id || '');
-  const [selectedAssistId, setSelectedAssistId] = useState<string>('none');
+  const [selectedAssistId, setSelectedAssistId] = useState<string>('');
   const [assistName, setAssistName] = useState('');
   const [eventMinute, setEventMinute] = useState(match ? getLiveMinute(match) : 75);
   const [eventDetail, setEventDetail] = useState('');
@@ -319,8 +319,9 @@ export default function AdminMatchCenterControllerPage({
     showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${eventMinute}')`);
     setEventDetail('');
     setAssistName('');
-    setSelectedAssistId('none');
-    if (selectedPlayerId === 'custom') setCustomPlayerName('');
+    setSelectedAssistId('');
+    setSelectedPlayerId('');
+    setCustomPlayerName('');
   };
 
   // Delete event with automatic score reversal

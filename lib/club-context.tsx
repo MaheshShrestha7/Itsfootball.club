@@ -25,6 +25,10 @@ import {
   ClubAnalytics,
   GateScanRecord,
   ClubAnalyticsSummary,
+  SponsorAnalyticsEvent,
+  SponsorAnalyticsEventType,
+  SponsorAnalyticsSummary,
+  SponsorPlacementStats,
   MatchAuditPayload,
   MatchAuditItem,
   MemberMessage,
@@ -185,7 +189,7 @@ interface ClubContextType {
   draftLineups: DraftLineup[];
   saveDraftLineup: (draft: Partial<DraftLineup> & { match_id: string; club_id: string }) => void;
   getDraftLineup: (matchId: string) => DraftLineup | undefined;
-  publishDraftLineup: (matchId: string) => { success: boolean; message: string };
+  publishDraftLineup: (matchId: string, latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>) => { success: boolean; message: string };
 
   // Post-Match Stats Audit & Leaderboard Baking
   auditAndBakeMatchStats: (matchId: string, payload: MatchAuditPayload) => { success: boolean; totalPointsAwarded: number; message: string };
@@ -197,6 +201,12 @@ interface ClubContextType {
   loadClubAnalytics: (clubId: string) => Promise<void>;
   recordGateScan: (scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => void;
   getClubAnalytics: (clubId: string) => ClubAnalyticsSummary;
+
+  // Sponsor Placement Analytics (real impressions/clicks, not modeled)
+  sponsorAnalyticsEvents: SponsorAnalyticsEvent[];
+  trackSponsorEvent: (clubId: string, sponsorId: string, eventType: SponsorAnalyticsEventType, opts?: { placement?: string; dwellMs?: number }) => void;
+  loadSponsorAnalytics: (clubId: string) => Promise<void>;
+  getSponsorAnalytics: (clubId: string, range?: { since?: Date; until?: Date }) => SponsorAnalyticsSummary;
 
   // Member Portal, Application Lifecycle & Messaging
   memberMessages: MemberMessage[];
@@ -308,6 +318,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const [seasons, setSeasons] = useState<ClubSeason[]>([]);
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
   const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
+  const [sponsorAnalyticsEvents, setSponsorAnalyticsEvents] = useState<SponsorAnalyticsEvent[]>([]);
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [memberMessages, setMemberMessages] = useState<MemberMessage[]>([]);
   const [internalTeams, setInternalTeams] = useState<InternalTeam[]>([]);
@@ -1884,10 +1895,15 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return draftLineups.find(d => d.match_id === matchId);
   }, [draftLineups]);
 
-  const publishDraftLineup = useCallback((matchId: string): { success: boolean; message: string } => {
-    const draft = draftLineups.find(d => d.match_id === matchId);
-    if (!draft) {
-      return { success: false, message: 'Draft lineup not found for this match.' };
+  const publishDraftLineup = useCallback((
+    matchId: string,
+    latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>
+  ): { success: boolean; message: string } => {
+    // `latest` lets a caller publish the lineup it just saved in the same event: saveDraftLineup's
+    // state update hasn't landed yet, so `draftLineups` here would still be the previous version.
+    const draft = latest || draftLineups.find(d => d.match_id === matchId);
+    if (!draft || !draft.lineup_coords?.length) {
+      return { success: false, message: 'Save a lineup for this match before publishing.' };
     }
 
     setMatches(prev =>
@@ -1905,7 +1921,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     setDraftLineups(prev =>
       prev.map(d =>
-        d.id === draft.id
+        d.match_id === matchId
           ? {
               ...d,
               is_published: true,
@@ -2276,6 +2292,196 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       recentGateScans: clubScans.slice(0, 10),
     };
   }, [analyticsEvents, gateScans, matches]);
+
+  // 16b. Sponsor Placement Analytics: real impressions/clicks recorded as visitors see/click a
+  // sponsor placement (see components/Footer.tsx), posted through the API route so country can be
+  // resolved server-side from the CDN geo header rather than trusted from the client.
+  const trackSponsorEvent = useCallback((
+    clubId: string,
+    sponsorId: string,
+    eventType: SponsorAnalyticsEventType,
+    opts?: { placement?: string; dwellMs?: number }
+  ) => {
+    if (typeof window === 'undefined' || !isUuid(clubId) || !isUuid(sponsorId)) return;
+
+    // One impression per sponsor per browser per 30 minutes; clicks are never deduped.
+    if (eventType !== 'click') {
+      try {
+        const key = `itsfootball_sp_${eventType}_${sponsorId}`;
+        const last = Number(sessionStorage.getItem(key) || 0);
+        if (Date.now() - last < 30 * 60 * 1000) return;
+        sessionStorage.setItem(key, String(Date.now()));
+      } catch {
+        // storage unavailable: count it anyway
+      }
+    }
+
+    let device = 'Desktop';
+    const ua = navigator.userAgent || '';
+    if (/tablet|ipad/i.test(ua) || (window.innerWidth >= 768 && window.innerWidth <= 1024)) {
+      device = 'Tablet';
+    } else if (/mobile|iphone|android|phone/i.test(ua) || window.innerWidth < 768) {
+      device = 'Mobile';
+    }
+
+    let visitor = '';
+    try {
+      visitor = localStorage.getItem('itsfootball_vid') || '';
+      if (!visitor) {
+        visitor = secureToken('v').slice(0, 24);
+        localStorage.setItem('itsfootball_vid', visitor);
+      }
+    } catch {
+      visitor = 'anon';
+    }
+
+    const payload = JSON.stringify({
+      club_id: clubId,
+      sponsor_id: sponsorId,
+      event_type: eventType,
+      placement: opts?.placement || null,
+      device,
+      visitor_hash: visitor,
+      dwell_ms: opts?.dwellMs,
+    });
+
+    // A click is immediately followed by navigation to the sponsor's site, so use sendBeacon
+    // (fire-and-forget, survives the page unload) instead of fetch where it's available.
+    if (eventType === 'click' && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/sponsor-track', new Blob([payload], { type: 'application/json' }));
+      return;
+    }
+
+    fetch('/api/sponsor-track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true })
+      .catch(() => { /* best-effort */ });
+  }, []);
+
+  const loadSponsorAnalytics = useCallback(async (clubId: string) => {
+    const client = getSupabaseClient();
+    if (!client || !isUuid(clubId)) return;
+    const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const { data, error } = await client
+      .from('sponsor_analytics')
+      .select('*')
+      .eq('club_id', clubId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(10000);
+    if (error) {
+      console.warn('Could not load sponsor analytics:', error.message);
+      return;
+    }
+    setSponsorAnalyticsEvents(prev => [
+      ...(data as SponsorAnalyticsEvent[]),
+      ...prev.filter(e => e.club_id !== clubId),
+    ]);
+  }, []);
+
+  const getSponsorAnalytics = useCallback((clubId: string, range?: { since?: Date; until?: Date }): SponsorAnalyticsSummary => {
+    const sinceMs = range?.since?.getTime();
+    const untilMs = range?.until?.getTime();
+    const rows = sponsorAnalyticsEvents.filter(e => {
+      if (e.club_id !== clubId) return false;
+      if (sinceMs !== undefined || untilMs !== undefined) {
+        const t = new Date(e.created_at).getTime();
+        if (sinceMs !== undefined && t < sinceMs) return false;
+        if (untilMs !== undefined && t > untilMs) return false;
+      }
+      return true;
+    });
+    const impressionsRows = rows.filter(r => r.event_type === 'impression');
+    const viewableRows = rows.filter(r => r.event_type === 'viewable_impression');
+    const clickRows = rows.filter(r => r.event_type === 'click');
+
+    const impressions = impressionsRows.length;
+    const viewableImpressions = viewableRows.length;
+    const clicks = clickRows.length;
+    const uniqueVisitors = new Set(impressionsRows.map(r => r.visitor_hash).filter(Boolean));
+    const uniqueReach = uniqueVisitors.size;
+    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+    const viewabilityRate = impressions > 0 ? (viewableImpressions / impressions) * 100 : 0;
+
+    // Share of unique visitors who saw a sponsor placement more than once.
+    const visitCounts = new Map<string, number>();
+    impressionsRows.forEach(r => {
+      if (!r.visitor_hash) return;
+      visitCounts.set(r.visitor_hash, (visitCounts.get(r.visitor_hash) || 0) + 1);
+    });
+    const repeatVisitors = [...visitCounts.values()].filter(c => c > 1).length;
+    const repeatExposureRate = uniqueReach > 0 ? (repeatVisitors / uniqueReach) * 100 : 0;
+
+    // Last 7 days, bucketed by day
+    const byDay: { day: string; impressions: number; clicks: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const dayEnd = dayStart + 24 * 3600 * 1000;
+      byDay.push({
+        day: dayLabel,
+        impressions: impressionsRows.filter(r => {
+          const t = new Date(r.created_at).getTime();
+          return t >= dayStart && t < dayEnd;
+        }).length,
+        clicks: clickRows.filter(r => {
+          const t = new Date(r.created_at).getTime();
+          return t >= dayStart && t < dayEnd;
+        }).length,
+      });
+    }
+
+    // Per-sponsor breakdown
+    const sponsorIds = new Set(rows.map(r => r.sponsor_id));
+    const bySponsor: Record<string, SponsorPlacementStats> = {};
+    sponsorIds.forEach(sponsorId => {
+      const sImpr = impressionsRows.filter(r => r.sponsor_id === sponsorId);
+      const sViewable = viewableRows.filter(r => r.sponsor_id === sponsorId);
+      const sClicks = clickRows.filter(r => r.sponsor_id === sponsorId);
+      const sUnique = new Set(sImpr.map(r => r.visitor_hash).filter(Boolean)).size;
+      const dwellValues = sViewable.map(r => r.dwell_ms || 0).filter(v => v > 0);
+      bySponsor[sponsorId] = {
+        sponsorId,
+        impressions: sImpr.length,
+        viewableImpressions: sViewable.length,
+        clicks: sClicks.length,
+        uniqueReach: sUnique,
+        ctr: sImpr.length > 0 ? (sClicks.length / sImpr.length) * 100 : 0,
+        viewabilityRate: sImpr.length > 0 ? (sViewable.length / sImpr.length) * 100 : 0,
+        avgDwellMs: dwellValues.length > 0 ? dwellValues.reduce((a, b) => a + b, 0) / dwellValues.length : 0,
+      };
+    });
+
+    // Country breakdown (server-resolved; 'Unknown' when the geo header wasn't available, e.g. local dev)
+    const countryCounts = new Map<string, number>();
+    impressionsRows.forEach(r => {
+      const c = r.country || 'Unknown';
+      countryCounts.set(c, (countryCounts.get(c) || 0) + 1);
+    });
+    const byCountry = [...countryCounts.entries()]
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    // Device breakdown across sponsor impressions
+    const totalDeviceRows = impressionsRows.length || 1;
+    const mobileCount = impressionsRows.filter(r => r.device === 'Mobile').length;
+    const desktopCount = impressionsRows.filter(r => r.device === 'Desktop').length;
+    const tabletCount = impressionsRows.filter(r => r.device === 'Tablet').length;
+
+    return {
+      hasAnyData: rows.length > 0,
+      totals: { impressions, viewableImpressions, clicks, uniqueReach, ctr, viewabilityRate, repeatExposureRate },
+      byDay,
+      bySponsor,
+      byCountry,
+      byDevice: [
+        { name: 'Mobile Phones (Smartphones)', percentage: `${Math.round((mobileCount / totalDeviceRows) * 100)}%`, color: '#10B981' },
+        { name: 'Desktop & Laptops', percentage: `${Math.round((desktopCount / totalDeviceRows) * 100)}%`, color: '#3B82F6' },
+        { name: 'Tablets & Consoles', percentage: `${Math.round((tabletCount / totalDeviceRows) * 100)}%`, color: '#F59E0B' },
+      ],
+    };
+  }, [sponsorAnalyticsEvents]);
 
   // 17. Member Portal Workflow, Applications, Magic Links & Admin Messaging
   const applyForMembership = useCallback((clubId: string, input: MemberApplicationInput): { success: boolean; member?: ClubMember; message: string; error?: string } => {
@@ -2813,6 +3019,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         trackPageView,
         recordGateScan,
         getClubAnalytics,
+        sponsorAnalyticsEvents,
+        trackSponsorEvent,
+        loadSponsorAnalytics,
+        getSponsorAnalytics,
         memberMessages,
         applyForMembership,
         approveMemberApplication,

@@ -17,28 +17,33 @@ import {
   Monitor
 } from 'lucide-react';
 
-export interface PlayerDragPayload {
-  type: 'bench' | 'pitch';
-  posId?: string;
-  memberId: string;
-  name: string;
-  number?: number;
-  position?: string;
-}
-
 export interface TacticalPitchProps {
   players: ClubMember[];
   formation?: string;
   matchFormat?: MatchFormat;
   onFormatChange?: (format: MatchFormat) => void;
   savedPositions?: PitchPosition[];
+  /** Controlled mode: when both are passed the parent owns the lineup, and every edit
+   *  (drag, swap, shape/format change, role change) is reported through onPositionsChange. */
+  positions?: PitchPosition[];
+  onPositionsChange?: (positions: PitchPosition[]) => void;
+  onFormationChange?: (formationKey: string) => void;
   primaryColor?: string;
   isEditable?: boolean;
   matchEvents?: MatchEvent[];
   onSaveFormation?: (formationName: string, positions: PitchPosition[]) => void;
+  saveLabel?: string;
   teamName?: string;
-  onSwapWithBench?: (pitchPlayerId: string) => void;
-  onPlayerDropReplace?: (targetPitchPosId: string, source: PlayerDragPayload) => void;
+  onSwapWithBench?: (slotId: string) => void;
+  /** A pitch player was sent to the bench: dragged onto [data-bench-dropzone] / a
+   *  [data-bench-member-id] card (that bench player swaps in), or via the "Bench" button. */
+  onSendToBench?: (slotId: string, benchMemberId: string | null) => void;
+  /** Return true to consume a tap on a slot (e.g. finishing a tap-to-substitute) instead of selecting it. */
+  onSlotTap?: (slotId: string) => boolean;
+  /** Slot to highlight as the drop target of a drag that started outside the pitch (the bench). */
+  externalDropTargetId?: string | null;
+  /** Pulse every slot, e.g. while a bench player is waiting to be tapped onto the pitch. */
+  pickMode?: boolean;
   orientation?: 'vertical' | 'horizontal';
   allowOrientationToggle?: boolean;
   /** Set false to hide the format/shape preset switcher and free-form/reset controls (read-only published lineup views) */
@@ -254,6 +259,82 @@ const TACTICAL_ROLES = [
   'Pressing Forward',
 ];
 
+export const defaultPresetFor = (fmt: MatchFormat): string =>
+  fmt === '7v7' ? '2-3-1' : fmt === '9v9' ? '3-2-3' : '4-3-3';
+
+/** A slot with nobody in it (a starter was sent to the bench). Legacy benched slots were saved as "Position X". */
+export function isEmptySlot(p: PitchPosition): boolean {
+  return !p.member_id && (!p.name || /^Position /.test(p.name));
+}
+
+function uniqueSlotId(taken: Set<string>, idx: number): string {
+  let n = idx;
+  while (taken.has(`slot-${n}`)) n++;
+  const id = `slot-${n}`;
+  taken.add(id);
+  return id;
+}
+
+function occupantOf(member: ClubMember) {
+  return {
+    member_id: member.id,
+    name: member.full_name,
+    number: member.jersey_number || 0,
+    position: member.player_position,
+    is_captain: !!member.is_executive && isPlayerMember(member),
+  };
+}
+
+/** Lays a preset's coordinates over the current lineup. Each slot keeps its player (preset slot order
+ *  is GK → defence → midfield → attack), new slots are filled from players not yet on the pitch, and
+ *  surplus starters drop to the bench. With an empty lineup this builds a fresh default XI. */
+export function buildLineupForPreset(players: ClubMember[], presetKey: string, current: PitchPosition[] = []): PitchPosition[] {
+  const preset = FORMATION_PRESETS[presetKey] || FORMATION_PRESETS['4-3-3'];
+  const kept = current.slice(0, preset.coords.length);
+  const taken = new Set(kept.map(p => p.id));
+  const onPitch = new Set(kept.map(p => p.member_id).filter(Boolean));
+  const reserves = players.filter(p => !onPitch.has(p.id));
+
+  return preset.coords.map((coord, idx) => {
+    const slot = kept[idx];
+    if (slot) {
+      return isEmptySlot(slot)
+        ? { ...slot, x: coord.x, y: coord.y, role: coord.role, position: coord.position }
+        : { ...slot, x: coord.x, y: coord.y, role: coord.role };
+    }
+    const reserve = reserves.shift();
+    const base = { id: uniqueSlotId(taken, idx), x: coord.x, y: coord.y, role: coord.role };
+    return reserve
+      ? { ...base, ...occupantOf(reserve), position: reserve.player_position || coord.position }
+      : { ...base, member_id: undefined, name: '', number: 0, position: coord.position, is_captain: false };
+  });
+}
+
+/** Repairs lineups saved by older builds: guarantees unique slot ids and never the same player in two slots. */
+export function normalizeLineup(list: PitchPosition[]): PitchPosition[] {
+  const ids = new Set<string>();
+  const members = new Set<string>();
+  return list.map((p, idx) => {
+    const id = p.id && !ids.has(p.id) ? p.id : uniqueSlotId(ids, idx);
+    ids.add(id);
+    if (p.member_id && members.has(p.member_id)) {
+      return { ...p, id, member_id: undefined, name: '', number: 0, is_captain: false };
+    }
+    if (p.member_id) members.add(p.member_id);
+    return { ...p, id };
+  });
+}
+
+/** Puts `member` into `slotId`; whoever was there drops to the bench (bench = squad minus pitch). */
+export function placeOnSlot(list: PitchPosition[], slotId: string, member: ClubMember): PitchPosition[] {
+  return list.map(p => {
+    if (p.id === slotId) return { ...p, ...occupantOf(member), position: member.player_position || p.position };
+    // The same player can't hold two slots: if they were already on the pitch, their old slot empties.
+    if (p.member_id === member.id) return { ...p, member_id: undefined, name: '', number: 0, is_captain: false };
+    return p;
+  });
+}
+
 export default function TacticalPitch({
   players,
   formation = '4-3-3',
@@ -264,8 +345,15 @@ export default function TacticalPitch({
   isEditable = true,
   matchEvents = [],
   onSaveFormation,
+  saveLabel = 'Save Shape',
   onSwapWithBench,
-  onPlayerDropReplace,
+  onSendToBench,
+  onSlotTap,
+  externalDropTargetId = null,
+  pickMode = false,
+  positions: controlledPositions,
+  onPositionsChange,
+  onFormationChange,
   orientation,
   allowOrientationToggle = true,
   showFormationControls = true,
@@ -295,64 +383,6 @@ export default function TacticalPitch({
 
   const [activeFormat, setActiveFormat] = useState<MatchFormat>(() => detectFormat(formation, matchFormat));
   const [hoveredDropTargetId, setHoveredDropTargetId] = useState<string | null>(null);
-  const [draggingPitchPosId, setDraggingPitchPosId] = useState<string | null>(null);
-
-  const handleNodeDrop = (e: React.DragEvent, targetPosId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setHoveredDropTargetId(null);
-    setDraggingPitchPosId(null);
-
-    try {
-      let data: PlayerDragPayload | null = null;
-      try {
-        const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
-        if (raw) data = JSON.parse(raw);
-      } catch {}
-      if (!data && typeof window !== 'undefined') {
-        data = (window as any).__activePlayerDragPayload || null;
-      }
-      if (!data) return;
-
-      // Update positions immediately in TacticalPitch
-      setPositions(prev => {
-        if (data.type === 'bench') {
-          return prev.map(p => (p.id === targetPosId ? {
-            ...p,
-            member_id: data.memberId,
-            name: data.name,
-            number: data.number ?? p.number,
-            position: data.position ?? p.position,
-          } : p));
-        }
-        if (data.type === 'pitch' && data.posId) {
-          const sourcePos = prev.find(p => p.id === data.posId);
-          const tgtPos = prev.find(p => p.id === targetPosId);
-          if (!sourcePos || !tgtPos) return prev;
-          return prev.map(p => {
-            if (p.id === targetPosId) {
-              return { ...p, member_id: sourcePos.member_id, name: sourcePos.name, number: sourcePos.number, position: sourcePos.position };
-            }
-            if (p.id === data.posId) {
-              return { ...p, member_id: tgtPos.member_id, name: tgtPos.name, number: tgtPos.number, position: tgtPos.position };
-            }
-            return p;
-          });
-        }
-        return prev;
-      });
-
-      if (onPlayerDropReplace) {
-        onPlayerDropReplace(targetPosId, data);
-      }
-    } catch (err) {
-      console.warn('Error handling player drop on pitch:', err);
-    } finally {
-      if (typeof window !== 'undefined') {
-        (window as any).__activePlayerDragPayload = null;
-      }
-    }
-  };
 
   // Sync format if prop changes
   useEffect(() => {
@@ -361,41 +391,49 @@ export default function TacticalPitch({
     }
   }, [matchFormat]);
 
+  const isControlled = controlledPositions !== undefined && !!onPositionsChange;
+
   // Normalize incoming formation name to matching preset key or 'Custom'
-  const initialPresetKey = Object.keys(FORMATION_PRESETS).find(k => formation.includes(k)) || (activeFormat === '7v7' ? '2-3-1' : activeFormat === '9v9' ? '3-2-3' : '4-3-3');
-  const [selectedFormationKey, setSelectedFormationKey] = useState<string>(
-    formation.toLowerCase().includes('custom') || savedPositions?.length ? 'Custom' : initialPresetKey
-  );
-  const [isFreeFormMode, setIsFreeFormMode] = useState<boolean>(
-    formation.toLowerCase().includes('custom') || !!savedPositions?.length
-  );
+  const initialPresetKey = Object.keys(FORMATION_PRESETS).find(k => formation.includes(k)) || defaultPresetFor(activeFormat);
+  const startsCustom = isControlled
+    ? !FORMATION_PRESETS[formation]
+    : formation.toLowerCase().includes('custom') || !!savedPositions?.length;
+  const [selectedFormationKey, setSelectedFormationKeyState] = useState<string>(startsCustom ? 'Custom' : initialPresetKey);
+  const [isFreeFormMode, setIsFreeFormMode] = useState<boolean>(startsCustom);
+  const lastPresetRef = useRef<string>(initialPresetKey);
   const [nameDisplay, setNameDisplay] = useState<'first' | 'last'>('first');
 
-  // Initialize Pitch Positions from saved coordinates, or preset mapped with squad players
-  const generatePositions = useCallback((presetKey: string): PitchPosition[] => {
-    const preset = FORMATION_PRESETS[presetKey] || FORMATION_PRESETS['4-3-3'];
-    return preset.coords.map((coord, idx) => {
-      const squadPlayer = players[idx];
-      return {
-        id: squadPlayer?.id || `pos-${idx}`,
-        member_id: squadPlayer?.id,
-        name: squadPlayer?.full_name || `Player ${idx + 1}`,
-        number: squadPlayer?.jersey_number || (idx === 0 ? 1 : idx + 1),
-        position: squadPlayer?.player_position || coord.position,
-        x: coord.x,
-        y: coord.y,
-        role: coord.role,
-        is_captain: squadPlayer?.is_executive && !!squadPlayer && isPlayerMember(squadPlayer),
-      };
-    });
-  }, [players]);
+  const changeFormationKey = (key: string) => {
+    setSelectedFormationKeyState(key);
+    setIsFreeFormMode(key === 'Custom');
+    if (key !== 'Custom') lastPresetRef.current = key;
+    onFormationChange?.(key);
+  };
 
-  const [positions, setPositions] = useState<PitchPosition[]>(() => {
-    if (savedPositions && savedPositions.length > 0) {
-      return savedPositions;
-    }
-    return generatePositions(initialPresetKey);
-  });
+  // In controlled mode the parent's formation is the source of truth (e.g. after switching fixture)
+  useEffect(() => {
+    if (!isControlled) return;
+    const key = FORMATION_PRESETS[formation] ? formation : 'Custom';
+    setSelectedFormationKeyState(key);
+    setIsFreeFormMode(key === 'Custom');
+    if (key !== 'Custom') lastPresetRef.current = key;
+  }, [formation, isControlled]);
+
+  const [internalPositions, setInternalPositions] = useState<PitchPosition[]>(() =>
+    savedPositions?.length ? savedPositions : buildLineupForPreset(players, initialPresetKey)
+  );
+  const positions = isControlled ? controlledPositions : internalPositions;
+
+  // Always-current lineup, so several edits within one event compose instead of clobbering each other
+  const positionsRef = useRef<PitchPosition[]>(positions);
+  positionsRef.current = positions;
+
+  const setPositions = useCallback((update: React.SetStateAction<PitchPosition[]>) => {
+    const next = typeof update === 'function' ? update(positionsRef.current) : update;
+    positionsRef.current = next;
+    if (isControlled) onPositionsChange!(next);
+    else setInternalPositions(next);
+  }, [isControlled, onPositionsChange]);
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
@@ -404,14 +442,15 @@ export default function TacticalPitch({
 
   const pitchRef = useRef<HTMLDivElement | null>(null);
 
-  // Synchronize when squad players or savedPositions change
+  // Uncontrolled: follow savedPositions when their *content* changes. Comparing by reference reset the
+  // board mid-edit whenever a realtime match update handed over a fresh-but-identical array.
+  const savedKey = savedPositions?.length ? JSON.stringify(savedPositions) : '';
   useEffect(() => {
-    if (savedPositions && savedPositions.length > 0) {
-      setPositions(savedPositions);
-      setSelectedFormationKey('Custom');
-      setIsFreeFormMode(true);
-    }
-  }, [savedPositions]);
+    if (isControlled || !savedKey) return;
+    setInternalPositions(JSON.parse(savedKey));
+    setSelectedFormationKeyState('Custom');
+    setIsFreeFormMode(true);
+  }, [savedKey, isControlled]);
 
   // Sector Zone Calculator for real-time tactical intelligence
   const getSectorZone = (x: number, y: number): string => {
@@ -423,67 +462,116 @@ export default function TacticalPitch({
     return `Opponent 18-Yard Danger Zone (${flank})`;
   };
 
-  // Change preset formation
+  // Change preset formation: keeps the current players, only their coordinates/roles change
   const handleSelectPreset = (presetKey: string) => {
-    setSelectedFormationKey(presetKey);
-    setIsFreeFormMode(false);
-    setPositions(generatePositions(presetKey));
+    changeFormationKey(presetKey);
+    setPositions(prev => buildLineupForPreset(players, presetKey, prev));
   };
 
   // Change Match Format (11v11, 9v9, 7v7)
   const handleFormatChange = (fmt: MatchFormat) => {
     setActiveFormat(fmt);
     if (onFormatChange) onFormatChange(fmt);
-    const defaultPreset = fmt === '7v7' ? '2-3-1' : fmt === '9v9' ? '3-2-3' : '4-3-3';
-    handleSelectPreset(defaultPreset);
+    handleSelectPreset(defaultPresetFor(fmt));
   };
 
   // Toggle Free-Form Tactical Mode
   const handleToggleFreeForm = () => {
     if (!isFreeFormMode) {
-      setIsFreeFormMode(true);
-      setSelectedFormationKey('Custom');
+      changeFormationKey('Custom');
     } else {
-      const defaultPreset = activeFormat === '7v7' ? '2-3-1' : activeFormat === '9v9' ? '3-2-3' : '4-3-3';
-      handleSelectPreset(defaultPreset);
+      handleSelectPreset(lastPresetRef.current in (FORMAT_PRESETS[activeFormat] || {}) ? lastPresetRef.current : defaultPresetFor(activeFormat));
     }
   };
 
-  // Reset to current preset
+  // Reset coordinates back to the last preset shape (players stay where they are in the lineup)
   const handleResetToPreset = () => {
-    const defaultPreset = activeFormat === '7v7' ? '2-3-1' : activeFormat === '9v9' ? '3-2-3' : '4-3-3';
-    const key = selectedFormationKey === 'Custom' ? defaultPreset : selectedFormationKey;
+    const key = selectedFormationKey !== 'Custom'
+      ? selectedFormationKey
+      : lastPresetRef.current in (FORMAT_PRESETS[activeFormat] || {}) ? lastPresetRef.current : defaultPresetFor(activeFormat);
     handleSelectPreset(key);
   };
 
-  const [dragOriginCoords, setDragOriginCoords] = useState<{ id: string; x: number; y: number } | null>(null);
+  // --- Pointer drag (mouse, touch and pen share one code path) ---------------------------------
+  // The drag lives in a ref so every pointer event sees the latest state; React state only drives rendering.
+  const dragRef = useRef<{
+    slotId: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    origin: { x: number; y: number };
+    active: boolean;
+  } | null>(null);
+  const hoveredRef = useRef<string | null>(null);
+  const benchHoverElRef = useRef<Element | null>(null);
 
-  // 1. Pointer Down on a Player Pin
-  const handlePointerDown = (e: React.PointerEvent, playerId: string) => {
-    if (!isEditable) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    setSelectedPlayerId(playerId);
-    setDraggingPlayerId(playerId);
-
-    const targetNode = e.currentTarget as HTMLElement;
-    targetNode.setPointerCapture(e.pointerId);
-
-    const player = positions.find(p => p.id === playerId);
-    if (player) {
-      setDragOriginCoords({ id: playerId, x: player.x, y: player.y });
-      setDragCoordinateFeedback({
-        x: player.x,
-        y: player.y,
-        zone: getSectorZone(player.x, player.y),
-      });
-    }
+  const setBenchHover = (el: Element | null) => {
+    if (benchHoverElRef.current === el) return;
+    benchHoverElRef.current?.classList.remove('is-drop-hover');
+    el?.classList.add('is-drop-hover');
+    benchHoverElRef.current = el;
   };
 
-  // 2. Pointer Move (Window/Pitch scope)
+  const benchTargetAt = (x: number, y: number): Element | null => {
+    if (!onSendToBench || typeof document === 'undefined') return null;
+    const el = document.elementFromPoint(x, y);
+    return el?.closest('[data-bench-member-id]') || el?.closest('[data-bench-dropzone]') || null;
+  };
+
+  const isOutsidePitch = (x: number, y: number) => {
+    const rect = pitchRef.current?.getBoundingClientRect();
+    return !rect || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom;
+  };
+
+  const endDrag = () => {
+    dragRef.current = null;
+    hoveredRef.current = null;
+    setBenchHover(null);
+    setHoveredDropTargetId(null);
+    setDraggingPlayerId(null);
+    setDragCoordinateFeedback(null);
+  };
+
+  const tapSlot = (slotId: string) => {
+    if (onSlotTap?.(slotId)) return;
+    setSelectedPlayerId(slotId);
+  };
+
+  // 1. Pointer Down on a Player Pin: only arms the drag; it starts once the pointer actually moves
+  const handlePointerDown = (e: React.PointerEvent, slotId: string) => {
+    if (!isEditable) {
+      setSelectedPlayerId(slotId);
+      return;
+    }
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault(); // no text selection / native image drag
+    e.stopPropagation();
+
+    const pos = positionsRef.current.find(p => p.id === slotId);
+    if (!pos) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = {
+      slotId,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origin: { x: pos.x, y: pos.y },
+      active: false,
+    };
+  };
+
+  // 2. Pointer Move (events from the captured node bubble up to the pitch)
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!draggingPlayerId || !pitchRef.current) return;
+    const drag = dragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId || !pitchRef.current) return;
+
+    if (!drag.active) {
+      const threshold = e.pointerType === 'mouse' ? 4 : 8;
+      if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < threshold) return;
+      drag.active = true;
+      setDraggingPlayerId(drag.slotId);
+      setSelectedPlayerId(drag.slotId);
+    }
 
     const rect = pitchRef.current.getBoundingClientRect();
     let rawX: number;
@@ -504,86 +592,107 @@ export default function TacticalPitch({
     const clampedX = Math.round(Math.max(5, Math.min(95, rawX)) * 10) / 10;
     const clampedY = Math.round(Math.max(8, Math.min(92, rawY)) * 10) / 10;
 
-    // Check proximity to other players for swap target preview
-    const nearbyPlayer = positions.find(p => {
-      if (p.id === draggingPlayerId) return false;
+    const outside = isOutsidePitch(e.clientX, e.clientY);
+    const benchEl = outside ? benchTargetAt(e.clientX, e.clientY) : null;
+    setBenchHover(benchEl);
+
+    // Proximity to another slot = swap target
+    const nearbyPlayer = outside ? undefined : positionsRef.current.find(p => {
+      if (p.id === drag.slotId) return false;
       const dx = p.x - clampedX;
       const dy = p.y - clampedY;
       return Math.sqrt(dx * dx + dy * dy) < 6.5;
     });
-
-    if (nearbyPlayer) {
-      setHoveredDropTargetId(nearbyPlayer.id);
-    } else {
-      setHoveredDropTargetId(null);
-    }
+    hoveredRef.current = nearbyPlayer?.id || null;
+    setHoveredDropTargetId(hoveredRef.current);
 
     setPositions(prev =>
-      prev.map(p => (p.id === draggingPlayerId ? { ...p, x: clampedX, y: clampedY } : p))
+      prev.map(p => (p.id === drag.slotId ? { ...p, x: clampedX, y: clampedY } : p))
     );
 
-    setDragCoordinateFeedback({
-      x: clampedX,
-      y: clampedY,
-      zone: nearbyPlayer ? `SWAP TARGET: ${nearbyPlayer.name} (#${nearbyPlayer.number})` : getSectorZone(clampedX, clampedY),
-    });
-
-    if (selectedFormationKey !== 'Custom') {
-      setSelectedFormationKey('Custom');
-      setIsFreeFormMode(true);
+    let zone: string;
+    if (benchEl) {
+      const benchName = benchEl.getAttribute('data-bench-name');
+      zone = benchName ? `Release to swap with ${benchName} (bench)` : 'Release to send to the bench';
+    } else if (outside) {
+      zone = onSendToBench ? 'Off the pitch: release on the bench to substitute, anywhere else to cancel' : 'Off the pitch: release to cancel';
+    } else if (nearbyPlayer) {
+      zone = isEmptySlot(nearbyPlayer)
+        ? `Release to move into the empty ${nearbyPlayer.position} slot`
+        : `SWAP TARGET: ${nearbyPlayer.name} (#${nearbyPlayer.number})`;
+    } else {
+      zone = getSectorZone(clampedX, clampedY);
     }
+    setDragCoordinateFeedback({ x: clampedX, y: clampedY, zone });
   };
 
-  // 3. Pointer Up
+  // 3. Pointer Up: tap, swap, send to bench, cancel, or free move
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (draggingPlayerId) {
-      try {
-        const targetNode = e.currentTarget as HTMLElement;
-        targetNode.releasePointerCapture(e.pointerId);
-      } catch {
-        // Safe fallback
-      }
+    const drag = dragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const benchEl = benchHoverElRef.current;
+    const targetId = hoveredRef.current;
+    endDrag();
 
-      if (hoveredDropTargetId && hoveredDropTargetId !== draggingPlayerId) {
-        const draggedPos = positions.find(p => p.id === draggingPlayerId);
-        const tgtPos = positions.find(p => p.id === hoveredDropTargetId);
-        if (draggedPos && tgtPos) {
-          if (dragOriginCoords && dragOriginCoords.id === draggingPlayerId) {
-            setPositions(prev =>
-              prev.map(p => {
-                if (p.id === hoveredDropTargetId) {
-                  return { ...p, member_id: draggedPos.member_id, name: draggedPos.name, number: draggedPos.number, position: draggedPos.position };
-                }
-                if (p.id === draggingPlayerId) {
-                  return { ...p, x: dragOriginCoords.x, y: dragOriginCoords.y, member_id: tgtPos.member_id, name: tgtPos.name, number: tgtPos.number, position: tgtPos.position };
-                }
-                return p;
-              })
-            );
-          }
+    if (!drag.active) {
+      tapSlot(drag.slotId);
+      return;
+    }
 
-          if (onPlayerDropReplace) {
-            onPlayerDropReplace(hoveredDropTargetId, {
-              type: 'pitch',
-              posId: draggingPlayerId,
-              memberId: draggedPos.member_id || '',
-              name: draggedPos.name,
-              number: draggedPos.number,
-              position: draggedPos.position,
-            });
-          }
-        }
-        setHoveredDropTargetId(null);
-      }
+    const restoreOrigin = (list: PitchPosition[]) =>
+      list.map(p => (p.id === drag.slotId ? { ...p, x: drag.origin.x, y: drag.origin.y } : p));
 
-      setDraggingPlayerId(null);
-      setDragCoordinateFeedback(null);
-      setDragOriginCoords(null);
+    if (benchEl && onSendToBench) {
+      setPositions(restoreOrigin);
+      onSendToBench(drag.slotId, benchEl.getAttribute('data-bench-member-id'));
+      return;
+    }
+
+    if (targetId) {
+      // Swap the two players between slots; the dragged slot keeps its original coordinates
+      setPositions(prev => {
+        const src = prev.find(p => p.id === drag.slotId);
+        const tgt = prev.find(p => p.id === targetId);
+        if (!src || !tgt) return restoreOrigin(prev);
+        const identity = (p: PitchPosition) => ({
+          member_id: p.member_id, name: p.name, number: p.number, position: p.position, is_captain: p.is_captain,
+        });
+        return prev.map(p => {
+          if (p.id === tgt.id) return { ...p, ...identity(src) };
+          if (p.id === src.id) return { ...p, x: drag.origin.x, y: drag.origin.y, ...identity(tgt) };
+          return p;
+        });
+      });
+      return;
+    }
+
+    if (isOutsidePitch(e.clientX, e.clientY)) {
+      setPositions(restoreOrigin);
+      return;
+    }
+
+    // A free move breaks the preset shape
+    if (selectedFormationKey !== 'Custom') changeFormationKey('Custom');
+  };
+
+  // The browser took the pointer (scroll gesture, OS interruption): put the player back
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    const drag = dragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    endDrag();
+    if (drag.active) {
+      setPositions(prev => prev.map(p => (p.id === drag.slotId ? { ...p, x: drag.origin.x, y: drag.origin.y } : p)));
     }
   };
 
-  // 4. Keyboard Nudge Accessibility
+  // 4. Keyboard: Enter/Space = tap, arrows = nudge
   const handleKeyDown = (e: React.KeyboardEvent, playerId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isEditable) tapSlot(playerId);
+      else setSelectedPlayerId(playerId);
+      return;
+    }
     if (!isEditable) return;
     const step = e.shiftKey ? 5 : 2;
 
@@ -617,10 +726,7 @@ export default function TacticalPitch({
       })
     );
 
-    if (selectedFormationKey !== 'Custom') {
-      setSelectedFormationKey('Custom');
-      setIsFreeFormMode(true);
-    }
+    if (selectedFormationKey !== 'Custom') changeFormationKey('Custom');
   };
 
   // Save Formation
@@ -637,6 +743,7 @@ export default function TacticalPitch({
 
   // Check card/substitution status from live match events
   const getPlayerMatchBadges = (playerName: string) => {
+    if (!playerName) return { hasYellow: false, hasRed: false, hasGoal: false, isSubbedOff: false };
     const playerEvents = matchEvents.filter(
       e => e.player_name.toLowerCase().includes(playerName.toLowerCase())
     );
@@ -823,41 +930,47 @@ export default function TacticalPitch({
               }}
             >
               {saveSuccess ? <Check size={14} /> : <Save size={14} />}
-              <span>{saveSuccess ? 'Saved!' : 'Save Shape'}</span>
+              <span>{saveSuccess ? 'Saved!' : saveLabel}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Real-time Drag Tooltip Feedback Banner */}
-      {dragCoordinateFeedback && (
-        <div style={{
-          padding: '0.45rem 0.85rem',
-          borderRadius: '8px',
-          background: 'rgba(245, 158, 11, 0.15)',
-          border: '1px solid #F59E0B',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.8rem',
-          color: '#F59E0B',
-          fontWeight: 700,
-          animation: 'fadeIn 0.2s ease',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Crosshair size={14} />
-            <span>Repositioning: <strong>{dragCoordinateFeedback.zone}</strong></span>
-          </div>
-        </div>
-      )}
-
       {/* THE FOOTBALL PITCH CANVAS */}
       <div
         ref={pitchRef}
-        className={`tactical-pitch ${isVertical ? 'tactical-pitch-vertical' : ''}`}
+        className={`tactical-pitch ${isVertical ? 'tactical-pitch-vertical' : ''} ${pickMode ? 'is-picking' : ''}`}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
+        {/* Real-time drag feedback: overlaid on the pitch so it never shifts the pitch mid-drag */}
+        {dragCoordinateFeedback && (
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'max-content',
+            maxWidth: 'calc(100% - 16px)',
+            zIndex: 40,
+            pointerEvents: 'none',
+            padding: '0.35rem 0.7rem',
+            borderRadius: '8px',
+            background: 'rgba(12, 16, 22, 0.92)',
+            border: '1px solid #F59E0B',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.74rem',
+            color: '#F59E0B',
+            fontWeight: 700,
+          }}>
+            <Crosshair size={13} style={{ flexShrink: 0 }} />
+            <span>{dragCoordinateFeedback.zone}</span>
+          </div>
+        )}
+
         {/* Pitch surface: background, markings, and goal/corner overhangs are clipped to the
             rounded pitch edge here, kept separate from the player nodes below so an edge-of-pitch
             player's circle/name-label is never cropped by that clipping (a mobile-width bug). */}
@@ -923,74 +1036,37 @@ export default function TacticalPitch({
             textTransform: 'uppercase',
             pointerEvents: 'none',
           }}>
-            <span>{isVertical ? 'Attacking Direction ↑' : 'Attacking Direction →'}</span>
+            <span>{isVertical ? 'Attack ↑' : 'Attacking Direction →'}</span>
           </div>
         </div>
 
         {/* 5. Interactive Draggable Player Nodes (outside the clipped surface, so edge positions never get cropped) */}
         {positions.map(pos => {
-          const badges = getPlayerMatchBadges(pos.name);
-          const isDragging = draggingPlayerId === pos.id || draggingPitchPosId === pos.id;
+          const empty = isEmptySlot(pos);
+          const badges = getPlayerMatchBadges(empty ? '' : pos.name);
+          const isDragging = draggingPlayerId === pos.id;
           const isSelected = selectedPlayerId === pos.id;
-          const isDropTarget = hoveredDropTargetId === pos.id && draggingPitchPosId !== pos.id;
-          const photoUrl = players.find(p => p.id === pos.member_id)?.photo_url;
+          const isDropTarget = (hoveredDropTargetId === pos.id || externalDropTargetId === pos.id) && !isDragging;
+          const photoUrl = empty ? undefined : players.find(p => p.id === pos.member_id)?.photo_url;
 
           return (
             <div
               key={pos.id}
               data-posid={pos.id}
-              className={`pitch-player-node ${isDragging ? 'is-dragging' : ''} ${isSelected ? 'is-selected' : ''}`}
+              className={`pitch-player-node ${isDragging ? 'is-dragging' : ''} ${isSelected ? 'is-selected' : ''} ${empty ? 'is-empty' : ''}`}
               style={{
                 left: isVertical ? `${pos.y}%` : `${pos.x}%`,
                 top: isVertical ? `${100 - pos.x}%` : `${pos.y}%`,
-                cursor: isEditable ? 'grab' : 'pointer',
+                cursor: isEditable ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
               }}
-              draggable={isEditable}
-              onDragStart={e => {
-                if (!isEditable) return;
-                const payload: PlayerDragPayload = {
-                  type: 'pitch',
-                  posId: pos.id,
-                  memberId: pos.member_id || '',
-                  name: pos.name,
-                  number: pos.number,
-                  position: pos.position,
-                };
-                e.dataTransfer.setData('text/plain', JSON.stringify(payload));
-                e.dataTransfer.setData('application/json', JSON.stringify(payload));
-                e.dataTransfer.effectAllowed = 'move';
-                if (typeof window !== 'undefined') {
-                  (window as any).__activePlayerDragPayload = payload;
-                }
-                setDraggingPitchPosId(pos.id);
-              }}
-              onDragEnd={() => {
-                setDraggingPitchPosId(null);
-                setHoveredDropTargetId(null);
-                if (typeof window !== 'undefined') {
-                  (window as any).__activePlayerDragPayload = null;
-                }
-              }}
-              onDragOver={e => {
-                if (!isEditable) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                if (hoveredDropTargetId !== pos.id) {
-                  setHoveredDropTargetId(pos.id);
-                }
-              }}
-              onDragLeave={() => {
-                if (hoveredDropTargetId === pos.id) {
-                  setHoveredDropTargetId(null);
-                }
-              }}
-              onDrop={e => handleNodeDrop(e, pos.id)}
               onPointerDown={e => handlePointerDown(e, pos.id)}
-              onClick={() => setSelectedPlayerId(pos.id)}
+              onDragStart={e => e.preventDefault()}
               onKeyDown={e => handleKeyDown(e, pos.id)}
               tabIndex={0}
               role="button"
-              aria-label={`${pos.name}, number ${pos.number}, ${pos.position}. Use arrow keys to reposition.`}
+              aria-label={empty
+                ? `Empty ${pos.position} slot`
+                : `${pos.name}, number ${pos.number}, ${pos.position}. Use arrow keys to reposition.`}
             >
               {/* Drop Target Swap Indicator Badge */}
               {isDropTarget && (
@@ -1015,7 +1091,7 @@ export default function TacticalPitch({
                   animation: 'pulse 1s infinite',
                 }}>
                   <ArrowLeftRight size={10} />
-                  <span>SWAP</span>
+                  <span>{empty ? 'IN' : 'SWAP'}</span>
                 </div>
               )}
 
@@ -1027,7 +1103,9 @@ export default function TacticalPitch({
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  background: photoUrl
+                  background: empty
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : photoUrl
                     ? '#0B0F14'
                     : pos.position === 'GK'
                     ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
@@ -1036,6 +1114,8 @@ export default function TacticalPitch({
                     ? '2.5px solid #10B981'
                     : isSelected
                     ? '2.5px solid #FFFFFF'
+                    : empty
+                    ? '2px dashed rgba(255, 255, 255, 0.65)'
                     : '2px solid rgba(255, 255, 255, 0.85)',
                   boxShadow: isDropTarget
                     ? '0 0 25px #10B981, 0 0 10px #10B981'
@@ -1055,11 +1135,14 @@ export default function TacticalPitch({
                   transition: 'border-color 0.15s, box-shadow 0.15s',
                 }}
               >
-                {photoUrl ? (
+                {empty ? (
+                  '+'
+                ) : photoUrl ? (
                   <>
                     <img
                       src={photoUrl}
                       alt={pos.name}
+                      draggable={false}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                     />
                     <span style={{
@@ -1176,8 +1259,8 @@ export default function TacticalPitch({
                   gap: '0.3rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
               }}>
-                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()}
+                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis', color: empty ? 'var(--text-muted)' : undefined }}>
+                  {empty ? 'Empty' : nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()}
                 </span>
                 <span style={{
                   fontSize: '0.6rem',
@@ -1207,7 +1290,9 @@ export default function TacticalPitch({
           <Info size={14} />
           <span>
             {isEditable
-              ? 'Click & drag any player pin to position freely. Focus + Arrow keys to nudge.'
+              ? onSendToBench
+                ? 'Drag a player to reposition, onto a teammate to swap, or off onto the bench. Tap a player for more options.'
+                : 'Drag a player to reposition or onto a teammate to swap. Focus + Arrow keys to nudge.'
               : 'Interactive Matchday Tactical Board.'}
           </span>
         </div>
@@ -1244,7 +1329,7 @@ export default function TacticalPitch({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  #{activePlayer.number} {activePlayer.name}
+                  {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `#${activePlayer.number} ${activePlayer.name}`}
                 </h4>
                 {activePlayer.is_captain && (
                   <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
@@ -1302,7 +1387,21 @@ export default function TacticalPitch({
                 }}
               >
                 <ArrowLeftRight size={14} />
-                <span>Swap with Bench</span>
+                <span>{isEmptySlot(activePlayer) ? 'Fill from Bench' : 'Swap with Bench'}</span>
+              </button>
+            )}
+
+            {onSendToBench && !isEmptySlot(activePlayer) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSendToBench(activePlayer.id, null);
+                  setSelectedPlayerId(null);
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', borderColor: '#EF4444', color: '#F87171' }}
+              >
+                Move to Bench
               </button>
             )}
 

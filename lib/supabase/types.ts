@@ -345,6 +345,49 @@ export interface ClubAnalyticsSummary {
   recentGateScans: GateScanRecord[];
 }
 
+export type SponsorAnalyticsEventType = 'impression' | 'viewable_impression' | 'click';
+
+export interface SponsorAnalyticsEvent {
+  id: string;
+  club_id: string;
+  sponsor_id: string;
+  event_type: SponsorAnalyticsEventType;
+  placement?: string;
+  device?: string;
+  country?: string;
+  visitor_hash?: string;
+  dwell_ms?: number;
+  created_at: string;
+}
+
+export interface SponsorPlacementStats {
+  sponsorId: string;
+  impressions: number;
+  viewableImpressions: number;
+  clicks: number;
+  uniqueReach: number;
+  ctr: number;
+  viewabilityRate: number;
+  avgDwellMs: number;
+}
+
+export interface SponsorAnalyticsSummary {
+  hasAnyData: boolean;
+  totals: {
+    impressions: number;
+    viewableImpressions: number;
+    clicks: number;
+    uniqueReach: number;
+    ctr: number;
+    viewabilityRate: number;
+    repeatExposureRate: number;
+  };
+  byDay: { day: string; impressions: number; clicks: number }[];
+  bySponsor: Record<string, SponsorPlacementStats>;
+  byCountry: { country: string; count: number }[];
+  byDevice: { name: string; percentage: string; color: string }[];
+}
+
 export interface ContactInquiry {
   id: string;
   club_id: string;

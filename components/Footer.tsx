@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
+import SponsorTrackedLink from './SponsorTrackedLink';
 
 interface FooterProps {
   club?: Club | null;
@@ -52,11 +53,12 @@ export default function Footer({ club, sponsors }: FooterProps) {
                 const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
                 const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
                 return (
-                  <a
+                  <SponsorTrackedLink
                     key={sponsor.id}
+                    clubId={sponsor.club_id}
+                    sponsorId={sponsor.id}
+                    placement="footer_marquee"
                     href={sponsor.website_url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -101,7 +103,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
                     }}>
                       {sponsor.tier}
                     </span>
-                  </a>
+                  </SponsorTrackedLink>
                 );
               })}
             </div>
