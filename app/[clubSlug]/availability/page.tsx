@@ -685,38 +685,44 @@ function AvailabilityHub() {
                           onClick={() => handleAdminSetStatus(player.id, 'available')}
                           title={`Mark ${player.full_name} available`}
                           style={{
-                            width: '28px',
-                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            padding: '0.35rem 0.6rem',
                             borderRadius: '8px',
                             border: `1px solid ${availability.status === 'available' ? '#10B981' : 'var(--border-subtle)'}`,
                             background: availability.status === 'available' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
                             color: '#10B981',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
                             cursor: 'pointer',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          <CheckCircle2 size={14} />
+                          <CheckCircle2 size={13} />
+                          <span>Available</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleAdminSetStatus(player.id, 'unavailable')}
                           title={`Mark ${player.full_name} unavailable`}
                           style={{
-                            width: '28px',
-                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            padding: '0.35rem 0.6rem',
                             borderRadius: '8px',
                             border: `1px solid ${availability.status === 'unavailable' ? '#EF4444' : 'var(--border-subtle)'}`,
                             background: availability.status === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.03)',
                             color: '#EF4444',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
                             cursor: 'pointer',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          <XCircle size={14} />
+                          <XCircle size={13} />
+                          <span>Not Available</span>
                         </button>
                       </div>
                     </div>

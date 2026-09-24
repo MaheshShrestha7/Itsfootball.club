@@ -858,71 +858,76 @@ export default function TacticalPitch({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* 1. Pitch Markings */}
-        <div className="pitch-halfway-line" />
-        <div className="pitch-center-circle" />
-        <div className="pitch-center-spot" />
+        {/* Pitch surface: background, markings, and goal/corner overhangs are clipped to the
+            rounded pitch edge here, kept separate from the player nodes below so an edge-of-pitch
+            player's circle/name-label is never cropped by that clipping (a mobile-width bug). */}
+        <div className="tactical-pitch-surface">
+          {/* 1. Pitch Markings */}
+          <div className="pitch-halfway-line" />
+          <div className="pitch-center-circle" />
+          <div className="pitch-center-spot" />
 
-        {/* 2. Penalty & Goal Areas */}
-        <div className="pitch-penalty-box-left" />
-        <div className="pitch-six-yard-left" />
-        <div className="pitch-penalty-spot-left" />
-        <div className="pitch-penalty-arc-left" />
-        <div className="pitch-goal-left" />
+          {/* 2. Penalty & Goal Areas */}
+          <div className="pitch-penalty-box-left" />
+          <div className="pitch-six-yard-left" />
+          <div className="pitch-penalty-spot-left" />
+          <div className="pitch-penalty-arc-left" />
+          <div className="pitch-goal-left" />
 
-        <div className="pitch-penalty-box-right" />
-        <div className="pitch-six-yard-right" />
-        <div className="pitch-penalty-spot-right" />
-        <div className="pitch-penalty-arc-right" />
-        <div className="pitch-goal-right" />
+          <div className="pitch-penalty-box-right" />
+          <div className="pitch-six-yard-right" />
+          <div className="pitch-penalty-spot-right" />
+          <div className="pitch-penalty-arc-right" />
+          <div className="pitch-goal-right" />
 
-        {/* 3. Corner Arcs */}
-        <div className="pitch-corner-arc pitch-corner-tl" />
-        <div className="pitch-corner-arc pitch-corner-tr" />
-        <div className="pitch-corner-arc pitch-corner-bl" />
-        <div className="pitch-corner-arc pitch-corner-br" />
+          {/* 3. Corner Arcs */}
+          <div className="pitch-corner-arc pitch-corner-tl" />
+          <div className="pitch-corner-arc pitch-corner-tr" />
+          <div className="pitch-corner-arc pitch-corner-bl" />
+          <div className="pitch-corner-arc pitch-corner-br" />
 
-        {/* 4. Format & Orientation Watermarks */}
-        <div style={{
-          position: 'absolute',
-          top: '12px',
-          right: '18px',
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '20px',
-          padding: '3px 10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-          fontSize: '0.68rem',
-          fontWeight: 800,
-          color: activeFormat === '7v7' ? '#F59E0B' : activeFormat === '9v9' ? '#60A5FA' : '#10B981',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-          pointerEvents: 'none',
-        }}>
-          <span>{activeFormat === '7v7' ? '⚡ 7v7 Mini-Soccer' : activeFormat === '9v9' ? '🏆 9v9 Academy' : '⭐ 11v11 Senior'}</span>
+          {/* 4. Format & Orientation Watermarks */}
+          <div style={{
+            position: 'absolute',
+            top: '12px',
+            right: '18px',
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '20px',
+            padding: '3px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            fontSize: '0.68rem',
+            fontWeight: 800,
+            color: activeFormat === '7v7' ? '#F59E0B' : activeFormat === '9v9' ? '#60A5FA' : '#10B981',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            pointerEvents: 'none',
+          }}>
+            <span>{activeFormat === '7v7' ? '⚡ 7v7 Mini-Soccer' : activeFormat === '9v9' ? '🏆 9v9 Academy' : '⭐ 11v11 Senior'}</span>
+          </div>
+
+          <div style={{
+            position: 'absolute',
+            bottom: '10px',
+            right: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            color: 'rgba(255, 255, 255, 0.22)',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            pointerEvents: 'none',
+          }}>
+            <span>{isVertical ? 'Attacking Direction ↑' : 'Attacking Direction →'}</span>
+          </div>
         </div>
 
-        <div style={{
-          position: 'absolute',
-          bottom: '10px',
-          right: '18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-          color: 'rgba(255, 255, 255, 0.22)',
-          fontSize: '0.72rem',
-          fontWeight: 800,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          pointerEvents: 'none',
-        }}>
-          <span>{isVertical ? 'Attacking Direction ↑' : 'Attacking Direction →'}</span>
-        </div>
-
-        {/* 5. Interactive Draggable Player Nodes */}
+        {/* 5. Interactive Draggable Player Nodes (outside the clipped surface, so edge positions never get cropped) */}
         {positions.map(pos => {
           const badges = getPlayerMatchBadges(pos.name);
           const isDragging = draggingPlayerId === pos.id || draggingPitchPosId === pos.id;

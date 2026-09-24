@@ -44,8 +44,8 @@ export default function DraftLineupPage() {
 
   const club = selectClubBySlug(slug);
 
-  // Filter squad players
-  const squadPlayers = useMemo(() => {
+  // Every player in the club (used as a fallback when attendance was never tracked for a match)
+  const allSquadPlayers = useMemo(() => {
     if (!club) return [];
     return members.filter(m => m.club_id === club.id && isPlayerMember(m));
   }, [club, members]);
@@ -62,6 +62,20 @@ export default function DraftLineupPage() {
   });
 
   const activeMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+
+  // Match Availabilities lookup
+  const matchAvailabilities = useMemo(() => {
+    if (!activeMatch) return [];
+    return availabilities.filter(a => a.match_id === activeMatch.id);
+  }, [availabilities, activeMatch]);
+
+  // The lineup builder only offers players explicitly marked "available" for this fixture.
+  // If attendance was never tracked for it, fall back to the full squad.
+  const squadPlayers = useMemo(() => {
+    if (matchAvailabilities.length === 0) return allSquadPlayers;
+    const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
+    return allSquadPlayers.filter(p => attendingIds.has(p.id));
+  }, [allSquadPlayers, matchAvailabilities]);
 
   // Active Draft
   const currentDraft = draftLineups.find(d => d.match_id === activeMatch?.id);
@@ -134,12 +148,6 @@ export default function DraftLineupPage() {
       }
     }
   }, [activeMatch, draftLineups, buildDefaultCoords]);
-
-  // Match Availabilities lookup
-  const matchAvailabilities = useMemo(() => {
-    if (!activeMatch) return [];
-    return availabilities.filter(a => a.match_id === activeMatch.id);
-  }, [availabilities, activeMatch]);
 
   const getPlayerAvailability = (memberId: string) => {
     return matchAvailabilities.find(a => a.member_id === memberId)?.status || 'pending';

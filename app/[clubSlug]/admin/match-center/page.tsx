@@ -752,6 +752,25 @@ export default function AdminMatchCenterControllerPage({
           {(() => {
             const isClubHome = match?.is_club_home ?? true;
             const isClubSelected = (isClubHome && teamSide === 'home') || (!isClubHome && teamSide === 'away');
+            const ourSide: 'home' | 'away' = isClubHome ? 'home' : 'away';
+            const oppSide: 'home' | 'away' = isClubHome ? 'away' : 'home';
+
+            const quickActions: { key: string; label: string; emoji: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string }[] = [
+              { key: 'goal-us', label: 'Goal', emoji: '⚽', eventType: 'goal', side: ourSide, accent: '#10B981' },
+              { key: 'goal-opp', label: 'Opponent Goal', emoji: '🥅', eventType: 'goal', side: oppSide, accent: '#EF4444' },
+              { key: 'penalty-us', label: 'Penalty', emoji: '🎯', eventType: 'penalty', side: ourSide, accent: '#10B981' },
+              { key: 'yellow-us', label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
+              { key: 'yellow-opp', label: 'Opponent Yellow', emoji: '🟨', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
+              { key: 'red-us', label: 'Red Card', emoji: '🟥', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
+              { key: 'red-opp', label: 'Opponent Red', emoji: '🟥', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
+              { key: 'sub-us', label: 'Substitution', emoji: '🔄', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
+            ];
+
+            const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
+              { key: 'var', label: 'VAR Review', emoji: '🖥️', eventType: 'var' },
+              { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },
+              { key: 'whistle', label: 'Period Whistle', emoji: '📢', eventType: 'whistle' },
+            ];
 
             return (
               <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)', marginBottom: '2.5rem' }}>
@@ -760,26 +779,71 @@ export default function AdminMatchCenterControllerPage({
                 </h3>
 
                 <form onSubmit={handleLogEvent}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">Event Type</label>
-                      <select
-                        className="form-select"
-                        value={eventType}
-                        onChange={e => setEventType(e.target.value as MatchEventType)}
-                      >
-                        <option value="goal">⚽ Goal (Regular)</option>
-                        <option value="penalty">🎯 Goal (Penalty)</option>
-                        <option value="yellow_card">🟨 Yellow Card</option>
-                        <option value="red_card">🟥 Red Card</option>
-                        <option value="sub">🔄 Substitution</option>
-                        <option value="var">🖥️ VAR Review</option>
-                        <option value="commentary">🎙️ Tactical Commentary</option>
-                        <option value="whistle">📢 Period Whistle</option>
-                      </select>
+                  {/* Quick Action Buttons */}
+                  <div className="form-group">
+                    <label className="form-label">Event</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      {quickActions.map(a => {
+                        const isActive = eventType === a.eventType && teamSide === a.side;
+                        return (
+                          <button
+                            key={a.key}
+                            type="button"
+                            onClick={() => { setEventType(a.eventType); setTeamSide(a.side); }}
+                            className="touch-target"
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem',
+                              padding: '0.75rem 0.5rem',
+                              borderRadius: 'var(--radius-md)',
+                              border: `1.5px solid ${isActive ? a.accent : 'var(--border-subtle)'}`,
+                              background: isActive ? `${a.accent}22` : 'rgba(255, 255, 255, 0.03)',
+                              color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                            }}
+                          >
+                            <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{a.emoji}</span>
+                            <span>{a.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    <div className="form-group">
+                    {/* Less-common events */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {otherActions.map(a => {
+                        const isActive = eventType === a.eventType;
+                        return (
+                          <button
+                            key={a.key}
+                            type="button"
+                            onClick={() => setEventType(a.eventType)}
+                            className="btn btn-sm touch-target"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                              border: `1px solid ${isActive ? '#FFFFFF' : 'var(--border-subtle)'}`,
+                              color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                            }}
+                          >
+                            <span>{a.emoji}</span>
+                            <span>{a.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">Team Side</label>
                       <select
                         className="form-select"
@@ -791,7 +855,7 @@ export default function AdminMatchCenterControllerPage({
                       </select>
                     </div>
 
-                    <div className="form-group">
+                    <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">Match Minute</label>
                       <input
                         type="number"

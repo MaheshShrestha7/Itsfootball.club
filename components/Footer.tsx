@@ -239,10 +239,11 @@ export default function Footer({ club, sponsors }: FooterProps) {
           color: 'var(--text-muted)',
         }}>
           <div>
-            &copy; {new Date().getFullYear()} {club ? `${club.name} & ` : ''}itsfootball.club. All rights reserved.
+            &copy; {new Date().getFullYear()} {club ? club.name : 'itsfootball.club'}. All rights reserved.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span>Crafted for football clubs worldwide</span>
+            <span>Powered by</span>
+            <Link href="/" style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>ItsFootball.club</Link>
             <Heart size={13} color="#EF4444" fill="#EF4444" />
           </div>
         </div>

@@ -7,7 +7,7 @@ import { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, ArrowLeft, User, LogOut } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut } from 'lucide-react';
 
 interface ClubNavbarProps {
   club: Club;
@@ -48,27 +48,6 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       WebkitBackdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border-subtle)',
     }}>
-      {/* Top micro-bar: Return to Platform */}
-      <div style={{
-        background: 'rgba(0, 0, 0, 0.45)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-        padding: '0.28rem 0',
-        fontSize: '0.75rem',
-      }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            <ArrowLeft size={12} />
-            <span>itsfootball.club</span>
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            {club.custom_domain && (
-              <span className="hide-on-mobile-xs" style={{ color: 'var(--text-secondary)' }}>{club.custom_domain}</span>
-            )}
-            <span>Est. {club.founded_year}</span>
-          </div>
-        </div>
-      </div>
-
       {/* Main Club Navigation */}
       <div className="container" style={{
         display: 'flex',
