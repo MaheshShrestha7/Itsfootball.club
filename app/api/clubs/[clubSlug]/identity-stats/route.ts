@@ -155,12 +155,13 @@ export async function GET(
       .select('*', { count: 'exact', head: true })
       .eq('club_id', clubId);
 
-    // 5. Query raw Sponsors table
+    // 5. Club-wide sponsors, via the public-safe view (the sponsors table itself is admin-only;
+    //    the view already excludes inactive sponsors). Event-scoped sponsors don't count.
     const { count: sponsorsCount, error: sponsorsError } = await supabase
-      .from('sponsors')
+      .from('sponsors_public')
       .select('*', { count: 'exact', head: true })
       .eq('club_id', clubId)
-      .eq('is_active', true);
+      .is('event_id', null);
 
     // Construct response with verified arithmetic sums
     return NextResponse.json({

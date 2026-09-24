@@ -8,6 +8,7 @@ import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
@@ -1318,22 +1319,24 @@ export default function ClubPublicPage({
                       : 'COMMUNITY SUPPORTER';
 
                   return (
-                    <a
+                    <SponsorTrackedLink
                       key={sponsor.id}
+                      clubId={sponsor.club_id}
+                      sponsorId={sponsor.id}
+                      placement="club_home_showcase"
                       href={sponsor.website_url || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="glass-panel"
                       style={{
-                        padding: isXL ? '1.35rem 2rem' : isLG ? '1.1rem 1.6rem' : isMD ? '0.85rem 1.25rem' : '0.65rem 1rem',
+                        padding: isXL ? '1.6rem 2.2rem' : isLG ? '1.3rem 1.75rem' : isMD ? '1.05rem 1.4rem' : '0.85rem 1.15rem',
                         display: 'flex',
+                        flexWrap: 'wrap',
                         alignItems: 'center',
-                        gap: isXL ? '1.5rem' : isLG ? '1.1rem' : isMD ? '0.85rem' : '0.65rem',
+                        gap: isXL ? '1.25rem 1.75rem' : isLG ? '1rem 1.4rem' : isMD ? '0.8rem 1.1rem' : '0.65rem 0.85rem',
                         textDecoration: 'none',
-                        borderRadius: isXL ? '16px' : isLG ? '14px' : '10px',
-                        minWidth: isXL ? '300px' : isLG ? '230px' : isMD ? '175px' : '135px',
-                        flex: isXL ? '2 1 340px' : isLG ? '1.5 1 250px' : isMD ? '1 1 180px' : '0.7 1 140px',
-                        maxWidth: isXL ? '560px' : isLG ? '440px' : isMD ? '320px' : '240px',
+                        borderRadius: isXL ? '18px' : isLG ? '16px' : '12px',
+                        minWidth: isXL ? 'min(100%, 340px)' : isLG ? 'min(100%, 280px)' : isMD ? 'min(100%, 220px)' : 'min(100%, 170px)',
+                        flex: isXL ? '2 1 420px' : isLG ? '1.5 1 320px' : isMD ? '1 1 240px' : '0.7 1 180px',
+                        maxWidth: isXL ? '720px' : isLG ? '560px' : isMD ? '420px' : '320px',
                         background: isXL
                           ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(15, 23, 42, 0.85))'
                           : isLG
@@ -1361,17 +1364,18 @@ export default function ClubPublicPage({
                       <img
                         src={sponsor.logo_url}
                         alt={sponsor.name}
+                        draggable={false}
                         style={{
-                          height: isXL ? '54px' : isLG ? '40px' : isMD ? '30px' : '24px',
-                          maxWidth: isXL ? '170px' : isLG ? '130px' : isMD ? '95px' : '75px',
+                          height: isXL ? '100px' : isLG ? '76px' : isMD ? '58px' : '44px',
+                          maxWidth: isXL ? 'min(100%, 300px)' : isLG ? 'min(100%, 230px)' : isMD ? 'min(100%, 170px)' : 'min(100%, 130px)',
                           objectFit: 'contain',
                           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
                         }}
                       />
-                      <div style={{ overflow: 'hidden' }}>
+                      <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 120px' }}>
                         <div style={{
                           fontWeight: 900,
-                          fontSize: isXL ? '1.15rem' : isLG ? '0.98rem' : isMD ? '0.86rem' : '0.78rem',
+                          fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
                           color: '#FFFFFF',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
@@ -1401,7 +1405,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
                       </div>
-                    </a>
+                    </SponsorTrackedLink>
                   );
                 })}
               </div>

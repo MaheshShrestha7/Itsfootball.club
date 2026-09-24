@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, use } from 'react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
@@ -42,6 +43,10 @@ export default function MatchCenterPage({
   const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs, sponsors } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
+  const { user, hasClubAdminAccess } = useAuth();
+  const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
   const match = matches.find(m => m.id === resolvedParams.matchId);
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
   const allSquadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
@@ -315,14 +320,16 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
 
-            <Link
-              href={`/${club.slug}/admin/match-center`}
-              className="btn btn-secondary btn-sm scroll-pill-item touch-target"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '38px' }}
-            >
-              <Settings size={14} />
-              <span>Admin</span>
-            </Link>
+            {isClubAdmin && (
+              <Link
+                href={`/${club.slug}/admin/match-center`}
+                className="btn btn-secondary btn-sm scroll-pill-item touch-target"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '38px' }}
+              >
+                <Settings size={14} />
+                <span>Admin</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -864,7 +871,7 @@ export default function MatchCenterPage({
                         color: 'var(--club-primary)',
                         width: '24px',
                       }}>
-                        #{p.jersey_number}
+                        {p.jersey_number ? `#${p.jersey_number}` : ''}
                       </span>
                       <span style={{ fontWeight: 600, color: '#FFFFFF', fontSize: '0.9rem' }}>{p.full_name}</span>
                     </div>

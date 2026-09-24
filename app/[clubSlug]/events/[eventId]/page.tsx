@@ -4,6 +4,7 @@ import React, { useState, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
+import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import {
   Shield,
   Calendar,
@@ -161,28 +162,30 @@ export default function EventDetailsPage({
                 const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
                 const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
                 return (
-                  <a
+                  <SponsorTrackedLink
                     key={sponsor.id}
+                    clubId={sponsor.club_id}
+                    sponsorId={sponsor.id}
+                    placement="event_page"
                     href={sponsor.website_url || '#'}
-                    target={sponsor.website_url ? '_blank' : undefined}
-                    rel={sponsor.website_url ? 'noopener noreferrer' : undefined}
                     className="glass-panel glass-panel-interactive"
                     style={{
-                      padding: '1.25rem',
+                      padding: '1.5rem',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       textAlign: 'center',
-                      gap: '0.6rem',
-                      width: '180px',
+                      gap: '0.7rem',
+                      width: isPlatinum ? 'min(100%, 320px)' : isGold ? 'min(100%, 270px)' : 'min(100%, 230px)',
                       borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
                     }}
                   >
                     <img
                       src={sponsor.logo_url}
                       alt={sponsor.name}
+                      draggable={false}
                       style={{
-                        height: isPlatinum ? '48px' : isGold ? '40px' : '32px',
+                        height: isPlatinum ? '96px' : isGold ? '76px' : '60px',
                         maxWidth: '100%',
                         objectFit: 'contain',
                       }}
@@ -203,7 +206,7 @@ export default function EventDetailsPage({
                         Visit <ExternalLink size={10} />
                       </span>
                     )}
-                  </a>
+                  </SponsorTrackedLink>
                 );
               })}
             </div>

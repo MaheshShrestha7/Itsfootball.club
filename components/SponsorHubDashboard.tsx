@@ -23,6 +23,8 @@ function startOfQuarter(now: Date): Date {
 const PLACEMENT_NAMES: Record<string, string> = {
   footer_marquee: 'Footer Sponsor Bar',
   match_center_marquee: 'Match Center Scroll',
+  club_home_showcase: 'Club Home Showcase',
+  event_page: 'Event Page',
 };
 
 const placementLabel = (placements?: string[]) =>

@@ -813,13 +813,13 @@ textarea {
   align-items: center;
   gap: 0.6rem;
   flex-shrink: 0;
-  padding: 0.4rem 0.8rem;
-  min-height: 44px;
-  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  min-height: 80px;
+  border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   white-space: nowrap;
   transition: border-color 0.15s ease, color 0.15s ease;
@@ -832,8 +832,8 @@ textarea {
 }
 
 .sponsor-marquee-item img {
-  height: 30px;
-  max-width: 110px;
+  height: 60px;
+  max-width: 210px;
   object-fit: contain;
   border-radius: 4px;
 }

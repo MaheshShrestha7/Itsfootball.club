@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
 
@@ -15,6 +16,9 @@ interface FooterProps {
 export default function Footer({ club, sponsors }: FooterProps) {
   const { clubs } = useClub();
   const fallbackSlug = clubs[0]?.slug || 'clubs';
+  // Admin links only for people who can actually open the admin area (same rule as AdminGuard)
+  const { user, hasClubAdminAccess } = useAuth();
+  const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
   return (
     <footer style={{
       background: 'rgba(5, 7, 11, 0.95)',
@@ -62,12 +66,15 @@ export default function Footer({ club, sponsors }: FooterProps) {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: isPlatinum ? '0.75rem' : '0.5rem',
+                      gap: isPlatinum ? '0.9rem' : '0.65rem',
                       opacity: isPlatinum ? 0.95 : 0.75,
-                      padding: isPlatinum ? '0.35rem 0.75rem' : '0.2rem 0.4rem',
+                      padding: isPlatinum ? '0.6rem 1rem' : '0.4rem 0.6rem',
                       background: isPlatinum ? 'rgba(245, 158, 11, 0.08)' : 'transparent',
                       border: isPlatinum ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid transparent',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
+                      maxWidth: '100%',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
                       transition: 'opacity 0.2s, transform 0.2s, border-color 0.2s',
                     }}
                     onMouseEnter={e => {
@@ -82,15 +89,16 @@ export default function Footer({ club, sponsors }: FooterProps) {
                     <img
                       src={sponsor.logo_url}
                       alt={sponsor.name}
+                      draggable={false}
                       style={{
-                        height: isPlatinum ? '38px' : isGold ? '30px' : '24px',
-                        maxWidth: isPlatinum ? '140px' : isGold ? '110px' : '90px',
+                        height: isPlatinum ? '68px' : isGold ? '54px' : '42px',
+                        maxWidth: isPlatinum ? 'min(240px, 70vw)' : isGold ? 'min(190px, 60vw)' : 'min(150px, 50vw)',
                         objectFit: 'contain',
                         borderRadius: '4px',
                       }}
                     />
                     <span style={{
-                      fontSize: isPlatinum ? '0.9rem' : '0.82rem',
+                      fontSize: isPlatinum ? '1rem' : '0.9rem',
                       fontWeight: isPlatinum ? 800 : 600,
                       color: isPlatinum ? '#FFFFFF' : 'var(--text-secondary)'
                     }}>
@@ -194,17 +202,21 @@ export default function Footer({ club, sponsors }: FooterProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
               {club ? (
                 <>
-                  <Link href={`/${club.slug}/admin`} style={{ color: 'var(--text-secondary)' }}>Admin Dashboard</Link>
-                  <Link href={`/${club.slug}/admin/branding`} style={{ color: 'var(--text-secondary)' }}>Branding &amp; Domain</Link>
-                  <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)' }}>Match Controller</Link>
-                  <Link href={`/${club.slug}/admin/scanner`} style={{ color: 'var(--text-secondary)' }}>QR Pass &amp; Event Scanner</Link>
+                  {isClubAdmin && (
+                    <>
+                      <Link href={`/${club.slug}/admin`} style={{ color: 'var(--text-secondary)' }}>Admin Dashboard</Link>
+                      <Link href={`/${club.slug}/admin/branding`} style={{ color: 'var(--text-secondary)' }}>Branding &amp; Domain</Link>
+                      <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)' }}>Match Controller</Link>
+                      <Link href={`/${club.slug}/admin/scanner`} style={{ color: 'var(--text-secondary)' }}>QR Pass &amp; Event Scanner</Link>
+                    </>
+                  )}
+                  <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Member Portal</Link>
                   <Link href={`/${club.slug}/verify`} style={{ color: 'var(--text-secondary)' }}>Pass Verification Portal</Link>
                 </>
               ) : (
                 <>
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Clubs Directory</Link>
-                  <Link href={`/${fallbackSlug}/admin/scanner`} style={{ color: 'var(--text-secondary)' }}>Turnstile &amp; Gate Scanner</Link>
-                  <Link href={`/${fallbackSlug}/admin/branding`} style={{ color: 'var(--text-secondary)' }}>Kit &amp; Crest Customizer</Link>
+                  <Link href="/my-clubs" style={{ color: 'var(--text-secondary)' }}>My Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Register New Club</Link>
                 </>
               )}
