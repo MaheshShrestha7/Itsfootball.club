@@ -239,7 +239,7 @@ export default function TournamentBracketView({
                             )}
                             {!isLive && !isCompleted && (
                               <span style={{ color: 'var(--text-secondary)' }}>
-                                {match.match_date ? match.match_date.slice(5) : 'Upcoming'}
+                                {match.match_date ? `${match.match_date.slice(5, 10)}${match.match_time ? ` ${match.match_time}` : ''}` : 'Upcoming'}
                               </span>
                             )}
                             {isAdmin && (

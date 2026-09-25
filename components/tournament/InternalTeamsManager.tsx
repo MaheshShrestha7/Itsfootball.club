@@ -5,6 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { InternalTeam } from '@/lib/supabase/types';
 import { Plus, Edit2, Trash2, Shield, Check, X, Image as ImageIcon, Search } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import CoverPresetPicker from '@/components/CoverPresetPicker';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { DEFAULT_CREST } from '@/lib/crest';
 
@@ -610,32 +611,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       folder="banners"
                       aspectRatio="16:9"
                     />
-                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80')}
-                        className="btn btn-sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
-                      >
-                        Stadium
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80')}
-                        className="btn btn-sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
-                      >
-                        Floodlights
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCoverUrl('https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1200&auto=format&fit=crop&q=80')}
-                        className="btn btn-sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
-                      >
-                        Pitch
-                      </button>
-                    </div>
+                    <CoverPresetPicker value={coverUrl} onPick={setCoverUrl} />
                   </div>
                 </div>
               </div>

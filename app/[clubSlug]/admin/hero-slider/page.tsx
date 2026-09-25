@@ -203,7 +203,7 @@ export default function AdminHeroSliderPage({
       title: article.title,
       subtitle: article.summary,
       badge: `BREAKING NEWS • ${article.tags[0] || 'FIRST TEAM'}`,
-      image_url: article.cover_image_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80',
+      image_url: article.cover_image_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
       cta_label: 'Read Full Story',
       cta_link: `/${club.slug}#news`,
       is_active: true,

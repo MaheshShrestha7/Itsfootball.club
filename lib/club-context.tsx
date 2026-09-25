@@ -42,12 +42,10 @@ import {
 } from './supabase/types';
 import { STANDARD_BADGES, getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import {
-  generateKnockoutBracket,
-  generateRoundRobinSchedule,
-  generateGroupKnockoutSchedule,
+  buildTiesheet,
   computeStandings,
-  progressKnockoutMatch,
-  seedKnockoutFromGroups
+  resolveTournament,
+  upgradeLegacyMatches
 } from './tournament-engine';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
@@ -228,12 +226,16 @@ interface ClubContextType {
   deleteInternalTeam: (teamId: string) => void;
   createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => Tournament;
   updateTournament: (tournamentId: string, updates: Partial<Tournament>) => void;
+  /** Edit a tournament; pass participantInputs to replace the teams and rebuild the tiesheet */
+  saveTournament: (tournamentId: string, updates: Partial<Tournament>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => void;
   deleteTournament: (tournamentId: string) => void;
   addTournamentParticipant: (participantData: Omit<TournamentParticipant, 'id'>) => TournamentParticipant;
   deleteTournamentParticipant: (participantId: string) => void;
   generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean }) => Match[];
-  updateTournamentMatchScore: (matchId: string, homeScore: number, awayScore: number, homePens?: number, awayPens?: number, isCompleted?: boolean) => void;
+  updateTournamentMatchScore: (matchId: string, homeScore: number, awayScore: number, homePens?: number, awayPens?: number, status?: 'upcoming' | 'live' | 'completed') => void;
   progressKnockoutStage: (tournamentId: string) => void;
+  /** Upgrades a club's tournaments built by older versions (safe to call repeatedly) */
+  repairTournaments: (clubId: string) => void;
   getTournamentStandings: (tournamentId: string, group?: string) => TournamentStanding[];
   getTournamentMatches: (tournamentId: string) => Match[];
 }
@@ -2754,15 +2756,57 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const updateInternalTeam = useCallback((teamId: string, updates: Partial<InternalTeam>) => {
     setInternalTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
-  }, []);
+
+    // Carry name / code / crest / colour into every tournament the team is enrolled in
+    const team = internalTeams.find(t => t.id === teamId);
+    if (!team) return;
+    const next = { ...team, ...updates };
+    const entries = tournamentParticipants.filter(p => p.internal_team_id === teamId);
+    if (entries.length === 0) return;
+    const logo = next.logo_url || DEFAULT_CREST;
+    setTournamentParticipants(prev => prev.map(p => p.internal_team_id === teamId
+      ? { ...p, name: next.name, short_name: next.short_name, logo_url: logo, color: next.color || p.color }
+      : p));
+    const renamed = new Map(entries.map(p => [p.tournament_id, p.name]));
+    setMatches(prev => prev.map(m => {
+      const oldName = m.tournament_id ? renamed.get(m.tournament_id) : undefined;
+      if (!oldName) return m;
+      const home = m.home_team_name === oldName;
+      const away = m.away_team_name === oldName;
+      if (!home && !away) return m;
+      return {
+        ...m,
+        ...(home ? { home_team_name: next.name, home_team_logo: logo } : {}),
+        ...(away ? { away_team_name: next.name, away_team_logo: logo } : {}),
+      };
+    }));
+  }, [internalTeams, tournamentParticipants]);
 
   const deleteInternalTeam = useCallback((teamId: string) => {
     setInternalTeams(prev => prev.filter(t => t.id !== teamId));
   }, []);
 
+  /** Replaces a tournament's fixtures (and participant seeds / groups) with a freshly built tiesheet */
+  const applyTiesheet = useCallback((
+    tournament: Tournament,
+    participants: TournamentParticipant[],
+    options?: { shuffle?: boolean }
+  ) => {
+    const res = buildTiesheet(tournament, participants, options);
+    setTournamentParticipants(prev => [...prev.filter(p => p.tournament_id !== tournament.id), ...res.participants]);
+    setMatches(prev => [...prev.filter(m => m.tournament_id !== tournament.id), ...res.matches]);
+    setTournaments(prev => prev.map(t => t.id === tournament.id ? {
+      ...t,
+      ...res.tournamentUpdates,
+      status: res.matches.length > 0 ? 'ongoing' : t.status,
+      updated_at: new Date().toISOString(),
+    } : t));
+    return res.matches;
+  }, []);
+
   const createTournament = useCallback((
     tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
-    participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]
+    participantInputs: Omit<TournamentParticipant, 'id' | 'tournament_id'>[] = []
   ) => {
     const tournId = newId();
     const newTournament: Tournament = {
@@ -2772,22 +2816,47 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       updated_at: new Date().toISOString(),
     };
     setTournaments(prev => [newTournament, ...prev]);
-
-    if (participantInputs && participantInputs.length > 0) {
-      const newParticipants: TournamentParticipant[] = participantInputs.map((p, idx) => ({
-        ...p,
-        id: newId(),
-        tournament_id: tournId,
-      }));
-      setTournamentParticipants(prev => [...prev, ...newParticipants]);
-    }
-
+    // Built from the new objects directly: state isn't updated until the next render
+    applyTiesheet(newTournament, participantInputs.map(p => ({ ...p, id: newId(), tournament_id: tournId })));
     return newTournament;
-  }, []);
+  }, [applyTiesheet]);
 
   const updateTournament = useCallback((tournamentId: string, updates: Partial<Tournament>) => {
     setTournaments(prev => prev.map(t => t.id === tournamentId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
   }, []);
+
+  const saveTournament = useCallback((
+    tournamentId: string,
+    updates: Partial<Tournament>,
+    participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]
+  ) => {
+    const current = tournaments.find(t => t.id === tournamentId);
+    if (!current) return;
+    const merged = { ...current, ...updates };
+    updateTournament(tournamentId, updates);
+
+    // Teams or structure changed: rebuild the tiesheet
+    if (participantInputs) {
+      applyTiesheet(merged, participantInputs.map(p => ({ ...p, id: newId(), tournament_id: tournamentId })));
+      return;
+    }
+
+    // Otherwise keep results; carry the new name / season / venue / dates onto unplayed fixtures
+    const datesChanged = merged.start_date !== current.start_date || merged.end_date !== current.end_date;
+    const fresh = datesChanged
+      ? new Map(buildTiesheet(merged, tournamentParticipants.filter(p => p.tournament_id === tournamentId)).matches.map(m => [m.id, m]))
+      : null;
+    setMatches(prev => prev.map(m => {
+      if (m.tournament_id !== tournamentId) return m;
+      const next = { ...m, competition: merged.name, season: merged.season };
+      if (m.status === 'upcoming') {
+        if (merged.venue && m.venue === current.venue) next.venue = merged.venue;
+        const f = fresh?.get(m.id);
+        if (f) Object.assign(next, { match_date: f.match_date, match_time: f.match_time });
+      }
+      return next;
+    }));
+  }, [tournaments, tournamentParticipants, updateTournament, applyTiesheet]);
 
   const deleteTournament = useCallback((tournamentId: string) => {
     setTournaments(prev => prev.filter(t => t.id !== tournamentId));
@@ -2811,39 +2880,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean }) => {
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (!tournament) return [];
-
-    const participants = tournamentParticipants.filter(p => p.tournament_id === tournamentId);
-    if (participants.length < 2) return [];
-
-    let generatedMatches: Match[] = [];
-
-    if (tournament.format === 'knockout') {
-      generatedMatches = generateKnockoutBracket(tournament, participants, options);
-    } else if (tournament.format === 'league') {
-      generatedMatches = generateRoundRobinSchedule(tournament, participants, options);
-    } else if (tournament.format === 'group_knockout') {
-      const res = generateGroupKnockoutSchedule(tournament, participants, options);
-      generatedMatches = res.matches;
-      // Update group assignments on participants
-      setTournamentParticipants(prev => {
-        const others = prev.filter(p => p.tournament_id !== tournamentId);
-        return [...others, ...res.updatedParticipants];
-      });
-    }
-
-    // Replace old matches for this tournament with new ones
-    setMatches(prev => {
-      const nonTournament = prev.filter(m => m.tournament_id !== tournamentId);
-      return [...nonTournament, ...generatedMatches];
-    });
-
-    // Mark tournament as ongoing if draft
-    if (tournament.status === 'draft') {
-      updateTournament(tournamentId, { status: 'ongoing' });
-    }
-
-    return generatedMatches;
-  }, [tournaments, tournamentParticipants, updateTournament]);
+    return applyTiesheet(tournament, tournamentParticipants.filter(p => p.tournament_id === tournamentId), options);
+  }, [tournaments, tournamentParticipants, applyTiesheet]);
 
   const updateTournamentMatchScore = useCallback((
     matchId: string,
@@ -2851,79 +2889,73 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     awayScore: number,
     homePens?: number,
     awayPens?: number,
-    isCompleted = true
+    status: 'upcoming' | 'live' | 'completed' = 'completed'
   ) => {
+    const played = status !== 'upcoming';
+    const updates: Partial<Match> = {
+      home_score: played ? homeScore : 0,
+      away_score: played ? awayScore : 0,
+      home_penalty_score: played ? homePens : undefined,
+      away_penalty_score: played ? awayPens : undefined,
+      status,
+      period: status === 'completed' ? (homePens !== undefined ? 'penalties' : 'full_time') : played ? 'second_half' : 'pre_match',
+    };
+
     setMatches(prevMatches => {
-      const targetMatch = prevMatches.find(m => m.id === matchId);
-      if (!targetMatch) return prevMatches;
-
-      const updated: Match = {
-        ...targetMatch,
-        home_score: homeScore,
-        away_score: awayScore,
-        home_penalty_score: homePens,
-        away_penalty_score: awayPens,
-        status: isCompleted ? 'completed' : 'live',
-        period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
-      };
-
-      // Progress knockout bracket if this match has downstream linkage
-      let finalMatches = prevMatches.map(m => m.id === matchId ? updated : m);
-
-      if (updated.tournament_id && updated.tournament_stage && updated.tournament_stage !== 'group') {
-        finalMatches = progressKnockoutMatch(finalMatches, updated);
-      }
-
-      // If this was a group match, check if group stage is ready to seed knockouts
-      if (updated.tournament_id && updated.tournament_stage === 'group') {
-        const tourney = tournaments.find(t => t.id === updated.tournament_id);
-        if (tourney && tourney.format === 'group_knockout') {
-          const participants = tournamentParticipants.filter(p => p.tournament_id === tourney.id);
-          const standingsByGroup: Record<string, TournamentStanding[]> = {};
-          const groupCount = tourney.group_count ?? 1;
-          const groupLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, groupCount);
-          groupLetters.forEach(letter => {
-            standingsByGroup[letter] = computeStandings(finalMatches, participants, {
-              group: letter,
-              pointsWin: tourney.points_win,
-              pointsDraw: tourney.points_draw,
-              pointsLoss: tourney.points_loss,
-            });
-          });
-          finalMatches = seedKnockoutFromGroups(finalMatches, standingsByGroup);
-        }
-      }
-
-      return finalMatches;
+      const target = prevMatches.find(m => m.id === matchId);
+      if (!target) return prevMatches;
+      const next = prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m);
+      const tourney = tournaments.find(t => t.id === target.tournament_id);
+      if (!tourney) return next;
+      return resolveTournament(next, tourney, tournamentParticipants.filter(p => p.tournament_id === tourney.id));
     });
+
+    // Finished once every fixture has a result; back to ongoing if one is reopened
+    const target = matches.find(m => m.id === matchId);
+    const tourney = tournaments.find(t => t.id === target?.tournament_id);
+    if (tourney) {
+      const own = matches.filter(m => m.tournament_id === tourney.id).map(m => (m.id === matchId ? { ...m, ...updates } : m));
+      const nextStatus = own.every(m => m.status === 'completed') ? 'completed' : 'ongoing';
+      if (tourney.status !== nextStatus) updateTournament(tourney.id, { status: nextStatus });
+    }
 
     broadcastLiveMatchdayEvent({
       type: 'MATCH_UPDATED',
       matchId,
-      updates: {
-        home_score: homeScore,
-        away_score: awayScore,
-        home_penalty_score: homePens,
-        away_penalty_score: awayPens,
-        status: isCompleted ? 'completed' : 'live',
-        period: isCompleted ? (homePens !== undefined ? 'penalties' : 'full_time') : 'second_half',
-      },
+      updates,
       timestamp: Date.now(),
     });
-  }, [tournaments, tournamentParticipants]);
+  }, [matches, tournaments, tournamentParticipants, updateTournament]);
+
+  /**
+   * Brings a club's tournaments up to date with the current engine, keeping results:
+   * builds fixtures for tournaments that never got any (old setup bug), upgrades old
+   * 3rd place sources and re-derives every bracket slot from the recorded results.
+   * Idempotent. Only runs once data has loaded, so it never works on a half-loaded state.
+   */
+  const repairTournaments = useCallback((clubId: string) => {
+    if (!isHydrated || !['off', 'idle', 'saving', 'readonly'].includes(syncStatus.phase)) return;
+    const fixes = new Map<string, Match>();
+    for (const t of tournaments.filter(x => x.club_id === clubId)) {
+      const parts = tournamentParticipants.filter(p => p.tournament_id === t.id);
+      const own = matches.filter(m => m.tournament_id === t.id);
+      if (own.length === 0) {
+        if (parts.length >= 2) applyTiesheet(t, parts);
+        continue;
+      }
+      const repaired = resolveTournament(upgradeLegacyMatches(own), t, parts);
+      repaired.forEach((m, i) => {
+        if (JSON.stringify(m) !== JSON.stringify(own[i])) fixes.set(m.id, m);
+      });
+    }
+    if (fixes.size > 0) setMatches(prev => prev.map(m => fixes.get(m.id) || m));
+  }, [isHydrated, syncStatus.phase, tournaments, tournamentParticipants, matches, applyTiesheet]);
 
   const progressKnockoutStage = useCallback((tournamentId: string) => {
-    setMatches(prevMatches => {
-      const tourneyMatches = prevMatches.filter(m => m.tournament_id === tournamentId);
-      let updatedList = [...prevMatches];
-      tourneyMatches.forEach(m => {
-        if (m.status === 'completed' && m.next_match_id) {
-          updatedList = progressKnockoutMatch(updatedList, m);
-        }
-      });
-      return updatedList;
-    });
-  }, []);
+    const tourney = tournaments.find(t => t.id === tournamentId);
+    if (!tourney) return;
+    setMatches(prev => resolveTournament(prev, tourney, tournamentParticipants.filter(p => p.tournament_id === tournamentId)));
+  }, [tournaments, tournamentParticipants]);
 
   const getTournamentStandings = useCallback((tournamentId: string, group?: string) => {
     const tourney = tournaments.find(t => t.id === tournamentId);
@@ -3042,12 +3074,14 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         deleteInternalTeam,
         createTournament,
         updateTournament,
+        saveTournament,
         deleteTournament,
         addTournamentParticipant,
         deleteTournamentParticipant,
         generateTournamentTiesheet,
         updateTournamentMatchScore,
         progressKnockoutStage,
+        repairTournaments,
         getTournamentStandings,
         getTournamentMatches,
       }}

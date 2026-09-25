@@ -1,33 +1,17 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { Match, TournamentParticipant } from '@/lib/supabase/types';
+import { Match } from '@/lib/supabase/types';
 import TournamentBracketView from '@/components/tournament/TournamentBracketView';
 import TournamentStandingsTable from '@/components/tournament/TournamentStandingsTable';
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
-import {
-  Trophy,
-  ArrowLeft,
-  Calendar,
-  Layers,
-  Shuffle,
-  RefreshCw,
-  Plus,
-  Users,
-  CheckCircle2,
-  ExternalLink,
-  Shield,
-  Clock,
-  Sparkles,
-  Settings,
-  X,
-  Image as ImageIcon
-} from 'lucide-react';
-import ImageUploadZone from '@/components/ImageUploadZone';
+import TournamentFormModal from '@/components/tournament/TournamentFormModal';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function AdminTournamentDetailPage({
   params,
@@ -41,12 +25,13 @@ export default function AdminTournamentDetailPage({
     tournaments,
     tournamentParticipants,
     matches,
-    updateTournament,
+    updateMatch,
     generateTournamentTiesheet,
     updateTournamentMatchScore,
     progressKnockoutStage,
     getTournamentStandings,
     addTournamentParticipant,
+    repairTournaments,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -59,12 +44,8 @@ export default function AdminTournamentDetailPage({
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamCode, setNewTeamCode] = useState('');
-  const [editFormatModalOpen, setEditFormatModalOpen] = useState(false);
-  const [editGroupCount, setEditGroupCount] = useState(tournament?.group_count ?? 1);
-  const [editTeamsAdvancing, setEditTeamsAdvancing] = useState(tournament?.teams_advancing_per_group ?? 2);
-  const [editThirdPlace, setEditThirdPlace] = useState(tournament?.has_third_place_match ?? false);
-  const [editBannerModalOpen, setEditBannerModalOpen] = useState(false);
-  const [editBannerUrl, setEditBannerUrl] = useState(tournament?.banner_url ?? '');
+  const [editOpen, setEditOpen] = useState(false);
+  useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
 
   if (!tournament) {
     return (
@@ -109,6 +90,12 @@ export default function AdminTournamentDetailPage({
   const handleAddGuestTeam = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamName.trim()) return;
+    if (participants.some(p => p.name.toLowerCase() === newTeamName.trim().toLowerCase())) {
+      setFeedbackTone('error');
+      setFeedback(`⚠ "${newTeamName.trim()}" is already in this tournament. Team names must be unique.`);
+      setTimeout(() => setFeedback(null), 3500);
+      return;
+    }
 
     addTournamentParticipant({
       tournament_id: tournament.id,
@@ -126,32 +113,6 @@ export default function AdminTournamentDetailPage({
     setFeedbackTone('success');
     setFeedback(`✓ Added guest team "${newTeamName.trim()}"! Remember to regenerate tiesheet to include them.`);
     setTimeout(() => setFeedback(null), 4000);
-  };
-
-  const handleSaveFormat = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateTournament(tournament.id, {
-      group_count: editGroupCount,
-      teams_advancing_per_group: editTeamsAdvancing,
-      has_third_place_match: editThirdPlace,
-    });
-    // Regenerate tiesheet with new structure
-    generateTournamentTiesheet(tournament.id);
-    setEditFormatModalOpen(false);
-    setFeedbackTone('success');
-    setFeedback(`✓ Updated structure: ${editGroupCount === 1 ? '1 Group' : `${editGroupCount} Groups`} with ${editTeamsAdvancing} advancing teams per group!`);
-    setTimeout(() => setFeedback(null), 4000);
-  };
-
-  const handleSaveBanner = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateTournament(tournament.id, {
-      banner_url: editBannerUrl.trim(),
-    });
-    setEditBannerModalOpen(false);
-    setFeedbackTone('success');
-    setFeedback('✓ Updated tournament cover photo!');
-    setTimeout(() => setFeedback(null), 3500);
   };
 
   const formatLabel =
@@ -207,10 +168,7 @@ export default function AdminTournamentDetailPage({
           </Link>
 
           <button
-            onClick={() => {
-              setEditBannerUrl(tournament.banner_url || '');
-              setEditBannerModalOpen(true);
-            }}
+            onClick={() => setEditOpen(true)}
             className="btn btn-sm btn-secondary"
             style={{
               display: 'inline-flex',
@@ -219,10 +177,10 @@ export default function AdminTournamentDetailPage({
               fontSize: '0.8rem',
               borderRadius: '8px',
             }}
-            title="Update tournament cover photo"
+            title="Edit name, dates, venue, cover, format and teams"
           >
-            <ImageIcon size={14} />
-            <span>Cover Photo</span>
+            <Pencil size={14} />
+            <span>Edit Tournament</span>
           </button>
 
           <button
@@ -256,29 +214,6 @@ export default function AdminTournamentDetailPage({
             <Shuffle size={14} />
             <span>Shuffle Draw</span>
           </button>
-
-          {tournament.format === 'group_knockout' && (
-            <button
-              onClick={() => {
-                setEditGroupCount(tournament.group_count ?? 1);
-                setEditTeamsAdvancing(tournament.teams_advancing_per_group ?? 2);
-                setEditThirdPlace(tournament.has_third_place_match ?? false);
-                setEditFormatModalOpen(true);
-              }}
-              className="btn btn-sm btn-secondary"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                fontSize: '0.8rem',
-                borderRadius: '8px',
-              }}
-              title="Configure group count and advancing rules"
-            >
-              <Settings size={14} />
-              <span>Format Rules</span>
-            </button>
-          )}
 
           <button
             onClick={() => handleGenerateTiesheet(false)}
@@ -381,6 +316,11 @@ export default function AdminTournamentDetailPage({
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Calendar size={14} />
                 <span>Season {tournament.season}</span>
+              </span>
+              <span>•</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Clock size={14} />
+                <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
               </span>
               <span>•</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -534,7 +474,7 @@ export default function AdminTournamentDetailPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {tournament.format === 'group_knockout' ? (
             // Render each group
-            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count ?? 1).map(groupLetter => {
+            GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(groupLetter => {
               const groupStandings = getTournamentStandings(tournament.id, groupLetter);
               return (
                 <div key={groupLetter}>
@@ -669,8 +609,9 @@ export default function AdminTournamentDetailPage({
           clubSlug={club.slug}
           isOpen={!!selectedMatch}
           onClose={() => setSelectedMatch(null)}
-          onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, isCompleted) => {
-            updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, isCompleted);
+          onSaveSchedule={(matchId, schedule) => updateMatch(matchId, schedule)}
+          onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, status) => {
+            updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, status);
             setFeedbackTone('success');
             setFeedback('✓ Match score updated and points table / knockout progression recomputed!');
             setTimeout(() => setFeedback(null), 3500);
@@ -773,285 +714,18 @@ export default function AdminTournamentDetailPage({
         </div>
       )}
 
-      {/* Modal: Edit Group Stage & Knockout Rules */}
-      {editFormatModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
+      {editOpen && (
+        <TournamentFormModal
+          club={club}
+          tournament={tournament}
+          onClose={() => setEditOpen(false)}
+          onSaved={msg => {
+            setEditOpen(false);
+            setFeedbackTone('success');
+            setFeedback(msg);
+            setTimeout(() => setFeedback(null), 4000);
           }}
-          onClick={() => setEditFormatModalOpen(false)}
-        >
-          <div
-            style={{
-              background: '#111827',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '14px',
-              width: '100%',
-              maxWidth: '480px',
-              padding: '1.75rem',
-              color: '#FFFFFF',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem' }}>Group Stage & Knockout Rules</h3>
-              <button
-                type="button"
-                onClick={() => setEditFormatModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveFormat}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
-                  Number of Groups
-                </label>
-                <select
-                  value={editGroupCount}
-                  onChange={e => {
-                    const newCount = parseInt(e.target.value, 10);
-                    setEditGroupCount(newCount);
-                    if (newCount === 1 && editTeamsAdvancing < 2) {
-                      setEditTeamsAdvancing(2);
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: '8px',
-                    color: '#FFFFFF',
-                    fontSize: '0.88rem',
-                  }}
-                >
-                  <option value={1}>1 Group (Single Pool • Group A)</option>
-                  <option value={2}>2 Groups (Group A & B)</option>
-                  <option value={3}>3 Groups (Group A, B, C)</option>
-                  <option value={4}>4 Groups (Group A, B, C, D)</option>
-                  <option value={8}>8 Groups (Group A - H)</option>
-                </select>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
-                  {editGroupCount === 1 ? 'All enrolled squads compete in one pool (Group A)' : `Squads are divided into ${editGroupCount} round-robin pools`}
-                </span>
-              </div>
-
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
-                  {editGroupCount === 1 ? 'Teams Advancing to Knockout' : 'Teams Advancing Per Group'}
-                </label>
-                <select
-                  value={editTeamsAdvancing}
-                  onChange={e => setEditTeamsAdvancing(parseInt(e.target.value, 10))}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: '8px',
-                    color: '#FFFFFF',
-                    fontSize: '0.88rem',
-                  }}
-                >
-                  {editGroupCount === 1 ? (
-                    <>
-                      <option value={2}>Min 2 Teams (Direct to Grand Final)</option>
-                      <option value={4}>4 Teams (Semi-Finals & Final)</option>
-                      <option value={8}>8 Teams (Quarter-Finals & Final)</option>
-                      <option value={16}>Max 16 Teams (Round of 16 & Final)</option>
-                    </>
-                  ) : editGroupCount === 2 ? (
-                    <>
-                      <option value={1}>Top 1 per Group (2 Teams Total • Grand Final)</option>
-                      <option value={2}>Top 2 per Group (4 Teams Total • Semi-Finals)</option>
-                      <option value={4}>Top 4 per Group (8 Teams Total • Quarter-Finals)</option>
-                      <option value={8}>Top 8 per Group (16 Teams Total • Round of 16)</option>
-                    </>
-                  ) : editGroupCount === 4 ? (
-                    <>
-                      <option value={1}>Top 1 per Group (4 Teams Total • Semi-Finals)</option>
-                      <option value={2}>Top 2 per Group (8 Teams Total • Quarter-Finals)</option>
-                      <option value={4}>Top 4 per Group (16 Teams Total • Round of 16)</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value={1}>Top 1 per Group</option>
-                      <option value={2}>Top 2 per Group</option>
-                      <option value={4}>Top 4 per Group</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={editThirdPlace}
-                    onChange={e => setEditThirdPlace(e.target.checked)}
-                  />
-                  <span>Include 3rd Place Playoff Match</span>
-                </label>
-              </div>
-
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  color: '#10B981',
-                  background: 'rgba(16, 185, 129, 0.08)',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                  marginBottom: '1.5rem',
-                }}
-              >
-                Knockout Pathway: {editGroupCount === 1 ? 'Single Group A' : `${editGroupCount} Groups`} &rarr;{' '}
-                {editGroupCount * editTeamsAdvancing <= 2
-                  ? 'Min 2 teams advance straight to Championship Grand Final (1st vs 2nd)'
-                  : editGroupCount * editTeamsAdvancing <= 5
-                  ? '4 teams advance to Semi-Finals (1st vs 4th, 2nd vs 3rd) then Grand Final'
-                  : editGroupCount * editTeamsAdvancing <= 11
-                  ? '8 teams advance to Quarter-Finals then Semi-Finals & Grand Final'
-                  : '16 teams advance to Round of 16'}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditFormatModalOpen(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.5rem 1rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
-                >
-                  Save & Regenerate Tiesheet
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* Edit Banner Modal */}
-      {editBannerModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: '#0F172A',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '560px',
-              overflow: 'hidden',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.7)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={20} color="#10B981" />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  Tournament Cover Photo
-                </h3>
-              </div>
-              <button
-                onClick={() => setEditBannerModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBanner} style={{ padding: '1.5rem' }}>
-              <ImageUploadZone
-                label="Tournament Cover Photo (16:9)"
-                recommendedText="Wide 16:9 hero image for tournament bracket and spectator page"
-                currentImageUrl={editBannerUrl}
-                onUploadComplete={url => setEditBannerUrl(url)}
-                folder="tournaments"
-                aspectRatio="16:9"
-              />
-              <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Stadium Presets:</span>
-                {[
-                  { label: 'Champions Stadium', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80' },
-                  { label: 'Floodlit Arena', url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80' },
-                  { label: 'Derby Night', url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80' },
-                  { label: 'Metro Pitch', url: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=1600&auto=format&fit=crop&q=80' },
-                ].map(p => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => setEditBannerUrl(p.url)}
-                    className="btn btn-sm"
-                    style={{
-                      fontSize: '0.7rem',
-                      padding: '2px 7px',
-                      background: editBannerUrl === p.url ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
-                      color: editBannerUrl === p.url ? '#10B981' : '#FFF',
-                      border: editBannerUrl === p.url ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditBannerModalOpen(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.5rem 1rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
-                >
-                  Save Cover Photo
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        />
       )}
     </div>
   );

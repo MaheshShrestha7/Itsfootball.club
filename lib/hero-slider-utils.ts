@@ -52,7 +52,7 @@ export function getDefaultHeroPinnedItems(
       title: featuredArticle.title,
       subtitle: featuredArticle.summary,
       badge: `FEATURED STORY • ${featuredArticle.tags?.[0] || 'FIRST TEAM'}`,
-      image_url: featuredArticle.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80',
+      image_url: featuredArticle.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
       cta_label: 'Read Full Story',
       cta_link: `/${club.slug}#news`,
       is_active: true,

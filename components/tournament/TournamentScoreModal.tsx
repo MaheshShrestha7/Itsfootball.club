@@ -17,8 +17,9 @@ interface TournamentScoreModalProps {
     awayScore: number,
     homePens?: number,
     awayPens?: number,
-    isCompleted?: boolean
+    status?: 'upcoming' | 'live' | 'completed'
   ) => void;
+  onSaveSchedule?: (matchId: string, schedule: Pick<Match, 'match_date' | 'match_time' | 'venue'>) => void;
 }
 
 export default function TournamentScoreModal({
@@ -27,6 +28,7 @@ export default function TournamentScoreModal({
   isOpen,
   onClose,
   onSaveScore,
+  onSaveSchedule,
 }: TournamentScoreModalProps) {
   const isKnockout = Boolean(match.tournament_stage && match.tournament_stage !== 'group');
 
@@ -43,20 +45,34 @@ export default function TournamentScoreModal({
   );
   const [homePens, setHomePens] = useState<number>(match.home_penalty_score || 0);
   const [awayPens, setAwayPens] = useState<number>(match.away_penalty_score || 0);
+  const [matchDate, setMatchDate] = useState(match.match_date?.slice(0, 10) || '');
+  const [matchTime, setMatchTime] = useState(match.match_time || '');
+  const [venue, setVenue] = useState(match.venue || '');
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const isCompleted = status === 'completed';
-    onSaveScore(
-      match.id,
-      Number(homeScore),
-      Number(awayScore),
-      isPensEnabled ? Number(homePens) : undefined,
-      isPensEnabled ? Number(awayPens) : undefined,
-      isCompleted
-    );
+    const pens = isPensEnabled && Number(homeScore) === Number(awayScore);
+    if (isKnockout && status === 'completed' && Number(homeScore) === Number(awayScore) && (!pens || Number(homePens) === Number(awayPens))) {
+      setError('A knockout match needs a winner: enter a penalty shootout result.');
+      return;
+    }
+    if (onSaveSchedule && (matchDate !== (match.match_date?.slice(0, 10) || '') || matchTime !== (match.match_time || '') || venue !== (match.venue || ''))) {
+      onSaveSchedule(match.id, { match_date: matchDate, match_time: matchTime, venue });
+    }
+    // Leave the result untouched when only the schedule changed
+    if (status !== 'upcoming' || initialStatus !== 'upcoming') {
+      onSaveScore(
+        match.id,
+        Number(homeScore),
+        Number(awayScore),
+        pens ? Number(homePens) : undefined,
+        pens ? Number(awayPens) : undefined,
+        status
+      );
+    }
     onClose();
   };
 
@@ -118,7 +134,7 @@ export default function TournamentScoreModal({
               <Trophy size={18} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Update Match Score</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{onSaveSchedule ? 'Edit Fixture' : 'Update Match Score'}</h3>
               <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 {match.title || 'Tournament Fixture'} • {match.tournament_group || (match.tournament_stage ? match.tournament_stage.replace('_', ' ').toUpperCase() : 'Match')}
               </p>
@@ -141,6 +157,38 @@ export default function TournamentScoreModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          {onSaveSchedule && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              {[
+                { label: 'Date', type: 'date', value: matchDate, set: setMatchDate },
+                { label: 'Kick-off', type: 'time', value: matchTime, set: setMatchTime },
+                { label: 'Venue', type: 'text', value: venue, set: setVenue },
+              ].map(f => (
+                <label key={f.label} style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  {f.label}
+                  <input
+                    type={f.type}
+                    value={f.value}
+                    required={f.type === 'date'}
+                    onChange={e => f.set(e.target.value)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      marginTop: '0.3rem',
+                      padding: '0.5rem 0.6rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.85rem',
+                      colorScheme: 'dark',
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+
           {/* Match Score Display & Inputs */}
           <div
             style={{
@@ -330,6 +378,12 @@ export default function TournamentScoreModal({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {error && (
+            <div role="alert" style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>
+              ⚠ {error}
             </div>
           )}
 

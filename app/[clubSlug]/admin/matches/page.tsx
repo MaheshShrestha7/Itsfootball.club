@@ -44,7 +44,7 @@ const FLYER_PRESETS = [
   },
   {
     name: 'Night Lights Stadium',
-    url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80'
+    url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80'
   },
   {
     name: 'Action Pitch Banner',
@@ -237,7 +237,7 @@ export default function AdminMatchesPage({
 
     const homeTeam = form.is_club_home ? club.name : cleanOpponent;
     const awayTeam = form.is_club_home ? cleanOpponent : club.name;
-    const homeLogo = form.is_club_home ? (club.logo_url || '') : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80';
+    const homeLogo = form.is_club_home ? (club.logo_url || '') : 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=100&auto=format&fit=crop&q=80';
     const awayLogo = form.is_club_home ? 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=100&auto=format&fit=crop&q=80' : (club.logo_url || '');
 
     // Combine date and time to ISO string

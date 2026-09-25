@@ -4,6 +4,7 @@ import React, { use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Trophy, Calendar, Users, ArrowRight, Layers, Award } from 'lucide-react';
+import { parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function PublicTournamentsPage({
   params,
@@ -135,7 +136,7 @@ export default function PublicTournamentsPage({
                   <div
                     style={{
                       height: '140px',
-                      background: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(11, 17, 32, 0.98)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80'})`,
+                      background: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(11, 17, 32, 0.98)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       padding: '1.25rem',
@@ -180,6 +181,10 @@ export default function PublicTournamentsPage({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
                       <Layers size={15} />
                       <span>{formatLabel}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                      <Calendar size={14} />
+                      <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                     </div>
 
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>

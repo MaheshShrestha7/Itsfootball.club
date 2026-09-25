@@ -47,6 +47,8 @@ interface EntityConfig {
   fromRow?: (row: Row) => Row;
   /** Adjusts an app object just before it is written */
   prepare?: (obj: Row) => Row;
+  /** Columns the app clears by leaving them undefined: written as NULL so the database clears too */
+  clearable?: string[];
 }
 
 // Parents first: this is also the upsert order (deletes run in reverse).
@@ -55,10 +57,14 @@ const ENTITIES: EntityConfig[] = [
   { key: 'members', table: 'club_members', extraReadSources: ['club_members_public'], fromRow: memberFromRow },
   { key: 'seasons', table: 'club_seasons' },
   { key: 'internalTeams', table: 'internal_teams' },
-  { key: 'tournaments', table: 'tournaments' },
-  { key: 'tournamentParticipants', table: 'tournament_participants' },
+  { key: 'tournaments', table: 'tournaments', clearable: ['end_date', 'group_count', 'teams_advancing_per_group'] },
+  { key: 'tournamentParticipants', table: 'tournament_participants', clearable: ['seed', 'group'] },
   { key: 'playerStats', table: 'player_stats' },
-  { key: 'matches', table: 'matches' },
+  {
+    key: 'matches',
+    table: 'matches',
+    clearable: ['winner_side', 'home_penalty_score', 'away_penalty_score', 'next_match_id', 'next_match_slot', 'tournament_group', 'home_team_source', 'away_team_source'],
+  },
   { key: 'matchEvents', table: 'match_events' },
   { key: 'events', table: 'events' },
   { key: 'sponsors', table: 'sponsors', extraReadSources: ['sponsors_public'] },
@@ -176,6 +182,7 @@ function toRow(cfg: EntityConfig, source: Row): Row | null {
   const row: Row = {};
   for (const col of columns) {
     let value = obj[col];
+    if (value === undefined && cfg.clearable?.includes(col)) value = null;
     if (value === undefined) continue;
     if (value === '' && EMPTY_TO_NULL.test(col)) value = null;
     row[col] = value;

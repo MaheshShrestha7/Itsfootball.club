@@ -18,6 +18,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function PublicTournamentDetailPage({
   params,
@@ -175,6 +176,11 @@ export default function PublicTournamentDetailPage({
                   </span>
                   <span>•</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Clock size={14} />
+                    <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
+                  </span>
+                  <span>•</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <MapPin size={14} />
                     <span>{tournament.venue || 'Stadium Arena'}</span>
                   </span>
@@ -317,7 +323,7 @@ export default function PublicTournamentDetailPage({
         {activeTab === 'standings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {tournament.format === 'group_knockout' ? (
-              ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, tournament.group_count ?? 1).map(groupLetter => {
+              GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(groupLetter => {
                 const groupStandings = getTournamentStandings(tournament.id, groupLetter);
                 return (
                   <div key={groupLetter}>

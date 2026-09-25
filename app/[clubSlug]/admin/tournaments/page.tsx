@@ -1,31 +1,13 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
+import { Tournament } from '@/lib/supabase/types';
 import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
-import {
-  Trophy,
-  Swords,
-  Users,
-  Plus,
-  Calendar,
-  Layers,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Trash2,
-  Settings,
-  Sparkles,
-  Shuffle,
-  Shield,
-  Image as ImageIcon
-} from 'lucide-react';
-import ImageUploadZone from '@/components/ImageUploadZone';
-import { DEFAULT_CREST } from '@/lib/crest';
-import { defaultSeasonLabel } from '@/lib/season';
+import TournamentFormModal from '@/components/tournament/TournamentFormModal';
+import { Trophy, Swords, Users, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
+import { parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function AdminTournamentsPage({
   params,
@@ -39,12 +21,10 @@ export default function AdminTournamentsPage({
     tournaments,
     internalTeams,
     tournamentParticipants,
-    createTournament,
     deleteTournament,
-    generateTournamentTiesheet,
     matches,
-    seasons,
     getActiveSeason,
+    repairTournaments,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -54,141 +34,12 @@ export default function AdminTournamentsPage({
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
 
   const [activeTab, setActiveTab] = useState<'tournaments' | 'internal_teams'>('tournaments');
-  const [wizardOpen, setWizardOpen] = useState(false);
+  // Upgrade tournaments made by older versions (missing fixtures, old 3rd place slots)
+  useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
+
+  const [formTarget, setFormTarget] = useState<Tournament | 'new' | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-
-  // Wizard Form State
-  const [name, setName] = useState('');
-  const [season, setSeason] = useState(activeSeason?.name || defaultSeasonLabel());
-  const [format, setFormat] = useState<TournamentFormat>('group_knockout');
-  const [venue, setVenue] = useState(club.stadium_name || 'Apex Park Stadium Arena');
-  const [bannerUrl, setBannerUrl] = useState('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(
-    new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
-  );
-  const [description, setDescription] = useState('');
-  const [pointsWin, setPointsWin] = useState(3);
-  const [groupCount, setGroupCount] = useState(2);
-  const [teamsAdvancing, setTeamsAdvancing] = useState(2);
-  const [hasThirdPlace, setHasThirdPlace] = useState(true);
-
-  // Participant selection: which internal teams are included
-  const [selectedInternalTeamIds, setSelectedInternalTeamIds] = useState<string[]>([]);
-  // External guest teams
-  const [externalTeams, setExternalTeams] = useState<{ name: string; short_name: string }[]>([
-    { name: 'St. Jude United', short_name: 'STJ' },
-    { name: 'Metro Rovers', short_name: 'ROV' },
-  ]);
-  const [newExternalName, setNewExternalName] = useState('');
-  const [newExternalCode, setNewExternalCode] = useState('');
-
-  const handleOpenWizard = () => {
-    setName('');
-    setSeason(activeSeason?.name || defaultSeasonLabel());
-    setFormat('group_knockout');
-    setVenue(club.stadium_name || 'Home Ground Arena');
-    setBannerUrl('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80');
-    setStartDate(new Date().toISOString().slice(0, 10));
-    setEndDate(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
-    setDescription('Championship cup featuring internal club teams and regional guest clubs.');
-    setPointsWin(3);
-    setGroupCount(2);
-    setTeamsAdvancing(2);
-    setHasThirdPlace(true);
-    setSelectedInternalTeamIds(clubInternalTeams.map(t => t.id));
-    setWizardOpen(true);
-  };
-
-  const handleAddExternalTeam = () => {
-    if (!newExternalName.trim()) return;
-    setExternalTeams(prev => [
-      ...prev,
-      {
-        name: newExternalName.trim(),
-        short_name: newExternalCode.trim() || newExternalName.slice(0, 3).toUpperCase(),
-      },
-    ]);
-    setNewExternalName('');
-    setNewExternalCode('');
-  };
-
-  const handleRemoveExternalTeam = (idx: number) => {
-    setExternalTeams(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleCreateTournamentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    // Build participant list
-    const participantInputs: Omit<TournamentParticipant, 'id' | 'tournament_id'>[] = [];
-
-    // 1. Add selected internal teams
-    selectedInternalTeamIds.forEach((tId, idx) => {
-      const team = clubInternalTeams.find(t => t.id === tId);
-      if (team) {
-        participantInputs.push({
-          team_type: 'internal',
-          internal_team_id: team.id,
-          name: team.name,
-          short_name: team.short_name,
-          logo_url: team.logo_url || DEFAULT_CREST,
-          color: team.color || '#10B981',
-          seed: idx + 1,
-        });
-      }
-    });
-
-    // 2. Add external teams
-    externalTeams.forEach((ext, idx) => {
-      participantInputs.push({
-        team_type: 'external',
-        name: ext.name,
-        short_name: ext.short_name,
-        logo_url: DEFAULT_CREST,
-        color: '#2563EB',
-        seed: selectedInternalTeamIds.length + idx + 1,
-      });
-    });
-
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-
-    const newTourn = createTournament(
-      {
-        club_id: club.id,
-        name: name.trim(),
-        slug: `${slug}-${Date.now().toString().slice(-4)}`,
-        season,
-        format,
-        status: 'draft',
-        points_win: Number(pointsWin),
-        points_draw: 1,
-        points_loss: 0,
-        group_count: format === 'group_knockout' ? Number(groupCount) : undefined,
-        teams_advancing_per_group: format === 'group_knockout' ? Number(teamsAdvancing) : undefined,
-        has_third_place_match: hasThirdPlace,
-        start_date: startDate,
-        end_date: endDate,
-        venue,
-        description,
-        banner_url: bannerUrl.trim() || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80',
-      },
-      participantInputs
-    );
-
-    // Auto-generate tiesheet if participants >= 2
-    if (participantInputs.length >= 2) {
-      generateTournamentTiesheet(newTourn.id);
-    }
-
-    setFeedback(`✓ Created tournament "${newTourn.name}" with tiesheet & ${participantInputs.length} teams!`);
-    setWizardOpen(false);
-    setTimeout(() => setFeedback(null), 4000);
-  };
+  const handleOpenWizard = () => setFormTarget('new');
 
   const handleDeleteTourn = (tournId: string, tournName: string) => {
     if (confirm(`Are you sure you want to delete tournament "${tournName}" and its fixtures?`)) {
@@ -435,7 +286,7 @@ export default function AdminTournamentsPage({
                     <div
                       style={{
                         height: '110px',
-                        background: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80'})`,
+                        background: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         padding: '1rem',
@@ -473,6 +324,22 @@ export default function AdminTournamentsPage({
                           {tourn.status}
                         </span>
 
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <button
+                          onClick={() => setFormTarget(tourn)}
+                          style={{
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: 'none',
+                            color: '#FFFFFF',
+                            padding: '0.35rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                          title="Edit Tournament"
+                          aria-label={`Edit ${tourn.name}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
                         <button
                           onClick={() => handleDeleteTourn(tourn.id, tourn.name)}
                           style={{
@@ -484,9 +351,11 @@ export default function AdminTournamentsPage({
                             cursor: 'pointer',
                           }}
                           title="Delete Tournament"
+                          aria-label={`Delete ${tourn.name}`}
                         >
                           <Trash2 size={14} />
                         </button>
+                        </div>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -510,6 +379,10 @@ export default function AdminTournamentsPage({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#10B981', fontWeight: 700 }}>
                         <Layers size={14} />
                         <span>{formatLabel}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <Calendar size={13} />
+                        <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                       </div>
 
                       <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
@@ -598,458 +471,17 @@ export default function AdminTournamentsPage({
         <InternalTeamsManager clubSlug={club.slug} />
       )}
 
-      {/* Setup Tournament Wizard Modal */}
-      {wizardOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(5, 10, 20, 0.88)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
+      {formTarget && (
+        <TournamentFormModal
+          club={club}
+          tournament={formTarget === 'new' ? undefined : formTarget}
+          onClose={() => setFormTarget(null)}
+          onSaved={msg => {
+            setFormTarget(null);
+            setFeedback(msg);
+            setTimeout(() => setFeedback(null), 4000);
           }}
-          onClick={() => setWizardOpen(false)}
-        >
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #111827 0%, #0F172A 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '680px',
-              maxHeight: '92vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(16, 185, 129, 0.15)',
-              color: '#FFFFFF',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Trophy size={20} color="#10B981" />
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-                  Tournament Setup Wizard
-                </h3>
-              </div>
-              <button
-                onClick={() => setWizardOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleCreateTournamentSubmit} style={{ padding: '1.5rem' }}>
-              {/* Basic Info */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                    Tournament Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Apex Summer Intra-Club Cup"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '8px',
-                      color: '#FFFFFF',
-                      fontSize: '0.88rem',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                    Season
-                  </label>
-                  <input
-                    type="text"
-                    value={season}
-                    onChange={e => setSeason(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '8px',
-                      color: '#FFFFFF',
-                      fontSize: '0.88rem',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Tournament Cover Photo / Banner */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <ImageUploadZone
-                  label="Tournament Cover Banner (16:9)"
-                  recommendedText="Wide 16:9 banner for bracket, spectator tiesheet, and matchday programs"
-                  currentImageUrl={bannerUrl}
-                  onUploadComplete={url => setBannerUrl(url)}
-                  folder="tournaments"
-                  aspectRatio="16:9"
-                />
-                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Stadium Presets:</span>
-                  {[
-                    { label: 'Champions Stadium', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1600&auto=format&fit=crop&q=80' },
-                    { label: 'Floodlit Arena', url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80' },
-                    { label: 'Derby Night', url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80' },
-                    { label: 'Metro Pitch', url: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=1600&auto=format&fit=crop&q=80' },
-                  ].map(p => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setBannerUrl(p.url)}
-                      className="btn btn-sm"
-                      style={{
-                        fontSize: '0.7rem',
-                        padding: '2px 7px',
-                        background: bannerUrl === p.url ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
-                        color: bannerUrl === p.url ? '#10B981' : '#FFF',
-                        border: bannerUrl === p.url ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)'
-                      }}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tournament Format Selector */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                  Tournament Format (Soccer Specific)
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
-                  {[
-                    {
-                      id: 'knockout',
-                      label: 'Knockout Bracket',
-                      desc: 'Single elimination with optional 3rd place',
-                    },
-                    {
-                      id: 'group_knockout',
-                      label: 'Group Stage + KO',
-                      desc: 'World Cup / UCL: Round-robin groups into knockout',
-                    },
-                    {
-                      id: 'league',
-                      label: 'Round-Robin League',
-                      desc: 'All-play-all points table & standings',
-                    },
-                  ].map(f => (
-                    <div
-                      key={f.id}
-                      onClick={() => setFormat(f.id as TournamentFormat)}
-                      style={{
-                        padding: '0.85rem',
-                        borderRadius: '10px',
-                        border: format === f.id ? '2px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
-                        background: format === f.id ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 0, 0, 0.35)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{ fontWeight: 800, fontSize: '0.85rem', color: format === f.id ? '#10B981' : '#FFFFFF' }}>
-                        {f.label}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                        {f.desc}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Format-Specific Rules */}
-              {format === 'group_knockout' && (
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
-                    padding: '1rem',
-                    marginBottom: '1.25rem',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr',
-                    gap: '1rem',
-                  }}
-                >
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Group Count</label>
-                    <select
-                      value={groupCount}
-                      onChange={e => {
-                        const newCount = parseInt(e.target.value, 10);
-                        setGroupCount(newCount);
-                        if (newCount === 1 && teamsAdvancing < 2) {
-                          setTeamsAdvancing(2);
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        background: '#1F2937',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '6px',
-                        color: '#FFFFFF',
-                        marginTop: '3px',
-                      }}
-                    >
-                      <option value={1}>1 Group (Single Pool • Group A)</option>
-                      <option value={2}>2 Groups (Group A & B)</option>
-                      <option value={3}>3 Groups (Group A, B, C)</option>
-                      <option value={4}>4 Groups (Group A, B, C, D)</option>
-                      <option value={8}>8 Groups (Group A - H)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {groupCount === 1 ? 'Teams Advancing to KO' : 'Teams Advance / Group'}
-                    </label>
-                    <select
-                      value={teamsAdvancing}
-                      onChange={e => setTeamsAdvancing(parseInt(e.target.value, 10))}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        background: '#1F2937',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '6px',
-                        color: '#FFFFFF',
-                        marginTop: '3px',
-                      }}
-                    >
-                      {groupCount === 1 ? (
-                        <>
-                          <option value={2}>Min 2 Teams (Direct to Grand Final)</option>
-                          <option value={4}>4 Teams (Semi-Finals & Final)</option>
-                          <option value={8}>8 Teams (Quarter-Finals & Final)</option>
-                          <option value={16}>Max 16 Teams (Round of 16 & Final)</option>
-                        </>
-                      ) : groupCount === 2 ? (
-                        <>
-                          <option value={1}>Top 1 per Group (2 Teams Total • Grand Final)</option>
-                          <option value={2}>Top 2 per Group (4 Teams Total • Semi-Finals)</option>
-                          <option value={4}>Top 4 per Group (8 Teams Total • Quarter-Finals)</option>
-                          <option value={8}>Top 8 per Group (16 Teams Total • Round of 16)</option>
-                        </>
-                      ) : groupCount === 4 ? (
-                        <>
-                          <option value={1}>Top 1 per Group (4 Teams Total • Semi-Finals)</option>
-                          <option value={2}>Top 2 per Group (8 Teams Total • Quarter-Finals)</option>
-                          <option value={4}>Top 4 per Group (16 Teams Total • Round of 16)</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value={1}>Top 1 per Group</option>
-                          <option value={2}>Top 2 per Group</option>
-                          <option value={4}>Top 4 per Group</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.78rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={hasThirdPlace}
-                        onChange={e => setHasThirdPlace(e.target.checked)}
-                      />
-                      Include 3rd Place Match
-                    </label>
-                  </div>
-                  <div
-                    style={{
-                      gridColumn: '1 / -1',
-                      fontSize: '0.72rem',
-                      color: '#10B981',
-                      background: 'rgba(16, 185, 129, 0.08)',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(16, 185, 129, 0.2)',
-                    }}
-                  >
-                    Format Summary: {groupCount === 1 ? 'Single Group A (All squads play round-robin)' : `${groupCount} Groups (Squads play round-robin in group)`} &rarr;{' '}
-                    {groupCount * teamsAdvancing <= 2
-                      ? 'Min 2 teams advance straight to Championship Grand Final (1st vs 2nd)'
-                      : groupCount * teamsAdvancing <= 5
-                      ? '4 teams advance to Semi-Finals (1st vs 4th, 2nd vs 3rd) then Final'
-                      : groupCount * teamsAdvancing <= 11
-                      ? '8 teams advance to Quarter-Finals then Semi-Finals & Final'
-                      : '16 teams advance to Round of 16'}
-                  </div>
-                </div>
-              )}
-
-              {/* Internal Teams Selection */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                    Include Internal Teams ({selectedInternalTeamIds.length} Selected)
-                  </label>
-                  <span style={{ fontSize: '0.72rem', color: '#10B981' }}>
-                    From Your Club Squads
-                  </span>
-                </div>
-
-                {clubInternalTeams.length === 0 ? (
-                  <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    No internal teams created yet. Switch to the &quot;Internal Teams&quot; tab to set up squads first.
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
-                    {clubInternalTeams.map(t => {
-                      const isSelected = selectedInternalTeamIds.includes(t.id);
-                      return (
-                        <div
-                          key={t.id}
-                          onClick={() =>
-                            setSelectedInternalTeamIds(prev =>
-                              prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]
-                            )
-                          }
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '8px',
-                            background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                            border: isSelected ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <input type="checkbox" checked={isSelected} onChange={() => {}} />
-                          <img loading="lazy" decoding="async" width={20} height={20} src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t.name}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Guest / External Teams */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  External Guest Teams ({externalTeams.length})
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Guest Club Name (e.g. Titan Athletic FC)"
-                    value={newExternalName}
-                    onChange={e => setNewExternalName(e.target.value)}
-                    style={{
-                      flex: 2,
-                      padding: '0.5rem 0.75rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: '#FFFFFF',
-                      fontSize: '0.82rem',
-                    }}
-                  />
-                  <input
-                    type="text"
-                    maxLength={4}
-                    placeholder="Code"
-                    value={newExternalCode}
-                    onChange={e => setNewExternalCode(e.target.value.toUpperCase())}
-                    style={{
-                      width: '70px',
-                      padding: '0.5rem',
-                      textAlign: 'center',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: '#FFFFFF',
-                      fontSize: '0.82rem',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddExternalTeam}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {externalTeams.map((ext, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        padding: '3px 8px',
-                        background: 'rgba(59, 130, 246, 0.12)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        borderRadius: '12px',
-                        color: '#93C5FD',
-                        fontSize: '0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      {ext.name} ({ext.short_name})
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExternalTeam(idx)}
-                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setWizardOpen(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.65rem 1.25rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: '0.65rem 1.5rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  <Sparkles size={16} />
-                  <span>Generate Tiesheet & Launch</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        />
       )}
     </div>
   );

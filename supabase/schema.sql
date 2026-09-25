@@ -1018,7 +1018,7 @@ CREATE INDEX IF NOT EXISTS idx_tournament_participants_tourn ON tournament_parti
 
 ALTER TABLE matches
     ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournaments(id) ON DELETE CASCADE,
-    ADD COLUMN IF NOT EXISTS tournament_stage VARCHAR(32) CHECK (tournament_stage IN ('group', 'round_of_16', 'quarter_final', 'semi_final', 'final', 'third_place')),
+    ADD COLUMN IF NOT EXISTS tournament_stage VARCHAR(32) CHECK (tournament_stage IN ('group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'final', 'third_place')),
     ADD COLUMN IF NOT EXISTS tournament_group VARCHAR(16),
     ADD COLUMN IF NOT EXISTS tournament_round INTEGER,
     ADD COLUMN IF NOT EXISTS tournament_match_number INTEGER,

@@ -26,11 +26,16 @@ export default function TournamentMatchesList({
   // Extract available stages
   const availableStages = Array.from(new Set(matches.map(m => m.tournament_stage || 'group')));
 
-  const filteredMatches = matches.filter(m => {
-    if (stageFilter !== 'all' && (m.tournament_stage || 'group') !== stageFilter) return false;
-    if (statusFilter !== 'all' && m.status !== statusFilter) return false;
-    return true;
-  });
+  const filteredMatches = matches
+    .filter(m => {
+      if (stageFilter !== 'all' && (m.tournament_stage || 'group') !== stageFilter) return false;
+      if (statusFilter !== 'all' && m.status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) =>
+      `${a.match_date} ${a.match_time || ''}`.localeCompare(`${b.match_date} ${b.match_time || ''}`) ||
+      (a.tournament_match_number ?? 0) - (b.tournament_match_number ?? 0)
+    );
 
   if (matches.length === 0) {
     return (
