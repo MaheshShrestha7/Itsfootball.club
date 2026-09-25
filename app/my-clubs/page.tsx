@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -24,9 +24,25 @@ import {
 } from 'lucide-react';
 
 export default function MyClubsPage() {
-  const { clubs, matches } = useClub();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { clubs, matches, syncStatus } = useClub();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // Club list still arriving from the database: don't show "no clubs" yet
+  const isLoading = authLoading || (isAuthenticated && syncStatus.phase === 'loading');
+
+  // A confirmation link that failed (expired / already used) lands here with the reason in the URL
+  const [linkError, setLinkError] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1) || window.location.search.slice(1));
+    const reason = params.get('error_description');
+    if (!reason) return;
+    setLinkError(
+      params.get('error_code') === 'otp_expired'
+        ? 'That confirmation link has expired or was already used. Sign in, or request a new confirmation email from the sign-in window.'
+        : reason
+    );
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   // Determine clubs owned by the active user
   const ownedClubs = useMemo(() => {
@@ -55,6 +71,11 @@ export default function MyClubsPage() {
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3rem 1.5rem', flex: 1, maxWidth: '1200px' }}>
+        {linkError && (
+          <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid #EF4444', color: '#FCA5A5', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            {linkError}
+          </div>
+        )}
         {/* Loading state */}
         {isLoading ? (
           <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>

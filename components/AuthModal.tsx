@@ -15,7 +15,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redirectTo = '/my-clubs' }: AuthModalProps) {
   const router = useRouter();
-  const { login, signup } = useAuth();
+  const { login, signup, resendConfirmation } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
 
   const [email, setEmail] = useState('');
@@ -24,6 +24,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [noticeMsg, setNoticeMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Offer to resend the confirmation email when the account isn't confirmed yet
+  const [canResend, setCanResend] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -44,6 +46,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     e.preventDefault();
     setErrorMsg(null);
     setNoticeMsg(null);
+    setCanResend(false);
     setSubmitting(true);
 
     try {
@@ -51,6 +54,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         const res = await login(email, password);
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to sign in. Please verify credentials.');
+          setCanResend(/confirm your email/i.test(res.error || ''));
         } else {
           onClose();
           if (redirectTo) {
@@ -62,7 +66,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to register account.');
         } else if (res.needsEmailConfirmation) {
-          setNoticeMsg('Account created. Check your inbox and click the confirmation link, then sign in.');
+          setNoticeMsg(`Account created. We sent a confirmation link to ${email.trim()}. Click it to finish signing in (check your spam folder too).`);
+          setCanResend(true);
+          setMode('login');
+          setPassword('');
         } else {
           onClose();
           if (redirectTo) {
@@ -75,6 +82,15 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleResend = async () => {
+    setErrorMsg(null);
+    setSubmitting(true);
+    const res = await resendConfirmation(email);
+    setSubmitting(false);
+    if (res.success) setNoticeMsg(`Confirmation email sent again to ${email.trim()}.`);
+    else setErrorMsg(res.error || 'Could not resend the confirmation email.');
   };
 
   return createPortal(
@@ -269,6 +285,12 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             <div role="status" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10B981', color: '#6EE7B7', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.8rem' }}>
               {noticeMsg}
             </div>
+          )}
+
+          {canResend && (
+            <button type="button" onClick={handleResend} disabled={submitting} className="btn btn-secondary" style={{ height: '40px', width: '100%' }}>
+              Resend confirmation email
+            </button>
           )}
 
           <button

@@ -132,6 +132,17 @@ export function isPlayerMember(member: Pick<ClubMember, 'role' | 'roles'>): bool
   return member.role.split(',').some(r => r.trim().toLowerCase() === 'player');
 }
 
+/** Permission level behind the squad role labels, e.g. 'Player, Club Admin, Manager' -> 'admin' */
+export function toClubRole(role?: string | null, roles?: string[] | null): 'owner' | 'admin' | 'staff' | 'player' | 'member' | 'supporter' {
+  const labels = [...(roles || []), ...(role || '').split(',')].map(r => r.trim().toLowerCase());
+  if (labels.includes('owner')) return 'owner';
+  if (labels.includes('admin') || labels.includes('club admin')) return 'admin';
+  if (labels.some(l => ['staff', 'manager', 'coach', 'executive committee', 'executive committe'].includes(l))) return 'staff';
+  if (labels.includes('player')) return 'player';
+  if (labels.includes('supporter')) return 'supporter';
+  return 'member';
+}
+
 export interface PlayerStats {
   id: string;
   club_id: string;

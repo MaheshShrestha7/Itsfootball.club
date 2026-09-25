@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { toClubRole } from './types';
 
 export type AuthCheck =
   | { ok: true; userId: string; token: string; supabase: SupabaseClient }
@@ -28,11 +29,13 @@ export async function requireClubAdmin(request: Request): Promise<AuthCheck> {
   if (error || !data.user) return { ok: false, status: 401, error: 'Your session has expired. Please sign in again.' };
 
   const userId = data.user.id;
-  const [owned, admin] = await Promise.all([
+  const [owned, memberships] = await Promise.all([
     supabase.from('clubs').select('id').eq('owner_id', userId).limit(1),
-    supabase.from('club_members').select('id').eq('user_id', userId).in('role', ['owner', 'admin']).limit(1),
+    supabase.from('club_members').select('role, roles').eq('user_id', userId),
   ]);
-  if (!owned.data?.length && !admin.data?.length) {
+  // Roles are squad labels such as 'Player, Club Admin'
+  const isAdmin = (memberships.data || []).some(m => ['owner', 'admin'].includes(toClubRole(m.role, m.roles)));
+  if (!owned.data?.length && !isAdmin) {
     return { ok: false, status: 403, error: 'Only club administrators can upload files.' };
   }
   return { ok: true, userId, token, supabase };

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { ClubRole } from './supabase/types';
+import { ClubRole, toClubRole } from './supabase/types';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 
 export interface UserProfile {
@@ -28,6 +28,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (email: string, fullName: string, password: string) => Promise<AuthResult>;
+  /** Sends the sign-up confirmation email again */
+  resendConfirmation: (email: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   getUserRoleForClub: (clubId: string) => ClubRole | null;
   hasClubAdminAccess: (clubId: string) => boolean;
@@ -39,11 +41,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const MIN_PASSWORD_LENGTH = 8;
-const KNOWN_ROLES: ClubRole[] = ['owner', 'admin', 'staff', 'player', 'member', 'supporter'];
 // Browser-side leftovers from the old fake sign-in; removed on load
 const LEGACY_AUTH_KEY = 'itsfootball_auth_session_v1';
 const LEGACY_MEMBER_SESSION_PREFIX = 'itsfootball_member_session_';
 const CLUB_STATE_KEY = 'itsfootball_state_v1';
+
+/** Where the confirmation link in the sign-up email brings people back to (this site, not the Supabase default) */
+const confirmRedirect = () => `${window.location.origin}/my-clubs`;
 
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
@@ -68,14 +72,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadRoles = useCallback(async (userId: string) => {
     const client = getSupabaseClient();
     if (!client) return;
+    // Links approved memberships made under this email (by a club admin) to the account, then
+    // returns them. Falls back to already-linked rows if the migration isn't applied yet.
+    const claimMemberships = async () => {
+      const claimed = await client.rpc('claim_my_memberships');
+      return claimed.error ? client.from('club_members').select('club_id, role').eq('user_id', userId) : claimed;
+    };
     const [owned, memberships] = await Promise.all([
       client.from('clubs').select('id').eq('owner_id', userId),
-      client.from('club_members').select('club_id, role').eq('user_id', userId),
+      claimMemberships(),
     ]);
 
     const roles: Record<string, ClubRole> = {};
-    (memberships.data || []).forEach(row => {
-      if (KNOWN_ROLES.includes(row.role)) roles[row.club_id] = row.role;
+    // Squad roles are labels ('Player, Club Admin'), so map them to a permission level
+    ((memberships.data || []) as { club_id: string; role: string }[]).forEach(row => {
+      roles[row.club_id] = toClubRole(row.role);
     });
     (owned.data || []).forEach(row => {
       roles[row.id] = 'owner';
@@ -164,12 +175,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: cleanEmail,
       password,
       // No roles here: user metadata can be edited by the user, so it must never grant access
-      options: { data: { full_name: fullName.trim() } },
+      options: { data: { full_name: fullName.trim() }, emailRedirectTo: confirmRedirect() },
     });
     if (error) return { success: false, error: friendlyAuthError(error.message) };
     // With email confirmation switched on there is no session until the link is clicked
     if (!data.session) return { success: true, needsEmailConfirmation: true };
     return { success: true };
+  }, []);
+
+  const resendConfirmation = useCallback(async (email: string): Promise<AuthResult> => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail) return { success: false, error: 'Enter your email address first.' };
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'The authentication service is not configured.' };
+    const { error } = await client.auth.resend({ type: 'signup', email: cleanEmail, options: { emailRedirectTo: confirmRedirect() } });
+    return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
   }, []);
 
   const logout = useCallback(async () => {
@@ -230,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         signup,
+        resendConfirmation,
         logout,
         getUserRoleForClub,
         hasClubAdminAccess,
