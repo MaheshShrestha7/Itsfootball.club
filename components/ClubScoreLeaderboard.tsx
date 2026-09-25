@@ -17,6 +17,7 @@ import {
   X,
   Zap
 } from 'lucide-react';
+import PlayerAvatar from './PlayerAvatar';
 
 interface ClubScoreLeaderboardProps {
   club: Club;
@@ -223,11 +224,7 @@ export default function ClubScoreLeaderboard({
                 </div>
 
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <img loading="lazy" decoding="async" width={42} height={42}
-                    src={player.photo_url}
-                    alt={`${player.full_name} photo`}
-                    style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
-                  />
+                  <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
                   {profile.current_streak >= 3 && (
                     <div style={{
                       position: 'absolute',
@@ -393,11 +390,7 @@ export default function ClubScoreLeaderboard({
 
             {/* Player Profile Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <img loading="lazy" decoding="async" width={64} height={64}
-                src={selectedPlayerModal.member.photo_url}
-                alt={`${selectedPlayerModal.member.full_name} photo`}
-                style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', border: '2px solid var(--club-primary)' }}
-              />
+              <PlayerAvatar photoUrl={selectedPlayerModal.member.photo_url} name={selectedPlayerModal.member.full_name} size={64} eager style={{ borderRadius: '12px', border: '2px solid var(--club-primary)' }} />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>

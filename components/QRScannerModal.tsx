@@ -17,6 +17,7 @@ import {
   VolumeX,
   Ticket
 } from 'lucide-react';
+import PlayerAvatar from './PlayerAvatar';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -457,18 +458,7 @@ export default function QRScannerModal({
               {/* Member Profile Snapshot if verified */}
               {scanResult.member ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem' }}>
-                  <img loading="eager" decoding="async" width={54} height={54}
-                    src={scanResult.member.photo_url}
-                    alt={`${scanResult.member.full_name} photo`}
-                    style={{
-                      width: '54px',
-                      height: '54px',
-                      borderRadius: '12px',
-                      objectFit: 'cover',
-                      border: '2px solid #10B981',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                    }}
-                  />
+                  <PlayerAvatar photoUrl={scanResult.member.photo_url} name={scanResult.member.full_name} size={54} eager style={{ borderRadius: '12px', border: '2px solid #10B981', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1.05rem' }}>
                       {scanResult.member.full_name}

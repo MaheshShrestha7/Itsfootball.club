@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { Shield, CheckCircle2, XCircle, AlertTriangle, ArrowLeft, CreditCard, RefreshCw } from 'lucide-react';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default function VerifyPassPage({
   params,
@@ -143,11 +144,7 @@ export default function VerifyPassPage({
                   alignItems: 'center',
                   gap: '1.25rem',
                 }}>
-                  <img loading="eager" decoding="async" width={72} height={72}
-                    src={result.member.photo_url}
-                    alt={`${result.member.full_name} photo`}
-                    style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover' }}
-                  />
+                  <PlayerAvatar photoUrl={result.member.photo_url} name={result.member.full_name} size={72} eager style={{ borderRadius: '14px' }} />
                   <div>
                     <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
                       {result.member.full_name}

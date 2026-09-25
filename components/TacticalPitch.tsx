@@ -436,6 +436,8 @@ export default function TacticalPitch({
   }, [isControlled, onPositionsChange]);
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  // Photos that failed to load fall back to the jersey number instead of a broken-image icon
+  const [brokenPhotos, setBrokenPhotos] = useState<Set<string>>(() => new Set());
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [dragCoordinateFeedback, setDragCoordinateFeedback] = useState<{ x: number; y: number; zone: string } | null>(null);
@@ -1047,7 +1049,8 @@ export default function TacticalPitch({
           const isDragging = draggingPlayerId === pos.id;
           const isSelected = selectedPlayerId === pos.id;
           const isDropTarget = (hoveredDropTargetId === pos.id || externalDropTargetId === pos.id) && !isDragging;
-          const photoUrl = empty ? undefined : players.find(p => p.id === pos.member_id)?.photo_url;
+          const rawPhoto = empty ? undefined : players.find(p => p.id === pos.member_id)?.photo_url;
+          const photoUrl = rawPhoto && !brokenPhotos.has(rawPhoto) ? rawPhoto : undefined;
 
           return (
             <div
@@ -1143,6 +1146,7 @@ export default function TacticalPitch({
                       src={photoUrl}
                       alt={`${pos.name} photo`}
                       draggable={false}
+                      onError={() => setBrokenPhotos(prev => new Set(prev).add(photoUrl))}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                     />
                     <span style={{

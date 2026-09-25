@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 import { newId } from '@/lib/ids';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default function AdminMembersPage({
   params,
@@ -569,17 +570,7 @@ export default function AdminMembersPage({
                       {/* Top Header of Card */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <img loading="lazy" decoding="async" width={46} height={46}
-                            src={member.photo_url}
-                            alt={`${member.full_name} photo`}
-                            style={{
-                              width: '46px',
-                              height: '46px',
-                              borderRadius: '12px',
-                              objectFit: 'cover',
-                              border: '1px solid var(--border-subtle)',
-                            }}
-                          />
+                          <PlayerAvatar photoUrl={member.photo_url} name={member.full_name} size={46} style={{ borderRadius: '12px', border: '1px solid var(--border-subtle)' }} />
                           <div>
                             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
                               {member.full_name}

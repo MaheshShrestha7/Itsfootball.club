@@ -37,6 +37,7 @@ import {
   Check,
   ChevronRight
 } from 'lucide-react';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default function MemberPortalPage({
   params,
@@ -761,18 +762,7 @@ export default function MemberPortalPage({
               borderTop: `4px solid ${club.primary_color}`,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img loading="lazy" decoding="async" width={52} height={52}
-                  src={activeMember.photo_url}
-                  alt={`${activeMember.full_name} photo`}
-                  style={{
-                    width: '52px',
-                    height: '52px',
-                    borderRadius: '14px',
-                    objectFit: 'cover',
-                    border: `2px solid ${club.primary_color}`,
-                    background: '#000000',
-                  }}
-                />
+                <PlayerAvatar photoUrl={activeMember.photo_url} name={activeMember.full_name} size={52} style={{ borderRadius: '14px', border: `2px solid ${club.primary_color}` }} />
 
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

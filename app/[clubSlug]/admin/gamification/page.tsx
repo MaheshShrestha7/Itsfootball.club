@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   UserCheck
 } from 'lucide-react';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default function AdminGamificationPage({
   params,
@@ -423,11 +424,7 @@ export default function AdminGamificationPage({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <img loading="lazy" decoding="async" width={30} height={30}
-                        src={player.photo_url}
-                        alt={`${player.full_name} photo`}
-                        style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }}
-                      />
+                      <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={30} style={{ borderRadius: '6px' }} />
                       <div>
                         <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{player.full_name}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>

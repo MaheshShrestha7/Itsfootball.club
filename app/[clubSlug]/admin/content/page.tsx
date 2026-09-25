@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, use } from 'react';
+import { fallbackToBrandImage } from "@/lib/image-fallback";
 import { useClub } from '@/lib/club-context';
 import { NewsArticle } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
@@ -167,7 +168,7 @@ export default function AdminContentPage({
           >
             <div style={{ display: 'flex', gap: '1.25rem', flex: 1, minWidth: '300px' }}>
               <img loading="lazy" decoding="async" width={120} height={80}
-                src={article.cover_image_url}
+                src={article.cover_image_url} onError={fallbackToBrandImage}
                 alt={article.title}
                 style={{ width: '120px', height: '80px', borderRadius: '10px', objectFit: 'cover' }}
               />

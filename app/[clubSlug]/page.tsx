@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use, useMemo } from 'react';
+import { fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -931,7 +932,7 @@ export default function ClubPublicPage({
                       >
                         <div style={{ height: '200px', position: 'relative' }}>
                           <img loading="eager" decoding="async"
-                            src={activeSlideNews.cover_image_url || club.banner_url}
+                            src={activeSlideNews.cover_image_url || club.banner_url} onError={fallbackToBrandImage}
                             alt={activeSlideNews.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -1074,7 +1075,7 @@ export default function ClubPublicPage({
                 }}>
                   <div style={{ height: '220px', position: 'relative' }}>
                     <img loading="eager" decoding="async"
-                      src={currentSlide.bgImage}
+                      src={currentSlide.bgImage} onError={fallbackToBrandImage}
                       alt={currentSlide.title}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
@@ -1714,7 +1715,7 @@ export default function ClubPublicPage({
               >
                 <div style={{ height: '240px', position: 'relative' }}>
                   <img loading="lazy" decoding="async"
-                    src={featuredArticle.cover_image_url}
+                    src={featuredArticle.cover_image_url} onError={fallbackToBrandImage}
                     alt={featuredArticle.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -1759,7 +1760,7 @@ export default function ClubPublicPage({
                   }}
                 >
                   <img loading="lazy" decoding="async" width={90} height={90}
-                    src={article.cover_image_url}
+                    src={article.cover_image_url} onError={fallbackToBrandImage}
                     alt={article.title}
                     style={{ width: '90px', height: '90px', borderRadius: '10px', objectFit: 'cover' }}
                   />
@@ -1890,11 +1891,7 @@ export default function ClubPublicPage({
                 >
                   {/* Photo & Number Banner */}
                   <div style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
-                    <img loading="lazy" decoding="async"
-                      src={player.photo_url}
-                      alt={`${player.full_name} photo`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.9), transparent)' }} />
                     <div style={{
                       position: 'absolute',
@@ -2078,11 +2075,7 @@ export default function ClubPublicPage({
                         {index + 1}
                       </div>
 
-                      <img loading="lazy" decoding="async" width={36} height={36}
-                        src={item.player?.photo_url}
-                        alt={`${(item.player?.full_name || 'Player')} photo`}
-                        style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }}
-                      />
+                      <PlayerAvatar photoUrl={item.player?.photo_url} name={item.player?.full_name || 'Player'} size={36} style={{ borderRadius: '8px' }} />
 
                       <div>
                         <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>{item.player?.full_name}</div>
@@ -2230,7 +2223,7 @@ export default function ClubPublicPage({
             padding: '2rem',
           }}>
             <img loading="lazy" decoding="async"
-              src={activeNewsModal.cover_image_url}
+              src={activeNewsModal.cover_image_url} onError={fallbackToBrandImage}
               alt={activeNewsModal.title}
               style={{ width: '100%', height: '220px', borderRadius: '12px', objectFit: 'cover', marginBottom: '1.25rem' }}
             />
