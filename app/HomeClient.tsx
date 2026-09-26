@@ -156,7 +156,7 @@ export default function PlatformHomePage() {
           </div>
 
           {/* Quick Pillar Grid */}
-          <div style={{
+          <div className="hero-pillars" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1.25rem',
