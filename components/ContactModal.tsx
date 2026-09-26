@@ -168,8 +168,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Your Full Name *</label>
-                <input
+                <label htmlFor="contactmodal-your-full-name" className="form-label">Your Full Name *</label>
+                <input id="contactmodal-your-full-name"
                   type="text"
                   required
                   className="form-input"
@@ -180,8 +180,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               </div>
 
               <div className="form-group">
-                <label className="form-label">Email Address *</label>
-                <input
+                <label htmlFor="contactmodal-email-address" className="form-label">Email Address *</label>
+                <input id="contactmodal-email-address"
                   type="email"
                   required
                   className="form-input"
@@ -194,8 +194,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Phone Number (Optional)</label>
-                <input
+                <label htmlFor="contactmodal-phone-number-optional" className="form-label">Phone Number (Optional)</label>
+                <input id="contactmodal-phone-number-optional"
                   type="tel"
                   className="form-input"
                   placeholder="+1 (555) 000-0000"
@@ -205,8 +205,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               </div>
 
               <div className="form-group">
-                <label className="form-label">Inquiry Purpose</label>
-                <select
+                <label htmlFor="contactmodal-inquiry-purpose" className="form-label">Inquiry Purpose</label>
+                <select id="contactmodal-inquiry-purpose"
                   className="form-select"
                   value={inquiryType}
                   onChange={e => setInquiryType(e.target.value as InquiryType)}
@@ -221,8 +221,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             </div>
 
             <div className="form-group">
-              <label className="form-label">Detailed Message *</label>
-              <textarea
+              <label htmlFor="contactmodal-detailed-message" className="form-label">Detailed Message *</label>
+              <textarea id="contactmodal-detailed-message"
                 required
                 rows={4}
                 className="form-textarea"

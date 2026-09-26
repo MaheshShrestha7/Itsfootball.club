@@ -232,7 +232,7 @@ export default function AdminMatchesPage({
     const cleanCompetition = form.competition.replace(/<[^>]*>?/gm, '').trim() || (form.match_type === 'internal' ? 'Intra-Squad Match' : form.match_type === 'tournament' ? 'Cup Tournament' : 'Club Friendly');
 
     if (!cleanOpponent) {
-      alert('Please provide an Opponent Name or internal squad name.');
+      showToast('Please provide an opponent name or internal squad name.');
       return;
     }
 
@@ -667,7 +667,7 @@ export default function AdminMatchesPage({
                       padding: '2px 6px',
                       borderRadius: '4px',
                       background: 'rgba(0,0,0,0.75)',
-                      fontSize: '0.65rem',
+                      fontSize: '0.7rem',
                       fontWeight: 800,
                       color: '#FFFFFF',
                       textTransform: 'uppercase'
@@ -684,7 +684,7 @@ export default function AdminMatchesPage({
                         padding: '2px 6px',
                         borderRadius: '4px',
                         background: 'var(--club-primary)',
-                        fontSize: '0.62rem',
+                        fontSize: '0.7rem',
                         fontWeight: 800,
                         color: '#FFFFFF'
                       }}
@@ -701,7 +701,7 @@ export default function AdminMatchesPage({
                       {m.competition}
                     </span>
                     {m.season && (
-                      <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.06)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
                         {m.season}
                       </span>
                     )}
@@ -1100,7 +1100,7 @@ export default function AdminMatchesPage({
                         type="button"
                         onClick={() => setForm({ ...form, competition: preset })}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', height: 'auto' }}
+                        style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', height: 'auto' }}
                       >
                         {preset}
                       </button>
@@ -1166,10 +1166,10 @@ export default function AdminMatchesPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
+                  <label htmlFor="matches-venue-side" className="form-label">
                     Venue Side
                   </label>
-                  <select
+                  <select id="matches-venue-side"
                     value={form.is_club_home ? 'home' : 'away'}
                     onChange={e => setForm({ ...form, is_club_home: e.target.value === 'home' })}
                     className="form-input"

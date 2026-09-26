@@ -338,7 +338,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               }}
             >
               <div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Turnstile QR Token
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem', color: '#FFFFFF', fontWeight: 700, marginTop: '0.1rem' }}>
@@ -384,7 +384,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
             >
               <span
                 style={{
-                  fontSize: '0.65rem',
+                  fontSize: '0.7rem',
                   fontWeight: 700,
                   color: 'var(--text-muted)',
                   background: 'rgba(0,0,0,0.6)',

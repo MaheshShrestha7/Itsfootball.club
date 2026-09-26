@@ -295,10 +295,10 @@ function AvailabilityHub() {
             {/* Match Selector */}
             {clubMatches.length > 0 && (
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                <label htmlFor="availability-availability-for" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                   Availability For:
                 </label>
-                <select
+                <select id="availability-availability-for"
                   className="form-select"
                   value={selectedMatchId}
                   onChange={e => setSelectedMatchId(e.target.value)}
@@ -362,7 +362,7 @@ function AvailabilityHub() {
                 </h3>
 
                 {token && (
-                  <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
+                  <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
                     ✨ Magic Link Verified
                   </span>
                 )}
@@ -370,10 +370,10 @@ function AvailabilityHub() {
 
               {/* Player Selector (if not locked by magic link) */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                <label htmlFor="availability-responding-player" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                   Responding Player:
                 </label>
-                <select
+                <select id="availability-responding-player"
                   className="form-select"
                   value={activePlayerId}
                   onChange={e => setActivePlayerId(e.target.value)}
@@ -409,7 +409,7 @@ function AvailabilityHub() {
                 >
                   <CheckCircle2 size={24} color="#10B981" />
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>I&apos;m In</span>
-                  <span style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: 700 }}>Available</span>
+                  <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>Available</span>
                 </button>
 
                 {/* Maybe */}
@@ -432,7 +432,7 @@ function AvailabilityHub() {
                 >
                   <AlertCircle size={24} color="#F59E0B" />
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>Doubtful</span>
-                  <span style={{ fontSize: '0.68rem', color: '#F59E0B', fontWeight: 700 }}>Maybe</span>
+                  <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>Maybe</span>
                 </button>
 
                 {/* Unavailable */}
@@ -455,7 +455,7 @@ function AvailabilityHub() {
                 >
                   <XCircle size={24} color="#EF4444" />
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>Can&apos;t Make It</span>
-                  <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 700 }}>Out</span>
+                  <span style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: 700 }}>Out</span>
                 </button>
               </div>
 
@@ -551,22 +551,22 @@ function AvailabilityHub() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10B981' }}>{confirmedCount}</div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#10B981', textTransform: 'uppercase' }}>Confirmed</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#10B981', textTransform: 'uppercase' }}>Confirmed</div>
               </div>
 
               <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#F59E0B' }}>{maybeCount}</div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase' }}>Doubtful</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase' }}>Doubtful</div>
               </div>
 
               <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#EF4444' }}>{unavailableCount}</div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#EF4444', textTransform: 'uppercase' }}>Out</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#EF4444', textTransform: 'uppercase' }}>Out</div>
               </div>
 
               <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-muted)' }}>{pendingCount}</div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pending</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pending</div>
               </div>
             </div>
 
@@ -644,10 +644,10 @@ function AvailabilityHub() {
                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {player.full_name}
                             </span>
-                            <span style={{ fontSize: '0.68rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ fontSize: '0.7rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
                               #{player.jersey_number || '-'}
                             </span>
-                            <span className="badge badge-secondary" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
+                            <span className="badge badge-secondary" style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem' }}>
                               {player.player_position || 'Squad'}
                             </span>
                           </div>

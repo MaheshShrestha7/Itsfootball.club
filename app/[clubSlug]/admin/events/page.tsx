@@ -385,8 +385,8 @@ export default function AdminEventsPage({
 
             <form onSubmit={handleSave}>
               <div className="form-group">
-                <label className="form-label">Event Title *</label>
-                <input
+                <label htmlFor="events-event-title" className="form-label">Event Title *</label>
+                <input id="events-event-title"
                   type="text"
                   required
                   className="form-input"
@@ -397,8 +397,8 @@ export default function AdminEventsPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Associated Season</label>
-                <select
+                <label htmlFor="events-associated-season" className="form-label">Associated Season</label>
+                <select id="events-associated-season"
                   className="form-select"
                   value={form.season}
                   onChange={e => setForm({ ...form, season: e.target.value })}
@@ -416,8 +416,8 @@ export default function AdminEventsPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select
+                  <label htmlFor="events-category" className="form-label">Category</label>
+                  <select id="events-category"
                     className="form-select"
                     value={form.category}
                     onChange={e => setForm({ ...form, category: e.target.value as EventCategory })}
@@ -432,8 +432,8 @@ export default function AdminEventsPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Max Attendees / Capacity</label>
-                  <input
+                  <label htmlFor="events-max-attendees-capacity" className="form-label">Max Attendees / Capacity</label>
+                  <input id="events-max-attendees-capacity"
                     type="number"
                     className="form-input"
                     value={form.max_capacity}
@@ -444,8 +444,8 @@ export default function AdminEventsPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Start Date & Time</label>
-                  <input
+                  <label htmlFor="events-start-date-time" className="form-label">Start Date & Time</label>
+                  <input id="events-start-date-time"
                     type="datetime-local"
                     className="form-input"
                     value={form.start_time}
@@ -454,8 +454,8 @@ export default function AdminEventsPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Location / Pitch</label>
-                  <input
+                  <label htmlFor="events-location-pitch" className="form-label">Location / Pitch</label>
+                  <input id="events-location-pitch"
                     type="text"
                     className="form-input"
                     value={form.location}
@@ -465,8 +465,8 @@ export default function AdminEventsPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Description & Instructions</label>
-                <textarea
+                <label htmlFor="events-description-instructions" className="form-label">Description & Instructions</label>
+                <textarea id="events-description-instructions"
                   rows={3}
                   className="form-textarea"
                   value={form.description}

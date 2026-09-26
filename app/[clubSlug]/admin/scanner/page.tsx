@@ -377,7 +377,7 @@ export default function AdminScannerPage({
                         {log.memberName || log.token}
                       </span>
                       {log.tier && (
-                        <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.06)' }}>
+                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
                           {log.tier}
                         </span>
                       )}

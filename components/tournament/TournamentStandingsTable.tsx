@@ -254,7 +254,7 @@ export default function TournamentStandingsTable({
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: '0.65rem',
+                                  fontSize: '0.7rem',
                                   fontWeight: 900,
                                 }}
                               >

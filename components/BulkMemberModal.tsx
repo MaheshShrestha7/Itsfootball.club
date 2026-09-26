@@ -688,8 +688,8 @@ export default function BulkMemberModal({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.25rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Membership Status</label>
-                    <select
+                    <label htmlFor="bulkmembermodal-membership-status" className="form-label">Membership Status</label>
+                    <select id="bulkmembermodal-membership-status"
                       className="form-select"
                       value={exportStatusFilter}
                       onChange={e => setExportStatusFilter(e.target.value as any)}
@@ -702,8 +702,8 @@ export default function BulkMemberModal({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Role Filter</label>
-                    <select
+                    <label htmlFor="bulkmembermodal-role-filter" className="form-label">Role Filter</label>
+                    <select id="bulkmembermodal-role-filter"
                       className="form-select"
                       value={exportRoleFilter}
                       onChange={e => setExportRoleFilter(e.target.value as any)}
@@ -1013,15 +1013,15 @@ export default function BulkMemberModal({
                           >
                             <td style={{ padding: '0.55rem 0.8rem' }}>
                               {!row.isValid ? (
-                                <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', fontSize: '0.65rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', fontSize: '0.7rem' }}>
                                   Invalid ({row.errors.join(', ')})
                                 </span>
                               ) : row.isDuplicate ? (
-                                <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', fontSize: '0.65rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', fontSize: '0.7rem' }}>
                                   {duplicatePolicy === 'update' ? 'Will Update' : 'Will Skip'}
                                 </span>
                               ) : (
-                                <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10B981', fontSize: '0.65rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10B981', fontSize: '0.7rem' }}>
                                   Ready
                                 </span>
                               )}

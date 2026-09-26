@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { useAuth } from './auth-context';
 import {
   Club,
   ClubMember,
@@ -17,7 +19,6 @@ import {
   GamificationActivityLog,
   ClubScoreRuleConfig,
   ClubBadge,
-  ClubScoreTier,
   PlayerAvailability,
   AvailabilityStatus,
   DraftLineup,
@@ -40,7 +41,7 @@ import {
   TournamentParticipant,
   TournamentStanding
 } from './supabase/types';
-import { STANDARD_BADGES, getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
+import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import {
   buildTiesheet,
   computeStandings,
@@ -167,7 +168,7 @@ interface ClubContextType {
   clubScoreProfiles: ClubScoreProfile[];
   activityLogs: GamificationActivityLog[];
   clubScoreRules: Record<string, ClubScoreRuleConfig>;
-  awardClubScorePoints: (memberId: string, points: number, eventType: any, description: string, referenceId?: string) => void;
+  awardClubScorePoints: (memberId: string, points: number, eventType: GamificationActivityLog['event_type'], description: string, referenceId?: string) => void;
   updateClubScoreRules: (clubId: string, rules: Partial<ClubScoreRuleConfig>) => void;
   getMemberClubScore: (memberId: string) => ClubScoreProfile | undefined;
   getMemberActivityLogs: (memberId: string) => GamificationActivityLog[];
@@ -251,7 +252,7 @@ const STORAGE_KEY = 'itsfootball_state_v1';
 const SYNCED_IDS_KEY = 'itsfootball_synced_ids_v1';
 
 export const RESERVED_SLUGS = [
-  'api', 'admin', 'clubs', 'create-club', 'verify', 'match', 'member',
+  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'verify', 'match', 'member',
   'squad', 'events', 'news', 'sponsors', 'branding', 'analytics', 'scanner',
   'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets'
 ];
@@ -271,6 +272,17 @@ export function passTokenFrom(raw: string): string {
   } catch {
     return cleaned; // not a URL: use as typed
   }
+}
+
+/**
+ * Asks the database whether a slug is free, including inactive clubs and old slugs this browser
+ * can't see. Returns true when it can't be checked (the insert's unique constraint still holds).
+ */
+export async function isClubSlugAvailable(slug: string, currentClubId?: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return true;
+  const { data, error } = await client.rpc('club_slug_available', { p_slug: slug, p_club_id: currentClubId ?? null });
+  return error ? true : data !== false;
 }
 
 export function validateClubSlug(
@@ -472,10 +484,25 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // What to load: the club in the URL plus the signed-in user's own clubs (see SupabaseSync.load)
+  const pathname = usePathname();
+  const { user, isLoading: authLoading } = useAuth();
+  const firstSegment = decodeURIComponent(pathname?.split('/')[1] || '').toLowerCase();
+  const scopeSlug = firstSegment && !RESERVED_SLUGS.includes(firstSegment) ? firstSegment : '';
+  const scopeClubIdsKey = Object.keys(user?.club_roles || {}).sort().join(',');
+  const [loadedClubIds, setLoadedClubIds] = useState<string[]>([]);
+
+  // Deletions the user made, waiting for the next flush (nothing is deleted just for being absent)
+  const pendingDeletesRef = useRef<Partial<Record<EntityKey, Set<string>>>>({});
+  const queueDelete = useCallback((key: EntityKey, ids: string[]) => {
+    const queue = (pendingDeletesRef.current[key] ??= new Set<string>());
+    ids.forEach(id => queue.add(id));
+  }, []);
+
   // Initial / repeat load from Supabase
   const lastLoadAtRef = useRef(0);
   useEffect(() => {
-    if (!isHydrated || !isSupabaseConfigured) return;
+    if (!isHydrated || !isSupabaseConfigured || authLoading) return;
     const client = getSupabaseClient();
     if (!client) return;
 
@@ -487,9 +514,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setSyncStatus({ phase: 'loading' });
 
     engine
-      .load()
-      .then(({ data, errors }) => {
+      .load({ slug: scopeSlug, clubIds: scopeClubIdsKey ? scopeClubIdsKey.split(',') : [] })
+      .then(({ data, errors, clubIds }) => {
         if (cancelled) return;
+        setLoadedClubIds(clubIds);
         const local = syncStateRef.current;
         const nextSyncedIds: Record<string, string[]> = {};
         // A local-only row with no created_at (or one older than this) that has never been
@@ -610,13 +638,13 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isHydrated, loadNonce]);
+  }, [isHydrated, loadNonce, authLoading, scopeSlug, scopeClubIdsKey]);
 
 
   // Live sync: Supabase pushes changes on the core, frequently-edited tables to every open
   // screen, so a club/member/sponsor/etc. edited from another tab, device, or admin session
   // shows up here without waiting for the next full page load.
-  const clubIdsKey = clubs.map(c => c.id).filter(id => /^[0-9a-f-]{36}$/i.test(id)).sort().join(',');
+  const clubIdsKey = loadedClubIds.slice().sort().join(',');
   useEffect(() => {
     if (!syncReady || !isSupabaseConfigured || !clubIdsKey) return;
     const client = getSupabaseClient();
@@ -692,7 +720,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     }
     flushingRef.current = true;
     try {
-      const result = await engine.flush(syncStateRef.current);
+      const result = await engine.flush(syncStateRef.current, pendingDeletesRef.current);
+      const done = new Set(result.deletedIds);
+      Object.values(pendingDeletesRef.current).forEach(queue => done.forEach(id => queue?.delete(id)));
       if (result.errors.length > 0) {
         setSyncStatus({ phase: 'error', message: Array.from(new Set(result.errors)).slice(0, 3).join('; ') });
       } else if (result.pendingReadonly > 0) {
@@ -726,6 +756,21 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     matches, matchEvents, events, sponsors, news, gallery, clubScoreRules, clubScoreProfiles,
     activityLogs, availabilities, draftLineups, memberMessages, gateScans, inquiries,
   ]);
+
+  /** Folds a row the server just wrote (e.g. an RPC result) into state without re-uploading it */
+  const applyServerRow = useCallback(<T extends { id: string }>(
+    key: EntityKey,
+    setter: React.Dispatch<React.SetStateAction<T[]>>,
+    row: any
+  ) => {
+    if (!row?.id) return;
+    setter(prev => {
+      const existing = prev.find(r => r.id === row.id);
+      const engine = syncRef.current;
+      const merged = (engine ? engine.applyRemote(key, existing, row) : { ...existing, ...row }) as T;
+      return existing ? prev.map(r => (r.id === row.id ? merged : r)) : [merged, ...prev];
+    });
+  }, []);
 
   const reloadFromServer = useCallback(() => setLoadNonce(n => n + 1), []);
 
@@ -779,6 +824,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    if (isSupabaseConfigured) return;
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
@@ -877,9 +923,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     tournamentParticipants,
   ]);
 
-  // Cross-tab live synchronization via BroadcastChannel
+  // Cross-tab live synchronization via BroadcastChannel (local-only mode; see the storage listener above)
   useEffect(() => {
-    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    if (isSupabaseConfigured || typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
     try {
       const channel = new BroadcastChannel('itsfootball_live_matchday');
       channel.onmessage = (event) => {
@@ -1021,7 +1067,8 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     // When team name, stadium, or crest is updated, also sync match records for this club
     setMatches(prevMatches =>
       prevMatches.map(m => {
-        if (m.club_id === clubId) {
+        // Internal and tournament fixtures are between the club's own teams, not the club itself
+        if (m.club_id === clubId && m.match_type !== 'internal' && !m.tournament_id) {
           return {
             ...m,
             home_team_name: updates.name && m.is_club_home ? updates.name : m.home_team_name,
@@ -1097,8 +1144,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteSeason = useCallback((seasonId: string) => {
+    queueDelete('seasons', [seasonId]);
     setSeasons(prev => prev.filter(s => s.id !== seasonId));
-  }, []);
+  }, [queueDelete]);
 
   const setCurrentSeason = useCallback((clubId: string, seasonId: string) => {
     setSeasons(prev =>
@@ -1165,6 +1213,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteMatch = useCallback((matchId: string) => {
+    queueDelete('matches', [matchId]);
     setMatches(prev => prev.filter(m => m.id !== matchId));
     setMatchEvents(prev => prev.filter(e => e.match_id !== matchId));
 
@@ -1173,7 +1222,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       ...c,
       hero_pinned_items: (c.hero_pinned_items || []).filter(p => p.target_id !== matchId && p.id !== `pin-fixture-${matchId}`)
     })));
-  }, []);
+  }, [queueDelete]);
 
   // 3. Update Match
   const updateMatch = useCallback((matchId: string, updates: Partial<Match>) => {
@@ -1252,92 +1301,33 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Tier calculation helper
-  const calculateTier = (points: number): ClubScoreTier => {
-    if (points >= 500) return 'Club Legend';
-    if (points >= 300) return 'All-Star';
-    if (points >= 150) return 'First Team';
-    if (points >= 50) return 'Prospect';
-    return 'Rookie';
-  };
-
-  // Gamification & ClubScore Engine
+  // Gamification & ClubScore Engine. Points, streaks, tiers and badges are all worked out by the
+  // database (admin_award_clubscore), the same code door check-ins use, so the two never disagree
+  // and a stale copy here can't overwrite points awarded elsewhere.
   const awardClubScorePoints = useCallback(
-    (memberId: string, basePoints: number, eventType: any, description: string, referenceId?: string) => {
+    (memberId: string, basePoints: number, eventType: GamificationActivityLog['event_type'], description: string, referenceId?: string) => {
+      const client = getSupabaseClient();
       const member = members.find(m => m.id === memberId);
-      if (!member) return;
-
-      setClubScoreProfiles(prevProfiles => {
-        const existing = prevProfiles.find(p => p.member_id === memberId);
-        const currentStreak = existing?.current_streak || 0;
-
-        // Calculate multiplier based on streak
-        let multiplier = 1.0;
-        if (currentStreak >= 10) multiplier = 1.50;
-        else if (currentStreak >= 5) multiplier = 1.25;
-        else if (currentStreak >= 3) multiplier = 1.15;
-
-        const finalPoints = basePoints > 0 ? Math.round(basePoints * multiplier) : basePoints;
-
-        // Calculate streak increment if attendance event
-        const isAttendance = ['training_checkin', 'social_checkin', 'match_appearance'].includes(eventType);
-        const newStreak = isAttendance ? currentStreak + 1 : currentStreak;
-        const highestStreak = Math.max(existing?.highest_streak || 0, newStreak);
-
-        const newTotal = Math.max(0, (existing?.total_points || 0) + finalPoints);
-        const newWeekly = Math.max(0, (existing?.weekly_points || 0) + finalPoints);
-        const newMonthly = Math.max(0, (existing?.monthly_points || 0) + finalPoints);
-        const newTier = calculateTier(newTotal);
-
-        // Check for unlocked badges
-        const currentBadges = existing?.badges ? [...existing.badges] : [];
-        if (newStreak >= 5 && !currentBadges.some(b => b.id === 'badge-ironman')) {
-          currentBadges.push(STANDARD_BADGES[0]);
-        }
-        if (newTotal >= 500 && !currentBadges.some(b => b.id === 'badge-centurion')) {
-          currentBadges.push(STANDARD_BADGES[3]);
-        }
-
-        const updatedProfile: ClubScoreProfile = {
-          id: existing?.id || newId(),
-          club_id: member.club_id,
-          member_id: memberId,
-          season: existing?.season || seasonLabelFor(member.club_id),
-          total_points: newTotal,
-          weekly_points: newWeekly,
-          monthly_points: newMonthly,
-          current_streak: newStreak,
-          highest_streak: highestStreak,
-          tier: newTier,
-          badges: currentBadges,
-          last_activity_date: new Date().toISOString().split('T')[0],
-          updated_at: new Date().toISOString(),
-        };
-
-        // Create Activity Log
-        const newLog: GamificationActivityLog = {
-          id: newId(),
-          club_id: member.club_id,
-          member_id: memberId,
-          event_type: eventType,
-          points_awarded: basePoints,
-          multiplier,
-          final_points: finalPoints,
-          description: multiplier > 1.0 ? `${description} (${currentStreak}-streak bonus applied)` : description,
-          reference_id: referenceId,
-          created_at: new Date().toISOString(),
-        };
-
-        setActivityLogs(prevLogs => [newLog, ...prevLogs]);
-
-        if (existing) {
-          return prevProfiles.map(p => (p.member_id === memberId ? updatedProfile : p));
-        } else {
-          return [...prevProfiles, updatedProfile];
-        }
-      });
+      if (!client || !member) return;
+      client
+        .rpc('admin_award_clubscore', {
+          p_member_id: memberId,
+          p_event_type: eventType,
+          p_points: basePoints,
+          p_description: description,
+          p_reference_id: referenceId && isUuid(referenceId) ? referenceId : null,
+          p_season: seasonLabelFor(member.club_id),
+        })
+        .then(({ data, error }) => {
+          if (error || !data) {
+            setSyncStatus({ phase: 'error', message: `Could not award ClubScore points: ${error?.message || 'no response'}` });
+            return;
+          }
+          applyServerRow('clubScoreProfiles', setClubScoreProfiles, data.profile);
+          applyServerRow('activityLogs', setActivityLogs, data.log);
+        });
     },
-    [members]
+    [members, seasonLabelFor, applyServerRow]
   );
 
   const updateClubScoreRules = useCallback((clubId: string, rules: Partial<ClubScoreRuleConfig>) => {
@@ -1368,11 +1358,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     setMatchEvents(prev => [...prev, newEvent]);
 
-    const eventMatch = matches.find(m => m.id === eventData.match_id);
-    const rules = eventMatch
-      ? clubScoreRules[eventMatch.club_id] || getDefaultClubScoreRules(eventMatch.club_id)
-      : null;
-
     // Update match score if event is a goal
     if (eventData.event_type === 'goal' || eventData.event_type === 'penalty') {
       setMatches(prev =>
@@ -1387,40 +1372,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
           return m;
         })
       );
-
-      // Auto-award ClubScore fantasy points if scorer is in club squad
-      if (eventData.player_name) {
-        const pName = eventData.player_name.toLowerCase();
-        const scorer = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
-        if (scorer) {
-          const pts = rules ? getGoalPointsForPosition(rules, scorer.player_position) : 10;
-          awardClubScorePoints(scorer.id, pts, 'match_goal', `Goal (${eventData.minute}') in match`, eventData.match_id);
-        }
-      }
-
-      // Auto-award assist points
-      if (eventData.assist_player_name) {
-        const aName = eventData.assist_player_name.toLowerCase();
-        const assister = members.find(m => aName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(aName));
-        if (assister) {
-          const pts = rules?.points_assist ?? 7;
-          awardClubScorePoints(assister.id, pts, 'match_assist', `Assist (${eventData.minute}') in match`, eventData.match_id);
-        }
-      }
-    } else if (eventData.event_type === 'yellow_card' && eventData.player_name) {
-      const pName = eventData.player_name.toLowerCase();
-      const player = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
-      if (player) {
-        const pts = rules?.points_yellow_card_penalty ?? -3;
-        awardClubScorePoints(player.id, pts, 'disciplinary_card', `Yellow Card (${eventData.minute}') penalty`, eventData.match_id);
-      }
-    } else if (eventData.event_type === 'red_card' && eventData.player_name) {
-      const pName = eventData.player_name.toLowerCase();
-      const player = members.find(m => pName.includes(m.full_name.toLowerCase()) || m.full_name.toLowerCase().includes(pName));
-      if (player) {
-        const pts = rules?.points_red_card_penalty ?? -10;
-        awardClubScorePoints(player.id, pts, 'disciplinary_card', `Red Card (${eventData.minute}') penalty`, eventData.match_id);
-      }
     }
 
     // Broadcast live event to public match centres and scoreboards
@@ -1430,9 +1381,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       event: newEvent,
       timestamp: Date.now(),
     });
-  }, [members, matches, clubScoreRules, awardClubScorePoints]);
+  }, []);
 
   const deleteMatchEvent = useCallback((eventId: string) => {
+    queueDelete('matchEvents', [eventId]);
     setMatchEvents(prev => {
       const target = prev.find(e => e.id === eventId);
       if (target && (target.event_type === 'goal' || target.event_type === 'penalty')) {
@@ -1459,7 +1411,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
       return prev.filter(e => e.id !== eventId);
     });
-  }, []);
+  }, [queueDelete]);
 
   // 5. Events Management
   const addEvent = useCallback((eventData: Omit<ClubEvent, 'id' | 'created_at'>) => {
@@ -1476,8 +1428,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteEvent = useCallback((eventId: string) => {
+    queueDelete('events', [eventId]);
     setEvents(prev => prev.filter(e => e.id !== eventId));
-  }, []);
+  }, [queueDelete]);
 
   // 6. Member & Squad Management
   const addMember = useCallback((memberData: Omit<ClubMember, 'id' | 'created_at'>): ClubMember => {
@@ -1595,9 +1548,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteMember = useCallback((memberId: string) => {
+    queueDelete('members', [memberId]);
     setMembers(prev => prev.filter(m => m.id !== memberId));
     setPlayerStats(prev => prev.filter(s => s.member_id !== memberId));
-  }, []);
+  }, [queueDelete]);
 
   const appointExecutive = useCallback((memberId: string, title: string, bio?: string, order?: number, season?: string) => {
     setMembers(prev =>
@@ -1642,8 +1596,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteSponsor = useCallback((sponsorId: string) => {
+    queueDelete('sponsors', [sponsorId]);
     setSponsors(prev => prev.filter(s => s.id !== sponsorId));
-  }, []);
+  }, [queueDelete]);
 
   // 8. News Articles CMS
   const addNewsArticle = useCallback((articleData: Omit<NewsArticle, 'id' | 'published_at'>) => {
@@ -1660,8 +1615,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteNewsArticle = useCallback((articleId: string) => {
+    queueDelete('news', [articleId]);
     setNews(prev => prev.filter(n => n.id !== articleId));
-  }, []);
+  }, [queueDelete]);
 
   const addMediaItem = useCallback((mediaData: Omit<MediaGalleryItem, 'id' | 'created_at'>) => {
     const newMedia: MediaGalleryItem = {
@@ -1955,6 +1911,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const targetMatch = matches.find(m => m.id === matchId);
     if (!targetMatch) {
       return { success: false, totalPointsAwarded: 0, message: 'Match fixture not found.' };
+    }
+    if (targetMatch.is_audited) {
+      return { success: false, totalPointsAwarded: 0, message: 'This match has already been audited; its points were awarded then.' };
     }
 
     let totalXP = 0;
@@ -2543,23 +2502,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     setMembers(prev => [...prev, newMem]);
 
-    // Initialize stats
-    const newStats: PlayerStats = {
-      id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
-      club_id: clubId,
-      member_id: newMem.id,
-      season: seasonLabelFor(clubId),
-      appearances: 0,
-      minutes_played: 0,
-      goals: 0,
-      assists: 0,
-      clean_sheets: 0,
-      yellow_cards: 0,
-      red_cards: 0,
-      motm_awards: 0,
-    };
-    setPlayerStats(prev => [...prev, newStats]);
-
     return {
       success: true,
       member: newMem,
@@ -2586,8 +2528,24 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
     setMembers(prev => prev.map(m => (m.id === memberId ? updatedMember : m)));
 
+    // Stats start with the approved membership (a signed-out applicant can't save them)
+    setPlayerStats(prev => prev.some(st => st.member_id === memberId) ? prev : [...prev, {
+      id: stableId(`stat-${memberId}-${new Date().getFullYear()}`),
+      club_id: member.club_id,
+      member_id: memberId,
+      season: seasonLabelFor(member.club_id),
+      appearances: 0,
+      minutes_played: 0,
+      goals: 0,
+      assists: 0,
+      clean_sheets: 0,
+      yellow_cards: 0,
+      red_cards: 0,
+      motm_awards: 0,
+    }]);
+
     // Award welcome points
-    awardClubScorePoints(memberId, 50, 'social_checkin', 'Membership Application Approved & Welcome Pack', member.club_id);
+    awardClubScorePoints(memberId, 50, 'admin_award', 'Membership Application Approved & Welcome Pack');
 
     // Automated welcome message
     const welcomeMsg: MemberMessage = {
@@ -2610,7 +2568,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       member: updatedMember,
       message: `Approved ${member.full_name}'s membership application!`
     };
-  }, [members, awardClubScorePoints]);
+  }, [members, awardClubScorePoints, seasonLabelFor]);
 
   const rejectMemberApplication = useCallback((memberId: string, reason: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
     const member = members.find(m => m.id === memberId);
@@ -2785,8 +2743,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [internalTeams, tournamentParticipants]);
 
   const deleteInternalTeam = useCallback((teamId: string) => {
+    queueDelete('internalTeams', [teamId]);
     setInternalTeams(prev => prev.filter(t => t.id !== teamId));
-  }, []);
+  }, [queueDelete]);
 
   /** Replaces a tournament's fixtures (and participant seeds / groups) with a freshly built tiesheet */
   const applyTiesheet = useCallback((
@@ -2795,8 +2754,16 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     options?: { shuffle?: boolean }
   ) => {
     const res = buildTiesheet(tournament, participants, options);
-    setTournamentParticipants(prev => [...prev.filter(p => p.tournament_id !== tournament.id), ...res.participants]);
-    setMatches(prev => [...prev.filter(m => m.tournament_id !== tournament.id), ...res.matches]);
+    const keptParticipants = new Set(res.participants.map(p => p.id));
+    const keptMatches = new Set(res.matches.map(m => m.id));
+    setTournamentParticipants(prev => {
+      queueDelete('tournamentParticipants', prev.filter(p => p.tournament_id === tournament.id && !keptParticipants.has(p.id)).map(p => p.id));
+      return [...prev.filter(p => p.tournament_id !== tournament.id), ...res.participants];
+    });
+    setMatches(prev => {
+      queueDelete('matches', prev.filter(m => m.tournament_id === tournament.id && !keptMatches.has(m.id)).map(m => m.id));
+      return [...prev.filter(m => m.tournament_id !== tournament.id), ...res.matches];
+    });
     setTournaments(prev => prev.map(t => t.id === tournament.id ? {
       ...t,
       ...res.tournamentUpdates,
@@ -2804,7 +2771,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       updated_at: new Date().toISOString(),
     } : t));
     return res.matches;
-  }, []);
+  }, [queueDelete]);
 
   const createTournament = useCallback((
     tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
@@ -2861,10 +2828,11 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [tournaments, tournamentParticipants, updateTournament, applyTiesheet]);
 
   const deleteTournament = useCallback((tournamentId: string) => {
+    queueDelete('tournaments', [tournamentId]);
     setTournaments(prev => prev.filter(t => t.id !== tournamentId));
     setTournamentParticipants(prev => prev.filter(p => p.tournament_id !== tournamentId));
     setMatches(prev => prev.filter(m => m.tournament_id !== tournamentId));
-  }, []);
+  }, [queueDelete]);
 
   const addTournamentParticipant = useCallback((participantData: Omit<TournamentParticipant, 'id'>) => {
     const newParticipant: TournamentParticipant = {
@@ -2876,8 +2844,9 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteTournamentParticipant = useCallback((participantId: string) => {
+    queueDelete('tournamentParticipants', [participantId]);
     setTournamentParticipants(prev => prev.filter(p => p.id !== participantId));
-  }, []);
+  }, [queueDelete]);
 
   const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean }) => {
     const tournament = tournaments.find(t => t.id === tournamentId);

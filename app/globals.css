@@ -18,7 +18,7 @@
   /* Typography Colors */
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --text-muted: #8190A5; /* at least 4.5:1 (WCAG AA) on every background and card colour here */
   --text-on-primary: var(--club-primary-contrast, #FFFFFF);
 
   /* Borders & Dividers */
@@ -983,7 +983,7 @@ textarea {
     font-size: 0.75rem !important;
   }
   .pitch-player-node .player-node-name {
-    font-size: 0.6rem !important;
+    font-size: 0.7rem !important;
     padding: 1px 4px !important;
     max-width: 68px !important;
     overflow: hidden !important;

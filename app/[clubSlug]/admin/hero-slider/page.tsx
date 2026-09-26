@@ -770,7 +770,7 @@ export default function AdminHeroSliderPage({
                   <span>{tab.label}</span>
                   {tab.count !== null && (
                     <span style={{
-                      fontSize: '0.65rem',
+                      fontSize: '0.7rem',
                       padding: '0.1rem 0.35rem',
                       borderRadius: '9999px',
                       background: isActive ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.08)'
@@ -808,7 +808,7 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className="badge badge-primary" style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                          <span className="badge badge-primary" style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>
                             {evt.category}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -872,7 +872,7 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className={`badge ${isLive ? 'badge-live' : 'badge-gold'}`} style={{ fontSize: '0.65rem' }}>
+                          <span className={`badge ${isLive ? 'badge-live' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
                             {isLive ? `LIVE ${getLiveMinute(m)}'` : m.status.toUpperCase()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -935,7 +935,7 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60A5FA', fontSize: '0.65rem' }}>
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60A5FA', fontSize: '0.7rem' }}>
                             {n.tags[0] || 'DISPATCH'}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -985,8 +985,8 @@ export default function AdminHeroSliderPage({
               gap: '0.9rem'
             }}>
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Background Image URL *</label>
-                <input
+                <label htmlFor="hero-slider-background-image-url" className="form-label" style={{ fontSize: '0.8rem' }}>Background Image URL *</label>
+                <input id="hero-slider-background-image-url"
                   type="url"
                   required
                   className="form-input"
@@ -997,8 +997,8 @@ export default function AdminHeroSliderPage({
               </div>
 
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Banner Heading / Title *</label>
-                <input
+                <label htmlFor="hero-slider-banner-heading-title" className="form-label" style={{ fontSize: '0.8rem' }}>Banner Heading / Title *</label>
+                <input id="hero-slider-banner-heading-title"
                   type="text"
                   required
                   className="form-input"
@@ -1009,8 +1009,8 @@ export default function AdminHeroSliderPage({
               </div>
 
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Subtitle / Caption</label>
-                <textarea
+                <label htmlFor="hero-slider-subtitle-caption" className="form-label" style={{ fontSize: '0.8rem' }}>Subtitle / Caption</label>
+                <textarea id="hero-slider-subtitle-caption"
                   className="form-input"
                   rows={2}
                   placeholder="Brief descriptive statement for fans..."
@@ -1021,8 +1021,8 @@ export default function AdminHeroSliderPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Tag Badge</label>
-                  <input
+                  <label htmlFor="hero-slider-tag-badge" className="form-label" style={{ fontSize: '0.8rem' }}>Tag Badge</label>
+                  <input id="hero-slider-tag-badge"
                     type="text"
                     className="form-input"
                     placeholder="e.g. SPECIAL PROMO"
@@ -1031,8 +1031,8 @@ export default function AdminHeroSliderPage({
                   />
                 </div>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>CTA Button Label</label>
-                  <input
+                  <label htmlFor="hero-slider-cta-button-label" className="form-label" style={{ fontSize: '0.8rem' }}>CTA Button Label</label>
+                  <input id="hero-slider-cta-button-label"
                     type="text"
                     className="form-input"
                     placeholder="e.g. Get Tickets"
@@ -1043,8 +1043,8 @@ export default function AdminHeroSliderPage({
               </div>
 
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>CTA Link Destination</label>
-                <input
+                <label htmlFor="hero-slider-cta-link-destination" className="form-label" style={{ fontSize: '0.8rem' }}>CTA Link Destination</label>
+                <input id="hero-slider-cta-link-destination"
                   type="text"
                   className="form-input"
                   placeholder={`/${club.slug}#membership`}

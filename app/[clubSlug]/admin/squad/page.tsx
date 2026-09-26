@@ -828,8 +828,8 @@ export default function AdminSquadPage({
               {/* 2. FIRST NAME & LAST NAME */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">First Name *</label>
-                  <input
+                  <label htmlFor="squad-first-name" className="form-label">First Name *</label>
+                  <input id="squad-first-name"
                     type="text"
                     required
                     className="form-input"
@@ -840,8 +840,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Last Name *</label>
-                  <input
+                  <label htmlFor="squad-last-name" className="form-label">Last Name *</label>
+                  <input id="squad-last-name"
                     type="text"
                     required
                     className="form-input"
@@ -926,7 +926,7 @@ export default function AdminSquadPage({
                             borderRadius: '50%',
                             background: 'var(--club-primary)',
                             color: '#FFFFFF',
-                            fontSize: '10px',
+                            fontSize: '0.7rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -939,7 +939,7 @@ export default function AdminSquadPage({
                         <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? '#FFFFFF' : 'var(--text-secondary)' }}>
                           {r.label}
                         </span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>
                           {r.desc}
                         </span>
                       </button>
@@ -964,10 +964,10 @@ export default function AdminSquadPage({
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                     {/* Primary Position */}
                     <div className="form-group">
-                      <label className="form-label">
+                      <label htmlFor="squad-primary-position" className="form-label">
                         Primary Position *
                       </label>
-                      <select
+                      <select id="squad-primary-position"
                         className="form-select"
                         value={form.player_position}
                         onChange={e => handlePrimaryPositionChange(e.target.value as PlayerPosition)}
@@ -1183,8 +1183,8 @@ export default function AdminSquadPage({
             <form onSubmit={handleSaveStats}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Appearances</label>
-                  <input
+                  <label htmlFor="squad-appearances" className="form-label">Appearances</label>
+                  <input id="squad-appearances"
                     type="number"
                     className="form-input"
                     value={statsForm.appearances}
@@ -1193,8 +1193,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Minutes Played</label>
-                  <input
+                  <label htmlFor="squad-minutes-played" className="form-label">Minutes Played</label>
+                  <input id="squad-minutes-played"
                     type="number"
                     className="form-input"
                     value={statsForm.minutes_played}
@@ -1203,8 +1203,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Goals Scored</label>
-                  <input
+                  <label htmlFor="squad-goals-scored" className="form-label">Goals Scored</label>
+                  <input id="squad-goals-scored"
                     type="number"
                     className="form-input"
                     value={statsForm.goals}
@@ -1213,8 +1213,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Assists</label>
-                  <input
+                  <label htmlFor="squad-assists" className="form-label">Assists</label>
+                  <input id="squad-assists"
                     type="number"
                     className="form-input"
                     value={statsForm.assists}
@@ -1223,8 +1223,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Clean Sheets</label>
-                  <input
+                  <label htmlFor="squad-clean-sheets" className="form-label">Clean Sheets</label>
+                  <input id="squad-clean-sheets"
                     type="number"
                     className="form-input"
                     value={statsForm.clean_sheets}
@@ -1233,8 +1233,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Yellow Cards</label>
-                  <input
+                  <label htmlFor="squad-yellow-cards" className="form-label">Yellow Cards</label>
+                  <input id="squad-yellow-cards"
                     type="number"
                     className="form-input"
                     value={statsForm.yellow_cards}
@@ -1243,8 +1243,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Red Cards</label>
-                  <input
+                  <label htmlFor="squad-red-cards" className="form-label">Red Cards</label>
+                  <input id="squad-red-cards"
                     type="number"
                     className="form-input"
                     value={statsForm.red_cards}
@@ -1253,8 +1253,8 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">MOTM Awards</label>
-                  <input
+                  <label htmlFor="squad-motm-awards" className="form-label">MOTM Awards</label>
+                  <input id="squad-motm-awards"
                     type="number"
                     className="form-input"
                     value={statsForm.motm_awards}

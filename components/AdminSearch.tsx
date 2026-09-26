@@ -141,7 +141,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
                   <Icon size={14} color="var(--club-primary)" />
                   <div style={{ overflow: 'hidden' }}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{r.label}</div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{r.sublabel}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.sublabel}</div>
                   </div>
                 </button>
               );

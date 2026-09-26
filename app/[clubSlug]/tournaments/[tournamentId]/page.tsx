@@ -388,7 +388,7 @@ export default function PublicTournamentDetailPage({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
                     <span
                       style={{
-                        fontSize: '0.68rem',
+                        fontSize: '0.7rem',
                         fontWeight: 700,
                         padding: '1px 6px',
                         borderRadius: '4px',

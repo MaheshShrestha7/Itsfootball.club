@@ -413,7 +413,7 @@ export default function AdminSeasonsPage({
                             borderRadius: '6px',
                             background: '#10B981',
                             color: '#000000',
-                            fontSize: '0.68rem',
+                            fontSize: '0.7rem',
                             fontWeight: 900,
                             letterSpacing: '0.05em'
                           }}>
@@ -621,8 +621,8 @@ export default function AdminSeasonsPage({
               </div>
 
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label" style={{ fontWeight: 700 }}>Campaign Status</label>
-                <select
+                <label htmlFor="seasons-campaign-status" className="form-label" style={{ fontWeight: 700 }}>Campaign Status</label>
+                <select id="seasons-campaign-status"
                   className="form-select"
                   value={formStatus}
                   onChange={e => setFormStatus(e.target.value as SeasonStatus)}
@@ -657,8 +657,8 @@ export default function AdminSeasonsPage({
               </div>
 
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label className="form-label">Campaign Notes / Key Objectives</label>
-                <textarea
+                <label htmlFor="seasons-campaign-notes-key-objectives" className="form-label">Campaign Notes / Key Objectives</label>
+                <textarea id="seasons-campaign-notes-key-objectives"
                   rows={3}
                   className="form-textarea"
                   placeholder="e.g. League title challenge, cup tournament entries, player recruitment goals..."

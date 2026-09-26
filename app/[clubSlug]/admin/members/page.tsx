@@ -442,10 +442,10 @@ export default function AdminMembersPage({
                     </p>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                      <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.06)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
                         {msg.category || 'General'}
                       </span>
-                      <span style={{ fontSize: '0.65rem', color: msg.sender_type === 'admin' ? '#10B981' : '#F59E0B' }}>
+                      <span style={{ fontSize: '0.7rem', color: msg.sender_type === 'admin' ? '#10B981' : '#F59E0B' }}>
                         {msg.sender_type === 'admin' ? '✓ Committee Sent' : '• From Member'}
                       </span>
                     </div>
@@ -785,10 +785,10 @@ export default function AdminMembersPage({
             </p>
 
             <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <label htmlFor="members-reason-for-rejection" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
                 Reason for Rejection:
               </label>
-              <textarea
+              <textarea id="members-reason-for-rejection"
                 rows={3}
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}

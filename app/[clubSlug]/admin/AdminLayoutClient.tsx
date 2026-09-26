@@ -1,6 +1,7 @@
 'use client';
 
 import React, { use, useState, useEffect } from 'react';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -54,6 +55,7 @@ export default function AdminLayout({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  useEscapeToClose(mobileDrawerOpen, setMobileDrawerOpen);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -184,7 +186,7 @@ export default function AdminLayout({
             <div key={section.title}>
               {section.title !== 'Overview' && (
                 <div style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.7rem',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
@@ -237,7 +239,7 @@ export default function AdminLayout({
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className="badge badge-live" style={{ fontSize: '0.6rem', padding: '0.15rem 0.45rem' }}>
+                        <span className="badge badge-live" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
                           {item.badge}
                         </span>
                       )}
@@ -278,7 +280,7 @@ export default function AdminLayout({
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                   {user.full_name}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: '#10B981', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700, textTransform: 'uppercase' }}>
                   {userRole === 'owner' ? 'Club Owner' : 'Club Admin'}
                 </div>
               </div>

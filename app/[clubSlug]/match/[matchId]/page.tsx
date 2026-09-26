@@ -505,7 +505,7 @@ export default function MatchCenterPage({
                 ) : (
                   <>
                     <Shield size={28} color="#FFFFFF" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
                       {match.home_team_name ? match.home_team_name.slice(0, 3).toUpperCase() : 'HOM'}
                     </span>
                   </>
@@ -563,7 +563,7 @@ export default function MatchCenterPage({
               </div>
 
               <div style={{
-                fontSize: '0.68rem',
+                fontSize: '0.7rem',
                 fontWeight: 700,
                 color: match.status === 'live' ? '#EF4444' : 'var(--text-muted)',
                 letterSpacing: '0.08em',
@@ -612,7 +612,7 @@ export default function MatchCenterPage({
                 ) : (
                   <>
                     <Trophy size={28} color="#FFFFFF" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
                       {match.away_team_name ? match.away_team_name.slice(0, 3).toUpperCase() : 'AWY'}
                     </span>
                   </>

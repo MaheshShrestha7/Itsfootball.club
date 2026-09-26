@@ -366,7 +366,7 @@ export default function LineupWorkbench({
                         background: `${st.color}20`,
                         border: `1px solid ${st.color}40`,
                         color: st.color,
-                        fontSize: '0.68rem',
+                        fontSize: '0.7rem',
                         fontWeight: 800,
                         flexShrink: 0,
                       }}

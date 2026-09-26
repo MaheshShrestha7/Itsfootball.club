@@ -241,13 +241,13 @@ export default function AdminSponsorsPage({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
                       <span className="badge" style={{
-                        fontSize: '0.6rem',
+                        fontSize: '0.7rem',
                         backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)',
                         color: sponsor.tier === 'platinum' ? '#F59E0B' : 'var(--text-muted)',
                       }}>
                         {sponsor.tier.toUpperCase()}
                       </span>
-                      <span style={{ fontSize: '0.65rem', color: isXL ? '#F59E0B' : 'var(--text-muted)', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.7rem', color: isXL ? '#F59E0B' : 'var(--text-muted)', fontWeight: 600 }}>
                         {scale.toUpperCase()} Space
                       </span>
                     </div>
@@ -304,7 +304,7 @@ export default function AdminSponsorsPage({
                     <span className="badge" style={{
                       backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                       color: scale === 'xl' ? '#F59E0B' : 'var(--text-muted)',
-                      fontSize: '0.65rem',
+                      fontSize: '0.7rem',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.25rem',
@@ -317,7 +317,7 @@ export default function AdminSponsorsPage({
                       <span className="badge" style={{
                         backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                         color: sponsor.package_status === 'paid' ? '#10B981' : sponsor.package_status === 'prospect' ? '#3B82F6' : 'var(--text-muted)',
-                        fontSize: '0.65rem',
+                        fontSize: '0.7rem',
                       }}>
                         {PACKAGE_STATUS_LABEL[sponsor.package_status]}
                       </span>
@@ -506,8 +506,8 @@ export default function AdminSponsorsPage({
 
               {form.scope === 'event' && (
                 <div className="form-group">
-                  <label className="form-label">Event *</label>
-                  <select
+                  <label htmlFor="sponsors-event" className="form-label">Event *</label>
+                  <select id="sponsors-event"
                     className="form-select"
                     required={form.scope === 'event'}
                     value={form.event_id}
@@ -529,8 +529,8 @@ export default function AdminSponsorsPage({
               )}
 
               <div className="form-group">
-                <label className="form-label">Sponsor / Partner Name *</label>
-                <input
+                <label htmlFor="sponsors-sponsor-partner-name" className="form-label">Sponsor / Partner Name *</label>
+                <input id="sponsors-sponsor-partner-name"
                   type="text"
                   required
                   className="form-input"
@@ -542,8 +542,8 @@ export default function AdminSponsorsPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Sponsorship Tier</label>
-                  <select
+                  <label htmlFor="sponsors-sponsorship-tier" className="form-label">Sponsorship Tier</label>
+                  <select id="sponsors-sponsorship-tier"
                     className="form-select"
                     value={form.tier}
                     onChange={e => setForm({ ...form, tier: e.target.value as SponsorTier })}
@@ -557,8 +557,8 @@ export default function AdminSponsorsPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Display Order</label>
-                  <input
+                  <label htmlFor="sponsors-display-order" className="form-label">Display Order</label>
+                  <input id="sponsors-display-order"
                     type="number"
                     className="form-input"
                     value={form.display_order}
@@ -600,8 +600,8 @@ export default function AdminSponsorsPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Website Link</label>
-                <input
+                <label htmlFor="sponsors-website-link" className="form-label">Website Link</label>
+                <input id="sponsors-website-link"
                   type="url"
                   className="form-input"
                   value={form.website_url}
@@ -618,8 +618,8 @@ export default function AdminSponsorsPage({
                 </p>
 
                 <div className="form-group">
-                  <label className="form-label">Contact Name</label>
-                  <input
+                  <label htmlFor="sponsors-contact-name" className="form-label">Contact Name</label>
+                  <input id="sponsors-contact-name"
                     type="text"
                     className="form-input"
                     placeholder="e.g. Sarah Whitfield"
@@ -666,8 +666,8 @@ export default function AdminSponsorsPage({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Package Value</label>
-                    <input
+                    <label htmlFor="sponsors-package-value" className="form-label">Package Value</label>
+                    <input id="sponsors-package-value"
                       type="number"
                       min="0"
                       step="0.01"
@@ -678,8 +678,8 @@ export default function AdminSponsorsPage({
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Package Status</label>
-                    <select
+                    <label htmlFor="sponsors-package-status" className="form-label">Package Status</label>
+                    <select id="sponsors-package-status"
                       className="form-select"
                       value={form.package_status}
                       onChange={e => setForm({ ...form, package_status: e.target.value as SponsorPackageStatus })}
@@ -692,8 +692,8 @@ export default function AdminSponsorsPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Season</label>
-                  <input
+                  <label htmlFor="sponsors-season" className="form-label">Season</label>
+                  <input id="sponsors-season"
                     type="text"
                     className="form-input"
                     placeholder={defaultSeasonLabel()}

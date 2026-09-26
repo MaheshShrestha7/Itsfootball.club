@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -14,6 +15,7 @@ export default function PlatformNavbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  useEscapeToClose(mobileDrawerOpen, setMobileDrawerOpen);
   const [isMounted, setIsMounted] = useState(false);
 
   React.useEffect(() => {
@@ -60,7 +62,7 @@ export default function PlatformNavbar() {
             }}>
               itsfootball<span style={{ color: '#C9A467', WebkitTextFillColor: '#C9A467' }}>.club</span>
             </span>
-            <div style={{ fontSize: '0.62rem', color: '#C9A467', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
+            <div style={{ fontSize: '0.7rem', color: '#C9A467', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
               Home of Football Clubs
             </div>
           </div>

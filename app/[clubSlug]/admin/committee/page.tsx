@@ -90,8 +90,8 @@ export default function AdminCommitteePage({
         <form onSubmit={handleAppoint}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Select Member</label>
-              <select
+              <label htmlFor="committee-select-member" className="form-label">Select Member</label>
+              <select id="committee-select-member"
                 className="form-select"
                 value={selectedMemberId}
                 onChange={e => setSelectedMemberId(e.target.value)}
@@ -105,8 +105,8 @@ export default function AdminCommitteePage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Executive Role / Title</label>
-              <input
+              <label htmlFor="committee-executive-role-title" className="form-label">Executive Role / Title</label>
+              <input id="committee-executive-role-title"
                 type="text"
                 required
                 className="form-input"
@@ -117,8 +117,8 @@ export default function AdminCommitteePage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Tenure Season</label>
-              <select
+              <label htmlFor="committee-tenure-season" className="form-label">Tenure Season</label>
+              <select id="committee-tenure-season"
                 className="form-select"
                 value={selectedSeason}
                 onChange={e => setSelectedSeason(e.target.value)}
@@ -135,8 +135,8 @@ export default function AdminCommitteePage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Display Priority Order</label>
-              <input
+              <label htmlFor="committee-display-priority-order" className="form-label">Display Priority Order</label>
+              <input id="committee-display-priority-order"
                 type="number"
                 className="form-input"
                 value={order}
@@ -146,8 +146,8 @@ export default function AdminCommitteePage({
           </div>
 
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label">Executive Bio & Statement</label>
-            <textarea
+            <label htmlFor="committee-executive-bio-statement" className="form-label">Executive Bio & Statement</label>
+            <textarea id="committee-executive-bio-statement"
               rows={3}
               className="form-textarea"
               placeholder="Background, achievements, and club responsibilities..."

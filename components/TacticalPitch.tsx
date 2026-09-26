@@ -1014,7 +1014,7 @@ export default function TacticalPitch({
             display: 'flex',
             alignItems: 'center',
             gap: '0.35rem',
-            fontSize: '0.68rem',
+            fontSize: '0.7rem',
             fontWeight: 800,
             color: activeFormat === '7v7' ? '#F59E0B' : activeFormat === '9v9' ? '#60A5FA' : '#10B981',
             letterSpacing: '0.05em',
@@ -1080,7 +1080,7 @@ export default function TacticalPitch({
                   transform: 'translateX(-50%)',
                   background: '#10B981',
                   color: '#070A0F',
-                  fontSize: '0.62rem',
+                  fontSize: '0.7rem',
                   fontWeight: 900,
                   padding: '2px 7px',
                   borderRadius: '10px',
@@ -1155,7 +1155,7 @@ export default function TacticalPitch({
                       right: '-3px',
                       background: pos.position === 'GK' ? '#F59E0B' : primaryColor,
                       color: '#FFFFFF',
-                      fontSize: '0.55rem',
+                      fontSize: '0.7rem',
                       fontWeight: 900,
                       minWidth: '14px',
                       height: '14px',
@@ -1182,7 +1182,7 @@ export default function TacticalPitch({
                     left: '-6px',
                     background: '#F59E0B',
                     color: '#000',
-                    fontSize: '0.62rem',
+                    fontSize: '0.7rem',
                     fontWeight: 900,
                     width: '16px',
                     height: '16px',
@@ -1254,7 +1254,7 @@ export default function TacticalPitch({
                   padding: '2px 7px',
                   borderRadius: '5px',
                   border: isSelected ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
-                  fontSize: '0.68rem',
+                  fontSize: '0.7rem',
                   fontWeight: 700,
                   color: '#FFFFFF',
                   whiteSpace: 'nowrap',
@@ -1267,7 +1267,7 @@ export default function TacticalPitch({
                   {empty ? 'Empty' : nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()}
                 </span>
                 <span style={{
-                  fontSize: '0.6rem',
+                  fontSize: '0.7rem',
                   color: primaryColor,
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 800,
@@ -1336,11 +1336,11 @@ export default function TacticalPitch({
                   {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `#${activePlayer.number} ${activePlayer.name}`}
                 </h4>
                 {activePlayer.is_captain && (
-                  <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
+                  <span className="badge badge-gold" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
                     Captain
                   </span>
                 )}
-                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
+                <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
                   {activePlayer.position}
                 </span>
               </div>

@@ -11,6 +11,7 @@ import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier } from '@/lib/sponsors';
+import NewsVideo from '@/components/NewsVideo';
 import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
@@ -823,7 +824,7 @@ export default function ClubPublicPage({
                             }}>
                               {activeSlideMatch.home_score} : {activeSlideMatch.away_score}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
+                            <div style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
                               {activeSlideMatch.period === 'first_half'
                                 ? '1st Half'
                                 : activeSlideMatch.period === 'halftime'
@@ -1507,12 +1508,12 @@ export default function ClubPublicPage({
                       {match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition}
                     </span>
                     {match.match_type && (
-                      <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
                         {match.match_type}
                       </span>
                     )}
                     {match.season && (
-                      <span className="badge" style={{ fontSize: '0.62rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
                         {match.season}
                       </span>
                     )}
@@ -1767,7 +1768,7 @@ export default function ClubPublicPage({
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.3rem' }}>
                       {article.tags?.slice(0, 2).map(tag => (
-                        <span key={tag} className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.07)' }}>
+                        <span key={tag} className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.07)' }}>
                           {tag}
                         </span>
                       ))}
@@ -1824,7 +1825,7 @@ export default function ClubPublicPage({
                   {exec.executive_title}
                 </div>
                 {(exec.executive_season || activeSeason) && (
-                  <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                  <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
                     Tenure: {exec.executive_season || activeSeason?.name || defaultSeasonLabel()}
                   </span>
                 )}
@@ -1919,19 +1920,19 @@ export default function ClubPublicPage({
                   <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
                       <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>APPS</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>APPS</div>
                         <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{stat?.appearances || 0}</div>
                       </div>
                       <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>GOALS</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>GOALS</div>
                         <div style={{ fontWeight: 800, color: '#10B981' }}>{stat?.goals || 0}</div>
                       </div>
                       <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>ASSISTS</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ASSISTS</div>
                         <div style={{ fontWeight: 800, color: '#F59E0B' }}>{stat?.assists || 0}</div>
                       </div>
                       <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>MOTM</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MOTM</div>
                         <div style={{ fontWeight: 800, color: '#3B82F6' }}>{stat?.motm_awards || 0}</div>
                       </div>
                     </div>
@@ -2016,7 +2017,7 @@ export default function ClubPublicPage({
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Trophy size={20} color="#F59E0B" /> Traditional Club Leaderboard (2025/2026)
+                    <Trophy size={20} color="#F59E0B" /> Traditional Club Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Top individual season performances</span>
                 </div>
@@ -2233,6 +2234,7 @@ export default function ClubPublicPage({
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
               Published by {activeNewsModal.author_name} • {new Date(activeNewsModal.published_at).toLocaleDateString()}
             </div>
+            <NewsVideo url={activeNewsModal.video_embed_url} title={activeNewsModal.title} />
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: '2rem' }}>
               {activeNewsModal.content}
             </div>

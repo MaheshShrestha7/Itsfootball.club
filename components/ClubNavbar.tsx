@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
@@ -17,6 +18,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const { matches } = useClub();
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -106,7 +108,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 lineHeight: 1,
               }}>
                 <Shield size={22} color={club.primary_color} />
-                <span style={{ fontSize: '0.55rem', fontWeight: 900, marginTop: '2px', color: '#FFFFFF' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 900, marginTop: '2px', color: '#FFFFFF' }}>
                   {club.short_name || 'FC'}
                 </span>
               </div>
@@ -127,7 +129,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               }}>
                 {club.name}
               </span>
-              <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', fontSize: '0.62rem', flexShrink: 0 }}>
+              <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
                 {club.short_name}
               </span>
             </div>
@@ -272,7 +274,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   {user.full_name.split(' ')[0]}
                 </span>
                 {userRole && (
-                  <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isAdmin ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)', color: isAdmin ? '#10B981' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isAdmin ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)', color: isAdmin ? '#10B981' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                     {userRole}
                   </span>
                 )}
@@ -355,7 +357,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF' }}>{club.name}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Official Matchday Portal</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Official Matchday Portal</div>
                   </div>
                 </div>
                 <button
@@ -505,7 +507,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                       <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 700 }}>
                         {user.full_name}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {userRole || 'Member'}
                       </div>
                     </div>

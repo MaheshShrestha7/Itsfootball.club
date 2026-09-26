@@ -263,7 +263,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                 >
                   <span
                     style={{
-                      fontSize: '0.68rem',
+                      fontSize: '0.7rem',
                       fontWeight: 800,
                       background: 'rgba(0, 0, 0, 0.65)',
                       backdropFilter: 'blur(8px)',
@@ -401,7 +401,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                           }}
                         >
                           {player.player_position && (
-                            <span style={{ color: team.color || '#10B981', fontWeight: 800, fontSize: '0.65rem' }}>
+                            <span style={{ color: team.color || '#10B981', fontWeight: 800, fontSize: '0.7rem' }}>
                               {player.player_position}
                             </span>
                           )}
@@ -483,10 +483,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-team-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                     Team Name *
                   </label>
-                  <input
+                  <input id="internalteamsmanager-team-name"
                     type="text"
                     required
                     placeholder="e.g. U-21 Academy"
@@ -504,10 +504,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-short-code" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                     Short Code
                   </label>
-                  <input
+                  <input id="internalteamsmanager-short-code"
                     type="text"
                     maxLength={6}
                     placeholder="e.g. U21"
@@ -619,10 +619,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               {/* Coach & Captain */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-coach-manager" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                     Coach / Manager
                   </label>
-                  <input
+                  <input id="internalteamsmanager-coach-manager"
                     type="text"
                     placeholder="e.g. Diego Morales"
                     value={coachName}
@@ -755,7 +755,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                             {member.full_name}
                           </div>
                           {member.player_position && (
-                            <span style={{ fontSize: '0.65rem', color: '#10B981', fontWeight: 800 }}>
+                            <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 800 }}>
                               {member.player_position}
                             </span>
                           )}

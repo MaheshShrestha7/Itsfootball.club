@@ -222,8 +222,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
           {mode === 'signup' && (
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.78rem' }}>Full Name *</label>
-              <input
+              <label htmlFor="authmodal-full-name" className="form-label" style={{ fontSize: '0.78rem' }}>Full Name *</label>
+              <input id="authmodal-full-name"
                 type="text"
                 required
                 className="form-input"
@@ -235,8 +235,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           )}
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label" style={{ fontSize: '0.78rem' }}>Email Address *</label>
-            <input
+            <label htmlFor="authmodal-email-address" className="form-label" style={{ fontSize: '0.78rem' }}>Email Address *</label>
+            <input id="authmodal-email-address"
               type="email"
               required
               className="form-input"
@@ -247,8 +247,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
-            <input
+            <label htmlFor="authmodal-password" className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
+            <input id="authmodal-password"
               type="password"
               required
               minLength={mode === 'signup' ? 8 : undefined}

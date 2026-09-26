@@ -184,17 +184,17 @@ export default function AdminMatchCenterControllerPage({
               </div>
               <form onSubmit={handleCreateFixture}>
                 <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label">Opponent Team *</label>
-                  <input type="text" required className="form-input" placeholder="e.g. Metro Rovers" value={fixtureOpponent} onChange={e => setFixtureOpponent(e.target.value)} />
+                  <label htmlFor="match-center-opponent-team" className="form-label">Opponent Team *</label>
+                  <input id="match-center-opponent-team" type="text" required className="form-input" placeholder="e.g. Metro Rovers" value={fixtureOpponent} onChange={e => setFixtureOpponent(e.target.value)} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Competition</label>
-                    <input type="text" className="form-input" value={fixtureCompetition} onChange={e => setFixtureCompetition(e.target.value)} />
+                    <label htmlFor="match-center-competition" className="form-label">Competition</label>
+                    <input id="match-center-competition" type="text" className="form-input" value={fixtureCompetition} onChange={e => setFixtureCompetition(e.target.value)} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Season</label>
-                    <select className="form-select" value={fixtureSeason} onChange={e => setFixtureSeason(e.target.value)}>
+                    <label htmlFor="match-center-season" className="form-label">Season</label>
+                    <select id="match-center-season" className="form-select" value={fixtureSeason} onChange={e => setFixtureSeason(e.target.value)}>
                       {clubSeasons.map(s => (<option key={s.id} value={s.name}>{s.name}</option>))}
                       {!clubSeasons.some(s => s.name === fixtureSeason) && (<option value={fixtureSeason}>{fixtureSeason}</option>)}
                     </select>
@@ -845,8 +845,8 @@ export default function AdminMatchCenterControllerPage({
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Team Side</label>
-                      <select
+                      <label htmlFor="match-center-team-side" className="form-label">Team Side</label>
+                      <select id="match-center-team-side"
                         className="form-select"
                         value={teamSide}
                         onChange={e => setTeamSide(e.target.value as any)}
@@ -857,8 +857,8 @@ export default function AdminMatchCenterControllerPage({
                     </div>
 
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Match Minute</label>
-                      <input
+                      <label htmlFor="match-center-match-minute" className="form-label">Match Minute</label>
+                      <input id="match-center-match-minute"
                         type="number"
                         min={0}
                         max={120}
@@ -898,8 +898,8 @@ export default function AdminMatchCenterControllerPage({
                       </div>
                     ) : (
                       <div className="form-group">
-                        <label className="form-label">Opponent Player Name *</label>
-                        <input
+                        <label htmlFor="match-center-opponent-player-name" className="form-label">Opponent Player Name *</label>
+                        <input id="match-center-opponent-player-name"
                           type="text"
                           required
                           className="form-input"
@@ -961,8 +961,8 @@ export default function AdminMatchCenterControllerPage({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Event Detail / Tactical Notes</label>
-                    <input
+                    <label htmlFor="match-center-event-detail-tactical-notes" className="form-label">Event Detail / Tactical Notes</label>
+                    <input id="match-center-event-detail-tactical-notes"
                       type="text"
                       className="form-input"
                       placeholder="e.g. Curling strike into top corner after neat combination play."
@@ -1034,7 +1034,7 @@ export default function AdminMatchCenterControllerPage({
                               (Ast: {evt.assist_player_name})
                             </span>
                           )}
-                          <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
                             {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                           </span>
                         </div>
@@ -1300,8 +1300,8 @@ export default function AdminMatchCenterControllerPage({
 
             <form onSubmit={handleCreateFixture}>
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label">Opponent Club Name *</label>
-                <input
+                <label htmlFor="match-center-opponent-club-name" className="form-label">Opponent Club Name *</label>
+                <input id="match-center-opponent-club-name"
                   type="text"
                   required
                   className="form-input"
@@ -1313,8 +1313,8 @@ export default function AdminMatchCenterControllerPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Competition</label>
-                  <input
+                  <label htmlFor="match-center-competition-2" className="form-label">Competition</label>
+                  <input id="match-center-competition-2"
                     type="text"
                     className="form-input"
                     value={fixtureCompetition}
@@ -1323,8 +1323,8 @@ export default function AdminMatchCenterControllerPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Associated Season *</label>
-                  <select
+                  <label htmlFor="match-center-associated-season" className="form-label">Associated Season *</label>
+                  <select id="match-center-associated-season"
                     className="form-select"
                     value={fixtureSeason}
                     onChange={e => setFixtureSeason(e.target.value)}
@@ -1343,8 +1343,8 @@ export default function AdminMatchCenterControllerPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Kickoff Date & Time *</label>
-                  <input
+                  <label htmlFor="match-center-kickoff-date-time" className="form-label">Kickoff Date & Time *</label>
+                  <input id="match-center-kickoff-date-time"
                     type="datetime-local"
                     required
                     className="form-input"
@@ -1354,8 +1354,8 @@ export default function AdminMatchCenterControllerPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Venue / Home Ground</label>
-                  <input
+                  <label htmlFor="match-center-venue-home-ground" className="form-label">Venue / Home Ground</label>
+                  <input id="match-center-venue-home-ground"
                     type="text"
                     className="form-input"
                     value={fixtureVenue}

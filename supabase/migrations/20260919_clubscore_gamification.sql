@@ -4,10 +4,8 @@
 -- Compatible with Supabase PostgreSQL (Postgres 15+)
 --
 -- NOTE FOR FRESH SUPABASE PROJECTS:
--- If setting up a new Supabase database, run `supabase/schema.sql` first!
--- That script creates the base tables (`clubs`, `club_members`, `events`, etc.)
--- which are referenced by this migration.
--- Alternatively, `supabase/schema.sql` now already includes all Gamification tables!
+-- Run every file in supabase/migrations in filename order; 20260918_base_schema.sql
+-- creates the base tables (`clubs`, `club_members`, `events`, etc.) this one references.
 -- ==============================================================================
 
 -- 1. Ensure UUID extension is active

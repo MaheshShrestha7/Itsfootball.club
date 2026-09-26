@@ -208,13 +208,13 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       title={`${d.impressions.toLocaleString()} impressions · ${d.clicks.toLocaleString()} clicks`}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: 'default' }}
                     >
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>{d.clicks > 0 ? `${d.clicks} clicks` : ''}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>{d.clicks > 0 ? `${d.clicks} clicks` : ''}</span>
                       <div style={{
                         width: '100%', maxWidth: '34px', height: `${heightPct}%`,
                         background: 'linear-gradient(180deg, var(--club-primary), rgba(16,185,129,0.35))',
                         borderRadius: '5px 5px 0 0',
                       }} />
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{d.day}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{d.day}</span>
                     </div>
                   );
                 })}
@@ -270,7 +270,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '700px' }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                  <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.7rem', letterSpacing: '0.04em' }}>
                     <th style={{ padding: '0.5rem 0.6rem' }}>CREATIVE / SLOT</th>
                     <th style={{ padding: '0.5rem 0.6rem' }}>IMPRESSIONS</th>
                     <th style={{ padding: '0.5rem 0.6rem' }}>VIEWABLE</th>
@@ -285,7 +285,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     <tr key={sponsor.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '0.65rem 0.6rem', fontWeight: 700, color: '#FFFFFF' }}>
                         {sponsor.name}
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }}>{placementLabel(stats?.placements)}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>{placementLabel(stats?.placements)}</div>
                       </td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>{(stats?.impressions || 0).toLocaleString()}</td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>

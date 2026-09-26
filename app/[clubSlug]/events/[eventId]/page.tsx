@@ -193,7 +193,7 @@ export default function EventDetailsPage({
                       {sponsor.name}
                     </div>
                     <span className="badge" style={{
-                      fontSize: '0.6rem',
+                      fontSize: '0.7rem',
                       backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
                       color: isPlatinum ? '#F59E0B' : 'var(--text-muted)',
                       textTransform: 'capitalize',

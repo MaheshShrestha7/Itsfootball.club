@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useClub } from '@/lib/club-context';
+import { defaultSeasonLabel } from '@/lib/season';
 import {
   Shield,
   MapPin,
@@ -97,6 +99,7 @@ export default function ClubIdentitySection({
   events,
   sponsors,
 }: ClubIdentitySectionProps) {
+  const { getActiveSeason } = useClub();
   const sectionRef = useRef<HTMLElement>(null);
   const [isInView, setIsInView] = useState(false);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
@@ -115,7 +118,7 @@ export default function ClubIdentitySection({
   );
   const rawMatchesPlayed = rawPlayedMatches.length;
 
-  const rawCurrentSeason = rawPlayedMatches[0]?.season || '2025/2026';
+  const rawCurrentSeason = getActiveSeason(clubId)?.name || rawPlayedMatches[0]?.season || defaultSeasonLabel();
   const rawSeasonMatches = rawPlayedMatches.filter(
     m => !m.season || m.season === rawCurrentSeason
   );
@@ -494,7 +497,7 @@ export default function ClubIdentitySection({
                 >
                   <span
                     style={{
-                      fontSize: '0.68rem',
+                      fontSize: '0.7rem',
                       fontWeight: 800,
                       color: card.isHighlight ? '#F59E0B' : 'var(--text-muted)',
                       textTransform: 'uppercase',
@@ -611,7 +614,7 @@ export default function ClubIdentitySection({
           <div className="stadium-specs-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
             {club.stadium_pitch_type && (
               <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Pitch Surface
                 </div>
                 <div style={{ fontSize: '0.92rem', fontWeight: 800, color: primaryColor }}>

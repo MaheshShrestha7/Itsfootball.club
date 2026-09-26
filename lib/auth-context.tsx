@@ -88,21 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadRoles = useCallback(async (userId: string) => {
     const client = getSupabaseClient();
     if (!client) return;
-    // Links approved memberships made under this email (by a club admin) to the account, then
-    // returns them. Falls back to already-linked rows if the migration isn't applied yet.
-    const claimMemberships = async () => {
-      const claimed = await client.rpc('claim_my_memberships');
-      return claimed.error ? client.from('club_members').select('club_id, role').eq('user_id', userId) : claimed;
-    };
+    // Links approved memberships made under this email (by a club admin) to the account first,
+    // then reads every linked row, including the `roles` labels the claim RPC doesn't return
     const [owned, memberships] = await Promise.all([
       client.from('clubs').select('id').eq('owner_id', userId),
-      claimMemberships(),
+      client.rpc('claim_my_memberships').then(() =>
+        client.from('club_members').select('club_id, role, roles').eq('user_id', userId)
+      ),
     ]);
 
     const roles: Record<string, ClubRole> = {};
     // Squad roles are labels ('Player, Club Admin'), so map them to a permission level
-    ((memberships.data || []) as { club_id: string; role: string }[]).forEach(row => {
-      roles[row.club_id] = toClubRole(row.role);
+    ((memberships.data || []) as { club_id: string; role: string; roles: unknown }[]).forEach(row => {
+      roles[row.club_id] = toClubRole(row.role, Array.isArray(row.roles) ? row.roles : null);
     });
     (owned.data || []).forEach(row => {
       roles[row.id] = 'owner';

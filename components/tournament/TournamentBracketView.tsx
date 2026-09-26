@@ -283,7 +283,7 @@ export default function TournamentBracketView({
                                   {match.home_team_name}
                                 </div>
                                 {match.home_team_source && (
-                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                     {match.home_team_source}
                                   </div>
                                 )}
@@ -293,7 +293,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.home_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.65rem', color: '#F59E0B', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
                                   ({match.home_penalty_score})
                                 </span>
                               )}
@@ -343,7 +343,7 @@ export default function TournamentBracketView({
                                   {match.away_team_name}
                                 </div>
                                 {match.away_team_source && (
-                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                     {match.away_team_source}
                                   </div>
                                 )}
@@ -353,7 +353,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.away_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.65rem', color: '#F59E0B', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
                                   ({match.away_penalty_score})
                                 </span>
                               )}

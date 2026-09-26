@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
-import { useClub, validateClubSlug } from '@/lib/club-context';
+import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
@@ -144,7 +144,7 @@ export default function CreateClubPage() {
     setStep(currentStep + 1);
   };
 
-  const handleFinish = (e: React.FormEvent) => {
+  const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep1()) {
       setStep(1);
@@ -154,6 +154,12 @@ export default function CreateClubPage() {
     if (!user) {
       setStepError(authLoading ? 'Checking your sign-in, please try again in a moment.' : 'Please sign in or register to launch your club.');
       if (!authLoading) setAuthModalOpen(true);
+      return;
+    }
+    // The local check only knows the clubs this browser has loaded
+    if (!(await isClubSlugAvailable(slugValidation.cleanSlug))) {
+      setStepError(`The URL /${slugValidation.cleanSlug} is already taken. Please choose another.`);
+      setStep(1);
       return;
     }
     setStepError(null);
@@ -382,8 +388,8 @@ export default function CreateClubPage() {
 
                 <div className="form-row-2-1">
                   <div className="form-group">
-                    <label className="form-label">Full Club Name *</label>
-                    <input
+                    <label htmlFor="create-club-full-club-name" className="form-label">Full Club Name *</label>
+                    <input id="create-club-full-club-name"
                       type="text"
                       name="name"
                       required
@@ -395,8 +401,8 @@ export default function CreateClubPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Short Name / Code *</label>
-                    <input
+                    <label htmlFor="create-club-short-name-code" className="form-label">Short Name / Code *</label>
+                    <input id="create-club-short-name-code"
                       type="text"
                       name="short_name"
                       required
@@ -454,8 +460,8 @@ export default function CreateClubPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Year Founded</label>
-                    <input
+                    <label htmlFor="create-club-year-founded" className="form-label">Year Founded</label>
+                    <input id="create-club-year-founded"
                       type="number"
                       name="founded_year"
                       className="form-input"
@@ -466,8 +472,8 @@ export default function CreateClubPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Club Motto / Slogan</label>
-                  <input
+                  <label htmlFor="create-club-club-motto-slogan" className="form-label">Club Motto / Slogan</label>
+                  <input id="create-club-club-motto-slogan"
                     type="text"
                     name="motto"
                     className="form-input"
@@ -704,8 +710,8 @@ export default function CreateClubPage() {
                 </p>
 
                 <div className="form-group">
-                  <label className="form-label">Home Ground Name *</label>
-                  <input
+                  <label htmlFor="create-club-home-ground-name" className="form-label">Home Ground Name *</label>
+                  <input id="create-club-home-ground-name"
                     type="text"
                     name="stadium_name"
                     required
@@ -717,8 +723,8 @@ export default function CreateClubPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Physical Address</label>
-                  <input
+                  <label htmlFor="create-club-physical-address" className="form-label">Physical Address</label>
+                  <input id="create-club-physical-address"
                     type="text"
                     name="stadium_address"
                     className="form-input"
@@ -730,8 +736,8 @@ export default function CreateClubPage() {
 
                 <div className="form-row-2">
                   <div className="form-group">
-                    <label className="form-label">Pitch Surface</label>
-                    <select
+                    <label htmlFor="create-club-pitch-surface" className="form-label">Pitch Surface</label>
+                    <select id="create-club-pitch-surface"
                       name="stadium_pitch_type"
                       className="form-select"
                       value={formData.stadium_pitch_type}
@@ -744,8 +750,8 @@ export default function CreateClubPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Parking & Transit Notes</label>
-                    <input
+                    <label htmlFor="create-club-parking-transit-notes" className="form-label">Parking & Transit Notes</label>
+                    <input id="create-club-parking-transit-notes"
                       type="text"
                       name="stadium_parking_info"
                       className="form-input"
@@ -801,8 +807,8 @@ export default function CreateClubPage() {
 
                 <div className="form-row-2">
                   <div className="form-group">
-                    <label className="form-label">Club Secretariat Email *</label>
-                    <input
+                    <label htmlFor="create-club-club-secretariat-email" className="form-label">Club Secretariat Email *</label>
+                    <input id="create-club-club-secretariat-email"
                       type="email"
                       name="contact_email"
                       required
@@ -813,8 +819,8 @@ export default function CreateClubPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Club Contact Phone</label>
-                    <input
+                    <label htmlFor="create-club-club-contact-phone" className="form-label">Club Contact Phone</label>
+                    <input id="create-club-club-contact-phone"
                       type="tel"
                       name="contact_phone"
                       className="form-input"

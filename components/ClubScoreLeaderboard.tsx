@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Club, ClubMember, ClubScoreProfile, GamificationActivityLog } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
+import { defaultSeasonLabel } from '@/lib/season';
 import {
   Trophy,
   Flame,
@@ -30,7 +31,7 @@ export default function ClubScoreLeaderboard({
   members,
   profiles,
 }: ClubScoreLeaderboardProps) {
-  const { activityLogs } = useClub();
+  const { activityLogs, getActiveSeason } = useClub();
   const [filter, setFilter] = useState<'season' | 'weekly' | 'streak'>('season');
   const [selectedPlayerModal, setSelectedPlayerModal] = useState<{
     member: ClubMember;
@@ -96,7 +97,7 @@ export default function ClubScoreLeaderboard({
             <span className="badge badge-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Zap size={12} fill="#F59E0B" /> FANTASY SQUAD LEAGUE
             </span>
-            <span className="badge badge-primary">2025/26 ACTIVE</span>
+            <span className="badge badge-primary">{getActiveSeason(club.id)?.name || defaultSeasonLabel()} ACTIVE</span>
           </div>
           <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <Trophy size={24} color="#F59E0B" />
@@ -257,7 +258,7 @@ export default function ClubScoreLeaderboard({
                         background: `${tierColor}18`,
                         color: tierColor,
                         border: `1px solid ${tierColor}40`,
-                        fontSize: '0.65rem',
+                        fontSize: '0.7rem',
                         padding: '0.15rem 0.4rem',
                       }}
                     >
@@ -422,21 +423,21 @@ export default function ClubScoreLeaderboard({
               marginBottom: '1.75rem'
             }}>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>SEASON PTS</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SEASON PTS</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--club-primary)' }}>
                   {selectedPlayerModal.profile.total_points}
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>THIS WEEK</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>THIS WEEK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#10B981' }}>
                   +{selectedPlayerModal.profile.weekly_points}
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>STREAK</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>STREAK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
                   <Flame size={16} color="#EF4444" fill="#EF4444" />
                   <span>{selectedPlayerModal.profile.current_streak}w</span>
@@ -485,7 +486,7 @@ export default function ClubScoreLeaderboard({
                         <div style={{ fontWeight: 700, fontSize: '0.75rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {badge.name}
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Verified</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Verified</div>
                       </div>
                     </div>
                   ))}
@@ -522,7 +523,7 @@ export default function ClubScoreLeaderboard({
                     >
                       <div style={{ minWidth: 0, paddingRight: '0.5rem' }}>
                         <div style={{ color: '#FFFFFF', fontWeight: 600 }}>{log.description}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
                           {new Date(log.created_at).toLocaleDateString()}
                         </div>
                       </div>

@@ -6,13 +6,9 @@ import { Club } from '@/lib/supabase/types';
 import { useAuth } from '@/lib/auth-context';
 import {
   ShieldAlert,
-  Lock,
   ArrowLeft,
   KeyRound,
-  UserCheck,
-  CheckCircle2,
   AlertCircle,
-  ExternalLink,
   Shield,
   CreditCard,
   LogOut
@@ -65,7 +61,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           )}
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 700 }}>
-          Verifying {club.name} accreditation...
+          Checking your access to {club.name}...
         </div>
       </div>
     );
@@ -129,7 +125,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           </div>
 
           <span className="badge badge-danger" style={{ marginBottom: '0.6rem' }}>
-            ACCREDITATION CHECKPOINT • RBAC PROTECTED
+            ADMIN SIGN-IN
           </span>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
@@ -137,7 +133,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           </h2>
 
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.5 }}>
-            Access to live matchday controls, squad accreditation, and branding configurations requires authenticated club director or administrative credentials.
+            Sign in with the account that manages this club to run fixtures, the squad and the club&apos;s branding.
           </p>
 
           {/* Error Message */}
@@ -166,21 +162,26 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           {/* Credential Login Form */}
           <form onSubmit={handleFormSubmit} style={{ textAlign: 'left', marginBottom: '0.5rem' }}>
             <div className="form-group">
-              <label className="form-label" style={{ fontSize: '0.8rem' }}>Secretariat Email Address</label>
+              <label className="form-label" htmlFor="admin-guard-email" style={{ fontSize: '0.8rem' }}>Email</label>
               <input
+                id="admin-guard-email"
                 type="email"
                 required
+                autoComplete="email"
                 className="form-input"
-                placeholder="admin@club.org"
+                placeholder="you@example.com"
                 value={emailInput}
                 onChange={e => setEmailInput(e.target.value)}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontSize: '0.8rem' }}>Password / Access Key</label>
+              <label className="form-label" htmlFor="admin-guard-password" style={{ fontSize: '0.8rem' }}>Password</label>
               <input
+                id="admin-guard-password"
                 type="password"
+                required
+                autoComplete="current-password"
                 className="form-input"
                 placeholder="••••••••••••"
                 value={passwordInput}
@@ -195,7 +196,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
               style={{ width: '100%', marginTop: '0.5rem', height: '44px' }}
             >
               <KeyRound size={16} />
-              <span>{submitting ? 'Authenticating...' : 'Sign In & Access Control Room'}</span>
+              <span>{submitting ? 'Signing in...' : 'Sign in'}</span>
             </button>
           </form>
 
@@ -205,7 +206,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.825rem' }}
             >
               <ArrowLeft size={14} />
-              <span>Return to Public {club.name} Portal</span>
+              <span>Back to the {club.name} website</span>
             </Link>
           </div>
         </div>
@@ -254,7 +255,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
           </div>
 
           <span className="badge badge-danger" style={{ marginBottom: '0.5rem' }}>
-            403 FORBIDDEN • INSUFFICIENT PERMISSIONS
+            NO ADMIN ACCESS
           </span>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
@@ -266,13 +267,13 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             <span style={{ color: '#F59E0B', fontWeight: 700, textTransform: 'uppercase' }}>
               {userRole || 'Supporter'}
             </span>
-            . Administrative access is reserved exclusively for Club Owners and verified Secretariat Administrators.
+            . Only the club&apos;s owner and admins can open this page. Ask a club admin to give your account admin access.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
             <Link href={`/${club.slug}/member`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
               <CreditCard size={16} />
-              <span>View My Player Pass & Clubhouse</span>
+              <span>Go to my member page</span>
             </Link>
 
             <button
@@ -282,7 +283,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             >
               <LogOut size={16} />
-              <span>Sign Out & Switch Account</span>
+              <span>Sign out and use another account</span>
             </button>
           </div>
 
@@ -291,7 +292,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.825rem' }}
           >
             <ArrowLeft size={14} />
-            <span>Return to {club.name} Homepage</span>
+            <span>Back to the {club.name} website</span>
           </Link>
         </div>
       </div>

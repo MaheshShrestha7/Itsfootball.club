@@ -33,11 +33,17 @@ const R2_PUBLIC_ORIGIN = r2PublicOrigin();
 // Production builds don't use eval, so it stays blocked there.
 const IS_DEV = process.env.NODE_ENV === 'development';
 
+// Scripts need this request's nonce (added by middleware.ts, which fills in __NONCE__), so no inline
+// script runs unless Next itself rendered it. 'strict-dynamic' lets those scripts load their chunks.
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'" + (IS_DEV ? " 'unsafe-eval'" : ''),
+  "script-src 'self' 'nonce-__NONCE__' 'strict-dynamic'" + (IS_DEV ? " 'unsafe-eval'" : ''),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.cloudflare.com" +
+    (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +
+    (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
+  // News article videos (.mp4) served from the club's own storage
+  "media-src 'self' blob: https://*.r2.cloudflarestorage.com" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +
     (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
   // Fonts are self-hosted by next/font, so no Google Fonts hosts are needed
@@ -54,8 +60,8 @@ const CSP_DIRECTIVES = [
   "upgrade-insecure-requests",
 ].join('; ');
 
+// The CSP itself is sent by middleware.ts (it needs a fresh nonce per request)
 const SECURITY_HEADERS = [
-  { key: 'Content-Security-Policy', value: CSP_DIRECTIVES },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -64,6 +70,8 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Inlined into middleware.ts at build time, like the host lookups above
+  env: { CSP_TEMPLATE: CSP_DIRECTIVES },
   // Render generateMetadata output inside <head> for every client. By default Next streams it into
   // the body for anything it doesn't recognise as a bot (including Googlebot), so crawlers and SEO
   // tools that don't run JavaScript saw club pages with no title, description or canonical. The club

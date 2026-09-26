@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useClub, validateClubSlug } from '@/lib/club-context';
+import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
@@ -149,7 +149,7 @@ export default function AdminBrandingPage({
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!club) return;
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -167,6 +167,12 @@ export default function AdminBrandingPage({
 
     const newSlug = slugValidation.cleanSlug;
     const isSlugChanged = newSlug !== club.slug;
+    if (isSlugChanged && !(await isClubSlugAvailable(newSlug, club.id))) {
+      setSavedMessage(false);
+      setSaveError(`Not saved: the URL /${newSlug} is already taken by another club.`);
+      savedTimerRef.current = setTimeout(() => setSaveError(null), 5000);
+      return;
+    }
 
     const sliderImages = formData.slider_images_text
       ? formData.slider_images_text.split('\n').map(s => s.trim()).filter(Boolean)
@@ -463,8 +469,8 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
             <div className="form-group">
-              <label className="form-label">Official Club Name *</label>
-              <input
+              <label htmlFor="branding-official-club-name" className="form-label">Official Club Name *</label>
+              <input id="branding-official-club-name"
                 type="text"
                 name="name"
                 required
@@ -475,8 +481,8 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Short Acronym / Code *</label>
-              <input
+              <label htmlFor="branding-short-acronym-code" className="form-label">Short Acronym / Code *</label>
+              <input id="branding-short-acronym-code"
                 type="text"
                 name="short_name"
                 required
@@ -605,8 +611,8 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Club Motto / Slogan</label>
-              <input
+              <label htmlFor="branding-club-motto-slogan" className="form-label">Club Motto / Slogan</label>
+              <input id="branding-club-motto-slogan"
                 type="text"
                 name="motto"
                 className="form-input"
@@ -682,8 +688,8 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Home Ground Name</label>
-              <input
+              <label htmlFor="branding-home-ground-name" className="form-label">Home Ground Name</label>
+              <input id="branding-home-ground-name"
                 type="text"
                 name="stadium_name"
                 className="form-input"
@@ -693,8 +699,8 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Pitch Surface</label>
-              <select
+              <label htmlFor="branding-pitch-surface" className="form-label">Pitch Surface</label>
+              <select id="branding-pitch-surface"
                 name="stadium_pitch_type"
                 className="form-select"
                 value={formData.stadium_pitch_type}
@@ -708,8 +714,8 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Physical Address</label>
-              <input
+              <label htmlFor="branding-physical-address" className="form-label">Physical Address</label>
+              <input id="branding-physical-address"
                 type="text"
                 name="stadium_address"
                 className="form-input"
@@ -719,8 +725,8 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Matchday Parking & Transit Information</label>
-              <input
+              <label htmlFor="branding-matchday-parking-transit-information" className="form-label">Matchday Parking & Transit Information</label>
+              <input id="branding-matchday-parking-transit-information"
                 type="text"
                 name="stadium_parking_info"
                 className="form-input"

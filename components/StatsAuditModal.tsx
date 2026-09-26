@@ -90,6 +90,7 @@ export default function StatsAuditModal({
   const auditNotes = '';
   const [isBaking, setIsBaking] = useState<boolean>(false);
   const [auditResult, setAuditResult] = useState<{ totalXP: number; message: string } | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -155,6 +156,8 @@ export default function StatsAuditModal({
     if (res.success) {
       setAuditResult({ totalXP: res.totalPointsAwarded, message: res.message });
       if (onAuditCompleted) onAuditCompleted();
+    } else {
+      setAuditError(res.message);
     }
   };
 
@@ -211,7 +214,7 @@ export default function StatsAuditModal({
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 Post-Match Stats Audit
-                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>30s Verification</span>
+                <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>30s Verification</span>
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
                 {match.home_team_name} {match.home_score} - {match.away_score} {match.away_team_name} • {match.competition}
@@ -318,7 +321,7 @@ export default function StatsAuditModal({
                           <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-mono)' }}>
                             {evt.minute}&apos;
                           </span>
-                          <span className={`badge ${evt.event_type.includes('card') ? 'badge-secondary' : 'badge-primary'}`} style={{ fontSize: '0.68rem' }}>
+                          <span className={`badge ${evt.event_type.includes('card') ? 'badge-secondary' : 'badge-primary'}`} style={{ fontSize: '0.7rem' }}>
                             {evt.event_type.toUpperCase()}
                           </span>
                         </div>
@@ -485,6 +488,12 @@ export default function StatsAuditModal({
           )}
 
         </div>
+
+        {auditError && (
+          <div role="alert" style={{ padding: '0.75rem 1.75rem', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600 }}>
+            {auditError}
+          </div>
+        )}
 
         {/* Modal Footer */}
         {!auditResult && (

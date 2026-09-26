@@ -571,7 +571,7 @@ export default function AdminTournamentDetailPage({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
                     <span
                       style={{
-                        fontSize: '0.65rem',
+                        fontSize: '0.7rem',
                         fontWeight: 800,
                         padding: '1px 5px',
                         borderRadius: '4px',
@@ -585,12 +585,12 @@ export default function AdminTournamentDetailPage({
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
                     </span>
                     {part.seed && (
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         Seed #{part.seed}
                       </span>
                     )}
                     {part.group && (
-                      <span style={{ fontSize: '0.68rem', color: '#F59E0B', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
                         Group {part.group}
                       </span>
                     )}
@@ -649,10 +649,10 @@ export default function AdminTournamentDetailPage({
             <h3 style={{ margin: '0 0 1rem 0', fontWeight: 800 }}>Add Guest Team</h3>
             <form onSubmit={handleAddGuestTeam}>
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <label htmlFor="tournamentid-team-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                   Team Name *
                 </label>
-                <input
+                <input id="tournamentid-team-name"
                   type="text"
                   required
                   placeholder="e.g. Northern United"
@@ -671,10 +671,10 @@ export default function AdminTournamentDetailPage({
               </div>
 
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <label htmlFor="tournamentid-short-code" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                   Short Code
                 </label>
-                <input
+                <input id="tournamentid-short-code"
                   type="text"
                   maxLength={4}
                   placeholder="e.g. NUFC"

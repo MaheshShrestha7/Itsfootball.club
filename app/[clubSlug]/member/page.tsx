@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { defaultSeasonLabel } from '@/lib/season';
 import { ClubMember, MemberMessageCategory, PlayerPosition } from '@/lib/supabase/types';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
@@ -56,7 +57,8 @@ export default function MemberPortalPage({
     reloadFromServer,
     sendMemberMessage,
     getMemberMessages,
-    getClubSeasonStats
+    getClubSeasonStats,
+    getActiveSeason
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -550,10 +552,10 @@ export default function MemberPortalPage({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                           Full Name *
                         </label>
-                        <input
+                        <input id="member-full-name"
                           type="text"
                           required
                           value={signupForm.fullName}
@@ -572,10 +574,10 @@ export default function MemberPortalPage({
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                           Email Address *
                         </label>
-                        <input
+                        <input id="member-email-address"
                           type="email"
                           required
                           value={signupForm.email}
@@ -596,10 +598,10 @@ export default function MemberPortalPage({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-phone-number" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                           Phone Number
                         </label>
-                        <input
+                        <input id="member-phone-number"
                           type="tel"
                           value={signupForm.phone}
                           onChange={e => setSignupForm({ ...signupForm, phone: e.target.value })}
@@ -617,10 +619,10 @@ export default function MemberPortalPage({
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-membership-tier" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                           Membership Tier *
                         </label>
-                        <select
+                        <select id="member-membership-tier"
                           value={signupForm.tier}
                           onChange={e => setSignupForm({ ...signupForm, tier: e.target.value })}
                           style={{
@@ -655,10 +657,10 @@ export default function MemberPortalPage({
                         borderRadius: '8px',
                       }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-position" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
                             Preferred Position
                           </label>
-                          <select
+                          <select id="member-preferred-position"
                             value={signupForm.position}
                             onChange={e => setSignupForm({ ...signupForm, position: e.target.value as PlayerPosition })}
                             style={{
@@ -686,10 +688,10 @@ export default function MemberPortalPage({
                         </div>
 
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-kit" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
                             Preferred Kit #
                           </label>
-                          <input
+                          <input id="member-preferred-kit"
                             type="number"
                             min={1}
                             max={99}
@@ -711,10 +713,10 @@ export default function MemberPortalPage({
                     )}
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                         Motivation &amp; Background Notes:
                       </label>
-                      <textarea
+                      <textarea id="member-motivation-amp-background-notes"
                         rows={2}
                         value={signupForm.notes}
                         onChange={e => setSignupForm({ ...signupForm, notes: e.target.value })}
@@ -878,7 +880,7 @@ export default function MemberPortalPage({
                     color: '#000',
                     borderRadius: '10px',
                     padding: '0.1rem 0.4rem',
-                    fontSize: '0.68rem',
+                    fontSize: '0.7rem',
                     fontWeight: 900,
                   }}>
                     {memberMessagesList.length}
@@ -903,7 +905,7 @@ export default function MemberPortalPage({
                 <div className="glass-panel" style={{ padding: '2rem', borderTop: `4px solid ${club.primary_color}` }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div>
-                      <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>LEAGUE CAMPAIGN 2025/26</span>
+                      <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>LEAGUE CAMPAIGN {getActiveSeason(club.id)?.name || defaultSeasonLabel()}</span>
                       <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Trophy size={22} color="#F59E0B" />
                         <span>{club.name} — Club Season Statistics</span>
@@ -1154,10 +1156,10 @@ export default function MemberPortalPage({
 
                   <form onSubmit={handleSendMessage}>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-inquiry-category" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                         Inquiry Category:
                       </label>
-                      <select
+                      <select id="member-inquiry-category"
                         value={messageCategory}
                         onChange={e => setMessageCategory(e.target.value as MemberMessageCategory)}
                         style={{
@@ -1180,10 +1182,10 @@ export default function MemberPortalPage({
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-subject" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                         Subject:
                       </label>
-                      <input
+                      <input id="member-subject"
                         type="text"
                         required
                         value={messageSubject}
@@ -1202,10 +1204,10 @@ export default function MemberPortalPage({
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-message" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
                         Message:
                       </label>
-                      <textarea
+                      <textarea id="member-message"
                         rows={4}
                         required
                         value={messageContent}
@@ -1274,7 +1276,7 @@ export default function MemberPortalPage({
                               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAdmin ? '#60A5FA' : '#10B981' }}>
                                 {isAdmin ? `🏛️ ${msg.sender_name}` : `👤 You (${activeMember.full_name})`}
                               </span>
-                              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>

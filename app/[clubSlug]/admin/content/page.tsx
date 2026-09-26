@@ -262,8 +262,8 @@ export default function AdminContentPage({
 
             <form onSubmit={handleSave}>
               <div className="form-group">
-                <label className="form-label">Headline Title *</label>
-                <input
+                <label htmlFor="content-headline-title" className="form-label">Headline Title *</label>
+                <input id="content-headline-title"
                   type="text"
                   required
                   className="form-input"
@@ -273,8 +273,8 @@ export default function AdminContentPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Brief Summary / Lead</label>
-                <input
+                <label htmlFor="content-brief-summary-lead" className="form-label">Brief Summary / Lead</label>
+                <input id="content-brief-summary-lead"
                   type="text"
                   className="form-input"
                   value={form.summary}
@@ -283,8 +283,8 @@ export default function AdminContentPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Full Article Content *</label>
-                <textarea
+                <label htmlFor="content-full-article-content" className="form-label">Full Article Content *</label>
+                <textarea id="content-full-article-content"
                   rows={5}
                   required
                   className="form-textarea"
@@ -295,8 +295,8 @@ export default function AdminContentPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Cover Image URL</label>
-                  <input
+                  <label htmlFor="content-cover-image-url" className="form-label">Cover Image URL</label>
+                  <input id="content-cover-image-url"
                     type="url"
                     className="form-input"
                     value={form.cover_image_url}
@@ -305,11 +305,11 @@ export default function AdminContentPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Video Embed URL (YouTube/MP4)</label>
-                  <input
+                  <label htmlFor="content-video-link-youtube-or-mp4" className="form-label">Video Link (YouTube or .mp4)</label>
+                  <input id="content-video-link-youtube-or-mp4"
                     type="text"
                     className="form-input"
-                    placeholder="https://www.youtube.com/embed/..."
+                    placeholder="https://www.youtube.com/watch?v=..."
                     value={form.video_embed_url}
                     onChange={e => setForm({ ...form, video_embed_url: e.target.value })}
                   />
@@ -318,8 +318,8 @@ export default function AdminContentPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Author Name</label>
-                  <input
+                  <label htmlFor="content-author-name" className="form-label">Author Name</label>
+                  <input id="content-author-name"
                     type="text"
                     className="form-input"
                     value={form.author_name}
@@ -328,8 +328,8 @@ export default function AdminContentPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Tags (comma separated)</label>
-                  <input
+                  <label htmlFor="content-tags-comma-separated" className="form-label">Tags (comma separated)</label>
+                  <input id="content-tags-comma-separated"
                     type="text"
                     className="form-input"
                     value={form.tags}

@@ -26,6 +26,9 @@ const bodyFont = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['300', '400', 
 // Only used for small numeric labels, so it isn't preloaded
 const monoFont = JetBrains_Mono({ subsets: ['latin'], weight: ['500', '700'], display: 'swap', variable: '--font-jetbrains', preload: false });
 
+// Every page carries a per-request CSP nonce (middleware.ts), so none can be served prerendered
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   themeColor: '#070A0F',
   width: 'device-width',
