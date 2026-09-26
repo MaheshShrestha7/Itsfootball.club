@@ -37,12 +37,14 @@ import {
   Pause,
   Newspaper,
   Image as ImageIcon,
-  QrCode
+  QrCode,
+  X
 } from 'lucide-react';
 import { Match, ClubEvent, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 
 interface HomeHeroSlide {
   id: string;
@@ -103,6 +105,8 @@ export default function ClubPublicPage({
 
   // Tab & Filter states
   const [squadFilter, setSquadFilter] = useState<'ALL' | 'GK' | 'DEF' | 'MID' | 'FWD'>('ALL');
+  const [rosterOpen, setRosterOpen] = useState(false);
+  useEscapeToClose(rosterOpen, setRosterOpen);
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
@@ -156,6 +160,46 @@ export default function ClubPublicPage({
     if (squadFilter === 'FWD') return ['LW', 'RW', 'ST'].includes(p.player_position || '');
     return true;
   });
+
+  // Players ranked by ClubScore XP (goals, assists, clean sheets, MOTM, appearances... as the club's
+  // rules weigh them): this season's points, else their latest season's. Ties go to goals, then assists.
+  const currentSeasonName = activeSeason?.name || defaultSeasonLabel();
+  const xpByMember = new Map<string, number>();
+  [...clubScoreProfiles]
+    .filter(p => p.club_id === clubId)
+    .sort((a, b) => Number(a.season === currentSeasonName) - Number(b.season === currentSeasonName) || String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+    .forEach(p => xpByMember.set(p.member_id, p.total_points)); // later (preferred) profiles overwrite earlier ones
+  const statFor = (memberId: string) => playerStats.find(st => st.member_id === memberId);
+  const rankedSquad = [...filteredSquad].sort((a, b) =>
+    (xpByMember.get(b.id) ?? 0) - (xpByMember.get(a.id) ?? 0) ||
+    (statFor(b.id)?.goals ?? 0) - (statFor(a.id)?.goals ?? 0) ||
+    (statFor(b.id)?.assists ?? 0) - (statFor(a.id)?.assists ?? 0) ||
+    a.full_name.localeCompare(b.full_name)
+  );
+  const topPlayers = rankedSquad.slice(0, 5);
+  const countOf = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
+
+  const positionPills = (
+    <div className="scroll-pill-strip" style={{ maxWidth: '100%' }} role="group" aria-label="Filter players by position">
+      {(['ALL', 'GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
+        <button
+          key={pos}
+          type="button"
+          onClick={() => setSquadFilter(pos)}
+          aria-pressed={squadFilter === pos}
+          className="btn btn-sm scroll-pill-item touch-target"
+          style={{
+            background: squadFilter === pos ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
+            color: squadFilter === pos ? '#FFFFFF' : 'var(--text-secondary)',
+            border: '1px solid var(--border-subtle)',
+            minHeight: '38px',
+          }}
+        >
+          {pos === 'ALL' ? 'All Positions' : pos === 'GK' ? 'Goalkeepers' : pos === 'DEF' ? 'Defenders' : pos === 'MID' ? 'Midfielders' : 'Forwards'}
+        </button>
+      ))}
+    </div>
+  );
 
   // Top leaderboard players
   const leaderboardList = [...playerStats]
@@ -1852,34 +1896,23 @@ export default function ClubPublicPage({
             marginBottom: '2.5rem',
           }}>
             <div>
-              <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>FIRST TEAM ROSTER</span>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Senior Squad & Player Stats</h2>
+              <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Top Players</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                Ranked by ClubScore XP for {currentSeasonName}: goals, assists, clean sheets, MOTM and appearances.
+              </p>
             </div>
 
             {/* Position Filter Pills: Scrollable on mobile */}
-            <div className="scroll-pill-strip" style={{ maxWidth: '100%' }}>
-              {(['ALL', 'GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
-                <button
-                  key={pos}
-                  onClick={() => setSquadFilter(pos)}
-                  className="btn btn-sm scroll-pill-item touch-target"
-                  style={{
-                    background: squadFilter === pos ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                    color: squadFilter === pos ? '#FFFFFF' : 'var(--text-secondary)',
-                    border: '1px solid var(--border-subtle)',
-                    minHeight: '38px',
-                  }}
-                >
-                  {pos === 'ALL' ? 'All Squad' : pos === 'GK' ? 'Goalkeepers' : pos === 'DEF' ? 'Defenders' : pos === 'MID' ? 'Midfielders' : 'Forwards'}
-                </button>
-              ))}
-            </div>
+            {positionPills}
           </div>
 
-          {/* Squad Grid */}
-          <div className="grid-responsive-3" style={{ marginBottom: '3.5rem' }}>
-            {filteredSquad.map(player => {
-              const stat = playerStats.find(s => s.member_id === player.id);
+          {/* Top five by XP */}
+          {topPlayers.length === 0 && (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No players in this position yet.</p>
+          )}
+          <div className="grid-responsive-3" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
+            {topPlayers.map((player, rank) => {
+              const stat = statFor(player.id);
 
               return (
                 <div
@@ -1905,7 +1938,11 @@ export default function ClubPublicPage({
                       color: '#FFFFFF',
                       textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                     }}>
-                      #{player.jersey_number}
+                      {player.jersey_number ? `#${player.jersey_number}` : ''}
+                    </div>
+                    <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
+                      <span className="badge" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
+                      <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
                       <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', marginBottom: '4px' }}>
@@ -1949,6 +1986,15 @@ export default function ClubPublicPage({
               );
             })}
           </div>
+
+          {rankedSquad.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3.5rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setRosterOpen(true)}>
+                <Users size={16} />
+                <span>View full squad ({rankedSquad.length})</span>
+              </button>
+            </div>
+          )}
 
           {/* Leaderboard View Switcher */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
@@ -2202,6 +2248,86 @@ export default function ClubPublicPage({
       />
 
       {/* News Article Modal */}
+      {rosterOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="full-squad-title"
+          onClick={e => { if (e.target === e.currentTarget) setRosterOpen(false); }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div className="glass-panel" style={{
+            width: '100%',
+            maxWidth: '760px',
+            maxHeight: '88vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+          }}>
+            <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                <h3 id="full-squad-title" style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF' }}>
+                  Full Squad ({rankedSquad.length})
+                </h3>
+                <button type="button" onClick={() => setRosterOpen(false)} className="btn btn-secondary btn-sm" aria-label="Close full squad">
+                  <X size={16} />
+                </button>
+              </div>
+              {positionPills}
+            </div>
+
+            <ol style={{ listStyle: 'none', overflowY: 'auto', padding: '0.75rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {rankedSquad.length === 0 && (
+                <li style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>No players in this position yet.</li>
+              )}
+              {rankedSquad.map((player, rank) => {
+                const stat = statFor(player.id);
+                return (
+                  <li
+                    key={player.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'auto auto 1fr auto',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                    }}
+                  >
+                    <span style={{ width: '1.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--text-muted)' }}>{rank + 1}</span>
+                    <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={38} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {player.jersey_number ? <span style={{ color: 'var(--club-primary)', fontWeight: 900 }}>#{player.jersey_number} </span> : null}
+                        {player.full_name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {player.player_position || 'Squad'} · {countOf(stat?.appearances, 'app')} · {countOf(stat?.goals, 'goal')} · {countOf(stat?.assists, 'assist')} · {countOf(stat?.clean_sheets, 'clean sheet')}
+                      </div>
+                    </div>
+                    <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </div>
+      )}
+
       {activeNewsModal && (
         <div style={{
           position: 'fixed',
