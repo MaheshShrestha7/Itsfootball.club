@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
+import { useDoorCheckinUrl } from '@/lib/door-code';
 
 export default function AdminEventsPage({
   params,
@@ -39,12 +40,7 @@ export default function AdminEventsPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
 
-  const getCheckinUrl = (evt: ClubEvent) => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/${club.slug}/events/${evt.id}/checkin`;
-    }
-    return `/${club.slug}/events/${evt.id}/checkin`;
-  };
+  const doorCheckinUrl = useDoorCheckinUrl(qrModalEvent ? `/${club.slug}/events/${qrModalEvent.id}/checkin` : null, qrModalEvent?.id);
 
   const filteredEvents = clubEvents.filter(e => {
     if (seasonFilter === 'ALL') return true;
@@ -506,7 +502,7 @@ export default function AdminEventsPage({
           badgeLabel="SELF CHECK-IN STATION"
           title={qrModalEvent.title}
           subtitle={`${qrModalEvent.location} • ${new Date(qrModalEvent.start_time).toLocaleDateString()} at ${new Date(qrModalEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-          checkinUrl={getCheckinUrl(qrModalEvent)}
+          checkinUrl={doorCheckinUrl}
           disabledNotice={!qrModalEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.' : undefined}
           onClose={() => setQrModalEvent(null)}
         />

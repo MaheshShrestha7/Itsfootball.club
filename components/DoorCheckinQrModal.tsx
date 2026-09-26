@@ -7,7 +7,8 @@ import { X, Copy, Check, ExternalLink } from 'lucide-react';
 interface DoorCheckinQrModalProps {
   title: string;
   subtitle: string;
-  checkinUrl: string;
+  /** null while the door code is being fetched */
+  checkinUrl: string | null;
   badgeLabel?: string;
   disabledNotice?: string;
   onClose: () => void;
@@ -27,6 +28,7 @@ export default function DoorCheckinQrModal({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const copyLink = () => {
+    if (!checkinUrl) return;
     navigator.clipboard?.writeText(checkinUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
@@ -106,7 +108,13 @@ export default function DoorCheckinQrModal({
             boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
           }}
         >
-          <QRCodeSVG value={checkinUrl} size={220} level="H" includeMargin={false} />
+          {checkinUrl ? (
+            <QRCodeSVG value={checkinUrl} size={220} level="H" includeMargin={false} />
+          ) : (
+            <div style={{ width: 220, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+              Generating check-in code...
+            </div>
+          )}
         </div>
 
         <div
@@ -132,7 +140,7 @@ export default function DoorCheckinQrModal({
               whiteSpace: 'nowrap'
             }}
           >
-            {checkinUrl}
+            {checkinUrl || 'Generating check-in code...'}
           </span>
           <button
             type="button"
@@ -147,7 +155,7 @@ export default function DoorCheckinQrModal({
 
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <a
-            href={checkinUrl}
+            href={checkinUrl || undefined}
             target="_blank"
             rel="noreferrer"
             className="btn btn-secondary btn-sm"

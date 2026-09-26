@@ -46,6 +46,22 @@ const LEGACY_AUTH_KEY = 'itsfootball_auth_session_v1';
 const LEGACY_MEMBER_SESSION_PREFIX = 'itsfootball_member_session_';
 const CLUB_STATE_KEY = 'itsfootball_state_v1';
 
+/**
+ * Signed out (explicitly, session expired, or from another tab): drop the cached club data, which
+ * holds admin-only member details, and reload so none of it stays in memory either.
+ */
+let endingSession = false;
+function endSession() {
+  if (endingSession) return;
+  endingSession = true;
+  try {
+    localStorage.removeItem(CLUB_STATE_KEY);
+  } catch {
+    // ignore
+  }
+  window.location.reload();
+}
+
 /** Where the confirmation link in the sign-up email brings people back to (this site, not the Supabase default) */
 const confirmRedirect = () => `${window.location.origin}/my-clubs`;
 
@@ -135,7 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     client.auth.getSession().then(({ data }) => apply(data.session?.user ?? null));
-    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = client.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        endSession();
+        return;
+      }
       // Deferred: Supabase calls made inside this callback can deadlock the auth client
       setTimeout(() => apply(session?.user ?? null), 0);
     });
@@ -197,13 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await client?.auth.signOut();
     } finally {
-      // Don't leave an admin's cached member details on a shared computer
-      try {
-        localStorage.removeItem(CLUB_STATE_KEY);
-      } catch {
-        // ignore
-      }
-      window.location.reload();
+      endSession();
     }
   }, []);
 

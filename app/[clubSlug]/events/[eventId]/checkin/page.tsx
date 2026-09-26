@@ -23,10 +23,14 @@ import {
 
 export default function EventDoorCheckinPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clubSlug: string; eventId: string }>;
+  searchParams: Promise<{ code?: string }>;
 }) {
   const resolvedParams = use(params);
+  // Secret door code carried by the QR code printed at the entrance
+  const doorCode = use(searchParams).code;
   const { clubs, selectClubBySlug, events, publicEventCheckin } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -114,14 +118,14 @@ export default function EventDoorCheckinPage({
   const executeCheckinWithToken = async (token: string) => {
     if (!token.trim()) return;
     setSubmitting(true);
-    applyCheckinResult(await publicEventCheckin(event.id, { token: token.trim() }));
+    applyCheckinResult(await publicEventCheckin(event.id, { token: token.trim(), doorCode }));
     setSubmitting(false);
   };
 
   const handleSignedInCheckin = async () => {
     if (!signedInMemberToken) return;
     setSubmitting(true);
-    applyCheckinResult(await publicEventCheckin(event.id, { token: signedInMemberToken }));
+    applyCheckinResult(await publicEventCheckin(event.id, { token: signedInMemberToken, doorCode }));
     setSubmitting(false);
   };
 
@@ -133,7 +137,7 @@ export default function EventDoorCheckinPage({
       ? { token: memberToken.trim() }
       : { name: guestName.trim(), email: guestEmail.trim() };
 
-    applyCheckinResult(await publicEventCheckin(event.id, payload));
+    applyCheckinResult(await publicEventCheckin(event.id, { ...payload, doorCode }));
     setSubmitting(false);
   };
 

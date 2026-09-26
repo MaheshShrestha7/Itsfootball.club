@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
+import { useDoorCheckinUrl } from '@/lib/door-code';
 
 const FLYER_PRESETS = [
   {
@@ -390,12 +391,9 @@ export default function AdminMatchesPage({
   const heroFeaturedCount = clubMatches.filter(m => m.featured_on_hero).length;
   const qrEnabledCount = clubMatches.filter(m => m.door_qr_checkin_enabled).length;
 
-  const getCheckinUrl = (m: Match) => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/${club.slug}/match/${m.id}/checkin`;
-    }
-    return `/${club.slug}/match/${m.id}/checkin`;
-  };
+  // Only one of the QR modal / gate poster is open at a time
+  const doorMatch = qrModalMatch || printPosterMatch;
+  const doorCheckinUrl = useDoorCheckinUrl(doorMatch ? `/${club.slug}/match/${doorMatch.id}/checkin` : null, doorMatch?.id);
 
   return (
     <div style={{ paddingBottom: '4rem' }}>
@@ -632,7 +630,6 @@ export default function AdminMatchesPage({
             const isCompleted = m.status === 'completed';
             const isLive = m.status === 'live' || m.status === 'halftime';
             const matchType = m.match_type || 'friendly';
-            const checkinUrl = getCheckinUrl(m);
 
             return (
               <div
@@ -1471,7 +1468,7 @@ export default function AdminMatchesPage({
         <DoorCheckinQrModal
           title={qrModalMatch.title || `${qrModalMatch.home_team_name} vs ${qrModalMatch.away_team_name}`}
           subtitle={`${qrModalMatch.venue} • ${new Date(qrModalMatch.match_date).toLocaleDateString()} at ${qrModalMatch.match_time || '15:00'}`}
-          checkinUrl={getCheckinUrl(qrModalMatch)}
+          checkinUrl={doorCheckinUrl}
           onClose={() => setQrModalMatch(null)}
           extraActions={
             <button
@@ -1544,12 +1541,18 @@ export default function AdminMatchesPage({
             </p>
 
             <div style={{ display: 'inline-block', padding: '1rem', border: '3px solid #0F172A', borderRadius: '16px', marginBottom: '1.75rem' }}>
-              <QRCodeSVG
-                value={getCheckinUrl(printPosterMatch)}
-                size={260}
-                level="H"
-                includeMargin={false}
-              />
+              {doorCheckinUrl ? (
+                <QRCodeSVG
+                  value={doorCheckinUrl}
+                  size={260}
+                  level="H"
+                  includeMargin={false}
+                />
+              ) : (
+                <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                  Generating check-in code...
+                </div>
+              )}
             </div>
 
             <div style={{ background: '#F1F5F9', borderRadius: '12px', padding: '1rem', marginBottom: '2rem' }}>

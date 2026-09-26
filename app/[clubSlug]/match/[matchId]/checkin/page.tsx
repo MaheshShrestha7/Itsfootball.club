@@ -23,10 +23,14 @@ import {
 
 export default function MatchDoorCheckinPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clubSlug: string; matchId: string }>;
+  searchParams: Promise<{ code?: string }>;
 }) {
   const resolvedParams = use(params);
+  // Secret door code carried by the QR code printed at the entrance
+  const doorCode = use(searchParams).code;
   const { clubs, selectClubBySlug, matches, publicMatchCheckin } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -67,7 +71,7 @@ export default function MatchDoorCheckinPage({
     if (!token.trim()) return;
     setSubmitting(true);
 
-    const res = await publicMatchCheckin(match.id, { token: token.trim() });
+    const res = await publicMatchCheckin(match.id, { token: token.trim(), doorCode });
 
     if (res.success) {
       // Trigger festive stadium confetti
@@ -106,7 +110,7 @@ export default function MatchDoorCheckinPage({
       ? { token: memberToken.trim() }
       : { name: guestName.trim(), email: guestEmail.trim() };
 
-    const res = await publicMatchCheckin(match.id, payload);
+    const res = await publicMatchCheckin(match.id, { ...payload, doorCode });
 
     if (res.success) {
       // Trigger festive stadium confetti

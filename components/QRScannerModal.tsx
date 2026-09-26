@@ -39,7 +39,7 @@ export default function QRScannerModal({
   mode = 'verify_pass',
   clubId,
 }: QRScannerModalProps) {
-  const { verifyMemberPass, publicEventCheckin, publicMatchCheckin, members } = useClub();
+  const { verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin } = useClub();
   const verifyClubId = targetEvent?.club_id ?? targetMatch?.club_id ?? clubId;
   const [manualCode, setManualCode] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -159,7 +159,11 @@ export default function QRScannerModal({
         turnstile: 'Turnstile 04',
       });
     } else {
-      const res = verifyMemberPass(token, verifyClubId);
+      // Checked on the server: only club admins have other members' pass tokens locally
+      const checked = await verifyMemberPassPublic(token);
+      const res = checked.member && verifyClubId && checked.member.club_id !== verifyClubId
+        ? { valid: false, member: undefined, message: 'Invalid pass: this pass belongs to a different club.' }
+        : checked;
       setIsProcessing(false);
       if (res.valid && res.member) {
         playTurnstileAudio('grant');
@@ -364,35 +368,6 @@ export default function QRScannerModal({
               </div>
             </div>
 
-            {/* Quick Demo Pre-filled Chips */}
-            <div style={{ marginTop: '0.75rem' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem', fontWeight: 700 }}>
-                Registered Squad Passes:
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {members.slice(0, 4).map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      setManualCode(m.qr_code_token);
-                      handleProcessToken(m.qr_code_token);
-                    }}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid var(--border-subtle)',
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {m.full_name} ({m.player_position || 'Staff'})
-                  </button>
-                ))}
-              </div>
-            </div>
           </form>
         )}
 

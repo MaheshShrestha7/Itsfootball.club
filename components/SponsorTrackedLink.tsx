@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useClub } from '@/lib/club-context';
+import { sponsorHref } from '@/lib/sponsors';
 
 interface SponsorTrackedLinkProps {
   clubId: string;
@@ -71,7 +72,7 @@ export default function SponsorTrackedLink({
   return (
     <a
       ref={ref}
-      href={href}
+      href={sponsorHref(href) || '#'}
       target="_blank"
       rel="noopener noreferrer"
       className={className}

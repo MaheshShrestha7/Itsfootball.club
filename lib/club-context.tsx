@@ -155,8 +155,8 @@ interface ClubContextType {
   /** Public pass check, run on the server (visitors never receive pass tokens) */
   verifyMemberPassPublic: (token: string) => Promise<{ valid: boolean; member?: ClubMember; message: string }>;
   /** Public door check-in, run on the server */
-  publicMatchCheckin: (matchId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
-  publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
+  publicMatchCheckin: (matchId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
+  publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
 
   // Inquiries
   submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string) => Promise<{ success: boolean; error?: string }>;
@@ -261,6 +261,16 @@ export function sanitizeText(text: string | undefined): string {
   return text
     .replace(/[<>]/g, '') // Strip potential script injection tags
     .trim();
+}
+
+/** A scanned QR may carry a whole link (".../verify?token=abc"); returns just the token */
+export function passTokenFrom(raw: string): string {
+  const cleaned = raw.trim();
+  try {
+    return new URL(cleaned).searchParams.get('token')?.trim() || cleaned;
+  } catch {
+    return cleaned; // not a URL: use as typed
+  }
 }
 
 export function validateClubSlug(
@@ -1112,14 +1122,10 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   // Fixtures CRUD
   const addMatch = useCallback((matchData: Omit<Match, 'id' | 'created_at'>): Match => {
     const matchId = newId();
-    const qrCode = matchData.door_qr_checkin_enabled
-      ? (matchData.door_qr_code || secureToken('door-match'))
-      : matchData.door_qr_code;
 
     const newMatch: Match = {
       ...matchData,
       id: matchId,
-      door_qr_code: qrCode,
       checkin_count: matchData.checkin_count || 0,
       created_at: new Date().toISOString(),
     };
@@ -1185,9 +1191,6 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
               updates.current_minute !== undefined || updates.is_paused !== undefined)
           ) {
             updated.period_started_at = new Date().toISOString();
-          }
-          if (updated.door_qr_checkin_enabled && !updated.door_qr_code) {
-            updated.door_qr_code = secureToken('door-match');
           }
           return updated;
         }
@@ -1680,18 +1683,22 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     setGateScans(prev => [newScan, ...prev.slice(0, 499)]);
   }, []);
 
+  // Exact token match only: member ids are public, and rows without a token (public view) must never match
   const verifyMemberPass = useCallback((token: string, clubId?: string): { valid: boolean; member?: ClubMember; message: string } => {
-    const cleaned = token.trim();
-    const member = members.find(
-      m => (!clubId || m.club_id === clubId) &&
-        (m.qr_code_token === cleaned || m.id === cleaned || cleaned.includes(m.qr_code_token))
-    );
+    const cleaned = passTokenFrom(token);
+    const member = cleaned
+      ? members.find(m => (!clubId || m.club_id === clubId) && m.qr_code_token === cleaned)
+      : undefined;
 
     if (!member) {
       return {
         valid: false,
         message: 'Invalid pass: No matching club member found for this QR token.'
       };
+    }
+
+    if ((member.membership_status || 'approved') !== 'approved') {
+      return { valid: false, member, message: 'Pass not active: this membership has not been approved.' };
     }
 
     if (member.status === 'suspended') {
@@ -2130,14 +2137,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const verifyMemberPassPublic = useCallback(async (token: string): Promise<{ valid: boolean; member?: ClubMember; message: string }> => {
-    // A scanned QR may carry a whole link (".../verify?token=abc"); pull the token out of it
-    let cleaned = token.trim();
-    try {
-      const fromUrl = new URL(cleaned).searchParams.get('token');
-      if (fromUrl) cleaned = fromUrl.trim();
-    } catch {
-      // not a URL: use as typed
-    }
+    const cleaned = passTokenFrom(token);
     if (!cleaned) return { valid: false, message: 'Please enter a pass token.' };
 
     const client = getSupabaseClient();
@@ -2181,7 +2181,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const publicMatchCheckin = useCallback(async (
     matchId: string,
-    attendee: { name?: string; email?: string; token?: string }
+    attendee: { name?: string; email?: string; token?: string; doorCode?: string }
   ): Promise<{ success: boolean; message: string; attendeeName?: string }> => {
     const client = getSupabaseClient();
     if (!client) return { success: false, message: 'Check-in is unavailable right now. Please try again.' };
@@ -2191,6 +2191,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       p_token: attendee.token || null,
       p_name: attendee.name ? sanitizeText(attendee.name) : null,
       p_email: attendee.email ? sanitizeText(attendee.email) : null,
+      p_door_code: attendee.doorCode || null,
     });
     if (error) return { success: false, message: 'Check-in failed. Please try again or ask a steward for help.' };
 
@@ -2201,7 +2202,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const publicEventCheckin = useCallback(async (
     eventId: string,
-    attendee: { name?: string; email?: string; token?: string }
+    attendee: { name?: string; email?: string; token?: string; doorCode?: string }
   ): Promise<{ success: boolean; message: string; attendeeName?: string }> => {
     const client = getSupabaseClient();
     if (!client) return { success: false, message: 'Check-in is unavailable right now. Please try again.' };
@@ -2211,6 +2212,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       p_token: attendee.token || null,
       p_name: attendee.name ? sanitizeText(attendee.name) : null,
       p_email: attendee.email ? sanitizeText(attendee.email) : null,
+      p_door_code: attendee.doorCode || null,
     });
     if (error) return { success: false, message: 'Check-in failed. Please try again or ask an organizer for help.' };
 

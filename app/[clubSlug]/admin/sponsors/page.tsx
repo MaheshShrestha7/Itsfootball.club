@@ -4,6 +4,7 @@ import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
+import { sponsorHref } from '@/lib/sponsors';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
 
@@ -325,7 +326,7 @@ export default function AdminSponsorsPage({
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', marginTop: '4px' }}>
                     {sponsor.website_url && (
                       <a
-                        href={sponsor.website_url}
+                        href={sponsorHref(sponsor.website_url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}

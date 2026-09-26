@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadBufferToR2, isR2Configured } from '@/lib/storage/r2';
 import { requireClubAdmin } from '@/lib/supabase/server-auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
     const auth = await requireClubAdmin(req);
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Anyone can create a club and become its admin, so cap uploads per account
+    if (!rateLimit(`upload:${auth.userId}`, 30, 10 * 60 * 1000).allowed) {
+      return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes and try again.' }, { status: 429 });
     }
 
     // Reject oversized bodies before reading them

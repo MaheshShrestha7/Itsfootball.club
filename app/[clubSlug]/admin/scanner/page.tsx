@@ -34,10 +34,9 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, events, matches, verifyMemberPass, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, events, matches, verifyMemberPass, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
-  const clubMembers = members.filter(m => m.club_id === club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
   const clubMatches = matches.filter(m => m.club_id === club.id);
 
@@ -306,35 +305,6 @@ export default function AdminScannerPage({
               </div>
             </form>
           )}
-
-          {/* Quick Demo Pre-filled Test Passes */}
-          <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.6rem', fontWeight: 700 }}>
-              1-Click Demo Pass Scanner Simulation:
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {clubMembers.slice(0, 5).map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    setManualCode(m.qr_code_token);
-                    processToken(m.qr_code_token);
-                  }}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '0.35rem 0.65rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    color: '#FFFFFF',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {m.full_name} (#{m.jersey_number || 'Staff'})
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Instant Result Inspection Card */}
           {currentResult && (

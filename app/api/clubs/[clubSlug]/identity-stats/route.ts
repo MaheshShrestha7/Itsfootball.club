@@ -55,20 +55,21 @@ export async function GET(
       club = data;
     }
 
+    // Case-insensitive, with % and _ escaped so they can't act as wildcards
     if (!club) {
-      const { data } = await supabase.from('clubs').select('*').ilike('slug', cleanSlug).maybeSingle();
+      const { data } = await supabase.from('clubs').select('*').ilike('slug', cleanSlug.replace(/[\\%_]/g, '\\$&')).maybeSingle();
       club = data;
     }
 
-    // Check previous slugs alias fallback
+    // Previous slugs alias fallback
     if (!club) {
-      const { data: allClubs } = await supabase.from('clubs').select('*');
-      if (allClubs) {
-        club = allClubs.find(c =>
-          c.slug?.toLowerCase() === cleanSlug ||
-          (Array.isArray(c.previous_slugs) && c.previous_slugs.some((p: string) => p.toLowerCase() === cleanSlug))
-        ) || null;
-      }
+      const { data } = await supabase
+        .from('clubs')
+        .select('*')
+        .contains('previous_slugs', JSON.stringify([cleanSlug]))
+        .limit(1)
+        .maybeSingle();
+      club = data;
     }
 
     if (!club) {
@@ -196,12 +197,12 @@ export async function GET(
         'Cache-Control': 'no-store',
       }
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Identity Stats API] Unexpected handler exception:', err);
     return NextResponse.json(
       {
         success: false,
-        error: err?.message || 'Failed to fetch club identity stats',
+        error: 'Failed to fetch club identity stats',
       },
       { status: 500 }
     );

@@ -192,7 +192,6 @@ export interface Match {
   status: MatchStatus;
   featured_on_hero?: boolean;
   door_qr_checkin_enabled?: boolean;
-  door_qr_code?: string;
   checkin_count?: number;
   home_score: number;
   away_score: number;

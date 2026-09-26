@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { sponsorHref } from '@/lib/sponsors';
 import {
   Shield,
   Radio,
@@ -343,9 +344,9 @@ export default function PlatformHomePage() {
                 return (
                   <a
                     key={sponsor.id}
-                    href={sponsor.website_url || `/${club.slug}`}
-                    target={sponsor.website_url ? '_blank' : undefined}
-                    rel={sponsor.website_url ? 'noopener noreferrer' : undefined}
+                    href={sponsorHref(sponsor.website_url) || `/${club.slug}`}
+                    target={sponsorHref(sponsor.website_url) ? '_blank' : undefined}
+                    rel={sponsorHref(sponsor.website_url) ? 'noopener noreferrer' : undefined}
                     className="glass-panel glass-panel-interactive sponsor-scroll-card"
                     style={{
                       width: '220px',
