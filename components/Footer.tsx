@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -15,6 +15,8 @@ interface FooterProps {
 
 export default function Footer({ club, sponsors }: FooterProps) {
   const { clubs } = useClub();
+  const [crestFailed, setCrestFailed] = useState(false);
+  useEffect(() => setCrestFailed(false), [club?.logo_url]);
   const fallbackSlug = clubs[0]?.slug || 'clubs';
   // Admin links only for people who can actually open the admin area (same rule as AdminGuard)
   const { user, hasClubAdminAccess } = useAuth();
@@ -130,7 +132,18 @@ export default function Footer({ club, sponsors }: FooterProps) {
           {/* Col 1: Club Info / Platform Info */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-              {club ? (
+              {club?.logo_url && !crestFailed ? (
+                <img
+                  src={club.logo_url}
+                  alt={`${club.name} crest`}
+                  width={48}
+                  height={48}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setCrestFailed(true)}
+                  style={{ width: '48px', height: '48px', objectFit: 'contain', flexShrink: 0 }}
+                />
+              ) : club ? (
                 <div style={{
                   width: '32px',
                   height: '32px',
@@ -139,6 +152,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  flexShrink: 0,
                 }}>
                   <Shield size={18} color="#FFFFFF" />
                 </div>

@@ -42,6 +42,7 @@ function AvailabilityHub() {
     setPlayerAvailability,
     getAvailabilityByToken,
     ensureAvailability,
+    syncStatus,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -95,12 +96,15 @@ function AvailabilityHub() {
 
   const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
 
-  // Give every squad player a personal, unguessable RSVP link for this match
+  // Give every squad player a personal, unguessable RSVP link for this match. Only once the
+  // admin's own data has loaded: until then only the public view is here (available players,
+  // no tokens), and rows that already exist would be created again as duplicates.
+  const dataLoaded = ['off', 'idle', 'saving', 'readonly'].includes(syncStatus.phase);
   useEffect(() => {
-    if (!targetMatch) return;
+    if (!targetMatch || !dataLoaded) return;
     squadPlayers.forEach(p => ensureAvailability(targetMatch.id, p.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetMatch?.id, squadPlayers.length]);
+  }, [targetMatch?.id, squadPlayers.length, dataLoaded]);
 
   // Match Availabilities
   const matchAvailabilities = useMemo(() => {
@@ -465,7 +469,7 @@ function AvailabilityHub() {
                   Coach Note / Timing details (optional):
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
+                  <input aria-label="Coach note"
                     type="text"
                     className="form-input"
                     placeholder="e.g. Can only play 2nd half, slight ankle sprain..."
@@ -572,7 +576,7 @@ function AvailabilityHub() {
 
             {/* Filter Bar */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '1rem' }}>
-              <input
+              <input aria-label="Search players"
                 type="text"
                 className="form-input"
                 placeholder="Search player or position..."
@@ -839,7 +843,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
               ))}
             </div>
 
-            <textarea
+            <textarea aria-label="Note (optional)"
               className="form-textarea"
               rows={2}
               maxLength={500}

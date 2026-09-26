@@ -455,7 +455,7 @@ export default function AdminMatchCenterControllerPage({
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                 <CalendarDays size={14} color="var(--club-primary)" /> Season:
               </span>
-              <select
+              <select aria-label="Season"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
                 value={seasonFilter}
@@ -474,7 +474,7 @@ export default function AdminMatchCenterControllerPage({
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 Fixture:
               </span>
-              <select
+              <select aria-label="Fixture"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '100%' }}
                 value={selectedMatchId}
@@ -885,7 +885,7 @@ export default function AdminMatchCenterControllerPage({
                         />
 
                         {selectedPlayerId === 'custom' && (
-                          <input
+                          <input aria-label="Player name"
                             type="text"
                             required
                             className="form-input"
@@ -937,7 +937,7 @@ export default function AdminMatchCenterControllerPage({
                               ]}
                             />
                             {selectedAssistId === 'custom' && (
-                              <input
+                              <input aria-label="Assist player name"
                                 type="text"
                                 className="form-input"
                                 placeholder="Enter player name"
@@ -948,7 +948,7 @@ export default function AdminMatchCenterControllerPage({
                             )}
                           </>
                         ) : (
-                          <input
+                          <input aria-label="Assist player name"
                             type="text"
                             className="form-input"
                             placeholder="Player name"

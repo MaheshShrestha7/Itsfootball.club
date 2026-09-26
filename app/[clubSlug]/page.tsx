@@ -12,6 +12,7 @@ import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 import NewsVideo from '@/components/NewsVideo';
+import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
@@ -898,7 +899,7 @@ export default function ClubPublicPage({
                           </div>
                         </div>
                         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.25rem' }}>
-                          Kickoff: {new Date(activeSlideMatch.match_date).toLocaleDateString()} at {new Date(activeSlideMatch.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {activeSlideMatch.venue}
+                          Kickoff: <LocalTime value={activeSlideMatch.match_date} /> at <LocalTime value={activeSlideMatch.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} /> • {activeSlideMatch.venue}
                         </div>
                         <Link
                           href={`/${club.slug}/match/${activeSlideMatch.id}`}
@@ -986,7 +987,7 @@ export default function ClubPublicPage({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Calendar size={15} color="var(--club-primary)" />
-                            <span>{new Date(activeSlideEvent.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span><LocalTime value={activeSlideEvent.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} /></span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <MapPin size={15} color="var(--club-primary)" />
@@ -997,8 +998,8 @@ export default function ClubPublicPage({
                         {/* Attendance Progress Meter */}
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                            <span style={{ color: 'var(--text-muted)' }}>RSVP Capacity</span>
-                            <strong style={{ color: '#FFFFFF' }}>{activeSlideEvent.rsvp_count} / {activeSlideEvent.max_capacity} Attending</strong>
+                            <span style={{ color: 'var(--text-muted)' }}>Checked In</span>
+                            <strong style={{ color: '#FFFFFF' }}>{activeSlideEvent.rsvp_count} / {activeSlideEvent.max_capacity} checked in</strong>
                           </div>
                           <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{
@@ -1426,7 +1427,7 @@ export default function ClubPublicPage({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</span>
-                <select
+                <select aria-label="Season"
                   value={fixturesSeasonFilter}
                   onChange={(e) => setFixturesSeasonFilter(e.target.value)}
                   style={{
@@ -1525,10 +1526,10 @@ export default function ClubPublicPage({
                   )}
                   <div style={{ fontSize: '0.9rem', color: '#FFFFFF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
                     <Calendar size={14} color="var(--text-muted)" />
-                    {new Date(match.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {match.match_time || new Date(match.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {match.venue}
+                    {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />} • {match.venue}
                   </div>
                 </div>
 
@@ -1648,7 +1649,7 @@ export default function ClubPublicPage({
                       {evt.category.toUpperCase()}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      RSVP: {evt.rsvp_count} / {evt.max_capacity}
+                      Checked in: {evt.rsvp_count} / {evt.max_capacity}
                     </span>
                   </div>
 
@@ -1664,7 +1665,7 @@ export default function ClubPublicPage({
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Calendar size={14} color="var(--club-primary)" />
-                    <span style={{ color: '#FFFFFF' }}>{new Date(evt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span style={{ color: '#FFFFFF' }}><LocalTime value={evt.start_time} locale="en-US" options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <MapPin size={14} color="var(--club-primary)" />
@@ -1777,7 +1778,7 @@ export default function ClubPublicPage({
                       {article.title}
                     </h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {new Date(article.published_at).toLocaleDateString()}
+                      <LocalTime value={article.published_at} />
                     </span>
                   </div>
                 </div>
@@ -2232,7 +2233,7 @@ export default function ClubPublicPage({
               {activeNewsModal.title}
             </h3>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Published by {activeNewsModal.author_name} • {new Date(activeNewsModal.published_at).toLocaleDateString()}
+              Published by {activeNewsModal.author_name} • <LocalTime value={activeNewsModal.published_at} />
             </div>
             <NewsVideo url={activeNewsModal.video_embed_url} title={activeNewsModal.title} />
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: '2rem' }}>

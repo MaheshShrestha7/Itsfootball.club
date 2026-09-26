@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, use, useMemo } from 'react';
+import React, { useState, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Match, MatchType, MatchStatus } from '@/lib/supabase/types';
@@ -88,6 +88,8 @@ export default function AdminMatchesPage({
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  // Status and score the edit form opened with, to tell what the admin changed
+  const editOpenedWithRef = useRef<{ status: MatchStatus; home_score: number; away_score: number } | null>(null);
   const [qrModalMatch, setQrModalMatch] = useState<Match | null>(null);
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -202,6 +204,7 @@ export default function AdminMatchesPage({
       home_score: m.home_score ?? 0,
       away_score: m.away_score ?? 0,
     });
+    editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setIsFormModalOpen(true);
   };
 
@@ -258,6 +261,7 @@ export default function AdminMatchesPage({
 
     if (editingMatchId) {
       // Update existing fixture - PRESERVE status & scores
+      const opened = editOpenedWithRef.current || { status: resolvedStatus, home_score: homeScore, away_score: awayScore };
       updateMatch(editingMatchId, {
         title: cleanTitle || `${homeTeam} vs ${awayTeam}`,
         match_type: form.match_type,
@@ -275,12 +279,14 @@ export default function AdminMatchesPage({
         venue: cleanVenue,
         match_flyer_url: form.match_flyer_url,
         description: cleanDescription,
-        status: resolvedStatus,
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
-        home_score: homeScore,
-        away_score: awayScore,
-        ...(resolvedStatus === 'completed' ? { period: 'full_time' } : {}),
+        // Only what the admin actually changed: the live match center may have moved the score or
+        // status on since this form was opened, and re-sending the old values would undo that
+        ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
+        ...(homeScore !== opened.home_score ? { home_score: homeScore } : {}),
+        ...(awayScore !== opened.away_score ? { away_score: awayScore } : {}),
+        ...(resolvedStatus === 'completed' && opened.status !== 'completed' ? { period: 'full_time' } : {}),
       });
       showToast(`Updated fixture: ${cleanTitle || cleanOpponent}`);
     } else {
@@ -567,7 +573,7 @@ export default function AdminMatchesPage({
         {/* Filters and Search Input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {/* Match Type Dropdown */}
-          <select
+          <select aria-label="Match type"
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="form-input"
@@ -580,7 +586,7 @@ export default function AdminMatchesPage({
           </select>
 
           {/* Season Dropdown */}
-          <select
+          <select aria-label="Season"
             value={seasonFilter}
             onChange={e => setSeasonFilter(e.target.value)}
             className="form-input"
@@ -595,7 +601,7 @@ export default function AdminMatchesPage({
           {/* Search Box */}
           <div style={{ position: 'relative', minWidth: '220px' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
+            <input aria-label="Search fixtures"
               type="text"
               placeholder="Search opponent, title, venue..."
               value={searchQuery}

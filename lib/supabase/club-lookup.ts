@@ -1,8 +1,6 @@
-// Lightweight server-side club lookup, used for:
-//  - returning a real HTTP 404 for unknown club slugs (clubSlugExists), and
-//  - generating server-rendered <title>/OG metadata for search engines and link
-//    previews (findClubBySlug), which the client-rendered pages themselves can't
-//    provide since they have no content until JS runs.
+import { fetchPaged } from '../paged';
+
+// Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
 // Mirrors the slug/previous_slugs matching logic in lib/club-context.tsx's selectClubBySlug.
 
 export interface ClubMetadataRow {
@@ -172,21 +170,25 @@ export async function listClubNews(clubId: string, limit = 20): Promise<NewsMeta
   }
 }
 
-async function fetchRows<T>(query: string): Promise<T[]> {
+/** Up to 5,000 rows of a REST query, a page at a time (Supabase returns at most 1,000 per request) */
+async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return [];
-  try {
-    const res = await fetch(`${url}/rest/v1/${query}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      next: { revalidate: 3600 },
-    });
-    return res.ok ? await res.json() : [];
-  } catch {
-    return [];
-  }
+  const { data } = await fetchPaged<T>(async (from, to) => {
+    try {
+      const res = await fetch(`${url}/rest/v1/${query}&offset=${from}&limit=${to - from + 1}`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        next: { revalidate: 3600 },
+      });
+      return res.ok ? { data: await res.json(), error: null } : { data: null, error: { message: res.statusText } };
+    } catch (err) {
+      return { data: null, error: { message: String(err) } };
+    }
+  }, max);
+  return data;
 }
 
 export interface SitemapData {
@@ -199,22 +201,10 @@ export interface SitemapData {
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
   const [clubs, matches, events, tournaments] = await Promise.all([
-    fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true'),
-    fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc&limit=5000'),
-    fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc&limit=5000'),
-    fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&limit=5000'),
+    fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true&order=id'),
+    fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
+    fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
+    fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
   ]);
   return { clubs, matches, events, tournaments };
-}
-
-export async function clubSlugExists(slug: string): Promise<boolean> {
-  if (!slug) return true; // fail open on an empty slug; let client-side handle it
-  const clubs = await fetchActiveClubs();
-  if (!clubs) return true; // fail open: unconfigured Supabase or a transient/network error
-  const clean = slug.toLowerCase();
-  return clubs.some(
-    c =>
-      c.slug?.toLowerCase() === clean ||
-      c.previous_slugs?.some(prev => prev?.toLowerCase() === clean)
-  );
 }

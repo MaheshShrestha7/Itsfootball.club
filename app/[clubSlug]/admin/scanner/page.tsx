@@ -182,7 +182,7 @@ export default function AdminScannerPage({
           {mode === 'match_checkin' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Match:</span>
-              <select
+              <select aria-label="Target match"
                 className="form-select"
                 style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedMatchId}
@@ -200,7 +200,7 @@ export default function AdminScannerPage({
           {mode === 'checkin' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Event:</span>
-              <select
+              <select aria-label="Target event"
                 className="form-select"
                 style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedEventId}
@@ -290,7 +290,7 @@ export default function AdminScannerPage({
               <div className="form-group">
                 <label className="form-label">Enter or Paste QR Code Token</label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
+                  <input aria-label="Pass token"
                     type="text"
                     className="form-input"
                     placeholder="e.g. apex-player-pass-10"

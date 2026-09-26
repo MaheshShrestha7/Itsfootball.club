@@ -60,7 +60,7 @@ export default function PlayerSearchSelect({
 
   return (
     <div style={{ position: 'relative' }}>
-      <input
+      <input aria-label={placeholder}
         type="text"
         className="form-input"
         placeholder={placeholder}

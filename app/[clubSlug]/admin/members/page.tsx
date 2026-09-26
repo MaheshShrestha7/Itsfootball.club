@@ -370,7 +370,7 @@ export default function AdminMembersPage({
         {activeTab !== 'messages' && (
           <div style={{ position: 'relative', minWidth: '240px' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
+            <input aria-label="Search members"
               type="text"
               placeholder="Search by name, email..."
               value={searchQuery}
@@ -495,7 +495,7 @@ export default function AdminMembersPage({
                     Reply as {user?.full_name || 'Club Committee'}:
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <textarea
+                    <textarea aria-label="Reply to member"
                       rows={2}
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}

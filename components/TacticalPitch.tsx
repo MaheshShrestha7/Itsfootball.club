@@ -279,7 +279,7 @@ function occupantOf(member: ClubMember) {
   return {
     member_id: member.id,
     name: member.full_name,
-    number: member.jersey_number || 0,
+    number: member.jersey_number || 0, // 0 = no number: shown blank
     position: member.player_position,
     is_captain: !!member.is_executive && isPlayerMember(member),
   };
@@ -621,7 +621,7 @@ export default function TacticalPitch({
     } else if (nearbyPlayer) {
       zone = isEmptySlot(nearbyPlayer)
         ? `Release to move into the empty ${nearbyPlayer.position} slot`
-        : `SWAP TARGET: ${nearbyPlayer.name} (#${nearbyPlayer.number})`;
+        : `SWAP TARGET: ${nearbyPlayer.name}${nearbyPlayer.number ? ` (#${nearbyPlayer.number})` : ''}`;
     } else {
       zone = getSectorZone(clampedX, clampedY);
     }
@@ -742,6 +742,11 @@ export default function TacticalPitch({
 
   // Selected player details
   const activePlayer = positions.find(p => p.id === selectedPlayerId);
+
+  // Squad players not in a pitch slot (older lineups saved slots by name only)
+  const pitchMemberIds = new Set(positions.map(p => p.member_id).filter(Boolean));
+  const pitchNames = new Set(positions.filter(p => !p.member_id).map(p => p.name.toLowerCase()));
+  const substitutes = players.filter(p => !pitchMemberIds.has(p.id) && !pitchNames.has(p.full_name.toLowerCase()));
 
   // Check card/substitution status from live match events
   const getPlayerMatchBadges = (playerName: string) => {
@@ -1069,7 +1074,7 @@ export default function TacticalPitch({
               role="button"
               aria-label={empty
                 ? `Empty ${pos.position} slot`
-                : `${pos.name}, number ${pos.number}, ${pos.position}. Use arrow keys to reposition.`}
+                : `${pos.name}${pos.number ? `, number ${pos.number}` : ''}, ${pos.position}. Use arrow keys to reposition.`}
             >
               {/* Drop Target Swap Indicator Badge */}
               {isDropTarget && (
@@ -1149,29 +1154,31 @@ export default function TacticalPitch({
                       onError={() => setBrokenPhotos(prev => new Set(prev).add(photoUrl))}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                     />
-                    <span style={{
-                      position: 'absolute',
-                      bottom: '-3px',
-                      right: '-3px',
-                      background: pos.position === 'GK' ? '#F59E0B' : primaryColor,
-                      color: '#FFFFFF',
-                      fontSize: '0.7rem',
-                      fontWeight: 900,
-                      minWidth: '14px',
-                      height: '14px',
-                      padding: '0 2px',
-                      borderRadius: '7px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1.5px solid rgba(0,0,0,0.6)',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                    }}>
-                      {pos.number}
-                    </span>
+                    {pos.number > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '-3px',
+                        right: '-3px',
+                        background: pos.position === 'GK' ? '#F59E0B' : primaryColor,
+                        color: '#FFFFFF',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                        minWidth: '14px',
+                        height: '14px',
+                        padding: '0 2px',
+                        borderRadius: '7px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1.5px solid rgba(0,0,0,0.6)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                      }}>
+                        {pos.number}
+                      </span>
+                    )}
                   </>
                 ) : (
-                  pos.number
+                  pos.number || ''
                 )}
 
                 {/* Captain's Armband */}
@@ -1280,6 +1287,63 @@ export default function TacticalPitch({
         })}
       </div>
 
+      {/* Substitutes: the matchday squad minus whoever is on the pitch (read-only views; editors have their own bench) */}
+      {!isEditable && substitutes.length > 0 && (
+        <div
+          aria-label="Substitutes"
+          style={{
+            marginTop: '-0.75rem',
+            padding: '0.75rem clamp(0.6rem, 2vw, 1rem)',
+            borderRadius: '0 0 var(--radius-md) var(--radius-md)',
+            background: 'rgba(0, 0, 0, 0.55)',
+            border: '1px solid var(--border-subtle)',
+            borderTop: `2px solid ${primaryColor}`,
+          }}
+        >
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.55rem' }}>
+            SUBSTITUTES ({substitutes.length})
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {substitutes.map(sub => {
+              const badges = getPlayerMatchBadges(sub.full_name);
+              return (
+                <div
+                  key={sub.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.3rem 0.65rem 0.3rem 0.3rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                  }}
+                >
+                  <PlayerAvatar photoUrl={sub.photo_url} name={sub.full_name} size={26} />
+                  {sub.jersey_number != null && (
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '0.75rem', color: primaryColor }}>
+                      {sub.jersey_number}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    {nameDisplay === 'first' ? sub.full_name.split(' ')[0] : sub.full_name.split(' ').pop()}
+                  </span>
+                  {sub.player_position && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{sub.player_position}</span>
+                  )}
+                  {badges.hasGoal && <span title="Goal">⚽</span>}
+                  {badges.hasRed ? (
+                    <span title="Red Card" style={{ width: '8px', height: '11px', borderRadius: '2px', background: '#EF4444' }} />
+                  ) : badges.hasYellow ? (
+                    <span title="Yellow Card" style={{ width: '8px', height: '11px', borderRadius: '2px', background: '#F59E0B' }} />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tactical Assistant Footer & Mode Hint */}
       <div style={{
         display: 'flex',
@@ -1333,7 +1397,7 @@ export default function TacticalPitch({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `#${activePlayer.number} ${activePlayer.name}`}
+                  {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `${activePlayer.number ? `#${activePlayer.number} ` : ''}${activePlayer.name}`}
                 </h4>
                 {activePlayer.is_captain && (
                   <span className="badge badge-gold" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>

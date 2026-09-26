@@ -431,7 +431,7 @@ export default function CreateClubPage() {
                       }}>
                         itsfootball.club/
                       </span>
-                      <input
+                      <input aria-label="Club URL slug"
                         type="text"
                         name="slug"
                         required
@@ -555,14 +555,14 @@ export default function CreateClubPage() {
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Primary Color</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <input
+                          <input aria-label="Primary colour"
                             type="color"
                             name="primary_color"
                             value={formData.primary_color}
                             onChange={handleChange}
                             style={{ width: '38px', height: '38px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                           />
-                          <input
+                          <input aria-label="Primary colour hex code"
                             type="text"
                             name="primary_color"
                             className="form-input"
@@ -576,14 +576,14 @@ export default function CreateClubPage() {
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Secondary</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <input
+                          <input aria-label="Secondary colour"
                             type="color"
                             name="secondary_color"
                             value={formData.secondary_color}
                             onChange={handleChange}
                             style={{ width: '38px', height: '38px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                           />
-                          <input
+                          <input aria-label="Secondary colour hex code"
                             type="text"
                             name="secondary_color"
                             className="form-input"
@@ -597,14 +597,14 @@ export default function CreateClubPage() {
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Accent / Gold</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <input
+                          <input aria-label="Accent colour"
                             type="color"
                             name="accent_color"
                             value={formData.accent_color}
                             onChange={handleChange}
                             style={{ width: '38px', height: '38px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                           />
-                          <input
+                          <input aria-label="Accent colour hex code"
                             type="text"
                             name="accent_color"
                             className="form-input"
@@ -790,7 +790,7 @@ export default function CreateClubPage() {
                     <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRight: 'none', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', color: 'var(--text-muted)' }}>
                       <Globe size={16} />
                     </span>
-                    <input
+                    <input aria-label="Custom domain"
                       type="text"
                       name="custom_domain"
                       className="form-input"

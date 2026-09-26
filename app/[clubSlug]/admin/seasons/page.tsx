@@ -576,10 +576,10 @@ export default function AdminSeasonsPage({
 
             <form onSubmit={handleSaveSeason}>
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label" style={{ fontWeight: 700 }}>
+                <label htmlFor="seasons-season-name-title" className="form-label" style={{ fontWeight: 700 }}>
                   Season Name / Title <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
+                <input id="seasons-season-name-title"
                   type="text"
                   required
                   className="form-input"
@@ -594,10 +594,10 @@ export default function AdminSeasonsPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>
+                  <label htmlFor="seasons-start-date" className="form-label" style={{ fontWeight: 700 }}>
                     Start Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
-                  <input
+                  <input id="seasons-start-date"
                     type="date"
                     required
                     className="form-input"
@@ -607,10 +607,10 @@ export default function AdminSeasonsPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>
+                  <label htmlFor="seasons-end-date" className="form-label" style={{ fontWeight: 700 }}>
                     End Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
-                  <input
+                  <input id="seasons-end-date"
                     type="date"
                     required
                     className="form-input"

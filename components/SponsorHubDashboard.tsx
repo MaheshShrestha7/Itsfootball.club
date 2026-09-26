@@ -133,9 +133,9 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {range === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
+              <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
-              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
+              <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
             </div>
           )}
           <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.3rem' }}>
@@ -258,7 +258,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
               </h3>
               <div style={{ position: 'relative' }}>
                 <Search size={13} style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input
+                <input aria-label="Search sponsors"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search sponsor..."

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { clubSlugExists } from '@/lib/supabase/club-lookup';
+import { clubExists } from '@/lib/supabase/server-data';
 import { SITE_NAME, clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import ClubLayoutClient from './ClubLayoutClient';
 
@@ -39,9 +39,9 @@ export default async function ClubLayout({
 
   // Server-side existence check so unknown club slugs return a real HTTP 404
   // instead of a client-rendered 200 "not found" page. This intentionally fails
-  // open on a transient Supabase error (see clubSlugExists), unlike a plain
+  // open on a transient Supabase error (see clubExists), unlike a plain
   // "club not found" lookup - a network blip shouldn't 404 every club page.
-  if (!(await clubSlugExists(clubSlug))) {
+  if (!(await clubExists(clubSlug))) {
     notFound();
   }
 

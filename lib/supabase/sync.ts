@@ -402,7 +402,7 @@ export class SupabaseSync {
   }
 
   /**
-   * Inserts new rows, sends only the changed columns of existing ones (so values another admin or a
+   * Inserts new rows (never overwriting an existing one), sends only the changed columns of existing ones (so values another admin or a
    * server function changed in the meantime aren't overwritten with this copy's stale ones), and
    * deletes exactly the ids in `deletes`.
    */
@@ -468,6 +468,11 @@ export class SupabaseSync {
     return result;
   }
 
+  /**
+   * New rows only: one whose id already exists is left alone (ON CONFLICT DO NOTHING), because a
+   * row that merely looks new here (e.g. a copy another tab cached for a different club) must never
+   * overwrite the database's newer version. The next load brings the real one back.
+   */
   private async insertRows(
     cfg: EntityConfig,
     rows: Row[],
@@ -475,7 +480,8 @@ export class SupabaseSync {
     failed: Map<string, string>,
     result: FlushResult
   ) {
-    const { error } = await this.client.from(cfg.table).upsert(rows, { onConflict: 'id' });
+    const insertOnly = { onConflict: 'id', ignoreDuplicates: true };
+    const { error } = await this.client.from(cfg.table).upsert(rows, insertOnly);
     if (!error) {
       rows.forEach(r => synced.set(r.id, r));
       result.wrote += rows.length;
@@ -484,7 +490,7 @@ export class SupabaseSync {
 
     // One bad row shouldn't block the rest: retry individually to find it
     for (const row of rows) {
-      const { error: rowError } = await this.client.from(cfg.table).upsert(row, { onConflict: 'id' });
+      const { error: rowError } = await this.client.from(cfg.table).upsert(row, insertOnly);
       if (rowError) {
         failed.set(row.id, hashRow(row));
         result.errors.push(`${cfg.table}: ${rowError.message}`);

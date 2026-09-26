@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import TournamentBracketView from '@/components/tournament/TournamentBracketView';
@@ -177,7 +178,7 @@ export default function PublicTournamentDetailPage({
                   <span>•</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Clock size={14} />
-                    <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
+                    <span>{parseTournamentDate(tournament.start_date) ? <LocalTime value={parseTournamentDate(tournament.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
                   </span>
                   <span>•</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>

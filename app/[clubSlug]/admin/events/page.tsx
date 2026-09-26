@@ -253,7 +253,7 @@ export default function AdminEventsPage({
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Capacity: {evt.rsvp_count} / {evt.max_capacity} RSVPs
+                    Checked in: {evt.rsvp_count} / {evt.max_capacity} capacity
                   </span>
                 </div>
 

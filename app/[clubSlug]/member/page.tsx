@@ -193,11 +193,11 @@ export default function MemberPortalPage({
   };
 
   // Handle Membership Application Submit
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
 
-    const res = applyForMembership(club.id, {
+    const res = await applyForMembership(club.id, {
       full_name: signupForm.fullName,
       email: signupForm.email,
       phone: signupForm.phone,
@@ -420,7 +420,7 @@ export default function MemberPortalPage({
                     </label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input
+                      <input aria-label="Email"
                         type="email"
                         required
                         value={loginEmail}

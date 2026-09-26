@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { Outfit, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
 import SyncStatusBanner from '@/components/SyncStatusBanner';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { loadInitialData } from '@/lib/supabase/server-data';
 
 // Site-wide defaults only. Every route sets its own title, description, canonical URL and social
 // tags (see lib/seo.ts), so nothing here should be page-specific - a canonical here would leak
@@ -37,16 +39,19 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Server-rendered pages start from real data (see ClubProvider's initialData)
+  const initialData = await loadInitialData((await headers()).get('x-pathname') || '/');
+
   return (
     <html lang="en" className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <body>
         <AuthProvider>
-          <ClubProvider>
+          <ClubProvider initialData={initialData}>
             <SyncStatusBanner />
             {children}
           </ClubProvider>

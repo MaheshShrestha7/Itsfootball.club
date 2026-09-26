@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
+import type { ClubEvent } from '@/lib/supabase/types';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import CameraQRScanner from '@/components/CameraQRScanner';
 import {
@@ -34,7 +36,25 @@ export default function EventDoorCheckinPage({
   const { clubs, selectClubBySlug, events, publicEventCheckin } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-  const event = events.find(e => e.id === resolvedParams.eventId);
+  const listedEvent = events.find(e => e.id === resolvedParams.eventId);
+
+  // Private events (training, AGMs...) aren't readable by visitors; the door code unlocks the
+  // few details this page shows. 'looking' until that lookup has answered.
+  const [doorEvent, setDoorEvent] = useState<ClubEvent | null | 'looking'>(null);
+  useEffect(() => {
+    if (listedEvent || !doorCode) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+    let cancelled = false;
+    setDoorEvent('looking');
+    client
+      .rpc('door_checkin_event', { p_event_id: resolvedParams.eventId, p_door_code: doorCode })
+      .then(({ data }) => {
+        if (!cancelled) setDoorEvent(Array.isArray(data) && data[0] ? (data[0] as ClubEvent) : null);
+      });
+    return () => { cancelled = true; };
+  }, [listedEvent, doorCode, resolvedParams.eventId]);
+  const event = listedEvent || (doorEvent === 'looking' ? null : doorEvent);
 
   const [mode, setMode] = useState<'camera' | 'member' | 'guest'>('camera');
   const [memberToken, setMemberToken] = useState('');
@@ -72,6 +92,14 @@ export default function EventDoorCheckinPage({
 
     return () => { cancelled = true; };
   }, [club]);
+
+  if (!event && doorEvent === 'looking') {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading event...
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -207,11 +235,11 @@ export default function EventDoorCheckinPage({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
               <Calendar size={13} color="var(--club-primary)" />
-              {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
               <Clock size={13} color="var(--club-primary)" />
-              {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <LocalTime value={event.start_time} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
               <MapPin size={13} color="var(--club-primary)" />

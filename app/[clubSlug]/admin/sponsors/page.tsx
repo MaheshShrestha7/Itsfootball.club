@@ -568,11 +568,11 @@ export default function AdminSponsorsPage({
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label htmlFor="sponsors-display-size-space-scale-public-page-foo" className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>Display Size / Space Scale</span>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Public Page Footprint</span>
                 </label>
-                <select
+                <select id="sponsors-display-size-space-scale-public-page-foo"
                   className="form-select"
                   value={form.size_scale}
                   onChange={e => setForm({ ...form, size_scale: e.target.value as SponsorSizeScale })}
@@ -630,10 +630,10 @@ export default function AdminSponsorsPage({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <label htmlFor="sponsors-contact-email" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Mail size={12} /> Contact Email
                     </label>
-                    <input
+                    <input id="sponsors-contact-email"
                       type="email"
                       className="form-input"
                       placeholder="sarah@sponsor.com"
@@ -642,10 +642,10 @@ export default function AdminSponsorsPage({
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <label htmlFor="sponsors-contact-phone" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Phone size={12} /> Contact Phone
                     </label>
-                    <input
+                    <input id="sponsors-contact-phone"
                       type="tel"
                       className="form-input"
                       placeholder="+1 (555) 000-0000"

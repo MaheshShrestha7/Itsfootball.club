@@ -391,7 +391,7 @@ export default function TournamentFormModal({
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={labelStyle}>Guest Teams ({externalTeams.length}) — optional</label>
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input
+              <input aria-label="Guest club name"
                 type="text"
                 placeholder="Guest club name"
                 value={newExternalName}

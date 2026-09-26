@@ -269,7 +269,7 @@ export default function ImageUploadZone({
 
       {showUrlInput && (
         <form onSubmit={handleApplyUrl} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.25rem' }}>
-          <input
+          <input aria-label="Image URL"
             type="url"
             className="form-input"
             style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}

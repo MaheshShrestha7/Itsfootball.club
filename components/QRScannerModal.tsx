@@ -354,7 +354,7 @@ export default function QRScannerModal({
             <div className="form-group">
               <label className="form-label" style={{ fontWeight: 700 }}>Enter Digital Pass Token / Barcode</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
+                <input aria-label="Pass token"
                   type="text"
                   className="form-input"
                   placeholder="Paste or type the pass token"
@@ -441,7 +441,7 @@ export default function QRScannerModal({
                     <div style={{ fontSize: '0.8rem', color: '#10B981', fontWeight: 700 }}>
                       {scanResult.member.is_executive
                         ? scanResult.member.executive_title
-                        : `${scanResult.member.membership_tier} Accreditation`} • #{scanResult.member.jersey_number || '10'}
+                        : `${scanResult.member.membership_tier} Accreditation`}{scanResult.member.jersey_number ? ` • #${scanResult.member.jersey_number}` : ''}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                       Pass Expiry: {scanResult.member.membership_expires_at}

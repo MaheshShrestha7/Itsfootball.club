@@ -9,6 +9,8 @@ export function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('Content-Security-Policy', csp);
+  // The root layout loads the page's club data on the server (lib/supabase/server-data.ts)
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);

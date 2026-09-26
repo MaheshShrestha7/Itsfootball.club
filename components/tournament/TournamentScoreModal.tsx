@@ -213,7 +213,7 @@ export default function TournamentScoreModal({
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {match.home_team_name}
               </div>
-              <input
+              <input aria-label={`${match.home_team_name} score`}
                 type="number"
                 min="0"
                 max="99"
@@ -249,7 +249,7 @@ export default function TournamentScoreModal({
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {match.away_team_name}
               </div>
-              <input
+              <input aria-label={`${match.away_team_name} score`}
                 type="number"
                 min="0"
                 max="99"
@@ -336,7 +336,7 @@ export default function TournamentScoreModal({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{match.home_team_name} Pens</span>
-                    <input
+                    <input aria-label={`${match.home_team_name} penalties`}
                       type="number"
                       min="0"
                       value={homePens}
@@ -357,7 +357,7 @@ export default function TournamentScoreModal({
                   </div>
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{match.away_team_name} Pens</span>
-                    <input
+                    <input aria-label={`${match.away_team_name} penalties`}
                       type="number"
                       min="0"
                       value={awayPens}

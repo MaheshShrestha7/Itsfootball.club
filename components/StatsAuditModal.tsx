@@ -328,7 +328,7 @@ export default function StatsAuditModal({
 
                         {/* Player Picker */}
                         <div style={{ flex: 1, minWidth: '140px' }}>
-                          <select
+                          <select aria-label="Player"
                             className="form-select"
                             value={evt.player_id || ''}
                             onChange={e => handleUpdateEvent(evt.id, 'player_id', e.target.value)}
@@ -346,7 +346,7 @@ export default function StatsAuditModal({
                         {/* Assist Picker if Goal */}
                         {(evt.event_type === 'goal' || evt.event_type === 'penalty') && (
                           <div style={{ flex: 1, minWidth: '140px' }}>
-                            <select
+                            <select aria-label="Assisted by"
                               className="form-select"
                               value={evt.assist_player_id || ''}
                               onChange={e => handleUpdateEvent(evt.id, 'assist_player_id', e.target.value)}

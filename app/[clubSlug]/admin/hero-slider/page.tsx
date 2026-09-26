@@ -670,7 +670,7 @@ export default function AdminHeroSliderPage({
                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>
                           Tag Badge
                         </label>
-                        <input
+                        <input aria-label="Tag badge"
                           type="text"
                           className="form-input"
                           style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', height: 'auto' }}
@@ -694,7 +694,7 @@ export default function AdminHeroSliderPage({
                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>
                           Button CTA Text
                         </label>
-                        <input
+                        <input aria-label="Button text"
                           type="text"
                           className="form-input"
                           style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', height: 'auto' }}
@@ -819,7 +819,7 @@ export default function AdminHeroSliderPage({
                           {evt.title}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {evt.location} • {evt.rsvp_count}/{evt.max_capacity} RSVPs
+                          {evt.location} • {evt.rsvp_count}/{evt.max_capacity} checked in
                         </p>
                       </div>
 

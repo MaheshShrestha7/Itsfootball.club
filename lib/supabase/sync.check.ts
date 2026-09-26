@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { SupabaseSync } from './sync';
 
-type Op = { table: string; kind?: string; filters: unknown[][]; rows?: unknown; patch?: Record<string, unknown> };
+type Op = { table: string; kind?: string; filters: unknown[][]; rows?: unknown; options?: unknown; patch?: Record<string, unknown> };
 
 function fakeClient(tables: Record<string, unknown[]>, log: Op[]) {
   const from = (table: string) => {
@@ -16,7 +16,7 @@ function fakeClient(tables: Record<string, unknown[]>, log: Op[]) {
       in: (c: string, v: unknown) => (op.filters.push(['in', c, v]), b),
       or: (f: string) => (op.filters.push(['or', f]), b),
       eq: (c: string, v: unknown) => (op.filters.push(['eq', c, v]), b),
-      upsert: (rows: unknown) => ((op.kind = 'upsert'), (op.rows = rows), b),
+      upsert: (rows: unknown, options: unknown) => ((op.kind = 'upsert'), (op.rows = rows), (op.options = options), b),
       update: (patch: Record<string, unknown>) => ((op.kind = 'update'), (op.patch = patch), b),
       delete: () => ((op.kind = 'delete'), b),
       then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) => {
@@ -62,6 +62,14 @@ async function main() {
   const updates = log.filter(o => o.kind === 'update');
   assert.equal(updates.length, 1);
   assert.deepEqual(updates[0].patch, { home_score: 1 });
+
+  // A row that looks new is only ever inserted, never allowed to overwrite an existing one
+  const M2 = '44444444-4444-4444-8444-444444444444';
+  log.length = 0;
+  await engine.flush({ matches: [{ ...match, home_score: 1 }, { ...match, id: M2 }] });
+  const insert = log.find(o => o.kind === 'upsert')!;
+  assert.deepEqual(insert.options, { onConflict: 'id', ignoreDuplicates: true });
+  assert.deepEqual((insert.rows as { id: string }[]).map(r => r.id), [M2]);
 
   // A row missing from state is not deleted...
   log.length = 0;

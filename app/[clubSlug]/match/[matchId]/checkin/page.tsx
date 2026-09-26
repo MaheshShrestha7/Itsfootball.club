@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
@@ -224,11 +225,11 @@ export default function MatchDoorCheckinPage({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Calendar size={13} color="var(--club-primary)" />
-                {new Date(match.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Clock size={13} color="var(--club-primary)" />
-                {match.match_time || new Date(match.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                 <MapPin size={13} color="var(--club-primary)" />

@@ -75,7 +75,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
     <div ref={containerRef} style={{ position: 'relative', marginBottom: '1.25rem' }}>
       <div style={{ position: 'relative' }}>
         <Search size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} />
-        <input
+        <input aria-label="Search players, matches and events"
           type="text"
           placeholder="Search players, matches, events..."
           value={query}

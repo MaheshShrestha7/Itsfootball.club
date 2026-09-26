@@ -84,7 +84,7 @@ export default function VerifyPassPage({
             <div className="form-group" style={{ textAlign: 'left' }}>
               <label className="form-label">Member Pass Token</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
+                <input aria-label="Member pass token"
                   type="text"
                   className="form-input"
                   placeholder="Enter QR token Enter the pass QR token"

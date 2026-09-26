@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
@@ -444,7 +445,7 @@ export default function MatchCenterPage({
             )}
             <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <Calendar size={12} />
-              {new Date(match.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
               {match.match_time && (
                 <>
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />
@@ -839,6 +840,9 @@ export default function MatchCenterPage({
               />
             </div>
 
+            {/* Club partners, shown ahead of the full squad list */}
+            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
+
             {/* Starting XI & Substitutes List */}
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: '#FFFFFF' }}>
@@ -883,7 +887,6 @@ export default function MatchCenterPage({
               </div>
             </div>
 
-            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
           </div>
         )}
 

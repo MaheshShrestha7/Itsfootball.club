@@ -53,6 +53,8 @@ import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
+import { RESERVED_SLUGS, clubSlugFromPath } from './slugs';
+import { fetchPaged } from './paged';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -102,6 +104,8 @@ interface ClubContextType {
   retrySync: () => void;
   /** Re-read everything from Supabase (e.g. after a member profile was linked) */
   reloadFromServer: () => void;
+  /** Saves pending changes now and resolves once they've reached Supabase (e.g. before navigating) */
+  saveNow: () => Promise<void>;
 
   // Selection
   selectClubBySlug: (slug: string) => Club | null;
@@ -209,7 +213,7 @@ interface ClubContextType {
 
   // Member Portal, Application Lifecycle & Messaging
   memberMessages: MemberMessage[];
-  applyForMembership: (clubId: string, input: MemberApplicationInput) => { success: boolean; member?: ClubMember; message: string; error?: string };
+  applyForMembership: (clubId: string, input: MemberApplicationInput) => Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }>;
   approveMemberApplication: (memberId: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
@@ -251,11 +255,7 @@ const STORAGE_KEY = 'itsfootball_state_v1';
 // keep reappearing forever just because a stale local copy remains in localStorage.
 const SYNCED_IDS_KEY = 'itsfootball_synced_ids_v1';
 
-export const RESERVED_SLUGS = [
-  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'verify', 'match', 'member',
-  'squad', 'events', 'news', 'sponsors', 'branding', 'analytics', 'scanner',
-  'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets'
-];
+export { RESERVED_SLUGS } from './slugs';
 
 export function sanitizeText(text: string | undefined): string {
   if (!text) return '';
@@ -323,31 +323,48 @@ export function validateClubSlug(
   return { valid: true, cleanSlug };
 }
 
-export function ClubProvider({ children }: { children: React.ReactNode }) {
-  const [clubs, setClubs] = useState<Club[]>([]);
+/** Rows the server rendered the page with win over the browser's cached copy; cached-only rows are kept */
+function withCached<T extends { id: string }>(current: T[], cached: T[]): T[] {
+  if (current.length === 0) return cached;
+  const ids = new Set(current.map(r => r.id));
+  return [...current, ...cached.filter(r => !ids.has(r.id))];
+}
+
+export function ClubProvider({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  /** Public data loaded on the server (lib/supabase/server-data.ts), so the first render already has the page */
+  initialData?: Partial<SyncState> | null;
+}) {
+  const initialDataRef = useRef(initialData);
+  const [clubs, setClubs] = useState<Club[]>(() => initialData?.clubs ?? []);
   const [activeClub, setActiveClub] = useState<Club | null>(null);
-  const [members, setMembers] = useState<ClubMember[]>([]);
-  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
-  const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
-  const [news, setNews] = useState<NewsArticle[]>([]);
-  const [gallery, setGallery] = useState<MediaGalleryItem[]>([]);
-  const [clubScoreProfiles, setClubScoreProfiles] = useState<ClubScoreProfile[]>([]);
-  const [activityLogs, setActivityLogs] = useState<GamificationActivityLog[]>([]);
-  const [clubScoreRules, setClubScoreRules] = useState<Record<string, ClubScoreRuleConfig>>({});
-  const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>([]);
-  const [draftLineups, setDraftLineups] = useState<DraftLineup[]>([]);
-  const [seasons, setSeasons] = useState<ClubSeason[]>([]);
+  const [members, setMembers] = useState<ClubMember[]>(() => dropSharedPhotos(initialData?.members ?? []));
+  const [playerStats, setPlayerStats] = useState<PlayerStats[]>(() => initialData?.playerStats ?? []);
+  const [matches, setMatches] = useState<Match[]>(() => initialData?.matches ?? []);
+  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>(() => initialData?.matchEvents ?? []);
+  const [events, setEvents] = useState<ClubEvent[]>(() => initialData?.events ?? []);
+  const [sponsors, setSponsors] = useState<Sponsor[]>(() => initialData?.sponsors ?? []);
+  const [news, setNews] = useState<NewsArticle[]>(() => initialData?.news ?? []);
+  const [gallery, setGallery] = useState<MediaGalleryItem[]>(() => initialData?.gallery ?? []);
+  const [clubScoreProfiles, setClubScoreProfiles] = useState<ClubScoreProfile[]>(() => initialData?.clubScoreProfiles ?? []);
+  const [activityLogs, setActivityLogs] = useState<GamificationActivityLog[]>(() => initialData?.activityLogs ?? []);
+  const [clubScoreRules, setClubScoreRules] = useState<Record<string, ClubScoreRuleConfig>>(() =>
+    Object.fromEntries(((initialData?.clubScoreRules as ClubScoreRuleConfig[] | undefined) ?? []).map(r => [r.club_id, r]))
+  );
+  const [availabilities, setAvailabilities] = useState<PlayerAvailability[]>(() => initialData?.availabilities ?? []);
+  const [draftLineups, setDraftLineups] = useState<DraftLineup[]>(() => initialData?.draftLineups ?? []);
+  const [seasons, setSeasons] = useState<ClubSeason[]>(() => initialData?.seasons ?? []);
   const [analyticsEvents, setAnalyticsEvents] = useState<ClubAnalytics[]>([]);
-  const [gateScans, setGateScans] = useState<GateScanRecord[]>([]);
+  const [gateScans, setGateScans] = useState<GateScanRecord[]>(() => initialData?.gateScans ?? []);
   const [sponsorAnalyticsEvents, setSponsorAnalyticsEvents] = useState<SponsorAnalyticsEvent[]>([]);
-  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
-  const [memberMessages, setMemberMessages] = useState<MemberMessage[]>([]);
-  const [internalTeams, setInternalTeams] = useState<InternalTeam[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>([]);
+  const [inquiries, setInquiries] = useState<ContactInquiry[]>(() => initialData?.inquiries ?? []);
+  const [memberMessages, setMemberMessages] = useState<MemberMessage[]>(() => initialData?.memberMessages ?? []);
+  const [internalTeams, setInternalTeams] = useState<InternalTeam[]>(() => initialData?.internalTeams ?? []);
+  const [tournaments, setTournaments] = useState<Tournament[]>(() => initialData?.tournaments ?? []);
+  const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>(() => initialData?.tournamentParticipants ?? []);
   const [isHydrated, setIsHydrated] = useState(false);
   const syncedIdsRef = useRef<Record<string, string[]>>({});
 
@@ -368,7 +385,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.clubs?.length) {
-            setClubs(parsed.clubs);
+            setClubs(prev => withCached(prev, parsed.clubs));
             if (parsed.activeClubId) {
               const found = parsed.clubs.find((c: Club) => c.id === parsed.activeClubId);
               setActiveClub(found || parsed.clubs[0]);
@@ -377,37 +394,37 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
             }
           }
           if (parsed.members?.length) {
-            setMembers(dropSharedPhotos(parsed.members.map((m: ClubMember) => ({
+            setMembers(prev => withCached(prev, dropSharedPhotos(parsed.members.map((m: ClubMember) => ({
               ...m,
               membership_status: m.membership_status || 'approved'
-            }))));
+            })))));
           }
-          if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
+          if (parsed.playerStats?.length) setPlayerStats(prev => withCached(prev, parsed.playerStats));
           if (Array.isArray(parsed.matches)) {
-            setMatches(parsed.matches);
+            setMatches(prev => withCached(prev, parsed.matches));
           }
-          if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
+          if (parsed.matchEvents?.length) setMatchEvents(prev => withCached(prev, parsed.matchEvents));
           // Use Array.isArray so empty arrays (all items deleted) are respected
-          if (Array.isArray(parsed.events)) setEvents(parsed.events);
-          if (Array.isArray(parsed.sponsors)) setSponsors(parsed.sponsors);
-          if (Array.isArray(parsed.news)) setNews(parsed.news);
-          if (parsed.gallery?.length) setGallery(parsed.gallery);
-          if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(parsed.clubScoreProfiles);
-          if (parsed.activityLogs?.length) setActivityLogs(parsed.activityLogs);
-          if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
-          if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
-          if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
-          if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
-          if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
-          if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
+          if (Array.isArray(parsed.events)) setEvents(prev => withCached(prev, parsed.events));
+          if (Array.isArray(parsed.sponsors)) setSponsors(prev => withCached(prev, parsed.sponsors));
+          if (Array.isArray(parsed.news)) setNews(prev => withCached(prev, parsed.news));
+          if (parsed.gallery?.length) setGallery(prev => withCached(prev, parsed.gallery));
+          if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(prev => withCached(prev, parsed.clubScoreProfiles));
+          if (parsed.activityLogs?.length) setActivityLogs(prev => withCached(prev, parsed.activityLogs));
+          if (parsed.clubScoreRules) setClubScoreRules(prev => ({ ...parsed.clubScoreRules, ...prev }));
+          if (parsed.availabilities?.length) setAvailabilities(prev => withCached(prev, parsed.availabilities));
+          if (parsed.draftLineups?.length) setDraftLineups(prev => withCached(prev, parsed.draftLineups));
+          if (Array.isArray(parsed.seasons)) setSeasons(prev => withCached(prev, parsed.seasons));
+          if (parsed.gateScans?.length) setGateScans(prev => withCached(prev, parsed.gateScans));
+          if (parsed.memberMessages?.length) setMemberMessages(prev => withCached(prev, parsed.memberMessages));
           if (Array.isArray(parsed.internalTeams)) {
-            setInternalTeams(parsed.internalTeams);
+            setInternalTeams(prev => withCached(prev, parsed.internalTeams));
           }
           if (Array.isArray(parsed.tournaments)) {
-            setTournaments(parsed.tournaments);
+            setTournaments(prev => withCached(prev, parsed.tournaments));
           }
           if (Array.isArray(parsed.tournamentParticipants)) {
-            setTournamentParticipants(parsed.tournamentParticipants);
+            setTournamentParticipants(prev => withCached(prev, parsed.tournamentParticipants));
           }
         }
       } catch (err) {
@@ -421,6 +438,14 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         // Not fatal: worst case this run treats every local-only row as still-pending,
         // same as before this fix existed.
       } finally {
+        // Rows the page was server-rendered with are in the database: a later load that no longer
+        // returns one means it was deleted, not that it's a local edit waiting to be saved
+        for (const [key, rows] of Object.entries(initialDataRef.current || {})) {
+          if (!Array.isArray(rows)) continue;
+          const known = new Set(syncedIdsRef.current[key] || []);
+          rows.forEach((r: { id: string }) => known.add(r.id));
+          syncedIdsRef.current[key] = [...known];
+        }
         setIsHydrated(true);
       }
 
@@ -487,8 +512,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   // What to load: the club in the URL plus the signed-in user's own clubs (see SupabaseSync.load)
   const pathname = usePathname();
   const { user, isLoading: authLoading } = useAuth();
-  const firstSegment = decodeURIComponent(pathname?.split('/')[1] || '').toLowerCase();
-  const scopeSlug = firstSegment && !RESERVED_SLUGS.includes(firstSegment) ? firstSegment : '';
+  const scopeSlug = clubSlugFromPath(pathname);
   const scopeClubIdsKey = Object.keys(user?.club_roles || {}).sort().join(',');
   const [loadedClubIds, setLoadedClubIds] = useState<string[]>([]);
 
@@ -773,6 +797,13 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const reloadFromServer = useCallback(() => setLoadNonce(n => n + 1), []);
+
+  const saveNow = useCallback(async () => {
+    // A flush already running may have started before the latest edit: wait for it, then flush again
+    // ponytail: 100ms polling; a promise queue if this ever needs to be tighter
+    while (flushingRef.current) await new Promise(resolve => setTimeout(resolve, 100));
+    await runFlush();
+  }, [runFlush]);
 
   const retrySync = useCallback(() => {
     syncRef.current?.clearFailures();
@@ -1230,15 +1261,16 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       prev.map(m => {
         if (m.id === matchId) {
           const updated = { ...m, ...updates };
-          // Any change to the period / status / minute / pause state restarts the shared
+          // A real change to the period / status / minute / pause state restarts the shared
           // match clock's reference point. While paused, getLiveMinute ignores this value
           // entirely, so resetting it here just means the clock resumes cleanly from
-          // current_minute the moment is_paused flips back to false.
-          if (
-            updates.period_started_at === undefined &&
-            (updates.period !== undefined || updates.status !== undefined ||
-              updates.current_minute !== undefined || updates.is_paused !== undefined)
-          ) {
+          // current_minute the moment is_paused flips back to false. An update that merely
+          // repeats the current value (e.g. the fixture edit form re-sending `status`) must
+          // not, or a live clock would jump back to the minute its period started.
+          const clockChanged = (['period', 'status', 'current_minute', 'is_paused'] as const).some(
+            k => updates[k] !== undefined && updates[k] !== m[k]
+          );
+          if (updates.period_started_at === undefined && clockChanged) {
             updated.period_started_at = new Date().toISOString();
           }
           return updated;
@@ -1467,80 +1499,75 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       membersData: Partial<Omit<ClubMember, 'id' | 'created_at'>>[],
       options?: { updateDuplicates?: boolean }
     ): { added: number; updated: number } => {
-      let added = 0;
-      let updated = 0;
       const updateDuplicates = options?.updateDuplicates ?? true;
+      const now = new Date().toISOString();
+      // Planned against the current members (not inside a state updater, which React may run later
+      // or, in development, twice), so the added/updated counts returned are the real ones
+      const emailKey = (clubId: string | undefined, email: string | undefined) =>
+        email?.trim() ? `${clubId}|${email.trim().toLowerCase()}` : null;
+      const byEmail = new Map<string, ClubMember>();
+      for (const m of (syncStateRef.current.members || []) as ClubMember[]) {
+        const key = emailKey(m.club_id, m.email);
+        if (key) byEmail.set(key, m);
+      }
 
-      setMembers(prev => {
-        const nextMembers = [...prev];
-        const newStats: PlayerStats[] = [];
+      const updates = new Map<string, Partial<ClubMember>>();
+      const created: ClubMember[] = [];
+      const newStats: PlayerStats[] = [];
+      let updated = 0;
 
-        membersData.forEach((memData, idx) => {
-          const emailLower = memData.email?.trim().toLowerCase();
-          const existingIdx = emailLower
-            ? nextMembers.findIndex(
-                m => m.club_id === memData.club_id && m.email?.trim().toLowerCase() === emailLower
-              )
-            : -1;
-
-          if (existingIdx !== -1 && updateDuplicates) {
-            nextMembers[existingIdx] = {
-              ...nextMembers[existingIdx],
-              ...memData,
-              updated_at: new Date().toISOString(),
-            };
-            updated++;
-          } else if (existingIdx === -1) {
-            // memData is Partial here (bulk import may only send the columns a CSV/JSON row
-            // actually had); a brand-new member still needs every required field filled in.
-            const newMem: ClubMember = {
-              ...memData,
-              id: newId(),
-              club_id: memData.club_id!,
-              full_name: memData.full_name || 'Member',
-              email: memData.email || '',
-              role: memData.role || 'Player',
-              status: memData.status || 'active',
-              membership_tier: memData.membership_tier || 'Full Senior Member',
-              membership_expires_at:
-                memData.membership_expires_at ||
-                new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-              is_executive: memData.is_executive ?? false,
-              qr_code_token:
-                memData.qr_code_token ||
-                secureToken('pass'),
-              created_at: new Date().toISOString(),
-            };
-            nextMembers.push(newMem);
-            added++;
-
-            newStats.push({
-              id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
-              club_id: newMem.club_id,
-              member_id: newMem.id,
-              season: seasonLabelFor(newMem.club_id),
-              appearances: 0,
-              minutes_played: 0,
-              goals: 0,
-              assists: 0,
-              clean_sheets: 0,
-              yellow_cards: 0,
-              red_cards: 0,
-              motm_awards: 0,
-            });
-          }
-        });
-
-        if (newStats.length > 0) {
-          setPlayerStats(statPrev => [...statPrev, ...newStats]);
+      membersData.forEach(memData => {
+        const key = emailKey(memData.club_id, memData.email);
+        const existing = key ? byEmail.get(key) : undefined;
+        if (existing) {
+          if (!updateDuplicates) return;
+          updated++;
+          // A row repeated within this same import updates the member it just created
+          if (created.includes(existing)) Object.assign(existing, memData, { updated_at: now });
+          else updates.set(existing.id, { ...updates.get(existing.id), ...memData, updated_at: now });
+          return;
         }
-
-        return nextMembers;
+        // memData is Partial here (bulk import may only send the columns a CSV/JSON row
+        // actually had); a brand-new member still needs every required field filled in.
+        const newMem: ClubMember = {
+          ...memData,
+          id: newId(),
+          club_id: memData.club_id!,
+          full_name: memData.full_name || 'Member',
+          email: memData.email || '',
+          role: memData.role || 'Player',
+          status: memData.status || 'active',
+          membership_tier: memData.membership_tier || 'Full Senior Member',
+          membership_expires_at:
+            memData.membership_expires_at ||
+            new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          is_executive: memData.is_executive ?? false,
+          qr_code_token: memData.qr_code_token || secureToken('pass'),
+          created_at: now,
+        };
+        created.push(newMem);
+        if (key) byEmail.set(key, newMem);
+        newStats.push({
+          id: stableId(`stat-${newMem.id}-${new Date().getFullYear()}`),
+          club_id: newMem.club_id,
+          member_id: newMem.id,
+          season: seasonLabelFor(newMem.club_id),
+          appearances: 0,
+          minutes_played: 0,
+          goals: 0,
+          assists: 0,
+          clean_sheets: 0,
+          yellow_cards: 0,
+          red_cards: 0,
+          motm_awards: 0,
+        });
       });
 
-      return { added, updated };
+      setMembers(prev => [...prev.map(m => (updates.has(m.id) ? { ...m, ...updates.get(m.id) } : m)), ...created]);
+      if (newStats.length > 0) setPlayerStats(prev => [...prev, ...newStats]);
+      return { added: created.length, updated };
     },
-    []
+    [seasonLabelFor]
   );
 
   const updateMember = useCallback((memberId: string, updates: Partial<ClubMember>) => {
@@ -2078,19 +2105,23 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const client = getSupabaseClient();
     if (!client || !isUuid(clubId)) return;
     const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
-    const { data, error } = await client
-      .from('club_analytics')
-      .select('*')
-      .eq('club_id', clubId)
-      .gte('created_at', since)
-      .order('created_at', { ascending: false })
-      .limit(5000);
+    const { data, error } = await fetchPaged<ClubAnalytics>(
+      (from, to) => client
+        .from('club_analytics')
+        .select('*')
+        .eq('club_id', clubId)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(from, to),
+      5000
+    );
     if (error) {
-      console.warn('Could not load analytics:', error.message);
+      console.warn('Could not load analytics:', error);
       return;
     }
     setAnalyticsEvents(prev => [
-      ...(data as ClubAnalytics[]),
+      ...data,
       ...prev.filter(e => e.club_id !== clubId),
     ]);
   }, []);
@@ -2323,19 +2354,23 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
     const client = getSupabaseClient();
     if (!client || !isUuid(clubId)) return;
     const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
-    const { data, error } = await client
-      .from('sponsor_analytics')
-      .select('*')
-      .eq('club_id', clubId)
-      .gte('created_at', since)
-      .order('created_at', { ascending: false })
-      .limit(10000);
+    const { data, error } = await fetchPaged<SponsorAnalyticsEvent>(
+      (from, to) => client
+        .from('sponsor_analytics')
+        .select('*')
+        .eq('club_id', clubId)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(from, to),
+      10000
+    );
     if (error) {
-      console.warn('Could not load sponsor analytics:', error.message);
+      console.warn('Could not load sponsor analytics:', error);
       return;
     }
     setSponsorAnalyticsEvents(prev => [
-      ...(data as SponsorAnalyticsEvent[]),
+      ...data,
       ...prev.filter(e => e.club_id !== clubId),
     ]);
   }, []);
@@ -2448,7 +2483,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
   }, [sponsorAnalyticsEvents]);
 
   // 17. Member Portal Workflow, Applications, Magic Links & Admin Messaging
-  const applyForMembership = useCallback((clubId: string, input: MemberApplicationInput): { success: boolean; member?: ClubMember; message: string; error?: string } => {
+  const applyForMembership = useCallback(async (clubId: string, input: MemberApplicationInput): Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }> => {
     const cleanEmail = input.email.toLowerCase().trim();
     const cleanName = sanitizeText(input.full_name.trim());
     
@@ -2500,14 +2535,32 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString(),
     };
 
-    setMembers(prev => [...prev, newMem]);
+    // Saved right away rather than by the background sync, so the applicant hears the real outcome:
+    // visitors can't read other members' emails, so only the database knows the email is taken.
+    const client = getSupabaseClient();
+    if (client) {
+      const { error } = await client.from('club_members').insert(newMem);
+      if (error) {
+        const taken = error.code === '23505' && /email/i.test(error.message);
+        return {
+          success: false,
+          message: taken
+            ? 'This email already has an application or membership with this club. Sign in with it to see where it stands.'
+            : 'Your application could not be sent. Please try again in a moment.',
+          error: error.message,
+        };
+      }
+      applyServerRow('members', setMembers, newMem);
+    } else {
+      setMembers(prev => [...prev, newMem]);
+    }
 
     return {
       success: true,
       member: newMem,
       message: 'Membership application submitted successfully! Your application is in the committee queue for approval.'
     };
-  }, [members]);
+  }, [members, applyServerRow]);
 
   const approveMemberApplication = useCallback((memberId: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
     const member = members.find(m => m.id === memberId);
@@ -2952,6 +3005,7 @@ export function ClubProvider({ children }: { children: React.ReactNode }) {
         syncStatus,
         retrySync,
         reloadFromServer,
+        saveNow,
         activeClub,
         members,
         playerStats,

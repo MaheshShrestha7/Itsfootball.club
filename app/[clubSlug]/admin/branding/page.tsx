@@ -34,11 +34,13 @@ export default function AdminBrandingPage({
 }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, updateClubBranding, isHydrated } = useClub();
+  const { clubs, selectClubBySlug, updateClubBranding, isHydrated, saveNow } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const [savedMessage, setSavedMessage] = useState(false);
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
+  // New club URL to move to once it's saved: the server 404s a slug the database doesn't have yet
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [autoSyncSlug, setAutoSyncSlug] = useState(true);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
@@ -191,10 +193,8 @@ export default function AdminBrandingPage({
     setSavedMessage(true);
 
     if (isSlugChanged) {
-      setRedirectNotice(`Club URL updated to /${newSlug}! Redirecting browser...`);
-      setTimeout(() => {
-        router.replace(`/${newSlug}/admin/branding`);
-      }, 750);
+      setRedirectNotice(`Club URL updated to /${newSlug}! Saving, then redirecting...`);
+      setPendingSlug(newSlug);
     }
 
     savedTimerRef.current = setTimeout(() => {
@@ -202,6 +202,16 @@ export default function AdminBrandingPage({
       setRedirectNotice(null);
     }, 4000);
   };
+
+  // Once the renamed club is in state (so the save includes it), save and only then move to the new URL
+  useEffect(() => {
+    if (!pendingSlug || club?.slug !== pendingSlug) return;
+    let cancelled = false;
+    saveNow().then(() => {
+      if (!cancelled) router.replace(`/${pendingSlug}/admin/branding`);
+    });
+    return () => { cancelled = true; };
+  }, [pendingSlug, club?.slug, saveNow, router]);
 
   return (
     <div>
@@ -320,14 +330,14 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label className="form-label">Primary Color</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
+                <input aria-label="Primary colour"
                   type="color"
                   name="primary_color"
                   value={formData.primary_color}
                   onChange={handleChange}
                   style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                 />
-                <input
+                <input aria-label="Primary colour hex code"
                   type="text"
                   name="primary_color"
                   className="form-input"
@@ -340,14 +350,14 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label className="form-label">Secondary Color</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
+                <input aria-label="Secondary colour"
                   type="color"
                   name="secondary_color"
                   value={formData.secondary_color}
                   onChange={handleChange}
                   style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                 />
-                <input
+                <input aria-label="Secondary colour hex code"
                   type="text"
                   name="secondary_color"
                   className="form-input"
@@ -360,14 +370,14 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label className="form-label">Accent / Gold</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
+                <input aria-label="Accent colour"
                   type="color"
                   name="accent_color"
                   value={formData.accent_color}
                   onChange={handleChange}
                   style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
                 />
-                <input
+                <input aria-label="Accent colour hex code"
                   type="text"
                   name="accent_color"
                   className="form-input"
@@ -494,11 +504,11 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-club-establishment-year" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Calendar size={15} color="var(--club-primary)" />
                 <span>Club Establishment Year *</span>
               </label>
-              <input
+              <input id="branding-club-establishment-year"
                 type="number"
                 name="founded_year"
                 required
@@ -552,7 +562,7 @@ export default function AdminBrandingPage({
                 }}>
                   itsfootball.club/
                 </span>
-                <input
+                <input aria-label="Club URL slug"
                   type="text"
                   name="slug"
                   required
@@ -668,7 +678,7 @@ export default function AdminBrandingPage({
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
               Add additional home ground photography, match celebrations, or banner graphics to cycle through on the public home page slider, or use the pinned content manager to pin fixtures, news, and events.
             </p>
-            <textarea
+            <textarea aria-label="Hero slider image URLs, one per line"
               name="slider_images_text"
               rows={3}
               className="form-input"
@@ -748,11 +758,11 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-official-secretariat-email" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Mail size={14} color="var(--club-primary)" />
                 <span>Official Secretariat Email</span>
               </label>
-              <input
+              <input id="branding-official-secretariat-email"
                 type="email"
                 name="contact_email"
                 className="form-input"
@@ -763,11 +773,11 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Phone size={14} color="var(--club-primary)" />
                 <span>Secretariat Phone / Matchday Hotline</span>
               </label>
-              <input
+              <input id="branding-secretariat-phone-matchday-hotline"
                 type="tel"
                 name="contact_phone"
                 className="form-input"
@@ -802,7 +812,7 @@ export default function AdminBrandingPage({
               }}>
                 <Globe size={16} />
               </span>
-              <input
+              <input aria-label="Custom domain"
                 type="text"
                 name="custom_domain"
                 className="form-input"

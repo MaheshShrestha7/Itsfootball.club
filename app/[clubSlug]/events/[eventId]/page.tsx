@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
@@ -101,7 +102,7 @@ export default function EventDetailsPage({
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Date</div>
                 <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
-                  {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                  <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
                 </div>
               </div>
             </div>
@@ -110,7 +111,7 @@ export default function EventDetailsPage({
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Time</div>
                 <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
-                  {new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  <LocalTime value={event.start_time} format="time" locale="en-US" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </div>
               </div>
             </div>
@@ -129,9 +130,9 @@ export default function EventDetailsPage({
             <div style={{ marginBottom: '1.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Users size={13} /> RSVP Capacity
+                  <Users size={13} /> Checked In
                 </span>
-                <strong style={{ color: '#FFFFFF' }}>{event.rsvp_count} / {event.max_capacity} Attending</strong>
+                <strong style={{ color: '#FFFFFF' }}>{event.rsvp_count} / {event.max_capacity} checked in</strong>
               </div>
               <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ width: `${rsvpPct}%`, height: '100%', background: categoryColor, borderRadius: '3px' }} />

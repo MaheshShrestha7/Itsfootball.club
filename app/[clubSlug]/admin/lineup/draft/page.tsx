@@ -327,7 +327,7 @@ export default function DraftLineupPage() {
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <ClipboardList size={16} color={club.primary_color} /> Coach Instructions & Tactical Cues
               </h3>
-              <textarea
+              <textarea aria-label="Coach instructions and tactical cues"
                 className="form-input"
                 rows={3}
                 placeholder="Add team instructions, set-piece assignments, pressing triggers..."

@@ -333,7 +333,7 @@ export default function CameraQRScanner({
       {cameras.length > 1 && cameraState === 'scanning' && (
         <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Camera size={14} color="var(--text-muted)" />
-          <select
+          <select aria-label="Camera"
             value={selectedCameraId}
             onChange={e => setSelectedCameraId(e.target.value)}
             className="form-select"

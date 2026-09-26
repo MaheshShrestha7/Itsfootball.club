@@ -96,7 +96,8 @@ export default function AdminSquadPage({
     roles: ['Player'] as string[],
     player_position: 'ST' as PlayerPosition,
     secondary_positions: [] as PlayerPosition[],
-    jersey_number: 9,
+    // Empty until chosen, so the required field asks for a number instead of quietly using a default
+    jersey_number: '' as number | '',
     status: 'active' as PlayerStatus,
     photo_url: '',
     nationality: '',
@@ -133,7 +134,7 @@ export default function AdminSquadPage({
       roles: ['Player'],
       player_position: 'ST',
       secondary_positions: [],
-      jersey_number: 9,
+      jersey_number: '',
       status: 'active',
       photo_url: '',
       nationality: '',
@@ -189,7 +190,7 @@ export default function AdminSquadPage({
       roles: normalizedRoles,
       player_position: m.player_position || 'ST',
       secondary_positions: m.secondary_positions || [],
-      jersey_number: m.jersey_number || 9,
+      jersey_number: m.jersey_number || '',
       status: (m.status === 'inactive' ? 'inactive' : 'active') as PlayerStatus,
       photo_url: m.photo_url || '',
       nationality: m.nationality || '',
@@ -520,7 +521,7 @@ export default function AdminSquadPage({
       }}>
         <div style={{ position: 'relative', flex: '2 1 220px', minWidth: '200px' }}>
           <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
+          <input aria-label="Search squad"
             type="text"
             className="form-input"
             placeholder="Search by name, email, phone, jersey #..."
@@ -530,7 +531,7 @@ export default function AdminSquadPage({
           />
         </div>
 
-        <select
+        <select aria-label="Filter by role"
           className="form-select"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
@@ -542,7 +543,7 @@ export default function AdminSquadPage({
           ))}
         </select>
 
-        <select
+        <select aria-label="Filter by position"
           className="form-select"
           value={positionFilter}
           onChange={e => setPositionFilter(e.target.value)}
@@ -813,7 +814,7 @@ export default function AdminSquadPage({
 
                 {manualUrlOpen && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <input
+                    <input aria-label="Photo URL"
                       type="url"
                       className="form-input"
                       placeholder="https://..."
@@ -855,10 +856,10 @@ export default function AdminSquadPage({
               {/* 3. EMAIL & PHONE NUMBER */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-email-address" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Mail size={13} /> Email Address *
                   </label>
-                  <input
+                  <input id="squad-email-address"
                     type="email"
                     required
                     className="form-input"
@@ -869,10 +870,10 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-phone-number" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Phone size={13} /> Phone Number
                   </label>
-                  <input
+                  <input id="squad-phone-number"
                     type="tel"
                     className="form-input"
                     placeholder="+1 (555) 019-2834"
@@ -983,10 +984,10 @@ export default function AdminSquadPage({
 
                     {/* Jersey Number */}
                     <div className="form-group">
-                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <label htmlFor="squad-jersey-number" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <Hash size={13} /> Jersey Number
                       </label>
-                      <input
+                      <input id="squad-jersey-number"
                         type="number"
                         min={1}
                         max={99}
@@ -994,7 +995,7 @@ export default function AdminSquadPage({
                         className="form-input"
                         placeholder="e.g. 9"
                         value={form.jersey_number}
-                        onChange={e => setForm({ ...form, jersey_number: Number(e.target.value) })}
+                        onChange={e => setForm({ ...form, jersey_number: e.target.value === '' ? '' : Number(e.target.value) })}
                         style={{ fontFamily: 'var(--font-heading)', fontWeight: 800 }}
                       />
                     </div>
@@ -1059,10 +1060,10 @@ export default function AdminSquadPage({
               {/* 6. CONDITIONAL EXECUTIVE COMMITTEE TITLE (If Executive Committee is selected) */}
               {form.roles.includes('Executive Committee') && (
                 <div className="form-group" style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
-                  <label className="form-label" style={{ color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Award size={14} /> Executive Committee Title / Post
                   </label>
-                  <input
+                  <input id="squad-executive-committee-title-post"
                     type="text"
                     className="form-input"
                     placeholder="e.g. Club President, Vice President, Honorary Secretary, Treasurer"

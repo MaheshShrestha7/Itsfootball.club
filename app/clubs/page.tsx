@@ -52,7 +52,7 @@ export default function ClubsDirectoryPage() {
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', maxWidth: '520px' }}>
             <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '180px' }}>
               <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
+              <input aria-label="Search clubs"
                 type="text"
                 placeholder="Search by club or home ground..."
                 className="form-input touch-target"

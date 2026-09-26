@@ -19,6 +19,7 @@ import {
   Zap
 } from 'lucide-react';
 import PlayerAvatar from './PlayerAvatar';
+import LocalTime from './LocalTime';
 
 interface ClubScoreLeaderboardProps {
   club: Club;
@@ -524,7 +525,7 @@ export default function ClubScoreLeaderboard({
                       <div style={{ minWidth: 0, paddingRight: '0.5rem' }}>
                         <div style={{ color: '#FFFFFF', fontWeight: 600 }}>{log.description}</div>
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                          {new Date(log.created_at).toLocaleDateString()}
+                          <LocalTime value={log.created_at} />
                         </div>
                       </div>
                       <div style={{

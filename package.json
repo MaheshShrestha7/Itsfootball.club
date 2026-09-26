@@ -8,7 +8,7 @@
     "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "next lint",
-    "check": "esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/video.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/supabase/sync.check.ts --bundle --platform=node --log-level=warning | node"
+    "check": "esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/video.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/supabase/sync.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/paged.check.ts --bundle --platform=node --log-level=warning | node"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.744.0",

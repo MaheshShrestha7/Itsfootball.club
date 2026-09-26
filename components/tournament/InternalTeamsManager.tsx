@@ -554,7 +554,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       {color === c.value && <Check size={14} color="#000" />}
                     </button>
                   ))}
-                  <input
+                  <input aria-label="Custom team colour"
                     type="color"
                     value={color}
                     onChange={e => setColor(e.target.value)}
@@ -691,7 +691,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
 
                 <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
                   <Search size={14} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
+                  <input aria-label="Search players"
                     type="text"
                     placeholder="Search players..."
                     value={playerSearch}
@@ -729,9 +729,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   {filteredMembers.map(member => {
                     const isChecked = selectedPlayerIds.includes(member.id);
                     return (
-                      <div
+                      <label
                         key={member.id}
-                        onClick={() => handleTogglePlayer(member.id)}
                         style={{
                           padding: '0.45rem 0.6rem',
                           borderRadius: '6px',
@@ -747,20 +746,20 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}}
+                          onChange={() => handleTogglePlayer(member.id)}
                           style={{ cursor: 'pointer' }}
                         />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ display: 'block', minWidth: 0 }}>
+                          <span style={{ display: 'block', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {member.full_name}
-                          </div>
+                          </span>
                           {member.player_position && (
                             <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 800 }}>
                               {member.player_position}
                             </span>
                           )}
-                        </div>
-                      </div>
+                        </span>
+                      </label>
                     );
                   })}
                 </div>

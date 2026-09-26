@@ -1,6 +1,7 @@
 'use client';
 
 import React, { use } from 'react';
+import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Trophy, Calendar, Users, ArrowRight, Layers, Award } from 'lucide-react';
@@ -184,7 +185,7 @@ export default function PublicTournamentsPage({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
                       <Calendar size={14} />
-                      <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
+                      <span>{parseTournamentDate(tourn.start_date) ? <LocalTime value={parseTournamentDate(tourn.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
                     </div>
 
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>

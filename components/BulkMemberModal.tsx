@@ -910,7 +910,7 @@ export default function BulkMemberModal({
                 </div>
               ) : (
                 <div>
-                  <textarea
+                  <textarea aria-label="Paste CSV or JSON roster"
                     className="form-input"
                     rows={6}
                     placeholder="Paste CSV text with headers (e.g. Full Name, Email, Role, Position, Jersey Number)..."
