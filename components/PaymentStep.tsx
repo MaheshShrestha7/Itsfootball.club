@@ -156,6 +156,19 @@ export default function PaymentStep(props: PaymentStepProps) {
           <AlertCircle size={15} /> {error}
         </p>
       )}
+
+      {(cardOn || bankOn) && (
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: 1.5, marginTop: '1rem', marginBottom: 0 }}>
+          {cardOn && (
+            <>
+              Card payments are processed securely by Stripe on the club&apos;s behalf and paid directly to the club.
+              Your card details go straight to Stripe and are never seen or stored by the club or itsfootball.club
+              (<a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Stripe Privacy Policy</a>).{' '}
+            </>
+          )}
+          {bankOn && 'Bank transfer receipts are stored privately and can only be viewed by the club’s administrators.'}
+        </p>
+      )}
     </div>
   );
 }
