@@ -101,7 +101,9 @@ export default function PlatformHomePage() {
             </div>
 
             <h1 className="lp-h1">
-              Grassroots club.<br /><em>Big-club</em> matchday.
+              {/* Explicit breaks: left to wrap, the fallback font fits "Big-club matchday." on one line
+                  and the webfont doesn't, so the swap would shift the whole page */}
+              Grassroots club.<br /><em>Big-club</em><br />matchday.
             </h1>
 
             <p className="lp-hero-sub">
@@ -218,11 +220,9 @@ export default function PlatformHomePage() {
                   </div>
                 </div>
                 <div className="lp-timeline">
-                  {goalIn && (
-                    <div className="lp-ev lp-ev-new">
-                      <time>71&apos;</time><Goal size={15} color={palette.accent} /><span><b>GOAL!</b> D. Okafor, assist M. Silva</span>
-                    </div>
-                  )}
+                  <div className={`lp-ev lp-ev-goal${goalIn ? ' is-in' : ''}`}>
+                    <time>71&apos;</time><Goal size={15} color={palette.accent} /><span><b>GOAL!</b> D. Okafor, assist M. Silva</span>
+                  </div>
                   <div className="lp-ev"><time>58&apos;</time><ArrowLeftRight size={14} color="#60A5FA" /><span>Sub: J. Park on for L. Hughes</span></div>
                   <div className="lp-ev"><time>41&apos;</time><span className="lp-card-yellow" /><span>Yellow card, Riverside #6</span></div>
                   <div className="lp-ev"><time>23&apos;</time><Goal size={15} color="#CBD5E1" /><span><b>Goal</b> M. Silva</span></div>

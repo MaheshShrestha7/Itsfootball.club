@@ -1,6 +1,12 @@
 /* Platform landing page (app/HomeClient.tsx). Everything is prefixed lp- so nothing leaks into club pages.
    --lp-p / --lp-s / --lp-a are the visitor's picked palette, set inline on .lp-hero. */
 
+/* Registered so a palette change blends everywhere at once, gradients included (a plain custom
+   property swaps instantly, and gradients don't transition). Without @property they just snap. */
+@property --lp-p { syntax: '<color>'; inherits: true; initial-value: #10B981; }
+@property --lp-s { syntax: '<color>'; inherits: true; initial-value: #0F172A; }
+@property --lp-a { syntax: '<color>'; inherits: true; initial-value: #F59E0B; }
+
 .lp { position: relative; overflow-x: clip; }
 .lp-section { padding: clamp(4rem, 9vw, 7rem) 0; position: relative; }
 .lp-eyebrow {
@@ -22,6 +28,10 @@
 .lp-hero {
   padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(3rem, 6vw, 5rem);
   position: relative;
+  transition: --lp-p 400ms var(--ease-out), --lp-s 400ms var(--ease-out), --lp-a 400ms var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero { transition-duration: 150ms; }
 }
 /* Floodlight wash in the picked colour, plus faint pitch markings */
 .lp-hero::before {
@@ -29,7 +39,6 @@
   background:
     radial-gradient(ellipse 60% 55% at 78% 30%, color-mix(in srgb, var(--lp-p) 22%, transparent), transparent 70%),
     radial-gradient(ellipse 40% 40% at 10% 0%, rgba(255, 255, 255, 0.05), transparent 70%);
-  transition: background 0.6s var(--ease-out);
 }
 .lp-hero::after {
   content: ''; position: absolute; left: 50%; top: 58%; width: 780px; height: 780px;
@@ -51,7 +60,7 @@
   font-size: clamp(2.6rem, 6vw, 4.6rem); font-weight: 900; line-height: 0.98;
   letter-spacing: -0.032em; word-spacing: 0.06em; margin-bottom: 1.5rem;
 }
-.lp-h1 em { font-style: normal; color: var(--lp-p); transition: color 0.4s var(--ease-out); }
+.lp-h1 em { font-style: normal; color: var(--lp-p); }
 .lp-hero-sub { color: var(--text-secondary); font-size: clamp(1rem, 1.7vw, 1.15rem); max-width: 50ch; margin-bottom: 2rem; }
 
 /* Claim-your-address box */
@@ -77,9 +86,11 @@
   border: 0; cursor: pointer; border-radius: 12px; padding: 0.8rem 1.15rem;
   font-weight: 800; font-size: 0.95rem; font-family: var(--font-heading);
   background: var(--lp-p); color: var(--lp-on-p);
-  transition: transform 0.15s var(--ease-out), filter 0.2s ease, background 0.4s var(--ease-out);
+  transition: transform 0.15s var(--ease-out), filter 0.2s ease;
 }
-.lp-claim-btn:hover { filter: brightness(1.1); }
+@media (hover: hover) and (pointer: fine) {
+  .lp-claim-btn:hover { filter: brightness(1.1); }
+}
 .lp-claim-btn:active { transform: scale(0.97); }
 .lp-claim-status { min-height: 1.5rem; margin-top: 0.6rem; font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); }
 .lp-claim-status.ok { color: #34D399; }
@@ -93,7 +104,10 @@
   background: var(--sw-p); box-shadow: inset 0 0 0 4px var(--sw-a);
   transition: transform 0.2s var(--ease-out), outline-color 0.2s ease;
 }
-.lp-swatch:hover { transform: scale(1.1); }
+@media (hover: hover) and (pointer: fine) {
+  .lp-swatch:hover { transform: scale(1.1); }
+}
+.lp-swatch:active { transform: scale(0.94); }
 .lp-swatch[aria-pressed='true'] { outline-color: var(--sw-p); }
 .lp-swatch:focus-visible { outline-color: #fff; }
 
@@ -122,14 +136,12 @@
 .lp-club-head {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem;
   background: linear-gradient(120deg, var(--lp-s), color-mix(in srgb, var(--lp-p) 35%, var(--lp-s)));
-  transition: background 0.5s var(--ease-out);
 }
 .lp-crest {
   width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center;
   font-family: var(--font-heading); font-weight: 900; font-size: 0.8rem; color: var(--lp-on-p);
   background: var(--lp-p); border: 2px solid var(--lp-a);
   clip-path: path('M19 1 3 7v12c0 10 7 16 16 18 9-2 16-8 16-18V7L19 1Z');
-  transition: background 0.4s var(--ease-out);
 }
 .lp-club-name { font-family: var(--font-heading); font-weight: 800; font-size: 1rem; color: #fff; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-club-nav { font-size: 0.66rem; color: rgba(255, 255, 255, 0.65); display: flex; gap: 0.7rem; margin-top: 2px; }
@@ -148,9 +160,12 @@
 .lp-ev { display: grid; grid-template-columns: 2.4rem 18px 1fr; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text-secondary); }
 .lp-ev time { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); text-align: right; }
 .lp-ev b { color: var(--text-primary); font-weight: 700; }
-.lp-ev-new { animation: lpEvIn 0.6s var(--ease-out) both; }
-.lp-ev-new b { color: var(--lp-a); }
+/* The 71' goal row is rendered from the start (hidden) so nothing below it shifts when it arrives */
+.lp-ev-goal { visibility: hidden; }
+.lp-ev-goal.is-in { visibility: visible; animation: lpEvIn 600ms var(--ease-out) both; }
+.lp-ev-goal b { color: var(--lp-a); }
 @keyframes lpEvIn { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes lpFade { from { opacity: 0; } }
 .lp-card-yellow { width: 10px; height: 14px; border-radius: 2px; background: #FACC15; margin-left: 4px; }
 
 /* Floating member pass */
@@ -163,7 +178,6 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.75);
   transform: rotate(5deg);
-  transition: background 0.5s var(--ease-out);
 }
 .lp-pass-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
 .lp-pass-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.14em; opacity: 0.8; }
@@ -182,10 +196,20 @@
 .lp-toast-ico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgba(16, 185, 129, 0.15); color: #34D399; }
 .lp-toast small { display: block; color: var(--text-muted); font-size: 0.68rem; }
 
+/* First paint: the site mock settles, the pass is handed over, then the availability notification
+   arrives. Entrances animate transform; the float animates translate, so the two stack. */
 @media (prefers-reduced-motion: no-preference) {
-  .lp-pass { animation: lpFloat 7s ease-in-out infinite; }
-  .lp-toast { animation: lpFloat 6s ease-in-out -2s infinite; }
+  .lp-browser { animation: lpBrowserIn 500ms var(--ease-out) backwards; }
+  .lp-pass { animation: lpPassIn 600ms var(--ease-out) 300ms backwards, lpFloat 7s ease-in-out 900ms infinite; }
+  .lp-toast { animation: lpToastIn 400ms var(--ease-out) 900ms backwards, lpFloat 6s ease-in-out -2s infinite; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .lp-browser, .lp-pass, .lp-toast { animation: lpFade 200ms var(--ease-out) backwards; }
+  .lp-ev-goal.is-in { animation-name: lpFade; animation-duration: 200ms; }
+}
+@keyframes lpBrowserIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@keyframes lpPassIn { from { opacity: 0; transform: rotate(-2deg) translateY(24px); } }
+@keyframes lpToastIn { from { opacity: 0; transform: translateX(16px); } }
 @keyframes lpFloat {
   0%, 100% { translate: 0 0; }
   50% { translate: 0 -8px; }
