@@ -9,7 +9,15 @@ export async function POST(req: NextRequest) {
   const stripe = getStripe();
   const db = getServiceClient();
   const secret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
-  if (!stripe || !db || !secret) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
+  if (!stripe || !db || !secret) {
+    // Names only (never values), so a misconfigured deploy says what it's missing
+    const missing = [
+      !stripe && 'STRIPE_SECRET_KEY',
+      !secret && 'STRIPE_CONNECT_WEBHOOK_SECRET',
+      !db && (process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SUPABASE_SECRET_KEY' : 'NEXT_PUBLIC_SUPABASE_URL'),
+    ].filter(Boolean);
+    return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
+  }
 
   let event: Stripe.Event;
   try {
