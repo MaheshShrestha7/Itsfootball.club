@@ -39,11 +39,12 @@ const CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' 'nonce-__NONCE__' 'strict-dynamic'" + (IS_DEV ? " 'unsafe-eval'" : ''),
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.cloudflare.com" +
+  // *.r2.dev: public R2 bucket URLs (club crests, photos), allowed even if R2_PUBLIC_DOMAIN is missing at build time
+  "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://*.cloudflare.com" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +
     (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
   // News article videos (.mp4) served from the club's own storage
-  "media-src 'self' blob: https://*.r2.cloudflarestorage.com" +
+  "media-src 'self' blob: https://*.r2.cloudflarestorage.com https://*.r2.dev" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST}` : '') +
     (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
   // Fonts are self-hosted by next/font, so no Google Fonts hosts are needed

@@ -6,6 +6,7 @@ import { Match } from '@/lib/supabase/types';
 import { Calendar, MapPin, Edit3, ArrowRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LiveMinute from '@/components/LiveMinute';
+import { compareTournamentMatches } from '@/lib/tournament-engine';
 
 interface TournamentMatchesListProps {
   matches: Match[];
@@ -23,8 +24,8 @@ export default function TournamentMatchesList({
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Extract available stages
-  const availableStages = Array.from(new Set(matches.map(m => m.tournament_stage || 'group')));
+  // Extract available stages (in tournament order)
+  const availableStages = Array.from(new Set([...matches].sort(compareTournamentMatches).map(m => m.tournament_stage || 'group')));
 
   const filteredMatches = matches
     .filter(m => {
@@ -32,10 +33,7 @@ export default function TournamentMatchesList({
       if (statusFilter !== 'all' && m.status !== statusFilter) return false;
       return true;
     })
-    .sort((a, b) =>
-      `${a.match_date} ${a.match_time || ''}`.localeCompare(`${b.match_date} ${b.match_time || ''}`) ||
-      (a.tournament_match_number ?? 0) - (b.tournament_match_number ?? 0)
-    );
+    .sort(compareTournamentMatches);
 
   if (matches.length === 0) {
     return (
@@ -356,6 +354,7 @@ export default function TournamentMatchesList({
               >
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   {match.tournament_group || (match.tournament_stage ? match.tournament_stage.replace('_', ' ').toUpperCase() : 'Match')}
+                  {(match.tournament_stage || 'group') === 'group' && match.tournament_round ? ` • Round ${match.tournament_round}` : ''}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

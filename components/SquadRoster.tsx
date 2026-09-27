@@ -78,6 +78,35 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
     );
   };
 
+  // Membership term: status from membership_status + expiry, dates as "valid from - to"
+  const today = new Date().toISOString().slice(0, 10);
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d.slice(0, 10)).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+  const membershipState = (m: ClubMember): [string, string] => {
+    if (m.membership_status === 'pending') return ['PENDING', '#F59E0B'];
+    if (m.membership_status === 'rejected') return ['REJECTED', '#EF4444'];
+    if (m.membership_status === 'suspended') return ['SUSPENDED', '#EF4444'];
+    const expires = m.membership_expires_at?.slice(0, 10);
+    if (!expires) return ['NO EXPIRY', 'var(--text-muted)'];
+    if (expires < today) return ['EXPIRED', '#EF4444'];
+    const days = (Date.parse(expires) - Date.parse(today)) / 86400000;
+    return days <= 30 ? ['EXPIRES SOON', '#F59E0B'] : ['ACTIVE', '#10B981'];
+  };
+  const membership = (m: ClubMember) => {
+    const [label, color] = membershipState(m);
+    const from = m.membership_starts_at || m.reviewed_at || m.applied_at || m.created_at;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
+        <span className="badge" style={{ alignSelf: 'flex-start', color, border: `1px solid ${color}`, background: 'transparent', fontWeight: 700, fontSize: '0.68rem', padding: '0.1rem 0.4rem' }}>
+          {label}
+        </span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }} title={m.membership_tier}>
+          {fmtDate(from)} – {fmtDate(m.membership_expires_at)}
+        </span>
+      </div>
+    );
+  };
+
   const jersey = (m: ClubMember) => (isPlayerOf(m) && m.jersey_number ? `#${m.jersey_number}` : '—');
 
   const actions = (m: ClubMember) => (
@@ -126,6 +155,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
             </div>
             <div className="squad-badges">{positionBadges(m)}</div>
             <div className="squad-badges">{roleBadges(m)}</div>
+            {membership(m)}
             <div className="squad-card-actions">{actions(m)}</div>
           </div>
         ))}
@@ -141,6 +171,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
         <span>Positions / Post</span>
         <span>Jersey</span>
         <span>Status</span>
+        <span>Membership</span>
         <span style={{ textAlign: 'right' }}>Actions</span>
       </div>
       {members.map(m => (
@@ -160,6 +191,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
           <div className="squad-cell-position squad-badges">{positionBadges(m)}</div>
           <div className="squad-cell-jersey" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--club-primary)' }}>{jersey(m)}</div>
           <div className="squad-cell-status">{statusBadge(m)}</div>
+          <div className="squad-cell-membership">{membership(m)}</div>
           <div className="squad-cell-actions">{actions(m)}</div>
         </div>
       ))}

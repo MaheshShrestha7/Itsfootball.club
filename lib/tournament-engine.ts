@@ -24,6 +24,22 @@ export const STAGE_TITLES: Record<string, string> = {
 
 export const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final'];
+
+/** Fixture list order: stage, then round (Round 1, Round 2, ...), then kick-off, then match number */
+export function compareTournamentMatches(a: Match, b: Match): number {
+  const stage = (m: Match) => {
+    const i = STAGE_ORDER.indexOf(m.tournament_stage || 'group');
+    return i < 0 ? STAGE_ORDER.length : i;
+  };
+  return (
+    stage(a) - stage(b) ||
+    (a.tournament_round ?? 0) - (b.tournament_round ?? 0) ||
+    `${a.match_date || ''} ${a.match_time || ''}`.localeCompare(`${b.match_date || ''} ${b.match_time || ''}`) ||
+    (a.tournament_match_number ?? 0) - (b.tournament_match_number ?? 0)
+  );
+}
+
 export interface TiesheetOptions {
   shuffle?: boolean;
 }

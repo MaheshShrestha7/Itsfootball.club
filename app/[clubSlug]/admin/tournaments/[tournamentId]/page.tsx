@@ -9,6 +9,7 @@ import TournamentStandingsTable from '@/components/tournament/TournamentStanding
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
+import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
 import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
@@ -32,6 +33,8 @@ export default function AdminTournamentDetailPage({
     getTournamentStandings,
     addTournamentParticipant,
     repairTournaments,
+    members,
+    updateTournament,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -353,6 +356,13 @@ export default function AdminTournamentDetailPage({
           </div>
         </div>
       </div>
+
+      <PlayerOfTournament
+        tournament={tournament}
+        members={members.filter(m => m.club_id === club.id)}
+        isAdmin
+        onSaved={updates => updateTournament(tournament.id, updates)}
+      />
 
       {/* Tabs Switcher */}
       <div

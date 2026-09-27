@@ -113,6 +113,8 @@ export interface ClubMember {
   qr_code_token: string;
   membership_tier: string;
   membership_expires_at: string;
+  /** Start of the current membership term (set by payments; read-only, not synced) */
+  membership_starts_at?: string | null;
   is_executive: boolean;
   executive_title?: string;
   executive_bio?: string;
@@ -631,6 +633,10 @@ export interface Tournament {
   venue?: string;
   description?: string;
   banner_url?: string;
+  /** Player of the Tournament award (saved directly, not by the background sync) */
+  player_of_tournament_member_id?: string | null;
+  player_of_tournament_name?: string | null;
+  player_of_tournament_note?: string | null;
   created_at?: string;
   updated_at?: string;
 }

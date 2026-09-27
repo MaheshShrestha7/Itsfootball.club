@@ -96,34 +96,41 @@ export default function AdminLayout({
 
   const navSections: NavSection[] = [
     {
+      // Always-visible entry points (this section has no heading)
       title: 'Overview',
       items: [
         { label: 'Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
+        {
+          label: 'Inbox',
+          href: `/${club.slug}/admin/inquiries`,
+          icon: Mail,
+          badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
+        },
       ],
     },
     {
-      // Tools you reach for on the day itself, at the ground
-      title: 'Matchday Live',
+      // The day itself: picking the team, running the game, the gate
+      title: 'Matchday',
       items: [
         { label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
+        { label: 'Player Availability', href: `/${club.slug}/admin/availability`, icon: ClipboardCheck },
+        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
         { label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
-        { label: 'Player Availability', href: `/${club.slug}/availability`, icon: ClipboardCheck },
       ],
     },
     {
-      // Planning ahead of matchday: what's on, who's playing, when
-      title: 'Fixtures & Events',
+      // Planning the season: what's on and when
+      title: 'Fixtures & Competitions',
       items: [
         { label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         { label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
         { label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
-        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
         { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, badge: activeSeason?.name },
       ],
     },
     {
-      // Squad, membership, and club communication
-      title: 'People & Squad',
+      // Squad, members and the committee
+      title: 'People & Membership',
       items: [
         { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
         {
@@ -134,12 +141,19 @@ export default function AdminLayout({
         },
         { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
         { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
+      ],
+    },
+    {
+      // Money in and out
+      title: 'Finance & Sponsors',
+      items: [
         {
-          label: 'Inbox',
-          href: `/${club.slug}/admin/inquiries`,
-          icon: Mail,
-          badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
+          label: 'Finance',
+          href: `/${club.slug}/admin/finance`,
+          icon: Wallet,
+          badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
         },
+        { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
       ],
     },
     {
@@ -149,13 +163,6 @@ export default function AdminLayout({
         { label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
         { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
         { label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
-        { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
-        {
-          label: 'Finance',
-          href: `/${club.slug}/admin/finance`,
-          icon: Wallet,
-          badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
-        },
         { label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
       ],
     },

@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches } from './tournament-engine';
 import type { Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -80,6 +80,22 @@ for (let n = 2; n <= 17; n++) {
   assert.equal(parseTournamentDate('2025-05-01')!.getHours(), 15, 'date-only start defaults to 15:00');
   const again = resolveTournament(upgradeLegacyMatches(repaired), t, parts);
   assert.equal(JSON.stringify(again), JSON.stringify(repaired), 'repair is idempotent');
+}
+
+// Fixture lists run Round 1, Round 2, ... even when later rounds kick off earlier or groups interleave
+{
+  const fx = (id: string, stage: Match['tournament_stage'], round: number, date: string, n: number) =>
+    ({ id, tournament_stage: stage, tournament_round: round, match_date: date, match_time: '10:00', tournament_match_number: n }) as Match;
+  const order = [
+    fx('final', 'final', 3, '2026-10-01', 9),
+    fx('gB-r2', 'group', 2, '2026-10-02', 8),
+    fx('gA-r2', 'group', 2, '2026-10-02', 3),
+    fx('gB-r1', 'group', 1, '2026-10-05', 6),
+    fx('gA-r1', 'group', 1, '2026-10-05', 1),
+    fx('third', 'third_place', 3, '2026-10-01', 10),
+    fx('semi', 'semi_final', 2, '2026-09-30', 7),
+  ].sort(compareTournamentMatches).map(m => m.id);
+  assert.deepEqual(order, ['gA-r1', 'gB-r1', 'gA-r2', 'gB-r2', 'semi', 'third', 'final'], 'fixture order by stage then round');
 }
 
 console.log('tournament engine: all formats OK');

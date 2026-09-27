@@ -204,7 +204,7 @@ export default function DraftLineupPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <Link
-              href={`/${club.slug}/availability`}
+              href={`/${club.slug}/admin/availability`}
               className="btn btn-secondary btn-sm"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >

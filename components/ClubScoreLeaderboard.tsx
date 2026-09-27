@@ -40,9 +40,19 @@ export default function ClubScoreLeaderboard({
     logs: GamificationActivityLog[];
   } | null>(null);
 
+  // Profiles are per season: pick one (the active season, else the latest one with scores)
+  const clubProfiles = profiles.filter(p => p.club_id === club.id && members.some(m => m.id === p.member_id));
+  const seasons = Array.from(new Set(clubProfiles.map(p => p.season).filter(Boolean))).sort().reverse();
+  const activeSeasonName = getActiveSeason(club.id)?.name;
+  const defaultSeason = activeSeasonName && seasons.includes(activeSeasonName) ? activeSeasonName : seasons[0] || '';
+  const [seasonChoice, setSeasonChoice] = useState<string | null>(null);
+  const season = seasonChoice !== null && seasons.includes(seasonChoice) ? seasonChoice : defaultSeason;
+  const [showAll, setShowAll] = useState(false);
+  const TOP_COUNT = 5;
+
   // Filter & sort leaderboard
-  const sortedProfiles = [...profiles]
-    .filter(p => p.club_id === club.id)
+  const sortedProfiles = clubProfiles
+    .filter(p => !season || p.season === season)
     .sort((a, b) => {
       if (filter === 'season') return b.total_points - a.total_points;
       if (filter === 'weekly') return b.weekly_points - a.weekly_points;
@@ -108,6 +118,19 @@ export default function ClubScoreLeaderboard({
             Combines pitch-side match performance with verified training attendance streaks.
           </p>
         </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
+        {seasons.length > 1 && (
+          <select
+            aria-label="Season"
+            className="form-select"
+            value={season}
+            onChange={e => { setSeasonChoice(e.target.value); setShowAll(false); }}
+            style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
+          >
+            {seasons.map(s => <option key={s} value={s}>{s}{s === activeSeasonName ? ' (current)' : ''}</option>)}
+          </select>
+        )}
 
         {/* Metric Selector Buttons */}
         <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
@@ -177,11 +200,17 @@ export default function ClubScoreLeaderboard({
             <span>Iron Streaks</span>
           </button>
         </div>
+        </div>
       </div>
 
       {/* Leaderboard Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {sortedProfiles.map((profile, idx) => {
+        {sortedProfiles.length === 0 && (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            No ClubScore points recorded{season ? ` for ${season}` : ''} yet.
+          </div>
+        )}
+        {(showAll ? sortedProfiles : sortedProfiles.slice(0, TOP_COUNT)).map((profile, idx) => {
           const player = members.find(m => m.id === profile.member_id);
           if (!player) return null;
 
@@ -309,6 +338,17 @@ export default function ClubScoreLeaderboard({
             </div>
           );
         })}
+        {sortedProfiles.length > TOP_COUNT && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowAll(v => !v)}
+            aria-expanded={showAll}
+            style={{ alignSelf: 'center', marginTop: '0.25rem' }}
+          >
+            {showAll ? `Show top ${TOP_COUNT} only` : `Show full standings (${sortedProfiles.length})`}
+          </button>
+        )}
       </div>
 
       {/* Footer Info Box: Gamification Explanation */}

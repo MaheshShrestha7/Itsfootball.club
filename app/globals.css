@@ -783,7 +783,7 @@ textarea {
 .squad-list { padding: 0.5rem; }
 .squad-list-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.5fr) minmax(0, 1.7fr) 64px 96px auto;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) minmax(0, 1.6fr) 64px 96px minmax(150px, 1.3fr) auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.7rem 0.85rem;
@@ -827,7 +827,8 @@ textarea {
       "member actions"
       "roles roles"
       "position position"
-      "jersey status";
+      "jersey status"
+      "membership membership";
     row-gap: 0.55rem;
     padding: 0.85rem 0.6rem;
   }
@@ -837,6 +838,7 @@ textarea {
   .squad-cell-position { grid-area: position; }
   .squad-cell-jersey { grid-area: jersey; }
   .squad-cell-status { grid-area: status; justify-self: end; }
+  .squad-cell-membership { grid-area: membership; }
   .squad-cell-actions .btn, .squad-card-actions .btn { min-width: 40px; min-height: 40px; }
 }
 

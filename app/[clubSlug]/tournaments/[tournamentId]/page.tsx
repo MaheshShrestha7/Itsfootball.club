@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import TournamentBracketView from '@/components/tournament/TournamentBracketView';
 import TournamentStandingsTable from '@/components/tournament/TournamentStandingsTable';
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
+import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
 import {
   Trophy,
   ArrowLeft,
@@ -33,6 +34,7 @@ export default function PublicTournamentDetailPage({
     tournaments,
     tournamentParticipants,
     matches,
+    members,
     getTournamentStandings,
   } = useClub();
 
@@ -214,6 +216,9 @@ export default function PublicTournamentDetailPage({
 
       {/* Main Tabs and Content */}
       <main style={{ maxWidth: '1300px', margin: '0 auto', padding: '2rem 1.5rem 4rem 1.5rem' }}>
+        {/* Shown only once the club has awarded it */}
+        <PlayerOfTournament tournament={tournament} members={members.filter(m => m.club_id === club.id)} />
+
         {/* Navigation Tabs */}
         <div
           style={{
