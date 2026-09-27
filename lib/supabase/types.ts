@@ -665,3 +665,82 @@ export interface TournamentStanding {
   form: ('W' | 'D' | 'L')[];
 }
 
+
+// ==============================================================================
+// Finance (supabase/migrations/20261010_finance.sql). Read and written directly, not synced.
+// ==============================================================================
+export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'income_other';
+export type PaymentMethod = 'stripe' | 'bank_transfer' | 'cash' | 'other';
+export type PaymentStatus = 'pending' | 'awaiting_review' | 'paid' | 'rejected' | 'refunded' | 'failed';
+
+export interface ClubPaymentSettings {
+  club_id: string;
+  currency: string;
+  bank_details?: string | null;
+  stripe_account_id?: string | null;
+  stripe_charges_enabled: boolean;
+}
+
+export interface MembershipPlan {
+  id: string;
+  club_id: string;
+  name: string;
+  description?: string | null;
+  price_cents: number;
+  duration_months: number;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SponsorshipPackage {
+  id: string;
+  club_id: string;
+  name: string;
+  tier: SponsorTier;
+  price_cents: number;
+  benefits?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface Payment {
+  id: string;
+  club_id: string;
+  kind: PaymentKind;
+  category: string;
+  member_id?: string | null;
+  sponsor_id?: string | null;
+  plan_id?: string | null;
+  package_id?: string | null;
+  description?: string | null;
+  amount_cents: number;
+  currency: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  payer_name?: string | null;
+  payer_email?: string | null;
+  reference?: string | null;
+  receipt_key?: string | null;
+  season?: string | null;
+  notes?: string | null;
+  rejection_reason?: string | null;
+  paid_at?: string | null;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  club_id: string;
+  category: string;
+  description: string;
+  vendor?: string | null;
+  amount_cents: number;
+  currency: string;
+  spent_on: string;
+  method: 'bank_transfer' | 'card' | 'cash' | 'other';
+  receipt_key?: string | null;
+  paid_by_member_id?: string | null;
+  reimbursed: boolean;
+  season?: string | null;
+  created_at: string;
+}

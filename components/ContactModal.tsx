@@ -217,6 +217,11 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                   <option value="Youth Academy">Youth Academy Enrollment</option>
                   <option value="Media Request">Press & Media Accreditation</option>
                 </select>
+                {inquiryType === 'Sponsorship' && (
+                  <a href={`/${club.slug}/sponsor`} style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--club-primary)', fontWeight: 700 }}>
+                    See sponsorship packages and sign up online →
+                  </a>
+                )}
               </div>
             </div>
 

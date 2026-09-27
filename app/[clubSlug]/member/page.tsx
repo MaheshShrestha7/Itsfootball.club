@@ -4,7 +4,9 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { defaultSeasonLabel } from '@/lib/season';
-import { ClubMember, MemberMessageCategory, PlayerPosition } from '@/lib/supabase/types';
+import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
+import PaymentStep from '@/components/PaymentStep';
+import { formatMoney } from '@/lib/finance';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -92,6 +94,13 @@ export default function MemberPortalPage({
   const [signupError, setSignupError] = useState<string | null>(null);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
 
+  // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [currency, setCurrency] = useState('AUD');
+  const [paymentNotice, setPaymentNotice] = useState<'success' | 'cancelled' | null>(null);
+  const [renewPlanId, setRenewPlanId] = useState('');
+  const [renewOpen, setRenewOpen] = useState(false);
+
   // Authenticated Member Clubhouse State
   const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages'>('pass');
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -149,6 +158,21 @@ export default function MemberPortalPage({
       sub.subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [club.id]);
+
+  useEffect(() => {
+    const payment = new URLSearchParams(window.location.search).get('payment');
+    if (payment === 'success' || payment === 'cancelled') setPaymentNotice(payment);
+    const client = getSupabaseClient();
+    if (!client) return;
+    client.from('membership_plans').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')
+      .then(({ data }) => {
+        const list = (data || []) as MembershipPlan[];
+        setPlans(list);
+        if (list.length) setSignupForm(f => (list.some(p => p.name === f.tier) ? f : { ...f, tier: list[0].name }));
+      });
+    client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
 
   // Keep activeMember in sync with live members state (e.g. after approval)
@@ -264,6 +288,20 @@ export default function MemberPortalPage({
             <span>Back to {club.name} Clubhouse</span>
           </Link>
         </div>
+
+        {paymentNotice && (
+          <div role="status" className="glass-panel" style={{
+            padding: '0.9rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
+            borderLeft: `4px solid ${paymentNotice === 'success' ? '#10B981' : '#F59E0B'}`,
+          }}>
+            {paymentNotice === 'success' ? <CheckCircle2 size={18} color="#10B981" /> : <AlertCircle size={18} color="#F59E0B" />}
+            <span style={{ fontSize: '0.88rem', color: '#FFFFFF' }}>
+              {paymentNotice === 'success'
+                ? 'Payment received, thank you! It can take a minute to show on your membership.'
+                : 'Payment was cancelled. Nothing was charged. You can try again any time.'}
+            </span>
+          </div>
+        )}
 
         {/* ==================================================================== */}
         {/* UN-AUTHENTICATED: GATEWAY & APPLICATION PORTAL */}
@@ -515,6 +553,22 @@ export default function MemberPortalPage({
                       <div>Application Ref: <code style={{ color: '#F59E0B' }}>{submittedApplication.id}</code></div>
                     </div>
 
+                    {(() => {
+                      const plan = plans.find(p => p.name === submittedApplication.membership_tier);
+                      return plan && plan.price_cents > 0 ? (
+                        <div style={{ marginBottom: '1.5rem' }}>
+                          <PaymentStep
+                            clubId={club.id}
+                            kind="membership_signup"
+                            memberId={submittedApplication.id}
+                            planId={plan.id}
+                            amountCents={plan.price_cents}
+                            label={`Pay for ${plan.name}`}
+                          />
+                        </div>
+                      ) : null;
+                    })()}
+
                     <button
                       type="button"
                       onClick={() => { setGatewayTab('signin'); setSubmittedApplication(null); }}
@@ -635,11 +689,19 @@ export default function MemberPortalPage({
                             fontSize: '0.85rem',
                           }}
                         >
-                          <option value="Supporter Season Pass">Supporter Season Pass</option>
-                          <option value="Senior Squad Player">Senior Squad Player</option>
-                          <option value="Academy / Youth Squad">Academy / Youth Squad</option>
-                          <option value="Club Volunteer">Club Volunteer</option>
-                          <option value="VIP Gold Pass">VIP Gold Pass</option>
+                          {plans.length ? plans.map(p => (
+                            <option key={p.id} value={p.name}>
+                              {p.name}: {p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Free'}
+                            </option>
+                          )) : (
+                            <>
+                              <option value="Supporter Season Pass">Supporter Season Pass</option>
+                              <option value="Senior Squad Player">Senior Squad Player</option>
+                              <option value="Academy / Youth Squad">Academy / Youth Squad</option>
+                              <option value="Club Volunteer">Club Volunteer</option>
+                              <option value="VIP Gold Pass">VIP Gold Pass</option>
+                            </>
+                          )}
                         </select>
                       </div>
                     </div>
@@ -803,6 +865,53 @@ export default function MemberPortalPage({
                 </button>
               </div>
             </div>
+
+            {/* Renewal: shown from 30 days before expiry */}
+            {(() => {
+              const paidPlans = plans.filter(p => p.price_cents > 0);
+              if (!activeMember.membership_expires_at || !paidPlans.length) return null;
+              const daysLeft = Math.ceil((new Date(activeMember.membership_expires_at).getTime() - Date.now()) / 86400000);
+              if (daysLeft > 30) return null;
+              const plan = paidPlans.find(p => p.id === renewPlanId)
+                || paidPlans.find(p => p.name === activeMember.membership_tier)
+                || paidPlans[0];
+              return (
+                <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem', borderLeft: `4px solid ${daysLeft < 0 ? '#EF4444' : '#F59E0B'}` }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#FFFFFF' }}>
+                        {daysLeft < 0 ? 'Your membership has expired' : `Your membership expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Expiry date {activeMember.membership_expires_at}. Renewing early keeps your remaining days.
+                      </div>
+                    </div>
+                    {!renewOpen && (
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => setRenewOpen(true)}>Renew membership</button>
+                    )}
+                  </div>
+                  {renewOpen && (
+                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <label className="form-label" htmlFor="renew-plan">Plan</label>
+                      <select id="renew-plan" className="form-select" value={plan.id} onChange={e => setRenewPlanId(e.target.value)}>
+                        {paidPlans.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}: {formatMoney(p.price_cents, currency)}</option>
+                        ))}
+                      </select>
+                      <PaymentStep
+                        key={plan.id}
+                        clubId={club.id}
+                        kind="membership_renewal"
+                        memberId={activeMember.id}
+                        planId={plan.id}
+                        amountCents={plan.price_cents}
+                        label={`Renew ${plan.name} (${plan.duration_months} months)`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Clubhouse Sub-Tabs */}
             <div style={{

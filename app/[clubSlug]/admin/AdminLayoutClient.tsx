@@ -35,9 +35,10 @@ import {
   Mail,
   ClipboardCheck,
   Flag,
-  Flame
+  Flame,
+  Wallet
 } from 'lucide-react';
-import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 
@@ -66,6 +67,14 @@ export default function AdminLayout({
   useEffect(() => {
     setMobileDrawerOpen(false);
   }, [pathname]);
+
+  // Bank transfer receipts waiting for the treasurer (refreshed on navigation)
+  const [receiptsToReview, setReceiptsToReview] = useState(0);
+  useEffect(() => {
+    getSupabaseClient()?.from('payments').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('status', 'awaiting_review')
+      .then(({ count }) => setReceiptsToReview(count || 0));
+  }, [club.id, pathname]);
 
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
   const userRole = user ? getUserRoleForClub(club.id) : null;
@@ -141,6 +150,12 @@ export default function AdminLayout({
         { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
         { label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
         { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
+        {
+          label: 'Finance',
+          href: `/${club.slug}/admin/finance`,
+          icon: Wallet,
+          badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
+        },
         { label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
       ],
     },

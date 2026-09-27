@@ -21,6 +21,7 @@ import {
   ArrowRight,
   User,
   Lock,
+  Search,
 } from 'lucide-react';
 
 export default function MyClubsPage() {
@@ -65,6 +66,7 @@ export default function MyClubsPage() {
       return !!role && role !== 'owner' && !ownedClubs.some(oc => oc.id === c.id);
     });
   }, [clubs, user, ownedClubs]);
+  const hasClubs = ownedClubs.length > 0 || memberClubs.length > 0;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -162,18 +164,18 @@ export default function MyClubsPage() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link href="/clubs" className="btn btn-secondary touch-target" style={{ minHeight: '44px' }}>
-                  <Trophy size={16} /> <span>Browse Directory</span>
-                </Link>
-                <Link href="/create-club" className="btn btn-primary touch-target" style={{ minHeight: '44px' }}>
-                  <PlusCircle size={16} /> <span>Launch New Club</span>
-                </Link>
-              </div>
+              {/* Users with no clubs get "Search for Club to Join" in the empty state instead */}
+              {hasClubs && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <Link href="/clubs" className="btn btn-secondary touch-target" style={{ minHeight: '44px' }}>
+                    <Trophy size={16} /> <span>Browse Directory</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Tiled Grid of Owned Clubs */}
-            {(ownedClubs.length > 0 || memberClubs.length > 0) ? (
+            {hasClubs ? (
               <>
               {ownedClubs.length > 0 && (
               <section style={{ marginBottom: memberClubs.length > 0 ? '3rem' : 0 }}>
@@ -332,45 +334,6 @@ export default function MyClubsPage() {
                   );
                 })}
 
-                {/* "+ Launch Another Club" Interactive Tile */}
-                <div
-                  className="glass-panel"
-                  style={{
-                    border: '2px dashed var(--border-medium)',
-                    borderRadius: 'var(--radius-lg)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '2.5rem 1.5rem',
-                    textAlign: 'center',
-                    minHeight: '340px',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <div style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '50%',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '1rem',
-                    color: '#10B981',
-                  }}>
-                    <PlusCircle size={28} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
-                    Launch Another Club
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '260px' }}>
-                    Configure a brand new club brand, team kit colours, squad roster, and match center.
-                  </p>
-                  <Link href="/create-club" className="btn btn-primary touch-target" style={{ minHeight: '44px' }}>
-                    <PlusCircle size={16} /> <span>Create New Club</span>
-                  </Link>
-                </div>
               </div>
               </section>
               )}
@@ -523,6 +486,49 @@ export default function MyClubsPage() {
                 </div>
               </section>
               )}
+
+              {/* The one place to launch a club, after both club lists */}
+              <div
+                className="glass-panel"
+                style={{
+                  marginTop: '3rem',
+                  border: '2px dashed var(--border-medium)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.75rem clamp(1.25rem, 4vw, 2.25rem)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1.25rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    width: '52px',
+                    height: '52px',
+                    flexShrink: 0,
+                    borderRadius: '50%',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#10B981',
+                  }}>
+                    <PlusCircle size={26} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+                      Launch a new club
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px' }}>
+                      Set up a club website with its own crest, kit colours, squad roster and match center.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/create-club" className="btn btn-primary touch-target" style={{ minHeight: '44px' }}>
+                  <PlusCircle size={16} /> <span>Launch New Club</span>
+                </Link>
+              </div>
               </>
             ) : (
               /* Empty State When No Clubs Owned or Joined */
@@ -572,6 +578,11 @@ export default function MyClubsPage() {
                   <Link href="/create-club" className="btn btn-primary btn-lg touch-target" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <PlusCircle size={20} />
                     <span>Launch Your First Club</span>
+                  </Link>
+
+                  <Link href="/clubs" className="btn btn-secondary btn-lg touch-target" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Search size={20} />
+                    <span>Search for Club to Join</span>
                   </Link>
 
                 </div>

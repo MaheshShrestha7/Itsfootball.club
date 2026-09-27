@@ -1,6 +1,7 @@
 'use client';
 
-import React, { use, useState } from 'react';
+import React, { use, useState, useEffect } from 'react';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { ClubMember, MemberMessage, isPlayerMember } from '@/lib/supabase/types';
@@ -63,6 +64,14 @@ export default function AdminMembersPage({
   const [selectedMessage, setSelectedMessage] = useState<MemberMessage | null>(null);
   const [replyText, setReplyText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sign-up payment status per member (paid by card, or a bank receipt waiting in Finance)
+  const [signupPayments, setSignupPayments] = useState<Record<string, string>>({});
+  useEffect(() => {
+    getSupabaseClient()?.from('payments').select('member_id, status')
+      .eq('club_id', club.id).eq('kind', 'membership_signup').in('status', ['paid', 'awaiting_review'])
+      .then(({ data }) => setSignupPayments(Object.fromEntries((data || []).map(p => [p.member_id, p.status]))));
+  }, [club.id]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -621,6 +630,8 @@ export default function AdminMembersPage({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>
                           <CreditCard size={14} color="var(--text-muted)" />
                           <span>Tier: <strong>{member.membership_tier}</strong></span>
+                          {signupPayments[member.id] === 'paid' && <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: '#10B981' }}>PAID</span>}
+                          {signupPayments[member.id] === 'awaiting_review' && <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B' }}>RECEIPT TO CHECK</span>}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>

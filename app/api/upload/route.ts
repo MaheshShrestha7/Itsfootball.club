@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { uploadBufferToR2, isR2Configured } from '@/lib/storage/r2';
 import { requireClubAdmin } from '@/lib/supabase/server-auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { matchesFileSignature } from '@/lib/file-signature';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -17,22 +18,6 @@ const EXTENSION_MAP: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
 };
-
-// True when the leading bytes really are the image type the client claimed
-function matchesImageSignature(bytes: Buffer, mime: string): boolean {
-  switch (mime) {
-    case 'image/jpeg':
-      return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-    case 'image/png':
-      return bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-    case 'image/gif':
-      return bytes.subarray(0, 4).toString('ascii') === 'GIF8';
-    case 'image/webp':
-      return bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-    default:
-      return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -90,7 +75,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Security Check 4: the file content must match its declared type
-    if (!matchesImageSignature(buffer, fileType)) {
+    if (!matchesFileSignature(buffer, fileType)) {
       return NextResponse.json({ error: 'File content does not match its image type.' }, { status: 415 });
     }
 

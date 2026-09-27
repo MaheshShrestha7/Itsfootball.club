@@ -40,3 +40,11 @@ export async function requireClubAdmin(request: Request): Promise<AuthCheck> {
   }
   return { ok: true, userId, token, supabase };
 }
+
+/** requireClubAdmin, narrowed to one club (admins of other clubs get 403) */
+export async function requireAdminOfClub(request: Request, clubId: string): Promise<AuthCheck> {
+  const auth = await requireClubAdmin(request);
+  if (!auth.ok) return auth;
+  const { data } = await auth.supabase.rpc('is_club_admin', { p_club_id: clubId });
+  return data === true ? auth : { ok: false, status: 403, error: 'You are not an administrator of this club.' };
+}

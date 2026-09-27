@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID;
@@ -6,6 +6,8 @@ const accessKeyId = process.env.R2_ACCESS_KEY_ID;
 const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
 const bucketName = process.env.R2_BUCKET_NAME || 'itsfootball-assets';
 const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+// Bucket with no public domain, for receipts and other private files
+const privateBucketName = process.env.R2_PRIVATE_BUCKET;
 
 export const isR2Configured = Boolean(
   accountId &&
@@ -81,3 +83,19 @@ export function getBadgeStorageKey(clubId: string, badgeId: string, extension = 
   return `clubs/${clubId}/badges/${badgeId}.${extension}`;
 }
 
+export const isR2PrivateConfigured = isR2Configured && Boolean(privateBucketName);
+
+/** Upload to the private bucket; returns the key, or null when it isn't configured */
+export async function putPrivateObject(key: string, body: Uint8Array, contentType: string): Promise<string | null> {
+  const client = getR2Client();
+  if (!client || !privateBucketName) return null;
+  await client.send(new PutObjectCommand({ Bucket: privateBucketName, Key: key, Body: body, ContentType: contentType }));
+  return key;
+}
+
+/** Short-lived download link for a private object */
+export async function getPrivateObjectUrl(key: string, expiresIn = 300): Promise<string | null> {
+  const client = getR2Client();
+  if (!client || !privateBucketName) return null;
+  return getSignedUrl(client, new GetObjectCommand({ Bucket: privateBucketName, Key: key }), { expiresIn });
+}
