@@ -278,6 +278,8 @@ export class SupabaseSync {
   /** table -> id -> hash of a row the server rejected (not retried until it changes) */
   private failed = new Map<string, Map<string, string>>();
   private loaded = new Set<EntityKey>();
+  /** table -> ids the last load actually got back from the database */
+  private loadedIds = new Map<string, Set<string>>();
 
   constructor(private client: SupabaseClient) {}
 
@@ -312,6 +314,7 @@ export class SupabaseSync {
     if (!narrow) {
       data[cfg.key] = [];
       this.loaded.add(cfg.key);
+      this.loadedIds.set(cfg.table, new Set());
       return;
     }
     const [base, ...extras] = await Promise.all(
@@ -325,6 +328,7 @@ export class SupabaseSync {
     const byId = new Map<string, Row>();
     for (const extra of extras) for (const r of extra.rows) byId.set(r.id, r);
     for (const r of base.rows) byId.set(r.id, r);
+    this.loadedIds.set(cfg.table, new Set(byId.keys()));
 
     data[cfg.key] = [...byId.values()].map(r => {
       const clean = stripNulls(r);
@@ -388,14 +392,19 @@ export class SupabaseSync {
     this.synced.get(cfg.table)?.delete(id);
   }
 
-  /** Marks rows as "already in the database" so they are not re-uploaded */
+  /**
+   * Marks rows as "already in the database" so they are not re-uploaded. Only rows the last load
+   * returned count: a local-only row in `state` (e.g. a message sent just before a reload) is still
+   * waiting for its first upload, and marking it would make flush() skip it for good.
+   */
   seed(state: Partial<SyncState>) {
     for (const cfg of ENTITIES) {
       if (!this.loaded.has(cfg.key)) continue;
+      const onServer = this.loadedIds.get(cfg.table);
       const map = new Map<string, Row>();
       for (const obj of stateRows(cfg, state)) {
         const row = toRow(cfg, obj);
-        if (row) map.set(row.id, row);
+        if (row && onServer?.has(row.id)) map.set(row.id, row);
       }
       this.synced.set(cfg.table, map);
     }

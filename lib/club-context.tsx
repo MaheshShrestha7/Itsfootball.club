@@ -729,6 +729,9 @@ export function ClubProvider({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: filterOn('club_id') }, payload =>
         apply<MatchEvent>('matchEvents', setMatchEvents, payload)
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_messages', filter: filterOn('club_id') }, payload =>
+        apply<MemberMessage>('memberMessages', setMemberMessages, payload)
+      )
       .subscribe();
 
     return () => {

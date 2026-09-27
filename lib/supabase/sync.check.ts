@@ -81,7 +81,19 @@ async function main() {
   assert.deepEqual(result.deletedIds, [M1]);
   assert.ok(log.some(o => o.kind === 'delete' && o.table === 'matches'));
 
-  console.log('sync: scoped load, column updates and explicit deletes OK');
+  // A local row the server didn't return (e.g. a message sent just before a reload) is still
+  // pending after seed(), so the next flush uploads it instead of treating it as saved
+  const fresh = new SupabaseSync(fakeClient({ clubs: [{ id: C1, slug: 'fc' }], matches: [match] }, log));
+  await fresh.load({ slug: 'fc', clubIds: [] });
+  const pending = { ...match, id: '55555555-5555-4555-8555-555555555555' };
+  fresh.seed({ matches: [match, pending] });
+  log.length = 0;
+  await fresh.flush({ matches: [match, pending] });
+  const upload = log.find(o => o.kind === 'upsert' && o.table === 'matches');
+  assert.deepEqual((upload?.rows as { id: string }[] | undefined)?.map(r => r.id), [pending.id], 'unsaved local row is uploaded');
+  assert.ok(!log.some(o => o.kind === 'update'), 'server row seeded as saved');
+
+  console.log('sync: scoped load, column updates, explicit deletes and pending local rows OK');
 }
 
 main().catch(err => {
