@@ -390,7 +390,7 @@ export default function TournamentScoreModal({
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
             <Link
-              href={`/${clubSlug}/admin/match-center`}
+              href={`/${clubSlug}/admin/match-center?match=${encodeURIComponent(match.id)}`}
               className="btn btn-secondary"
               style={{
                 flex: 1,

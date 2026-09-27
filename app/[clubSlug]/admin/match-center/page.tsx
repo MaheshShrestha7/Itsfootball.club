@@ -36,13 +36,18 @@ import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
+import { clubSidePlayers } from '@/lib/tournament-engine';
 
 export default function AdminMatchCenterControllerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clubSlug: string }>;
+  searchParams: Promise<{ match?: string }>;
 }) {
   const resolvedParams = use(params);
+  // ?match=<id> opens that fixture (e.g. the "Match Center" button on a tournament fixture)
+  const { match: requestedMatchId } = use(searchParams);
   const {
     clubs,
     selectClubBySlug,
@@ -56,7 +61,9 @@ export default function AdminMatchCenterControllerPage({
     members,
     seasons,
     getActiveSeason,
-    getMatchAvailabilities
+    getMatchAvailabilities,
+    internalTeams,
+    tournamentParticipants,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -71,11 +78,15 @@ export default function AdminMatchCenterControllerPage({
     return m.season === seasonFilter;
   });
 
-  const [selectedMatchId, setSelectedMatchId] = useState<string>(clubMatches[0]?.id || '');
+  const [selectedMatchId, setSelectedMatchId] = useState<string>(requestedMatchId || clubMatches[0]?.id || '');
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
   const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+
+  // Each side's own club players (null = outside team); tournament sides come from their participants
+  const homePlayers = match ? clubSidePlayers(match, 'home', squadPlayers, tournamentParticipants, internalTeams) : null;
+  const awayPlayers = match ? clubSidePlayers(match, 'away', squadPlayers, tournamentParticipants, internalTeams) : null;
 
   // Post-match verification only offers players explicitly marked "available" for this fixture.
   // If attendance was never tracked for it, fall back to the full squad.
@@ -105,13 +116,22 @@ export default function AdminMatchCenterControllerPage({
   const [teamSide, setTeamSide] = useState<'home' | 'away'>('home');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [customPlayerName, setCustomPlayerName] = useState('');
-  const [selectedSubOffId, setSelectedSubOffId] = useState<string>(squadPlayers[0]?.id || '');
+  const [selectedSubOffId, setSelectedSubOffId] = useState<string>('');
   const [selectedAssistId, setSelectedAssistId] = useState<string>('');
   const [assistName, setAssistName] = useState('');
   const [eventMinute, setEventMinute] = useState(match ? getLiveMinute(match) : 75);
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+
+  // Picked players belong to one side's roster, so switching sides clears them
+  const chooseSide = (side: 'home' | 'away') => {
+    if (side === teamSide) return;
+    setTeamSide(side);
+    setSelectedPlayerId('');
+    setSelectedSubOffId('');
+    setSelectedAssistId('');
+  };
 
   const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
     setFeedback({ text, type });
@@ -265,15 +285,15 @@ export default function AdminMatchCenterControllerPage({
   const handleLogEvent = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const isClubHome = match?.is_club_home ?? true;
-    const isClubSelected = (isClubHome && teamSide === 'home') || (!isClubHome && teamSide === 'away');
+    const sideSquad = (teamSide === 'home' ? homePlayers : awayPlayers) ?? [];
+    const isClubSelected = (teamSide === 'home' ? homePlayers : awayPlayers) !== null;
 
     let resolvedPlayerName = '';
     if (isClubSelected) {
       if (selectedPlayerId === 'custom') {
         resolvedPlayerName = customPlayerName.trim();
       } else {
-        const found = squadPlayers.find(p => p.id === selectedPlayerId);
+        const found = sideSquad.find(p => p.id === selectedPlayerId);
         resolvedPlayerName = found ? found.full_name : customPlayerName.trim();
       }
     } else {
@@ -292,7 +312,7 @@ export default function AdminMatchCenterControllerPage({
       if (selectedAssistId === 'custom') {
         assist = assistName.trim();
       } else if (selectedAssistId !== 'none') {
-        const foundAssist = squadPlayers.find(p => p.id === selectedAssistId);
+        const foundAssist = sideSquad.find(p => p.id === selectedAssistId);
         assist = foundAssist ? foundAssist.full_name : '';
       }
     } else {
@@ -300,7 +320,11 @@ export default function AdminMatchCenterControllerPage({
     }
 
     if (eventType === 'sub') {
-      const offPlayer = squadPlayers.find(p => p.id === selectedSubOffId);
+      const offPlayer = sideSquad.find(p => p.id === selectedSubOffId);
+      if (isClubSelected && !offPlayer) {
+        showFeedback('Please select the player coming off.', 'error');
+        return;
+      }
       const offName = offPlayer ? offPlayer.full_name : 'Player';
       detail = `Substitution: ${resolvedPlayerName} ON, ${offName} OFF. ${detail}`.trim();
     }
@@ -477,7 +501,7 @@ export default function AdminMatchCenterControllerPage({
               <select aria-label="Fixture"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '100%' }}
-                value={selectedMatchId}
+                value={match?.id || ''}
                 onChange={e => setSelectedMatchId(e.target.value)}
               >
                 {filteredMatches.map(m => (
@@ -751,21 +775,45 @@ export default function AdminMatchCenterControllerPage({
 
           {/* Event Logger Form */}
           {(() => {
-            const isClubHome = match?.is_club_home ?? true;
-            const isClubSelected = (isClubHome && teamSide === 'home') || (!isClubHome && teamSide === 'away');
-            const ourSide: 'home' | 'away' = isClubHome ? 'home' : 'away';
-            const oppSide: 'home' | 'away' = isClubHome ? 'away' : 'home';
+            const selectedSquad = teamSide === 'home' ? homePlayers : awayPlayers;
+            const isClubSelected = selectedSquad !== null;
+            const clubSides = (['home', 'away'] as const).filter(s => (s === 'home' ? homePlayers : awayPlayers) !== null);
+            const sideName = (s: 'home' | 'away') => (s === 'home' ? match.home_team_name : match.away_team_name);
+            const sideTag = (s: 'home' | 'away') => {
+              const venue = s === 'home' ? 'Home' : 'Away';
+              if (clubSides.length !== 1) return venue;
+              return `${clubSides[0] === s ? 'Our Club' : 'Opponent'} - ${venue}`;
+            };
 
-            const quickActions: { key: string; label: string; emoji: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string }[] = [
-              { key: 'goal-us', label: 'Goal', emoji: '⚽', eventType: 'goal', side: ourSide, accent: '#10B981' },
-              { key: 'goal-opp', label: 'Opponent Goal', emoji: '🥅', eventType: 'goal', side: oppSide, accent: '#EF4444' },
-              { key: 'penalty-us', label: 'Penalty', emoji: '🎯', eventType: 'penalty', side: ourSide, accent: '#10B981' },
-              { key: 'yellow-us', label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
-              { key: 'yellow-opp', label: 'Opponent Yellow', emoji: '🟨', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
-              { key: 'red-us', label: 'Red Card', emoji: '🟥', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
-              { key: 'red-opp', label: 'Opponent Red', emoji: '🟥', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
-              { key: 'sub-us', label: 'Substitution', emoji: '🔄', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
-            ];
+            type QuickAction = { key: string; label: string; emoji: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string; team?: string };
+            let quickActions: QuickAction[];
+            if (clubSides.length === 1) {
+              // A normal fixture: the club against an outside opponent
+              const ourSide = clubSides[0];
+              const oppSide: 'home' | 'away' = ourSide === 'home' ? 'away' : 'home';
+              quickActions = [
+                { key: 'goal-us', label: 'Goal', emoji: '⚽', eventType: 'goal', side: ourSide, accent: '#10B981' },
+                { key: 'goal-opp', label: 'Opponent Goal', emoji: '🥅', eventType: 'goal', side: oppSide, accent: '#EF4444' },
+                { key: 'penalty-us', label: 'Penalty', emoji: '🎯', eventType: 'penalty', side: ourSide, accent: '#10B981' },
+                { key: 'yellow-us', label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
+                { key: 'yellow-opp', label: 'Opponent Yellow', emoji: '🟨', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
+                { key: 'red-us', label: 'Red Card', emoji: '🟥', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
+                { key: 'red-opp', label: 'Opponent Red', emoji: '🟥', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
+                { key: 'sub-us', label: 'Substitution', emoji: '🔄', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
+              ];
+            } else {
+              // Both sides are the club's own teams (or both outside teams): the same actions for each, named per team
+              const perSide: Omit<QuickAction, 'key' | 'side' | 'team'>[] = [
+                { label: 'Goal', emoji: '⚽', eventType: 'goal', accent: '#10B981' },
+                { label: 'Penalty', emoji: '🎯', eventType: 'penalty', accent: '#10B981' },
+                { label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', accent: '#F59E0B' },
+                { label: 'Red Card', emoji: '🟥', eventType: 'red_card', accent: '#EF4444' },
+                { label: 'Substitution', emoji: '🔄', eventType: 'sub', accent: '#3B82F6' },
+              ];
+              quickActions = perSide.flatMap(a => (['home', 'away'] as const).map(side => ({
+                ...a, key: `${a.eventType}-${side}`, side, team: sideName(side),
+              })));
+            }
 
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
               { key: 'var', label: 'VAR Review', emoji: '🖥️', eventType: 'var' },
@@ -790,7 +838,7 @@ export default function AdminMatchCenterControllerPage({
                           <button
                             key={a.key}
                             type="button"
-                            onClick={() => { setEventType(a.eventType); setTeamSide(a.side); }}
+                            onClick={() => { setEventType(a.eventType); chooseSide(a.side); }}
                             className="touch-target"
                             style={{
                               display: 'flex',
@@ -811,6 +859,11 @@ export default function AdminMatchCenterControllerPage({
                           >
                             <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{a.emoji}</span>
                             <span>{a.label}</span>
+                            {a.team && (
+                              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {a.team}
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -849,10 +902,10 @@ export default function AdminMatchCenterControllerPage({
                       <select id="match-center-team-side"
                         className="form-select"
                         value={teamSide}
-                        onChange={e => setTeamSide(e.target.value as any)}
+                        onChange={e => chooseSide(e.target.value as 'home' | 'away')}
                       >
-                        <option value="home">{match.home_team_name} ({isClubHome ? 'Our Club - Home' : 'Opponent - Home'})</option>
-                        <option value="away">{match.away_team_name} ({!isClubHome ? 'Our Club - Away' : 'Opponent - Away'})</option>
+                        <option value="home">{match.home_team_name} ({sideTag('home')})</option>
+                        <option value="away">{match.away_team_name} ({sideTag('away')})</option>
                       </select>
                     </div>
 
@@ -878,7 +931,7 @@ export default function AdminMatchCenterControllerPage({
                         </label>
                         <PlayerSearchSelect
                           id="player-involved-search"
-                          players={squadPlayers}
+                          players={selectedSquad ?? []}
                           value={selectedPlayerId}
                           onChange={setSelectedPlayerId}
                           extraOptions={[{ value: 'custom', label: '-- Custom Name / Other Player --' }]}
@@ -916,7 +969,7 @@ export default function AdminMatchCenterControllerPage({
                         <label className="form-label">Player Coming OFF *</label>
                         <PlayerSearchSelect
                           id="player-sub-off-search"
-                          players={squadPlayers}
+                          players={selectedSquad ?? []}
                           value={selectedSubOffId}
                           onChange={setSelectedSubOffId}
                         />
@@ -928,7 +981,7 @@ export default function AdminMatchCenterControllerPage({
                           <>
                             <PlayerSearchSelect
                               id="player-assist-search"
-                              players={squadPlayers}
+                              players={selectedSquad ?? []}
                               value={selectedAssistId}
                               onChange={setSelectedAssistId}
                               extraOptions={[
@@ -1083,7 +1136,7 @@ export default function AdminMatchCenterControllerPage({
           {/* Interactive Tactical Pitch */}
           <div className="glass-panel" style={{ padding: 'clamp(0.75rem, 2vw, 1.75rem)' }}>
             <TacticalPitch
-              players={squadPlayers}
+              players={(match.is_club_home ? homePlayers : awayPlayers) ?? squadPlayers}
               formation={match.home_formation || '4-3-3'}
               savedPositions={match.home_lineup_coords}
               primaryColor={club.primary_color}

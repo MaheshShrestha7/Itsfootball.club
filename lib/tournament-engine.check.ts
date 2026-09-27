@@ -1,8 +1,8 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches } from './tournament-engine';
-import type { Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers } from './tournament-engine';
+import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
   const t: Tournament = {
@@ -96,6 +96,38 @@ for (let n = 2; n <= 17; n++) {
     fx('semi', 'semi_final', 2, '2026-09-30', 7),
   ].sort(compareTournamentMatches).map(m => m.id);
   assert.deepEqual(order, ['gA-r1', 'gB-r1', 'gA-r2', 'gB-r2', 'semi', 'third', 'final'], 'fixture order by stage then round');
+}
+
+// Match center: which sides field the club's own players
+{
+  const squad = ['a', 'b', 'c', 'd'].map(id => ({ id }) as ClubMember);
+  const ids = (list: ClubMember[] | null) => list && list.map(p => p.id);
+  const teams = [
+    { id: 'it1', player_ids: ['a', 'b'] },
+    { id: 'it2', player_ids: ['c'] },
+    { id: 'it3', player_ids: [] },
+  ] as unknown as InternalTeam[];
+  const parts = [
+    { tournament_id: 't', team_type: 'internal', internal_team_id: 'it1', name: 'Reds' },
+    { tournament_id: 't', team_type: 'internal', internal_team_id: 'it2', name: 'Blues' },
+    { tournament_id: 't', team_type: 'internal', internal_team_id: 'it3', name: 'Greens' },
+    { tournament_id: 't', team_type: 'external', name: 'Visitors' },
+    { tournament_id: 'other', team_type: 'internal', internal_team_id: 'it2', name: 'Reds' },
+  ] as TournamentParticipant[];
+  const tm = (home: string, away: string) =>
+    ({ tournament_id: 't', is_club_home: true, home_team_name: home, away_team_name: away }) as Match;
+  const side = (m: Match, s: 'home' | 'away') => ids(clubSidePlayers(m, s, squad, parts, teams));
+
+  assert.deepEqual(side(tm('Reds', 'Blues'), 'home'), ['a', 'b'], 'internal home team fields its roster');
+  assert.deepEqual(side(tm('Reds', 'Blues'), 'away'), ['c'], 'internal away team is not "opponent"');
+  assert.deepEqual(side(tm('Greens', 'Reds'), 'home'), ['a', 'b', 'c', 'd'], 'team with no roster falls back to squad');
+  assert.equal(side(tm('Reds', 'Visitors'), 'away'), null, 'external participant is an opponent');
+  assert.equal(side(tm('TBD', 'Reds'), 'home'), null, 'unfilled knockout slot is nobody yet');
+  const league = (isHome: boolean) => ({ is_club_home: isHome, home_team_name: 'Club', away_team_name: 'Rivals' }) as Match;
+  assert.deepEqual([side(league(true), 'home'), side(league(true), 'away')], [['a', 'b', 'c', 'd'], null], 'club at home');
+  assert.deepEqual([side(league(false), 'home'), side(league(false), 'away')], [null, ['a', 'b', 'c', 'd']], 'club away');
+  const intra = { match_type: 'internal', is_club_home: true } as Match;
+  assert.ok(side(intra, 'home') && side(intra, 'away'), 'internal friendly: both sides are the club');
 }
 
 console.log('tournament engine: all formats OK');

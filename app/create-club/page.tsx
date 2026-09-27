@@ -63,6 +63,19 @@ export default function CreateClubPage() {
     custom_domain: '',
   });
 
+  // Carry over the name and palette picked on the home page hero (?name=&palette=)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const name = (params.get('name') || '').trim().slice(0, 60);
+    const palette = params.has('palette') ? FOOTBALL_COLOR_PALETTES[Number(params.get('palette'))] : undefined;
+    if (!name && !palette) return;
+    setFormData(prev => ({
+      ...prev,
+      ...(name && { name, slug: validateClubSlug(name, []).cleanSlug }),
+      ...(palette && { primary_color: palette.primary, secondary_color: palette.secondary, accent_color: palette.accent }),
+    }));
+  }, []);
+
   // Real-time slug validation
   const slugValidation = useMemo(() => {
     return validateClubSlug(formData.slug, clubs);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { defaultSeasonLabel } from '@/lib/season';
+import { countsTowardClubRecord } from '@/lib/supabase/types';
 
 // Server-side secure Supabase client initialization
 function getServerSupabaseClient() {
@@ -104,17 +105,18 @@ export async function GET(
     // 3. Query raw Matches table
     const { data: matches, error: matchesError } = await supabase
       .from('matches')
-      .select('id, competition, season, home_score, away_score, is_club_home, status')
+      .select('id, competition, season, home_score, away_score, is_club_home, status, tournament_id, match_type')
       .eq('club_id', clubId);
 
-    // Filter for matches that have actually been played (completed, live, or halftime)
+    // Filter for the club's own matches that have actually been played (completed, live, or halftime)
     const playedMatches = matches
       ? matches.filter(
           m =>
-            m.status === 'completed' ||
+            countsTowardClubRecord(m) &&
+            (m.status === 'completed' ||
             m.status === 'live' ||
             m.status === 'halftime' ||
-            m.status === 'full_time'
+            m.status === 'full_time')
         )
       : [];
     const matchesPlayed = playedMatches.length;

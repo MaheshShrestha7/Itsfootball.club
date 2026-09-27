@@ -134,6 +134,12 @@ export function isPlayerMember(member: Pick<ClubMember, 'role' | 'roles'>): bool
   return member.role.split(',').some(r => r.trim().toLowerCase() === 'player');
 }
 
+// Tournament fixtures and internal friendlies are played between the club's own teams (tournament
+// matches store is_club_home = true whoever plays), so their scores aren't the club's results.
+export function countsTowardClubRecord(match: Pick<Match, 'tournament_id' | 'match_type'>): boolean {
+  return !match.tournament_id && match.match_type !== 'internal';
+}
+
 /** Permission level behind the squad role labels, e.g. 'Player, Club Admin, Manager' -> 'admin' */
 export function toClubRole(role?: string | null, roles?: string[] | null): 'owner' | 'admin' | 'staff' | 'player' | 'member' | 'supporter' {
   const labels = [...(roles || []), ...(role || '').split(',')].map(r => r.trim().toLowerCase());

@@ -39,7 +39,8 @@ import {
   InternalTeam,
   Tournament,
   TournamentParticipant,
-  TournamentStanding
+  TournamentStanding,
+  countsTowardClubRecord,
 } from './supabase/types';
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import {
@@ -2698,7 +2699,7 @@ export function ClubProvider({
   }, [memberMessages]);
 
   const getClubSeasonStats = useCallback((clubId: string): ClubSeasonStatsSummary => {
-    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed');
+    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed' && countsTowardClubRecord(m));
     let wins = 0;
     let draws = 0;
     let losses = 0;

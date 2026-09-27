@@ -6,7 +6,9 @@ import {
   Tournament,
   TournamentParticipant,
   TournamentStanding,
-  Match
+  Match,
+  ClubMember,
+  InternalTeam
 } from './supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
@@ -641,4 +643,27 @@ function parseGroupSource(source: string): { rank: number; group: string } | nul
     };
   }
   return null;
+}
+
+/**
+ * The club's own players on one side of a fixture, or null when that side is an outside team.
+ * Tournament fixtures store is_club_home = true for every match, so their sides come from the
+ * tournament's participants instead: an internal team fields its roster (the whole squad if it has none).
+ */
+export function clubSidePlayers(
+  match: Match,
+  side: 'home' | 'away',
+  squad: ClubMember[],
+  participants: TournamentParticipant[],
+  internalTeams: InternalTeam[],
+): ClubMember[] | null {
+  if (match.tournament_id) {
+    const teamName = side === 'home' ? match.home_team_name : match.away_team_name;
+    const participant = participants.find(p => p.tournament_id === match.tournament_id && p.name === teamName);
+    if (participant?.team_type !== 'internal') return null;
+    const roster = new Set(internalTeams.find(t => t.id === participant.internal_team_id)?.player_ids ?? []);
+    return roster.size > 0 ? squad.filter(p => roster.has(p.id)) : squad;
+  }
+  if (match.match_type === 'internal') return squad;
+  return (side === 'home') === (match.is_club_home ?? true) ? squad : null;
 }
