@@ -11,8 +11,7 @@ import {
   Trophy,
   Flame,
   Award,
-  ExternalLink,
-  Database
+  ExternalLink
 } from 'lucide-react';
 import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
 
@@ -319,22 +318,6 @@ export default function ClubIdentitySection({
           }
         }
 
-        @keyframes badgeSyncFlash {
-          0% {
-            transform: scale(0.97);
-            background: rgba(16, 185, 129, 0.1);
-          }
-          50% {
-            transform: scale(1.02);
-            background: rgba(16, 185, 129, 0.25);
-            box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
-          }
-          100% {
-            transform: scale(1);
-            background: rgba(16, 185, 129, 0.1);
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
           .impact-stat-card, .impact-section-header, .goals-highlight-card {
             animation: none !important;
@@ -400,42 +383,6 @@ export default function ClubIdentitySection({
             >
               Club&apos;s Impact in Numbers
             </h2>
-          </div>
-
-          {/* Live Data Badge with Pulse */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.4rem 0.95rem',
-              borderRadius: '20px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: '#10B981',
-              animation: stats.source === 'supabase_raw_dataset' ? 'badgeSyncFlash 0.6s ease-out' : 'none',
-              transition: 'all 0.25s ease',
-            }}
-          >
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: '#10B981',
-                boxShadow: '0 0 8px #10B981',
-                display: 'inline-block',
-                animation: 'pulse 2s infinite',
-              }}
-            />
-            <Database size={13} />
-            <span>
-              {stats.source === 'supabase_raw_dataset'
-                ? 'Verified Live Data • Supabase Database'
-                : 'Live Registry Synced • Dynamic Counts'}
-            </span>
           </div>
         </div>
 

@@ -37,6 +37,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 const FLYER_PRESETS = [
   {
@@ -241,8 +242,9 @@ export default function AdminMatchesPage({
 
     const homeTeam = form.is_club_home ? club.name : cleanOpponent;
     const awayTeam = form.is_club_home ? cleanOpponent : club.name;
-    const homeLogo = form.is_club_home ? (club.logo_url || '') : 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=100&auto=format&fit=crop&q=80';
-    const awayLogo = form.is_club_home ? 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=100&auto=format&fit=crop&q=80' : (club.logo_url || '');
+    // The opponent has no crest on file: show the neutral shield, not a stock photo
+    const homeLogo = form.is_club_home ? (club.logo_url || '') : DEFAULT_CREST;
+    const awayLogo = form.is_club_home ? DEFAULT_CREST : (club.logo_url || '');
 
     // Combine date and time to ISO string
     let combinedDateIso = new Date().toISOString();

@@ -37,6 +37,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubSidePlayers } from '@/lib/tournament-engine';
+import { DEFAULT_CREST } from '@/lib/crest';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -148,8 +149,8 @@ export default function AdminMatchCenterControllerPage({
       season: fixtureSeason,
       home_team_name: fixtureIsHome ? club.name : fixtureOpponent.trim(),
       away_team_name: fixtureIsHome ? fixtureOpponent.trim() : club.name,
-      home_team_logo: fixtureIsHome ? club.logo_url : 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=100&auto=format&fit=crop&q=80',
-      away_team_logo: fixtureIsHome ? 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=100&auto=format&fit=crop&q=80' : club.logo_url,
+      home_team_logo: fixtureIsHome ? club.logo_url : DEFAULT_CREST,
+      away_team_logo: fixtureIsHome ? DEFAULT_CREST : club.logo_url,
       is_club_home: fixtureIsHome,
       match_date: new Date(fixtureDate).toISOString(),
       venue: fixtureVenue,

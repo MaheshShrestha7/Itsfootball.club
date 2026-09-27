@@ -13,7 +13,7 @@ import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
-import { DEFAULT_CREST } from '@/lib/crest';
+import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
   Shield,
   Radio,
@@ -843,8 +843,9 @@ export default function ClubPublicPage({
                             <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
                               alt={`${activeSlideMatch.home_team_name} crest`}
-                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
+                              ref={crestFallbackRef}
+                              onError={crestOnError}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Home</span>
@@ -889,8 +890,9 @@ export default function ClubPublicPage({
                             <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
                               alt={`${activeSlideMatch.away_team_name} crest`}
-                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
+                              ref={crestFallbackRef}
+                              onError={crestOnError}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Away</span>
@@ -926,8 +928,9 @@ export default function ClubPublicPage({
                             <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
                               alt={`${activeSlideMatch.home_team_name} crest`}
-                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
+                              ref={crestFallbackRef}
+                              onError={crestOnError}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
                           </div>
@@ -936,8 +939,9 @@ export default function ClubPublicPage({
                             <img loading="eager" decoding="async" width={48} height={48}
                               src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
                               alt={`${activeSlideMatch.away_team_name} crest`}
-                              onError={e => { if (e.currentTarget.src !== DEFAULT_CREST) e.currentTarget.src = DEFAULT_CREST; }}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', margin: '0 auto 0.5rem auto' }}
+                              ref={crestFallbackRef}
+                              onError={crestOnError}
+                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
                             />
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
                           </div>

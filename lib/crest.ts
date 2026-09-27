@@ -26,3 +26,16 @@ export const DEFAULT_BANNER =
     '<path d="M400 108 372 128l11 34h34l11-34Z" fill="#1E293B" stroke="#64748B" stroke-width="4"/>' +
     '</svg>'
   );
+
+function showDefaultCrest(img: HTMLImageElement) {
+  if (img.src !== DEFAULT_CREST) img.src = DEFAULT_CREST;
+}
+
+/** onError for a crest <img>: swap a dead URL for the neutral shield */
+export const crestOnError = (e: { currentTarget: HTMLImageElement }) => showDefaultCrest(e.currentTarget);
+
+/** ref for a server-rendered crest <img>: a URL that failed before hydration never reaches onError,
+ *  so check on mount whether it already finished loading with nothing to show */
+export const crestFallbackRef = (img: HTMLImageElement | null) => {
+  if (img?.complete && img.naturalWidth === 0) showDefaultCrest(img);
+};
