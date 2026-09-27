@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
@@ -17,9 +17,62 @@ import './home.css';
 import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
-  Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone, Heart,
-  Layers,
+  Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
+  Layers, ClipboardList, Share2,
 } from 'lucide-react';
+
+// "I'm a..." switcher: each role gets its own pitch and the action that role can actually take.
+// secondary: 'demo' links to a live club site, 'share' sends this page to whoever runs the club.
+const AUDIENCES = [
+  {
+    id: 'coach', tab: 'Managers & coaches', Icon: ClipboardList, color: '#FBBF24',
+    headline: 'Know your XI before Thursday.',
+    body: 'Send one availability link, see who is in, and drag them onto the pitch. On matchday, log goals, cards and subs from the touchline.',
+    points: [
+      'Players reply in a tap, so no chasing in the group chat',
+      'Lineup builder on a tactical pitch, published to the club site',
+      'A live match centre you run from your phone',
+      'ClubScore rewards turning up, so attendance looks after itself',
+    ],
+    cta: { label: 'Set up your team', href: '/create-club' }, secondary: 'demo',
+  },
+  {
+    id: 'committee', tab: 'Committee', Icon: Shield, color: '#34D399',
+    headline: 'One dashboard instead of five apps.',
+    body: 'Squad, fixtures, members, money, content and sponsors in one place, with roles for your president, secretary and treasurer.',
+    points: [
+      'Memberships paid by card or bank transfer, with receipts',
+      'Income and expenses in one ledger',
+      'Bulk member import and a QR member pass for everyone',
+      'A club website with your crest, colours and own domain',
+    ],
+    cta: { label: 'Claim your club', href: '/create-club' }, secondary: 'demo',
+  },
+  {
+    id: 'player', tab: 'Players', Icon: Users, color: '#60A5FA',
+    headline: 'Your pass, your stats, your streak.',
+    body: 'Players never set anything up. Your club adds you, and you get a member pass on your phone, availability in a tap and your goals on the board.',
+    points: [
+      'A digital member pass with your own QR code',
+      'Reply to availability in one tap',
+      'Goals, assists and attendance streaks on the ClubScore leaderboard',
+      'Nothing to install',
+    ],
+    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
+  },
+  {
+    id: 'sponsor', tab: 'Sponsors', Icon: Megaphone, color: '#A78BFA',
+    headline: 'Proof your money worked.',
+    body: 'Back a local club and see what it bought: your logo across their site and events, with every impression and click tracked.',
+    points: [
+      'Tiered placements across the club site and event pages',
+      'Impressions and clicks tracked for you',
+      'Sign up and pay online from the club sponsor page',
+      'A report ready for renewal talks',
+    ],
+    cta: { label: 'Find a club to back', href: '/clubs' }, secondary: 'demo',
+  },
+] as const;
 
 const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
 
@@ -79,8 +132,71 @@ export default function PlatformHomePage() {
 
   const openAuth = (mode: 'login' | 'signup') => { setAuthMode(mode); setAuthModalOpen(true); };
 
+  // ponytail: the first listed club doubles as the demo; add a demo flag on clubs if it needs curating
+  const demoClub = clubs[0];
+
+  const [audIdx, setAudIdx] = useState(0);
+  const aud = AUDIENCES[audIdx];
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // One marker slides between tabs; measured from the selected tab, re-measured when the row reflows
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const [ind, setInd] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const list = tabListRef.current;
+    if (!list || !('ResizeObserver' in window)) return;
+    const place = () => {
+      const t = tabRefs.current[audIdx];
+      if (t) setInd({ x: t.offsetLeft, y: t.offsetTop, w: t.offsetWidth, h: t.offsetHeight });
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(list);
+    return () => ro.disconnect();
+  }, [audIdx]);
+  const onTabKey = (e: React.KeyboardEvent) => {
+    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const next = (audIdx + step + AUDIENCES.length) % AUDIENCES.length;
+    setAudIdx(next);
+    tabRefs.current[next]?.focus();
+  };
+
+  const [copied, setCopied] = useState(false);
+  const shareLink = async () => {
+    const url = window.location.origin;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'itsfootball.club', text: 'Club website, live match centre and member passes for our club?', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch { /* share sheet dismissed or clipboard blocked */ }
+  };
+
+  // Bento visuals play once when they scroll into view. "armed" is only set once JS runs, so without it
+  // (or with reduced motion) the visuals simply render in their finished state.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(entries => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        en.target.classList.add('is-in');
+        io.unobserve(en.target);
+      }
+    }, { threshold: 0.5 });
+    root.querySelectorAll('.lp-play').forEach(el => io.observe(el));
+    setArmed(true);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <div className="lp" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div ref={rootRef} className={`lp${armed ? ' lp-armed' : ''}`} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <PlatformNavbar />
 
       {/* ================= HERO ================= */}
@@ -157,6 +273,12 @@ export default function PlatformHomePage() {
                 />
               ))}
             </div>
+
+            {demoClub && (
+              <Link href={`/${demoClub.slug}`} className="lp-demo">
+                Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
+              </Link>
+            )}
 
             <div className="lp-hero-meta">
               <span><Check size={15} /> Free to set up</span>
@@ -272,14 +394,14 @@ export default function PlatformHomePage() {
             <h2 className="lp-h2">Your club runs on volunteers. Not on five different apps.</h2>
           </div>
           <div className="lp-vs lp-reveal">
-            <div className="lp-vs-col lp-vs-before">
+            <div className="lp-vs-col lp-vs-before lp-play">
               <div className="lp-vs-title">Most clubs today</div>
               <ul>
-                <li><X size={16} /><span>&ldquo;Who&apos;s available Saturday?&rdquo; buried in the group chat</span></li>
-                <li><X size={16} /><span>Subs tracked in someone&apos;s spreadsheet, chased in cash</span></li>
-                <li><X size={16} /><span>A social page as the club&apos;s only &ldquo;website&rdquo;</span></li>
-                <li><X size={16} /><span>Scores posted hours later, if at all</span></li>
-                <li><X size={16} /><span>Sponsors who never see what their money did</span></li>
+                <li><X size={16} /><span><s>&ldquo;Who&apos;s available Saturday?&rdquo; buried in the group chat</s></span></li>
+                <li><X size={16} /><span><s>Subs tracked in someone&apos;s spreadsheet, chased in cash</s></span></li>
+                <li><X size={16} /><span><s>A social page as the club&apos;s only &ldquo;website&rdquo;</s></span></li>
+                <li><X size={16} /><span><s>Scores posted hours later, if at all</s></span></li>
+                <li><X size={16} /><span><s>Sponsors who never see what their money did</s></span></li>
               </ul>
             </div>
             <div className="lp-vs-col lp-vs-after">
@@ -313,17 +435,17 @@ export default function PlatformHomePage() {
                 <h3>Live match centre</h3>
                 <p>Run the clock from the touchline and log goals, assists, cards and subs as they happen. Supporters follow on the club site in real time, with the published lineup on a tactical pitch.</p>
               </div>
-              <div className="lp-viz">
+              <div className="lp-viz lp-play">
                 <div className="lp-mc">
                   <div className="lp-mc-score"><small>● LIVE 67&apos;</small>2 – 1</div>
                   <div>
                     <div className="lp-mc-track">
                       <div className="lp-mc-line" />
                       <div className="lp-mc-ht" />
-                      <div className="lp-mc-pin" style={{ left: '25%' }}><Goal size={12} /></div>
-                      <div className="lp-mc-pin y" style={{ left: '45%' }}><span className="lp-card-yellow" style={{ margin: 0 }} /></div>
-                      <div className="lp-mc-pin s" style={{ left: '64%' }}><ArrowLeftRight size={11} /></div>
-                      <div className="lp-mc-pin" style={{ left: '72%' }}><Goal size={12} /></div>
+                      <div className="lp-mc-pin" style={{ left: '25%', '--d': '405ms' } as React.CSSProperties}><Goal size={12} /></div>
+                      <div className="lp-mc-pin y" style={{ left: '45%', '--d': '730ms' } as React.CSSProperties}><span className="lp-card-yellow" style={{ margin: 0 }} /></div>
+                      <div className="lp-mc-pin s" style={{ left: '64%', '--d': '1040ms' } as React.CSSProperties}><ArrowLeftRight size={11} /></div>
+                      <div className="lp-mc-pin" style={{ left: '72%', '--d': '1170ms' } as React.CSSProperties}><Goal size={12} /></div>
                     </div>
                     <div className="lp-mc-legend"><span>0&apos;</span><span>HT</span><span>90&apos;</span></div>
                   </div>
@@ -338,7 +460,7 @@ export default function PlatformHomePage() {
                 <h3>Digital member passes</h3>
                 <p>Every member gets a pass with their own QR code. Scan it at the gate, or put up a door QR so people check themselves in.</p>
               </div>
-              <div className="lp-viz">
+              <div className="lp-viz lp-play">
                 <div className="lp-scan">
                   <div className="lp-scan-reticle">
                     <i /><i /><i /><i />
@@ -357,11 +479,11 @@ export default function PlatformHomePage() {
                 <h3>Availability &amp; lineups</h3>
                 <p>Share one link and players reply in a tap. Then drag the ones who are in onto the pitch and publish the XI.</p>
               </div>
-              <div className="lp-viz">
+              <div className="lp-viz lp-play">
                 <div className="lp-pitch">
                   <div className="lp-pitch-half" />
                   {[[8, 50], [24, 20], [22, 40], [22, 60], [24, 80], [40, 30], [38, 50], [40, 70], [56, 22], [58, 50], [56, 78]].map(([x, y], i) => (
-                    <div key={i} className="lp-pl" style={{ left: `${x}%`, top: `${y}%` }}>{i + 1}</div>
+                    <div key={i} className="lp-pl" style={{ left: `${x}%`, top: `${y}%`, '--i': i } as React.CSSProperties}>{i + 1}</div>
                   ))}
                 </div>
                 <div className="lp-avail">
@@ -379,7 +501,7 @@ export default function PlatformHomePage() {
                 <h3>Subs &amp; club finances</h3>
                 <p>Membership plans paid by card (Stripe) or bank transfer, with automatic receipts. Income and expenses sit in one ledger.</p>
               </div>
-              <div className="lp-viz">
+              <div className="lp-viz lp-play">
                 <div className="lp-money">
                   <div className="lp-money-top"><b>$2,340</b><small>of $3,000 season subs</small></div>
                   <div className="lp-bar"><i /></div>
@@ -396,9 +518,9 @@ export default function PlatformHomePage() {
                 <h3>Sponsor hub</h3>
                 <p>Tiered sponsor spots across your site, with tracked impressions and clicks. Export the report when it&apos;s time to renew.</p>
               </div>
-              <div className="lp-viz">
+              <div className="lp-viz lp-play">
                 <div className="lp-spark">
-                  {[30, 42, 38, 55, 48, 62, 58, 75, 70, 88, 82, 96].map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
+                  {[30, 42, 38, 55, 48, 62, 58, 75, 70, 88, 82, 96].map((h, i) => <i key={i} style={{ height: `${h}%`, '--i': i } as React.CSSProperties} />)}
                 </div>
                 <div className="lp-kpis">
                   <div className="lp-kpi"><b>12.4k</b><small>Impressions</small></div>
@@ -468,33 +590,68 @@ export default function PlatformHomePage() {
         </div>
       </section>
 
-      {/* ================= ROLES ================= */}
+      {/* ================= AUDIENCE SWITCHER ================= */}
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
             <div className="lp-eyebrow">One platform, everyone at the club</div>
-            <h2 className="lp-h2">Something for the whole club.</h2>
+            <h2 className="lp-h2">What&apos;s in it for you?</h2>
           </div>
-          <div className="lp-roles">
-            <div className="lp-role lp-reveal" style={{ '--rc': '#34D399' } as React.CSSProperties}>
-              <div className="lp-role-who"><Shield size={14} /> Committee</div>
-              <h3>One dashboard instead of five apps.</h3>
-              <p>Squad, fixtures, members, money, content and sponsors, with roles for your president, secretary and treasurer.</p>
+          <div className="lp-reveal">
+            <div ref={tabListRef} className={`lp-aud-tabs${ind ? ' has-ind' : ''}`} role="tablist" aria-label="I am a" onKeyDown={onTabKey}>
+              {ind && (
+                <span
+                  className="lp-aud-ind"
+                  aria-hidden="true"
+                  style={{ transform: `translate(${ind.x}px, ${ind.y}px)`, width: ind.w, height: ind.h, '--rc': aud.color } as React.CSSProperties}
+                />
+              )}
+              {AUDIENCES.map((a, i) => (
+                <button
+                  key={a.id}
+                  ref={el => { tabRefs.current[i] = el; }}
+                  type="button"
+                  role="tab"
+                  id={`lp-aud-tab-${a.id}`}
+                  aria-selected={i === audIdx}
+                  aria-controls="lp-aud-panel"
+                  tabIndex={i === audIdx ? 0 : -1}
+                  className="lp-aud-tab"
+                  style={{ '--rc': a.color } as React.CSSProperties}
+                  onClick={() => setAudIdx(i)}
+                >
+                  <a.Icon size={16} /> {a.tab}
+                </button>
+              ))}
             </div>
-            <div className="lp-role lp-reveal" style={{ '--rc': '#60A5FA' } as React.CSSProperties}>
-              <div className="lp-role-who"><Users size={14} /> Players</div>
-              <h3>Pass on their phone, stats on the board.</h3>
-              <p>Reply to availability in a tap, check in with a QR code, and watch goals and streaks add up.</p>
-            </div>
-            <div className="lp-role lp-reveal" style={{ '--rc': '#F87171' } as React.CSSProperties}>
-              <div className="lp-role-who"><Heart size={14} /> Supporters</div>
-              <h3>Follow every match, live.</h3>
-              <p>Fixtures, results, news and live scores on a proper club site. No app to download, no account needed.</p>
-            </div>
-            <div className="lp-role lp-reveal" style={{ '--rc': '#A78BFA' } as React.CSSProperties}>
-              <div className="lp-role-who"><Megaphone size={14} /> Sponsors</div>
-              <h3>Proof their money worked.</h3>
-              <p>Logo placement across the site and events, plus a report with real impressions and clicks.</p>
+            <div
+              key={aud.id}
+              id="lp-aud-panel"
+              role="tabpanel"
+              aria-labelledby={`lp-aud-tab-${aud.id}`}
+              className="lp-aud-panel"
+              style={{ '--rc': aud.color } as React.CSSProperties}
+            >
+              <div>
+                <div className="lp-role-who"><aud.Icon size={14} /> {aud.tab}</div>
+                <h3>{aud.headline}</h3>
+                <p>{aud.body}</p>
+                <div className="lp-aud-actions">
+                  <Link href={aud.cta.href} className="btn btn-primary">
+                    {aud.cta.label} <ArrowRight size={16} />
+                  </Link>
+                  {aud.secondary === 'share' ? (
+                    <button type="button" className="btn btn-secondary" onClick={shareLink}>
+                      <Share2 size={16} /> <span aria-live="polite">{copied ? 'Link copied' : 'Send this to your committee'}</span>
+                    </button>
+                  ) : demoClub && (
+                    <Link href={`/${demoClub.slug}`} className="btn btn-secondary">See a live club site</Link>
+                  )}
+                </div>
+              </div>
+              <ul className="lp-aud-points">
+                {aud.points.map(pt => <li key={pt}><Check size={16} /><span>{pt}</span></li>)}
+              </ul>
             </div>
           </div>
         </div>

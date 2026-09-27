@@ -115,6 +115,12 @@
 .lp-hero-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .lp-hero-meta svg { color: #10B981; }
 .lp-hero-signin { margin-top: 0.9rem; font-size: 0.85rem; color: var(--text-muted); }
+.lp-demo { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-decoration: underline; text-decoration-color: var(--border-medium); text-underline-offset: 4px; transition: color 0.2s ease; }
+.lp-demo svg { transition: transform 0.2s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .lp-demo:hover { color: var(--text-primary); }
+  .lp-demo:hover svg { transform: translateX(3px); }
+}
 .lp-linkbtn { background: none; border: 0; padding: 0; color: #34D399; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* Hero product mock */
@@ -243,7 +249,11 @@
 .lp-vs ul { list-style: none; display: grid; gap: 0.95rem; }
 .lp-vs li { display: grid; grid-template-columns: 22px 1fr; gap: 0.75rem; align-items: start; font-size: 0.98rem; }
 .lp-vs-before li { color: var(--text-muted); }
-.lp-vs-before li span { text-decoration: line-through; text-decoration-color: rgba(239, 68, 68, 0.55); text-decoration-thickness: 2px; }
+/* Strike drawn as a background line so it can grow; on an inline <s> it runs across wrapped lines in order */
+.lp-vs-before s {
+  text-decoration: none;
+  background: linear-gradient(rgba(239, 68, 68, 0.55), rgba(239, 68, 68, 0.55)) no-repeat 0 55% / 100% 2px;
+}
 .lp-vs-before svg { color: #F87171; margin-top: 3px; }
 .lp-vs-after li { color: var(--text-primary); }
 .lp-vs-after svg { color: #34D399; margin-top: 3px; }
@@ -289,7 +299,7 @@
 .lp-scan-laser { position: absolute; left: 8px; right: 8px; height: 2px; background: #34D399; box-shadow: 0 0 12px #34D399; top: 50%; }
 .lp-stamp {
   position: absolute; right: 12px; bottom: 12px; font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700;
-  letter-spacing: 0.1em; color: #34D399; border: 2px solid #34D399; border-radius: 6px; padding: 0.2rem 0.45rem; transform: rotate(-8deg);
+  letter-spacing: 0.1em; color: #34D399; border: 2px solid #34D399; border-radius: 6px; padding: 0.2rem 0.45rem; transform: rotate(-7deg);
   background: rgba(16, 185, 129, 0.08);
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -352,13 +362,61 @@
 .lp-chip { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.9rem; border-radius: 99px; background: var(--bg-surface); border: 1px solid var(--border-subtle); font-size: 0.84rem; color: var(--text-secondary); }
 .lp-chip svg { color: #34D399; }
 
-/* ---------- Roles ---------- */
-.lp-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
-.lp-role { padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); background: var(--bg-surface); position: relative; }
-.lp-role::before { content: ''; position: absolute; left: 1.5rem; right: 1.5rem; top: -1px; height: 2px; background: var(--rc); border-radius: 2px; }
-.lp-role-who { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rc); margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.45rem; }
-.lp-role h3 { font-size: 1.12rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.25; }
-.lp-role p { font-size: 0.86rem; color: var(--text-secondary); }
+/* ---------- Audience switcher ---------- */
+/* Registered so the sliding marker blends between role colours instead of snapping */
+@property --rc { syntax: '<color>'; inherits: true; initial-value: transparent; }
+.lp-aud-tabs { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+.lp-aud-tab {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.05rem; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-secondary);
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.9rem;
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 160ms var(--ease-out);
+}
+.lp-aud-tab svg { color: var(--rc); }
+.lp-aud-tab[aria-selected='true'] {
+  color: var(--text-primary); border-color: color-mix(in srgb, var(--rc) 55%, transparent);
+  background: color-mix(in srgb, var(--rc) 12%, var(--bg-surface));
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-aud-tab:hover { color: var(--text-primary); border-color: var(--border-medium); }
+}
+.lp-aud-tab:active { transform: scale(0.97); }
+.lp-aud-tab:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* Once the marker is measured it carries the selected look, so the tabs themselves go transparent */
+.lp-aud-tabs.has-ind .lp-aud-tab { position: relative; z-index: 1; background: transparent; }
+.lp-aud-tabs.has-ind .lp-aud-tab[aria-selected='true'] { border-color: transparent; }
+.lp-aud-ind {
+  position: absolute; left: 0; top: 0; border-radius: 99px; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  background: color-mix(in srgb, var(--rc) 12%, var(--bg-surface));
+  transition: transform 250ms var(--ease-out), width 250ms var(--ease-out), height 250ms var(--ease-out), --rc 250ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-aud-ind { transition: --rc 150ms ease; }
+}
+.lp-aud-panel {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem); padding: clamp(1.5rem, 4vw, 2.75rem); border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rc) 10%, transparent), transparent 60%), var(--bg-surface);
+}
+.lp-aud-panel::before { content: ''; position: absolute; left: 2rem; right: 2rem; top: -1px; height: 2px; background: var(--rc); border-radius: 2px; }
+.lp-role-who { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rc); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.45rem; }
+.lp-aud-panel h3 { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.75rem; }
+.lp-aud-panel p { color: var(--text-secondary); max-width: 48ch; }
+.lp-aud-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+.lp-aud-actions .btn { display: inline-flex; align-items: center; gap: 0.45rem; }
+.lp-aud-points { list-style: none; display: grid; gap: 0.9rem; }
+.lp-aud-points li { display: grid; grid-template-columns: 22px 1fr; gap: 0.7rem; align-items: start; font-size: 0.95rem; }
+.lp-aud-points svg { color: var(--rc); margin-top: 3px; }
+/* The panel is keyed on the role, so each switch remounts it and replays this */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-aud-panel { animation: lpPanelIn 200ms var(--ease-out); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-aud-panel { animation: lpFade 150ms ease; }
+}
+@keyframes lpPanelIn { from { opacity: 0; transform: translateY(6px); } }
 
 /* ---------- Steps ---------- */
 .lp-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; counter-reset: lp-step; }
@@ -396,6 +454,50 @@
 .lp-final p { color: var(--text-secondary); max-width: 52ch; margin: 0 auto 2rem; }
 .lp-final-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; }
 
+/* ---------- Bento visuals play once on entry ----------
+   .lp-armed is set once JS runs; each .lp-play gets .is-in when half visible. Until then the animations sit
+   paused on their first frame (fill: backwards). No JS or reduced motion: nothing animates, finished state shows. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-armed .lp-play { --lp-run: paused; }
+  .lp-armed .lp-play.is-in { --lp-run: running; }
+
+  /* Match centre: the line is the match clock, so it fills at a steady rate; pins land as it reaches them */
+  .lp-armed .lp-play .lp-mc-line::before { transform-origin: left; animation: lpGrowX 1200ms linear backwards var(--lp-run); }
+  .lp-armed .lp-play .lp-mc-pin { animation: lpPin 300ms var(--ease-out) var(--d) backwards var(--lp-run); }
+
+  /* Lineup: players rise onto the pitch keeper first, then the availability count appears */
+  .lp-armed .lp-play .lp-pl { animation: lpRise 450ms var(--ease-out) calc(var(--i) * 50ms) backwards var(--lp-run); }
+  .lp-armed .lp-play .lp-avail span { animation: lpFadeUp 300ms var(--ease-out) 1000ms backwards var(--lp-run); }
+  .lp-armed .lp-play .lp-avail span:nth-child(2) { animation-delay: 1060ms; }
+  .lp-armed .lp-play .lp-avail span:nth-child(3) { animation-delay: 1120ms; }
+
+  /* Subs: the bar fills, then the payments come in */
+  .lp-armed .lp-play .lp-bar i { transform-origin: left; animation: lpGrowX 900ms var(--ease-out) backwards var(--lp-run); }
+  .lp-armed .lp-play .lp-tx { animation: lpFadeUp 250ms var(--ease-out) 700ms backwards var(--lp-run); }
+  .lp-armed .lp-play .lp-tx + .lp-tx { animation-delay: 820ms; }
+
+  /* Member pass: the stamp lands after the laser's first sweep (reuses the gate scanner's stampSlam) */
+  .lp-armed .lp-play .lp-stamp { animation: stampSlam 420ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 1200ms backwards var(--lp-run); }
+
+  /* Before list: read the problem, then watch it get crossed out */
+  .lp-armed .lp-vs-before.lp-play s { animation: lpStrike 400ms var(--ease-out) backwards var(--lp-run); }
+  .lp-armed .lp-vs-before.lp-play li:nth-child(1) s { animation-delay: 300ms; }
+  .lp-armed .lp-vs-before.lp-play li:nth-child(2) s { animation-delay: 380ms; }
+  .lp-armed .lp-vs-before.lp-play li:nth-child(3) s { animation-delay: 460ms; }
+  .lp-armed .lp-vs-before.lp-play li:nth-child(4) s { animation-delay: 540ms; }
+  .lp-armed .lp-vs-before.lp-play li:nth-child(5) s { animation-delay: 620ms; }
+
+  /* Sponsor chart: bars grow from the baseline */
+  .lp-armed .lp-play .lp-spark i { transform-origin: bottom; animation: lpGrowY 500ms var(--ease-out) calc(var(--i) * 35ms) backwards var(--lp-run); }
+}
+@keyframes lpGrowX { from { transform: scaleX(0); } }
+@keyframes lpStrike { from { background-size: 0 2px; } }
+@keyframes lpGrowY { from { transform: scaleY(0); } }
+/* scale/translate (not transform) so they stack with the elements' centring transform */
+@keyframes lpPin { from { opacity: 0; scale: 0.6; } }
+@keyframes lpRise { from { opacity: 0; translate: 0 40px; } }
+@keyframes lpFadeUp { from { opacity: 0; transform: translateY(6px); } }
+
 /* ---------- Scroll reveal: decorative, so progressive enhancement only (no JS fallback) ---------- */
 @supports ((animation-timeline: view()) and (animation-range: entry)) {
   @media (prefers-reduced-motion: no-preference) {
@@ -411,9 +513,6 @@
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1024px) {
-  .lp-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 960px) {
   .lp-hero-grid { grid-template-columns: minmax(0, 1fr); }
   .lp-stage { max-width: 560px; margin: 0 auto; width: 100%; }
@@ -421,7 +520,7 @@
   .lp-tile-wide { grid-column: span 2; }
 }
 @media (max-width: 720px) {
-  .lp-vs, .lp-steps, .lp-roles { grid-template-columns: 1fr; }
+  .lp-vs, .lp-steps, .lp-aud-panel { grid-template-columns: 1fr; }
   .lp-bento { grid-template-columns: 1fr; }
   .lp-tile-wide { grid-column: auto; }
   .lp-tile { min-height: 0; }
