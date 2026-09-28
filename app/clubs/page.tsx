@@ -91,7 +91,7 @@ export default function ClubsDirectoryPage() {
                     alt={`${club.name} banner`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.9), transparent)' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.9), transparent)' }} />
                   {liveMatch && (
                     <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                       <span className="badge badge-live">
@@ -112,7 +112,7 @@ export default function ClubsDirectoryPage() {
                       }}
                     />
                     <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>{club.name}</h3>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>{club.name}</h3>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{club.short_name} • Est. {club.founded_year}</span>
                     </div>
                   </div>
@@ -142,7 +142,7 @@ export default function ClubsDirectoryPage() {
                       Public Page
                     </Link>
                     <Link href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Radio size={14} color="#EF4444" /> Match Center
+                      <Radio size={14} color="var(--c-red)" /> Match Center
                     </Link>
                     <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <CreditCard size={14} color={club.primary_color} /> Member Pass

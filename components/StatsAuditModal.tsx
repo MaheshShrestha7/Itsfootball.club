@@ -192,7 +192,7 @@ export default function StatsAuditModal({
         {/* Modal Header */}
         <div style={{
           padding: '1.25rem 1.75rem',
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.9) 100%)',
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(var(--dk-15-23-42), 0.9) 100%)',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
@@ -209,10 +209,10 @@ export default function StatsAuditModal({
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <ShieldCheck size={22} color="#F59E0B" />
+              <ShieldCheck size={22} color="var(--c-amber)" />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 Post-Match Stats Audit
                 <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>30s Verification</span>
               </h2>
@@ -257,7 +257,7 @@ export default function StatsAuditModal({
                 <CheckCircle2 size={32} color="#FFFFFF" />
               </div>
 
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                 Stats Successfully Baked into Season Records!
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '480px' }}>
@@ -273,7 +273,7 @@ export default function StatsAuditModal({
                 borderRadius: '20px',
                 background: 'rgba(245, 158, 11, 0.2)',
                 border: '1px solid #F59E0B',
-                color: '#F59E0B',
+                color: 'var(--c-amber)',
                 fontWeight: 900,
                 fontSize: '0.9rem',
               }}>
@@ -293,12 +293,12 @@ export default function StatsAuditModal({
             <>
               {/* 1. Review Goals & Cards */}
               <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Flame size={16} color="#F59E0B" /> 1. Verify Recorded Goals & Cards ({auditedEvents.length})
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Flame size={16} color="var(--c-amber)" /> 1. Verify Recorded Goals & Cards ({auditedEvents.length})
                 </h4>
 
                 {auditedEvents.length === 0 ? (
-                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  <div style={{ background: 'rgba(var(--tint-rgb), 0.03)', padding: '1rem', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     No home goals or disciplinary cards were logged during this match.
                   </div>
                 ) : (
@@ -310,7 +310,7 @@ export default function StatsAuditModal({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          background: 'rgba(15, 23, 42, 0.7)',
+                          background: 'rgba(var(--dk-15-23-42), 0.7)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: '8px',
                           padding: '0.6rem 0.85rem',
@@ -318,7 +318,7 @@ export default function StatsAuditModal({
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '80px' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-mono)' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 900, color: 'var(--c-amber)', fontFamily: 'var(--font-mono)' }}>
                             {evt.minute}&apos;
                           </span>
                           <span className={`badge ${evt.event_type.includes('card') ? 'badge-secondary' : 'badge-primary'}`} style={{ fontSize: '0.7rem' }}>
@@ -365,7 +365,7 @@ export default function StatsAuditModal({
                         <button
                           type="button"
                           onClick={() => handleRemoveEvent(evt.id)}
-                          style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '0.3rem' }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--c-red)', cursor: 'pointer', padding: '0.3rem' }}
                           title="Discard event from records"
                         >
                           <Trash2 size={14} />
@@ -378,8 +378,8 @@ export default function StatsAuditModal({
 
               {/* 2. Clean Sheet Bonus */}
               <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldCheck size={16} color="#10B981" /> 2. Clean Sheet Verification (+10 XP)
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldCheck size={16} color="var(--c-green)" /> 2. Clean Sheet Verification (+10 XP)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                   {isCleanSheetGame
@@ -404,9 +404,9 @@ export default function StatsAuditModal({
                           fontSize: '0.76rem',
                           fontWeight: 800,
                           cursor: 'pointer',
-                          background: isChecked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                          background: isChecked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.04)',
                           border: `1px solid ${isChecked ? '#10B981' : 'var(--border-subtle)'}`,
-                          color: isChecked ? '#10B981' : 'var(--text-muted)',
+                          color: isChecked ? 'var(--c-green)' : 'var(--text-muted)',
                         }}
                       >
                         <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={20} />
@@ -420,8 +420,8 @@ export default function StatsAuditModal({
 
               {/* 3. Man of the Match (MOTM) */}
               <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Star size={16} color="#F59E0B" /> 3. Man of the Match Award (+15 XP)
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Star size={16} color="var(--c-amber)" /> 3. Man of the Match Award (+15 XP)
                 </h4>
                 <PlayerSearchSelect
                   id="motm-search"
@@ -434,8 +434,8 @@ export default function StatsAuditModal({
 
               {/* 4. Match Appearances Verification */}
               <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <User size={16} color="#3B82F6" /> 4. Matchday Appearances (+5 XP)
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <User size={16} color="var(--c-blue)" /> 4. Matchday Appearances (+5 XP)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                   Select squad members who played minutes in this fixture ({appearanceMemberIds.length} checked):
@@ -458,9 +458,9 @@ export default function StatsAuditModal({
                           fontSize: '0.72rem',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          background: isChecked ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                          background: isChecked ? 'rgba(59, 130, 246, 0.2)' : 'rgba(var(--tint-rgb), 0.03)',
                           border: `1px solid ${isChecked ? '#3B82F6' : 'var(--border-subtle)'}`,
-                          color: isChecked ? '#93C5FD' : 'var(--text-muted)',
+                          color: isChecked ? 'var(--c-sky)' : 'var(--text-muted)',
                         }}
                       >
                         <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={18} />
@@ -482,7 +482,7 @@ export default function StatsAuditModal({
                 color: 'var(--text-secondary)',
                 lineHeight: 1.45,
               }}>
-                ⚡ <strong>Production Guarantee:</strong> Clicking <em>&quot;Bake into Season Records&quot;</em> atomically updates cumulative <code style={{ color: '#FFFFFF' }}>player_stats</code>, deposits ClubScore fantasy points into player profiles, and records audit entries in the immutable ledger.
+                ⚡ <strong>Production Guarantee:</strong> Clicking <em>&quot;Bake into Season Records&quot;</em> atomically updates cumulative <code style={{ color: 'var(--text-primary)' }}>player_stats</code>, deposits ClubScore fantasy points into player profiles, and records audit entries in the immutable ledger.
               </div>
             </>
           )}
@@ -490,7 +490,7 @@ export default function StatsAuditModal({
         </div>
 
         {auditError && (
-          <div role="alert" style={{ padding: '0.75rem 1.75rem', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600 }}>
+          <div role="alert" style={{ padding: '0.75rem 1.75rem', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 600 }}>
             {auditError}
           </div>
         )}
@@ -499,7 +499,7 @@ export default function StatsAuditModal({
         {!auditResult && (
           <div style={{
             padding: '1.25rem 1.75rem',
-            background: 'rgba(10, 15, 23, 0.95)',
+            background: 'rgba(var(--dk-10-15-23), 0.95)',
             borderTop: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',

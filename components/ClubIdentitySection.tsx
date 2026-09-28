@@ -299,7 +299,7 @@ export default function ClubIdentitySection({
       style={{
         position: 'relative',
         padding: '3.5rem 0 3.25rem 0',
-        background: 'linear-gradient(180deg, rgba(14, 20, 30, 0.96) 0%, rgba(8, 12, 18, 0.99) 100%)',
+        background: 'linear-gradient(180deg, rgba(var(--dk-14-20-30), 0.96) 0%, rgba(var(--dk-8-12-18), 0.99) 100%)',
         borderBottom: '1px solid var(--border-subtle)',
         overflow: 'hidden',
         scrollMarginTop: '90px',
@@ -365,7 +365,7 @@ export default function ClubIdentitySection({
               <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.65rem' }}>
                 EST. {club.founded_year || 2018}
               </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>{club.name}</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{club.name}</span>
               {club.motto && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                   • &ldquo;{club.motto}&rdquo;
@@ -377,7 +377,7 @@ export default function ClubIdentitySection({
                 fontSize: 'clamp(1.6rem, 3.2vw, 2.3rem)',
                 fontWeight: 900,
                 letterSpacing: '-0.02em',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 margin: 0,
               }}
             >
@@ -397,6 +397,7 @@ export default function ClubIdentitySection({
               <div
                 key={card.id}
                 className={`glass-panel impact-stat-card ${card.isHighlight ? 'goals-highlight-card' : ''}`}
+                data-theme={card.isHighlight ? 'dark' : undefined}
                 onMouseEnter={() => setHoveredCardIndex(idx)}
                 onMouseLeave={() => setHoveredCardIndex(null)}
                 style={{
@@ -407,14 +408,14 @@ export default function ClubIdentitySection({
                       : `1px solid rgba(245, 158, 11, 0.38)`
                     : isHovered
                     ? `1px solid ${card.accentColor}80`
-                    : '1px solid rgba(255, 255, 255, 0.09)',
+                    : '1px solid rgba(var(--tint-rgb), 0.09)',
                   background: card.isHighlight
                     ? isHovered
                       ? 'rgba(32, 26, 20, 0.95)'
                       : 'rgba(25, 22, 18, 0.82)'
                     : isHovered
                     ? 'rgba(24, 34, 48, 0.88)'
-                    : 'rgba(18, 26, 38, 0.75)',
+                    : 'rgba(var(--dk-18-26-38), 0.75)',
                   boxShadow: isHovered
                     ? `0 14px 30px rgba(0,0,0,0.55), 0 0 20px ${card.accentColor}30`
                     : card.isHighlight
@@ -446,7 +447,7 @@ export default function ClubIdentitySection({
                     style={{
                       fontSize: '0.7rem',
                       fontWeight: 800,
-                      color: card.isHighlight ? '#F59E0B' : 'var(--text-muted)',
+                      color: card.isHighlight ? 'var(--c-amber)' : 'var(--text-muted)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       transition: 'color 0.2s ease',
@@ -467,7 +468,7 @@ export default function ClubIdentitySection({
                         ? 'rgba(245, 158, 11, 0.16)'
                         : isHovered
                         ? `${card.accentColor}25`
-                        : 'rgba(255,255,255,0.06)',
+                        : 'rgba(var(--tint-rgb), 0.06)',
                       transform: isHovered ? 'scale(1.12)' : 'scale(1)',
                       transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease',
                       flexShrink: 0,
@@ -483,7 +484,7 @@ export default function ClubIdentitySection({
                   style={{
                     fontSize: '2rem',
                     fontWeight: 900,
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     lineHeight: 1,
                     letterSpacing: '-0.02em',
                     fontVariantNumeric: 'tabular-nums',
@@ -496,7 +497,7 @@ export default function ClubIdentitySection({
                 <div
                   style={{
                     fontSize: '0.72rem',
-                    color: card.isHighlight ? '#F59E0B' : 'var(--text-muted)',
+                    color: card.isHighlight ? 'var(--c-amber)' : 'var(--text-muted)',
                     marginTop: '0.45rem',
                     fontWeight: card.isHighlight ? 700 : 500,
                     lineHeight: 1.3,
@@ -519,8 +520,8 @@ export default function ClubIdentitySection({
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '1.25rem',
-            background: 'rgba(12, 17, 26, 0.85)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(var(--dk-14-20-30), 0.85)',
+            border: '1px solid rgba(var(--tint-rgb), 0.08)',
             opacity: isInView ? 1 : 0,
             transform: isInView ? 'translateY(0)' : 'translateY(8px)',
             transition: 'opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1) 240ms, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) 240ms',
@@ -547,7 +548,7 @@ export default function ClubIdentitySection({
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>
                 Official Home Ground
               </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {club.stadium_name}
                 {club.stadium_address && (
                   <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.6rem' }}>

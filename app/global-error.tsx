@@ -15,8 +15,8 @@ export default function GlobalError({
       <body style={{
         margin: 0,
         minHeight: '100vh',
-        background: '#070A0F',
-        color: '#FFFFFF',
+        background: 'rgb(var(--dk-7-10-15))',
+        color: 'var(--text-primary)',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         display: 'flex',
         alignItems: 'center',
@@ -26,7 +26,7 @@ export default function GlobalError({
         <div style={{
           maxWidth: '500px',
           width: '100%',
-          background: '#0E141E',
+          background: 'rgb(var(--dk-14-20-30))',
           border: '1px solid rgba(239, 68, 68, 0.3)',
           borderRadius: '16px',
           padding: '2.5rem 2rem',
@@ -38,7 +38,7 @@ export default function GlobalError({
             height: '56px',
             borderRadius: '50%',
             background: 'rgba(239, 68, 68, 0.15)',
-            color: '#EF4444',
+            color: 'var(--c-red)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -47,11 +47,11 @@ export default function GlobalError({
             <AlertTriangle size={28} />
           </div>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.75rem', color: '#FFFFFF' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
             System Stoppage
           </h2>
 
-          <p style={{ color: '#8F9CAE', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
             The application encountered a critical system error. Please try restarting the session.
           </p>
 

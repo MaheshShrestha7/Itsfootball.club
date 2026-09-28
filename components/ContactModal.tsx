@@ -98,7 +98,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               <Mail size={18} color="#FFFFFF" />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 Contact {club.name}
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -109,7 +109,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
           <button
             onClick={handleResetAndClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: 'rgba(var(--tint-rgb), 0.08)',
               border: 'none',
               borderRadius: '50%',
               width: '32px',
@@ -138,9 +138,9 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               justifyContent: 'center',
               margin: '0 auto 1.25rem auto',
             }}>
-              <CheckCircle2 size={36} color="#10B981" />
+              <CheckCircle2 size={36} color="var(--c-green)" />
             </div>
-            <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+            <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               Message Received!
             </h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
@@ -238,7 +238,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             </div>
 
             {sendError && (
-              <div role="alert" style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #EF4444', background: 'rgba(239, 68, 68, 0.12)', color: '#FCA5A5', fontSize: '0.8rem' }}>
+              <div role="alert" style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #EF4444', background: 'rgba(239, 68, 68, 0.12)', color: 'var(--c-red)', fontSize: '0.8rem' }}>
                 {sendError}
               </div>
             )}

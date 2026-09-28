@@ -189,11 +189,11 @@ export default function DraftLineupPage() {
               <ChevronRight size={14} />
               <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Match Center</Link>
               <ChevronRight size={14} />
-              <span style={{ color: '#FFFFFF' }}>Draft Lineup Workbench</span>
+              <span style={{ color: 'var(--text-primary)' }}>Draft Lineup Workbench</span>
             </div>
 
-            <h1 style={{ fontSize: 'clamp(1.3rem, 5vw, 1.75rem)', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              <Layers size={26} color="#F59E0B" />
+            <h1 style={{ fontSize: 'clamp(1.3rem, 5vw, 1.75rem)', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <Layers size={26} color="var(--c-amber)" />
               <span>Draft Lineup & Tactical Workbench</span>
               <span className="badge badge-gold" style={{ fontSize: '0.72rem' }}>Coach Sandbox</span>
             </h1>
@@ -208,7 +208,7 @@ export default function DraftLineupPage() {
               className="btn btn-secondary btn-sm"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <Users size={14} color="#10B981" />
+              <Users size={14} color="var(--c-green)" />
               <span>Availability Hub</span>
             </Link>
 
@@ -220,7 +220,7 @@ export default function DraftLineupPage() {
                 alignItems: 'center',
                 gap: '0.45rem',
                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 border: 'none',
                 boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
               }}
@@ -248,7 +248,7 @@ export default function DraftLineupPage() {
               gap: '0.5rem',
               background: feedback.type === 'error' ? 'rgba(60, 12, 12, 0.95)' : feedback.type === 'info' ? 'rgba(12, 24, 48, 0.95)' : 'rgba(6, 40, 28, 0.95)',
               border: `1px solid ${feedback.type === 'error' ? '#EF4444' : feedback.type === 'info' ? '#3B82F6' : '#10B981'}`,
-              color: feedback.type === 'error' ? '#F87171' : feedback.type === 'info' ? '#93C5FD' : '#10B981',
+              color: feedback.type === 'error' ? 'var(--c-red)' : feedback.type === 'info' ? 'var(--c-sky)' : 'var(--c-green)',
             }}
           >
             {feedback.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
@@ -286,7 +286,7 @@ export default function DraftLineupPage() {
                 border: '1px solid #3B82F6',
                 fontSize: '0.78rem',
                 fontWeight: 800,
-                color: '#93C5FD',
+                color: 'var(--c-sky)',
               }}>
                 Unsaved changes
               </span>
@@ -301,7 +301,7 @@ export default function DraftLineupPage() {
               border: `1px solid ${currentDraft?.is_published ? '#10B981' : '#F59E0B'}`,
               fontSize: '0.78rem',
               fontWeight: 800,
-              color: currentDraft?.is_published ? '#10B981' : '#F59E0B',
+              color: currentDraft?.is_published ? 'var(--c-green)' : 'var(--c-amber)',
             }}>
               {currentDraft?.is_published ? <CheckCircle2 size={14} /> : <Shield size={14} />}
               <span>{currentDraft?.is_published ? 'Published Live' : 'Draft Mode (Private)'}</span>
@@ -324,7 +324,7 @@ export default function DraftLineupPage() {
           onNotify={showFeedback}
           footer={
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <ClipboardList size={16} color={club.primary_color} /> Coach Instructions & Tactical Cues
               </h3>
               <textarea aria-label="Coach instructions and tactical cues"
@@ -355,10 +355,10 @@ export default function DraftLineupPage() {
             <div className="glass-panel" style={{ maxWidth: '480px', width: '100%', padding: '2rem', animation: 'fadeIn 0.25s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 <div style={{ width: '42px', height: '42px', flexShrink: 0, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Send size={22} color="#10B981" />
+                  <Send size={22} color="var(--c-green)" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF' }}>Publish Lineup to Match Center?</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)' }}>Publish Lineup to Match Center?</h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                     This saves the lineup shown on the board and immediately updates the live public match center.
                   </p>
@@ -366,7 +366,7 @@ export default function DraftLineupPage() {
               </div>
 
               <div style={{
-                background: 'rgba(0, 0, 0, 0.4)',
+                background: 'rgba(var(--shade-rgb), 0.4)',
                 borderRadius: '10px',
                 padding: '1rem',
                 border: '1px solid var(--border-subtle)',
@@ -378,19 +378,19 @@ export default function DraftLineupPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Match:</span>
-                  <span style={{ fontWeight: 800, color: '#FFFFFF', textAlign: 'right' }}>{activeMatch.home_team_name} vs {activeMatch.away_team_name}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', textAlign: 'right' }}>{activeMatch.home_team_name} vs {activeMatch.away_team_name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Format:</span>
-                  <span style={{ fontWeight: 800, color: '#10B981' }}>{matchFormat}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--c-green)' }}>{matchFormat}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Formation:</span>
-                  <span style={{ fontWeight: 800, color: '#F59E0B' }}>{formation}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--c-amber)' }}>{formation}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Starting Players:</span>
-                  <span style={{ fontWeight: 800, color: starterCount < lineupCoords.length ? '#F59E0B' : '#FFFFFF' }}>
+                  <span style={{ fontWeight: 800, color: starterCount < lineupCoords.length ? 'var(--c-amber)' : 'var(--text-primary)' }}>
                     {starterCount} of {lineupCoords.length} positions filled
                   </span>
                 </div>
@@ -413,7 +413,7 @@ export default function DraftLineupPage() {
                     padding: '0.55rem 1.25rem',
                     background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                     border: 'none',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     fontWeight: 800,
                   }}
                 >

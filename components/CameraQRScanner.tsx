@@ -210,7 +210,7 @@ export default function CameraQRScanner({
           width: '100%',
           maxWidth: '380px',
           aspectRatio: '1/1',
-          background: '#040609',
+          background: 'rgb(var(--dk-4-6-9))',
           borderRadius: '16px',
           overflow: 'hidden',
           border: '2px solid rgba(16, 185, 129, 0.4)',
@@ -255,7 +255,7 @@ export default function CameraQRScanner({
               textAlign: 'center',
               fontSize: '0.75rem',
               fontWeight: 800,
-              color: '#FFFFFF',
+              color: 'var(--text-primary)',
               textShadow: '0 2px 8px rgba(0,0,0,0.9)',
               letterSpacing: '0.04em',
               display: 'flex',
@@ -274,7 +274,7 @@ export default function CameraQRScanner({
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(4, 6, 9, 0.85)',
+            background: 'rgba(var(--dk-4-6-9), 0.85)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -284,8 +284,8 @@ export default function CameraQRScanner({
             padding: '1.5rem',
             textAlign: 'center',
           }}>
-            <RefreshCw size={32} color="#10B981" className="animate-spin" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>
+            <RefreshCw size={32} color="var(--c-green)" className="animate-spin" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               Initializing Stadium Camera Stream...
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -299,7 +299,7 @@ export default function CameraQRScanner({
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(10, 15, 23, 0.95)',
+            background: 'rgba(var(--dk-10-15-23), 0.95)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -309,8 +309,8 @@ export default function CameraQRScanner({
             padding: '1.5rem',
             textAlign: 'center',
           }}>
-            <AlertCircle size={36} color="#EF4444" />
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <AlertCircle size={36} color="var(--c-red)" />
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               {cameraState === 'permission_denied' ? 'Camera Access Denied' : 'Optical Sensor Unavailable'}
             </span>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>

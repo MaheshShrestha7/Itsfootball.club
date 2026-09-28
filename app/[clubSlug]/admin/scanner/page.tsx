@@ -133,7 +133,7 @@ export default function AdminScannerPage({
     <div>
       <div style={{ marginBottom: '2rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY ACCREDITATION</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
           QR Scanner Reticle & Gate Check-In
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -229,7 +229,7 @@ export default function AdminScannerPage({
           {/* Scanner Tab Switcher */}
           <div style={{
             display: 'flex',
-            background: 'rgba(0, 0, 0, 0.3)',
+            background: 'rgba(var(--shade-rgb), 0.3)',
             padding: '4px',
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.5rem',
@@ -321,17 +321,17 @@ export default function AdminScannerPage({
               animation: 'fadeIn 0.3s ease',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                {currentResult.valid ? <CheckCircle2 size={24} color="#10B981" /> : <AlertTriangle size={24} color="#F59E0B" />}
+                {currentResult.valid ? <CheckCircle2 size={24} color="var(--c-green)" /> : <AlertTriangle size={24} color="var(--c-amber)" />}
                 <div>
                   <div style={{
                     fontWeight: 800,
                     fontSize: '1rem',
-                    color: currentResult.valid ? '#10B981' : '#F59E0B',
+                    color: currentResult.valid ? 'var(--c-green)' : 'var(--c-amber)',
                     marginBottom: '0.2rem',
                   }}>
                     {currentResult.valid ? 'VALIDATION APPROVED' : 'ACCESS WARNING'}
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: '#FFFFFF' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                     {currentResult.message}
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export default function AdminScannerPage({
         {/* Right: Realtime Scan Log Stream */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <History size={18} color="var(--club-primary)" />
               <span>Turnstile Scan Stream</span>
             </h3>
@@ -367,17 +367,17 @@ export default function AdminScannerPage({
                     justifyContent: 'space-between',
                     padding: '0.75rem 1rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'rgba(var(--shade-rgb), 0.3)',
                     border: '1px solid var(--border-subtle)',
                   }}
                 >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                         {log.memberName || log.token}
                       </span>
                       {log.tier && (
-                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
+                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
                           {log.tier}
                         </span>
                       )}
@@ -390,7 +390,7 @@ export default function AdminScannerPage({
                   <div style={{ textAlign: 'right' }}>
                     <span className="badge" style={{
                       backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: log.status === 'valid' ? '#10B981' : '#EF4444',
+                      color: log.status === 'valid' ? 'var(--c-green)' : 'var(--c-red)',
                     }}>
                       {log.status.toUpperCase()}
                     </span>

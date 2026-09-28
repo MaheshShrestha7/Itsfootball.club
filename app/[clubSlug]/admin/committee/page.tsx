@@ -55,7 +55,7 @@ export default function AdminCommitteePage({
     <div>
       <div style={{ marginBottom: '2rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
           Executive Committee Appointments
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -69,7 +69,7 @@ export default function AdminCommitteePage({
           border: '1px solid #10B981',
           padding: '0.85rem 1.25rem',
           borderRadius: 'var(--radius-md)',
-          color: '#10B981',
+          color: 'var(--c-green)',
           fontWeight: 700,
           marginBottom: '1.5rem',
           display: 'flex',
@@ -83,8 +83,8 @@ export default function AdminCommitteePage({
 
       {/* Appointment Form Card */}
       <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Award size={18} color="#F59E0B" /> Appoint Member to Committee
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Award size={18} color="var(--c-amber)" /> Appoint Member to Committee
         </h3>
 
         <form onSubmit={handleAppoint}>
@@ -169,7 +169,7 @@ export default function AdminCommitteePage({
       <div className="glass-panel" style={{ padding: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Executive Committee Board ({filteredExecutiveMembers.length})
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -178,7 +178,7 @@ export default function AdminCommitteePage({
           </div>
 
           {/* Season Filter Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
             <button
               onClick={() => setSeasonFilter('ALL')}
               style={{
@@ -216,7 +216,7 @@ export default function AdminCommitteePage({
         </div>
 
         {filteredExecutiveMembers.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
+          <div style={{ textAlign: 'center', padding: '2.5rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '10px' }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               No executive members appointed for season &quot;{seasonFilter}&quot;.
             </p>
@@ -233,7 +233,7 @@ export default function AdminCommitteePage({
                   justifyContent: 'space-between',
                   padding: '1rem 1.25rem',
                   borderRadius: '10px',
-                  background: 'rgba(0, 0, 0, 0.25)',
+                  background: 'rgba(var(--shade-rgb), 0.25)',
                   border: '1px solid var(--border-subtle)',
                   gap: '1rem',
                 }}
@@ -247,11 +247,11 @@ export default function AdminCommitteePage({
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1.05rem' }}>{exec.full_name}</span>
-                      <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', fontSize: '0.7rem' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem' }}>{exec.full_name}</span>
+                      <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
                         #{exec.executive_order}
                       </span>
-                      <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <CalendarDays size={10} />
                         {exec.executive_season || activeSeason?.name || defaultSeasonLabel()} Tenure
                       </span>
@@ -270,7 +270,7 @@ export default function AdminCommitteePage({
                 <button
                   onClick={() => handleRevoke(exec.id)}
                   className="btn btn-secondary btn-sm"
-                  style={{ color: '#EF4444' }}
+                  style={{ color: 'var(--c-red)' }}
                 >
                   Revoke Role
                 </button>

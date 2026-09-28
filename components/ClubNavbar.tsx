@@ -8,6 +8,7 @@ import { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut } from 'lucide-react';
 
 interface ClubNavbarProps {
@@ -45,7 +46,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      background: 'rgba(10, 15, 23, 0.94)',
+      background: 'rgba(var(--dk-10-15-23), 0.94)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border-subtle)',
@@ -76,7 +77,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             height: '44px',
             borderRadius: '13px',
             border: `2px solid ${club.primary_color}`,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(15,23,42,0.95) 100%)',
+            background: 'linear-gradient(135deg, rgba(var(--tint-rgb), 0.08) 0%, rgba(var(--dk-15-23-42),0.95) 100%)',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -108,7 +109,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 lineHeight: 1,
               }}>
                 <Shield size={22} color={club.primary_color} />
-                <span style={{ fontSize: '0.7rem', fontWeight: 900, marginTop: '2px', color: '#FFFFFF' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 900, marginTop: '2px', color: 'var(--text-primary)' }}>
                   {club.short_name || 'FC'}
                 </span>
               </div>
@@ -122,14 +123,14 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 fontSize: 'clamp(1rem, 3.8vw, 1.25rem)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}>
                 {club.name}
               </span>
-              <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
+              <span className="badge" style={{ backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
                 {club.short_name}
               </span>
             </div>
@@ -151,7 +152,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         </Link>
 
         {/* Desktop Links */}
-        <nav style={{ display: 'none', alignItems: 'center', gap: '1.5rem' }} className="desktop-nav">
+        <nav style={{ display: 'none', alignItems: 'center', gap: '1.5rem', marginLeft: 'auto' }} className="desktop-nav">
           <Link href={`/${club.slug}`} style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
             Club
           </Link>
@@ -165,7 +166,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               gap: '0.45rem',
               fontWeight: 600,
               fontSize: '0.9rem',
-              color: liveMatch ? '#EF4444' : 'var(--text-secondary)',
+              color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)',
             }}
           >
             {liveMatch ? (
@@ -210,7 +211,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               fontSize: '0.9rem',
             }}
           >
-            <Trophy size={15} color="#F59E0B" />
+            <Trophy size={15} color="var(--c-amber)" />
             <span>Tournaments</span>
           </Link>
           <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
@@ -233,7 +234,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 alignItems: 'center',
                 gap: '0.4rem',
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: '#10B981',
+                color: 'var(--c-green)',
                 border: '1px solid rgba(16, 185, 129, 0.4)',
                 fontWeight: 700,
               }}
@@ -254,7 +255,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   gap: '0.5rem',
                   padding: '0.35rem 0.65rem',
                   borderRadius: 'var(--radius-full)',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(var(--tint-rgb), 0.05)',
                   border: '1px solid var(--border-subtle)',
                   textDecoration: 'none',
                 }}
@@ -270,11 +271,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     {user.full_name.substring(0, 1)}
                   </div>
                 )}
-                <span style={{ fontSize: '0.8rem', color: '#FFFFFF', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                   {user.full_name.split(' ')[0]}
                 </span>
                 {userRole && (
-                  <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isAdmin ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)', color: isAdmin ? '#10B981' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isAdmin ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.08)', color: isAdmin ? 'var(--c-green)' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                     {userRole}
                   </span>
                 )}
@@ -316,13 +317,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           )}
         </nav>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem' }}>
+        <ThemeToggle />
         {/* Mobile menu trigger */}
         <button
           onClick={() => setMobileMenuOpen(true)}
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#FFFFFF',
+            color: 'var(--text-primary)',
             cursor: 'pointer',
             padding: '0.5rem',
             display: 'flex',
@@ -336,6 +339,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         >
           <Menu size={24} />
         </button>
+        </div>
       </div>
 
       {/* Mobile Menu Drawer via Portal */}
@@ -356,13 +360,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain' }}
                   />
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF' }}>{club.name}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{club.name}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Official Matchday Portal</div>
                   </div>
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFFFFF', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ background: 'rgba(var(--tint-rgb), 0.06)', border: 'none', color: 'var(--text-primary)', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label="Close Menu"
                 >
                   <X size={20} />
@@ -380,8 +384,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
-                    background: liveMatch ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                    color: liveMatch ? '#EF4444' : '#FFFFFF',
+                    background: liveMatch ? 'rgba(239, 68, 68, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
+                    color: liveMatch ? 'var(--c-red)' : 'var(--text-primary)',
                     border: `1px solid ${liveMatch ? 'rgba(239, 68, 68, 0.5)' : 'var(--border-subtle)'}`,
                     padding: '0.65rem 1rem',
                     fontWeight: 700,
@@ -413,9 +417,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     gap: '0.75rem',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     fontWeight: 700,
-                    background: 'rgba(255, 255, 255, 0.04)',
+                    background: 'rgba(var(--tint-rgb), 0.04)',
                   }}
                 >
                   <Shield size={16} color={club.primary_color} />
@@ -436,7 +440,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
                 >
-                  <Trophy size={16} color="#F59E0B" />
+                  <Trophy size={16} color="var(--c-amber)" />
                   <span>Tournaments & Cups</span>
                 </Link>
 
@@ -477,7 +481,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                       gap: '0.75rem',
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
-                      color: '#10B981',
+                      color: 'var(--c-green)',
                       background: 'rgba(16, 185, 129, 0.1)',
                       border: '1px solid rgba(16, 185, 129, 0.3)',
                       fontWeight: 700,
@@ -504,7 +508,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                       </div>
                     )}
                     <div>
-                      <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 700 }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                         {user.full_name}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -515,7 +519,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <button
                     type="button"
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: '#EF4444', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--c-red)', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Sign Out
                   </button>

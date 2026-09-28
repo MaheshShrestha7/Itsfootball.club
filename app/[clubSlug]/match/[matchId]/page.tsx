@@ -201,12 +201,12 @@ export default function MatchCenterPage({
 
   if (!isHydrated) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', padding: '2rem' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', padding: '2rem' }}>
         <div style={{
           width: '50px',
           height: '50px',
           borderRadius: '50%',
-          border: '3px solid rgba(255,255,255,0.1)',
+          border: '3px solid rgba(var(--tint-rgb), 0.1)',
           borderTopColor: '#10B981',
           animation: 'spin 0.8s linear infinite',
           marginBottom: '1rem',
@@ -218,7 +218,7 @@ export default function MatchCenterPage({
 
   if (!match) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', color: '#FFFFFF', padding: '6rem 1.5rem', textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', color: 'var(--text-primary)', padding: '6rem 1.5rem', textAlign: 'center' }}>
         <Shield size={48} style={{ opacity: 0.3, margin: '0 auto 1.25rem auto' }} />
         <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>Match Fixture Not Found</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
@@ -279,7 +279,7 @@ export default function MatchCenterPage({
                 borderRadius: 'var(--radius-sm)',
                 background: liveSyncPulse ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.12)',
                 border: `1px solid ${liveSyncPulse ? '#10B981' : 'rgba(16, 185, 129, 0.35)'}`,
-                color: '#10B981',
+                color: 'var(--c-green)',
                 fontSize: '0.74rem',
                 fontWeight: 800,
                 minHeight: '38px',
@@ -301,7 +301,7 @@ export default function MatchCenterPage({
                   gap: '0.4rem',
                   background: 'rgba(59, 130, 246, 0.15)',
                   border: '1px solid #3B82F6',
-                  color: '#3B82F6',
+                  color: 'var(--c-blue)',
                   minHeight: '38px',
                   fontWeight: 700
                 }}
@@ -340,7 +340,7 @@ export default function MatchCenterPage({
           style={{
             padding: '2.5rem 1.5rem',
             marginBottom: '2.5rem',
-            background: 'linear-gradient(180deg, rgba(18, 26, 38, 0.95) 0%, rgba(10, 15, 23, 0.98) 100%)',
+            background: 'linear-gradient(180deg, rgba(var(--dk-18-26-38), 0.95) 0%, rgba(var(--dk-10-15-23), 0.98) 100%)',
             border: goalAlert?.active
               ? '2px solid #F59E0B'
               : match.status === 'live'
@@ -392,7 +392,7 @@ export default function MatchCenterPage({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.6rem',
-                boxShadow: '0 8px 30px rgba(245, 158, 11, 0.8), 0 0 25px rgba(255, 255, 255, 0.9)',
+                boxShadow: '0 8px 30px rgba(245, 158, 11, 0.8), 0 0 25px rgba(var(--tint-rgb), 0.9)',
                 zIndex: 25,
                 animation: 'goalBannerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
               }}
@@ -420,26 +420,26 @@ export default function MatchCenterPage({
                     </span>
                   </>
                 ) : (
-                  <span style={{ color: '#F59E0B' }}>{match.title}</span>
+                  <span style={{ color: 'var(--c-amber)' }}>{match.title}</span>
                 )}
               </div>
             )}
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
                 <span className="pulse-dot" /> {match.is_paused ? 'PAUSED' : 'LIVE'} • <LiveMinute match={match} />&apos;
-                {match.added_time > 0 && <span style={{ color: '#F59E0B', marginLeft: '0.25rem' }}>(+{match.added_time}&apos;)</span>}
+                {match.added_time > 0 && <span style={{ color: 'var(--c-amber)', marginLeft: '0.25rem' }}>(+{match.added_time}&apos;)</span>}
               </span>
             ) : match.status === 'halftime' ? (
               <span className="badge badge-gold" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
                 HALF-TIME (HT)
               </span>
             ) : (
-              <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}>
+              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-primary)' }}>
                 {match.status.toUpperCase()}
               </span>
             )}
             {match.match_type && (
-              <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--club-primary)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
+              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--club-primary)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
                 {match.match_type} FIXTURE
               </span>
             )}
@@ -505,14 +505,14 @@ export default function MatchCenterPage({
                   />
                 ) : (
                   <>
-                    <Shield size={28} color="#FFFFFF" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                    <Shield size={28} color="var(--text-primary)" strokeWidth={2.4} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px', letterSpacing: '0.05em' }}>
                       {match.home_team_name ? match.home_team_name.slice(0, 3).toUpperCase() : 'HOM'}
                     </span>
                   </>
                 )}
               </div>
-              <h2 className="scoreboard-team-name" title={match.home_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+              <h2 className="scoreboard-team-name" title={match.home_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
                 <span className="team-name-full">{match.home_team_name}</span>
                 <span className="team-name-short">{homeShort}</span>
               </h2>
@@ -520,14 +520,14 @@ export default function MatchCenterPage({
             </div>
 
             {/* Stadium Mechanical Scoreboard Digit Display */}
-            <div style={{
+            <div data-theme="dark" style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(0.75rem, 3vw, 2rem)',
-              background: '#040609',
+              background: 'rgb(var(--dk-4-6-9))',
               borderRadius: '20px',
-              border: `2px solid ${goalAlert?.active ? '#F59E0B' : 'rgba(255, 255, 255, 0.12)'}`,
+              border: `2px solid ${goalAlert?.active ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.12)'}`,
               boxShadow: 'inset 0 0 30px rgba(0,0,0,0.95), 0 12px 30px rgba(0,0,0,0.7)',
               position: 'relative',
               transition: 'border-color 0.3s ease',
@@ -566,7 +566,7 @@ export default function MatchCenterPage({
               <div style={{
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: match.status === 'live' ? '#EF4444' : 'var(--text-muted)',
+                color: match.status === 'live' ? 'var(--c-red)' : 'var(--text-muted)',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 marginTop: '8px',
@@ -612,14 +612,14 @@ export default function MatchCenterPage({
                   />
                 ) : (
                   <>
-                    <Trophy size={28} color="#FFFFFF" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                    <Trophy size={28} color="var(--text-primary)" strokeWidth={2.4} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px', letterSpacing: '0.05em' }}>
                       {match.away_team_name ? match.away_team_name.slice(0, 3).toUpperCase() : 'AWY'}
                     </span>
                   </>
                 )}
               </div>
-              <h2 className="scoreboard-team-name" title={match.away_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+              <h2 className="scoreboard-team-name" title={match.away_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
                 <span className="team-name-full">{match.away_team_name}</span>
                 <span className="team-name-short">{awayShort}</span>
               </h2>
@@ -663,10 +663,10 @@ export default function MatchCenterPage({
                   </div>
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-amber)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Player of the Match
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', overflowWrap: 'anywhere' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>
                     {motmMember.full_name}
                     {motmMember.jersey_number ? ` (#${motmMember.jersey_number})` : ''}
                   </div>
@@ -684,7 +684,7 @@ export default function MatchCenterPage({
                   {goalEvents.map(evt => (
                     <div key={evt.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{evt.minute}&apos;</span>
-                      <span style={{ color: '#FFFFFF', fontWeight: 700 }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
                         {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
                       </span>
                       {evt.assist_player_name && (
@@ -722,7 +722,7 @@ export default function MatchCenterPage({
                 border: 'none',
                 borderBottom: activeTab === tab.id ? `3px solid var(--club-primary)` : '3px solid transparent',
                 padding: '0.75rem 0.25rem',
-                color: activeTab === tab.id ? '#FFFFFF' : 'var(--text-muted)',
+                color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -791,8 +791,8 @@ export default function MatchCenterPage({
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
                         <span className="badge" style={{
-                          backgroundColor: evt.event_type === 'goal' ? 'rgba(16, 185, 129, 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                          color: evt.event_type === 'goal' ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : '#FFFFFF',
+                          backgroundColor: evt.event_type === 'goal' ? 'rgba(16, 185, 129, 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
+                          color: evt.event_type === 'goal' ? 'var(--c-green)' : evt.event_type === 'yellow_card' ? 'var(--c-amber)' : 'var(--text-primary)',
                         }}>
                           {evt.event_type.toUpperCase().replace('_', ' ')}
                         </span>
@@ -801,7 +801,7 @@ export default function MatchCenterPage({
                         </span>
                       </div>
 
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
                         {evt.player_name} {evt.assist_player_name ? `(Assist: ${evt.assist_player_name})` : ''}
                       </h4>
 
@@ -845,7 +845,7 @@ export default function MatchCenterPage({
 
             {/* Starting XI & Substitutes List */}
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
                 {club.name} Matchday Squad
               </h3>
 
@@ -864,7 +864,7 @@ export default function MatchCenterPage({
                       justifyContent: 'space-between',
                       padding: '0.55rem 0.85rem',
                       borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
+                      background: 'rgba(var(--tint-rgb), 0.03)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -877,9 +877,9 @@ export default function MatchCenterPage({
                       }}>
                         {p.jersey_number ? `#${p.jersey_number}` : ''}
                       </span>
-                      <span style={{ fontWeight: 600, color: '#FFFFFF', fontSize: '0.9rem' }}>{p.full_name}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.full_name}</span>
                     </div>
-                    <span className="badge" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>
+                    <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)' }}>
                       {p.player_position}
                     </span>
                   </div>
@@ -911,7 +911,7 @@ export default function MatchCenterPage({
 
           return (
             <div className="glass-panel" style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', textAlign: 'center' }}>
                 Match Statistics
               </h3>
               <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
@@ -920,10 +920,10 @@ export default function MatchCenterPage({
 
               {/* Home vs Away header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', padding: '0 0.25rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--c-green)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {match.home_team_name}
                 </span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--c-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {match.away_team_name}
                 </span>
               </div>
@@ -935,11 +935,11 @@ export default function MatchCenterPage({
                 return (
                   <div key={s.label} style={{ marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                      <span style={{ color: '#10B981', minWidth: '24px' }}>{s.home}</span>
+                      <span style={{ color: 'var(--c-green)', minWidth: '24px' }}>{s.home}</span>
                       <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-                      <span style={{ color: '#3B82F6', minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
+                      <span style={{ color: 'var(--c-blue)', minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
                     </div>
-                    <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ height: '8px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
                       <div style={{ width: `${homePercent}%`, background: '#10B981', transition: 'width 0.6s ease' }} />
                       <div style={{ width: `${100 - homePercent}%`, background: '#3B82F6', transition: 'width 0.6s ease' }} />
                     </div>

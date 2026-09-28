@@ -8,7 +8,28 @@
   --club-accent: #F59E0B;
   --club-accent-rgb: 245, 158, 11;
 
-  /* Global Athletic Dark Theme */
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-full: 9999px;
+
+  /* Font Families */
+  --font-heading: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: var(--font-jakarta), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
+
+  /* Container */
+  --max-width: 1280px;
+  /* Motion: the strong ease-out used across this stylesheet */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Colour tokens. Dark is the default; <html data-theme> is set from the theme cookie (app/layout.tsx).
+   Any element can pin its subtree with data-theme="dark" (photo heroes, pitch, member pass). */
+:root,
+[data-theme='dark'] {
   --bg-pitch: #070A0F;
   --bg-surface: #0E141E;
   --bg-surface-elevated: #141C29;
@@ -32,22 +53,100 @@
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 30px rgba(var(--club-primary-rgb), 0.35);
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 26px;
-  --radius-full: 9999px;
+  /* Foreground tint for translucent overlays/borders: white on dark, ink on light */
+  --tint-rgb: 255, 255, 255;
+  /* Recessed wells: black wash on dark, pale slate on light */
+  --shade-rgb: 0, 0, 0;
+  /* Accent text colours (a darker shade in light mode keeps them readable on white) */
+  --c-green: #10B981;
+  --c-amber: #F59E0B;
+  --c-red: #EF4444;
+  --c-blue: #3B82F6;
+  --c-sky: #60A5FA;
+  --c-purple: #A855F7;
+  --c-gold: #C9A467;
+  /* How far accent-coloured text is pulled toward --text-primary: none on dark, enough to read on white */
+  --accent-ink: 0%;
+  /* Near-black surface shades used inline, one per original value so dark mode is unchanged */
+  --dk-4-6-9: 4, 6, 9;
+  --dk-7-10-15: 7, 10, 15;
+  --dk-8-12-18: 8, 12, 18;
+  --dk-9-13-22: 9, 13, 22;
+  --dk-10-14-23: 10, 14, 23;
+  --dk-10-15-23: 10, 15, 23;
+  --dk-11-17-32: 11, 17, 32;
+  --dk-14-20-30: 14, 20, 30;
+  --dk-15-23-42: 15, 23, 42;
+  --dk-17-24-39: 17, 24, 39;
+  --dk-18-26-38: 18, 26, 38;
+  --dk-19-27-38: 19, 27, 38;
+  --dk-20-28-41: 20, 28, 41;
+  --dk-30-41-59: 30, 41, 59;
+  --scrollbar-track: #070A0F;
+  --scrollbar-thumb: #1e293b;
+  --scrollbar-thumb-hover: #334155;
+  color-scheme: dark;
+}
 
-  /* Font Families */
-  --font-heading: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: var(--font-jakarta), -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: var(--font-jetbrains), monospace;
+[data-theme='light'] {
+  --bg-pitch: #F3F5F9;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(255, 255, 255, 1);
 
-  /* Container */
-  --max-width: 1280px;
-  /* Motion: the strong ease-out used across this stylesheet */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #5B6B80; /* 4.5:1+ on the light backgrounds */
+
+  --border-subtle: rgba(15, 23, 42, 0.1);
+  --border-medium: rgba(15, 23, 42, 0.2);
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+
+  --tint-rgb: 15, 23, 42;
+  --shade-rgb: 226, 232, 240;
+  --c-green: #047857;
+  --c-amber: #B45309;
+  --c-red: #DC2626;
+  --c-blue: #1D4ED8;
+  --c-sky: #2563EB;
+  --c-purple: #7E22CE;
+  --c-gold: #8A6A2F;
+  --accent-ink: 45%;
+
+  /* Page-level darks -> page grey, panel darks -> white */
+  --dk-4-6-9: 243, 245, 249;
+  --dk-7-10-15: 243, 245, 249;
+  --dk-8-12-18: 243, 245, 249;
+  --dk-9-13-22: 243, 245, 249;
+  --dk-10-14-23: 243, 245, 249;
+  --dk-10-15-23: 243, 245, 249;
+  --dk-11-17-32: 243, 245, 249;
+  --dk-14-20-30: 255, 255, 255;
+  --dk-15-23-42: 255, 255, 255;
+  --dk-17-24-39: 255, 255, 255;
+  --dk-18-26-38: 255, 255, 255;
+  --dk-19-27-38: 255, 255, 255;
+  --dk-20-28-41: 255, 255, 255;
+  --dk-30-41-59: 226, 232, 240;
+  --scrollbar-track: #F3F5F9;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-thumb-hover: #94A3B8;
+  color-scheme: light;
+}
+
+/* A pinned-dark island inside a light page: re-apply its own text colour */
+[data-theme='dark'] {
+  color: var(--text-primary);
+}
+
+/* Theme switch: CSS picks the icon, so it is right on first paint */
+[data-theme='light'] .theme-icon-light,
+[data-theme='dark'] .theme-icon-dark {
+  display: none;
 }
 
 /* Reset & Base */
@@ -60,7 +159,6 @@
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
   overflow-x: hidden;
 }
@@ -187,13 +285,13 @@ textarea {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--tint-rgb), 0.07);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--tint-rgb), 0.12);
   border-color: var(--border-medium);
   transform: translateY(-1.5px);
 }
@@ -211,7 +309,7 @@ textarea {
 
 .btn-danger {
   background: rgba(239, 68, 68, 0.15);
-  color: #EF4444;
+  color: var(--c-red);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -253,13 +351,13 @@ textarea {
 
 .badge-primary {
   background: rgba(var(--club-primary-rgb), 0.15);
-  color: var(--club-primary);
+  color: color-mix(in srgb, var(--club-primary), var(--text-primary) var(--accent-ink));
   border: 1px solid rgba(var(--club-primary-rgb), 0.3);
 }
 
 .badge-gold {
   background: rgba(245, 158, 11, 0.15);
-  color: #F59E0B;
+  color: var(--c-amber);
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
@@ -315,7 +413,7 @@ textarea {
 .form-textarea {
   width: 100%;
   padding: 0.7rem 0.95rem;
-  background: rgba(14, 20, 30, 0.8);
+  background: rgba(var(--dk-14-20-30), 0.8);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -787,11 +885,11 @@ textarea {
   gap: 0.75rem;
   align-items: center;
   padding: 0.7rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(var(--tint-rgb), 0.04);
   font-size: 0.875rem;
 }
 .squad-list-row:last-child { border-bottom: none; }
-.squad-list-row:not(.squad-list-head):hover { background: rgba(255, 255, 255, 0.03); }
+.squad-list-row:not(.squad-list-head):hover { background: rgba(var(--tint-rgb), 0.03); }
 .squad-list-head {
   font-size: 0.72rem;
   font-weight: 700;
@@ -817,7 +915,7 @@ textarea {
   padding: 1.1rem;
   min-width: 0;
 }
-.squad-card-actions { margin-top: auto; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.squad-card-actions { margin-top: auto; padding-top: 0.5rem; border-top: 1px solid rgba(var(--tint-rgb), 0.06); }
 
 @media (max-width: 860px) {
   .squad-list-head { display: none; }
@@ -891,7 +989,7 @@ textarea {
   min-height: 80px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--tint-rgb), 0.03);
   color: var(--text-secondary);
   font-size: 0.95rem;
   font-weight: 700;
@@ -902,7 +1000,7 @@ textarea {
 .sponsor-marquee-item:hover,
 .sponsor-marquee-item:focus-visible {
   border-color: var(--club-primary);
-  color: #FFFFFF;
+  color: var(--text-primary);
 }
 
 .sponsor-marquee-item img {
@@ -1242,16 +1340,16 @@ textarea {
 }
 
 ::-webkit-scrollbar-track {
-  background: #070A0F;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Animations */
@@ -1377,7 +1475,7 @@ textarea {
 .mobile-drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 10, 0.85);
+  background: rgba(var(--dk-4-6-9), 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 99;
@@ -1519,7 +1617,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: rgba(14, 20, 30, 0.95);
+  background: rgba(var(--dk-14-20-30), 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);

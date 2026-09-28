@@ -39,8 +39,8 @@ export default function TournamentMatchesList({
     return (
       <div
         style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(var(--tint-rgb), 0.02)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
           borderRadius: '14px',
           padding: '3rem',
           textAlign: 'center',
@@ -48,7 +48,7 @@ export default function TournamentMatchesList({
         }}
       >
         <Calendar size={32} style={{ opacity: 0.4, margin: '0 auto 0.75rem auto' }} />
-        <h3 style={{ margin: '0 0 0.5rem 0', color: '#FFFFFF', fontWeight: 800 }}>
+        <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
           No Tournament Fixtures Scheduled
         </h3>
         <p style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -70,8 +70,8 @@ export default function TournamentMatchesList({
           justifyContent: 'space-between',
           marginBottom: '1.25rem',
           padding: '0.75rem 1rem',
-          background: 'rgba(15, 23, 42, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(var(--dk-15-23-42), 0.6)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
           borderRadius: '12px',
         }}
       >
@@ -82,9 +82,9 @@ export default function TournamentMatchesList({
             style={{
               padding: '0.35rem 0.75rem',
               borderRadius: '8px',
-              border: stageFilter === 'all' ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.1)',
-              background: stageFilter === 'all' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-              color: stageFilter === 'all' ? '#10B981' : '#FFFFFF',
+              border: stageFilter === 'all' ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
+              background: stageFilter === 'all' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
+              color: stageFilter === 'all' ? 'var(--c-green)' : 'var(--text-primary)',
               fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -115,9 +115,9 @@ export default function TournamentMatchesList({
                 style={{
                   padding: '0.35rem 0.75rem',
                   borderRadius: '8px',
-                  border: stageFilter === stage ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.1)',
-                  background: stageFilter === stage ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                  color: stageFilter === stage ? '#10B981' : '#FFFFFF',
+                  border: stageFilter === stage ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
+                  background: stageFilter === stage ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
+                  color: stageFilter === stage ? 'var(--c-green)' : 'var(--text-primary)',
                   fontSize: '0.78rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -139,9 +139,9 @@ export default function TournamentMatchesList({
               style={{
                 padding: '0.35rem 0.65rem',
                 borderRadius: '6px',
-                border: statusFilter === st ? '1px solid var(--club-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
-                background: statusFilter === st ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                color: statusFilter === st ? '#FFFFFF' : 'var(--text-secondary)',
+                border: statusFilter === st ? '1px solid var(--club-primary)' : '1px solid rgba(var(--tint-rgb), 0.08)',
+                background: statusFilter === st ? 'rgba(var(--tint-rgb), 0.1)' : 'transparent',
+                color: statusFilter === st ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -170,10 +170,10 @@ export default function TournamentMatchesList({
             <div
               key={match.id}
               style={{
-                background: 'rgba(15, 23, 42, 0.75)',
+                background: 'rgba(var(--dk-15-23-42), 0.75)',
                 border: isLive
                   ? '1.5px solid #EF4444'
-                  : '1px solid rgba(255, 255, 255, 0.08)',
+                  : '1px solid rgba(var(--tint-rgb), 0.08)',
                 borderRadius: '12px',
                 overflow: 'hidden',
                 display: 'flex',
@@ -185,8 +185,8 @@ export default function TournamentMatchesList({
               <div
                 style={{
                   padding: '0.65rem 1rem',
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                  background: 'rgba(var(--shade-rgb), 0.35)',
+                  borderBottom: '1px solid rgba(var(--tint-rgb), 0.06)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -203,7 +203,7 @@ export default function TournamentMatchesList({
                   {isLive && (
                     <span
                       style={{
-                        color: '#EF4444',
+                        color: 'var(--c-red)',
                         fontWeight: 800,
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -225,7 +225,7 @@ export default function TournamentMatchesList({
                   {isCompleted && (
                     <span
                       style={{
-                        color: '#10B981',
+                        color: 'var(--c-green)',
                         fontWeight: 800,
                         background: 'rgba(16, 185, 129, 0.1)',
                         padding: '1px 6px',
@@ -262,7 +262,7 @@ export default function TournamentMatchesList({
                       style={{
                         fontWeight: 700,
                         fontSize: '0.85rem',
-                        color: '#FFFFFF',
+                        color: 'var(--text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -276,11 +276,11 @@ export default function TournamentMatchesList({
                   <div style={{ textAlign: 'center', minWidth: '70px' }}>
                     {isCompleted || isLive ? (
                       <div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>
                           {match.home_score} - {match.away_score}
                         </div>
                         {match.home_penalty_score !== undefined && match.away_penalty_score !== undefined && (
-                          <div style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
                             ({match.home_penalty_score} - {match.away_penalty_score} pens)
                           </div>
                         )}
@@ -291,7 +291,7 @@ export default function TournamentMatchesList({
                           fontSize: '0.9rem',
                           fontWeight: 800,
                           color: 'var(--text-secondary)',
-                          background: 'rgba(255, 255, 255, 0.05)',
+                          background: 'rgba(var(--tint-rgb), 0.05)',
                           padding: '0.25rem 0.65rem',
                           borderRadius: '6px',
                         }}
@@ -312,7 +312,7 @@ export default function TournamentMatchesList({
                       style={{
                         fontWeight: 700,
                         fontSize: '0.85rem',
-                        color: '#FFFFFF',
+                        color: 'var(--text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -344,8 +344,8 @@ export default function TournamentMatchesList({
               <div
                 style={{
                   padding: '0.65rem 1rem',
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(var(--shade-rgb), 0.25)',
+                  borderTop: '1px solid rgba(var(--tint-rgb), 0.05)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -368,14 +368,14 @@ export default function TournamentMatchesList({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.3rem',
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        color: '#FFFFFF',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        background: 'rgba(var(--tint-rgb), 0.08)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid rgba(var(--tint-rgb), 0.12)',
                         borderRadius: '6px',
                         cursor: 'pointer',
                       }}
                     >
-                      <Edit3 size={12} color="#10B981" />
+                      <Edit3 size={12} color="var(--c-green)" />
                       <span>Update Score</span>
                     </button>
                   )}

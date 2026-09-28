@@ -180,7 +180,7 @@ export default function AdminLayout({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '0.75rem',
-          background: 'rgba(0,0,0,0.35)',
+          background: 'rgba(var(--shade-rgb), 0.35)',
           borderRadius: 'var(--radius-md)',
           marginBottom: '1.25rem',
           border: '1px solid var(--border-subtle)',
@@ -191,7 +191,7 @@ export default function AdminLayout({
             style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', border: `2px solid ${club.primary_color}` }}
           />
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {club.name}
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--club-primary)', fontWeight: 700 }}>
@@ -234,7 +234,7 @@ export default function AdminLayout({
                         justifyContent: 'space-between',
                         padding: '0.6rem 0.85rem',
                         borderRadius: 'var(--radius-sm)',
-                        color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                         background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                         border: isActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
                         boxShadow: isActive ? 'inset 3px 0 0 var(--club-primary)' : 'none',
@@ -245,7 +245,7 @@ export default function AdminLayout({
                       }}
                       onMouseEnter={e => {
                         if (!isActive) {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                          e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.04)';
                           e.currentTarget.style.color = '#FFFFFF';
                         }
                       }}
@@ -278,7 +278,7 @@ export default function AdminLayout({
       <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         {user && (
           <div style={{
-            background: 'rgba(0,0,0,0.35)',
+            background: 'rgba(var(--shade-rgb), 0.35)',
             border: '1px solid var(--border-subtle)',
             borderRadius: '8px',
             padding: '0.65rem 0.75rem',
@@ -299,10 +299,10 @@ export default function AdminLayout({
                 </div>
               )}
               <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                   {user.full_name}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700, textTransform: 'uppercase' }}>
                   {userRole === 'owner' ? 'Club Owner' : 'Club Admin'}
                 </div>
               </div>
@@ -333,11 +333,11 @@ export default function AdminLayout({
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isSupabaseConfigured ? '#10B981' : '#F59E0B' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isSupabaseConfigured ? 'var(--c-green)' : 'var(--c-amber)' }}>
             <Database size={12} />
             <span>Security: RBAC Strict Session Active</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isR2Configured ? '#10B981' : 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isR2Configured ? 'var(--c-green)' : 'var(--text-muted)' }}>
             <Cloud size={12} />
             <span>Storage: {isR2Configured ? 'Cloudflare R2 Encrypted' : 'Local Storage Engine'}</span>
           </div>
@@ -370,7 +370,7 @@ export default function AdminLayout({
             <Menu size={18} />
             <span>Admin Menu</span>
           </button>
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
             {currentNavItem?.label || 'Control Room'}
           </div>
           <Link
@@ -396,7 +396,7 @@ export default function AdminLayout({
               style={{ padding: '1.25rem 1rem' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF' }}>Control Room</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Control Room</div>
                 <button
                   type="button"
                   onClick={() => setMobileDrawerOpen(false)}
@@ -440,7 +440,7 @@ export default function AdminLayout({
                   fontSize: '0.825rem',
                   background: syncStatus.phase === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
                   border: `1px solid ${syncStatus.phase === 'error' ? '#EF4444' : '#F59E0B'}`,
-                  color: syncStatus.phase === 'error' ? '#FCA5A5' : '#FCD34D',
+                  color: syncStatus.phase === 'error' ? 'var(--c-red)' : '#FCD34D',
                 }}
               >
                 <span>

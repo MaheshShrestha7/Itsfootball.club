@@ -105,8 +105,8 @@ export default function EventDoorCheckinPage({
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div className="glass-panel text-center" style={{ maxWidth: '480px', padding: '2.5rem' }}>
-          <AlertTriangle size={48} color="#EF4444" style={{ margin: '0 auto 1rem auto' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+          <AlertTriangle size={48} color="var(--c-red)" style={{ margin: '0 auto 1rem auto' }} />
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
             Event Not Found
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
@@ -189,7 +189,7 @@ export default function EventDoorCheckinPage({
             <span>Back to Event Details</span>
           </Link>
 
-          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid #10B981' }}>
+          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid #10B981' }}>
             <QrCode size={12} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
             EVENT GATE CHECK-IN
           </span>
@@ -226,7 +226,7 @@ export default function EventDoorCheckinPage({
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {event.category.toUpperCase()}
               </span>
-              <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                 {event.title}
               </h1>
             </div>
@@ -258,8 +258,8 @@ export default function EventDoorCheckinPage({
               background: 'rgba(239, 68, 68, 0.05)'
             }}
           >
-            <AlertTriangle size={48} color="#EF4444" style={{ margin: '0 auto 1.25rem auto' }} />
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+            <AlertTriangle size={48} color="var(--c-red)" style={{ margin: '0 auto 1.25rem auto' }} />
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               Door Self Check-In Closed
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', margin: '0 auto 1.75rem auto' }}>
@@ -294,22 +294,22 @@ export default function EventDoorCheckinPage({
                 margin: '0 auto 1.25rem auto'
               }}
             >
-              <CheckCircle2 size={36} color="#10B981" />
+              <CheckCircle2 size={36} color="var(--c-green)" />
             </div>
 
             <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
               CHECK-IN CONFIRMED
             </span>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
               Welcome, {result.attendeeName}!
             </h2>
-            <p style={{ color: '#10B981', fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--c-green)', fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.5rem' }}>
               {result.message}
             </p>
 
             <div
               style={{
-                background: 'rgba(0, 0, 0, 0.4)',
+                background: 'rgba(var(--shade-rgb), 0.4)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '1.25rem',
                 marginBottom: '1.75rem',
@@ -318,13 +318,13 @@ export default function EventDoorCheckinPage({
                 fontSize: '0.85rem'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Timestamp:</span>
-                <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{result.checkedInAt}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{result.checkedInAt}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Location:</span>
-                <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{event.location}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{event.location}</span>
               </div>
             </div>
 
@@ -357,7 +357,7 @@ export default function EventDoorCheckinPage({
             }}
           >
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.3rem' }}>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>
                 Gate Self-Check-In Station
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -374,7 +374,7 @@ export default function EventDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   padding: '0.75rem 1rem',
                   marginBottom: '1.25rem',
-                  color: '#EF4444',
+                  color: 'var(--c-red)',
                   fontSize: '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -403,9 +403,9 @@ export default function EventDoorCheckinPage({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <LogIn size={18} color="#10B981" />
+                  <LogIn size={18} color="var(--c-green)" />
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       Signed in as {signedInMemberName}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -430,7 +430,7 @@ export default function EventDoorCheckinPage({
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: '0.4rem',
-                background: 'rgba(0, 0, 0, 0.35)',
+                background: 'rgba(var(--shade-rgb), 0.35)',
                 padding: '0.3rem',
                 borderRadius: 'var(--radius-lg)',
                 marginBottom: '1.5rem',

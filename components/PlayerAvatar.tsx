@@ -49,9 +49,9 @@ export default function PlayerAvatar({ photoUrl, name, size = 32, fill = false, 
       style={{
         ...box,
         background: fill
-          ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02)), var(--club-primary, #1F2937)'
-          : 'rgba(255, 255, 255, 0.08)',
-        color: fill ? '#FFFFFF' : 'var(--text-secondary)',
+          ? 'linear-gradient(135deg, rgba(var(--tint-rgb), 0.10), rgba(var(--tint-rgb), 0.02)), var(--club-primary, #1F2937)'
+          : 'rgba(var(--tint-rgb), 0.08)',
+        color: fill ? 'var(--text-primary)' : 'var(--text-secondary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

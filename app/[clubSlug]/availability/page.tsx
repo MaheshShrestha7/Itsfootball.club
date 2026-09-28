@@ -227,12 +227,12 @@ function AvailabilityHub() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
             <Link href={`/${club.slug}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>{club.name}</Link>
             <ChevronRight size={14} />
-            <span style={{ color: '#FFFFFF' }}>Matchday Availability & RSVP</span>
+            <span style={{ color: 'var(--text-primary)' }}>Matchday Availability & RSVP</span>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: '#FFFFFF' }}>
+              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: 'var(--text-primary)' }}>
                 Pre-Match Availability Hub
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginTop: '0.35rem' }}>
@@ -248,7 +248,7 @@ function AvailabilityHub() {
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                 title="Copy general availability link"
               >
-                {copiedLink ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
+                {copiedLink ? <Check size={14} color="var(--c-green)" /> : <Copy size={14} />}
                 <span>{copiedLink ? 'Copied Link!' : 'Copy Team Link'}</span>
               </button>
 
@@ -257,7 +257,7 @@ function AvailabilityHub() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#25D366', color: '#FFFFFF', border: 'none' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#25D366', color: 'var(--text-primary)', border: 'none' }}
               >
                 <Share2 size={14} />
                 <span>Call-Up via WhatsApp</span>
@@ -273,7 +273,7 @@ function AvailabilityHub() {
             bottom: '24px',
             right: '24px',
             background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            color: '#FFFFFF',
+            color: 'var(--text-primary)',
             padding: '0.85rem 1.4rem',
             borderRadius: '12px',
             fontWeight: 800,
@@ -324,7 +324,7 @@ function AvailabilityHub() {
                   <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
                     {targetMatch.competition}
                   </span>
-                  <span style={{ fontSize: '0.78rem', color: '#F59E0B', fontWeight: 800 }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--c-amber)', fontWeight: 800 }}>
                     {targetMatch.period.toUpperCase().replace('_', ' ')}
                   </span>
                 </div>
@@ -332,12 +332,12 @@ function AvailabilityHub() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>{targetMatch.home_team_name}</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{targetMatch.home_team_name}</span>
                   </div>
                   <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-muted)' }}>VS</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: 'row-reverse' }}>
                     <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.away_team_logo} alt={`${targetMatch.away_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>{targetMatch.away_team_name}</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{targetMatch.away_team_name}</span>
                   </div>
                 </div>
 
@@ -361,7 +361,7 @@ function AvailabilityHub() {
             {/* 2. Player 1-Tap Response Form */}
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Shield size={18} color={club.primary_color} /> Confirm Your Status
                 </h3>
 
@@ -406,14 +406,14 @@ function AvailabilityHub() {
                     padding: '1.1rem 0.5rem',
                     borderRadius: '12px',
                     border: rsvpStatus === 'available' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'available' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                    background: rsvpStatus === 'available' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <CheckCircle2 size={24} color="#10B981" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>I&apos;m In</span>
-                  <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>Available</span>
+                  <CheckCircle2 size={24} color="var(--c-green)" />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>I&apos;m In</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700 }}>Available</span>
                 </button>
 
                 {/* Maybe */}
@@ -429,14 +429,14 @@ function AvailabilityHub() {
                     padding: '1.1rem 0.5rem',
                     borderRadius: '12px',
                     border: rsvpStatus === 'maybe' ? '2px solid #F59E0B' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'maybe' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                    background: rsvpStatus === 'maybe' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <AlertCircle size={24} color="#F59E0B" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>Doubtful</span>
-                  <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>Maybe</span>
+                  <AlertCircle size={24} color="var(--c-amber)" />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>Doubtful</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>Maybe</span>
                 </button>
 
                 {/* Unavailable */}
@@ -452,14 +452,14 @@ function AvailabilityHub() {
                     padding: '1.1rem 0.5rem',
                     borderRadius: '12px',
                     border: rsvpStatus === 'unavailable' ? '2px solid #EF4444' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'unavailable' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                    background: rsvpStatus === 'unavailable' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <XCircle size={24} color="#EF4444" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>Can&apos;t Make It</span>
-                  <span style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: 700 }}>Out</span>
+                  <XCircle size={24} color="var(--c-red)" />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>Can&apos;t Make It</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--c-red)', fontWeight: 700 }}>Out</span>
                 </button>
               </div>
 
@@ -491,7 +491,7 @@ function AvailabilityHub() {
               {/* Personal Magic Link Box for Player */}
               {currentPlayer && (
                 <div style={{
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'rgba(var(--shade-rgb), 0.3)',
                   padding: '0.85rem',
                   borderRadius: '10px',
                   border: '1px solid var(--border-subtle)',
@@ -514,7 +514,7 @@ function AvailabilityHub() {
                     style={{ padding: '0.35rem 0.65rem', flexShrink: 0 }}
                     title="Copy unique one-tap magic link"
                   >
-                    {copiedText ? <Check size={13} color="#10B981" /> : <Copy size={13} />}
+                    {copiedText ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
                   </button>
                 </div>
               )}
@@ -523,7 +523,7 @@ function AvailabilityHub() {
             {/* Quick Link to Draft Lineup for Coaches */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>Coach Draft Workbench</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>Coach Draft Workbench</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Experiment with tactical shapes and lineup rotations.</div>
               </div>
               <Link
@@ -542,7 +542,7 @@ function AvailabilityHub() {
             {/* Header & Metric Badges */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Users size={20} color={club.primary_color} /> Squad Availability Breakdown
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.2rem' }}>
@@ -554,21 +554,21 @@ function AvailabilityHub() {
             {/* 4 Status KPI Counters */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10B981' }}>{confirmedCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#10B981', textTransform: 'uppercase' }}>Confirmed</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-green)' }}>{confirmedCount}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-green)', textTransform: 'uppercase' }}>Confirmed</div>
               </div>
 
               <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#F59E0B' }}>{maybeCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase' }}>Doubtful</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-amber)' }}>{maybeCount}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-amber)', textTransform: 'uppercase' }}>Doubtful</div>
               </div>
 
               <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#EF4444' }}>{unavailableCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#EF4444', textTransform: 'uppercase' }}>Out</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-red)' }}>{unavailableCount}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-red)', textTransform: 'uppercase' }}>Out</div>
               </div>
 
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-muted)' }}>{pendingCount}</div>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pending</div>
               </div>
@@ -585,7 +585,7 @@ function AvailabilityHub() {
                 style={{ flex: 1, minWidth: '160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
               />
 
-              <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                 {['all', 'available', 'maybe', 'unavailable'].map(st => (
                   <button
                     key={st}
@@ -620,7 +620,7 @@ function AvailabilityHub() {
                     available: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10B981', border: 'rgba(16, 185, 129, 0.4)', icon: CheckCircle2, label: 'Available' },
                     maybe: { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B', border: 'rgba(245, 158, 11, 0.4)', icon: AlertCircle, label: 'Doubtful' },
                     unavailable: { bg: 'rgba(239, 68, 68, 0.15)', text: '#EF4444', border: 'rgba(239, 68, 68, 0.4)', icon: XCircle, label: 'Out' },
-                    pending: { bg: 'rgba(255, 255, 255, 0.05)', text: 'var(--text-muted)', border: 'var(--border-subtle)', icon: HelpCircle, label: 'Pending' },
+                    pending: { bg: 'rgba(var(--tint-rgb), 0.05)', text: 'var(--text-muted)', border: 'var(--border-subtle)', icon: HelpCircle, label: 'Pending' },
                   };
 
                   const cfg = statusColors[availability.status] || statusColors.pending;
@@ -635,7 +635,7 @@ function AvailabilityHub() {
                         justifyContent: 'space-between',
                         padding: '0.65rem 0.85rem',
                         borderRadius: '10px',
-                        background: 'rgba(15, 23, 42, 0.6)',
+                        background: 'rgba(var(--dk-15-23-42), 0.6)',
                         border: '1px solid var(--border-subtle)',
                         gap: '0.75rem',
                       }}
@@ -645,7 +645,7 @@ function AvailabilityHub() {
                         <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={36} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {player.full_name}
                             </span>
                             <span style={{ fontSize: '0.7rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
@@ -657,7 +657,7 @@ function AvailabilityHub() {
                           </div>
 
                           {availability.note && (
-                            <div style={{ fontSize: '0.74rem', color: '#F59E0B', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--c-amber)', fontStyle: 'italic', marginTop: '0.15rem' }}>
                               &ldquo;{availability.note}&rdquo;
                             </div>
                           )}
@@ -695,8 +695,8 @@ function AvailabilityHub() {
                             padding: '0.35rem 0.6rem',
                             borderRadius: '8px',
                             border: `1px solid ${availability.status === 'available' ? '#10B981' : 'var(--border-subtle)'}`,
-                            background: availability.status === 'available' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                            color: '#10B981',
+                            background: availability.status === 'available' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.03)',
+                            color: 'var(--c-green)',
                             fontSize: '0.7rem',
                             fontWeight: 800,
                             cursor: 'pointer',
@@ -717,8 +717,8 @@ function AvailabilityHub() {
                             padding: '0.35rem 0.6rem',
                             borderRadius: '8px',
                             border: `1px solid ${availability.status === 'unavailable' ? '#EF4444' : 'var(--border-subtle)'}`,
-                            background: availability.status === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                            color: '#EF4444',
+                            background: availability.status === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(var(--tint-rgb), 0.03)',
+                            color: 'var(--c-red)',
                             fontSize: '0.7rem',
                             fontWeight: 800,
                             cursor: 'pointer',
@@ -808,7 +808,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
 
         {state === 'invalid' && (
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>Link not recognised</h2>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Link not recognised</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               This availability link is missing or no longer valid. Ask your club for your personal link.
             </p>
@@ -817,7 +817,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
 
         {state === 'ready' && record && (
           <>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
               {record.member ? `Hi ${record.member.full_name.split(' ')[0]}, are you in?` : 'Are you available?'}
             </h2>
             {match && (
@@ -853,7 +853,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
             />
 
             {message && (
-              <div role="status" style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: message.ok ? '#6EE7B7' : '#FCA5A5' }}>
+              <div role="status" style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: message.ok ? '#6EE7B7' : 'var(--c-red)' }}>
                 {message.text}
               </div>
             )}

@@ -108,7 +108,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             width: '68px',
             height: '68px',
             borderRadius: '20px',
-            background: `linear-gradient(135deg, ${club.primary_color}25, rgba(0, 0, 0, 0.4))`,
+            background: `linear-gradient(135deg, ${club.primary_color}25, rgba(var(--shade-rgb), 0.4))`,
             border: `2px solid ${club.primary_color}`,
             display: 'flex',
             alignItems: 'center',
@@ -128,7 +128,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             ADMIN SIGN-IN
           </span>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
             {club.name} Admin Portal
           </h2>
 
@@ -144,7 +144,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
                 border: '1px solid #EF4444',
                 borderRadius: 'var(--radius-md)',
                 padding: '0.75rem 1rem',
-                color: '#EF4444',
+                color: 'var(--c-red)',
                 fontSize: '0.8rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -249,7 +249,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.25rem auto',
-            color: '#EF4444',
+            color: 'var(--c-red)',
           }}>
             <ShieldAlert size={32} />
           </div>
@@ -258,13 +258,13 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             NO ADMIN ACCESS
           </span>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
             Access Restricted
           </h2>
 
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
             You are signed in as <strong>{user.full_name}</strong> with role{' '}
-            <span style={{ color: '#F59E0B', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span style={{ color: 'var(--c-amber)', fontWeight: 700, textTransform: 'uppercase' }}>
               {userRole || 'Supporter'}
             </span>
             . Only the club&apos;s owner and admins can open this page. Ask a club admin to give your account admin access.

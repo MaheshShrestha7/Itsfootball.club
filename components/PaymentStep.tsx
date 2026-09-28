@@ -84,8 +84,8 @@ export default function PaymentStep(props: PaymentStepProps) {
   if (sent) {
     return (
       <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center' }}>
-        <CheckCircle2 size={28} color="#10B981" style={{ marginBottom: '0.5rem' }} />
-        <div style={{ fontWeight: 800, color: '#FFFFFF' }}>Receipt sent</div>
+        <CheckCircle2 size={28} color="var(--c-green)" style={{ marginBottom: '0.5rem' }} />
+        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Receipt sent</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.35rem 0 0' }}>
           The club treasurer will check the transfer and confirm your payment.
         </p>
@@ -96,7 +96,7 @@ export default function PaymentStep(props: PaymentStepProps) {
   return (
     <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'left' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', marginBottom: '1rem' }}>
-        <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{label}</div>
+        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{label}</div>
         <div style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--club-primary)' }}>{formatMoney(amountCents, currency)}</div>
       </div>
 
@@ -129,10 +129,10 @@ export default function PaymentStep(props: PaymentStepProps) {
 
           {method === 'bank' && (
             <form onSubmit={sendReceipt} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.85rem', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
+              <div style={{ background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.85rem', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
                 {settings?.bank_details}
-                {'\n\n'}Amount: <strong style={{ color: '#FFFFFF' }}>{formatMoney(amountCents, currency)}</strong>
-                {'\n'}Reference: <strong style={{ color: '#F59E0B' }}>{reference}</strong>
+                {'\n\n'}Amount: <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(amountCents, currency)}</strong>
+                {'\n'}Reference: <strong style={{ color: 'var(--c-amber)' }}>{reference}</strong>
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="payment-reference">Reference you used</label>
@@ -152,7 +152,7 @@ export default function PaymentStep(props: PaymentStepProps) {
       )}
 
       {error && (
-        <p role="alert" style={{ color: '#EF4444', fontSize: '0.85rem', marginTop: '0.75rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+        <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', marginTop: '0.75rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
           <AlertCircle size={15} /> {error}
         </p>
       )}

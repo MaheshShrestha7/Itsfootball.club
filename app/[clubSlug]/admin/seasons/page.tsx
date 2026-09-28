@@ -206,7 +206,7 @@ export default function AdminSeasonsPage({
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
             CLUB GOVERNANCE • SEASONS
           </span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Season Management
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
@@ -231,7 +231,7 @@ export default function AdminSeasonsPage({
           border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
           padding: '0.85rem 1.25rem',
           borderRadius: 'var(--radius-md)',
-          color: feedback.type === 'error' ? '#EF4444' : '#10B981',
+          color: feedback.type === 'error' ? 'var(--c-red)' : 'var(--c-green)',
           fontWeight: 700,
           marginBottom: '1.75rem',
           display: 'flex',
@@ -251,7 +251,7 @@ export default function AdminSeasonsPage({
             padding: '1.75rem 2rem',
             marginBottom: '2.5rem',
             border: '1px solid rgba(16, 185, 129, 0.35)',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(var(--dk-15-23-42), 0.7) 100%)',
             position: 'relative',
             overflow: 'hidden',
           }}
@@ -277,7 +277,7 @@ export default function AdminSeasonsPage({
                   padding: '0.25rem 0.75rem',
                   borderRadius: '999px',
                   background: 'rgba(16, 185, 129, 0.2)',
-                  color: '#10B981',
+                  color: 'var(--c-green)',
                   fontWeight: 800,
                   fontSize: '0.75rem',
                   textTransform: 'uppercase',
@@ -291,8 +291,8 @@ export default function AdminSeasonsPage({
                 </span>
               </div>
 
-              <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <CalendarDays size={26} color="#10B981" />
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <CalendarDays size={26} color="var(--c-green)" />
                 {activeSeason.name} Season
               </h2>
 
@@ -301,8 +301,8 @@ export default function AdminSeasonsPage({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span>📅 From: <strong style={{ color: '#FFFFFF' }}>{activeSeason.start_date}</strong></span>
-                <span>🏁 Until: <strong style={{ color: '#FFFFFF' }}>{activeSeason.end_date}</strong></span>
+                <span>📅 From: <strong style={{ color: 'var(--text-primary)' }}>{activeSeason.start_date}</strong></span>
+                <span>🏁 Until: <strong style={{ color: 'var(--text-primary)' }}>{activeSeason.end_date}</strong></span>
               </div>
             </div>
 
@@ -310,7 +310,7 @@ export default function AdminSeasonsPage({
             <div style={{
               display: 'flex',
               gap: '1rem',
-              background: 'rgba(0,0,0,0.3)',
+              background: 'rgba(var(--shade-rgb), 0.3)',
               padding: '1rem 1.5rem',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-subtle)',
@@ -320,17 +320,17 @@ export default function AdminSeasonsPage({
                 return (
                   <>
                     <div style={{ textAlign: 'center', padding: '0 0.5rem' }}>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10B981' }}>{stats.matchesCount}</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-green)' }}>{stats.matchesCount}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Matches</div>
                     </div>
                     <div style={{ width: '1px', background: 'var(--border-subtle)' }} />
                     <div style={{ textAlign: 'center', padding: '0 0.5rem' }}>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F59E0B' }}>{stats.eventsCount}</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-amber)' }}>{stats.eventsCount}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Events</div>
                     </div>
                     <div style={{ width: '1px', background: 'var(--border-subtle)' }} />
                     <div style={{ textAlign: 'center', padding: '0 0.5rem' }}>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#3B82F6' }}>{stats.committeeCount}</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-blue)' }}>{stats.committeeCount}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Committee</div>
                     </div>
                   </>
@@ -345,7 +345,7 @@ export default function AdminSeasonsPage({
       <div className="glass-panel" style={{ padding: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Club Seasons Registry ({clubSeasons.length})
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -355,9 +355,9 @@ export default function AdminSeasonsPage({
         </div>
 
         {clubSeasons.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+          <div style={{ textAlign: 'center', padding: '3.5rem 1rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '12px' }}>
             <CalendarDays size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem', opacity: 0.6 }} />
-            <h4 style={{ color: '#FFFFFF', fontWeight: 700, fontSize: '1.1rem' }}>No Seasons Defined Yet</h4>
+            <h4 style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.1rem' }}>No Seasons Defined Yet</h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '400px', margin: '0.5rem auto 1.5rem' }}>
               Create your club&apos;s first campaign season (e.g. 2026/27) to associate matches, executive committee appointments, and calendar events.
             </p>
@@ -380,7 +380,7 @@ export default function AdminSeasonsPage({
                     justifyContent: 'space-between',
                     padding: '1.25rem 1.5rem',
                     borderRadius: '12px',
-                    background: season.is_current ? 'rgba(16, 185, 129, 0.05)' : 'rgba(0, 0, 0, 0.3)',
+                    background: season.is_current ? 'rgba(16, 185, 129, 0.05)' : 'rgba(var(--shade-rgb), 0.3)',
                     border: season.is_current ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-subtle)',
                     gap: '1.25rem',
                     transition: 'all 0.2s ease',
@@ -392,11 +392,11 @@ export default function AdminSeasonsPage({
                       width: '46px',
                       height: '46px',
                       borderRadius: '12px',
-                      background: season.is_current ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      background: season.is_current ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.05)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: season.is_current ? '#10B981' : 'var(--text-muted)',
+                      color: season.is_current ? 'var(--c-green)' : 'var(--text-muted)',
                       border: season.is_current ? '1px solid #10B981' : '1px solid var(--border-subtle)',
                     }}>
                       <CalendarDays size={22} />
@@ -404,7 +404,7 @@ export default function AdminSeasonsPage({
 
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                           {season.name}
                         </span>
                         {season.is_current && (
@@ -423,7 +423,7 @@ export default function AdminSeasonsPage({
                         <span className="badge" style={{
                           fontSize: '0.7rem',
                           background: season.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : season.status === 'upcoming' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(148, 163, 184, 0.15)',
-                          color: season.status === 'active' ? '#10B981' : season.status === 'upcoming' ? '#3B82F6' : '#94A3B8',
+                          color: season.status === 'active' ? 'var(--c-green)' : season.status === 'upcoming' ? 'var(--c-blue)' : 'var(--text-secondary)',
                         }}>
                           {season.status.toUpperCase()}
                         </span>
@@ -438,18 +438,18 @@ export default function AdminSeasonsPage({
 
                   {/* Middle Linked Counters */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.82rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.matchesCount > 0 ? '#FFFFFF' : 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.matchesCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Radio size={14} color="var(--club-primary)" />
                       <span><strong>{stats.matchesCount}</strong> matches</span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.eventsCount > 0 ? '#FFFFFF' : 'var(--text-muted)' }}>
-                      <Calendar size={14} color="#F59E0B" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.eventsCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      <Calendar size={14} color="var(--c-amber)" />
                       <span><strong>{stats.eventsCount}</strong> events</span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.committeeCount > 0 ? '#FFFFFF' : 'var(--text-muted)' }}>
-                      <Award size={14} color="#3B82F6" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.committeeCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      <Award size={14} color="var(--c-blue)" />
                       <span><strong>{stats.committeeCount}</strong> committee</span>
                     </div>
                   </div>
@@ -460,7 +460,7 @@ export default function AdminSeasonsPage({
                       <button
                         onClick={() => handleSetCurrent(season)}
                         className="btn btn-secondary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#10B981' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-green)' }}
                         title="Set as active current season"
                       >
                         <Star size={14} />
@@ -481,7 +481,7 @@ export default function AdminSeasonsPage({
                     <button
                       onClick={() => setSeasonToDelete(season)}
                       className="btn btn-secondary btn-sm"
-                      style={{ color: '#EF4444', display: 'flex', alignItems: 'center' }}
+                      style={{ color: 'var(--c-red)', display: 'flex', alignItems: 'center' }}
                       title="Delete season"
                     >
                       <Trash2 size={14} />
@@ -499,23 +499,23 @@ export default function AdminSeasonsPage({
         <Link href={`/${club.slug}/admin/match-center`} className="glass-panel glass-panel-interactive" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>MATCHES & FIXTURES</div>
-            <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem', marginTop: '2px' }}>Manage Match Center</div>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginTop: '2px' }}>Manage Match Center</div>
           </div>
           <ArrowRight size={18} color="var(--text-muted)" />
         </Link>
 
         <Link href={`/${club.slug}/admin/committee`} className="glass-panel glass-panel-interactive" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3B82F6', textTransform: 'uppercase' }}>GOVERNANCE</div>
-            <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem', marginTop: '2px' }}>Executive Committee Appointments</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-blue)', textTransform: 'uppercase' }}>GOVERNANCE</div>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginTop: '2px' }}>Executive Committee Appointments</div>
           </div>
           <ArrowRight size={18} color="var(--text-muted)" />
         </Link>
 
         <Link href={`/${club.slug}/admin/events`} className="glass-panel glass-panel-interactive" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#F59E0B', textTransform: 'uppercase' }}>CALENDAR</div>
-            <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem', marginTop: '2px' }}>Club Events & Trainings</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-amber)', textTransform: 'uppercase' }}>CALENDAR</div>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginTop: '2px' }}>Club Events & Trainings</div>
           </div>
           <ArrowRight size={18} color="var(--text-muted)" />
         </Link>
@@ -544,8 +544,8 @@ export default function AdminSeasonsPage({
             boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CalendarDays size={20} color="#10B981" />
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CalendarDays size={20} color="var(--c-green)" />
                 {editingSeason ? 'Edit Season Details' : 'Create New Club Season'}
               </h3>
               <button
@@ -562,7 +562,7 @@ export default function AdminSeasonsPage({
                 border: '1px solid #EF4444',
                 padding: '0.75rem 1rem',
                 borderRadius: '8px',
-                color: '#EF4444',
+                color: 'var(--c-red)',
                 fontSize: '0.85rem',
                 marginBottom: '1.25rem',
                 display: 'flex',
@@ -577,7 +577,7 @@ export default function AdminSeasonsPage({
             <form onSubmit={handleSaveSeason}>
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label htmlFor="seasons-season-name-title" className="form-label" style={{ fontWeight: 700 }}>
-                  Season Name / Title <span style={{ color: '#EF4444' }}>*</span>
+                  Season Name / Title <span style={{ color: 'var(--c-red)' }}>*</span>
                 </label>
                 <input id="seasons-season-name-title"
                   type="text"
@@ -595,7 +595,7 @@ export default function AdminSeasonsPage({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="seasons-start-date" className="form-label" style={{ fontWeight: 700 }}>
-                    Start Date <span style={{ color: '#EF4444' }}>*</span>
+                    Start Date <span style={{ color: 'var(--c-red)' }}>*</span>
                   </label>
                   <input id="seasons-start-date"
                     type="date"
@@ -608,7 +608,7 @@ export default function AdminSeasonsPage({
 
                 <div className="form-group">
                   <label htmlFor="seasons-end-date" className="form-label" style={{ fontWeight: 700 }}>
-                    End Date <span style={{ color: '#EF4444' }}>*</span>
+                    End Date <span style={{ color: 'var(--c-red)' }}>*</span>
                   </label>
                   <input id="seasons-end-date"
                     type="date"
@@ -634,7 +634,7 @@ export default function AdminSeasonsPage({
               </div>
 
               <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(var(--tint-rgb), 0.03)',
                 padding: '0.85rem 1rem',
                 borderRadius: '8px',
                 border: '1px solid var(--border-subtle)',
@@ -651,7 +651,7 @@ export default function AdminSeasonsPage({
                   onChange={e => setFormIsCurrent(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: '#10B981', cursor: 'pointer' }}
                 />
-                <label htmlFor="isCurrentSeason" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#FFFFFF' }}>
+                <label htmlFor="isCurrentSeason" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Set as Club&apos;s Active Current Season
                 </label>
               </div>
@@ -710,9 +710,9 @@ export default function AdminSeasonsPage({
             border: '1px solid rgba(239, 68, 68, 0.4)',
             background: 'var(--bg-surface)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#EF4444' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--c-red)' }}>
               <AlertTriangle size={24} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                 Delete Season &quot;{seasonToDelete.name}&quot;?
               </h3>
             </div>
@@ -724,7 +724,7 @@ export default function AdminSeasonsPage({
                 <div style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   {totalLinked > 0 ? (
                     <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', marginBottom: '0.75rem' }}>
-                      <strong style={{ color: '#EF4444' }}>Warning: Linked Items Detected!</strong>
+                      <strong style={{ color: 'var(--c-red)' }}>Warning: Linked Items Detected!</strong>
                       <div style={{ marginTop: '0.25rem', fontSize: '0.85rem' }}>
                         This season currently has <strong>{stats.matchesCount} matches</strong>, <strong>{stats.eventsCount} events</strong>, and <strong>{stats.committeeCount} committee appointments</strong> associated with it.
                       </div>

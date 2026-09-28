@@ -133,7 +133,7 @@ export default function AdminSponsorsPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB SPONSORS & PARTNERS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Club Sponsors & Commercial Partners
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -153,14 +153,14 @@ export default function AdminSponsorsPage({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0.85rem 1.25rem',
-        background: 'rgba(255, 255, 255, 0.03)',
+        background: 'rgba(var(--tint-rgb), 0.03)',
         border: '1px solid var(--border-subtle)',
         borderRadius: '12px',
         marginBottom: '1.5rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Sparkles size={16} color="#F59E0B" />
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>
+          <Sparkles size={16} color="var(--c-amber)" />
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             Sponsor Space Scaling Active:
           </span>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -183,7 +183,7 @@ export default function AdminSponsorsPage({
         <div style={{
           marginBottom: '2rem',
           padding: '1.25rem',
-          background: 'rgba(0, 0, 0, 0.25)',
+          background: 'rgba(var(--shade-rgb), 0.25)',
           border: '1px solid var(--border-subtle)',
           borderRadius: '14px',
         }}>
@@ -208,10 +208,10 @@ export default function AdminSponsorsPage({
                   style={{
                     padding: isXL ? '1rem 1.5rem' : isLG ? '0.85rem 1.25rem' : isMD ? '0.7rem 1rem' : '0.5rem 0.8rem',
                     background: isXL
-                      ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.15), rgba(30, 41, 59, 0.7))'
+                      ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.15), rgba(var(--dk-30-41-59), 0.7))'
                       : isLG
                       ? 'rgba(245, 158, 11, 0.06)'
-                      : 'rgba(255, 255, 255, 0.03)',
+                      : 'rgba(var(--tint-rgb), 0.03)',
                     border: isXL
                       ? '1px solid rgba(245, 158, 11, 0.5)'
                       : isLG
@@ -236,18 +236,18 @@ export default function AdminSponsorsPage({
                     }}
                   />
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: '#FFFFFF' }}>
+                    <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
                       {sponsor.name}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
                       <span className="badge" style={{
                         fontSize: '0.7rem',
-                        backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                        color: sponsor.tier === 'platinum' ? '#F59E0B' : 'var(--text-muted)',
+                        backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(var(--tint-rgb), 0.08)',
+                        color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-muted)',
                       }}>
                         {sponsor.tier.toUpperCase()}
                       </span>
-                      <span style={{ fontSize: '0.7rem', color: isXL ? '#F59E0B' : 'var(--text-muted)', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.7rem', color: isXL ? 'var(--c-amber)' : 'var(--text-muted)', fontWeight: 600 }}>
                         {scale.toUpperCase()} Space
                       </span>
                     </div>
@@ -287,23 +287,23 @@ export default function AdminSponsorsPage({
                     width: scale === 'xl' ? '70px' : '55px',
                     height: scale === 'xl' ? '46px' : '38px',
                     objectFit: 'contain',
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'rgba(var(--tint-rgb), 0.05)',
                     padding: '4px',
                     borderRadius: '6px',
                   }}
                 />
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>{sponsor.name}</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{sponsor.name}</span>
                     <span className="badge" style={{
-                      backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                      color: sponsor.tier === 'platinum' ? '#F59E0B' : 'var(--text-secondary)',
+                      backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.08)',
+                      color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-secondary)',
                     }}>
                       {sponsor.tier.toUpperCase()}
                     </span>
                     <span className="badge" style={{
-                      backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                      color: scale === 'xl' ? '#F59E0B' : 'var(--text-muted)',
+                      backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                      color: scale === 'xl' ? 'var(--c-amber)' : 'var(--text-muted)',
                       fontSize: '0.7rem',
                       display: 'flex',
                       alignItems: 'center',
@@ -315,8 +315,8 @@ export default function AdminSponsorsPage({
                     </span>
                     {sponsor.package_status && (
                       <span className="badge" style={{
-                        backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                        color: sponsor.package_status === 'paid' ? '#10B981' : sponsor.package_status === 'prospect' ? '#3B82F6' : 'var(--text-muted)',
+                        backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                        color: sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
                         fontSize: '0.7rem',
                       }}>
                         {PACKAGE_STATUS_LABEL[sponsor.package_status]}
@@ -456,7 +456,7 @@ export default function AdminSponsorsPage({
             padding: '2rem',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -475,9 +475,9 @@ export default function AdminSponsorsPage({
                     style={{
                       justifyContent: 'center',
                       gap: '0.4rem',
-                      background: form.scope === 'club' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)',
+                      background: form.scope === 'club' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
                       border: form.scope === 'club' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      color: form.scope === 'club' ? '#10B981' : 'var(--text-secondary)',
+                      color: form.scope === 'club' ? 'var(--c-green)' : 'var(--text-secondary)',
                     }}
                   >
                     <Shield size={14} /> Club Sponsor
@@ -489,9 +489,9 @@ export default function AdminSponsorsPage({
                     style={{
                       justifyContent: 'center',
                       gap: '0.4rem',
-                      background: form.scope === 'event' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)',
+                      background: form.scope === 'event' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
                       border: form.scope === 'event' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      color: form.scope === 'event' ? '#10B981' : 'var(--text-secondary)',
+                      color: form.scope === 'event' ? 'var(--c-green)' : 'var(--text-secondary)',
                     }}
                   >
                     <Calendar size={14} /> Event Sponsor
@@ -521,7 +521,7 @@ export default function AdminSponsorsPage({
                     ))}
                   </select>
                   {clubEvents.length === 0 && (
-                    <p style={{ fontSize: '0.75rem', color: '#F59E0B', marginTop: '0.35rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.35rem' }}>
                       No events yet - add one under Events first.
                     </p>
                   )}
@@ -610,7 +610,7 @@ export default function AdminSponsorsPage({
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <User size={14} color="var(--club-primary)" /> Sponsor Contact
                 </h4>
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
@@ -657,7 +657,7 @@ export default function AdminSponsorsPage({
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <DollarSign size={14} color="var(--club-primary)" /> Sponsorship Package
                 </h4>
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>

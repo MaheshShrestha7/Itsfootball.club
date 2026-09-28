@@ -45,13 +45,13 @@ export default function ScoreboardDigitRoll({
 
   return (
     <div
-      style={{
+      data-theme="dark" style={{
         position: 'relative',
         width: '68px',
         height: '84px',
-        background: 'linear-gradient(180deg, #0c121d 0%, #040609 100%)',
+        background: 'linear-gradient(180deg, #0c121d 0%, rgb(var(--dk-4-6-9)) 100%)',
         borderRadius: '12px',
-        border: `1.5px solid ${isGoal ? '#F59E0B' : 'rgba(255, 255, 255, 0.14)'}`,
+        border: `1.5px solid ${isGoal ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.14)'}`,
         boxShadow: isGoal
           ? `inset 0 0 20px rgba(245, 158, 11, 0.4), 0 0 25px rgba(245, 158, 11, 0.35)`
           : 'inset 0 2px 10px rgba(0, 0, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)',
@@ -83,7 +83,7 @@ export default function ScoreboardDigitRoll({
           right: 0,
           top: '50%',
           height: '1px',
-          background: 'rgba(255, 255, 255, 0.08)',
+          background: 'rgba(var(--tint-rgb), 0.08)',
           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.9)',
           zIndex: 5,
         }}
@@ -102,7 +102,7 @@ export default function ScoreboardDigitRoll({
             fontFamily: 'var(--font-heading)',
             fontSize: '3.6rem',
             fontWeight: 900,
-            color: '#FFFFFF',
+            color: 'var(--text-primary)',
             lineHeight: 1,
             animation:
               direction === 'up'
@@ -127,10 +127,10 @@ export default function ScoreboardDigitRoll({
           fontFamily: 'var(--font-heading)',
           fontSize: '3.6rem',
           fontWeight: 900,
-          color: isGoal ? '#F59E0B' : '#FFFFFF',
+          color: isGoal ? 'var(--c-amber)' : 'var(--text-primary)',
           textShadow: isGoal
             ? '0 0 25px #F59E0B, 0 0 10px #FFFFFF'
-            : '0 0 15px rgba(255, 255, 255, 0.25)',
+            : '0 0 15px rgba(var(--tint-rgb), 0.25)',
           lineHeight: 1,
           animation: isAnimating
             ? direction === 'up'

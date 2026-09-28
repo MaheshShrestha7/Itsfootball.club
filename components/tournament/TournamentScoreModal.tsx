@@ -83,7 +83,7 @@ export default function TournamentScoreModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 10, 20, 0.85)',
+        backgroundColor: 'rgba(var(--dk-4-6-9), 0.85)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -95,14 +95,14 @@ export default function TournamentScoreModal({
     >
       <div
         style={{
-          background: 'linear-gradient(135deg, #111827 0%, #0B1120 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
+          border: '1px solid rgba(var(--tint-rgb), 0.12)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '520px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(16, 185, 129, 0.15)',
           overflow: 'hidden',
-          color: '#FFFFFF',
+          color: 'var(--text-primary)',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -110,11 +110,11 @@ export default function TournamentScoreModal({
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'rgba(var(--tint-rgb), 0.02)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -128,7 +128,7 @@ export default function TournamentScoreModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#10B981',
+                color: 'var(--c-green)',
               }}
             >
               <Trophy size={18} />
@@ -176,10 +176,10 @@ export default function TournamentScoreModal({
                       width: '100%',
                       marginTop: '0.3rem',
                       padding: '0.5rem 0.6rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(var(--shade-rgb), 0.4)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontSize: '0.85rem',
                       colorScheme: 'dark',
                     }}
@@ -196,10 +196,10 @@ export default function TournamentScoreModal({
               gridTemplateColumns: '1fr auto 1fr',
               gap: '1rem',
               alignItems: 'center',
-              background: 'rgba(0, 0, 0, 0.4)',
+              background: 'rgba(var(--shade-rgb), 0.4)',
               padding: '1.25rem',
               borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(var(--tint-rgb), 0.06)',
               marginBottom: '1.25rem',
             }}
           >
@@ -225,10 +225,10 @@ export default function TournamentScoreModal({
                   fontSize: '1.75rem',
                   fontWeight: 900,
                   textAlign: 'center',
-                  background: 'rgba(15, 23, 42, 0.9)',
+                  background: 'rgba(var(--dk-15-23-42), 0.9)',
                   border: '2px solid rgba(16, 185, 129, 0.4)',
                   borderRadius: '10px',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   marginTop: '0.5rem',
                 }}
               />
@@ -261,10 +261,10 @@ export default function TournamentScoreModal({
                   fontSize: '1.75rem',
                   fontWeight: 900,
                   textAlign: 'center',
-                  background: 'rgba(15, 23, 42, 0.9)',
+                  background: 'rgba(var(--dk-15-23-42), 0.9)',
                   border: '2px solid rgba(16, 185, 129, 0.4)',
                   borderRadius: '10px',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   marginTop: '0.5rem',
                 }}
               />
@@ -285,9 +285,9 @@ export default function TournamentScoreModal({
                   style={{
                     padding: '0.65rem 0.5rem',
                     borderRadius: '8px',
-                    border: status === st ? '2px solid #10B981' : '1px solid rgba(255, 255, 255, 0.1)',
-                    background: status === st ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                    color: status === st ? '#10B981' : '#FFFFFF',
+                    border: status === st ? '2px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
+                    background: status === st ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
+                    color: status === st ? 'var(--c-green)' : 'var(--text-primary)',
                     fontWeight: 700,
                     fontSize: '0.8rem',
                     textTransform: 'uppercase',
@@ -313,7 +313,7 @@ export default function TournamentScoreModal({
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPensEnabled ? '0.75rem' : '0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F59E0B' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--c-amber)' }}>
                     Penalty Shootout (Ties)
                   </span>
                   {isLevelScore && (
@@ -382,7 +382,7 @@ export default function TournamentScoreModal({
           )}
 
           {error && (
-            <div role="alert" style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>
+            <div role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700 }}>
               ⚠ {error}
             </div>
           )}
@@ -400,14 +400,14 @@ export default function TournamentScoreModal({
                 gap: '0.4rem',
                 fontSize: '0.85rem',
                 padding: '0.75rem',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                color: '#FFFFFF',
+                background: 'rgba(var(--tint-rgb), 0.05)',
+                border: '1px solid rgba(var(--tint-rgb), 0.12)',
+                color: 'var(--text-primary)',
                 borderRadius: '8px',
                 textDecoration: 'none',
               }}
             >
-              <Radio size={15} color="#10B981" />
+              <Radio size={15} color="var(--c-green)" />
               <span>Match Center</span>
             </Link>
 

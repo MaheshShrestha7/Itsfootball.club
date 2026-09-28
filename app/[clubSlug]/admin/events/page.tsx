@@ -166,7 +166,7 @@ export default function AdminEventsPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB OPERATIONS & EVENTS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Club Events & Trainings Management
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -176,7 +176,7 @@ export default function AdminEventsPage({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {/* Season Filter Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
             <button
               onClick={() => setSeasonFilter('ALL')}
               style={{
@@ -222,7 +222,7 @@ export default function AdminEventsPage({
       {/* Events Table / Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {filteredEvents.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '12px' }}>
             <p style={{ color: 'var(--text-secondary)' }}>
               No events found for season &quot;{seasonFilter}&quot;.
             </p>
@@ -245,11 +245,11 @@ export default function AdminEventsPage({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
                   <span className="badge" style={{
                     backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.2)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                    color: evt.category === 'training' ? '#10B981' : evt.category === 'social' ? '#F59E0B' : '#3B82F6',
+                    color: evt.category === 'training' ? 'var(--c-green)' : evt.category === 'social' ? 'var(--c-amber)' : 'var(--c-blue)',
                   }}>
                     {evt.category.toUpperCase()}
                   </span>
-                  <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.7rem' }}>
+                  <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.7rem' }}>
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -257,7 +257,7 @@ export default function AdminEventsPage({
                   </span>
                 </div>
 
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 {evt.title}
               </h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
@@ -289,7 +289,7 @@ export default function AdminEventsPage({
                       alignItems: 'center',
                       gap: '0.4rem',
                       borderColor: isPinned ? '#10B981' : undefined,
-                      color: isPinned ? '#10B981' : 'var(--text-secondary)',
+                      color: isPinned ? 'var(--c-green)' : 'var(--text-secondary)',
                       background: isPinned ? 'rgba(16, 185, 129, 0.1)' : undefined
                     }}
                     title={isPinned ? 'Pinned to Hero Slider (Click to unpin)' : 'Pin to Hero Slider'}
@@ -308,7 +308,7 @@ export default function AdminEventsPage({
                   alignItems: 'center',
                   gap: '0.4rem',
                   borderColor: evt.door_qr_checkin_enabled ? '#3B82F6' : undefined,
-                  color: evt.door_qr_checkin_enabled ? '#3B82F6' : 'var(--text-secondary)',
+                  color: evt.door_qr_checkin_enabled ? 'var(--c-blue)' : 'var(--text-secondary)',
                 }}
                 title="Self Check-In QR Code"
               >
@@ -375,7 +375,7 @@ export default function AdminEventsPage({
             padding: '2rem',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingEventId ? 'Edit Club Event' : 'Add New Club Event'}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -529,17 +529,17 @@ export default function AdminEventsPage({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '1rem 1.4rem',
-          background: 'rgba(15, 23, 42, 0.96)',
+          background: 'rgba(var(--dk-15-23-42), 0.96)',
           border: '1.5px solid #10B981',
           borderRadius: '12px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: '#FFFFFF',
+          color: 'var(--text-primary)',
           fontSize: '0.9rem',
           fontWeight: 700,
           backdropFilter: 'blur(10px)',
           animation: 'fadeIn 0.2s ease-out'
         }}>
-          <Sparkles size={18} color="#10B981" />
+          <Sparkles size={18} color="var(--c-green)" />
           <span>{toastMessage}</span>
         </div>
       )}

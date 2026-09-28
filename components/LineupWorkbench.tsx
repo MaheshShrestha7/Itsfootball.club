@@ -7,9 +7,9 @@ import PlayerAvatar from './PlayerAvatar';
 import { ArrowLeftRight, CheckCircle2, XCircle, HelpCircle, AlertCircle, Users, GripVertical, X } from 'lucide-react';
 
 const STATUS: Record<AvailabilityStatus, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  available: { icon: CheckCircle2, color: '#10B981', label: 'Available' },
-  maybe: { icon: AlertCircle, color: '#F59E0B', label: 'Doubtful' },
-  unavailable: { icon: XCircle, color: '#EF4444', label: 'Out' },
+  available: { icon: CheckCircle2, color: 'var(--c-green)', label: 'Available' },
+  maybe: { icon: AlertCircle, color: 'var(--c-amber)', label: 'Doubtful' },
+  unavailable: { icon: XCircle, color: 'var(--c-red)', label: 'Out' },
   pending: { icon: HelpCircle, color: 'var(--text-muted)', label: 'Pending' },
 };
 
@@ -182,7 +182,7 @@ export default function LineupWorkbench({
           {pendingSub && (
             <div
               role="status"
-              style={{
+              data-theme="dark" style={{
                 position: 'sticky',
                 top: '0.5rem',
                 zIndex: 45,
@@ -195,7 +195,7 @@ export default function LineupWorkbench({
                 background: 'rgba(8, 30, 20, 0.95)',
                 border: '1px solid #10B981',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 fontSize: '0.82rem',
               }}
             >
@@ -242,8 +242,8 @@ export default function LineupWorkbench({
         {/* Bench */}
         <div className="lineup-workbench-bench glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={18} color="#3B82F6" /> Substitutes & Reserves
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Users size={18} color="var(--c-blue)" /> Substitutes & Reserves
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>({benchPlayers.length})</span>
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
@@ -259,7 +259,7 @@ export default function LineupWorkbench({
               borderRadius: '8px',
               padding: '0.65rem 0.75rem',
               textAlign: 'center',
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: 'rgba(var(--tint-rgb), 0.02)',
               transition: 'all 0.15s ease',
               display: 'flex',
               alignItems: 'center',
@@ -316,7 +316,7 @@ export default function LineupWorkbench({
                       justifyContent: 'space-between',
                       padding: '0.5rem 0.65rem 0.5rem 0.35rem',
                       borderRadius: '8px',
-                      background: isPending ? 'rgba(16, 185, 129, 0.14)' : 'rgba(15, 23, 42, 0.65)',
+                      background: isPending ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--dk-15-23-42), 0.65)',
                       border: `1px solid ${isPending ? '#10B981' : 'var(--border-subtle)'}`,
                       gap: '0.5rem',
                       cursor: 'grab',
@@ -345,7 +345,7 @@ export default function LineupWorkbench({
                       </span>
                       <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {player.full_name}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -387,7 +387,7 @@ export default function LineupWorkbench({
       {/* Drag ghost follows the pointer; pointer-events:none so hit-testing sees the pitch underneath */}
       {ghost && (
         <div
-          style={{
+          data-theme="dark" style={{
             position: 'fixed',
             left: ghost.x,
             top: ghost.y,
@@ -435,8 +435,8 @@ export default function LineupWorkbench({
             style={{ maxWidth: '440px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ArrowLeftRight size={18} color="#3B82F6" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ArrowLeftRight size={18} color="var(--c-blue)" />
                 {isEmptySlot(swapSlot) ? `Fill ${swapSlot.position} slot` : `Replace ${swapSlot.name}`}
               </h3>
               <button
@@ -473,11 +473,11 @@ export default function LineupWorkbench({
                         justifyContent: 'space-between',
                         padding: '0.65rem 0.85rem',
                         borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.04)',
+                        background: 'rgba(var(--tint-rgb), 0.04)',
                         border: '1px solid var(--border-subtle)',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        color: '#FFFFFF',
+                        color: 'var(--text-primary)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>

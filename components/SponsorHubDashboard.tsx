@@ -88,12 +88,12 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   const maxDayImpressions = Math.max(...data.byDay.map(d => d.impressions), 1);
 
   const kpiCards = [
-    { key: 'impr', label: 'Impressions', icon: Eye, value: data.totals.impressions.toLocaleString(), color: '#10B981' },
-    { key: 'reach', label: 'Unique Reach', icon: Users2, value: data.totals.uniqueReach.toLocaleString(), color: '#3B82F6' },
-    { key: 'clicks', label: 'Clicks & Interactions', icon: MousePointerClick, value: data.totals.clicks.toLocaleString(), color: '#F59E0B' },
-    { key: 'ctr', label: 'CTR', icon: Percent, value: `${data.totals.ctr.toFixed(2)}%`, color: '#A855F7' },
+    { key: 'impr', label: 'Impressions', icon: Eye, value: data.totals.impressions.toLocaleString(), color: 'var(--c-green)' },
+    { key: 'reach', label: 'Unique Reach', icon: Users2, value: data.totals.uniqueReach.toLocaleString(), color: 'var(--c-blue)' },
+    { key: 'clicks', label: 'Clicks & Interactions', icon: MousePointerClick, value: data.totals.clicks.toLocaleString(), color: 'var(--c-amber)' },
+    { key: 'ctr', label: 'CTR', icon: Percent, value: `${data.totals.ctr.toFixed(2)}%`, color: 'var(--c-purple)' },
     { key: 'viewability', label: 'Viewability Rate', icon: ShieldCheck, value: `${data.totals.viewabilityRate.toFixed(1)}%`, color: '#22D3EE' },
-    { key: 'ecpm', label: 'eCPM', icon: DollarSign, value: ecpm > 0 ? `$${ecpm.toFixed(2)}` : '—', color: '#EF4444' },
+    { key: 'ecpm', label: 'eCPM', icon: DollarSign, value: ecpm > 0 ? `$${ecpm.toFixed(2)}` : '—', color: 'var(--c-red)' },
   ];
 
   const handleExportCsv = () => {
@@ -125,7 +125,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.75rem' }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>SPONSOR HUB &middot; MEDIA KIT VIEW</span>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF' }}>Advertiser & Sponsor Performance</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)' }}>Advertiser & Sponsor Performance</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             Delivery, engagement, and audience reporting for every sponsor placement on {club.name}&apos;s site.
           </p>
@@ -133,12 +133,12 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {range === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
+              <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
-              <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.75rem' }} />
+              <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.3rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(var(--tint-rgb), 0.03)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.3rem' }}>
             {([['30d', 'Last 30 Days'], ['qtd', 'Quarter-to-date'], ['custom', 'Custom Campaign']] as [DateRange, string][]).map(([key, label]) => (
               <button
                 key={key}
@@ -166,7 +166,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: '0.6rem', padding: '1.25rem',
           borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.35)', background: 'rgba(59, 130, 246, 0.08)',
-          marginBottom: '2rem', fontSize: '0.82rem', color: '#93C5FD',
+          marginBottom: '2rem', fontSize: '0.82rem', color: 'var(--c-sky)',
         }}>
           <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
           <span>
@@ -188,7 +188,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{card.label.toUpperCase()}</span>
                     <Icon size={16} color={card.color} />
                   </div>
-                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF' }}>{card.value}</div>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)' }}>{card.value}</div>
                 </div>
               );
             })}
@@ -197,7 +197,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           {/* Placement performance + engagement depth */}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem' }}>Placement Performance</h3>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Placement Performance</h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Impressions and clicks over the last 7 days, recorded live from every sponsor placement on the site.</p>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', height: '180px' }}>
                 {data.byDay.map(d => {
@@ -222,11 +222,11 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
             </div>
 
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>Engagement</h3>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>Engagement</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 <Clock size={18} color="var(--club-primary)" />
                 <div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                     {(() => {
                       const dwells = Object.values(data.bySponsor).map(s => s.avgDwellMs).filter(v => v > 0);
                       const avg = dwells.length ? dwells.reduce((a, b) => a + b, 0) / dwells.length : 0;
@@ -238,10 +238,10 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
               </div>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.3rem' }}>
-                  <span style={{ color: '#FFFFFF' }}>Repeat exposure rate</span>
+                  <span style={{ color: 'var(--text-primary)' }}>Repeat exposure rate</span>
                   <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{data.totals.repeatExposureRate.toFixed(0)}%</span>
                 </div>
-                <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '0.4rem' }}>
+                <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '0.4rem' }}>
                   <div style={{ width: `${data.totals.repeatExposureRate}%`, height: '100%', background: '#3B82F6' }} />
                 </div>
                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Share of unique visitors who saw a placement more than once.</p>
@@ -252,7 +252,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           {/* Sponsor data table */}
           <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 <Layers size={16} style={{ marginRight: '0.4rem', verticalAlign: '-2px' }} />
                 Sponsor Asset Delivery
               </h3>
@@ -262,7 +262,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search sponsor..."
-                  style={{ padding: '0.4rem 0.7rem 0.4rem 1.8rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: '#FFFFFF', fontSize: '0.78rem' }}
+                  style={{ padding: '0.4rem 0.7rem 0.4rem 1.8rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.78rem' }}
                 />
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                 <tbody>
                   {rows.map(({ sponsor, stats }) => (
                     <tr key={sponsor.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '0.65rem 0.6rem', fontWeight: 700, color: '#FFFFFF' }}>
+                      <td style={{ padding: '0.65rem 0.6rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                         {sponsor.name}
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>{placementLabel(stats?.placements)}</div>
                       </td>
@@ -312,7 +312,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           {/* Demographics & export */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem', marginBottom: '1.5rem' }}>
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.1rem' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.1rem' }}>
                 <Globe2 size={16} style={{ marginRight: '0.4rem', verticalAlign: '-2px' }} />
                 Top Countries
               </h3>
@@ -326,10 +326,10 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     return (
                       <div key={c.country}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
-                          <span style={{ color: '#FFFFFF' }}>{c.country}</span>
+                          <span style={{ color: 'var(--text-primary)' }}>{c.country}</span>
                           <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{c.count.toLocaleString()}</span>
                         </div>
-                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${pct}%`, height: '100%', background: 'var(--club-primary)' }} />
                         </div>
                       </div>
@@ -340,15 +340,15 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
             </div>
 
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.1rem' }}>Device Breakdown</h3>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.1rem' }}>Device Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
                 {data.byDevice.map(dev => (
                   <div key={dev.name}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.3rem' }}>
-                      <span style={{ color: '#FFFFFF' }}>{dev.name}</span>
+                      <span style={{ color: 'var(--text-primary)' }}>{dev.name}</span>
                       <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
                     </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: dev.percentage, height: '100%', background: dev.color }} />
                     </div>
                   </div>
@@ -358,7 +358,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
 
             <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.6rem' }}>Export</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>Export</h3>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                   Download real, measured delivery numbers for this range.
                 </p>

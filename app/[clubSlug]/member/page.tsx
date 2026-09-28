@@ -294,8 +294,8 @@ export default function MemberPortalPage({
             padding: '0.9rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
             borderLeft: `4px solid ${paymentNotice === 'success' ? '#10B981' : '#F59E0B'}`,
           }}>
-            {paymentNotice === 'success' ? <CheckCircle2 size={18} color="#10B981" /> : <AlertCircle size={18} color="#F59E0B" />}
-            <span style={{ fontSize: '0.88rem', color: '#FFFFFF' }}>
+            {paymentNotice === 'success' ? <CheckCircle2 size={18} color="var(--c-green)" /> : <AlertCircle size={18} color="var(--c-amber)" />}
+            <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
               {paymentNotice === 'success'
                 ? 'Payment received, thank you! It can take a minute to show on your membership.'
                 : 'Payment was cancelled. Nothing was charged. You can try again any time.'}
@@ -344,7 +344,7 @@ export default function MemberPortalPage({
                 OFFICIAL MEMBER GATEWAY
               </span>
 
-              <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 {club.name} Member Portal
               </h1>
 
@@ -358,7 +358,7 @@ export default function MemberPortalPage({
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: '0.5rem',
-              background: 'rgba(0, 0, 0, 0.4)',
+              background: 'rgba(var(--shade-rgb), 0.4)',
               padding: '0.35rem',
               borderRadius: '12px',
               border: '1px solid var(--border-subtle)',
@@ -418,7 +418,7 @@ export default function MemberPortalPage({
                 border: '1px solid rgba(16, 185, 129, 0.3)',
                 borderRadius: '8px',
                 padding: '0.85rem 1rem',
-                color: '#10B981',
+                color: 'var(--c-green)',
                 fontSize: '0.85rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -436,7 +436,7 @@ export default function MemberPortalPage({
                 border: '1px solid rgba(239, 68, 68, 0.3)',
                 borderRadius: '8px',
                 padding: '0.85rem 1rem',
-                color: '#EF4444',
+                color: 'var(--c-red)',
                 fontSize: '0.85rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -453,7 +453,7 @@ export default function MemberPortalPage({
               <div className="glass-panel" style={{ padding: '2rem' }}>
                 <form onSubmit={handleRequestMagicLink}>
                   <div style={{ marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                       Member Email Address:
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -468,9 +468,9 @@ export default function MemberPortalPage({
                           width: '100%',
                           padding: '0.75rem 0.75rem 0.75rem 2.5rem',
                           borderRadius: '8px',
-                          background: 'rgba(0, 0, 0, 0.4)',
+                          background: 'rgba(var(--shade-rgb), 0.4)',
                           border: '1px solid var(--border-subtle)',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           fontSize: '0.9rem',
                         }}
                       />
@@ -494,7 +494,7 @@ export default function MemberPortalPage({
                 {signedInEmail && !activeMember && (
                   <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                     Signed in as {signedInEmail}.{' '}
-                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#10B981', cursor: 'pointer', fontWeight: 700 }}>
+                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
                       Use a different email
                     </button>
                   </div>
@@ -519,14 +519,14 @@ export default function MemberPortalPage({
                       justifyContent: 'center',
                       margin: '0 auto 1.25rem auto',
                     }}>
-                      <Clock size={32} color="#F59E0B" />
+                      <Clock size={32} color="var(--c-amber)" />
                     </div>
 
-                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', marginBottom: '0.75rem' }}>
+                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', marginBottom: '0.75rem' }}>
                       ⏳ APPLICATION PENDING COMMITTEE REVIEW
                     </span>
 
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                       Application Received, {submittedApplication.full_name}!
                     </h2>
 
@@ -536,7 +536,7 @@ export default function MemberPortalPage({
                     </p>
 
                     <div style={{
-                      background: 'rgba(0, 0, 0, 0.35)',
+                      background: 'rgba(var(--shade-rgb), 0.35)',
                       borderRadius: '8px',
                       padding: '1rem',
                       textAlign: 'left',
@@ -547,10 +547,10 @@ export default function MemberPortalPage({
                       marginBottom: '1.5rem',
                       border: '1px solid var(--border-subtle)',
                     }}>
-                      <div>Applicant: <strong style={{ color: '#FFFFFF' }}>{submittedApplication.full_name}</strong></div>
-                      <div>Email: <strong style={{ color: '#FFFFFF' }}>{submittedApplication.email}</strong></div>
-                      <div>Membership Tier: <strong style={{ color: '#10B981' }}>{submittedApplication.membership_tier}</strong></div>
-                      <div>Application Ref: <code style={{ color: '#F59E0B' }}>{submittedApplication.id}</code></div>
+                      <div>Applicant: <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.full_name}</strong></div>
+                      <div>Email: <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.email}</strong></div>
+                      <div>Membership Tier: <strong style={{ color: 'var(--c-green)' }}>{submittedApplication.membership_tier}</strong></div>
+                      <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{submittedApplication.id}</code></div>
                     </div>
 
                     {(() => {
@@ -581,8 +581,8 @@ export default function MemberPortalPage({
                 ) : (
                   /* Application Registration Form */
                   <form onSubmit={handleSignupSubmit}>
-                    <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                    <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)', paddingBottom: '0.75rem' }}>
+                      <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                         Club Membership Application
                       </h2>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
@@ -596,7 +596,7 @@ export default function MemberPortalPage({
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '8px',
                         padding: '0.75rem 1rem',
-                        color: '#EF4444',
+                        color: 'var(--c-red)',
                         fontSize: '0.82rem',
                         marginBottom: '1rem',
                       }}>
@@ -606,7 +606,7 @@ export default function MemberPortalPage({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="member-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Full Name *
                         </label>
                         <input id="member-full-name"
@@ -619,16 +619,16 @@ export default function MemberPortalPage({
                             width: '100%',
                             padding: '0.65rem 0.75rem',
                             borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.4)',
+                            background: 'rgba(var(--shade-rgb), 0.4)',
                             border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
+                            color: 'var(--text-primary)',
                             fontSize: '0.85rem',
                           }}
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Email Address *
                         </label>
                         <input id="member-email-address"
@@ -641,9 +641,9 @@ export default function MemberPortalPage({
                             width: '100%',
                             padding: '0.65rem 0.75rem',
                             borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.4)',
+                            background: 'rgba(var(--shade-rgb), 0.4)',
                             border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
+                            color: 'var(--text-primary)',
                             fontSize: '0.85rem',
                           }}
                         />
@@ -652,7 +652,7 @@ export default function MemberPortalPage({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="member-phone-number" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-phone-number" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Phone Number
                         </label>
                         <input id="member-phone-number"
@@ -664,16 +664,16 @@ export default function MemberPortalPage({
                             width: '100%',
                             padding: '0.65rem 0.75rem',
                             borderRadius: '8px',
-                            background: 'rgba(0,0,0,0.4)',
+                            background: 'rgba(var(--shade-rgb), 0.4)',
                             border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
+                            color: 'var(--text-primary)',
                             fontSize: '0.85rem',
                           }}
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="member-membership-tier" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-membership-tier" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Membership Tier *
                         </label>
                         <select id="member-membership-tier"
@@ -683,9 +683,9 @@ export default function MemberPortalPage({
                             width: '100%',
                             padding: '0.65rem 0.75rem',
                             borderRadius: '8px',
-                            background: '#040609',
+                            background: 'rgb(var(--dk-4-6-9))',
                             border: '1px solid var(--border-subtle)',
-                            color: '#FFFFFF',
+                            color: 'var(--text-primary)',
                             fontSize: '0.85rem',
                           }}
                         >
@@ -719,7 +719,7 @@ export default function MemberPortalPage({
                         borderRadius: '8px',
                       }}>
                         <div>
-                          <label htmlFor="member-preferred-position" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-position" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
                             Preferred Position
                           </label>
                           <select id="member-preferred-position"
@@ -729,9 +729,9 @@ export default function MemberPortalPage({
                               width: '100%',
                               padding: '0.55rem 0.75rem',
                               borderRadius: '6px',
-                              background: '#040609',
+                              background: 'rgb(var(--dk-4-6-9))',
                               border: '1px solid var(--border-subtle)',
-                              color: '#FFFFFF',
+                              color: 'var(--text-primary)',
                               fontSize: '0.8rem',
                             }}
                           >
@@ -750,7 +750,7 @@ export default function MemberPortalPage({
                         </div>
 
                         <div>
-                          <label htmlFor="member-preferred-kit" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10B981', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-kit" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
                             Preferred Kit #
                           </label>
                           <input id="member-preferred-kit"
@@ -764,9 +764,9 @@ export default function MemberPortalPage({
                               width: '100%',
                               padding: '0.55rem 0.75rem',
                               borderRadius: '6px',
-                              background: 'rgba(0,0,0,0.4)',
+                              background: 'rgba(var(--shade-rgb), 0.4)',
                               border: '1px solid var(--border-subtle)',
-                              color: '#FFFFFF',
+                              color: 'var(--text-primary)',
                               fontSize: '0.8rem',
                             }}
                           />
@@ -775,7 +775,7 @@ export default function MemberPortalPage({
                     )}
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                         Motivation &amp; Background Notes:
                       </label>
                       <textarea id="member-motivation-amp-background-notes"
@@ -787,9 +787,9 @@ export default function MemberPortalPage({
                           width: '100%',
                           padding: '0.65rem 0.75rem',
                           borderRadius: '8px',
-                          background: 'rgba(0,0,0,0.4)',
+                          background: 'rgba(var(--shade-rgb), 0.4)',
                           border: '1px solid var(--border-subtle)',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           fontSize: '0.85rem',
                           resize: 'none',
                         }}
@@ -830,10 +830,10 @@ export default function MemberPortalPage({
 
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                    <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                       {activeMember.full_name}
                     </h2>
-                    <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
+                    <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', fontSize: '0.72rem', fontWeight: 800 }}>
                       ✓ VERIFIED MEMBER
                     </span>
                   </div>
@@ -879,7 +879,7 @@ export default function MemberPortalPage({
                 <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem', borderLeft: `4px solid ${daysLeft < 0 ? '#EF4444' : '#F59E0B'}` }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                     <div>
-                      <div style={{ fontWeight: 800, color: '#FFFFFF' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
                         {daysLeft < 0 ? 'Your membership has expired' : `Your membership expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -930,7 +930,7 @@ export default function MemberPortalPage({
                   borderRadius: '8px',
                   border: activeClubhouseTab === 'pass' ? `1px solid ${club.primary_color}` : '1px solid transparent',
                   background: activeClubhouseTab === 'pass' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'pass' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: activeClubhouseTab === 'pass' ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: 800,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
@@ -951,7 +951,7 @@ export default function MemberPortalPage({
                   borderRadius: '8px',
                   border: activeClubhouseTab === 'stats' ? `1px solid ${club.primary_color}` : '1px solid transparent',
                   background: activeClubhouseTab === 'stats' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'stats' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: activeClubhouseTab === 'stats' ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: 800,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
@@ -972,7 +972,7 @@ export default function MemberPortalPage({
                   borderRadius: '8px',
                   border: activeClubhouseTab === 'messages' ? `1px solid ${club.primary_color}` : '1px solid transparent',
                   background: activeClubhouseTab === 'messages' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'messages' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: activeClubhouseTab === 'messages' ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: 800,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
@@ -1015,8 +1015,8 @@ export default function MemberPortalPage({
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div>
                       <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>LEAGUE CAMPAIGN {getActiveSeason(club.id)?.name || defaultSeasonLabel()}</span>
-                      <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Trophy size={22} color="#F59E0B" />
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Trophy size={22} color="var(--c-amber)" />
                         <span>{club.name} — Club Season Statistics</span>
                       </h3>
                     </div>
@@ -1056,52 +1056,52 @@ export default function MemberPortalPage({
                     gap: '1rem',
                     marginBottom: '1.5rem',
                   }}>
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Matches</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#FFFFFF' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {clubSeasonStats.matchesPlayed}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Played</div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Record</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: '#10B981' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-green)' }}>
                         {clubSeasonStats.wins}W - {clubSeasonStats.draws}D - {clubSeasonStats.losses}L
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#10B981' }}>{clubSeasonStats.winRate}% Win Rate</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--c-green)' }}>{clubSeasonStats.winRate}% Win Rate</div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Points</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#F59E0B' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-amber)' }}>
                         {clubSeasonStats.points}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total League PTS</div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Goals</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {clubSeasonStats.goalsFor} : {clubSeasonStats.goalsAgainst}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#10B981' }}>+{clubSeasonStats.goalDifference} GD</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--c-green)' }}>+{clubSeasonStats.goalDifference} GD</div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Clean Sheets</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#3B82F6' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-blue)' }}>
                         {clubSeasonStats.cleanSheets}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Shutouts Kept</div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Club Top Scorer</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: '#A855F7', marginTop: '4px' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: 'var(--c-purple)', marginTop: '4px' }}>
                         {clubSeasonStats.topScorer?.name || 'No goals yet'}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: 700 }}>{clubSeasonStats.topScorer?.goals || 0} Goals</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--c-purple)', fontWeight: 700 }}>{clubSeasonStats.topScorer?.goals || 0} Goals</div>
                     </div>
                   </div>
                 </div>
@@ -1109,7 +1109,7 @@ export default function MemberPortalPage({
                 {/* 2. Personal Performance Dashboard */}
                 <div className="glass-panel" style={{ padding: '2rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Activity size={20} color="var(--club-primary)" />
                       <span>{activeMember.full_name} — Personal Season Performance</span>
                     </h3>
@@ -1122,51 +1122,51 @@ export default function MemberPortalPage({
                     gap: '1rem',
                     marginBottom: '1.5rem',
                   }}>
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Appearances</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#FFFFFF' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {currentStats?.appearances || 0}
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Goals</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#10B981' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-green)' }}>
                         {currentStats?.goals || 0}
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Assists</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#F59E0B' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-amber)' }}>
                         {currentStats?.assists || 0}
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Clean Sheets</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#3B82F6' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-blue)' }}>
                         {currentStats?.clean_sheets || 0}
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>MOTM Awards</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: '#A855F7' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-purple)' }}>
                         {currentStats?.motm_awards || 0}
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Discipline</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: '#EF4444', marginTop: '6px' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: 'var(--c-red)', marginTop: '6px' }}>
                         {currentStats?.yellow_cards || 0}Y • {currentStats?.red_cards || 0}R
                       </div>
                     </div>
                   </div>
 
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Total Playing Minutes: <strong style={{ color: '#FFFFFF' }}>{currentStats?.minutes_played || 0} mins</strong>
+                    Total Playing Minutes: <strong style={{ color: 'var(--text-primary)' }}>{currentStats?.minutes_played || 0} mins</strong>
                   </div>
                 </div>
 
@@ -1179,11 +1179,11 @@ export default function MemberPortalPage({
                           <span className="badge badge-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <Zap size={12} fill="#F59E0B" /> CLUBSCORE FANTASY
                           </span>
-                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60A5FA' }}>
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)' }}>
                             {currentClubScore.season}
                           </span>
                         </div>
-                        <h4 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                        <h4 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                           Level &amp; Attendance Streak Hub
                         </h4>
                       </div>
@@ -1197,8 +1197,8 @@ export default function MemberPortalPage({
                         padding: '0.4rem 0.8rem',
                         borderRadius: '8px',
                       }}>
-                        <Crown size={16} color="#F59E0B" />
-                        <span style={{ fontWeight: 800, color: '#F59E0B', fontSize: '0.85rem' }}>
+                        <Crown size={16} color="var(--c-amber)" />
+                        <span style={{ fontWeight: 800, color: 'var(--c-amber)', fontSize: '0.85rem' }}>
                           {currentClubScore.tier}
                         </span>
                       </div>
@@ -1208,14 +1208,14 @@ export default function MemberPortalPage({
                     <div style={{ marginBottom: '1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Total XP Points: <strong style={{ color: '#FFFFFF', fontSize: '0.95rem' }}>{currentClubScore.total_points} PTS</strong>
+                          Total XP Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{currentClubScore.total_points} PTS</strong>
                         </span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           Streak: {currentClubScore.current_streak}w active
                         </span>
                       </div>
 
-                      <div style={{ width: '100%', height: '10px', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ width: '100%', height: '10px', background: 'rgba(var(--shade-rgb), 0.4)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                         <div
                           style={{
                             height: '100%',
@@ -1237,8 +1237,8 @@ export default function MemberPortalPage({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '2rem' }}>
                 {/* Send New Inquiry Left */}
                 <div className="glass-panel" style={{ padding: '2rem' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <MessageSquare size={20} color="#3B82F6" />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <MessageSquare size={20} color="var(--c-blue)" />
                     <span>Contact Club Administration</span>
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -1251,7 +1251,7 @@ export default function MemberPortalPage({
                       border: '1px solid #10B981',
                       borderRadius: '8px',
                       padding: '0.75rem 1rem',
-                      color: '#10B981',
+                      color: 'var(--c-green)',
                       fontSize: '0.85rem',
                       marginBottom: '1rem',
                       display: 'flex',
@@ -1265,7 +1265,7 @@ export default function MemberPortalPage({
 
                   <form onSubmit={handleSendMessage}>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="member-inquiry-category" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-inquiry-category" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                         Inquiry Category:
                       </label>
                       <select id="member-inquiry-category"
@@ -1275,9 +1275,9 @@ export default function MemberPortalPage({
                           width: '100%',
                           padding: '0.65rem 0.75rem',
                           borderRadius: '8px',
-                          background: '#040609',
+                          background: 'rgb(var(--dk-4-6-9))',
                           border: '1px solid var(--border-subtle)',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           fontSize: '0.85rem',
                         }}
                       >
@@ -1291,7 +1291,7 @@ export default function MemberPortalPage({
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="member-subject" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-subject" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                         Subject:
                       </label>
                       <input id="member-subject"
@@ -1304,16 +1304,16 @@ export default function MemberPortalPage({
                           width: '100%',
                           padding: '0.65rem 0.75rem',
                           borderRadius: '8px',
-                          background: 'rgba(0,0,0,0.4)',
+                          background: 'rgba(var(--shade-rgb), 0.4)',
                           border: '1px solid var(--border-subtle)',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           fontSize: '0.85rem',
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="member-message" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-message" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                         Message:
                       </label>
                       <textarea id="member-message"
@@ -1326,9 +1326,9 @@ export default function MemberPortalPage({
                           width: '100%',
                           padding: '0.75rem',
                           borderRadius: '8px',
-                          background: 'rgba(0,0,0,0.4)',
+                          background: 'rgba(var(--shade-rgb), 0.4)',
                           border: '1px solid var(--border-subtle)',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           fontSize: '0.85rem',
                           resize: 'none',
                         }}
@@ -1349,7 +1349,7 @@ export default function MemberPortalPage({
                 {/* Message Correspondence History Right */}
                 <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', height: '560px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                       Conversation History
                     </h3>
                     <span className="badge" style={{ fontSize: '0.7rem' }}>
@@ -1382,7 +1382,7 @@ export default function MemberPortalPage({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.35rem' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAdmin ? '#60A5FA' : '#10B981' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAdmin ? 'var(--c-sky)' : 'var(--c-green)' }}>
                                 {isAdmin ? `🏛️ ${msg.sender_name}` : `👤 You (${activeMember.full_name})`}
                               </span>
                               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -1391,12 +1391,12 @@ export default function MemberPortalPage({
                             </div>
 
                             {msg.subject && (
-                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
                                 {msg.subject}
                               </div>
                             )}
 
-                            <p style={{ fontSize: '0.85rem', color: '#F8FAFC', lineHeight: 1.45, margin: 0 }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.45, margin: 0 }}>
                               {msg.content}
                             </p>
                           </div>

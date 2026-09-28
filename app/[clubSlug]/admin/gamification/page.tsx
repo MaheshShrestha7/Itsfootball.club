@@ -114,7 +114,7 @@ export default function AdminGamificationPage({
             </span>
             <span className="badge badge-primary">RETENTION ENGINE</span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             🏆 ClubScore Gamification Controller
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -124,15 +124,15 @@ export default function AdminGamificationPage({
 
         {/* Quick KPI Badges */}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ACTIVE 3+ STREAKS</div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-              <Flame size={18} color="#EF4444" fill="#EF4444" />
+            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
+              <Flame size={18} color="var(--c-red)" fill="#EF4444" />
               <span>{activeStreaksCount} Players</span>
             </div>
           </div>
 
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SEASON TOTAL PTS</div>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--club-primary)' }}>
               {totalClubPoints} PTS
@@ -151,8 +151,8 @@ export default function AdminGamificationPage({
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 2rem)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={18} color="#F59E0B" />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={18} color="var(--c-amber)" />
                 <span>Point Weightings & Multipliers</span>
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -256,8 +256,8 @@ export default function AdminGamificationPage({
             </div>
 
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Flame size={14} color="#EF4444" />
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Flame size={14} color="var(--c-red)" />
                 <span>Streak Multipliers</span>
               </h4>
 
@@ -315,7 +315,7 @@ export default function AdminGamificationPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {/* Quick Bonus Points Awarder */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Award size={18} color="var(--club-primary)" />
               <span>Award Coach Discretionary Bonus</span>
             </h3>
@@ -382,7 +382,7 @@ export default function AdminGamificationPage({
                   border: '1px solid rgba(16, 185, 129, 0.4)'
                 }}
               >
-                {awardSuccess ? <CheckCircle2 size={16} color="#10B981" /> : <Sparkles size={16} color="#10B981" />}
+                {awardSuccess ? <CheckCircle2 size={16} color="var(--c-green)" /> : <Sparkles size={16} color="var(--c-green)" />}
                 <span>{awardSuccess ? 'Points Allocated & Logged!' : 'Award Points & Record in Ledger'}</span>
               </button>
             </form>
@@ -391,11 +391,11 @@ export default function AdminGamificationPage({
           {/* Player Retention & Attendance Streak Health */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Flame size={18} color="#EF4444" />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Flame size={18} color="var(--c-red)" />
                 <span>Squad Streak Retention Monitor</span>
               </h3>
-              <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', fontSize: '0.7rem' }}>
+              <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', fontSize: '0.7rem' }}>
                 TOUCHLINE HEALTH
               </span>
             </div>
@@ -418,7 +418,7 @@ export default function AdminGamificationPage({
                       justifyContent: 'space-between',
                       padding: '0.6rem 0.85rem',
                       borderRadius: '8px',
-                      background: 'rgba(0,0,0,0.2)',
+                      background: 'rgba(var(--shade-rgb), 0.2)',
                       border: '1px solid var(--border-subtle)',
                       fontSize: '0.82rem',
                     }}
@@ -426,7 +426,7 @@ export default function AdminGamificationPage({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={30} style={{ borderRadius: '6px' }} />
                       <div>
-                        <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{player.full_name}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{player.full_name}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                           #{player.jersey_number} • {profile?.tier || 'Rookie'}
                         </div>
@@ -435,8 +435,8 @@ export default function AdminGamificationPage({
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: streak >= 3 ? '#EF4444' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                          {streak >= 3 && <Flame size={12} color="#EF4444" fill="#EF4444" />}
+                        <div style={{ fontWeight: 800, color: streak >= 3 ? 'var(--c-red)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          {streak >= 3 && <Flame size={12} color="var(--c-red)" fill="#EF4444" />}
                           <span>{streak}w streak</span>
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -445,15 +445,15 @@ export default function AdminGamificationPage({
                       </div>
 
                       {streak >= 5 ? (
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '0.7rem' }}>
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', fontSize: '0.7rem' }}>
                           Iron Man
                         </span>
                       ) : isAtRisk ? (
-                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', fontSize: '0.7rem' }}>
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
                           Building
                         </span>
                       ) : (
-                        <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                        <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
                           Inactive
                         </span>
                       )}

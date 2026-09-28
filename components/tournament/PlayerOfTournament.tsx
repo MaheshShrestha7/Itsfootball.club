@@ -65,7 +65,7 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
     <div style={{
       display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem',
       padding: '1rem 1.25rem', marginBottom: '1.5rem', borderRadius: '14px',
-      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(15, 23, 42, 0.75))',
+      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(var(--dk-15-23-42), 0.75))',
       border: '1px solid rgba(245, 158, 11, 0.35)',
     }}>
       {editing ? (
@@ -92,20 +92,20 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
             {winnerName && <button type="button" className="btn btn-danger btn-sm" disabled={saving} onClick={() => save(true)}>Remove</button>}
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setError(null); }} aria-label="Cancel"><X size={14} /></button>
           </div>
-          {error && <p role="alert" style={{ color: '#EF4444', fontSize: '0.8rem', margin: 0, gridColumn: '1 / -1' }}>{error}</p>}
+          {error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: 0, gridColumn: '1 / -1' }}>{error}</p>}
         </div>
       ) : (
         <>
           {winnerName ? (
             <PlayerAvatar photoUrl={winner?.photo_url} name={winnerName} size={56} style={{ borderRadius: '14px', border: '2px solid #F59E0B' }} />
           ) : (
-            <Award size={40} color="#F59E0B" />
+            <Award size={40} color="var(--c-amber)" />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', color: '#F59E0B', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--c-amber)', textTransform: 'uppercase' }}>
               Player of the Tournament
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF' }}>{winnerName || 'Not awarded yet'}</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{winnerName || 'Not awarded yet'}</div>
             {tournament.player_of_tournament_note && (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{tournament.player_of_tournament_note}</div>
             )}

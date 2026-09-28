@@ -163,9 +163,9 @@ export default function KitDesignerPreview({
         <div style={{
           display: 'inline-flex',
           padding: '4px',
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'rgba(var(--tint-rgb), 0.05)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(var(--tint-rgb), 0.1)',
         }}>
           {(['home', 'away', 'third'] as KitType[]).map(t => {
             const isSelected = kitType === t;
@@ -179,7 +179,7 @@ export default function KitDesignerPreview({
                   borderRadius: '8px',
                   border: 'none',
                   background: isSelected ? 'var(--club-primary, #10B981)' : 'transparent',
-                  color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: isSelected ? 800 : 600,
                   fontSize: '0.8rem',
                   fontFamily: 'var(--font-heading)',
@@ -219,7 +219,7 @@ export default function KitDesignerPreview({
         <div className="kit-gloss-sweep" />
 
         {/* Official Matchwear Tag Pill */}
-        <div style={{
+        <div data-theme="dark" style={{
           position: 'absolute',
           top: '14px',
           left: '16px',
@@ -243,7 +243,7 @@ export default function KitDesignerPreview({
         </div>
 
         {/* Contrast Legibility Indicator */}
-        <div style={{
+        <div data-theme="dark" style={{
           position: 'absolute',
           top: '14px',
           right: '16px',
@@ -257,7 +257,7 @@ export default function KitDesignerPreview({
           border: '1px solid rgba(255, 255, 255, 0.1)',
           fontSize: '0.7rem',
           fontWeight: 700,
-          color: contrastRatio >= 4.5 ? '#10B981' : '#F59E0B',
+          color: contrastRatio >= 4.5 ? 'var(--c-green)' : 'var(--c-amber)',
           zIndex: 6,
         }}>
           <span>{contrastRatio}:1 Contrast</span>
@@ -320,7 +320,7 @@ export default function KitDesignerPreview({
               <path
                 d="M 95 62 L 32 110 L 58 152 L 105 116 Z"
                 fill={pattern === 'halves' ? kitColors.base : kitColors.secondary}
-                stroke="rgba(255,255,255,0.15)"
+                stroke="rgba(var(--tint-rgb), 0.15)"
                 strokeWidth="1.5"
               />
               {/* Left Sleeve Cuff Trim */}
@@ -333,7 +333,7 @@ export default function KitDesignerPreview({
               <path
                 d="M 225 62 L 288 110 L 262 152 L 215 116 Z"
                 fill={kitColors.secondary}
-                stroke="rgba(255,255,255,0.15)"
+                stroke="rgba(var(--tint-rgb), 0.15)"
                 strokeWidth="1.5"
               />
               {/* Right Sleeve Cuff Trim */}
@@ -358,7 +358,7 @@ export default function KitDesignerPreview({
                     ? 'url(#kit-gradient)'
                     : kitColors.base
                 }
-                stroke="rgba(255,255,255,0.2)"
+                stroke="rgba(var(--tint-rgb), 0.2)"
                 strokeWidth="2"
               />
 
@@ -441,7 +441,7 @@ export default function KitDesignerPreview({
                     height="28"
                     rx="4"
                     fill="rgba(0,0,0,0.35)"
-                    stroke="rgba(255,255,255,0.1)"
+                    stroke="rgba(var(--tint-rgb), 0.1)"
                   />
                   <text
                     x="0"
@@ -539,7 +539,7 @@ export default function KitDesignerPreview({
 
         {/* Current Kit Active Summary */}
         <div style={{ textAlign: 'center', marginTop: '0.85rem' }}>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+          <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             {clubName} • {kitType.toUpperCase()} KIT
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -573,9 +573,9 @@ export default function KitDesignerPreview({
                   style={{
                     padding: '0.35rem 0.65rem',
                     borderRadius: '6px',
-                    border: `1px solid ${isActive ? primaryColor : 'rgba(255, 255, 255, 0.1)'}`,
-                    background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                    color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                    border: `1px solid ${isActive ? primaryColor : 'rgba(var(--tint-rgb), 0.1)'}`,
+                    background: isActive ? 'rgba(var(--tint-rgb), 0.12)' : 'rgba(var(--tint-rgb), 0.03)',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                     fontSize: '0.75rem',
                     fontWeight: isActive ? 800 : 500,
                     cursor: 'pointer',
@@ -592,14 +592,14 @@ export default function KitDesignerPreview({
       {/* Curated Kit Color Preset Swatches */}
       {interactive && onColorsChange && (
         <div style={{
-          background: 'rgba(255, 255, 255, 0.02)',
+          background: 'rgba(var(--tint-rgb), 0.02)',
           padding: '1rem',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
-            <Palette size={14} color="#F59E0B" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <Palette size={14} color="var(--c-amber)" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               One-Click Kit Theme Swatches:
             </span>
           </div>
@@ -619,8 +619,8 @@ export default function KitDesignerPreview({
                   style={{
                     padding: '0.5rem 0.65rem',
                     borderRadius: '8px',
-                    border: `1.5px solid ${isSelected ? '#F59E0B' : 'rgba(255, 255, 255, 0.08)'}`,
-                    background: isSelected ? 'rgba(245, 158, 11, 0.12)' : 'rgba(0, 0, 0, 0.35)',
+                    border: `1.5px solid ${isSelected ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.08)'}`,
+                    background: isSelected ? 'rgba(245, 158, 11, 0.12)' : 'rgba(var(--shade-rgb), 0.35)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
@@ -632,14 +632,14 @@ export default function KitDesignerPreview({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
                     {/* 3 Color Dots */}
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.primary, border: '1px solid rgba(255,255,255,0.4)' }} />
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.secondary, border: '1px solid rgba(255,255,255,0.4)' }} />
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.accent, border: '1px solid rgba(255,255,255,0.4)' }} />
+                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.primary, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
+                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.secondary, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
+                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.accent, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
                     {isSelected && (
-                      <Check size={12} color="#F59E0B" style={{ marginLeft: 'auto' }} />
+                      <Check size={12} color="var(--c-amber)" style={{ marginLeft: 'auto' }} />
                     )}
                   </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     {preset.name}
                   </span>
                 </button>

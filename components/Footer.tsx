@@ -23,7 +23,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
   const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
   return (
     <footer style={{
-      background: 'rgba(5, 7, 11, 0.95)',
+      background: 'rgba(var(--dk-4-6-9), 0.95)',
       borderTop: '1px solid var(--border-subtle)',
       marginTop: '5rem',
       position: 'relative',
@@ -34,7 +34,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
         <div style={{
           borderBottom: '1px solid var(--border-subtle)',
           padding: '1.5rem 0',
-          background: 'rgba(255, 255, 255, 0.015)',
+          background: 'rgba(var(--tint-rgb), 0.015)',
         }}>
           <div className="container">
             <div style={{
@@ -102,14 +102,14 @@ export default function Footer({ club, sponsors }: FooterProps) {
                     <span style={{
                       fontSize: isPlatinum ? '1rem' : '0.9rem',
                       fontWeight: isPlatinum ? 800 : 600,
-                      color: isPlatinum ? '#FFFFFF' : 'var(--text-secondary)'
+                      color: isPlatinum ? 'var(--text-primary)' : 'var(--text-secondary)'
                     }}>
                       {sponsor.name}
                     </span>
                     <span className="badge" style={{
                       fontSize: '0.7rem',
-                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                      color: isPlatinum ? '#F59E0B' : 'var(--text-muted)'
+                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.05)',
+                      color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)'
                     }}>
                       {sponsor.tier}
                     </span>
@@ -154,7 +154,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}>
-                  <Shield size={18} color="#FFFFFF" />
+                  <Shield size={18} color="var(--text-primary)" />
                 </div>
               ) : (
                 <img src="/logo-96.png" alt="itsfootball.club logo" width={48} height={48} loading="lazy" decoding="async" style={{ width: '48px', height: '48px' }} />
@@ -252,10 +252,10 @@ export default function Footer({ club, sponsors }: FooterProps) {
               Engineered to professional league standards with protected squad records, instant pitchside updates, and encrypted matchday passes.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>Protected Squad Data</span>
-              <span className="badge" style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#3B82F6' }}>Match Media Hub</span>
-              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>Dedicated Club Sites</span>
-              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#A855F7' }}>Verified Turnstiles</span>
+              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--c-green)' }}>Protected Squad Data</span>
+              <span className="badge" style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--c-blue)' }}>Match Media Hub</span>
+              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--c-amber)' }}>Dedicated Club Sites</span>
+              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'var(--c-purple)' }}>Verified Turnstiles</span>
             </div>
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
               <img src="/logo-96.png" alt="" width={20} height={20} loading="lazy" decoding="async" style={{ width: '20px', height: '20px' }} />
               ItsFootball.club
             </Link>
-            <Heart size={13} color="#EF4444" fill="#EF4444" />
+            <Heart size={13} color="var(--c-red)" fill="#EF4444" />
           </div>
         </div>
       </div>

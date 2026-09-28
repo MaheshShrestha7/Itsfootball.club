@@ -23,7 +23,7 @@ export default function Error({
       justifyContent: 'center',
       padding: '2rem 1rem',
       background: 'var(--bg-pitch)',
-      color: '#FFFFFF',
+      color: 'var(--text-primary)',
       fontFamily: 'var(--font-sans)',
     }}>
       <div className="glass-panel" style={{
@@ -38,7 +38,7 @@ export default function Error({
           height: '56px',
           borderRadius: '50%',
           background: 'rgba(239, 68, 68, 0.15)',
-          color: '#EF4444',
+          color: 'var(--c-red)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -47,11 +47,11 @@ export default function Error({
           <AlertTriangle size={28} />
         </div>
 
-        <span className="badge" style={{ marginBottom: '0.75rem', background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+        <span className="badge" style={{ marginBottom: '0.75rem', background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
           TECHNICAL STOPPAGE
         </span>
 
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.75rem', color: '#FFFFFF' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
           Something went wrong
         </h2>
 
@@ -64,7 +64,7 @@ export default function Error({
             fontSize: '0.75rem',
             fontFamily: 'var(--font-mono)',
             color: 'var(--text-muted)',
-            background: 'rgba(0,0,0,0.3)',
+            background: 'rgba(var(--shade-rgb), 0.3)',
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             marginBottom: '1.5rem',

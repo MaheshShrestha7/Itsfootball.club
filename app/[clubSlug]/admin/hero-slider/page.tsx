@@ -263,7 +263,7 @@ export default function AdminHeroSliderPage({
               {pinnedItems.length} items pinned ({activePinned.length} active)
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Hero Slider & Pinned Content Manager
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px' }}>
@@ -295,7 +295,7 @@ export default function AdminHeroSliderPage({
               cursor: 'pointer'
             }}
           >
-            {savedSuccess ? <CheckCircle2 size={16} color="#FFFFFF" /> : <Save size={16} />}
+            {savedSuccess ? <CheckCircle2 size={16} color="var(--text-primary)" /> : <Save size={16} />}
             <span>{savedSuccess ? 'Pins Live & Synced' : hasUnsavedChanges ? 'Save & Publish Pins' : 'All Pins Live & Synced'}</span>
           </button>
         </div>
@@ -312,17 +312,17 @@ export default function AdminHeroSliderPage({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '1rem 1.4rem',
-          background: 'rgba(15, 23, 42, 0.96)',
+          background: 'rgba(var(--dk-15-23-42), 0.96)',
           border: '1.5px solid #10B981',
           borderRadius: '12px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: '#FFFFFF',
+          color: 'var(--text-primary)',
           fontSize: '0.9rem',
           fontWeight: 700,
           backdropFilter: 'blur(10px)',
           animation: 'fadeIn 0.2s ease-out'
         }}>
-          <Sparkles size={18} color="#10B981" />
+          <Sparkles size={18} color="var(--c-green)" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -338,7 +338,7 @@ export default function AdminHeroSliderPage({
           border: '1px solid rgba(16, 185, 129, 0.3)',
           borderRadius: 'var(--radius-md)',
           marginBottom: '2rem',
-          color: '#34D399',
+          color: 'var(--c-green)',
           animation: 'fadeIn 0.3s ease-out'
         }}>
           <CheckCircle2 size={20} />
@@ -360,10 +360,10 @@ export default function AdminHeroSliderPage({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sliders size={18} color="var(--club-primary)" />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Live Carousel Simulator
             </h2>
-            <span className="badge" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
+            <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
               Slide {activePinned.length > 0 ? previewIndex + 1 : 0} of {activePinned.length}
             </span>
           </div>
@@ -394,8 +394,8 @@ export default function AdminHeroSliderPage({
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden',
           minHeight: '260px',
-          background: '#0a0e17',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'rgb(var(--dk-10-14-23))',
+          border: '1px solid rgba(var(--tint-rgb), 0.1)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-end',
@@ -416,7 +416,7 @@ export default function AdminHeroSliderPage({
               <div style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(to top, #0A0E17 15%, rgba(10,14,23,0.7) 60%, transparent 100%)'
+                background: 'linear-gradient(to top, rgb(var(--dk-10-14-23)) 15%, rgba(var(--dk-10-14-23),0.7) 60%, transparent 100%)'
               }} />
 
               {/* Slide Content */}
@@ -426,7 +426,7 @@ export default function AdminHeroSliderPage({
                     background: currentPreview.type === 'fixture' ? 'rgba(239, 68, 68, 0.2)' :
                                 currentPreview.type === 'event' ? 'rgba(16, 185, 129, 0.2)' :
                                 currentPreview.type === 'news' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    color: currentPreview.type === 'fixture' ? '#EF4444' :
+                    color: currentPreview.type === 'fixture' ? 'var(--c-red)' :
                            currentPreview.type === 'event' ? '#10B981' :
                            currentPreview.type === 'news' ? '#60A5FA' : '#F59E0B',
                     border: '1px solid currentColor',
@@ -436,15 +436,15 @@ export default function AdminHeroSliderPage({
                   }}>
                     {currentPreview.badge || currentPreview.type.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(var(--tint-rgb), 0.5)', fontWeight: 600 }}>
                     PINNED {currentPreview.type.toUpperCase()}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
                   {currentPreview.title}
                 </h3>
-                <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.85)', marginBottom: '1.25rem', lineHeight: 1.5, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                <p style={{ fontSize: '0.95rem', color: 'rgba(var(--tint-rgb), 0.85)', marginBottom: '1.25rem', lineHeight: 1.5, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
                   {currentPreview.subtitle}
                 </p>
 
@@ -505,7 +505,7 @@ export default function AdminHeroSliderPage({
         {/* Left Column: Currently Pinned Items (Order & Settings) */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>Pinned Slides Order</span>
               <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
                 {pinnedItems.length} Total
@@ -552,9 +552,9 @@ export default function AdminHeroSliderPage({
                   <div
                     key={item.id}
                     style={{
-                      background: item.is_active ? 'var(--bg-surface)' : 'rgba(255,255,255,0.02)',
+                      background: item.is_active ? 'var(--bg-surface)' : 'rgba(var(--tint-rgb), 0.02)',
                       border: '1px solid',
-                      borderColor: item.is_active ? 'var(--border-subtle)' : 'rgba(255,255,255,0.05)',
+                      borderColor: item.is_active ? 'var(--border-subtle)' : 'rgba(var(--tint-rgb), 0.05)',
                       borderRadius: 'var(--radius-md)',
                       padding: '1rem',
                       display: 'flex',
@@ -570,13 +570,13 @@ export default function AdminHeroSliderPage({
                           width: '24px',
                           height: '24px',
                           borderRadius: '6px',
-                          background: 'rgba(255,255,255,0.1)',
+                          background: 'rgba(var(--tint-rgb), 0.1)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '0.75rem',
                           fontWeight: 800,
-                          color: '#FFFFFF'
+                          color: 'var(--text-primary)'
                         }}>
                           {index + 1}
                         </span>
@@ -585,7 +585,7 @@ export default function AdminHeroSliderPage({
                           background: item.type === 'fixture' ? 'rgba(239, 68, 68, 0.15)' :
                                       item.type === 'event' ? 'rgba(16, 185, 129, 0.15)' :
                                       item.type === 'news' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                          color: item.type === 'fixture' ? '#EF4444' :
+                          color: item.type === 'fixture' ? 'var(--c-red)' :
                                  item.type === 'event' ? '#10B981' :
                                  item.type === 'news' ? '#60A5FA' : '#F59E0B',
                           fontSize: '0.7rem',
@@ -608,9 +608,9 @@ export default function AdminHeroSliderPage({
                             padding: '0.25rem 0.5rem',
                             borderRadius: '4px',
                             border: '1px solid',
-                            borderColor: item.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)',
+                            borderColor: item.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(var(--tint-rgb), 0.1)',
                             background: item.is_active ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                            color: item.is_active ? '#34D399' : 'var(--text-muted)',
+                            color: item.is_active ? 'var(--c-green)' : 'var(--text-muted)',
                             fontSize: '0.7rem',
                             fontWeight: 700,
                             cursor: 'pointer'
@@ -649,7 +649,7 @@ export default function AdminHeroSliderPage({
                     </div>
 
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF', marginBottom: '0.2rem' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                         {item.title}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -663,7 +663,7 @@ export default function AdminHeroSliderPage({
                       gridTemplateColumns: '1fr 1fr',
                       gap: '0.5rem',
                       paddingTop: '0.5rem',
-                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                      borderTop: '1px solid rgba(var(--tint-rgb), 0.05)',
                       fontSize: '0.75rem'
                     }}>
                       <div>
@@ -723,7 +723,7 @@ export default function AdminHeroSliderPage({
 
         {/* Right Column: Library of Events, Fixtures, News & Custom Image Builder */}
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>
             Pin Content Library
           </h2>
 
@@ -773,7 +773,7 @@ export default function AdminHeroSliderPage({
                       fontSize: '0.7rem',
                       padding: '0.1rem 0.35rem',
                       borderRadius: '9999px',
-                      background: isActive ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.08)'
+                      background: isActive ? 'rgba(var(--shade-rgb), 0.25)' : 'rgba(var(--tint-rgb), 0.08)'
                     }}>
                       {tab.count}
                     </span>
@@ -815,7 +815,7 @@ export default function AdminHeroSliderPage({
                             {new Date(evt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
-                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           {evt.title}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
@@ -833,7 +833,7 @@ export default function AdminHeroSliderPage({
                           flexShrink: 0,
                           fontSize: '0.75rem',
                           borderColor: isPinned ? '#10B981' : undefined,
-                          color: isPinned ? '#10B981' : undefined
+                          color: isPinned ? 'var(--c-green)' : undefined
                         }}
                       >
                         {isPinned ? <Check size={14} /> : <Plus size={14} />}
@@ -879,7 +879,7 @@ export default function AdminHeroSliderPage({
                             {m.competition}
                           </span>
                         </div>
-                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           {m.home_team_name} vs {m.away_team_name}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -897,7 +897,7 @@ export default function AdminHeroSliderPage({
                           flexShrink: 0,
                           fontSize: '0.75rem',
                           borderColor: isPinned ? '#EF4444' : undefined,
-                          color: isPinned ? '#EF4444' : undefined
+                          color: isPinned ? 'var(--c-red)' : undefined
                         }}
                       >
                         {isPinned ? <Check size={14} /> : <Plus size={14} />}
@@ -935,14 +935,14 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60A5FA', fontSize: '0.7rem' }}>
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', fontSize: '0.7rem' }}>
                             {n.tags[0] || 'DISPATCH'}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             By {n.author_name}
                           </span>
                         </div>
-                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           {n.title}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
@@ -960,7 +960,7 @@ export default function AdminHeroSliderPage({
                           flexShrink: 0,
                           fontSize: '0.75rem',
                           borderColor: isPinned ? '#60A5FA' : undefined,
-                          color: isPinned ? '#60A5FA' : undefined
+                          color: isPinned ? 'var(--c-sky)' : undefined
                         }}
                       >
                         {isPinned ? <Check size={14} /> : <Plus size={14} />}

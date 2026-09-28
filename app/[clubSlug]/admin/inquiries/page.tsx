@@ -32,7 +32,7 @@ export default function AdminInquiriesPage({
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>INBOX</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>Contact Inquiries</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>Contact Inquiries</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
           Messages sent from your public contact form: trials, sponsorship, media requests and general questions.
         </p>
@@ -66,7 +66,7 @@ export default function AdminInquiriesPage({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                 <div>
-                  <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{item.sender_name}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.sender_name}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     {item.inquiry_type} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
                   </div>

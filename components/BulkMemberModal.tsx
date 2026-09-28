@@ -574,7 +574,7 @@ export default function BulkMemberModal({
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--bg-surface-elevated, #0B1120)',
-        border: '1px solid var(--border-medium, rgba(255,255,255,0.12))',
+        border: '1px solid var(--border-medium, rgba(var(--tint-rgb), 0.12))',
         borderRadius: '20px',
         boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
         overflow: 'hidden',
@@ -582,7 +582,7 @@ export default function BulkMemberModal({
         {/* Modal Header */}
         <div style={{
           padding: '1.5rem 2rem',
-          borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          borderBottom: '1px solid var(--border-subtle, rgba(var(--tint-rgb), 0.08))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -596,7 +596,7 @@ export default function BulkMemberModal({
                 {club.name}
               </span>
             </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
               Bulk Import &amp; Export Members
             </h2>
           </div>
@@ -604,7 +604,7 @@ export default function BulkMemberModal({
             type="button"
             onClick={onClose}
             style={{
-              background: 'rgba(255,255,255,0.05)',
+              background: 'rgba(var(--tint-rgb), 0.05)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
               padding: '0.4rem',
@@ -621,8 +621,8 @@ export default function BulkMemberModal({
           display: 'flex',
           gap: '0.5rem',
           padding: '0.75rem 2rem',
-          borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-          background: 'rgba(0,0,0,0.2)',
+          borderBottom: '1px solid var(--border-subtle, rgba(var(--tint-rgb), 0.08))',
+          background: 'rgba(var(--shade-rgb), 0.2)',
         }}>
           <button
             type="button"
@@ -632,7 +632,7 @@ export default function BulkMemberModal({
               borderRadius: '10px',
               border: activeTab === 'export' ? '1px solid #10B981' : '1px solid transparent',
               background: activeTab === 'export' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-              color: activeTab === 'export' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'export' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.88rem',
               cursor: 'pointer',
@@ -652,7 +652,7 @@ export default function BulkMemberModal({
               borderRadius: '10px',
               border: activeTab === 'import' ? '1px solid #3B82F6' : '1px solid transparent',
               background: activeTab === 'import' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: activeTab === 'import' ? '#60A5FA' : 'var(--text-secondary)',
+              color: activeTab === 'import' ? 'var(--c-sky)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.88rem',
               cursor: 'pointer',
@@ -675,11 +675,11 @@ export default function BulkMemberModal({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{
                 padding: '1.25rem',
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'rgba(var(--tint-rgb), 0.02)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: '12px',
               }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                   Filter Member Export Dataset
                 </h4>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -727,7 +727,7 @@ export default function BulkMemberModal({
                       padding: '1.25rem',
                       borderRadius: '12px',
                       border: exportFormat === 'csv' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
-                      background: exportFormat === 'csv' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                      background: exportFormat === 'csv' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(var(--tint-rgb), 0.02)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -735,9 +735,9 @@ export default function BulkMemberModal({
                       transition: 'all 0.2s',
                     }}
                   >
-                    <FileSpreadsheet size={32} color="#10B981" />
+                    <FileSpreadsheet size={32} color="var(--c-green)" />
                     <div>
-                      <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                         CSV Spreadsheet (.csv)
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -752,7 +752,7 @@ export default function BulkMemberModal({
                       padding: '1.25rem',
                       borderRadius: '12px',
                       border: exportFormat === 'json' ? '2px solid #3B82F6' : '1px solid var(--border-subtle)',
-                      background: exportFormat === 'json' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                      background: exportFormat === 'json' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(var(--tint-rgb), 0.02)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -760,9 +760,9 @@ export default function BulkMemberModal({
                       transition: 'all 0.2s',
                     }}
                   >
-                    <FileCode size={32} color="#60A5FA" />
+                    <FileCode size={32} color="var(--c-sky)" />
                     <div>
-                      <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                         JSON Dataset (.json)
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -782,7 +782,7 @@ export default function BulkMemberModal({
                 borderTop: '1px solid var(--border-subtle)',
               }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Ready to export <strong style={{ color: '#FFFFFF' }}>{filteredExportMembers.length}</strong> matching members.
+                  Ready to export <strong style={{ color: 'var(--text-primary)' }}>{filteredExportMembers.length}</strong> matching members.
                 </div>
                 <button
                   type="button"
@@ -814,9 +814,9 @@ export default function BulkMemberModal({
                 borderRadius: '12px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <FileSpreadsheet size={22} color="#60A5FA" />
+                  <FileSpreadsheet size={22} color="var(--c-sky)" />
                   <div>
-                    <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                       Need the standard CSV format?
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -845,7 +845,7 @@ export default function BulkMemberModal({
                     borderRadius: '8px',
                     border: importMethod === 'file' ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
                     background: importMethod === 'file' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    color: importMethod === 'file' ? '#60A5FA' : 'var(--text-secondary)',
+                    color: importMethod === 'file' ? 'var(--c-sky)' : 'var(--text-secondary)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -861,7 +861,7 @@ export default function BulkMemberModal({
                     borderRadius: '8px',
                     border: importMethod === 'paste' ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
                     background: importMethod === 'paste' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    color: importMethod === 'paste' ? '#60A5FA' : 'var(--text-secondary)',
+                    color: importMethod === 'paste' ? 'var(--c-sky)' : 'var(--text-secondary)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -876,12 +876,12 @@ export default function BulkMemberModal({
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    border: '2px dashed var(--border-medium, rgba(255,255,255,0.2))',
+                    border: '2px dashed var(--border-medium, rgba(var(--tint-rgb), 0.2))',
                     borderRadius: '14px',
                     padding: '2.5rem 1.5rem',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    background: 'rgba(255, 255, 255, 0.015)',
+                    background: 'rgba(var(--tint-rgb), 0.015)',
                     transition: 'border-color 0.2s, background 0.2s',
                   }}
                   onMouseEnter={e => {
@@ -889,8 +889,8 @@ export default function BulkMemberModal({
                     e.currentTarget.style.background = 'rgba(59, 130, 246, 0.04)';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'var(--border-medium, rgba(255,255,255,0.2))';
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.015)';
+                    e.currentTarget.style.borderColor = 'var(--border-medium, rgba(var(--tint-rgb), 0.2))';
+                    e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.015)';
                   }}
                 >
                   <input
@@ -900,8 +900,8 @@ export default function BulkMemberModal({
                     onChange={handleFileUpload}
                     style={{ display: 'none' }}
                   />
-                  <Upload size={36} color="#3B82F6" style={{ margin: '0 auto 0.75rem auto' }} />
-                  <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                  <Upload size={36} color="var(--c-blue)" style={{ margin: '0 auto 0.75rem auto' }} />
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.25rem' }}>
                     {fileName ? fileName : 'Click or Drag & Drop member file here'}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -928,7 +928,7 @@ export default function BulkMemberModal({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <HelpCircle size={15} color="var(--text-muted)" />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>Duplicate Resolution (matched by email):</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Duplicate Resolution (matched by email):</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -957,24 +957,24 @@ export default function BulkMemberModal({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {/* Stats Bar */}
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(var(--tint-rgb), 0.04)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Parsed: </span>
-                      <strong style={{ color: '#FFFFFF' }}>{parsedRows.length}</strong>
+                      <strong style={{ color: 'var(--text-primary)' }}>{parsedRows.length}</strong>
                     </div>
                     <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#10B981' }}>Valid Entries: </span>
-                      <strong style={{ color: '#FFFFFF' }}>{validCount}</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>Valid Entries: </span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{validCount}</strong>
                     </div>
                     {duplicateCount > 0 && (
                       <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#F59E0B' }}>Existing Matches: </span>
-                        <strong style={{ color: '#FFFFFF' }}>{duplicateCount}</strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)' }}>Existing Matches: </span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{duplicateCount}</strong>
                       </div>
                     )}
                     {errorCount > 0 && (
                       <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#EF4444' }}>Errors: </span>
-                        <strong style={{ color: '#FFFFFF' }}>{errorCount}</strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--c-red)' }}>Errors: </span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{errorCount}</strong>
                       </div>
                     )}
                   </div>
@@ -985,11 +985,11 @@ export default function BulkMemberModal({
                     overflowY: 'auto',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: '10px',
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'rgba(var(--shade-rgb), 0.3)',
                   }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <tr style={{ background: 'rgba(var(--tint-rgb), 0.03)', borderBottom: '1px solid var(--border-subtle)' }}>
                           <th style={{ padding: '0.6rem 0.8rem', color: 'var(--text-muted)' }}>Status</th>
                           <th style={{ padding: '0.6rem 0.8rem', color: 'var(--text-muted)' }}>Full Name</th>
                           <th style={{ padding: '0.6rem 0.8rem', color: 'var(--text-muted)' }}>Email</th>
@@ -1003,7 +1003,7 @@ export default function BulkMemberModal({
                           <tr
                             key={`row-${row.index}`}
                             style={{
-                              borderBottom: '1px solid rgba(255,255,255,0.03)',
+                              borderBottom: '1px solid rgba(var(--tint-rgb), 0.03)',
                               background: !row.isValid
                                 ? 'rgba(239, 68, 68, 0.05)'
                                 : row.isDuplicate
@@ -1013,20 +1013,20 @@ export default function BulkMemberModal({
                           >
                             <td style={{ padding: '0.55rem 0.8rem' }}>
                               {!row.isValid ? (
-                                <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', fontSize: '0.7rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', fontSize: '0.7rem' }}>
                                   Invalid ({row.errors.join(', ')})
                                 </span>
                               ) : row.isDuplicate ? (
-                                <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', fontSize: '0.7rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
                                   {duplicatePolicy === 'update' ? 'Will Update' : 'Will Skip'}
                                 </span>
                               ) : (
-                                <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10B981', fontSize: '0.7rem' }}>
+                                <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--c-green)', fontSize: '0.7rem' }}>
                                   Ready
                                 </span>
                               )}
                             </td>
-                            <td style={{ padding: '0.55rem 0.8rem', color: '#FFFFFF', fontWeight: 600 }}>
+                            <td style={{ padding: '0.55rem 0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                               {row.memberData?.full_name || row.raw['fullname'] || '—'}
                             </td>
                             <td style={{ padding: '0.55rem 0.8rem', color: 'var(--text-secondary)' }}>
@@ -1056,7 +1056,7 @@ export default function BulkMemberModal({
                     borderTop: '1px solid var(--border-subtle)',
                   }}>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      Ready to import <strong style={{ color: '#10B981' }}>{validCount}</strong> valid entries into {club.name}.
+                      Ready to import <strong style={{ color: 'var(--c-green)' }}>{validCount}</strong> valid entries into {club.name}.
                     </div>
                     <button
                       type="button"

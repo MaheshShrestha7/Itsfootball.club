@@ -250,7 +250,7 @@ export default function ImageUploadZone({
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#EF4444',
+                color: 'var(--c-red)',
                 fontSize: '0.75rem',
                 cursor: 'pointer',
                 display: 'flex',
@@ -324,7 +324,7 @@ export default function ImageUploadZone({
         {previewUrl ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div
-              style={{
+              data-theme="dark" style={{
                 width: aspectRatio === '16:9' ? '120px' : '64px',
                 height: '64px',
                 borderRadius: '8px',
@@ -349,7 +349,7 @@ export default function ImageUploadZone({
             </div>
 
             <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Asset configured
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -361,7 +361,7 @@ export default function ImageUploadZone({
               style={{
                 padding: '0.4rem 0.6rem',
                 borderRadius: '6px',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(var(--tint-rgb), 0.05)',
                 color: 'var(--text-secondary)',
                 fontSize: '0.75rem',
                 display: 'flex',
@@ -396,7 +396,7 @@ export default function ImageUploadZone({
             </div>
 
             <div>
-              <span style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.9rem' }}>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                 {uploading ? 'Uploading asset...' : 'Choose a file or drag it here'}
               </span>
             </div>
@@ -431,7 +431,7 @@ export default function ImageUploadZone({
             alignItems: 'center',
             gap: '0.4rem',
             fontSize: '0.75rem',
-            color: '#EF4444',
+            color: 'var(--c-red)',
             marginTop: '0.2rem',
           }}
           role="alert"

@@ -105,14 +105,14 @@ export default function PlayerSearchSelect({
                 alignItems: 'center',
                 gap: '0.6rem',
                 padding: '0.5rem 0.75rem',
-                background: opt.value === value ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+                background: opt.value === value ? 'rgba(var(--tint-rgb), 0.06)' : 'transparent',
                 border: 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
               }}
             >
               {opt.isPlayer && <PlayerAvatar photoUrl={opt.photoUrl} name={opt.label} size={26} />}
-              <span style={{ fontSize: '0.85rem', color: '#FFFFFF' }}>{opt.label}</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{opt.label}</span>
             </button>
           ))}
         </div>

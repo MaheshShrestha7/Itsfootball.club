@@ -76,7 +76,7 @@ export default function DoorCheckinQrModal({
         <span className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>
           {badgeLabel}
         </span>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
           {title}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -90,7 +90,7 @@ export default function DoorCheckinQrModal({
             borderRadius: 'var(--radius-md)',
             padding: '0.65rem 1rem',
             marginBottom: '1.25rem',
-            color: '#EF4444',
+            color: 'var(--c-red)',
             fontSize: '0.8rem',
           }}>
             {disabledNotice}
@@ -119,7 +119,7 @@ export default function DoorCheckinQrModal({
 
         <div
           style={{
-            background: 'rgba(0, 0, 0, 0.4)',
+            background: 'rgba(var(--shade-rgb), 0.4)',
             padding: '0.75rem 1rem',
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.5rem',
@@ -148,7 +148,7 @@ export default function DoorCheckinQrModal({
             className="btn btn-secondary btn-sm"
             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
           >
-            {copiedLink ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
+            {copiedLink ? <Check size={12} color="var(--c-green)" /> : <Copy size={12} />}
             <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
           </button>
         </div>

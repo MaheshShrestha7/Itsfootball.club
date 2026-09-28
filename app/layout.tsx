@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { Outfit, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
@@ -31,13 +31,20 @@ const monoFont = JetBrains_Mono({ subsets: ['latin'], weight: ['500', '700'], di
 // Every page carries a per-request CSP nonce (middleware.ts), so none can be served prerendered
 export const dynamic = 'force-dynamic';
 
-export const viewport: Viewport = {
-  themeColor: '#070A0F',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-  viewportFit: 'cover',
-};
+/** 'light' or 'dark' (default), from the cookie ThemeToggle writes. Read on the server so the first paint is right. */
+async function getTheme() {
+  return (await cookies()).get('theme')?.value === 'light' ? 'light' : 'dark';
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  return {
+    themeColor: (await getTheme()) === 'light' ? '#F3F5F9' : '#070A0F',
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: 'cover',
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -46,9 +53,10 @@ export default async function RootLayout({
 }) {
   // Server-rendered pages start from real data (see ClubProvider's initialData)
   const initialData = await loadInitialData((await headers()).get('x-pathname') || '/');
+  const theme = await getTheme();
 
   return (
-    <html lang="en" className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+    <html lang="en" data-theme={theme} className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <body>
         <AuthProvider>
           <ClubProvider initialData={initialData}>

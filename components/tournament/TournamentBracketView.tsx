@@ -29,8 +29,8 @@ export default function TournamentBracketView({
     return (
       <div
         style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(var(--tint-rgb), 0.02)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
           borderRadius: '16px',
           padding: '3rem',
           textAlign: 'center',
@@ -38,7 +38,7 @@ export default function TournamentBracketView({
         }}
       >
         <Trophy size={36} style={{ opacity: 0.3, margin: '0 auto 1rem auto' }} />
-        <h3 style={{ margin: '0 0 0.5rem 0', color: '#FFFFFF', fontWeight: 800 }}>
+        <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
           No Knockout Tiesheet Generated Yet
         </h3>
         <p style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -113,21 +113,21 @@ export default function TournamentBracketView({
                     background:
                       rIdx === totalRounds - 1
                         ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)'
-                        : 'rgba(255, 255, 255, 0.03)',
+                        : 'rgba(var(--tint-rgb), 0.03)',
                     borderRadius: '10px',
                     border:
                       rIdx === totalRounds - 1
                         ? '1px solid rgba(245, 158, 11, 0.4)'
-                        : '1px solid rgba(255, 255, 255, 0.06)',
+                        : '1px solid rgba(var(--tint-rgb), 0.06)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                    {rIdx === totalRounds - 1 && <Trophy size={15} color="#F59E0B" />}
+                    {rIdx === totalRounds - 1 && <Trophy size={15} color="var(--c-amber)" />}
                     <span
                       style={{
                         fontWeight: 800,
                         fontSize: '0.85rem',
-                        color: rIdx === totalRounds - 1 ? '#F59E0B' : '#FFFFFF',
+                        color: rIdx === totalRounds - 1 ? 'var(--c-amber)' : 'var(--text-primary)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                       }}
@@ -161,12 +161,12 @@ export default function TournamentBracketView({
                         key={match.id}
                         onClick={() => onSelectMatch && onSelectMatch(match)}
                         style={{
-                          background: 'linear-gradient(145deg, #111827 0%, #0F172A 100%)',
+                          background: 'linear-gradient(145deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
                           border: isLive
                             ? '1.5px solid #EF4444'
                             : isCompleted
                             ? '1px solid rgba(16, 185, 129, 0.35)'
-                            : '1px solid rgba(255, 255, 255, 0.1)',
+                            : '1px solid rgba(var(--tint-rgb), 0.1)',
                           borderRadius: '12px',
                           overflow: 'hidden',
                           boxShadow: isLive
@@ -189,7 +189,7 @@ export default function TournamentBracketView({
                               ? '#EF4444'
                               : isCompleted
                               ? 'rgba(16, 185, 129, 0.35)'
-                              : 'rgba(255, 255, 255, 0.1)';
+                              : 'rgba(var(--tint-rgb), 0.1)';
                           }
                         }}
                       >
@@ -197,8 +197,8 @@ export default function TournamentBracketView({
                         <div
                           style={{
                             padding: '0.45rem 0.75rem',
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            background: 'rgba(var(--shade-rgb), 0.4)',
+                            borderBottom: '1px solid rgba(var(--tint-rgb), 0.05)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -216,7 +216,7 @@ export default function TournamentBracketView({
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '3px',
-                                  color: '#EF4444',
+                                  color: 'var(--c-red)',
                                   fontWeight: 800,
                                 }}
                               >
@@ -233,7 +233,7 @@ export default function TournamentBracketView({
                               </span>
                             )}
                             {isCompleted && (
-                              <span style={{ color: '#10B981', fontWeight: 800 }}>
+                              <span style={{ color: 'var(--c-green)', fontWeight: 800 }}>
                                 FT
                               </span>
                             )}
@@ -273,7 +273,7 @@ export default function TournamentBracketView({
                                   style={{
                                     fontSize: '0.8rem',
                                     fontWeight: isHomeWinner ? 800 : 600,
-                                    color: isHomeWinner ? '#FFFFFF' : isCompleted ? 'rgba(255,255,255,0.6)' : '#FFFFFF',
+                                    color: isHomeWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : '#FFFFFF',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -293,7 +293,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.home_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
                                   ({match.home_penalty_score})
                                 </span>
                               )}
@@ -301,7 +301,7 @@ export default function TournamentBracketView({
                                 style={{
                                   fontSize: '0.95rem',
                                   fontWeight: 800,
-                                  color: isHomeWinner ? '#10B981' : isCompleted ? '#CBD5E1' : 'var(--text-muted)',
+                                  color: isHomeWinner ? 'var(--c-green)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
                                   minWidth: '18px',
                                   textAlign: 'right',
                                 }}
@@ -333,7 +333,7 @@ export default function TournamentBracketView({
                                   style={{
                                     fontSize: '0.8rem',
                                     fontWeight: isAwayWinner ? 800 : 600,
-                                    color: isAwayWinner ? '#FFFFFF' : isCompleted ? 'rgba(255,255,255,0.6)' : '#FFFFFF',
+                                    color: isAwayWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : '#FFFFFF',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -353,7 +353,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.away_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
                                   ({match.away_penalty_score})
                                 </span>
                               )}
@@ -361,7 +361,7 @@ export default function TournamentBracketView({
                                 style={{
                                   fontSize: '0.95rem',
                                   fontWeight: 800,
-                                  color: isAwayWinner ? '#10B981' : isCompleted ? '#CBD5E1' : 'var(--text-muted)',
+                                  color: isAwayWinner ? 'var(--c-green)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
                                   minWidth: '18px',
                                   textAlign: 'right',
                                 }}
@@ -386,8 +386,8 @@ export default function TournamentBracketView({
         <div
           style={{
             marginTop: '1.5rem',
-            background: 'rgba(0, 0, 0, 0.35)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(var(--shade-rgb), 0.35)',
+            border: '1px solid rgba(var(--tint-rgb), 0.08)',
             borderRadius: '12px',
             padding: '1rem 1.25rem',
             display: 'flex',
@@ -399,9 +399,9 @@ export default function TournamentBracketView({
           onClick={() => onSelectMatch && onSelectMatch(thirdPlaceMatch)}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Award size={22} color="#F59E0B" />
+            <Award size={22} color="var(--c-amber)" />
             <div>
-              <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#FFFFFF' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                 3rd Place Playoff
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -414,7 +414,7 @@ export default function TournamentBracketView({
               style={{
                 fontSize: '1rem',
                 fontWeight: 900,
-                color: thirdPlaceMatch.status === 'completed' ? '#10B981' : 'var(--text-muted)',
+                color: thirdPlaceMatch.status === 'completed' ? 'var(--c-green)' : 'var(--text-muted)',
               }}
             >
               {thirdPlaceMatch.status === 'completed'

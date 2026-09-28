@@ -772,7 +772,7 @@ export default function TacticalPitch({
         gap: '0.65rem',
         padding: 'clamp(0.6rem, 2vw, 0.85rem)',
         borderRadius: 'var(--radius-md)',
-        background: 'rgba(14, 20, 30, 0.7)',
+        background: 'rgba(var(--dk-14-20-30), 0.7)',
         border: '1px solid var(--border-subtle)',
         width: '100%',
       }}>
@@ -783,7 +783,7 @@ export default function TacticalPitch({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.45)',
+            background: 'rgba(var(--shade-rgb), 0.45)',
             padding: '2px',
             borderRadius: '8px',
             border: '1px solid var(--border-subtle)',
@@ -800,7 +800,7 @@ export default function TacticalPitch({
                   fontWeight: activeFormat === fmt ? 800 : 600,
                   borderRadius: '6px',
                   background: activeFormat === fmt ? primaryColor : 'transparent',
-                  color: activeFormat === fmt ? '#FFFFFF' : 'var(--text-muted)',
+                  color: activeFormat === fmt ? 'var(--text-primary)' : 'var(--text-muted)',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -825,7 +825,7 @@ export default function TacticalPitch({
                 onClick={() => handleSelectPreset(key)}
                 className="scroll-pill-item btn btn-sm touch-target"
                 style={{
-                  background: selectedFormationKey === key && !isFreeFormMode ? primaryColor : 'rgba(255, 255, 255, 0.05)',
+                  background: selectedFormationKey === key && !isFreeFormMode ? primaryColor : 'rgba(var(--tint-rgb), 0.05)',
                   color: selectedFormationKey === key && !isFreeFormMode ? 'var(--club-primary-contrast, #FFFFFF)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.78rem',
@@ -852,7 +852,7 @@ export default function TacticalPitch({
           justifyContent: 'space-between',
           gap: '0.5rem',
           width: '100%',
-          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          borderTop: '1px solid rgba(var(--tint-rgb), 0.06)',
           paddingTop: '0.5rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
@@ -863,7 +863,7 @@ export default function TacticalPitch({
                 className="btn btn-sm touch-target"
                 style={{
                   background: isFreeFormMode ? '#F59E0B' : 'rgba(245, 158, 11, 0.12)',
-                  color: isFreeFormMode ? '#000000' : '#F59E0B',
+                  color: isFreeFormMode ? '#000000' : 'var(--c-amber)',
                   fontWeight: 800,
                   fontSize: '0.78rem',
                   padding: '0.35rem 0.65rem',
@@ -953,7 +953,7 @@ export default function TacticalPitch({
       >
         {/* Real-time drag feedback: overlaid on the pitch so it never shifts the pitch mid-drag */}
         {dragCoordinateFeedback && (
-          <div style={{
+          <div data-theme="dark" style={{
             position: 'absolute',
             top: '8px',
             left: '50%',
@@ -970,7 +970,7 @@ export default function TacticalPitch({
             alignItems: 'center',
             gap: '0.4rem',
             fontSize: '0.74rem',
-            color: '#F59E0B',
+            color: 'var(--c-amber)',
             fontWeight: 700,
           }}>
             <Crosshair size={13} style={{ flexShrink: 0 }} />
@@ -1007,7 +1007,7 @@ export default function TacticalPitch({
           <div className="pitch-corner-arc pitch-corner-br" />
 
           {/* 4. Format & Orientation Watermarks */}
-          <div style={{
+          <div data-theme="dark" style={{
             position: 'absolute',
             top: '12px',
             right: '18px',
@@ -1021,7 +1021,7 @@ export default function TacticalPitch({
             gap: '0.35rem',
             fontSize: '0.7rem',
             fontWeight: 800,
-            color: activeFormat === '7v7' ? '#F59E0B' : activeFormat === '9v9' ? '#60A5FA' : '#10B981',
+            color: activeFormat === '7v7' ? 'var(--c-amber)' : activeFormat === '9v9' ? 'var(--c-sky)' : 'var(--c-green)',
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
             pointerEvents: 'none',
@@ -1036,7 +1036,7 @@ export default function TacticalPitch({
             display: 'flex',
             alignItems: 'center',
             gap: '0.35rem',
-            color: 'rgba(255, 255, 255, 0.22)',
+            color: 'rgba(var(--tint-rgb), 0.22)',
             fontSize: '0.72rem',
             fontWeight: 800,
             letterSpacing: '0.08em',
@@ -1112,7 +1112,7 @@ export default function TacticalPitch({
                   height: '36px',
                   borderRadius: '50%',
                   background: empty
-                    ? 'rgba(255, 255, 255, 0.08)'
+                    ? 'rgba(var(--tint-rgb), 0.08)'
                     : photoUrl
                     ? '#0B0F14'
                     : pos.position === 'GK'
@@ -1123,19 +1123,19 @@ export default function TacticalPitch({
                     : isSelected
                     ? '2.5px solid #FFFFFF'
                     : empty
-                    ? '2px dashed rgba(255, 255, 255, 0.65)'
-                    : '2px solid rgba(255, 255, 255, 0.85)',
+                    ? '2px dashed rgba(var(--tint-rgb), 0.65)'
+                    : '2px solid rgba(var(--tint-rgb), 0.85)',
                   boxShadow: isDropTarget
                     ? '0 0 25px #10B981, 0 0 10px #10B981'
                     : isDragging
                     ? '0 0 20px #F59E0B, 0 8px 20px rgba(0,0,0,0.7)'
                     : isSelected
-                    ? '0 0 16px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.6)'
+                    ? '0 0 16px rgba(var(--tint-rgb), 0.8), 0 4px 12px rgba(0,0,0,0.6)'
                     : '0 4px 12px rgba(0,0,0,0.5)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   fontFamily: 'var(--font-heading)',
                   fontWeight: 900,
                   fontSize: '0.9rem',
@@ -1246,7 +1246,7 @@ export default function TacticalPitch({
                     justifyContent: 'center',
                     border: '1.5px solid #FFFFFF',
                   }}>
-                    <Flame size={10} color="#FFFFFF" />
+                    <Flame size={10} color="var(--text-primary)" />
                   </span>
                 )}
               </div>
@@ -1256,14 +1256,14 @@ export default function TacticalPitch({
                 className="player-node-name"
                 style={{
                   marginTop: '4px',
-                  background: 'rgba(8, 12, 18, 0.88)',
+                  background: 'rgba(var(--dk-8-12-18), 0.88)',
                   backdropFilter: 'blur(6px)',
                   padding: '2px 7px',
                   borderRadius: '5px',
-                  border: isSelected ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
+                  border: isSelected ? '1px solid rgba(var(--tint-rgb), 0.6)' : '1px solid rgba(var(--tint-rgb), 0.15)',
                   fontSize: '0.7rem',
                   fontWeight: 700,
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
@@ -1291,7 +1291,7 @@ export default function TacticalPitch({
       {!isEditable && substitutes.length > 0 && (
         <div
           aria-label="Substitutes"
-          style={{
+          data-theme="dark" style={{
             marginTop: '-0.75rem',
             padding: '0.75rem clamp(0.6rem, 2vw, 1rem)',
             borderRadius: '0 0 var(--radius-md) var(--radius-md)',
@@ -1315,8 +1315,8 @@ export default function TacticalPitch({
                     gap: '0.45rem',
                     padding: '0.3rem 0.65rem 0.3rem 0.3rem',
                     borderRadius: 'var(--radius-full)',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'rgba(var(--tint-rgb), 0.06)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.12)',
                   }}
                 >
                   <PlayerAvatar photoUrl={sub.photo_url} name={sub.full_name} size={26} />
@@ -1325,7 +1325,7 @@ export default function TacticalPitch({
                       {sub.jersey_number}
                     </span>
                   )}
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {nameDisplay === 'first' ? sub.full_name.split(' ')[0] : sub.full_name.split(' ').pop()}
                   </span>
                   {sub.player_position && (
@@ -1375,7 +1375,7 @@ export default function TacticalPitch({
           className="glass-panel"
           style={{
             padding: '1.25rem',
-            background: 'linear-gradient(135deg, rgba(20, 28, 41, 0.95) 0%, rgba(10, 15, 23, 0.98) 100%)',
+            background: 'linear-gradient(135deg, rgba(var(--dk-20-28-41), 0.95) 0%, rgba(var(--dk-10-15-23), 0.98) 100%)',
             border: `1.5px solid ${primaryColor}`,
             boxShadow: '0 8px 25px rgba(0, 0, 0, 0.5)',
             display: 'flex',
@@ -1396,7 +1396,7 @@ export default function TacticalPitch({
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `${activePlayer.number ? `#${activePlayer.number} ` : ''}${activePlayer.name}`}
                 </h4>
                 {activePlayer.is_captain && (
@@ -1409,7 +1409,7 @@ export default function TacticalPitch({
                 </span>
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Tactical Zone: <strong style={{ color: '#FFFFFF' }}>{getSectorZone(activePlayer.x, activePlayer.y)}</strong>
+                Tactical Zone: <strong style={{ color: 'var(--text-primary)' }}>{getSectorZone(activePlayer.x, activePlayer.y)}</strong>
               </p>
             </div>
           </div>
@@ -1451,7 +1451,7 @@ export default function TacticalPitch({
                   alignItems: 'center',
                   gap: '0.35rem',
                   borderColor: '#3B82F6',
-                  color: '#60A5FA',
+                  color: 'var(--c-sky)',
                 }}
               >
                 <ArrowLeftRight size={14} />
@@ -1467,7 +1467,7 @@ export default function TacticalPitch({
                   setSelectedPlayerId(null);
                 }}
                 className="btn btn-secondary btn-sm"
-                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', borderColor: '#EF4444', color: '#F87171' }}
+                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', borderColor: '#EF4444', color: 'var(--c-red)' }}
               >
                 Move to Bench
               </button>

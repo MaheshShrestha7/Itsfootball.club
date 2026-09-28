@@ -103,7 +103,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
           top: 'calc(100% + 0.35rem)',
           left: 0,
           right: 0,
-          background: 'rgba(15, 23, 42, 0.98)',
+          background: 'rgba(var(--dk-15-23-42), 0.98)',
           border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-md)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
@@ -133,9 +133,9 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
                     border: 'none',
                     borderBottom: '1px solid var(--border-subtle)',
                     cursor: 'pointer',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.05)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <Icon size={14} color="var(--club-primary)" />

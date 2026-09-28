@@ -52,7 +52,7 @@ export default function PublicTournamentDetailPage({
 
   if (!tournament) {
     return (
-      <div style={{ minHeight: '100vh', background: '#090D16', color: '#FFFFFF' }}>
+      <div style={{ minHeight: '100vh', background: 'rgb(var(--dk-9-13-22))', color: 'var(--text-primary)' }}>
         <div style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
           <h2>Tournament Not Found</h2>
           <p style={{ color: 'var(--text-secondary)' }}>The requested tournament does not exist or has concluded.</p>
@@ -76,15 +76,16 @@ export default function PublicTournamentDetailPage({
       : 'Group Stage + Knockout';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090D16', color: '#FFFFFF' }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(var(--dk-9-13-22))', color: 'var(--text-primary)' }}>
 
       {/* Tournament Header */}
       <section
+        data-theme={tournament.banner_url ? 'dark' : undefined}
         style={{
           background: tournament.banner_url
-            ? `linear-gradient(180deg, rgba(9, 13, 22, 0.75) 0%, rgba(9, 13, 22, 0.96) 100%), url(${tournament.banner_url}) center/cover no-repeat`
-            : 'linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(9, 13, 22, 0.95) 100%)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            ? `linear-gradient(180deg, rgba(var(--dk-9-13-22), 0.75) 0%, rgba(var(--dk-9-13-22), 0.96) 100%), url(${tournament.banner_url}) center/cover no-repeat`
+            : 'linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(var(--dk-9-13-22), 0.95) 100%)',
+          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
           padding: '2.5rem 1.5rem 1.5rem 1.5rem',
           position: 'relative',
         }}
@@ -126,7 +127,7 @@ export default function PublicTournamentDetailPage({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#F59E0B',
+                  color: 'var(--c-amber)',
                   boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
                 }}
               >
@@ -146,7 +147,7 @@ export default function PublicTournamentDetailPage({
                         padding: '2px 8px',
                         borderRadius: '6px',
                         background: 'rgba(239, 68, 68, 0.2)',
-                        color: '#EF4444',
+                        color: 'var(--c-red)',
                         border: '1px solid #EF4444',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -168,7 +169,7 @@ export default function PublicTournamentDetailPage({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10B981', fontWeight: 700 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
                     <Layers size={14} />
                     <span>{formatLabel}</span>
                   </span>
@@ -201,7 +202,7 @@ export default function PublicTournamentDetailPage({
                 border: '1px solid rgba(16, 185, 129, 0.3)',
                 padding: '0.4rem 0.85rem',
                 borderRadius: '20px',
-                color: '#10B981',
+                color: 'var(--c-green)',
                 fontSize: '0.75rem',
                 fontWeight: 800,
                 letterSpacing: '0.04em',
@@ -224,7 +225,7 @@ export default function PublicTournamentDetailPage({
           style={{
             display: 'flex',
             gap: '0.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
             marginBottom: '1.75rem',
             overflowX: 'auto',
           }}
@@ -237,7 +238,7 @@ export default function PublicTournamentDetailPage({
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === 'bracket' ? '2px solid #10B981' : '2px solid transparent',
-                color: activeTab === 'bracket' ? '#10B981' : 'var(--text-secondary)',
+                color: activeTab === 'bracket' ? 'var(--c-green)' : 'var(--text-secondary)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -260,7 +261,7 @@ export default function PublicTournamentDetailPage({
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === 'standings' ? '2px solid #10B981' : '2px solid transparent',
-                color: activeTab === 'standings' ? '#10B981' : 'var(--text-secondary)',
+                color: activeTab === 'standings' ? 'var(--c-green)' : 'var(--text-secondary)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -282,7 +283,7 @@ export default function PublicTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'fixtures' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'fixtures' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'fixtures' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.92rem',
               cursor: 'pointer',
@@ -303,7 +304,7 @@ export default function PublicTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'teams' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'teams' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'teams' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.92rem',
               cursor: 'pointer',
@@ -373,8 +374,8 @@ export default function PublicTournamentDetailPage({
               <div
                 key={part.id}
                 style={{
-                  background: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(var(--dk-15-23-42), 0.75)',
+                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   display: 'flex',
@@ -388,7 +389,7 @@ export default function PublicTournamentDetailPage({
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}
                 />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {part.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
@@ -402,7 +403,7 @@ export default function PublicTournamentDetailPage({
                           part.team_type === 'internal'
                             ? 'rgba(16, 185, 129, 0.15)'
                             : 'rgba(59, 130, 246, 0.15)',
-                        color: part.team_type === 'internal' ? '#10B981' : '#60A5FA',
+                        color: part.team_type === 'internal' ? 'var(--c-green)' : 'var(--c-sky)',
                       }}
                     >
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
@@ -413,7 +414,7 @@ export default function PublicTournamentDetailPage({
                       </span>
                     )}
                     {part.group && (
-                      <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
                         Group {part.group}
                       </span>
                     )}

@@ -385,14 +385,14 @@ export default function ClubPublicPage({
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              border: '3px solid rgba(255,255,255,0.08)',
+              border: '3px solid rgba(var(--tint-rgb), 0.08)',
               borderTopColor: 'var(--club-primary, #10B981)',
               animation: 'spin 0.9s linear infinite',
             }} />
             <Shield size={28} color="var(--club-primary, #10B981)" style={{ opacity: 0.9 }} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FFFFFF', letterSpacing: '0.02em' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
               Loading Club Headquarters...
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
@@ -437,13 +437,13 @@ export default function ClubPublicPage({
       <section
         onMouseEnter={() => setIsSliderPaused(true)}
         onMouseLeave={() => setIsSliderPaused(false)}
-        style={{
+        data-theme="dark" style={{
           position: 'relative',
           minHeight: '560px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
-          background: `linear-gradient(to bottom, rgba(7, 10, 15, 0.45) 0%, rgba(7, 10, 15, 0.88) 75%, var(--bg-pitch) 100%), url(${currentSlide.bgImage}) center/cover no-repeat`,
+          background: `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), url(${currentSlide.bgImage}) center/cover no-repeat`,
           borderBottom: '1px solid var(--border-subtle)',
           padding: '2.5rem 0 2.5rem 0',
           transition: 'background-image 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -468,7 +468,7 @@ export default function ClubPublicPage({
           {club.logo_url && !heroLogoError ? (
             <img loading="eager" decoding="async" fetchPriority="high" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(100%)' }} />
           ) : (
-            <Shield size={400} color="#FFFFFF" />
+            <Shield size={400} color="var(--text-primary)" />
           )}
         </div>
 
@@ -487,7 +487,7 @@ export default function ClubPublicPage({
                     {/* SLIDE: MATCHDAY LIVE / FIXTURE CLASH */}
                     {currentSlide.category === 'match' && (
                       <div>
-                        <div style={{
+                        <div data-theme="dark" style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.65rem',
@@ -504,9 +504,9 @@ export default function ClubPublicPage({
                               <Shield size={13} color={club.primary_color} />
                             )}
                           </div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FFFFFF' }}>{club.name}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>{club.name}</span>
                           <span style={{ color: 'var(--text-muted)' }}>•</span>
-                          <span style={{ fontSize: '0.75rem', color: activeSlideMatch?.status === 'live' ? '#EF4444' : 'var(--club-primary)', fontWeight: 700 }}>
+                          <span style={{ fontSize: '0.75rem', color: activeSlideMatch?.status === 'live' ? 'var(--c-red)' : 'var(--club-primary)', fontWeight: 700 }}>
                             {currentSlide.badge}
                           </span>
                         </div>
@@ -517,7 +517,7 @@ export default function ClubPublicPage({
                           lineHeight: 1.1,
                           letterSpacing: '-0.03em',
                           marginBottom: '1rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
                         </h1>
@@ -559,7 +559,7 @@ export default function ClubPublicPage({
                     {/* SLIDE 3: BREAKING NEWS */}
                     {currentSlide.category === 'news' && (
                       <div>
-                        <div style={{
+                        <div data-theme="dark" style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.65rem',
@@ -581,7 +581,7 @@ export default function ClubPublicPage({
                           lineHeight: 1.15,
                           letterSpacing: '-0.02em',
                           marginBottom: '1rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
                         </h1>
@@ -622,7 +622,7 @@ export default function ClubPublicPage({
                     {/* SLIDE 4: CLUB EVENTS & TRIALS */}
                     {currentSlide.category === 'event' && (
                       <div>
-                        <div style={{
+                        <div data-theme="dark" style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.65rem',
@@ -633,7 +633,7 @@ export default function ClubPublicPage({
                           marginBottom: '1rem',
                         }}>
                           <Calendar size={14} color="var(--club-accent, #F59E0B)" />
-                          <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 800 }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)', fontWeight: 800 }}>
                             {currentSlide.badge}
                           </span>
                         </div>
@@ -644,7 +644,7 @@ export default function ClubPublicPage({
                           lineHeight: 1.15,
                           letterSpacing: '-0.02em',
                           marginBottom: '1rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
                         </h1>
@@ -683,7 +683,7 @@ export default function ClubPublicPage({
                     {/* SLIDE: CUSTOM IMAGE BANNER SPOTLIGHT */}
                     {currentSlide.category === 'image' && (
                       <div>
-                        <div style={{
+                        <div data-theme="dark" style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.65rem',
@@ -694,7 +694,7 @@ export default function ClubPublicPage({
                           marginBottom: '1rem',
                         }}>
                           <Sparkles size={14} color="var(--club-accent, #F59E0B)" />
-                          <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 800 }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)', fontWeight: 800 }}>
                             {currentSlide.badge}
                           </span>
                         </div>
@@ -705,7 +705,7 @@ export default function ClubPublicPage({
                           lineHeight: 1.15,
                           letterSpacing: '-0.02em',
                           marginBottom: '1rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
                         </h1>
@@ -747,7 +747,7 @@ export default function ClubPublicPage({
               {/* SLIDE 5: STADIUM FORTRESS */}
               {currentSlide.category === 'stadium' && (
                 <div>
-                  <div style={{
+                  <div data-theme="dark" style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.65rem',
@@ -769,7 +769,7 @@ export default function ClubPublicPage({
                     lineHeight: 1.1,
                     letterSpacing: '-0.03em',
                     marginBottom: '1rem',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                   }}>
                     {club.stadium_name}
                   </h1>
@@ -820,7 +820,7 @@ export default function ClubPublicPage({
                         padding: '1.5rem',
                         border: '2px solid #EF4444',
                         boxShadow: '0 0 35px rgba(239, 68, 68, 0.35)',
-                        background: 'rgba(18, 26, 38, 0.92)',
+                        background: 'rgba(var(--dk-18-26-38), 0.92)',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span className="badge badge-live">
@@ -847,12 +847,12 @@ export default function ClubPublicPage({
                               onError={crestOnError}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
+                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Home</span>
                           </div>
 
                           {/* Live Score */}
-                          <div style={{
+                          <div data-theme="dark" style={{
                             padding: '0.5rem 1rem',
                             background: 'rgba(0, 0, 0, 0.6)',
                             borderRadius: '16px',
@@ -865,12 +865,12 @@ export default function ClubPublicPage({
                               fontSize: 'clamp(2rem, 5vw, 2.8rem)',
                               fontWeight: 900,
                               letterSpacing: '0.05em',
-                              color: '#FFFFFF',
+                              color: 'var(--text-primary)',
                               lineHeight: 1,
                             }}>
                               {activeSlideMatch.home_score} : {activeSlideMatch.away_score}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--c-red)', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
                               {activeSlideMatch.period === 'first_half'
                                 ? '1st Half'
                                 : activeSlideMatch.period === 'halftime'
@@ -894,14 +894,14 @@ export default function ClubPublicPage({
                               onError={crestOnError}
                               style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
                             />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
+                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Away</span>
                           </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            Venue: <strong style={{ color: '#FFFFFF' }}>{activeSlideMatch.venue}</strong>
+                            Venue: <strong style={{ color: 'var(--text-primary)' }}>{activeSlideMatch.venue}</strong>
                           </div>
                           <Link
                             href={`/${club.slug}/match/${activeSlideMatch.id}`}
@@ -995,7 +995,7 @@ export default function ClubPublicPage({
                           <div style={{ fontSize: '0.75rem', color: 'var(--club-primary)', fontWeight: 700, textTransform: 'uppercase' }}>
                             {activeSlideNews.tags?.join(' • ') || 'First Team'}
                           </div>
-                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.3 }}>
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
                             {activeSlideNews.title}
                           </h3>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
@@ -1019,7 +1019,7 @@ export default function ClubPublicPage({
                       <div className="glass-panel" style={{
                         padding: '2rem',
                         border: '1.5px solid rgba(245, 158, 11, 0.3)',
-                        background: 'rgba(14, 20, 30, 0.9)',
+                        background: 'rgba(var(--dk-14-20-30), 0.9)',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                           <span className="badge badge-gold">EVENT INVITATION</span>
@@ -1028,7 +1028,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
 
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
                           {activeSlideEvent.title}
                         </h3>
 
@@ -1047,9 +1047,9 @@ export default function ClubPublicPage({
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
                             <span style={{ color: 'var(--text-muted)' }}>Checked In</span>
-                            <strong style={{ color: '#FFFFFF' }}>{activeSlideEvent.rsvp_count} / {activeSlideEvent.max_capacity} checked in</strong>
+                            <strong style={{ color: 'var(--text-primary)' }}>{activeSlideEvent.rsvp_count} / {activeSlideEvent.max_capacity} checked in</strong>
                           </div>
-                          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: '100%', height: '6px', background: 'rgba(var(--tint-rgb), 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{
                               width: `${Math.min(100, Math.round((activeSlideEvent.rsvp_count / activeSlideEvent.max_capacity) * 100))}%`,
                               height: '100%',
@@ -1076,7 +1076,7 @@ export default function ClubPublicPage({
                 <div className="glass-panel" style={{
                   padding: '2rem',
                   border: '1.5px solid var(--border-medium)',
-                  background: 'rgba(14, 20, 30, 0.9)',
+                  background: 'rgba(var(--dk-14-20-30), 0.9)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                     <span className="badge badge-primary">FORTRESS SPECS</span>
@@ -1088,7 +1088,7 @@ export default function ClubPublicPage({
                       <MapPin size={18} color="var(--club-primary)" />
                       <div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Address</div>
-                        <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.9rem' }}>{club.stadium_address}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_address}</div>
                       </div>
                     </div>
 
@@ -1096,7 +1096,7 @@ export default function ClubPublicPage({
                       <Shield size={18} color="var(--club-primary)" />
                       <div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pitch Surface</div>
-                        <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.9rem' }}>{club.stadium_pitch_type}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_pitch_type}</div>
                       </div>
                     </div>
                   </div>
@@ -1119,7 +1119,7 @@ export default function ClubPublicPage({
                 <div className="glass-panel" style={{
                   overflow: 'hidden',
                   border: '1.5px solid rgba(245, 158, 11, 0.35)',
-                  background: 'rgba(14, 20, 30, 0.92)',
+                  background: 'rgba(var(--dk-14-20-30), 0.92)',
                   display: 'flex',
                   flexDirection: 'column',
                 }}>
@@ -1129,14 +1129,14 @@ export default function ClubPublicPage({
                       alt={currentSlide.title}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.95) 0%, transparent 60%)' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.95) 0%, transparent 60%)' }} />
                     <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
                       <span className="badge badge-gold">{currentSlide.badge}</span>
                     </div>
                   </div>
 
                   <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.3 }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
                       {currentSlide.title}
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -1165,7 +1165,7 @@ export default function ClubPublicPage({
             gap: '0.85rem',
             marginTop: '2.5rem',
             paddingTop: '1.25rem',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
+            borderTop: '1px solid rgba(var(--tint-rgb), 0.08)',
           }}>
             {/* Category Select Tabs: Mobile Horizontal Scroll Pill Strip */}
             <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 0 }}>
@@ -1182,9 +1182,9 @@ export default function ClubPublicPage({
                       gap: '0.5rem',
                       padding: '0.5rem 0.95rem',
                       borderRadius: '30px',
-                      border: isActive ? `1.5px solid ${club.primary_color}` : '1px solid rgba(255,255,255,0.08)',
-                      background: isActive ? 'rgba(var(--club-primary-rgb), 0.2)' : 'rgba(0,0,0,0.45)',
-                      color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                      border: isActive ? `1.5px solid ${club.primary_color}` : '1px solid rgba(var(--tint-rgb), 0.08)',
+                      background: isActive ? 'rgba(var(--club-primary-rgb), 0.2)' : 'rgba(var(--shade-rgb), 0.45)',
+                      color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       fontWeight: 700,
                       fontSize: '0.8rem',
@@ -1239,7 +1239,7 @@ export default function ClubPublicPage({
                 onClick={() => setActiveSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)}
                 aria-label="Previous Slide"
                 className="touch-target"
-                style={{
+                data-theme="dark" style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
@@ -1259,7 +1259,7 @@ export default function ClubPublicPage({
                 onClick={() => setActiveSlide(prev => (prev + 1) % heroSlides.length)}
                 aria-label="Next Slide"
                 className="touch-target"
-                style={{
+                data-theme="dark" style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
@@ -1315,21 +1315,21 @@ export default function ClubPublicPage({
         const sortedSponsors = sortSponsorsByTier(clubSponsors);
 
         return (
-          <section style={{ padding: '3rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,0,0,0.2) 100%)' }}>
+          <section style={{ padding: '3rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
             <div className="container">
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
                 <div>
                   <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
                     Commercial Backers &amp; Kit Partners
                   </span>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                     Official Club Sponsors
                   </h3>
                 </div>
                 <button
                   onClick={() => setContactModalOpen(true)}
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'rgba(var(--tint-rgb), 0.05)',
                     border: '1px solid var(--border-subtle)',
                     padding: '0.5rem 1rem',
                     borderRadius: '8px',
@@ -1386,17 +1386,17 @@ export default function ClubPublicPage({
                         flex: isXL ? '2 1 420px' : isLG ? '1.5 1 320px' : isMD ? '1 1 240px' : '0.7 1 180px',
                         maxWidth: isXL ? '720px' : isLG ? '560px' : isMD ? '420px' : '320px',
                         background: isXL
-                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(15, 23, 42, 0.85))'
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(var(--dk-15-23-42), 0.85))'
                           : isLG
-                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.07), rgba(15, 23, 42, 0.65))'
-                          : 'rgba(255, 255, 255, 0.025)',
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.07), rgba(var(--dk-15-23-42), 0.65))'
+                          : 'rgba(var(--tint-rgb), 0.025)',
                         border: isXL
                           ? '1px solid rgba(245, 158, 11, 0.45)'
                           : isLG
                           ? '1px solid rgba(245, 158, 11, 0.22)'
                           : isMD
-                          ? '1px solid rgba(255, 255, 255, 0.1)'
-                          : '1px solid rgba(255, 255, 255, 0.05)',
+                          ? '1px solid rgba(var(--tint-rgb), 0.1)'
+                          : '1px solid rgba(var(--tint-rgb), 0.05)',
                         boxShadow: isXL ? '0 10px 32px rgba(245, 158, 11, 0.14)' : isLG ? '0 6px 20px rgba(0, 0, 0, 0.25)' : 'none',
                         transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
                       }}
@@ -1424,7 +1424,7 @@ export default function ClubPublicPage({
                         <div style={{
                           fontWeight: 900,
                           fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
@@ -1441,7 +1441,7 @@ export default function ClubPublicPage({
                               ? 'rgba(245, 158, 11, 0.22)'
                               : sponsor.tier === 'gold'
                               ? 'rgba(234, 179, 8, 0.18)'
-                              : 'rgba(255, 255, 255, 0.08)',
+                              : 'rgba(var(--tint-rgb), 0.08)',
                             color: sponsor.tier === 'platinum'
                               ? '#F59E0B'
                               : sponsor.tier === 'gold'
@@ -1480,22 +1480,22 @@ export default function ClubPublicPage({
                   onChange={(e) => setFixturesSeasonFilter(e.target.value)}
                   style={{
                     padding: '0.45rem 0.85rem',
-                    background: 'rgba(255, 255, 255, 0.07)',
+                    background: 'rgba(var(--tint-rgb), 0.07)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-sm)',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     fontSize: '0.82rem',
                     fontWeight: 700,
                     outline: 'none',
                     cursor: 'pointer'
                   }}
                 >
-                  <option value="CURRENT" style={{ background: '#111827', color: '#FFFFFF' }}>
+                  <option value="CURRENT" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>
                     Current Season ({activeSeason?.name || defaultSeasonLabel()})
                   </option>
-                  <option value="ALL" style={{ background: '#111827', color: '#FFFFFF' }}>All Seasons</option>
+                  <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All Seasons</option>
                   {clubSeasons.map(s => (
-                    <option key={s.id} value={s.name} style={{ background: '#111827', color: '#FFFFFF' }}>
+                    <option key={s.id} value={s.name} style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>
                       {s.name} {s.is_current ? '(Active)' : `(${s.status})`}
                     </option>
                   ))}
@@ -1503,7 +1503,7 @@ export default function ClubPublicPage({
               </div>
 
               {/* Tab switchers */}
-              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: 'var(--radius-md)', flex: 1, minWidth: '220px' }}>
+              <div style={{ display: 'flex', background: 'rgba(var(--tint-rgb), 0.05)', padding: '4px', borderRadius: 'var(--radius-md)', flex: 1, minWidth: '220px' }}>
                 <button
                   onClick={() => setFixturesTab('upcoming')}
                   style={{
@@ -1557,22 +1557,22 @@ export default function ClubPublicPage({
                       {match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition}
                     </span>
                     {match.match_type && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', textTransform: 'uppercase' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
                         {match.match_type}
                       </span>
                     )}
                     {match.season && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)' }}>
                         {match.season}
                       </span>
                     )}
                   </div>
                   {match.title && (
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#F59E0B', marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--c-amber)', marginTop: '2px' }}>
                       {match.title}
                     </div>
                   )}
-                  <div style={{ fontSize: '0.9rem', color: '#FFFFFF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
                     <Calendar size={14} color="var(--text-muted)" />
                     <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
                   </div>
@@ -1583,24 +1583,24 @@ export default function ClubPublicPage({
 
                 {/* Scoreline / Teams */}
                 <div className="fixture-teams" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'right', flex: 1, fontWeight: 700, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                  <div style={{ textAlign: 'right', flex: 1, fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                     {match.home_team_name}
                   </div>
 
                   <div style={{
                     padding: '0.35rem 0.85rem',
-                    background: match.status === 'completed' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.4)',
+                    background: match.status === 'completed' ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--shade-rgb), 0.4)',
                     borderRadius: '8px',
                     fontFamily: 'var(--font-heading)',
                     fontWeight: 900,
                     fontSize: '1.2rem',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     minWidth: '70px',
                     textAlign: 'center',
                     flexShrink: 0,
                   }}>
                     {match.status === 'live' ? (
-                      <span style={{ color: '#EF4444' }}>{match.home_score} - {match.away_score}</span>
+                      <span style={{ color: 'var(--c-red)' }}>{match.home_score} - {match.away_score}</span>
                     ) : match.status === 'completed' ? (
                       `${match.home_score} - ${match.away_score}`
                     ) : (
@@ -1608,7 +1608,7 @@ export default function ClubPublicPage({
                     )}
                   </div>
 
-                  <div style={{ textAlign: 'left', flex: 1, fontWeight: 700, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                  <div style={{ textAlign: 'left', flex: 1, fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                     {match.away_team_name}
                   </div>
                 </div>
@@ -1626,7 +1626,7 @@ export default function ClubPublicPage({
                         gap: '0.3rem',
                         background: 'rgba(16, 185, 129, 0.15)',
                         border: '1px solid #10B981',
-                        color: '#10B981',
+                        color: 'var(--c-green)',
                         fontSize: '0.78rem',
                         padding: '0.4rem 0.75rem',
                       }}
@@ -1646,7 +1646,7 @@ export default function ClubPublicPage({
                         gap: '0.3rem',
                         background: 'rgba(59, 130, 246, 0.15)',
                         border: '1px solid #3B82F6',
-                        color: '#3B82F6',
+                        color: 'var(--c-blue)',
                         fontSize: '0.78rem',
                         padding: '0.4rem 0.75rem',
                       }}
@@ -1672,7 +1672,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.4 SCHEDULED SOCIAL EVENTS */}
-      <section id="events" style={{ padding: '4.5rem 0', background: 'rgba(255,255,255,0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="events" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
             <div>
@@ -1692,7 +1692,7 @@ export default function ClubPublicPage({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <span className="badge" style={{
                       backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.15)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                      color: evt.category === 'training' ? '#10B981' : evt.category === 'social' ? '#F59E0B' : '#3B82F6',
+                      color: evt.category === 'training' ? 'var(--c-green)' : evt.category === 'social' ? 'var(--c-amber)' : 'var(--c-blue)',
                     }}>
                       {evt.category.toUpperCase()}
                     </span>
@@ -1701,7 +1701,7 @@ export default function ClubPublicPage({
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                     {evt.title}
                   </h3>
 
@@ -1713,7 +1713,7 @@ export default function ClubPublicPage({
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Calendar size={14} color="var(--club-primary)" />
-                    <span style={{ color: '#FFFFFF' }}><LocalTime value={evt.start_time} locale="en-US" options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
+                    <span style={{ color: 'var(--text-primary)' }}><LocalTime value={evt.start_time} locale="en-US" options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <MapPin size={14} color="var(--club-primary)" />
@@ -1776,7 +1776,7 @@ export default function ClubPublicPage({
 
                 <div style={{ padding: '1.75rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.6rem', lineHeight: 1.3 }}>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem', lineHeight: 1.3 }}>
                       {featuredArticle.title}
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
@@ -1817,12 +1817,12 @@ export default function ClubPublicPage({
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.3rem' }}>
                       {article.tags?.slice(0, 2).map(tag => (
-                        <span key={tag} className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.07)' }}>
+                        <span key={tag} className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.07)' }}>
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3, marginBottom: '0.3rem' }}>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '0.3rem' }}>
                       {article.title}
                     </h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1837,13 +1837,13 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE */}
-      <section style={{ padding: '4.5rem 0', background: 'rgba(255,255,255,0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <span className="badge badge-primary">LEADERSHIP</span>
               {activeSeason && (
-                <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', fontSize: '0.72rem' }}>
+                <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', fontSize: '0.72rem' }}>
                   🗓️ {activeSeason.name} Tenure
                 </span>
               )}
@@ -1867,14 +1867,14 @@ export default function ClubPublicPage({
                     marginBottom: '1rem',
                   }}
                 />
-                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.2rem' }}>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                   {exec.full_name}
                 </h4>
                 <div style={{ color: 'var(--club-primary)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                   {exec.executive_title}
                 </div>
                 {(exec.executive_season || activeSeason) && (
-                  <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                  <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
                     Tenure: {exec.executive_season || activeSeason?.name || defaultSeasonLabel()}
                   </span>
                 )}
@@ -1931,7 +1931,7 @@ export default function ClubPublicPage({
                   {/* Photo & Number Banner */}
                   <div style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
                     <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,20,30,0.9), transparent)' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.9), transparent)' }} />
                     <div style={{
                       position: 'absolute',
                       top: '12px',
@@ -1939,20 +1939,20 @@ export default function ClubPublicPage({
                       fontFamily: 'var(--font-heading)',
                       fontWeight: 900,
                       fontSize: '1.75rem',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                     }}>
                       {player.jersey_number ? `#${player.jersey_number}` : ''}
                     </div>
                     <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
-                      <span className="badge" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
+                      <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
                       <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
                       <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', marginBottom: '4px' }}>
                         {player.player_position}
                       </span>
-                      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                         {player.full_name}
                       </h3>
                     </div>
@@ -1961,21 +1961,21 @@ export default function ClubPublicPage({
                   {/* Player Stats Mini Grid */}
                   <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
+                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>APPS</div>
-                        <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{stat?.appearances || 0}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{stat?.appearances || 0}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
+                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>GOALS</div>
-                        <div style={{ fontWeight: 800, color: '#10B981' }}>{stat?.goals || 0}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--c-green)' }}>{stat?.goals || 0}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
+                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ASSISTS</div>
-                        <div style={{ fontWeight: 800, color: '#F59E0B' }}>{stat?.assists || 0}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--c-amber)' }}>{stat?.assists || 0}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
+                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MOTM</div>
-                        <div style={{ fontWeight: 800, color: '#3B82F6' }}>{stat?.motm_awards || 0}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--c-blue)' }}>{stat?.motm_awards || 0}</div>
                       </div>
                     </div>
 
@@ -2004,7 +2004,7 @@ export default function ClubPublicPage({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
             <div style={{
               display: 'inline-flex',
-              background: 'rgba(0,0,0,0.4)',
+              background: 'rgba(var(--shade-rgb), 0.4)',
               padding: '0.35rem',
               borderRadius: '12px',
               border: '1px solid var(--border-subtle)',
@@ -2067,8 +2067,8 @@ export default function ClubPublicPage({
             <div id="leaderboard" className="glass-panel" style={{ padding: '2rem' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Trophy size={20} color="#F59E0B" /> Traditional Club Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Trophy size={20} color="var(--c-amber)" /> Traditional Club Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Top individual season performances</span>
                 </div>
@@ -2106,7 +2106,7 @@ export default function ClubPublicPage({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '0.75rem 1rem',
-                      background: 'rgba(0, 0, 0, 0.25)',
+                      background: 'rgba(var(--shade-rgb), 0.25)',
                       borderRadius: '8px',
                       border: '1px solid var(--border-subtle)',
                     }}
@@ -2130,7 +2130,7 @@ export default function ClubPublicPage({
                       <PlayerAvatar photoUrl={item.player?.photo_url} name={item.player?.full_name || 'Player'} size={36} style={{ borderRadius: '8px' }} />
 
                       <div>
-                        <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>{item.player?.full_name}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{item.player?.full_name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           #{item.player?.jersey_number} • {item.player?.player_position}
                         </div>
@@ -2149,7 +2149,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.8 HOME GROUND DETAILS & MAP */}
-      <section id="stadium" style={{ padding: '5rem 0', background: 'rgba(255,255,255,0.015)' }}>
+      <section id="stadium" style={{ padding: '5rem 0', background: 'rgba(var(--tint-rgb), 0.015)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -2172,7 +2172,7 @@ export default function ClubPublicPage({
                   <MapPin size={20} color="var(--club-primary)" />
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location Address</div>
-                    <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{club.stadium_address}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_address}</div>
                   </div>
                 </div>
 
@@ -2180,7 +2180,7 @@ export default function ClubPublicPage({
                   <Shield size={20} color="var(--club-primary)" />
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pitch Surface</div>
-                    <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{club.stadium_pitch_type}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_pitch_type}</div>
                   </div>
                 </div>
               </div>
@@ -2192,7 +2192,7 @@ export default function ClubPublicPage({
 
             {/* Interactive Map Embed / Visual Map Presentation */}
             <div className="glass-panel" style={{ overflow: 'hidden', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)' }}>
-              <div style={{ height: '380px', position: 'relative', background: '#131b26' }}>
+              <div style={{ height: '380px', position: 'relative', background: 'rgb(var(--dk-19-27-38))' }}>
                 {/* Embedded Map Representation, geocoded live from the club's own stadium address */}
                 <iframe
                   title="Home Ground Map"
@@ -2214,7 +2214,7 @@ export default function ClubPublicPage({
                   bottom: '16px',
                   left: '16px',
                   right: '16px',
-                  background: 'rgba(10, 15, 23, 0.9)',
+                  background: 'rgba(var(--dk-10-15-23), 0.9)',
                   backdropFilter: 'blur(10px)',
                   padding: '0.85rem 1.25rem',
                   borderRadius: '12px',
@@ -2224,7 +2224,7 @@ export default function ClubPublicPage({
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFFFFF' }}>{club.stadium_name}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{club.stadium_name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gates open 90m before kickoff</div>
                   </div>
                   <a
@@ -2283,7 +2283,7 @@ export default function ClubPublicPage({
           }}>
             <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <h3 id="full-squad-title" style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF' }}>
+                <h3 id="full-squad-title" style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                   Full Squad ({rankedSquad.length})
                 </h3>
                 <button type="button" onClick={() => setRosterOpen(false)} className="btn btn-secondary btn-sm" aria-label="Close full squad">
@@ -2309,13 +2309,13 @@ export default function ClubPublicPage({
                       gap: '0.75rem',
                       padding: '0.6rem 0.85rem',
                       borderRadius: '10px',
-                      background: 'rgba(255, 255, 255, 0.03)',
+                      background: 'rgba(var(--tint-rgb), 0.03)',
                     }}
                   >
                     <span style={{ width: '1.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--text-muted)' }}>{rank + 1}</span>
                     <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={38} />
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {player.jersey_number ? <span style={{ color: 'var(--club-primary)', fontWeight: 900 }}>#{player.jersey_number} </span> : null}
                         {player.full_name}
                       </div>
@@ -2359,7 +2359,7 @@ export default function ClubPublicPage({
               alt={activeNewsModal.title}
               style={{ width: '100%', height: '220px', borderRadius: '12px', objectFit: 'cover', marginBottom: '1.25rem' }}
             />
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               {activeNewsModal.title}
             </h3>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>

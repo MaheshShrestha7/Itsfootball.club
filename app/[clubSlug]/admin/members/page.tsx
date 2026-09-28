@@ -139,8 +139,8 @@ export default function AdminMembersPage({
           position: 'fixed',
           bottom: '2rem',
           right: '2rem',
-          background: '#0F172A',
-          color: '#FFFFFF',
+          background: 'rgb(var(--dk-15-23-42))',
+          color: 'var(--text-primary)',
           border: '1px solid #10B981',
           boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           padding: '0.85rem 1.4rem',
@@ -153,7 +153,7 @@ export default function AdminMembersPage({
           fontSize: '0.9rem',
           animation: 'fadeIn 0.3s ease',
         }}>
-          <Sparkles size={18} color="#10B981" />
+          <Sparkles size={18} color="var(--c-green)" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -176,7 +176,7 @@ export default function AdminMembersPage({
               {club.name} Administration
             </span>
           </div>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+          <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
             Member Approvals &amp; Passes
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
@@ -198,13 +198,13 @@ export default function AdminMembersPage({
               borderRadius: '10px',
               border: '1px solid rgba(16, 185, 129, 0.4)',
               background: 'rgba(16, 185, 129, 0.08)',
-              color: '#FFFFFF',
+              color: 'var(--text-primary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
             }}
           >
-            <FileSpreadsheet size={17} color="#10B981" />
+            <FileSpreadsheet size={17} color="var(--c-green)" />
             <span>Bulk Import / Export</span>
           </button>
 
@@ -215,10 +215,10 @@ export default function AdminMembersPage({
             padding: '0.6rem 1rem',
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700, textTransform: 'uppercase' }}>
               Pending Review
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF' }}>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
               {pendingMembers.length}
             </div>
           </div>
@@ -230,10 +230,10 @@ export default function AdminMembersPage({
             padding: '0.6rem 1rem',
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700, textTransform: 'uppercase' }}>
               Active Members
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF' }}>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
               {approvedMembers.length}
             </div>
           </div>
@@ -245,10 +245,10 @@ export default function AdminMembersPage({
             padding: '0.6rem 1rem',
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: '0.7rem', color: '#60A5FA', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--c-sky)', fontWeight: 700, textTransform: 'uppercase' }}>
               Messages
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#FFFFFF' }}>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
               {clubMessages.length}
             </div>
           </div>
@@ -275,7 +275,7 @@ export default function AdminMembersPage({
               borderRadius: '8px',
               border: activeTab === 'pending' ? '1px solid #F59E0B' : '1px solid transparent',
               background: activeTab === 'pending' ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
-              color: activeTab === 'pending' ? '#F59E0B' : 'var(--text-secondary)',
+              color: activeTab === 'pending' ? 'var(--c-amber)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -308,7 +308,7 @@ export default function AdminMembersPage({
               borderRadius: '8px',
               border: activeTab === 'active' ? '1px solid #10B981' : '1px solid transparent',
               background: activeTab === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-              color: activeTab === 'active' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'active' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -329,7 +329,7 @@ export default function AdminMembersPage({
               borderRadius: '8px',
               border: activeTab === 'rejected' ? '1px solid #EF4444' : '1px solid transparent',
               background: activeTab === 'rejected' ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-              color: activeTab === 'rejected' ? '#EF4444' : 'var(--text-secondary)',
+              color: activeTab === 'rejected' ? 'var(--c-red)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -350,7 +350,7 @@ export default function AdminMembersPage({
               borderRadius: '8px',
               border: activeTab === 'messages' ? '1px solid #3B82F6' : '1px solid transparent',
               background: activeTab === 'messages' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: activeTab === 'messages' ? '#60A5FA' : 'var(--text-secondary)',
+              color: activeTab === 'messages' ? 'var(--c-sky)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -388,9 +388,9 @@ export default function AdminMembersPage({
                 width: '100%',
                 padding: '0.5rem 0.75rem 0.5rem 2.2rem',
                 borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(var(--tint-rgb), 0.05)',
                 border: '1px solid var(--border-subtle)',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 fontSize: '0.85rem',
               }}
             />
@@ -404,8 +404,8 @@ export default function AdminMembersPage({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
           {/* Messages List Left */}
           <div className="glass-panel" style={{ padding: '1.25rem', height: '620px', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <MessageSquare size={18} color="#3B82F6" />
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MessageSquare size={18} color="var(--c-blue)" />
               <span>Inbox Correspondence ({clubMessages.length})</span>
             </h3>
 
@@ -422,20 +422,20 @@ export default function AdminMembersPage({
                     style={{
                       padding: '0.85rem',
                       borderRadius: '8px',
-                      background: selectedMessage?.id === msg.id ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                      background: selectedMessage?.id === msg.id ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--shade-rgb), 0.25)',
                       border: selectedMessage?.id === msg.id ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#FFFFFF' }}>{msg.sender_name}</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{msg.sender_name}</span>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {new Date(msg.created_at).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '0.78rem', color: '#60A5FA', fontWeight: 600, marginBottom: '0.2rem' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--c-sky)', fontWeight: 600, marginBottom: '0.2rem' }}>
                       {msg.subject || 'Member Question'}
                     </div>
 
@@ -451,10 +451,10 @@ export default function AdminMembersPage({
                     </p>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
                         {msg.category || 'General'}
                       </span>
-                      <span style={{ fontSize: '0.7rem', color: msg.sender_type === 'admin' ? '#10B981' : '#F59E0B' }}>
+                      <span style={{ fontSize: '0.7rem', color: msg.sender_type === 'admin' ? 'var(--c-green)' : 'var(--c-amber)' }}>
                         {msg.sender_type === 'admin' ? '✓ Committee Sent' : '• From Member'}
                       </span>
                     </div>
@@ -470,7 +470,7 @@ export default function AdminMembersPage({
               <>
                 <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                       {selectedMessage.subject || 'Member Inquiry'}
                     </h3>
                     <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
@@ -478,22 +478,22 @@ export default function AdminMembersPage({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                    From: <strong style={{ color: '#FFFFFF' }}>{selectedMessage.sender_name}</strong> • {new Date(selectedMessage.created_at).toLocaleString()}
+                    From: <strong style={{ color: 'var(--text-primary)' }}>{selectedMessage.sender_name}</strong> • {new Date(selectedMessage.created_at).toLocaleString()}
                   </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', background: 'rgba(var(--shade-rgb), 0.3)', borderRadius: '8px', padding: '1rem' }}>
                   <div style={{
                     padding: '1rem',
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
                     borderRadius: '8px',
                     border: '1px solid var(--border-subtle)',
                     marginBottom: '1rem',
                   }}>
-                    <div style={{ fontSize: '0.75rem', color: '#60A5FA', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--c-sky)', fontWeight: 700, marginBottom: '0.4rem' }}>
                       ORIGINAL INQUIRY
                     </div>
-                    <p style={{ color: '#F8FAFC', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>
+                    <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>
                       {selectedMessage.content}
                     </p>
                   </div>
@@ -511,11 +511,11 @@ export default function AdminMembersPage({
                       placeholder="Type official response to member..."
                       style={{
                         flex: 1,
-                        background: 'rgba(0,0,0,0.4)',
+                        background: 'rgba(var(--shade-rgb), 0.4)',
                         border: '1px solid var(--border-subtle)',
                         borderRadius: '8px',
                         padding: '0.6rem 0.8rem',
-                        color: '#FFFFFF',
+                        color: 'var(--text-primary)',
                         fontSize: '0.85rem',
                         resize: 'none',
                       }}
@@ -546,7 +546,7 @@ export default function AdminMembersPage({
           {displayedList.length === 0 ? (
             <div className="glass-panel" style={{ padding: '3.5rem 1rem', textAlign: 'center' }}>
               <UserCheck size={42} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '0.75rem' }} />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.35rem' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                 No {activeTab} members found
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '420px', margin: '0 auto' }}>
@@ -581,7 +581,7 @@ export default function AdminMembersPage({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <PlayerAvatar photoUrl={member.photo_url} name={member.full_name} size={46} style={{ borderRadius: '12px', border: '1px solid var(--border-subtle)' }} />
                           <div>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                               {member.full_name}
                             </h3>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -594,7 +594,7 @@ export default function AdminMembersPage({
                           className="badge"
                           style={{
                             background: isPending ? 'rgba(245, 158, 11, 0.15)' : isApproved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: isPending ? '#F59E0B' : isApproved ? '#10B981' : '#EF4444',
+                            color: isPending ? 'var(--c-amber)' : isApproved ? 'var(--c-green)' : 'var(--c-red)',
                             fontSize: '0.7rem',
                             fontWeight: 800,
                             padding: '0.2rem 0.55rem',
@@ -606,7 +606,7 @@ export default function AdminMembersPage({
 
                       {/* Contact & Meta Details */}
                       <div style={{
-                        background: 'rgba(0,0,0,0.25)',
+                        background: 'rgba(var(--shade-rgb), 0.25)',
                         borderRadius: '8px',
                         padding: '0.75rem',
                         fontSize: '0.8rem',
@@ -615,26 +615,26 @@ export default function AdminMembersPage({
                         gap: '0.4rem',
                         marginBottom: '1rem',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
                           <Mail size={14} color="var(--text-muted)" />
                           <span>{member.email}</span>
                         </div>
 
                         {member.phone && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
                             <Phone size={14} color="var(--text-muted)" />
                             <span>{member.phone}</span>
                           </div>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
                           <CreditCard size={14} color="var(--text-muted)" />
                           <span>Tier: <strong>{member.membership_tier}</strong></span>
-                          {signupPayments[member.id] === 'paid' && <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: '#10B981' }}>PAID</span>}
-                          {signupPayments[member.id] === 'awaiting_review' && <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B' }}>RECEIPT TO CHECK</span>}
+                          {signupPayments[member.id] === 'paid' && <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>PAID</span>}
+                          {signupPayments[member.id] === 'awaiting_review' && <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)' }}>RECEIPT TO CHECK</span>}
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#E2E8F0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
                           <Calendar size={14} color="var(--text-muted)" />
                           <span>
                             {isPending
@@ -645,7 +645,7 @@ export default function AdminMembersPage({
 
                         {member.qr_code_token && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                            Pass Token: <code style={{ color: '#10B981' }}>{member.qr_code_token}</code>
+                            Pass Token: <code style={{ color: 'var(--c-green)' }}>{member.qr_code_token}</code>
                           </div>
                         )}
                       </div>
@@ -657,7 +657,7 @@ export default function AdminMembersPage({
                           color: 'var(--text-secondary)',
                           fontStyle: 'italic',
                           marginBottom: '1rem',
-                          background: 'rgba(255,255,255,0.02)',
+                          background: 'rgba(var(--tint-rgb), 0.02)',
                           padding: '0.5rem 0.75rem',
                           borderRadius: '6px',
                           borderLeft: '2px solid var(--border-subtle)',
@@ -670,7 +670,7 @@ export default function AdminMembersPage({
                       {isRejected && member.rejection_reason && (
                         <div style={{
                           fontSize: '0.78rem',
-                          color: '#EF4444',
+                          color: 'var(--c-red)',
                           background: 'rgba(239, 68, 68, 0.08)',
                           padding: '0.5rem 0.75rem',
                           borderRadius: '6px',
@@ -699,7 +699,7 @@ export default function AdminMembersPage({
                             type="button"
                             onClick={() => setRejectModalMember(member)}
                             className="btn btn-secondary btn-sm"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: '#EF4444' }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-red)' }}
                           >
                             <X size={16} />
                             <span>Reject</span>
@@ -707,7 +707,7 @@ export default function AdminMembersPage({
                         </>
                       ) : isApproved ? (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
+                          <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
                             <CheckCircle2 size={14} /> Turnstile Pass Active
                           </span>
                           <button
@@ -731,7 +731,7 @@ export default function AdminMembersPage({
                             style={{
                               background: 'transparent',
                               border: 'none',
-                              color: '#3B82F6',
+                              color: 'var(--c-blue)',
                               fontWeight: 700,
                               cursor: 'pointer',
                               display: 'flex',
@@ -776,10 +776,10 @@ export default function AdminMembersPage({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '1.75rem', background: '#090D16' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <XCircle size={20} color="#EF4444" />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <XCircle size={20} color="var(--c-red)" />
                 <span>Reject Membership</span>
               </h3>
               <button
@@ -792,11 +792,11 @@ export default function AdminMembersPage({
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              You are rejecting the membership application for <strong style={{ color: '#FFFFFF' }}>{rejectModalMember.full_name}</strong>. Provide a reason so the applicant understands the committee decision.
+              You are rejecting the membership application for <strong style={{ color: 'var(--text-primary)' }}>{rejectModalMember.full_name}</strong>. Provide a reason so the applicant understands the committee decision.
             </p>
 
             <div style={{ marginBottom: '1.25rem' }}>
-              <label htmlFor="members-reason-for-rejection" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+              <label htmlFor="members-reason-for-rejection" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 Reason for Rejection:
               </label>
               <textarea id="members-reason-for-rejection"

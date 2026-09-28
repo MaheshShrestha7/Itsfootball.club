@@ -50,16 +50,16 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
           {m.player_position || 'ST'} (Primary)
         </span>
         {m.secondary_positions?.map(secPos => (
-          <span key={secPos} className="badge" style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)', padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}>
+          <span key={secPos} className="badge" style={{ backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}>
             {secPos}
           </span>
         ))}
         {m.executive_title && (
-          <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontStyle: 'italic' }}>({m.executive_title})</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)', fontStyle: 'italic' }}>({m.executive_title})</span>
         )}
       </>
     ) : (
-      <span style={{ color: m.executive_title ? '#F59E0B' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: m.executive_title ? 600 : 400 }}>
+      <span style={{ color: m.executive_title ? 'var(--c-amber)' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: m.executive_title ? 600 : 400 }}>
         {m.executive_title || 'Non-playing Staff'}
       </span>
     );
@@ -69,7 +69,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
     return (
       <span className="badge" style={{
         backgroundColor: active ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-        color: active ? '#10B981' : '#EF4444',
+        color: active ? 'var(--c-green)' : 'var(--c-red)',
         border: `1px solid ${active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
         fontWeight: 700,
       }}>
@@ -113,7 +113,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
     <>
       {isPlayerOf(m) && (
         <button onClick={() => onStats(m)} className="btn btn-secondary btn-sm" title={`Update match stats for ${m.full_name}`} aria-label={`Update match stats for ${m.full_name}`}>
-          <Activity size={14} color="#F59E0B" />
+          <Activity size={14} color="var(--c-amber)" />
         </button>
       )}
       <button onClick={() => onEdit(m)} className="btn btn-secondary btn-sm" title={`Edit ${m.full_name}`} aria-label={`Edit ${m.full_name}`}>
@@ -146,7 +146,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
               </div>
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
+              <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
               {(m.email || m.phone) && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {m.email || m.phone}
@@ -179,7 +179,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
           <div className="squad-cell-member">
             <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
               {(m.email || m.phone) && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {[m.email, m.phone].filter(Boolean).join(' • ')}

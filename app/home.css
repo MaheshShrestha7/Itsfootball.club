@@ -60,7 +60,7 @@
   font-size: clamp(2.6rem, 6vw, 4.6rem); font-weight: 900; line-height: 0.98;
   letter-spacing: -0.032em; word-spacing: 0.06em; margin-bottom: 1.5rem;
 }
-.lp-h1 em { font-style: normal; color: var(--lp-p); }
+.lp-h1 em { font-style: normal; color: color-mix(in srgb, var(--lp-p), var(--text-primary) var(--accent-ink)); }
 .lp-hero-sub { color: var(--text-secondary); font-size: clamp(1rem, 1.7vw, 1.15rem); max-width: 50ch; margin-bottom: 2rem; }
 
 /* Claim-your-address box */
@@ -538,3 +538,42 @@
   .lp-claim input { flex-basis: 100%; order: 0; padding-left: 0.5rem; }
   .lp-claim-btn { width: 100%; justify-content: center; }
 }
+
+/* ---------- Light theme ----------
+   The hero mock (.lp-stage) and final CTA are pinned dark in the markup; these are the page-level bits. */
+[data-theme='light'] .lp-eyebrow,
+[data-theme='light'] .lp-hero-meta svg { color: #047857; }
+[data-theme='light'] .lp-linkbtn,
+[data-theme='light'] .lp-claim-status.ok,
+[data-theme='light'] .lp-vs-after .lp-vs-title,
+[data-theme='light'] .lp-vs-after svg,
+[data-theme='light'] .lp-chip svg,
+[data-theme='light'] .lp-tx em { color: #047857; }
+[data-theme='light'] .lp-claim-status.bad { color: #B45309; }
+[data-theme='light'] .lp-vs-before svg,
+[data-theme='light'] .lp-mc-score small { color: #DC2626; }
+[data-theme='light'] .lp-trophy,
+[data-theme='light'] .lp-lb-row:first-child .lp-lb-rank { color: #B45309; }
+[data-theme='light'] .lp-lb-badge { color: #C2410C; }
+[data-theme='light'] .lp-mc-pin { color: var(--text-primary); }
+[data-theme='light'] .lp-mc-pin.s { color: #2563EB; }
+[data-theme='light'] .lp-swatch:focus-visible { outline-color: var(--text-primary); }
+[data-theme='light'] .lp-step-n { -webkit-text-stroke-color: rgba(4, 120, 87, 0.6); }
+[data-theme='light'] .lp-hero::before {
+  background: radial-gradient(ellipse 60% 55% at 78% 30%, color-mix(in srgb, var(--lp-p) 22%, transparent), transparent 70%);
+}
+[data-theme='light'] .lp-hero::after,
+[data-theme='light'] .lp-kicker,
+[data-theme='light'] .lp-strip,
+[data-theme='light'] .lp-vs-before,
+[data-theme='light'] .lp-step { background: rgba(15, 23, 42, 0.025); border-color: var(--border-subtle); }
+[data-theme='light'] .lp-hero::after { background: none; }
+/* Demo "wells" inside the feature tiles: a faint ink wash instead of black-on-white murk */
+[data-theme='light'] .lp-mc,
+[data-theme='light'] .lp-scan,
+[data-theme='light'] .lp-money,
+[data-theme='light'] .lp-kpi,
+[data-theme='light'] .lp-bm { background: rgba(15, 23, 42, 0.04); }
+[data-theme='light'] .lp-mc-line,
+[data-theme='light'] .lp-bar { background: rgba(15, 23, 42, 0.1); }
+[data-theme='light'] .lp-mc-ht { background: rgba(15, 23, 42, 0.25); }

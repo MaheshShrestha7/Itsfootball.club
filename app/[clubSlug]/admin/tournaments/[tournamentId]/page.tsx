@@ -52,7 +52,7 @@ export default function AdminTournamentDetailPage({
 
   if (!tournament) {
     return (
-      <div style={{ padding: '4rem', textAlign: 'center', color: '#FFFFFF' }}>
+      <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-primary)' }}>
         <h2>Tournament not found.</h2>
         <p style={{ color: 'var(--text-secondary)' }}>The requested tournament does not exist or has been deleted.</p>
         <Link href={`/${club.slug}/admin/tournaments`} className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
@@ -106,7 +106,7 @@ export default function AdminTournamentDetailPage({
       name: newTeamName.trim(),
       short_name: newTeamCode.trim() || newTeamName.slice(0, 3).toUpperCase(),
       logo_url: DEFAULT_CREST,
-      color: '#3B82F6',
+      color: 'var(--c-blue)',
       seed: participants.length + 1,
     });
 
@@ -198,7 +198,7 @@ export default function AdminTournamentDetailPage({
             }}
             title="Advance knockout round winners"
           >
-            <Sparkles size={14} color="#10B981" />
+            <Sparkles size={14} color="var(--c-green)" />
             <span>Progress Bracket</span>
           </button>
 
@@ -241,7 +241,7 @@ export default function AdminTournamentDetailPage({
           style={{
             background: feedbackTone === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
             border: feedbackTone === 'error' ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
-            color: feedbackTone === 'error' ? '#EF4444' : '#10B981',
+            color: feedbackTone === 'error' ? 'var(--c-red)' : 'var(--c-green)',
             padding: '0.85rem 1.25rem',
             borderRadius: '10px',
             marginBottom: '1.25rem',
@@ -259,9 +259,9 @@ export default function AdminTournamentDetailPage({
           position: 'relative',
           overflow: 'hidden',
           background: tournament.banner_url
-            ? `linear-gradient(135deg, rgba(17, 24, 39, 0.88) 0%, rgba(15, 23, 42, 0.94) 100%), url(${tournament.banner_url}) center/cover no-repeat`
-            : 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+            ? `linear-gradient(135deg, rgba(var(--dk-17-24-39), 0.88) 0%, rgba(var(--dk-15-23-42), 0.94) 100%), url(${tournament.banner_url}) center/cover no-repeat`
+            : 'linear-gradient(135deg, rgba(var(--dk-17-24-39), 0.95) 0%, rgba(var(--dk-15-23-42), 0.95) 100%)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
           borderRadius: '16px',
           padding: '1.5rem',
           marginBottom: '1.5rem',
@@ -284,7 +284,7 @@ export default function AdminTournamentDetailPage({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#F59E0B',
+              color: 'var(--c-amber)',
               boxShadow: '0 0 20px rgba(245, 158, 11, 0.2)',
             }}
           >
@@ -292,7 +292,7 @@ export default function AdminTournamentDetailPage({
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.25rem' }}>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                 {tournament.name}
               </h1>
               <span
@@ -302,7 +302,7 @@ export default function AdminTournamentDetailPage({
                   padding: '2px 8px',
                   borderRadius: '6px',
                   background: 'rgba(16, 185, 129, 0.15)',
-                  color: '#10B981',
+                  color: 'var(--c-green)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   textTransform: 'uppercase',
                 }}
@@ -311,7 +311,7 @@ export default function AdminTournamentDetailPage({
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.82rem', flexWrap: 'wrap' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10B981', fontWeight: 700 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
                 <Layers size={14} />
                 <span>{formatLabel}</span>
               </span>
@@ -335,21 +335,21 @@ export default function AdminTournamentDetailPage({
         </div>
 
         {/* Quick Stats Block */}
-        <div style={{ display: 'flex', gap: '1rem', background: 'rgba(0, 0, 0, 0.3)', padding: '0.75rem 1.25rem', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '1rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '12px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF' }}>{tourneyMatches.length}</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{tourneyMatches.length}</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Fixtures</div>
           </div>
-          <div style={{ width: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+          <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-green)' }}>
               {tourneyMatches.filter(m => m.status === 'completed').length}
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Completed</div>
           </div>
-          <div style={{ width: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+          <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#EF4444' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-red)' }}>
               {tourneyMatches.filter(m => m.status === 'live').length}
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Live Now</div>
@@ -369,7 +369,7 @@ export default function AdminTournamentDetailPage({
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
           marginBottom: '1.5rem',
           overflowX: 'auto',
         }}
@@ -382,7 +382,7 @@ export default function AdminTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'bracket' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'bracket' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'bracket' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.88rem',
               cursor: 'pointer',
@@ -405,7 +405,7 @@ export default function AdminTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'standings' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'standings' ? '#10B981' : 'var(--text-secondary)',
+              color: activeTab === 'standings' ? 'var(--c-green)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.88rem',
               cursor: 'pointer',
@@ -427,7 +427,7 @@ export default function AdminTournamentDetailPage({
             background: 'transparent',
             border: 'none',
             borderBottom: activeTab === 'fixtures' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'fixtures' ? '#10B981' : 'var(--text-secondary)',
+            color: activeTab === 'fixtures' ? 'var(--c-green)' : 'var(--text-secondary)',
             fontWeight: 800,
             fontSize: '0.88rem',
             cursor: 'pointer',
@@ -448,7 +448,7 @@ export default function AdminTournamentDetailPage({
             background: 'transparent',
             border: 'none',
             borderBottom: activeTab === 'teams' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'teams' ? '#10B981' : 'var(--text-secondary)',
+            color: activeTab === 'teams' ? 'var(--c-green)' : 'var(--text-secondary)',
             fontWeight: 800,
             fontSize: '0.88rem',
             cursor: 'pointer',
@@ -545,8 +545,8 @@ export default function AdminTournamentDetailPage({
               <div
                 key={part.id}
                 style={{
-                  background: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(var(--dk-15-23-42), 0.75)',
+                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
                   borderRadius: '12px',
                   padding: '1rem',
                   display: 'flex',
@@ -559,7 +559,7 @@ export default function AdminTournamentDetailPage({
                     width: '40px',
                     height: '40px',
                     borderRadius: '10px',
-                    background: 'rgba(0, 0, 0, 0.35)',
+                    background: 'rgba(var(--shade-rgb), 0.35)',
                     border: `2px solid ${part.color || '#10B981'}`,
                     display: 'flex',
                     alignItems: 'center',
@@ -575,7 +575,7 @@ export default function AdminTournamentDetailPage({
                   />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {part.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
@@ -589,7 +589,7 @@ export default function AdminTournamentDetailPage({
                           part.team_type === 'internal'
                             ? 'rgba(16, 185, 129, 0.15)'
                             : 'rgba(59, 130, 246, 0.15)',
-                        color: part.team_type === 'internal' ? '#10B981' : '#60A5FA',
+                        color: part.team_type === 'internal' ? 'var(--c-green)' : 'var(--c-sky)',
                       }}
                     >
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
@@ -600,7 +600,7 @@ export default function AdminTournamentDetailPage({
                       </span>
                     )}
                     {part.group && (
-                      <span style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
                         Group {part.group}
                       </span>
                     )}
@@ -635,7 +635,7 @@ export default function AdminTournamentDetailPage({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(5, 10, 20, 0.85)',
+            background: 'rgba(var(--dk-4-6-9), 0.85)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -646,13 +646,13 @@ export default function AdminTournamentDetailPage({
         >
           <div
             style={{
-              background: '#111827',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: 'rgb(var(--dk-17-24-39))',
+              border: '1px solid rgba(var(--tint-rgb), 0.12)',
               borderRadius: '14px',
               width: '100%',
               maxWidth: '420px',
               padding: '1.5rem',
-              color: '#FFFFFF',
+              color: 'var(--text-primary)',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -671,10 +671,10 @@ export default function AdminTournamentDetailPage({
                   style={{
                     width: '100%',
                     padding: '0.65rem 0.85rem',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'rgba(var(--shade-rgb), 0.4)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.12)',
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     fontSize: '0.88rem',
                   }}
                 />
@@ -693,10 +693,10 @@ export default function AdminTournamentDetailPage({
                   style={{
                     width: '100%',
                     padding: '0.65rem 0.85rem',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'rgba(var(--shade-rgb), 0.4)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.12)',
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: 'var(--text-primary)',
                     fontSize: '0.88rem',
                   }}
                 />

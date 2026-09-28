@@ -128,12 +128,12 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
         >
           {/* ================= FRONT OF CARD ================= */}
           <div
-            style={{
+            data-theme="dark" style={{
               position: 'absolute',
               inset: 0,
               borderRadius: '20px',
               background: `radial-gradient(circle at 15% 15%, rgba(var(--club-primary-rgb), 0.3) 0%, #0E1420 65%, #05080E 100%)`,
-              border: `1.5px solid ${tilt.isHovered ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.15)'}`,
+              border: `1.5px solid ${tilt.isHovered ? 'rgba(var(--tint-rgb), 0.32)' : 'rgba(var(--tint-rgb), 0.15)'}`,
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(0deg)',
@@ -179,7 +179,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               style={{
                 position: 'absolute',
                 inset: 0,
-                backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035) 1px, transparent 1px)',
+                backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(var(--tint-rgb), 0.035) 1px, transparent 1px)',
                 backgroundSize: '16px 16px',
                 pointerEvents: 'none',
                 zIndex: 1,
@@ -199,7 +199,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div
-                  style={{
+                  data-theme="dark" style={{
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
@@ -219,7 +219,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                   )}
                 </div>
                 <div>
-                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.15rem', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                     {club.name}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -234,7 +234,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 className="badge"
                 style={{
                   backgroundColor: isSuspended ? 'rgba(239, 68, 68, 0.2)' : isExpired ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                  color: isSuspended ? '#EF4444' : isExpired ? '#F59E0B' : '#10B981',
+                  color: isSuspended ? 'var(--c-red)' : isExpired ? 'var(--c-amber)' : 'var(--c-green)',
                   border: `1px solid ${isSuspended ? '#EF4444' : isExpired ? '#F59E0B' : '#10B981'}`,
                 }}
               >
@@ -262,11 +262,11 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                   size={86}
                   style={{
                     borderRadius: '16px',
-                    border: `2.5px solid rgba(255, 255, 255, 0.35)`,
+                    border: `2.5px solid rgba(var(--tint-rgb), 0.35)`,
                     boxShadow: '0 12px 24px rgba(0,0,0,0.6)',
                     fontSize: 30,
-                    color: '#FFFFFF',
-                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: 'var(--text-primary)',
+                    background: 'rgba(var(--tint-rgb), 0.12)',
                   }}
                 />
                 {member.jersey_number && (
@@ -296,33 +296,33 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               </div>
 
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
                   {member.full_name}
                 </h3>
                 <div
                   style={{
                     display: 'inline-block',
-                    background: 'rgba(255, 255, 255, 0.1)',
+                    background: 'rgba(var(--tint-rgb), 0.1)',
                     padding: '0.2rem 0.6rem',
                     borderRadius: '6px',
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: '#E2E8F0',
+                    color: 'var(--text-primary)',
                     marginBottom: '0.4rem',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.1)',
                   }}
                 >
                   {member.is_executive ? member.executive_title : member.membership_tier}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Position: <strong style={{ color: '#FFFFFF' }}>{member.player_position || 'Squad Member'}</strong>
+                  Position: <strong style={{ color: 'var(--text-primary)' }}>{member.player_position || 'Squad Member'}</strong>
                 </div>
               </div>
             </div>
 
             {/* Bottom: Turnstile QR Code & Validity */}
             <div
-              style={{
+              data-theme="dark" style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -330,7 +330,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 backdropFilter: 'blur(10px)',
                 padding: '0.9rem 1rem',
                 borderRadius: '14px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(var(--tint-rgb), 0.1)',
                 position: 'relative',
                 zIndex: 3,
                 transform: 'translateZ(25px)',
@@ -341,11 +341,11 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Turnstile QR Token
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem', color: '#FFFFFF', fontWeight: 700, marginTop: '0.1rem' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem', color: 'var(--text-primary)', fontWeight: 700, marginTop: '0.1rem' }}>
                   {member.qr_code_token.substring(0, 16)}...
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Valid Thru: <span style={{ color: '#E2E8F0', fontWeight: 600 }}>{member.membership_expires_at}</span>
+                  Valid Thru: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{member.membership_expires_at}</span>
                 </div>
               </div>
 
@@ -383,7 +383,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               }}
             >
               <span
-                style={{
+                data-theme="dark" style={{
                   fontSize: '0.7rem',
                   fontWeight: 700,
                   color: 'var(--text-muted)',
@@ -400,12 +400,12 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
           {/* ================= BACK OF CARD ================= */}
           <div
-            style={{
+            data-theme="dark" style={{
               position: 'absolute',
               inset: 0,
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #070a11 0%, #111827 100%)',
-              border: `1.5px solid ${tilt.isHovered ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.15)'}`,
+              background: 'linear-gradient(135deg, #070a11 0%, rgb(var(--dk-17-24-39)) 100%)',
+              border: `1.5px solid ${tilt.isHovered ? 'rgba(var(--tint-rgb), 0.32)' : 'rgba(var(--tint-rgb), 0.15)'}`,
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
@@ -434,7 +434,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
             <div style={{ position: 'relative', zIndex: 3 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
                 <Sparkles size={18} color={club.accent_color} />
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
                   Ground Regulations & Access
                 </span>
               </div>
@@ -442,20 +442,20 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Home Ground Gate</div>
-                  <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{club.stadium_name} — Members Turnstile 3</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_name} — Members Turnstile 3</div>
                 </div>
 
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Member Email & Phone</div>
-                  <div style={{ color: '#FFFFFF' }}>{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
+                  <div style={{ color: 'var(--text-primary)' }}>{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
                 </div>
 
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Nationality & DOB</div>
-                  <div style={{ color: '#FFFFFF' }}>{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
+                  <div style={{ color: 'var(--text-primary)' }}>{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.04)', padding: '0.65rem 0.8rem', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '0.65rem 0.8rem', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                   This pass grants turnstile admission to official club fixtures and club house events. Tamper-evident credentials verified at each gate.
                 </div>
               </div>
@@ -508,7 +508,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
             transition: 'all 0.2s ease',
           }}
         >
-          {downloadSuccess ? <CheckCircle2 size={14} color="#FFFFFF" /> : <Download size={14} />}
+          {downloadSuccess ? <CheckCircle2 size={14} color="var(--text-primary)" /> : <Download size={14} />}
           <span>{downloadSuccess ? 'Pass Saved!' : 'Save Digital Pass'}</span>
         </button>
       </div>

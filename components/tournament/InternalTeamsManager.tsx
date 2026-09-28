@@ -148,7 +148,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         }}
       >
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', margin: '0 0 0.25rem 0' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>
             Internal Teams & Squads
           </h2>
           <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -178,7 +178,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
           style={{
             background: 'rgba(16, 185, 129, 0.15)',
             border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: '#10B981',
+            color: 'var(--c-green)',
             padding: '0.75rem 1rem',
             borderRadius: '8px',
             marginBottom: '1.25rem',
@@ -194,8 +194,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
       {clubInternalTeams.length === 0 ? (
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(var(--tint-rgb), 0.02)',
+            border: '1px solid rgba(var(--tint-rgb), 0.08)',
             borderRadius: '14px',
             padding: '3rem',
             textAlign: 'center',
@@ -203,7 +203,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
           }}
         >
           <Shield size={36} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#FFFFFF', fontWeight: 800 }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
             No Internal Teams Created
           </h3>
           <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem' }}>
@@ -230,8 +230,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               <div
                 key={team.id}
                 style={{
-                  background: 'rgba(15, 23, 42, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(var(--dk-15-23-42), 0.85)',
+                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
                   borderRadius: '16px',
                   overflow: 'hidden',
                   position: 'relative',
@@ -250,8 +250,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     height: '110px',
                     width: '100%',
                     background: team.cover_url
-                      ? `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(15, 23, 42, 0.95) 100%), url(${team.cover_url})`
-                      : `linear-gradient(135deg, ${team.color || '#10B981'}40 0%, #0B1120 100%)`,
+                      ? `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(var(--dk-15-23-42), 0.95) 100%), url(${team.cover_url})`
+                      : `linear-gradient(135deg, ${team.color || '#10B981'}40 0%, rgb(var(--dk-15-23-42)) 100%)`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     position: 'relative',
@@ -262,12 +262,12 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   }}
                 >
                   <span
-                    style={{
+                    data-theme="dark" style={{
                       fontSize: '0.7rem',
                       fontWeight: 800,
                       background: 'rgba(0, 0, 0, 0.65)',
                       backdropFilter: 'blur(8px)',
-                      color: team.color || '#10B981',
+                      color: team.color || 'var(--c-green)',
                       border: `1px solid ${team.color || '#10B981'}50`,
                       padding: '2px 8px',
                       borderRadius: '6px',
@@ -278,13 +278,13 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     {team.short_name}
                   </span>
 
-                  <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(0,0,0,0.5)', padding: '3px', borderRadius: '8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div data-theme="dark" style={{ display: 'flex', gap: '0.35rem', background: 'rgba(0,0,0,0.5)', padding: '3px', borderRadius: '8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <button
                       onClick={() => handleOpenEdit(team)}
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#FFFFFF',
+                        color: 'var(--text-primary)',
                         padding: '0.4rem',
                         borderRadius: '6px',
                         cursor: 'pointer',
@@ -300,7 +300,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#EF4444',
+                        color: 'var(--c-red)',
                         padding: '0.4rem',
                         borderRadius: '6px',
                         cursor: 'pointer',
@@ -322,7 +322,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         width: '52px',
                         height: '52px',
                         borderRadius: '12px',
-                        background: '#080D15',
+                        background: 'rgb(var(--dk-8-12-18))',
                         border: `2px solid ${team.color || '#10B981'}`,
                         boxShadow: '0 6px 16px rgba(0, 0, 0, 0.7)',
                         display: 'flex',
@@ -340,7 +340,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                       />
                     </div>
                     <div style={{ paddingBottom: '2px', minWidth: 0 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {team.name}
                       </h3>
                       {team.coach_name && (
@@ -354,7 +354,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   {/* Captain & Stats Row */}
                   <div
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'rgba(var(--shade-rgb), 0.3)',
                       borderRadius: '8px',
                       padding: '0.65rem 0.85rem',
                       display: 'flex',
@@ -366,13 +366,13 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   >
                     <div>
                       <span style={{ color: 'var(--text-muted)' }}>Captain: </span>
-                      <span style={{ color: '#FFFFFF', fontWeight: 700 }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
                         {captain ? captain.full_name : 'Unassigned'}
                       </span>
                     </div>
                     <div>
                       <span style={{ color: 'var(--text-muted)' }}>Squad Size: </span>
-                      <span style={{ color: '#10B981', fontWeight: 800 }}>
+                      <span style={{ color: 'var(--c-green)', fontWeight: 800 }}>
                         {teamPlayers.length} Athletes
                       </span>
                     </div>
@@ -391,17 +391,17 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                             fontSize: '0.72rem',
                             fontWeight: 600,
                             padding: '2px 7px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            background: 'rgba(var(--tint-rgb), 0.05)',
+                            border: '1px solid rgba(var(--tint-rgb), 0.08)',
                             borderRadius: '12px',
-                            color: '#E2E8F0',
+                            color: 'var(--text-primary)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '3px',
                           }}
                         >
                           {player.player_position && (
-                            <span style={{ color: team.color || '#10B981', fontWeight: 800, fontSize: '0.7rem' }}>
+                            <span style={{ color: team.color || 'var(--c-green)', fontWeight: 800, fontSize: '0.7rem' }}>
                               {player.player_position}
                             </span>
                           )}
@@ -431,7 +431,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(5, 10, 20, 0.85)',
+            background: 'rgba(var(--dk-4-6-9), 0.85)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
@@ -443,15 +443,15 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         >
           <div
             style={{
-              background: '#111827',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: 'rgb(var(--dk-17-24-39))',
+              border: '1px solid rgba(var(--tint-rgb), 0.12)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '600px',
               maxHeight: '90vh',
               overflowY: 'auto',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
-              color: '#FFFFFF',
+              color: 'var(--text-primary)',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -459,14 +459,14 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
             <div
               style={{
                 padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Shield size={18} color="#10B981" />
+                <Shield size={18} color="var(--c-green)" />
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
                   {editingTeam ? 'Edit Internal Team' : 'Create Internal Team'}
                 </h3>
@@ -495,10 +495,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     style={{
                       width: '100%',
                       padding: '0.65rem 0.85rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(var(--shade-rgb), 0.4)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontSize: '0.88rem',
                     }}
                   />
@@ -516,10 +516,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     style={{
                       width: '100%',
                       padding: '0.65rem 0.85rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(var(--shade-rgb), 0.4)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontSize: '0.88rem',
                       fontWeight: 700,
                     }}
@@ -572,8 +572,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               </div>
 
               {/* Team Crest & Cover Photo Upload Zones */}
-              <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(var(--shade-rgb), 0.25)', borderRadius: '12px', border: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <ImageIcon size={15} color={color} />
                   <span>Team Identity & Media Assets</span>
                 </div>
@@ -594,7 +594,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         type="button"
                         onClick={() => setLogoUrl(club.logo_url || DEFAULT_CREST)}
                         className="btn btn-sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#FFF' }}
+                        style={{ fontSize: '0.7rem', padding: '2px 7px', background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-primary)' }}
                       >
                         Club Crest
                       </button>
@@ -630,10 +630,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     style={{
                       width: '100%',
                       padding: '0.65rem 0.85rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(var(--shade-rgb), 0.4)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontSize: '0.88rem',
                     }}
                   />
@@ -699,10 +699,10 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     style={{
                       width: '100%',
                       padding: '0.5rem 0.75rem 0.5rem 2rem',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(var(--shade-rgb), 0.4)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontSize: '0.8rem',
                     }}
                   />
@@ -712,8 +712,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   style={{
                     maxHeight: '180px',
                     overflowY: 'auto',
-                    background: 'rgba(0, 0, 0, 0.35)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(var(--shade-rgb), 0.35)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.08)',
                     borderRadius: '8px',
                     padding: '0.5rem',
                     display: 'grid',
@@ -734,8 +734,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         style={{
                           padding: '0.45rem 0.6rem',
                           borderRadius: '6px',
-                          background: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                          border: isChecked ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.06)',
+                          background: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                          border: isChecked ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.06)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -750,11 +750,11 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                           style={{ cursor: 'pointer' }}
                         />
                         <span style={{ display: 'block', minWidth: 0 }}>
-                          <span style={{ display: 'block', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {member.full_name}
                           </span>
                           {member.player_position && (
-                            <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 800 }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 800 }}>
                               {member.player_position}
                             </span>
                           )}

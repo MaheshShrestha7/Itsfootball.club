@@ -71,11 +71,11 @@ export default function ClubScoreLeaderboard({
 
   const getBadgeIcon = (iconName: string) => {
     switch (iconName) {
-      case 'flame': return <Flame size={16} color="#EF4444" />;
-      case 'shield': return <Shield size={16} color="#3B82F6" />;
-      case 'crown': return <Crown size={16} color="#F59E0B" />;
+      case 'flame': return <Flame size={16} color="var(--c-red)" />;
+      case 'shield': return <Shield size={16} color="var(--c-blue)" />;
+      case 'crown': return <Crown size={16} color="var(--c-amber)" />;
       case 'sparkles': return <Sparkles size={16} color="#EC4899" />;
-      default: return <Award size={16} color="#10B981" />;
+      default: return <Award size={16} color="var(--c-green)" />;
     }
   };
 
@@ -110,8 +110,8 @@ export default function ClubScoreLeaderboard({
             </span>
             <span className="badge badge-primary">{getActiveSeason(club.id)?.name || defaultSeasonLabel()} ACTIVE</span>
           </div>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Trophy size={24} color="#F59E0B" />
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Trophy size={24} color="var(--c-amber)" />
             <span>ClubScore Fantasy Standings</span>
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', marginTop: '2px' }}>
@@ -133,7 +133,7 @@ export default function ClubScoreLeaderboard({
         )}
 
         {/* Metric Selector Buttons */}
-        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
           <button
             id="tab-clubscore-season"
             onClick={() => setFilter('season')}
@@ -232,7 +232,7 @@ export default function ClubScoreLeaderboard({
                 padding: '0.9rem 1.25rem',
                 borderRadius: '10px',
                 border: isTopThree ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-subtle)',
-                background: isTopThree ? 'rgba(245, 158, 11, 0.04)' : 'rgba(0,0,0,0.25)',
+                background: isTopThree ? 'rgba(245, 158, 11, 0.04)' : 'rgba(var(--shade-rgb), 0.25)',
                 cursor: 'pointer',
               }}
             >
@@ -242,8 +242,8 @@ export default function ClubScoreLeaderboard({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: idx === 0 ? '#F59E0B' : idx === 1 ? '#94A3B8' : idx === 2 ? '#B45309' : 'rgba(255,255,255,0.08)',
-                  color: idx < 3 ? '#000000' : '#FFFFFF',
+                  background: idx === 0 ? '#F59E0B' : idx === 1 ? '#94A3B8' : idx === 2 ? '#B45309' : 'rgba(var(--tint-rgb), 0.08)',
+                  color: idx < 3 ? '#000000' : 'var(--text-primary)',
                   fontWeight: 900,
                   display: 'flex',
                   alignItems: 'center',
@@ -261,7 +261,7 @@ export default function ClubScoreLeaderboard({
                       position: 'absolute',
                       bottom: '-4px',
                       right: '-4px',
-                      background: '#0F172A',
+                      background: 'rgb(var(--dk-15-23-42))',
                       borderRadius: '50%',
                       padding: '2px',
                       display: 'flex',
@@ -269,14 +269,14 @@ export default function ClubScoreLeaderboard({
                       justifyContent: 'center',
                       border: '1px solid #EF4444'
                     }}>
-                      <Flame size={12} color="#EF4444" fill="#EF4444" />
+                      <Flame size={12} color="var(--c-red)" fill="#EF4444" />
                     </div>
                   )}
                 </div>
 
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem' }}>
                       {player.full_name}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -286,7 +286,7 @@ export default function ClubScoreLeaderboard({
                       className="badge"
                       style={{
                         background: `${tierColor}18`,
-                        color: tierColor,
+                        color: `color-mix(in srgb, ${tierColor}, var(--text-primary) var(--accent-ink))`,
                         border: `1px solid ${tierColor}40`,
                         fontSize: '0.7rem',
                         padding: '0.15rem 0.4rem',
@@ -299,8 +299,8 @@ export default function ClubScoreLeaderboard({
                   {/* Badges preview row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
                     {profile.current_streak > 0 && (
-                      <span style={{ fontSize: '0.72rem', color: '#EF4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <Flame size={12} color="#EF4444" />
+                      <span style={{ fontSize: '0.72rem', color: 'var(--c-red)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Flame size={12} color="var(--c-red)" />
                         {profile.current_streak}-week streak
                       </span>
                     )}
@@ -320,7 +320,7 @@ export default function ClubScoreLeaderboard({
                     fontFamily: 'var(--font-heading)',
                     fontWeight: 900,
                     fontSize: '1.45rem',
-                    color: filter === 'streak' ? '#EF4444' : filter === 'weekly' ? '#10B981' : 'var(--club-primary)'
+                    color: filter === 'streak' ? 'var(--c-red)' : filter === 'weekly' ? 'var(--c-green)' : 'var(--club-primary)'
                   }}>
                     {filter === 'season' && `${profile.total_points} PTS`}
                     {filter === 'weekly' && `+${profile.weekly_points} PTS`}
@@ -356,7 +356,7 @@ export default function ClubScoreLeaderboard({
         marginTop: '2rem',
         padding: '1rem 1.25rem',
         borderRadius: '8px',
-        background: 'rgba(255,255,255,0.02)',
+        background: 'rgba(var(--tint-rgb), 0.02)',
         border: '1px solid var(--border-subtle)',
         display: 'flex',
         flexWrap: 'wrap',
@@ -365,7 +365,7 @@ export default function ClubScoreLeaderboard({
         gap: '1rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <Sparkles size={16} color="#F59E0B" />
+          <Sparkles size={16} color="var(--c-amber)" />
           <span>
             <strong>How points work:</strong> Match Goals (+10), Assists (+7), Clean Sheets (+10), Training QR Check-Ins (+10). Consistent 3+ week streaks unlock up to <strong>1.5x multiplier bonuses</strong>.
           </span>
@@ -415,7 +415,7 @@ export default function ClubScoreLeaderboard({
                 position: 'absolute',
                 top: '1.25rem',
                 right: '1.25rem',
-                background: 'rgba(255,255,255,0.08)',
+                background: 'rgba(var(--tint-rgb), 0.08)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '32px',
@@ -423,7 +423,7 @@ export default function ClubScoreLeaderboard({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 cursor: 'pointer'
               }}
             >
@@ -435,7 +435,7 @@ export default function ClubScoreLeaderboard({
               <PlayerAvatar photoUrl={selectedPlayerModal.member.photo_url} name={selectedPlayerModal.member.full_name} size={64} eager style={{ borderRadius: '12px', border: '2px solid var(--club-primary)' }} />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                     {selectedPlayerModal.member.full_name}
                   </h3>
                   <span
@@ -463,24 +463,24 @@ export default function ClubScoreLeaderboard({
               gap: '0.75rem',
               marginBottom: '1.75rem'
             }}>
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SEASON PTS</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--club-primary)' }}>
                   {selectedPlayerModal.profile.total_points}
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>THIS WEEK</div>
-                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#10B981' }}>
+                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-green)' }}>
                   +{selectedPlayerModal.profile.weekly_points}
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>STREAK</div>
-                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
-                  <Flame size={16} color="#EF4444" fill="#EF4444" />
+                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                  <Flame size={16} color="var(--c-red)" fill="#EF4444" />
                   <span>{selectedPlayerModal.profile.current_streak}w</span>
                 </div>
               </div>
@@ -488,8 +488,8 @@ export default function ClubScoreLeaderboard({
 
             {/* Badges Earned Showcase */}
             <div style={{ marginBottom: '1.75rem' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Award size={16} color="#F59E0B" />
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Award size={16} color="var(--c-amber)" />
                 <span>Unlocked Achievement Badges ({selectedPlayerModal.profile.badges.length})</span>
               </div>
 
@@ -503,7 +503,7 @@ export default function ClubScoreLeaderboard({
                     <div
                       key={badge.id}
                       style={{
-                        background: 'rgba(255,255,255,0.03)',
+                        background: 'rgba(var(--tint-rgb), 0.03)',
                         border: '1px solid var(--border-subtle)',
                         borderRadius: '8px',
                         padding: '0.6rem',
@@ -516,7 +516,7 @@ export default function ClubScoreLeaderboard({
                         width: '28px',
                         height: '28px',
                         borderRadius: '6px',
-                        background: 'rgba(0,0,0,0.4)',
+                        background: 'rgba(var(--shade-rgb), 0.4)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
@@ -524,7 +524,7 @@ export default function ClubScoreLeaderboard({
                         {getBadgeIcon(badge.icon)}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.75rem', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {badge.name}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Verified</div>
@@ -537,7 +537,7 @@ export default function ClubScoreLeaderboard({
 
             {/* Activity Ledger Feed */}
             <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <History size={16} color="var(--club-primary)" />
                 <span>Recent Point Audit Trail</span>
               </div>
@@ -556,21 +556,21 @@ export default function ClubScoreLeaderboard({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0.5rem 0.75rem',
-                        background: 'rgba(0,0,0,0.2)',
+                        background: 'rgba(var(--shade-rgb), 0.2)',
                         borderRadius: '6px',
                         border: '1px solid var(--border-subtle)',
                         fontSize: '0.78rem',
                       }}
                     >
                       <div style={{ minWidth: 0, paddingRight: '0.5rem' }}>
-                        <div style={{ color: '#FFFFFF', fontWeight: 600 }}>{log.description}</div>
+                        <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.description}</div>
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
                           <LocalTime value={log.created_at} />
                         </div>
                       </div>
                       <div style={{
                         fontWeight: 900,
-                        color: log.final_points >= 0 ? '#10B981' : '#EF4444',
+                        color: log.final_points >= 0 ? 'var(--c-green)' : 'var(--c-red)',
                         whiteSpace: 'nowrap'
                       }}>
                         {log.final_points >= 0 ? `+${log.final_points}` : log.final_points} PTS

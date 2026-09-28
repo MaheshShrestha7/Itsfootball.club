@@ -28,7 +28,7 @@ export default function AdminAnalyticsPage({
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>AUDIENCE & CLUB ANALYTICS</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
           Club Public Page Analytics
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -44,7 +44,7 @@ export default function AdminAnalyticsPage({
           style={{
             display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.7rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer',
             fontSize: '0.85rem', fontWeight: 700,
-            color: view === 'overview' ? '#FFFFFF' : 'var(--text-muted)',
+            color: view === 'overview' ? 'var(--text-primary)' : 'var(--text-muted)',
             borderBottom: view === 'overview' ? '2px solid var(--club-primary)' : '2px solid transparent',
           }}
         >
@@ -56,7 +56,7 @@ export default function AdminAnalyticsPage({
           style={{
             display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.7rem 1rem', border: 'none', background: 'transparent', cursor: 'pointer',
             fontSize: '0.85rem', fontWeight: 700,
-            color: view === 'sponsors' ? '#FFFFFF' : 'var(--text-muted)',
+            color: view === 'sponsors' ? 'var(--text-primary)' : 'var(--text-muted)',
             borderBottom: view === 'sponsors' ? '2px solid var(--club-primary)' : '2px solid transparent',
           }}
         >
@@ -80,10 +80,10 @@ export default function AdminAnalyticsPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>LIVE PUBLIC VISITS</span>
             <Eye size={18} color="var(--club-primary)" />
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span className="pulse-dot" style={{ background: '#10B981', width: '6px', height: '6px' }} />
             <span>Active live stream</span>
           </div>
@@ -92,12 +92,12 @@ export default function AdminAnalyticsPage({
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>MATCH CENTER FANS</span>
-            <Radio size={18} color="#EF4444" />
+            <Radio size={18} color="var(--c-red)" />
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.matchCenterFans.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: analytics.matchCenterFans > 0 ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.75rem', color: analytics.matchCenterFans > 0 ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.35rem' }}>
             {analytics.matchCenterFans > 0 ? 'Live match in progress' : 'Fixture standby'}
           </div>
         </div>
@@ -105,20 +105,20 @@ export default function AdminAnalyticsPage({
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>PASS SCANS AT GATE</span>
-            <QrCode size={18} color="#F59E0B" />
+            <QrCode size={18} color="var(--c-amber)" />
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.gateScansCount.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.35rem' }}>Turnstile accreditations</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem' }}>Turnstile accreditations</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>AVG. DURATION</span>
-            <TrendingUp size={18} color="#3B82F6" />
+            <TrendingUp size={18} color="var(--c-blue)" />
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.avgDuration}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>High fan retention</div>
@@ -128,10 +128,10 @@ export default function AdminAnalyticsPage({
       {/* Weekly Traffic Bar Chart */}
       <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             Weekly Visitor Activity (Surge on Matchday)
           </h3>
-          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
             Real-Time Aggregation
           </span>
         </div>
@@ -144,7 +144,7 @@ export default function AdminAnalyticsPage({
 
               return (
                 <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isMatchday ? '#EF4444' : 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isMatchday ? 'var(--c-red)' : 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                     {val.toLocaleString()}
                   </span>
                   <div style={{
@@ -170,7 +170,7 @@ export default function AdminAnalyticsPage({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem' }}>
         {/* Most Viewed Sections */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
             Top Public Page Sections
           </h3>
 
@@ -178,10 +178,10 @@ export default function AdminAnalyticsPage({
             {analytics.topSections.map(sec => (
               <div key={sec.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{sec.name}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{sec.name}</span>
                   <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{sec.views}</span>
                 </div>
-                <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{ width: sec.views, height: '100%', background: sec.color, transition: 'width 0.5s ease' }} />
                 </div>
               </div>
@@ -191,7 +191,7 @@ export default function AdminAnalyticsPage({
 
         {/* Device Breakdown */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
             Fan Device Breakdown
           </h3>
 
@@ -199,10 +199,10 @@ export default function AdminAnalyticsPage({
             {analytics.deviceBreakdown.map(dev => (
               <div key={dev.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{dev.name}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{dev.name}</span>
                   <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
                 </div>
-                <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '8px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ width: dev.percentage, height: '100%', background: dev.color, transition: 'width 0.5s ease' }} />
                 </div>
               </div>

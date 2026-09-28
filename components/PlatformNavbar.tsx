@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
 
 export default function PlatformNavbar() {
@@ -28,7 +29,7 @@ export default function PlatformNavbar() {
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      background: 'rgba(7, 10, 15, 0.9)',
+      background: 'rgba(var(--dk-7-10-15), 0.9)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-subtle)',
@@ -56,13 +57,13 @@ export default function PlatformNavbar() {
               fontSize: '1.2rem',
               fontWeight: 800,
               letterSpacing: '-0.02em',
-              background: 'linear-gradient(to right, #FFFFFF, #CBD5E1)',
+              background: 'linear-gradient(to right, var(--text-primary), rgba(var(--tint-rgb), 0.78))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              itsfootball<span style={{ color: '#C9A467', WebkitTextFillColor: '#C9A467' }}>.club</span>
+              itsfootball<span style={{ color: 'var(--c-gold)', WebkitTextFillColor: 'var(--c-gold)' }}>.club</span>
             </span>
-            <div style={{ fontSize: '0.7rem', color: '#C9A467', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--c-gold)', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
               Home of Football Clubs
             </div>
           </div>
@@ -71,7 +72,7 @@ export default function PlatformNavbar() {
         {/* Desktop Navigation Links */}
         {/* nowrap: items briefly wrapped to two lines under the (slightly wider) fallback font, then
             snapped back when the webfont loaded - a visible layout shift on every platform page */}
-        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem', whiteSpace: 'nowrap' }}>
+        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
           <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Trophy size={16} />
             Clubs Directory
@@ -86,7 +87,7 @@ export default function PlatformNavbar() {
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(var(--tint-rgb), 0.05)',
                 border: '1px solid var(--border-subtle)',
                 color: 'var(--text-primary)',
                 padding: '0.45rem 0.85rem',
@@ -136,7 +137,7 @@ export default function PlatformNavbar() {
                       fontSize: '0.85rem',
                       fontWeight: 600,
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.06)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -165,7 +166,7 @@ export default function PlatformNavbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  color: '#10B981',
+                  color: 'var(--c-green)',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   padding: '0.4rem 0.8rem',
@@ -175,7 +176,7 @@ export default function PlatformNavbar() {
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Shield size={15} color="#10B981" />
+                <Shield size={15} color="var(--c-green)" />
                 <span>My Clubs</span>
               </Link>
 
@@ -185,7 +186,7 @@ export default function PlatformNavbar() {
                 gap: '0.5rem',
                 padding: '0.35rem 0.65rem',
                 borderRadius: 'var(--radius-full)',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(var(--tint-rgb), 0.05)',
                 border: '1px solid var(--border-subtle)',
               }}>
                 {user.avatar_url ? (
@@ -199,7 +200,7 @@ export default function PlatformNavbar() {
                     {user.full_name.substring(0, 1)}
                   </div>
                 )}
-                <span style={{ fontSize: '0.8rem', color: '#FFFFFF', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                   {user.full_name.split(' ')[0]}
                 </span>
               </div>
@@ -238,6 +239,8 @@ export default function PlatformNavbar() {
           )}
         </nav>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem' }}>
+        <ThemeToggle />
         {/* Mobile Menu Trigger Button */}
         <button
           type="button"
@@ -246,7 +249,7 @@ export default function PlatformNavbar() {
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#FFFFFF',
+            color: 'var(--text-primary)',
             cursor: 'pointer',
             padding: '0.5rem',
             borderRadius: '8px',
@@ -255,6 +258,7 @@ export default function PlatformNavbar() {
         >
           <Menu size={24} />
         </button>
+        </div>
       </div>
 
       {/* Mobile Slide-Over Drawer */}
@@ -270,11 +274,11 @@ export default function PlatformNavbar() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <img src="/logo-96.png" alt="itsfootball.club logo" width={34} height={34} loading="lazy" decoding="async" style={{ width: '34px', height: '34px' }} />
-                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>itsfootball<span style={{ color: '#C9A467' }}>.club</span></span>
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>itsfootball<span style={{ color: '#C9A467' }}>.club</span></span>
                 </div>
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFFFFF', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ background: 'rgba(var(--tint-rgb), 0.06)', border: 'none', color: 'var(--text-primary)', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label="Close Menu"
                 >
                   <X size={20} />
@@ -304,14 +308,14 @@ export default function PlatformNavbar() {
                       gap: '0.75rem',
                       padding: '0.75rem 0.85rem',
                       borderRadius: '8px',
-                      color: '#FFFFFF',
+                      color: 'var(--text-primary)',
                       fontWeight: 700,
                       fontSize: '0.95rem',
                       background: 'rgba(16, 185, 129, 0.15)',
                       border: '1px solid rgba(16, 185, 129, 0.3)',
                     }}
                   >
-                    <Shield size={18} color="#10B981" />
+                    <Shield size={18} color="var(--c-green)" />
                     <span>My Clubs</span>
                   </Link>
                 )}
@@ -328,10 +332,10 @@ export default function PlatformNavbar() {
                     color: 'var(--text-primary)',
                     fontWeight: 600,
                     fontSize: '0.95rem',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
                   }}
                 >
-                  <Trophy size={18} color="#F59E0B" />
+                  <Trophy size={18} color="var(--c-amber)" />
                   <span>Clubs Directory</span>
                 </Link>
                 <Link
@@ -346,10 +350,10 @@ export default function PlatformNavbar() {
                     color: 'var(--text-primary)',
                     fontWeight: 600,
                     fontSize: '0.95rem',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
                   }}
                 >
-                  <HelpCircle size={18} color="#3B82F6" />
+                  <HelpCircle size={18} color="var(--c-blue)" />
                   <span>FAQ</span>
                 </Link>
               </div>
@@ -371,8 +375,8 @@ export default function PlatformNavbar() {
                         justifyContent: 'space-between',
                         padding: '0.6rem 0.75rem',
                         borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        color: '#FFFFFF',
+                        background: 'rgba(var(--tint-rgb), 0.03)',
+                        color: 'var(--text-primary)',
                         fontSize: '0.85rem',
                         fontWeight: 600,
                       }}
@@ -401,13 +405,13 @@ export default function PlatformNavbar() {
                       </div>
                     )}
                     <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>{user.full_name}</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user.full_name}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user.email}</div>
                     </div>
                   </div>
                   <button
                     onClick={() => { logout(); setMobileDrawerOpen(false); }}
-                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: '#EF4444', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--c-red)', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Sign Out
                   </button>

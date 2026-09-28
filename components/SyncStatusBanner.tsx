@@ -36,7 +36,7 @@ export default function SyncStatusBanner() {
         fontSize: '0.8rem',
         textAlign: 'center',
         background: isError ? '#7F1D1D' : '#78350F',
-        color: isError ? '#FCA5A5' : '#FCD34D',
+        color: isError ? 'var(--c-red)' : '#FCD34D',
         borderBottom: `1px solid ${isError ? '#EF4444' : '#F59E0B'}`,
       }}
     >

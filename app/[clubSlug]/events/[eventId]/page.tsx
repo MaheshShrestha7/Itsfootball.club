@@ -44,7 +44,7 @@ export default function EventDetailsPage({
     return (
       <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem', textAlign: 'center' }}>
         <Shield size={48} style={{ opacity: 0.3, marginBottom: '1.25rem' }} />
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem', color: '#FFFFFF' }}>Event Not Found</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Event Not Found</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
           This event does not exist or may have been removed from the calendar.
         </p>
@@ -83,7 +83,7 @@ export default function EventDetailsPage({
             {event.category.toUpperCase()}
           </span>
 
-          <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.4rem)', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.75rem' }}>
+          <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
             {event.title}
           </h1>
 
@@ -101,7 +101,7 @@ export default function EventDetailsPage({
               <Calendar size={18} color={categoryColor} />
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Date</div>
-                <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
                 </div>
               </div>
@@ -110,7 +110,7 @@ export default function EventDetailsPage({
               <Clock size={18} color={categoryColor} />
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Time</div>
-                <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   <LocalTime value={event.start_time} format="time" locale="en-US" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function EventDetailsPage({
               <MapPin size={18} color={categoryColor} />
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Location</div>
-                <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   {event.location || club.stadium_name}
                 </div>
               </div>
@@ -132,9 +132,9 @@ export default function EventDetailsPage({
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <Users size={13} /> Checked In
                 </span>
-                <strong style={{ color: '#FFFFFF' }}>{event.rsvp_count} / {event.max_capacity} checked in</strong>
+                <strong style={{ color: 'var(--text-primary)' }}>{event.rsvp_count} / {event.max_capacity} checked in</strong>
               </div>
-              <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ width: `${rsvpPct}%`, height: '100%', background: categoryColor, borderRadius: '3px' }} />
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function EventDetailsPage({
         {/* Event Sponsors */}
         {eventSponsors.length > 0 && (
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Award size={18} color={categoryColor} /> Event Sponsors
             </h2>
 
@@ -190,13 +190,13 @@ export default function EventDetailsPage({
                         objectFit: 'contain',
                       }}
                     />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {sponsor.name}
                     </div>
                     <span className="badge" style={{
                       fontSize: '0.7rem',
-                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                      color: isPlatinum ? '#F59E0B' : 'var(--text-muted)',
+                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
+                      color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)',
                       textTransform: 'capitalize',
                     }}>
                       {sponsor.tier}

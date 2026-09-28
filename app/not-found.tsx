@@ -11,7 +11,7 @@ export default function NotFound() {
       justifyContent: 'center',
       padding: '2rem 1rem',
       background: 'var(--bg-pitch)',
-      color: '#FFFFFF',
+      color: 'var(--text-primary)',
       fontFamily: 'var(--font-sans)',
     }}>
       <div className="glass-panel" style={{
@@ -39,7 +39,7 @@ export default function NotFound() {
           404 • OFF THE PITCH
         </span>
 
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '0.75rem', color: '#FFFFFF' }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
           Page Not Found
         </h1>
 

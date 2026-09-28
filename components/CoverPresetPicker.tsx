@@ -28,7 +28,7 @@ export default function CoverPresetPicker({ value, onPick }: { value?: string; o
               title={p.label}
               aria-label={`Use ${p.label} cover`}
               aria-pressed={selected}
-              style={{
+              data-theme="dark" style={{
                 padding: 0,
                 aspectRatio: '16 / 10',
                 borderRadius: '6px',

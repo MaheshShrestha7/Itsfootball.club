@@ -413,7 +413,7 @@ export default function AdminMatchesPage({
             bottom: '2rem',
             right: '2rem',
             background: 'var(--bg-surface-elevated)',
-            color: '#FFFFFF',
+            color: 'var(--text-primary)',
             border: '1px solid var(--club-primary)',
             borderRadius: 'var(--radius-lg)',
             padding: '0.85rem 1.4rem',
@@ -446,11 +446,11 @@ export default function AdminMatchesPage({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
             <span className="badge badge-primary">MATCHDAY OPERATIONS</span>
-            <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
+            <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)' }}>
               {activeSeason?.name || defaultSeasonLabel()}
             </span>
           </div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.15 }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.15 }}>
             Match Fixtures & Scheduling Hub
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px', marginTop: '0.35rem' }}>
@@ -464,7 +464,7 @@ export default function AdminMatchesPage({
             className="btn btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            <Radio size={16} color="#EF4444" />
+            <Radio size={16} color="var(--c-red)" />
             <span>Match Command Center</span>
           </Link>
 
@@ -493,16 +493,16 @@ export default function AdminMatchesPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Matches</span>
             <CalendarDays size={18} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF' }}>{totalCount}</div>
+          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>{totalCount}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>All recorded fixtures</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#10B981', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-green)', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Upcoming</span>
             <Calendar size={18} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#10B981' }}>{upcomingCount}</div>
+          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-green)' }}>{upcomingCount}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Live on public site view</div>
         </div>
 
@@ -511,25 +511,25 @@ export default function AdminMatchesPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Completed</span>
             <CheckCircle2 size={18} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF' }}>{completedCount}</div>
+          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>{completedCount}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Archived to past results</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#F59E0B', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-amber)', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Hero Spotlight</span>
             <Sparkles size={18} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#F59E0B' }}>{heroFeaturedCount}</div>
+          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-amber)' }}>{heroFeaturedCount}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Pinned to homepage hero</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#3B82F6', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-blue)', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Door QR Check-in</span>
             <QrCode size={18} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#3B82F6' }}>{qrEnabledCount}</div>
+          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-blue)' }}>{qrEnabledCount}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Gate turnstiles enabled</div>
         </div>
       </div>
@@ -549,7 +549,7 @@ export default function AdminMatchesPage({
         }}
       >
         {/* Status Tabs */}
-        <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(0, 0, 0, 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
           {(['all', 'upcoming', 'completed', 'live'] as const).map(tab => (
             <button
               key={tab}
@@ -619,7 +619,7 @@ export default function AdminMatchesPage({
       {filteredMatches.length === 0 ? (
         <div className="glass-panel text-center" style={{ padding: '4rem 2rem' }}>
           <Calendar size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem auto' }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
             No Matches Found
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -653,7 +653,7 @@ export default function AdminMatchesPage({
                 {/* Flyer Thumbnail or Visual Badge */}
                 <div
                   className="match-flyer-thumb"
-                  style={{
+                  data-theme="dark" style={{
                     height: '100px',
                     borderRadius: 'var(--radius-md)',
                     overflow: 'hidden',
@@ -668,7 +668,7 @@ export default function AdminMatchesPage({
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   <div
-                    style={{
+                    data-theme="dark" style={{
                       position: 'absolute',
                       top: '6px',
                       left: '6px',
@@ -709,24 +709,24 @@ export default function AdminMatchesPage({
                       {m.competition}
                     </span>
                     {m.season && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)' }}>
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
                         {m.season}
                       </span>
                     )}
 
                     {/* Status Badge */}
                     {m.status === 'live' ? (
-                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid #EF4444', fontWeight: 800 }}>
+                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid #EF4444', fontWeight: 800 }}>
                         <Radio size={10} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
                         LIVE • <LiveMinute match={m} />&apos; IN PLAY
                       </span>
                     ) : m.status === 'halftime' ? (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', border: '1px solid #F59E0B', fontWeight: 800 }}>
+                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', border: '1px solid #F59E0B', fontWeight: 800 }}>
                         <Clock size={10} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
                         HALF-TIME BREAK
                       </span>
                     ) : isCompleted ? (
-                      <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-muted)' }}>
+                      <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-muted)' }}>
                         COMPLETED
                       </span>
                     ) : m.status === 'postponed' ? (
@@ -734,31 +734,31 @@ export default function AdminMatchesPage({
                         POSTPONED
                       </span>
                     ) : m.status === 'cancelled' ? (
-                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid #EF4444' }}>
+                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', border: '1px solid #EF4444' }}>
                         CANCELLED
                       </span>
                     ) : (
-                      <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid #10B981' }}>
+                      <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid #10B981' }}>
                         UPCOMING FIXTURE
                       </span>
                     )}
 
                     {m.featured_on_hero && (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', border: '1px solid #F59E0B' }}>
+                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid #F59E0B' }}>
                         <Star size={10} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
                         HERO PINNED
                       </span>
                     )}
 
                     {m.door_qr_checkin_enabled && (
-                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', border: '1px solid #3B82F6' }}>
+                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', border: '1px solid #3B82F6' }}>
                         <QrCode size={10} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
                         DOOR QR ({m.checkin_count || 0})
                       </span>
                     )}
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.4rem', wordBreak: 'break-word' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', wordBreak: 'break-word' }}>
                     {m.title ? (
                       <span>{m.title} <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.95rem' }}>({m.home_team_name} vs {m.away_team_name})</span></span>
                     ) : (
@@ -780,7 +780,7 @@ export default function AdminMatchesPage({
                       {m.venue}
                     </span>
                     {(isCompleted || isLive || (m.home_score !== undefined && m.home_score !== null && (m.home_score > 0 || m.away_score > 0))) && (
-                      <span style={{ fontWeight: 800, color: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                         <Trophy size={13} color="var(--club-primary)" />
                         Score: {m.home_score ?? 0} - {m.away_score ?? 0}
                       </span>
@@ -807,8 +807,8 @@ export default function AdminMatchesPage({
                         padding: '0.4rem 0.6rem',
                         borderRadius: 'var(--radius-sm)',
                         border: m.featured_on_hero ? '1px solid #F59E0B' : '1px solid var(--border-medium)',
-                        background: m.featured_on_hero ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0,0,0,0.3)',
-                        color: m.featured_on_hero ? '#F59E0B' : 'var(--text-muted)',
+                        background: m.featured_on_hero ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
+                        color: m.featured_on_hero ? 'var(--c-amber)' : 'var(--text-muted)',
                         fontSize: '0.75rem',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -831,8 +831,8 @@ export default function AdminMatchesPage({
                         padding: '0.4rem 0.6rem',
                         borderRadius: 'var(--radius-sm)',
                         border: m.door_qr_checkin_enabled ? '1px solid #3B82F6' : '1px solid var(--border-medium)',
-                        background: m.door_qr_checkin_enabled ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0,0,0,0.3)',
-                        color: m.door_qr_checkin_enabled ? '#3B82F6' : 'var(--text-muted)',
+                        background: m.door_qr_checkin_enabled ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
+                        color: m.door_qr_checkin_enabled ? 'var(--c-blue)' : 'var(--text-muted)',
                         fontSize: '0.75rem',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -854,9 +854,9 @@ export default function AdminMatchesPage({
                     style={{
                       padding: '0.45rem 0.75rem',
                       borderRadius: 'var(--radius-sm)',
-                      border: isCompleted ? '1px solid rgba(255,255,255,0.2)' : '1px solid #10B981',
-                      background: isCompleted ? 'rgba(255,255,255,0.06)' : 'rgba(16, 185, 129, 0.15)',
-                      color: isCompleted ? 'var(--text-muted)' : '#10B981',
+                      border: isCompleted ? '1px solid rgba(var(--tint-rgb), 0.2)' : '1px solid #10B981',
+                      background: isCompleted ? 'rgba(var(--tint-rgb), 0.06)' : 'rgba(16, 185, 129, 0.15)',
+                      color: isCompleted ? 'var(--text-muted)' : 'var(--c-green)',
                       fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -879,7 +879,7 @@ export default function AdminMatchesPage({
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid #EF4444',
                         background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#EF4444',
+                        color: 'var(--c-red)',
                         fontSize: '0.76rem',
                         fontWeight: 800,
                         textDecoration: 'none',
@@ -921,7 +921,7 @@ export default function AdminMatchesPage({
                       onClick={() => handleDeleteMatch(m)}
                       className="btn btn-secondary btn-sm"
                       title="Delete Match"
-                      style={{ padding: '0.35rem 0.6rem', color: '#EF4444' }}
+                      style={{ padding: '0.35rem 0.6rem', color: 'var(--c-red)' }}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -971,7 +971,7 @@ export default function AdminMatchesPage({
                 <span className="badge badge-primary" style={{ marginBottom: '0.25rem' }}>
                   {editingMatchId ? 'EDIT MATCH' : 'NEW SCHEDULED FIXTURE'}
                 </span>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF' }}>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                   {editingMatchId ? 'Update Match Details' : 'Schedule Match Fixture'}
                 </h2>
               </div>
@@ -1029,8 +1029,8 @@ export default function AdminMatchesPage({
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-md)',
                         border: form.match_type === type ? `2px solid ${club.primary_color}` : '1px solid var(--border-medium)',
-                        background: form.match_type === type ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.3)',
-                        color: form.match_type === type ? '#FFFFFF' : 'var(--text-secondary)',
+                        background: form.match_type === type ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
+                        color: form.match_type === type ? 'var(--text-primary)' : 'var(--text-secondary)',
                         fontWeight: 800,
                         fontSize: '0.85rem',
                         cursor: 'pointer',
@@ -1043,8 +1043,8 @@ export default function AdminMatchesPage({
                       }}
                     >
                       {type === 'internal' && <Users size={15} color="var(--club-primary)" />}
-                      {type === 'friendly' && <Shield size={15} color="#3B82F6" />}
-                      {type === 'tournament' && <Trophy size={15} color="#F59E0B" />}
+                      {type === 'friendly' && <Shield size={15} color="var(--c-blue)" />}
+                      {type === 'tournament' && <Trophy size={15} color="var(--c-amber)" />}
                       <span>{type}</span>
                     </button>
                   ))}
@@ -1052,7 +1052,7 @@ export default function AdminMatchesPage({
 
                 {/* Internal Type Quick Presets */}
                 {form.match_type === 'internal' && (
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', marginBottom: '0.4rem' }}>
                       Intra-Club Presets:
                     </div>
@@ -1293,7 +1293,7 @@ export default function AdminMatchesPage({
               {/* Operational Controls & Progression Status Section */}
               <div
                 style={{
-                  background: 'rgba(0, 0, 0, 0.35)',
+                  background: 'rgba(var(--shade-rgb), 0.35)',
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
                   border: '1px solid var(--border-medium)',
@@ -1304,11 +1304,11 @@ export default function AdminMatchesPage({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Match Status & Scoring
                   </div>
                   {(form.status === 'live' || form.status === 'halftime') && (
-                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', border: '1px solid #EF4444', fontWeight: 800, fontSize: '0.72rem' }}>
+                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid #EF4444', fontWeight: 800, fontSize: '0.72rem' }}>
                       <Radio size={11} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
                       MATCH IN PROGRESS • LIVE SCORES PRESERVED
                     </span>
@@ -1359,11 +1359,11 @@ export default function AdminMatchesPage({
                 <div style={{
                   padding: '0.85rem',
                   borderRadius: 'var(--radius-md)',
-                  background: 'rgba(255, 255, 255, 0.03)',
+                  background: 'rgba(var(--tint-rgb), 0.03)',
                   border: '1px solid var(--border-subtle)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       Current Match Score
                     </label>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -1417,7 +1417,7 @@ export default function AdminMatchesPage({
                       style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#F59E0B', cursor: 'pointer' }}
                     />
                     <div style={{ flex: 1 }}>
-                      <label htmlFor="toggle-hero" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
+                      <label htmlFor="toggle-hero" style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
                         Feature on Home page hero slider
                       </label>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
@@ -1436,7 +1436,7 @@ export default function AdminMatchesPage({
                       style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#3B82F6', cursor: 'pointer' }}
                     />
                     <div style={{ flex: 1 }}>
-                      <label htmlFor="toggle-door-qr" style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', cursor: 'pointer' }}>
+                      <label htmlFor="toggle-door-qr" style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
                         Enable Door QR Code self-check-in
                       </label>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
@@ -1538,7 +1538,7 @@ export default function AdminMatchesPage({
             </div>
 
             {/* Printable Poster Content */}
-            <div style={{ textTransform: 'uppercase', fontWeight: 900, color: club.primary_color || '#10B981', letterSpacing: '0.1em', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+            <div style={{ textTransform: 'uppercase', fontWeight: 900, color: club.primary_color || 'var(--c-green)', letterSpacing: '0.1em', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
               {club.name} • Official Turnstile Check-In
             </div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: '0.5rem' }}>

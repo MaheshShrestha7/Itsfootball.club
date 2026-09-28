@@ -19,14 +19,14 @@ export default function PublicTournamentsPage({
   const clubTournaments = tournaments.filter(t => t.club_id === club.id);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090D16', color: '#FFFFFF' }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(var(--dk-9-13-22))', color: 'var(--text-primary)' }}>
 
       {/* Hero Section */}
       <section
         style={{
           padding: '4rem 1.5rem 3rem 1.5rem',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(9, 13, 22, 1) 75%)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(var(--dk-9-13-22), 1) 75%)',
+          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
           textAlign: 'center',
         }}
       >
@@ -38,7 +38,7 @@ export default function PublicTournamentsPage({
               gap: '0.45rem',
               background: 'rgba(245, 158, 11, 0.12)',
               border: '1px solid rgba(245, 158, 11, 0.3)',
-              color: '#F59E0B',
+              color: 'var(--c-amber)',
               padding: '0.3rem 0.85rem',
               borderRadius: '20px',
               fontSize: '0.8rem',
@@ -58,7 +58,7 @@ export default function PublicTournamentsPage({
               fontWeight: 900,
               margin: '0 0 1rem 0',
               lineHeight: 1.15,
-              background: 'linear-gradient(180deg, #FFFFFF 0%, #94A3B8 100%)',
+              background: 'linear-gradient(180deg, var(--text-primary) 0%, var(--text-secondary) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -77,8 +77,8 @@ export default function PublicTournamentsPage({
         {clubTournaments.length === 0 ? (
           <div
             style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(var(--dk-15-23-42), 0.6)',
+              border: '1px solid rgba(var(--tint-rgb), 0.08)',
               borderRadius: '16px',
               padding: '4rem 1.5rem',
               textAlign: 'center',
@@ -86,7 +86,7 @@ export default function PublicTournamentsPage({
             }}
           >
             <Trophy size={48} style={{ opacity: 0.3, margin: '0 auto 1.25rem auto' }} />
-            <h2 style={{ color: '#FFFFFF', fontWeight: 800, margin: '0 0 0.5rem 0' }}>
+            <h2 style={{ color: 'var(--text-primary)', fontWeight: 800, margin: '0 0 0.5rem 0' }}>
               No Active Tournaments
             </h2>
             <p style={{ margin: 0 }}>There are currently no public tournaments scheduled for this club.</p>
@@ -115,8 +115,8 @@ export default function PublicTournamentsPage({
                 <div
                   key={tourn.id}
                   style={{
-                    background: 'linear-gradient(145deg, #111827 0%, #0B1120 100%)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'linear-gradient(145deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
+                    border: '1px solid rgba(var(--tint-rgb), 0.08)',
                     borderRadius: '16px',
                     overflow: 'hidden',
                     display: 'flex',
@@ -130,14 +130,14 @@ export default function PublicTournamentsPage({
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(var(--tint-rgb), 0.08)';
                   }}
                 >
                   {/* Banner */}
                   <div
-                    style={{
+                    data-theme="dark" style={{
                       height: '140px',
-                      background: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(11, 17, 32, 0.98)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
+                      background: `linear-gradient(rgba(var(--dk-15-23-42), 0.3), rgba(var(--dk-11-17-32), 0.98)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       padding: '1.25rem',
@@ -157,7 +157,7 @@ export default function PublicTournamentsPage({
                             tourn.status === 'ongoing'
                               ? 'rgba(16, 185, 129, 0.25)'
                               : 'rgba(59, 130, 246, 0.25)',
-                          color: tourn.status === 'ongoing' ? '#10B981' : '#60A5FA',
+                          color: tourn.status === 'ongoing' ? 'var(--c-green)' : 'var(--c-sky)',
                           border:
                             tourn.status === 'ongoing'
                               ? '1px solid #10B981'
@@ -170,8 +170,8 @@ export default function PublicTournamentsPage({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Trophy size={18} color="#F59E0B" />
-                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#FFFFFF' }}>
+                      <Trophy size={18} color="var(--c-amber)" />
+                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {tourn.name}
                       </h2>
                     </div>
@@ -179,7 +179,7 @@ export default function PublicTournamentsPage({
 
                   {/* Body */}
                   <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--c-green)', fontWeight: 700, fontSize: '0.82rem' }}>
                       <Layers size={15} />
                       <span>{formatLabel}</span>
                     </div>
@@ -194,7 +194,7 @@ export default function PublicTournamentsPage({
 
                     <div
                       style={{
-                        background: 'rgba(0, 0, 0, 0.35)',
+                        background: 'rgba(var(--shade-rgb), 0.35)',
                         borderRadius: '10px',
                         padding: '0.75rem 1rem',
                         display: 'grid',
@@ -207,19 +207,19 @@ export default function PublicTournamentsPage({
                     >
                       <div>
                         <div style={{ color: 'var(--text-muted)' }}>Teams</div>
-                        <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                           {participants.length}
                         </div>
                       </div>
                       <div>
                         <div style={{ color: 'var(--text-muted)' }}>Fixtures</div>
-                        <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                           {tourneyMatches.length}
                         </div>
                       </div>
                       <div>
                         <div style={{ color: 'var(--text-muted)' }}>Played</div>
-                        <div style={{ fontWeight: 800, color: '#10B981', fontSize: '0.95rem' }}>
+                        <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.95rem' }}>
                           {completedCount}
                         </div>
                       </div>
@@ -230,8 +230,8 @@ export default function PublicTournamentsPage({
                   <div
                     style={{
                       padding: '1rem 1.25rem',
-                      background: 'rgba(0, 0, 0, 0.25)',
-                      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                      background: 'rgba(var(--shade-rgb), 0.25)',
+                      borderTop: '1px solid rgba(var(--tint-rgb), 0.06)',
                     }}
                   >
                     <Link

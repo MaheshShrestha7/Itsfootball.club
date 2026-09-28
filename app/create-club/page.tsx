@@ -237,14 +237,14 @@ export default function CreateClubPage() {
               justifyContent: 'center',
               margin: '0 auto 1.5rem auto',
             }}>
-              <Shield size={32} color="#10B981" />
+              <Shield size={32} color="var(--c-green)" />
             </div>
 
             <span className="badge badge-primary" style={{ marginBottom: '0.6rem' }}>
               ACCOUNT REQUIRED
             </span>
 
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               Sign In to Launch Your Club
             </h1>
 
@@ -281,7 +281,7 @@ export default function CreateClubPage() {
           <div className="badge badge-primary" style={{ marginBottom: '0.6rem' }}>
             <Sparkles size={14} /> CLUB ONBOARDING WIZARD • REAL-WORLD READY
           </div>
-          <h1 style={{ fontSize: '2.4rem', fontWeight: 900, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2.4rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Launch & Configure Your Football Club
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto' }}>
@@ -294,7 +294,7 @@ export default function CreateClubPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.04)',
+          background: 'rgba(var(--tint-rgb), 0.04)',
           padding: '0.65rem 1rem',
           borderRadius: 'var(--radius-md)',
           marginBottom: '1.25rem',
@@ -303,7 +303,7 @@ export default function CreateClubPage() {
           <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--club-primary)', letterSpacing: '0.05em' }}>
             STEP {step} OF 4
           </span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             {step === 1 ? 'Identity & Slug' : step === 2 ? 'Branding & Assets' : step === 3 ? 'Home Ground' : 'Domain & Launch'}
           </span>
         </div>
@@ -356,7 +356,7 @@ export default function CreateClubPage() {
               }}>
                 {step > s.num ? <CheckCircle2 size={16} /> : s.num}
               </div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: step === s.num ? '#FFFFFF' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: step === s.num ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                 {s.label}
               </span>
             </div>
@@ -371,7 +371,7 @@ export default function CreateClubPage() {
               border: '1px solid #EF4444',
               borderRadius: 'var(--radius-md)',
               padding: '0.85rem 1.25rem',
-              color: '#EF4444',
+              color: 'var(--c-red)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.6rem',
@@ -392,7 +392,7 @@ export default function CreateClubPage() {
             {/* STEP 1: IDENTITY */}
             {step === 1 && (
               <div className="animate-fade-in">
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   1. Club Identity & Official Registry
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
@@ -433,7 +433,7 @@ export default function CreateClubPage() {
                     <label className="form-label">Public URL Slug *</label>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <span style={{
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'rgba(var(--tint-rgb), 0.05)',
                         padding: '0.7rem 0.8rem',
                         border: '1px solid var(--border-subtle)',
                         borderRight: 'none',
@@ -459,12 +459,12 @@ export default function CreateClubPage() {
                     {/* Real-time inline slug feedback */}
                     <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {slugValidation.valid ? (
-                        <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
                           <CheckCircle2 size={13} />
                           URL is available: itsfootball.club/{slugValidation.cleanSlug}
                         </span>
                       ) : (
-                        <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--c-red)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
                           <AlertCircle size={13} />
                           {slugValidation.error}
                         </span>
@@ -513,7 +513,7 @@ export default function CreateClubPage() {
             {/* STEP 2: BRANDING & ASSETS */}
             {step === 2 && (
               <div className="animate-fade-in">
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   2. Dynamic Visual Branding & Official Kit Design
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
@@ -539,10 +539,10 @@ export default function CreateClubPage() {
                           padding: '0.4rem 0.65rem',
                           borderRadius: '8px',
                           border: formData.primary_color === p.primary ? '2px solid #FFFFFF' : '1px solid var(--border-subtle)',
-                          background: 'rgba(255, 255, 255, 0.04)',
+                          background: 'rgba(var(--tint-rgb), 0.04)',
                           cursor: 'pointer',
                           fontSize: '0.75rem',
-                          color: '#FFFFFF',
+                          color: 'var(--text-primary)',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -633,7 +633,7 @@ export default function CreateClubPage() {
                     <div style={{
                       padding: '0.75rem 1rem',
                       borderRadius: '8px',
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'rgba(var(--shade-rgb), 0.3)',
                       border: '1px solid var(--border-subtle)',
                       display: 'flex',
                       alignItems: 'center',
@@ -653,7 +653,7 @@ export default function CreateClubPage() {
                           fontWeight: 700,
                           fontSize: '0.7rem',
                           background: contrastInfo.isWcagAA ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                          color: contrastInfo.isWcagAA ? '#10B981' : '#F59E0B',
+                          color: contrastInfo.isWcagAA ? 'var(--c-green)' : 'var(--c-amber)',
                         }}
                       >
                         {contrastInfo.isWcagAA ? 'WCAG 2.2 AA PASSED' : 'LARGE TEXT ONLY'}
@@ -715,7 +715,7 @@ export default function CreateClubPage() {
             {/* STEP 3: HOME GROUND */}
             {step === 3 && (
               <div className="animate-fade-in">
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   3. Home Ground & Matchday Venue
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
@@ -790,7 +790,7 @@ export default function CreateClubPage() {
             {/* STEP 4: DOMAIN & LAUNCH */}
             {step === 4 && (
               <div className="animate-fade-in">
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                   4. Custom Domain & Launch Setup
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
@@ -800,7 +800,7 @@ export default function CreateClubPage() {
                 <div className="form-group">
                   <label className="form-label">Custom Domain (Optional)</label>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRight: 'none', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', color: 'var(--text-muted)' }}>
+                    <span style={{ background: 'rgba(var(--tint-rgb), 0.05)', padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRight: 'none', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', color: 'var(--text-muted)' }}>
                       <Globe size={16} />
                     </span>
                     <input aria-label="Custom domain"
@@ -844,7 +844,7 @@ export default function CreateClubPage() {
                 </div>
 
                 <div className="glass-panel" style={{ padding: '1.25rem', marginTop: '1.5rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#10B981', fontWeight: 800, marginBottom: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--c-green)', fontWeight: 800, marginBottom: '0.4rem' }}>
                     <CheckCircle2 size={18} /> Ready to Initialize Tenant
                   </div>
                   <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>

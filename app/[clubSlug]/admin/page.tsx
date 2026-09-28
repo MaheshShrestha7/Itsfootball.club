@@ -63,7 +63,7 @@ export default function AdminDashboardPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ADMIN CONSOLE</span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {club.name} Dashboard
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -93,12 +93,12 @@ export default function AdminDashboardPage({
         {/* KPI 0: Active Season */}
         <Link href={`/${club.slug}/admin/seasons`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', textTransform: 'uppercase' }}>
               Active Season
             </span>
-            <div style={{ color: '#10B981' }}><CalendarDays size={20} /></div>
+            <div style={{ color: 'var(--c-green)' }}><CalendarDays size={20} /></div>
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {activeSeason?.name || defaultSeasonLabel()}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -115,7 +115,7 @@ export default function AdminDashboardPage({
             </span>
             <div style={{ color: 'var(--club-primary)' }}><Users size={20} /></div>
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {squadPlayers.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
@@ -130,15 +130,15 @@ export default function AdminDashboardPage({
           style={{ padding: '1.5rem', textDecoration: 'none', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? '#EF4444' : 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)', textTransform: 'uppercase' }}>
               {liveMatch ? 'LIVE MATCH STATUS' : 'SCHEDULED FIXTURES'}
             </span>
-            <div style={{ color: liveMatch ? '#EF4444' : 'var(--text-muted)' }}><Radio size={20} /></div>
+            <div style={{ color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)' }}><Radio size={20} /></div>
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
           </div>
-          <div style={{ fontSize: '0.75rem', color: liveMatch ? '#EF4444' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ fontSize: '0.75rem', color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span>{liveMatch ? `${getLiveMinute(liveMatch)}' in progress` : 'Manage fixtures & schedules'}</span>
             <ArrowRight size={12} />
           </div>
@@ -150,12 +150,12 @@ export default function AdminDashboardPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Member Passes & Turnstile
             </span>
-            <div style={{ color: '#F59E0B' }}><CreditCard size={20} /></div>
+            <div style={{ color: 'var(--c-amber)' }}><CreditCard size={20} /></div>
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {clubMembers.length}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#F59E0B', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span>{analytics.gateScansCount.toLocaleString()} turnstile scans recorded</span>
             <ArrowRight size={12} />
           </div>
@@ -168,12 +168,12 @@ export default function AdminDashboardPage({
               <span className="pulse-dot" style={{ background: '#10B981' }} />
               <span>Public Page Visits</span>
             </span>
-            <div style={{ color: '#3B82F6' }}><TrendingUp size={20} /></div>
+            <div style={{ color: 'var(--c-blue)' }}><TrendingUp size={20} /></div>
           </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span>Live analytics stream active</span>
             <ArrowRight size={12} />
           </div>
@@ -182,7 +182,7 @@ export default function AdminDashboardPage({
 
       {/* Quick Actions Panel */}
       <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>
           Quick Management Actions
         </h3>
 
@@ -192,11 +192,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)' }}>
               <Radio size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Match Controller</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Match Controller</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Score & live events</div>
             </div>
           </Link>
@@ -206,11 +206,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: '#10B981' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>
               <Settings size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Club Branding</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Branding</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Colors, logo & domain</div>
             </div>
           </Link>
@@ -220,11 +220,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)' }}>
               <Users size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Squad & Players</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Squad & Players</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roster & stats</div>
             </div>
           </Link>
@@ -234,11 +234,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)' }}>
               <Calendar size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Club Events</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Events</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainings & social</div>
             </div>
           </Link>
@@ -248,11 +248,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)' }}>
               <Sparkles size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Hero Slider Pins</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Hero Slider Pins</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Curate pinned slides</div>
             </div>
           </Link>
@@ -262,11 +262,11 @@ export default function AdminDashboardPage({
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
           >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}>
+            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)' }}>
               <Trophy size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFFFFF' }}>Tournaments & Cups</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Tournaments & Cups</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Brackets & Tiesheets</div>
             </div>
           </Link>
@@ -278,20 +278,20 @@ export default function AdminDashboardPage({
         {/* Live Match Operation Overview */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Matchday Command
             </h3>
             {liveMatch ? (
               <span className="badge badge-live">LIVE • <LiveMinute match={liveMatch} />&apos;</span>
             ) : (
-              <span className="badge" style={{ background: 'rgba(255,255,255,0.06)' }}>STANDBY</span>
+              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>STANDBY</span>
             )}
           </div>
 
           {liveMatch ? (
             <div>
               <div style={{
-                background: 'rgba(0, 0, 0, 0.3)',
+                background: 'rgba(var(--shade-rgb), 0.3)',
                 padding: '1.25rem',
                 borderRadius: '12px',
                 display: 'flex',
@@ -300,16 +300,16 @@ export default function AdminDashboardPage({
                 marginBottom: '1.25rem',
               }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{liveMatch.home_team_name}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.home_team_name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Home</div>
                 </div>
 
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                   {liveMatch.home_score} : {liveMatch.away_score}
                 </div>
 
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{liveMatch.away_team_name}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.away_team_name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Away</div>
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function AdminDashboardPage({
 
         {/* Recent Platform Activities */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
             Recent Club Activity Feed
           </h3>
 
@@ -349,11 +349,11 @@ export default function AdminDashboardPage({
                   justifyContent: 'space-between',
                   padding: '0.65rem 0.85rem',
                   borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.02)',
+                  background: 'rgba(var(--tint-rgb), 0.02)',
                   fontSize: '0.825rem',
                 }}
               >
-                <div style={{ color: '#FFFFFF' }}>{act.description}</div>
+                <div style={{ color: 'var(--text-primary)' }}>{act.description}</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(act.created_at).toLocaleString()}</div>
               </div>
             ))}

@@ -69,7 +69,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <ArrowLeft size={16} /> Back to {club.name}
         </Link>
 
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <Handshake size={30} color="var(--club-primary)" /> Sponsor {club.name}
         </h1>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
@@ -78,12 +78,12 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
 
         {paymentNotice === 'success' && (
           <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #10B981', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-            <CheckCircle2 size={18} color="#10B981" /> Payment received, thank you! The club will be in touch about your logo and artwork.
+            <CheckCircle2 size={18} color="var(--c-green)" /> Payment received, thank you! The club will be in touch about your logo and artwork.
           </div>
         )}
         {paymentNotice === 'cancelled' && (
           <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #F59E0B', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-            <AlertCircle size={18} color="#F59E0B" /> Payment was cancelled. Nothing was charged.
+            <AlertCircle size={18} color="var(--c-amber)" /> Payment was cancelled. Nothing was charged.
           </div>
         )}
 
@@ -104,7 +104,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                   className="glass-panel glass-panel-interactive"
                   style={{ padding: '1.25rem', textAlign: 'left', cursor: 'pointer', border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
                   <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.tier}</span>
-                  <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#FFFFFF', margin: '0.5rem 0 0.25rem' }}>{p.name}</div>
+                  <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0.5rem 0 0.25rem' }}>{p.name}</div>
                   <div style={{ fontWeight: 800, color: 'var(--club-primary)', marginBottom: '0.5rem' }}>{formatMoney(p.price_cents, currency)}</div>
                   {p.benefits && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.benefits}</div>}
                 </button>
@@ -113,7 +113,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
 
             {selected && (
               <form onSubmit={submit} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ fontWeight: 800, color: '#FFFFFF' }}>Your details for {selected.name}</div>
+                <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Your details for {selected.name}</div>
                 {field('name', 'Business name')}
                 {field('contact_name', 'Contact name')}
                 {field('contact_email', 'Email', 'email')}
@@ -123,7 +123,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                 <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={form.company_website_confirm}
                   onChange={e => setForm({ ...form, company_website_confirm: e.target.value })}
                   style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} />
-                {error && <p role="alert" style={{ color: '#EF4444', fontSize: '0.85rem' }}>{error}</p>}
+                {error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem' }}>{error}</p>}
                 <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Continue to payment'}</button>
               </form>
             )}

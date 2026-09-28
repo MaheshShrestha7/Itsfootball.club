@@ -16,10 +16,10 @@ type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'>;
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.65rem 0.85rem',
-  background: 'rgba(0, 0, 0, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.12)',
+  background: 'rgba(var(--shade-rgb), 0.4)',
+  border: '1px solid rgba(var(--tint-rgb), 0.12)',
   borderRadius: '8px',
-  color: '#FFFFFF',
+  color: 'var(--text-primary)',
   fontSize: '0.88rem',
   colorScheme: 'dark',
 };
@@ -99,7 +99,7 @@ export default function TournamentFormModal({
       ...selectedInternalTeamIds.flatMap(id => {
         const team = clubInternalTeams.find(t => t.id === id);
         return team
-          ? [{ team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || '#10B981' }]
+          ? [{ team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)' }]
           : [];
       }),
       ...externalTeams.map(ext => ({ team_type: 'external' as const, name: ext.name, short_name: ext.short_name, logo_url: DEFAULT_CREST, color: '#2563EB' })),
@@ -159,7 +159,7 @@ export default function TournamentFormModal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(5, 10, 20, 0.88)',
+        background: 'rgba(var(--dk-4-6-9), 0.88)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -171,29 +171,29 @@ export default function TournamentFormModal({
     >
       <div
         style={{
-          background: 'linear-gradient(135deg, #111827 0%, #0F172A 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
+          border: '1px solid rgba(var(--tint-rgb), 0.12)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '680px',
           maxHeight: '92vh',
           overflowY: 'auto',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(16, 185, 129, 0.15)',
-          color: '#FFFFFF',
+          color: 'var(--text-primary)',
         }}
         onClick={e => e.stopPropagation()}
       >
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Trophy size={20} color="#10B981" />
+            <Trophy size={20} color="var(--c-green)" />
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
               {isEdit ? 'Edit Tournament' : 'Tournament Setup Wizard'}
             </h3>
@@ -275,12 +275,12 @@ export default function TournamentFormModal({
                     padding: '0.85rem',
                     borderRadius: '10px',
                     textAlign: 'left',
-                    border: format === f.id ? '2px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
-                    background: format === f.id ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 0, 0, 0.35)',
+                    border: format === f.id ? '2px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.08)',
+                    background: format === f.id ? 'rgba(16, 185, 129, 0.12)' : 'rgba(var(--shade-rgb), 0.35)',
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{ fontWeight: 800, fontSize: '0.85rem', color: format === f.id ? '#10B981' : '#FFFFFF' }}>{f.label}</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.85rem', color: format === f.id ? 'var(--c-green)' : 'var(--text-primary)' }}>{f.label}</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '3px' }}>{f.desc}</div>
                 </button>
               ))}
@@ -290,8 +290,8 @@ export default function TournamentFormModal({
           {format !== 'league' && (
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(var(--tint-rgb), 0.03)',
+                border: '1px solid rgba(var(--tint-rgb), 0.08)',
                 borderRadius: '10px',
                 padding: '1rem',
                 marginBottom: '1.25rem',
@@ -331,7 +331,7 @@ export default function TournamentFormModal({
                   style={{
                     gridColumn: '1 / -1',
                     fontSize: '0.72rem',
-                    color: '#10B981',
+                    color: 'var(--c-green)',
                     background: 'rgba(16, 185, 129, 0.08)',
                     padding: '0.5rem 0.75rem',
                     borderRadius: '6px',
@@ -349,10 +349,10 @@ export default function TournamentFormModal({
           <div style={{ marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>Internal Teams ({selectedInternalTeamIds.length} selected)</label>
-              <span style={{ fontSize: '0.72rem', color: '#10B981' }}>From your club squads</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--c-green)' }}>From your club squads</span>
             </div>
             {clubInternalTeams.length === 0 ? (
-              <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <div style={{ padding: '0.75rem', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 No internal teams yet. Create squads in the &quot;Internal Teams&quot; tab, or add guest teams below.
               </div>
             ) : (
@@ -365,8 +365,8 @@ export default function TournamentFormModal({
                       style={{
                         padding: '0.5rem 0.75rem',
                         borderRadius: '8px',
-                        background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                        border: isSelected ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
+                        background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                        border: isSelected ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.08)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -379,7 +379,7 @@ export default function TournamentFormModal({
                         onChange={() => setSelectedInternalTeamIds(prev => (prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]))}
                       />
                       <img loading="lazy" decoding="async" width={20} height={20} src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
                     </label>
                   );
                 })}
@@ -426,7 +426,7 @@ export default function TournamentFormModal({
                     background: 'rgba(59, 130, 246, 0.12)',
                     border: '1px solid rgba(59, 130, 246, 0.3)',
                     borderRadius: '12px',
-                    color: '#93C5FD',
+                    color: 'var(--c-sky)',
                     fontSize: '0.75rem',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -438,7 +438,7 @@ export default function TournamentFormModal({
                     type="button"
                     aria-label={`Remove ${ext.name}`}
                     onClick={() => setExternalTeams(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--c-red)', cursor: 'pointer', padding: 0 }}
                   >
                     ×
                   </button>
@@ -448,7 +448,7 @@ export default function TournamentFormModal({
           </div>
 
           {error && (
-            <div role="alert" style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+            <div role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem' }}>
               ⚠ {error}
             </div>
           )}

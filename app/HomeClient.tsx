@@ -25,7 +25,7 @@ import {
 // secondary: 'demo' links to a live club site, 'share' sends this page to whoever runs the club.
 const AUDIENCES = [
   {
-    id: 'coach', tab: 'Managers & coaches', Icon: ClipboardList, color: '#FBBF24',
+    id: 'coach', tab: 'Managers & coaches', Icon: ClipboardList, color: 'var(--c-amber)',
     headline: 'Know your XI before Thursday.',
     body: 'Send one availability link, see who is in, and drag them onto the pitch. On matchday, log goals, cards and subs from the touchline.',
     points: [
@@ -37,7 +37,7 @@ const AUDIENCES = [
     cta: { label: 'Set up your team', href: '/create-club' }, secondary: 'demo',
   },
   {
-    id: 'committee', tab: 'Committee', Icon: Shield, color: '#34D399',
+    id: 'committee', tab: 'Committee', Icon: Shield, color: 'var(--c-green)',
     headline: 'One dashboard instead of five apps.',
     body: 'Squad, fixtures, members, money, content and sponsors in one place, with roles for your president, secretary and treasurer.',
     points: [
@@ -49,7 +49,7 @@ const AUDIENCES = [
     cta: { label: 'Claim your club', href: '/create-club' }, secondary: 'demo',
   },
   {
-    id: 'player', tab: 'Players', Icon: Users, color: '#60A5FA',
+    id: 'player', tab: 'Players', Icon: Users, color: 'var(--c-sky)',
     headline: 'Your pass, your stats, your streak.',
     body: 'Players never set anything up. Your club adds you, and you get a member pass on your phone, availability in a tap and your goals on the board.',
     points: [
@@ -61,7 +61,7 @@ const AUDIENCES = [
     cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
   },
   {
-    id: 'sponsor', tab: 'Sponsors', Icon: Megaphone, color: '#A78BFA',
+    id: 'sponsor', tab: 'Sponsors', Icon: Megaphone, color: 'var(--c-purple)',
     headline: 'Proof your money worked.',
     body: 'Back a local club and see what it bought: your logo across their site and events, with every impression and click tracked.',
     points: [
@@ -300,7 +300,7 @@ export default function PlatformHomePage() {
           </div>
 
           {/* Live product mock, painted in the visitor's name and colours */}
-          <div className="lp-stage" aria-hidden="true">
+          <div className="lp-stage" aria-hidden="true" data-theme="dark">
             <div className="lp-toast">
               <div className="lp-toast-ico"><CalendarCheck size={16} /></div>
               <div>
@@ -345,9 +345,9 @@ export default function PlatformHomePage() {
                   <div className={`lp-ev lp-ev-goal${goalIn ? ' is-in' : ''}`}>
                     <time>71&apos;</time><Goal size={15} color={palette.accent} /><span><b>GOAL!</b> D. Okafor, assist M. Silva</span>
                   </div>
-                  <div className="lp-ev"><time>58&apos;</time><ArrowLeftRight size={14} color="#60A5FA" /><span>Sub: J. Park on for L. Hughes</span></div>
+                  <div className="lp-ev"><time>58&apos;</time><ArrowLeftRight size={14} color="var(--c-sky)" /><span>Sub: J. Park on for L. Hughes</span></div>
                   <div className="lp-ev"><time>41&apos;</time><span className="lp-card-yellow" /><span>Yellow card, Riverside #6</span></div>
-                  <div className="lp-ev"><time>23&apos;</time><Goal size={15} color="#CBD5E1" /><span><b>Goal</b> M. Silva</span></div>
+                  <div className="lp-ev"><time>23&apos;</time><Goal size={15} color="var(--text-primary)" /><span><b>Goal</b> M. Silva</span></div>
                 </div>
               </div>
             </div>
@@ -487,9 +487,9 @@ export default function PlatformHomePage() {
                   ))}
                 </div>
                 <div className="lp-avail">
-                  <span style={{ background: 'rgba(16,185,129,.15)', color: '#34D399' }}>16 in</span>
-                  <span style={{ background: 'rgba(239,68,68,.12)', color: '#F87171' }}>2 out</span>
-                  <span style={{ background: 'rgba(148,163,184,.12)', color: '#CBD5E1' }}>3 maybe</span>
+                  <span style={{ background: 'rgba(16,185,129,.15)', color: 'var(--c-green)' }}>16 in</span>
+                  <span style={{ background: 'rgba(239,68,68,.12)', color: 'var(--c-red)' }}>2 out</span>
+                  <span style={{ background: 'rgba(148,163,184,.12)', color: 'var(--text-primary)' }}>3 maybe</span>
                 </div>
               </div>
             </article>
@@ -749,7 +749,7 @@ export default function PlatformHomePage() {
                   >
                     <img loading="lazy" decoding="async" src={sponsor.logo_url} alt={`${sponsor.name} logo`}
                       style={{ height: isPlatinum ? '56px' : isGold ? '46px' : '38px', maxWidth: '100%', objectFit: 'contain' }} />
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>{sponsor.name}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{sponsor.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', width: '100%', justifyContent: 'center' }}>
                       <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt=""
                         style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'cover' }} />
@@ -766,7 +766,7 @@ export default function PlatformHomePage() {
       {/* ================= FINAL CTA ================= */}
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container">
-          <div className="lp-final lp-reveal">
+          <div className="lp-final lp-reveal" data-theme="dark">
             <div className="lp-eyebrow" style={{ justifyContent: 'center' }}><Zap size={13} /> Free to set up</div>
             <h2 className="lp-h2">Give your club the matchday it deserves.</h2>
             <p>Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>

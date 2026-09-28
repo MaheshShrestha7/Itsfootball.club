@@ -174,7 +174,7 @@ export default function AdminMatchCenterControllerPage({
   if (!match) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem' }}>
-        <h2 style={{ color: '#FFFFFF', fontWeight: 800 }}>No match fixtures found for this club.</h2>
+        <h2 style={{ color: 'var(--text-primary)', fontWeight: 800 }}>No match fixtures found for this club.</h2>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
           Schedule a match fixture associated with a season to operate live matchday reporting.
         </p>
@@ -200,7 +200,7 @@ export default function AdminMatchCenterControllerPage({
           }}>
             <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>Schedule New Fixture</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Schedule New Fixture</h3>
                 <button onClick={() => setIsCreateFixtureOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}><X size={20} /></button>
               </div>
               <form onSubmit={handleCreateFixture}>
@@ -379,7 +379,7 @@ export default function AdminMatchCenterControllerPage({
           <span className="badge badge-live" style={{ marginBottom: '0.4rem' }}>
             <span className="pulse-dot" /> MATCHDAY COMMAND CENTER
           </span>
-          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.25 }}>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.25 }}>
             Live Match-Day Reporting & Tactical Hub
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
@@ -399,7 +399,7 @@ export default function AdminMatchCenterControllerPage({
               gap: '0.4rem',
               background: 'rgba(59, 130, 246, 0.16)',
               border: '1px solid #3B82F6',
-              color: '#3B82F6',
+              color: 'var(--c-blue)',
               fontWeight: 800,
             }}
             title="Scan pass QR code via camera or enter token to check in attendees"
@@ -420,7 +420,7 @@ export default function AdminMatchCenterControllerPage({
               background: match.is_audited
                 ? 'rgba(16, 185, 129, 0.15)'
                 : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-              color: match.is_audited ? '#10B981' : '#000000',
+              color: match.is_audited ? 'var(--c-green)' : '#000000',
               fontWeight: 800,
               border: match.is_audited ? '1px solid #10B981' : 'none',
               boxShadow: match.is_audited ? 'none' : '0 4px 14px rgba(245, 158, 11, 0.4)',
@@ -435,7 +435,7 @@ export default function AdminMatchCenterControllerPage({
             className="btn btn-secondary btn-sm touch-target"
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
           >
-            <Layers size={14} color="#F59E0B" />
+            <Layers size={14} color="var(--c-amber)" />
             <span>Draft Workbench</span>
           </Link>
 
@@ -443,7 +443,7 @@ export default function AdminMatchCenterControllerPage({
             href={`/${club.slug}/match/${match.id}`}
             target="_blank"
             className="btn btn-secondary btn-sm touch-target"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(var(--tint-rgb), 0.15)' }}
           >
             <span>Public Match Center</span>
             <ExternalLink size={14} />
@@ -458,7 +458,7 @@ export default function AdminMatchCenterControllerPage({
           border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
           padding: '0.85rem 1.25rem',
           borderRadius: 'var(--radius-md)',
-          color: feedback.type === 'error' ? '#EF4444' : '#10B981',
+          color: feedback.type === 'error' ? 'var(--c-red)' : 'var(--c-green)',
           fontWeight: 700,
           marginBottom: '1.5rem',
           display: 'flex',
@@ -515,7 +515,7 @@ export default function AdminMatchCenterControllerPage({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
-            <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <CalendarDays size={12} /> {match.season}
             </span>
             <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
@@ -561,8 +561,8 @@ export default function AdminMatchCenterControllerPage({
               onClick={() => setAdminTab(tab.id as any)}
               className="btn btn-sm"
               style={{
-                background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-                color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                background: isActive ? 'rgba(var(--tint-rgb), 0.12)' : 'transparent',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontWeight: 800,
                 fontSize: '0.9rem',
                 border: '1px solid',
@@ -587,11 +587,11 @@ export default function AdminMatchCenterControllerPage({
       {adminTab === 'events' && (
         <div>
           {/* Main Scoreboard Command Hub */}
-          <div className="glass-panel" style={{
+          <div className="glass-panel" data-theme="dark" style={{
             padding: 'clamp(1rem, 2.5vw, 2rem)',
             marginBottom: '2rem',
             background: 'linear-gradient(180deg, #0e1624 0%, #080d15 100%)',
-            border: '2px solid rgba(255, 255, 255, 0.15)',
+            border: '2px solid rgba(var(--tint-rgb), 0.15)',
             overflow: 'hidden',
           }}>
             {/* Quick Period & Minute Bar */}
@@ -610,7 +610,7 @@ export default function AdminMatchCenterControllerPage({
                   fontFamily: 'var(--font-heading)',
                   fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
                   fontWeight: 900,
-                  color: match.status === 'live' ? '#EF4444' : '#FFFFFF',
+                  color: match.status === 'live' ? 'var(--c-red)' : 'var(--text-primary)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
@@ -618,7 +618,7 @@ export default function AdminMatchCenterControllerPage({
                   <Clock size={22} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
                   <span><LiveMinute match={match} />&apos;</span>
                   {match.added_time > 0 && (
-                    <span style={{ fontSize: '1rem', color: '#F59E0B' }}>
+                    <span style={{ fontSize: '1rem', color: 'var(--c-amber)' }}>
                       (+{match.added_time}&apos;)
                     </span>
                   )}
@@ -695,7 +695,7 @@ export default function AdminMatchCenterControllerPage({
                 <div style={{
                   fontWeight: 800,
                   fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   marginBottom: '0.4rem',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -715,7 +715,7 @@ export default function AdminMatchCenterControllerPage({
                   >
                     <Minus size={15} />
                   </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: '#FFFFFF', minWidth: '36px', textAlign: 'center' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: 'var(--text-primary)', minWidth: '36px', textAlign: 'center' }}>
                     {match.home_score}
                   </span>
                   <button
@@ -738,7 +738,7 @@ export default function AdminMatchCenterControllerPage({
                 <div style={{
                   fontWeight: 800,
                   fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   marginBottom: '0.4rem',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -758,7 +758,7 @@ export default function AdminMatchCenterControllerPage({
                   >
                     <Minus size={15} />
                   </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: '#FFFFFF', minWidth: '36px', textAlign: 'center' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: 'var(--text-primary)', minWidth: '36px', textAlign: 'center' }}>
                     {match.away_score}
                   </span>
                   <button
@@ -824,8 +824,8 @@ export default function AdminMatchCenterControllerPage({
 
             return (
               <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)', marginBottom: '2.5rem' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Radio size={18} color="#10B981" /> Broadcast Live Match Event
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Radio size={18} color="var(--c-green)" /> Broadcast Live Match Event
                 </h3>
 
                 <form onSubmit={handleLogEvent}>
@@ -884,9 +884,9 @@ export default function AdminMatchCenterControllerPage({
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.35rem',
-                              background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                              background: isActive ? 'rgba(var(--tint-rgb), 0.1)' : 'transparent',
                               border: `1px solid ${isActive ? '#FFFFFF' : 'var(--border-subtle)'}`,
-                              color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                              color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                             }}
                           >
                             <span>{a.emoji}</span>
@@ -1038,7 +1038,7 @@ export default function AdminMatchCenterControllerPage({
 
           {/* Logged Events List with Deletion */}
           <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
               Logged Match Events ({events.length})
             </h3>
 
@@ -1057,7 +1057,7 @@ export default function AdminMatchCenterControllerPage({
                       justifyContent: 'space-between',
                       padding: 'clamp(0.6rem, 2vw, 0.85rem) clamp(0.75rem, 2.5vw, 1.15rem)',
                       borderRadius: '8px',
-                      background: 'rgba(0, 0, 0, 0.35)',
+                      background: 'rgba(var(--shade-rgb), 0.35)',
                       border: '1px solid var(--border-subtle)',
                       gap: '0.75rem',
                     }}
@@ -1076,11 +1076,11 @@ export default function AdminMatchCenterControllerPage({
 
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                             {evt.event_type.toUpperCase().replace('_', ' ')}
                           </span>
                           <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>•</span>
-                          <span style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.88rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                             {evt.player_name}
                           </span>
                           {evt.assist_player_name && (
@@ -1088,7 +1088,7 @@ export default function AdminMatchCenterControllerPage({
                               (Ast: {evt.assist_player_name})
                             </span>
                           )}
-                          <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
                             {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                           </span>
                         </div>
@@ -1103,7 +1103,7 @@ export default function AdminMatchCenterControllerPage({
                     <button
                       onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
                       className="btn btn-secondary btn-sm touch-target"
-                      style={{ padding: '0.35rem 0.65rem', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
+                      style={{ padding: '0.35rem 0.65rem', color: 'var(--c-red)', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
                       title="Delete event and revert score if goal"
                     >
                       <Trash2 size={14} />
@@ -1124,8 +1124,8 @@ export default function AdminMatchCenterControllerPage({
           <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 1.5rem) clamp(1rem, 3vw, 2rem)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Move size={20} color="#F59E0B" /> Tactical Pitch & Free-Form Manager
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Move size={20} color="var(--c-amber)" /> Tactical Pitch & Free-Form Manager
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
                   Coaches can choose a tactical preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or freely drag and drop any player node into custom shapes. Click &quot;Save Shape&quot; to publish directly to the live match center.
@@ -1158,8 +1158,8 @@ export default function AdminMatchCenterControllerPage({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '2rem' }}>
           {/* Stoppage Time Board (4th Official LED) */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Timer size={18} color="#F59E0B" /> 4th Official Stoppage Board
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Timer size={18} color="var(--c-amber)" /> 4th Official Stoppage Board
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
               Select additional stoppage time indicated by the match referee.
@@ -1167,7 +1167,7 @@ export default function AdminMatchCenterControllerPage({
 
             {/* LED Display Box */}
             <div style={{
-              background: '#040609',
+              background: 'rgb(var(--dk-4-6-9))',
               border: '2px solid #F59E0B',
               borderRadius: '16px',
               padding: '1.5rem',
@@ -1175,10 +1175,10 @@ export default function AdminMatchCenterControllerPage({
               marginBottom: '1.5rem',
               boxShadow: '0 0 25px rgba(245, 158, 11, 0.3)',
             }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--c-amber)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Official Stoppage Time
               </span>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '3.5rem', fontWeight: 900, color: '#F59E0B', marginTop: '0.2rem' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '3.5rem', fontWeight: 900, color: 'var(--c-amber)', marginTop: '0.2rem' }}>
                 +{match.added_time}&apos;
               </div>
             </div>
@@ -1206,8 +1206,8 @@ export default function AdminMatchCenterControllerPage({
 
           {/* Period Transition Manager */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={18} color="#10B981" /> Match Period Transition
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Clock size={18} color="var(--c-green)" /> Match Period Transition
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
               Trigger whistle transitions to control live status on supporter feeds.
@@ -1231,7 +1231,7 @@ export default function AdminMatchCenterControllerPage({
                   {match.is_paused ? <Play size={16} /> : <Pause size={16} />}
                   {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury, VAR check, etc.)'}
                 </span>
-                {match.is_paused && <span className="badge" style={{ background: 'rgba(0,0,0,0.2)', color: '#000' }}>PAUSED</span>}
+                {match.is_paused && <span className="badge" style={{ background: 'rgba(var(--shade-rgb), 0.2)', color: '#000' }}>PAUSED</span>}
               </button>
             )}
 
@@ -1290,7 +1290,7 @@ export default function AdminMatchCenterControllerPage({
                 style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: '#3B82F6' }}
               >
                 <span>Full Time (Final Whistle & Audit)</span>
-                <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#FFF' }}>FT</span>
+                <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.2)', color: 'var(--text-primary)' }}>FT</span>
               </button>
             </div>
           </div>
@@ -1340,7 +1340,7 @@ export default function AdminMatchCenterControllerPage({
             boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CalendarDays size={20} color="var(--club-primary)" />
                 Schedule Match Fixture
               </h3>
@@ -1419,7 +1419,7 @@ export default function AdminMatchCenterControllerPage({
               </div>
 
               <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(var(--tint-rgb), 0.03)',
                 padding: '0.85rem 1rem',
                 borderRadius: '8px',
                 border: '1px solid var(--border-subtle)',
@@ -1436,7 +1436,7 @@ export default function AdminMatchCenterControllerPage({
                   onChange={e => setFixtureIsHome(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--club-primary)', cursor: 'pointer' }}
                 />
-                <label htmlFor="fixtureHomeCheck" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#FFFFFF' }}>
+                <label htmlFor="fixtureHomeCheck" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {club.name} is the Home Team (Playing at {club.stadium_name})
                 </label>
               </div>

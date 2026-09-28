@@ -74,7 +74,7 @@ export default function MyClubsPage() {
 
       <main className="container" style={{ padding: '3rem 1.5rem', flex: 1, maxWidth: '1200px' }}>
         {linkError && (
-          <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid #EF4444', color: '#FCA5A5', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+          <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid #EF4444', color: 'var(--c-red)', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
             {linkError}
           </div>
         )}
@@ -114,12 +114,12 @@ export default function MyClubsPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 1.5rem auto',
-                color: '#10B981',
+                color: 'var(--c-green)',
               }}>
                 <Lock size={28} />
               </div>
 
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                 Sign In to View Your Clubs
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem', lineHeight: 1.5 }}>
@@ -156,7 +156,7 @@ export default function MyClubsPage() {
                 <div className="badge badge-primary" style={{ marginBottom: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Shield size={14} /> CLUB MANAGEMENT CONSOLE
                 </div>
-                <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', marginBottom: '0.4rem' }}>
+                <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '0.4rem' }}>
                   Your Registered Clubs
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', maxWidth: '650px', fontSize: '0.925rem' }}>
@@ -179,8 +179,8 @@ export default function MyClubsPage() {
               <>
               {ownedClubs.length > 0 && (
               <section style={{ marginBottom: memberClubs.length > 0 ? '3rem' : 0 }}>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Shield size={18} color="#F59E0B" /> Clubs You Own
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Shield size={18} color="var(--c-amber)" /> Clubs You Own
                 </h2>
               <div className="grid-responsive-3" style={{ gap: '1.75rem' }}>
                 {ownedClubs.map(club => {
@@ -211,7 +211,7 @@ export default function MyClubsPage() {
                         <div style={{
                           position: 'absolute',
                           inset: 0,
-                          background: 'linear-gradient(to top, rgba(14, 20, 30, 0.95), rgba(7, 10, 15, 0.2))',
+                          background: 'linear-gradient(to top, rgba(var(--dk-14-20-30), 0.95), rgba(var(--dk-7-10-15), 0.2))',
                         }} />
 
                         {/* Owner Badge */}
@@ -248,12 +248,12 @@ export default function MyClubsPage() {
                               borderRadius: '12px',
                               border: `2px solid ${club.primary_color}`,
                               objectFit: 'cover',
-                              background: '#070A0F',
+                              background: 'rgb(var(--dk-7-10-15))',
                               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
                             }}
                           />
                           <div>
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                               {club.name}
                             </h3>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -273,7 +273,7 @@ export default function MyClubsPage() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                               <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
-                              <span style={{ color: '#E2E8F0' }}>{club.stadium_name}</span>
+                              <span style={{ color: 'var(--text-primary)' }}>{club.stadium_name}</span>
                             </div>
                             <div>
                               Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
@@ -315,7 +315,7 @@ export default function MyClubsPage() {
                               style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
                               title="Live Match Center"
                             >
-                              <Radio size={13} color="#EF4444" />
+                              <Radio size={13} color="var(--c-red)" />
                               <span>Match</span>
                             </Link>
                             <Link
@@ -341,7 +341,7 @@ export default function MyClubsPage() {
               {/* Tiled Grid of Clubs You're a Member Of (not owned) */}
               {memberClubs.length > 0 && (
               <section>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Users size={18} color="var(--club-primary, #10B981)" /> Clubs You&apos;re In
                 </h2>
                 <div className="grid-responsive-3" style={{ gap: '1.75rem' }}>
@@ -375,7 +375,7 @@ export default function MyClubsPage() {
                           <div style={{
                             position: 'absolute',
                             inset: 0,
-                            background: 'linear-gradient(to top, rgba(14, 20, 30, 0.95), rgba(7, 10, 15, 0.2))',
+                            background: 'linear-gradient(to top, rgba(var(--dk-14-20-30), 0.95), rgba(var(--dk-7-10-15), 0.2))',
                           }} />
 
                           {/* Role Badge */}
@@ -410,12 +410,12 @@ export default function MyClubsPage() {
                                 borderRadius: '12px',
                                 border: `2px solid ${club.primary_color}`,
                                 objectFit: 'cover',
-                                background: '#070A0F',
+                                background: 'rgb(var(--dk-7-10-15))',
                                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
                               }}
                             />
                             <div>
-                              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+                              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                                 {club.name}
                               </h3>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -434,7 +434,7 @@ export default function MyClubsPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                 <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
-                                <span style={{ color: '#E2E8F0' }}>{club.stadium_name}</span>
+                                <span style={{ color: 'var(--text-primary)' }}>{club.stadium_name}</span>
                               </div>
                               <div>
                                 Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
@@ -474,7 +474,7 @@ export default function MyClubsPage() {
                                 style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
                                 title="Live Match Center"
                               >
-                                <Radio size={13} color="#EF4444" />
+                                <Radio size={13} color="var(--c-red)" />
                                 <span>Match</span>
                               </Link>
                             </div>
@@ -512,12 +512,12 @@ export default function MyClubsPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#10B981',
+                    color: 'var(--c-green)',
                   }}>
                     <PlusCircle size={26} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.25rem' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
                       Launch a new club
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px' }}>
@@ -554,13 +554,13 @@ export default function MyClubsPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 1.5rem auto',
-                  color: '#10B981',
+                  color: 'var(--c-green)',
                   boxShadow: '0 0 24px rgba(16, 185, 129, 0.25)',
                 }}>
                   <Shield size={32} />
                 </div>
 
-                <h2 style={{ fontSize: '1.85rem', fontWeight: 900, marginBottom: '0.75rem', color: '#FFFFFF' }}>
+                <h2 style={{ fontSize: '1.85rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
                   No Football Clubs Registered Yet
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 2rem auto' }}>
@@ -597,7 +597,7 @@ export default function MyClubsPage() {
                   textAlign: 'left',
                 }}>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#10B981', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       ⚡ 60-Second Setup
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -605,7 +605,7 @@ export default function MyClubsPage() {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#F59E0B', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--c-amber)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       📻 Pitchside Live Desk
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -613,7 +613,7 @@ export default function MyClubsPage() {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#3B82F6', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--c-blue)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       🎟️ Digital Turnstiles
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>

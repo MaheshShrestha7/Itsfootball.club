@@ -214,8 +214,8 @@ export default function QRScannerModal({
         maxWidth: '540px',
         maxHeight: '92vh',
         overflowY: 'auto',
-        background: 'linear-gradient(180deg, rgba(18, 26, 38, 0.98) 0%, rgba(8, 12, 18, 0.99) 100%)',
-        border: '1px solid rgba(255, 255, 255, 0.15)',
+        background: 'linear-gradient(180deg, rgba(var(--dk-18-26-38), 0.98) 0%, rgba(var(--dk-8-12-18), 0.99) 100%)',
+        border: '1px solid rgba(var(--tint-rgb), 0.15)',
         borderRadius: 'var(--radius-xl)',
         padding: '1.75rem',
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.12)',
@@ -225,8 +225,8 @@ export default function QRScannerModal({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-              <Shield size={20} color="#10B981" />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
+              <Shield size={20} color="var(--c-green)" />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                 {mode === 'match_checkin'
                   ? 'Matchday Gate Check-In'
                   : mode === 'event_checkin'
@@ -247,7 +247,7 @@ export default function QRScannerModal({
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
+                background: 'rgba(var(--tint-rgb), 0.08)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '34px',
@@ -255,7 +255,7 @@ export default function QRScannerModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: audioEnabled ? '#10B981' : 'var(--text-muted)',
+                color: audioEnabled ? 'var(--c-green)' : 'var(--text-muted)',
                 cursor: 'pointer',
               }}
               title={audioEnabled ? 'Mute turnstile chime' : 'Enable turnstile chime'}
@@ -266,7 +266,7 @@ export default function QRScannerModal({
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
+                background: 'rgba(var(--tint-rgb), 0.08)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '34px',
@@ -287,11 +287,11 @@ export default function QRScannerModal({
         {/* Tab switchers: Live Holographic Scanner vs Manual Entry */}
         <div style={{
           display: 'flex',
-          background: 'rgba(0, 0, 0, 0.4)',
+          background: 'rgba(var(--shade-rgb), 0.4)',
           padding: '4px',
           borderRadius: 'var(--radius-md)',
           marginBottom: '1.25rem',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(var(--tint-rgb), 0.08)',
         }}>
           <button
             onClick={() => { setActiveTab('camera'); setScanResult({ status: 'idle', message: '' }); }}
@@ -301,7 +301,7 @@ export default function QRScannerModal({
               borderRadius: 'var(--radius-sm)',
               border: 'none',
               background: activeTab === 'camera' ? 'var(--club-primary, #10B981)' : 'transparent',
-              color: activeTab === 'camera' ? '#FFFFFF' : 'var(--text-muted)',
+              color: activeTab === 'camera' ? 'var(--text-primary)' : 'var(--text-muted)',
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -322,7 +322,7 @@ export default function QRScannerModal({
               borderRadius: 'var(--radius-sm)',
               border: 'none',
               background: activeTab === 'manual' ? 'var(--club-primary, #10B981)' : 'transparent',
-              color: activeTab === 'manual' ? '#FFFFFF' : 'var(--text-muted)',
+              color: activeTab === 'manual' ? 'var(--text-primary)' : 'var(--text-muted)',
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -399,35 +399,35 @@ export default function QRScannerModal({
             <div className="turnstile-stamp-container">
               {scanResult.status === 'success' && (
                 <div className="authorization-stamp stamp-granted">
-                  <CheckCircle2 size={20} color="#10B981" strokeWidth={3} />
+                  <CheckCircle2 size={20} color="var(--c-green)" strokeWidth={3} />
                   <span>★ ACCESS GRANTED • GATE UNLOCKED ★</span>
                 </div>
               )}
               {scanResult.status === 'warning' && (
                 <div className="authorization-stamp stamp-warning">
-                  <AlertTriangle size={20} color="#F59E0B" strokeWidth={3} />
+                  <AlertTriangle size={20} color="var(--c-amber)" strokeWidth={3} />
                   <span>⚠ ACCESS RESTRICTED • MANUAL CHECK ⚠</span>
                 </div>
               )}
               {scanResult.status === 'error' && (
                 <div className="authorization-stamp stamp-denied">
-                  <XCircle size={20} color="#EF4444" strokeWidth={3} />
+                  <XCircle size={20} color="var(--c-red)" strokeWidth={3} />
                   <span>✖ ACCESS DENIED • TURNSTILE LOCKED ✖</span>
                 </div>
               )}
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-              <p style={{ fontSize: '0.85rem', color: '#FFFFFF', margin: 0, fontWeight: 600 }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
                 {scanResult.message}
               </p>
             </div>
 
             {/* Matchday Turnstile Gate Clearance Receipt */}
             <div style={{
-              background: '#040609',
+              background: 'rgb(var(--dk-4-6-9))',
               borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(var(--tint-rgb), 0.1)',
               padding: '1rem',
             }}>
               {/* Member Profile Snapshot if verified */}
@@ -435,10 +435,10 @@ export default function QRScannerModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem' }}>
                   <PlayerAvatar photoUrl={scanResult.member.photo_url} name={scanResult.member.full_name} size={54} eager style={{ borderRadius: '12px', border: '2px solid #10B981', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1.05rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem' }}>
                       {scanResult.member.full_name}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#10B981', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--c-green)', fontWeight: 700 }}>
                       {scanResult.member.is_executive
                         ? scanResult.member.executive_title
                         : `${scanResult.member.membership_tier} Accreditation`}{scanResult.member.jersey_number ? ` • #${scanResult.member.jersey_number}` : ''}
@@ -464,8 +464,8 @@ export default function QRScannerModal({
                     <Ticket size={22} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: '#FFFFFF' }}>{scanResult.attendeeName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#10B981' }}>Event Attendee Confirmed</div>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{scanResult.attendeeName}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>Event Attendee Confirmed</div>
                   </div>
                 </div>
               ) : null}
@@ -475,21 +475,21 @@ export default function QRScannerModal({
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '0.5rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                borderTop: '1px solid rgba(var(--tint-rgb), 0.08)',
                 paddingTop: '0.75rem',
                 fontSize: '0.72rem',
               }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block' }}>Turnstile Gate</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 800 }}>{scanResult.gate || 'Gate A'}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.gate || 'Gate A'}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block' }}>Turnstile Unit</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 800 }}>{scanResult.turnstile || 'Unit 04'}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.turnstile || 'Unit 04'}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block' }}>Timestamp</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 800 }}>{scanResult.timestamp || 'Just now'}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.timestamp || 'Just now'}</span>
                 </div>
               </div>
             </div>

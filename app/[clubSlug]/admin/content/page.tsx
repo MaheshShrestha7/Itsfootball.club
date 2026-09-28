@@ -137,7 +137,7 @@ export default function AdminContentPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CONTENT & MEDIA CMS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Content & Media Management
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -176,7 +176,7 @@ export default function AdminContentPage({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                   {article.is_featured && <span className="badge badge-gold">FEATURED</span>}
                   {article.video_embed_url && (
-                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444' }}>
+                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)' }}>
                       <Play size={10} /> VIDEO
                     </span>
                   )}
@@ -185,7 +185,7 @@ export default function AdminContentPage({
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.3rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>
                   {article.title}
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -206,7 +206,7 @@ export default function AdminContentPage({
                       alignItems: 'center',
                       gap: '0.35rem',
                       borderColor: isPinned ? '#60A5FA' : undefined,
-                      color: isPinned ? '#60A5FA' : 'var(--text-secondary)',
+                      color: isPinned ? 'var(--c-sky)' : 'var(--text-secondary)',
                       background: isPinned ? 'rgba(59, 130, 246, 0.1)' : undefined
                     }}
                     title={isPinned ? 'Pinned to Hero Slider (Click to unpin)' : 'Pin to Hero Slider'}
@@ -252,7 +252,7 @@ export default function AdminContentPage({
             padding: '2rem',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingId ? 'Edit Article' : 'Publish New Story'}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -346,7 +346,7 @@ export default function AdminContentPage({
                   onChange={e => setForm({ ...form, is_featured: e.target.checked })}
                   style={{ width: '18px', height: '18px', accentColor: 'var(--club-primary)' }}
                 />
-                <label htmlFor="is_featured" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#FFFFFF', cursor: 'pointer' }}>
+                <label htmlFor="is_featured" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
                   Pin as Featured Story on Club Home Page
                 </label>
               </div>
@@ -375,17 +375,17 @@ export default function AdminContentPage({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '1rem 1.4rem',
-          background: 'rgba(15, 23, 42, 0.96)',
+          background: 'rgba(var(--dk-15-23-42), 0.96)',
           border: '1.5px solid #10B981',
           borderRadius: '12px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: '#FFFFFF',
+          color: 'var(--text-primary)',
           fontSize: '0.9rem',
           fontWeight: 700,
           backdropFilter: 'blur(10px)',
           animation: 'fadeIn 0.2s ease-out'
         }}>
-          <Sparkles size={18} color="#10B981" />
+          <Sparkles size={18} color="var(--c-green)" />
           <span>{toastMessage}</span>
         </div>
       )}

@@ -115,7 +115,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>CLUB GOVERNANCE • FINANCE</span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <Wallet size={30} /> Finance
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
@@ -136,7 +136,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
         <div role="status" style={{
           background: feedback.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
           border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
-          color: feedback.type === 'error' ? '#EF4444' : '#10B981',
+          color: feedback.type === 'error' ? 'var(--c-red)' : 'var(--c-green)',
           padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontWeight: 700,
         }}>{feedback.text}</div>
       )}
@@ -224,26 +224,26 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-        <Bars title="Income by category" rows={byCategory(paid, INCOME_CATEGORIES)} money={money} color="#10B981" />
-        <Bars title="Expenses by category" rows={byCategory(expenses, EXPENSE_CATEGORIES)} money={money} color="#EF4444" />
+        <Bars title="Income by category" rows={byCategory(paid, INCOME_CATEGORIES)} money={money} color="var(--c-green)" />
+        <Bars title="Expenses by category" rows={byCategory(expenses, EXPENSE_CATEGORIES)} money={money} color="var(--c-red)" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={{ fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem' }}>Memberships due ({expiring.length})</h3>
+          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Memberships due ({expiring.length})</h3>
           {expiring.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nobody expires in the next 30 days.</p> : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
               {expiring.map(m => (
                 <li key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span>{m.full_name}</span>
-                  <span style={{ color: m.days < 0 ? '#EF4444' : '#F59E0B', fontWeight: 700 }}>{m.days < 0 ? `expired ${-m.days}d ago` : `in ${m.days}d`}</span>
+                  <span style={{ color: m.days < 0 ? 'var(--c-red)' : 'var(--c-amber)', fontWeight: 700 }}>{m.days < 0 ? `expired ${-m.days}d ago` : `in ${m.days}d`}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={{ fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem' }}>Unpaid sponsorships ({pledges.length})</h3>
+          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Unpaid sponsorships ({pledges.length})</h3>
           {pledges.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No outstanding sponsor deals.</p> : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {pledges.map(s => (
@@ -255,7 +255,7 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
             </ul>
           )}
           {owedToMembers.length > 0 && (
-            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#F59E0B' }}>
+            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--c-amber)' }}>
               {owedToMembers.length} expense{owedToMembers.length === 1 ? '' : 's'} still to reimburse to members
               ({money(owedToMembers.reduce((n, e) => n + e.amount_cents, 0))}).
             </p>
@@ -270,13 +270,13 @@ function Bars({ title, rows, money, color }: { title: string; rows: { label: str
   const max = Math.max(1, ...rows.map(r => r.value));
   return (
     <div className="glass-panel" style={{ padding: '1.25rem' }}>
-      <h3 style={{ fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem' }}>{title}</h3>
+      <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>{title}</h3>
       {rows.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nothing recorded yet.</p> : rows.map(r => (
         <div key={r.label} style={{ marginBottom: '0.6rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
             <span>{r.label}</span><strong>{money(r.value)}</strong>
           </div>
-          <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{ height: 8, borderRadius: 4, background: 'rgba(var(--tint-rgb), 0.06)' }}>
             <div style={{ width: `${(r.value / max) * 100}%`, height: '100%', borderRadius: 4, background: color }} />
           </div>
         </div>
@@ -588,7 +588,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
                 <td style={cell}>
                   {e.description}
                   {e.paid_by_member_id && (
-                    <div style={{ fontSize: '0.75rem', color: e.reimbursed ? 'var(--text-muted)' : '#F59E0B' }}>
+                    <div style={{ fontSize: '0.75rem', color: e.reimbursed ? 'var(--text-muted)' : 'var(--c-amber)' }}>
                       Paid by {members.find(m => m.id === e.paid_by_member_id)?.full_name || 'member'}: {e.reimbursed ? 'reimbursed' : 'to reimburse'}
                     </div>
                   )}
@@ -662,7 +662,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={{ fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><CreditCard size={18} /> Card payments (Stripe)</h3>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><CreditCard size={18} /> Card payments (Stripe)</h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
           {stripeState === 'connected' && 'Connected. Card payments go straight into the club’s own Stripe account.'}
           {stripeState === 'incomplete' && 'Stripe setup isn’t finished yet. Continue to add the club’s details and bank account.'}
@@ -685,7 +685,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
       </div>
 
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <h3 style={{ fontWeight: 800, color: '#FFFFFF' }}>Currency & bank transfer</h3>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Currency & bank transfer</h3>
         <div className="form-group">
           <label className="form-label" htmlFor="set-currency">Currency</label>
           <select id="set-currency" className="form-select" style={{ maxWidth: 200 }} value={currency} onChange={e => setCurrency(e.target.value)}>
@@ -764,7 +764,7 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
   return (
     <div className="glass-panel" style={{ padding: '1.25rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h3 style={{ fontWeight: 800, color: '#FFFFFF' }}>{title}</h3>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h3>
         <button type="button" className="btn btn-secondary btn-sm" onClick={add}><Plus size={14} /> Add</button>
       </div>
       {rows.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None yet.</p>}

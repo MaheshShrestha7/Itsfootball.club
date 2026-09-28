@@ -134,7 +134,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             position: 'absolute',
             top: '1.25rem',
             right: '1.25rem',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'rgba(var(--tint-rgb), 0.05)',
             border: 'none',
             color: 'var(--text-secondary)',
             width: '32px',
@@ -160,7 +160,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           style={{ display: 'block', width: '72px', height: '72px', margin: '0 auto 1rem auto', filter: 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5))' }}
         />
 
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: '#FFFFFF', marginBottom: '0.4rem' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
           {mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
         </h3>
         <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -172,7 +172,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         {/* Tab switch */}
         <div style={{
           display: 'flex',
-          background: 'rgba(0, 0, 0, 0.3)',
+          background: 'rgba(var(--shade-rgb), 0.3)',
           padding: '0.3rem',
           borderRadius: '10px',
           marginBottom: '1.5rem',
@@ -267,7 +267,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           border: '1px solid #EF4444',
           borderRadius: 'var(--radius-md)',
           padding: '0.65rem 0.85rem',
-          color: '#EF4444',
+          color: 'var(--c-red)',
           fontSize: '0.78rem',
           display: 'flex',
           alignItems: 'center',

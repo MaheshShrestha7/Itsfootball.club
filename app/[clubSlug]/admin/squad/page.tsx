@@ -468,7 +468,7 @@ export default function AdminSquadPage({
               }).length} Players)
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Squad & Members Administration
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -489,13 +489,13 @@ export default function AdminSquadPage({
               borderRadius: '10px',
               border: '1px solid rgba(16, 185, 129, 0.4)',
               background: 'rgba(16, 185, 129, 0.08)',
-              color: '#FFFFFF',
+              color: 'var(--text-primary)',
               fontWeight: 800,
               fontSize: '0.85rem',
               cursor: 'pointer',
             }}
           >
-            <FileSpreadsheet size={17} color="#10B981" />
+            <FileSpreadsheet size={17} color="var(--c-green)" />
             <span>Bulk Import / Export</span>
           </button>
 
@@ -580,9 +580,9 @@ export default function AdminSquadPage({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            Showing <strong style={{ color: '#FFFFFF' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
+            Showing <strong style={{ color: 'var(--text-primary)' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
           </span>
-          <div role="group" aria-label="Roster layout" style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
+          <div role="group" aria-label="Roster layout" style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
             {([['list', List, 'List view'], ['grid', LayoutGrid, 'Grid view']] as const).map(([mode, Icon, label]) => (
               <button
                 key={mode}
@@ -615,7 +615,7 @@ export default function AdminSquadPage({
           background: 'rgba(16, 185, 129, 0.15)',
           border: '1px solid #10B981',
           borderRadius: 'var(--radius-md)',
-          color: '#10B981',
+          color: 'var(--c-green)',
           fontWeight: 700,
           marginBottom: '1.5rem',
         }}>
@@ -662,7 +662,7 @@ export default function AdminSquadPage({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                   {editingMember ? 'Edit Club Member' : 'Register New Club Member'}
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -687,7 +687,7 @@ export default function AdminSquadPage({
                 background: 'rgba(239, 68, 68, 0.15)',
                 border: '1px solid #EF4444',
                 borderRadius: 'var(--radius-md)',
-                color: '#EF4444',
+                color: 'var(--c-red)',
                 fontSize: '0.85rem',
                 marginBottom: '1.25rem',
               }}>
@@ -701,7 +701,7 @@ export default function AdminSquadPage({
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Member Photo</span>
-                  <span style={{ fontSize: '0.7rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Cloud size={12} /> Stored on Cloudflare R2
                   </span>
                 </label>
@@ -711,7 +711,7 @@ export default function AdminSquadPage({
                   alignItems: 'center',
                   gap: '1.25rem',
                   padding: '1rem',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'rgba(var(--shade-rgb), 0.3)',
                   border: '1px dashed var(--border-medium)',
                   borderRadius: 'var(--radius-lg)',
                 }}>
@@ -728,7 +728,7 @@ export default function AdminSquadPage({
                         width: '100%',
                         height: '100%',
                         borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.06)',
+                        background: 'rgba(var(--tint-rgb), 0.06)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -738,7 +738,7 @@ export default function AdminSquadPage({
                       </div>
                     )}
                     {uploadingPhoto && (
-                      <div style={{
+                      <div data-theme="dark" style={{
                         position: 'absolute',
                         inset: 0,
                         background: 'rgba(0,0,0,0.7)',
@@ -778,7 +778,7 @@ export default function AdminSquadPage({
                           type="button"
                           onClick={() => setForm(prev => ({ ...prev, photo_url: '' }))}
                           className="btn btn-secondary btn-sm"
-                          style={{ color: '#EF4444' }}
+                          style={{ color: 'var(--c-red)' }}
                         >
                           Remove
                         </button>
@@ -805,7 +805,7 @@ export default function AdminSquadPage({
                     </div>
 
                     {uploadError && (
-                      <div style={{ fontSize: '0.75rem', color: '#EF4444', marginTop: '0.35rem', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--c-red)', marginTop: '0.35rem', fontWeight: 600 }}>
                         {uploadError}
                       </div>
                     )}
@@ -907,7 +907,7 @@ export default function AdminSquadPage({
                           padding: '0.85rem 0.65rem',
                           borderRadius: 'var(--radius-md)',
                           border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
-                          background: isSelected ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.03)',
+                          background: isSelected ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--tint-rgb), 0.03)',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
@@ -937,7 +937,7 @@ export default function AdminSquadPage({
                           </span>
                         )}
                         <Icon size={20} color={isSelected ? 'var(--club-primary)' : 'var(--text-muted)'} />
-                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? '#FFFFFF' : 'var(--text-secondary)' }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {r.label}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>
@@ -953,8 +953,8 @@ export default function AdminSquadPage({
               {form.roles.includes('Player') && (
                 <div style={{
                   padding: '1.25rem',
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(var(--shade-rgb), 0.35)',
+                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
                   borderRadius: 'var(--radius-lg)',
                   marginBottom: '1.25rem',
                 }}>
@@ -1010,7 +1010,7 @@ export default function AdminSquadPage({
                       <span style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: form.secondary_positions.length === 5 ? '#F59E0B' : 'var(--text-muted)',
+                        color: form.secondary_positions.length === 5 ? 'var(--c-amber)' : 'var(--text-muted)',
                       }}>
                         {form.secondary_positions.length} / 5 selected
                       </span>
@@ -1060,7 +1060,7 @@ export default function AdminSquadPage({
               {/* 6. CONDITIONAL EXECUTIVE COMMITTEE TITLE (If Executive Committee is selected) */}
               {form.roles.includes('Executive Committee') && (
                 <div className="form-group" style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
-                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ color: 'var(--c-amber)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Award size={14} /> Executive Committee Title / Post
                   </label>
                   <input id="squad-executive-committee-title-post"
@@ -1084,8 +1084,8 @@ export default function AdminSquadPage({
                       padding: '0.75rem',
                       borderRadius: 'var(--radius-md)',
                       border: form.status === 'active' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      background: form.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: form.status === 'active' ? '#10B981' : 'var(--text-muted)',
+                      background: form.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      color: form.status === 'active' ? 'var(--c-green)' : 'var(--text-muted)',
                       fontWeight: 700,
                       fontSize: '0.85rem',
                       cursor: 'pointer',
@@ -1106,8 +1106,8 @@ export default function AdminSquadPage({
                       padding: '0.75rem',
                       borderRadius: 'var(--radius-md)',
                       border: form.status === 'inactive' ? '1px solid #EF4444' : '1px solid var(--border-subtle)',
-                      background: form.status === 'inactive' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: form.status === 'inactive' ? '#EF4444' : 'var(--text-muted)',
+                      background: form.status === 'inactive' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      color: form.status === 'inactive' ? 'var(--c-red)' : 'var(--text-muted)',
                       fontWeight: 700,
                       fontSize: '0.85rem',
                       cursor: 'pointer',
@@ -1171,7 +1171,7 @@ export default function AdminSquadPage({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   Update Player Stats
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--club-primary)' }}>{editingMember.full_name}</span>
