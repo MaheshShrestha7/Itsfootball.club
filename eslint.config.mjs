@@ -11,7 +11,9 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   // Build output and generated files (plain `eslint .` otherwise reports thousands of problems in them)
-  { ignores: [".next/**", ".open-next/**", ".wrangler/**", "node_modules/**", "next-env.d.ts"] },
+  { ignores: [".next/**", ".open-next/**", ".wrangler/**", "node_modules/**", "next-env.d.ts",
+    // Cloudflare Worker entry: bundled by wrangler around the generated .open-next/worker.js, not part of the Next app
+    "worker.ts"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
