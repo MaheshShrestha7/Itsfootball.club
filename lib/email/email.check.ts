@@ -1,10 +1,15 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, availabilityReminder, renewalReminder } from './templates';
+import { authEmail, availabilityReminder, renewalReminder, newsNotice, matchNotice } from './templates';
+import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
+import { cleanSettings } from './settings';
 
-// Vector computed independently with Python's hmac module (base64(HMAC-SHA256(key, id.ts.body)))
-const SECRET = 'v1,whsec_dGVzdC1zZWNyZXQta2V5LTAxMjM0NTY3ODlhYmNkZWY=';
+// Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
+// Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
+// SIG was computed independently with Python's hmac module: base64(HMAC-SHA256(key, "id.ts.body")).
+const FAKE_KEY = 'test-secret-key-0123456789abcdef';
+const SECRET = `v1,whsec_${btoa(FAKE_KEY)}`;
 const BODY = '{"user":{"email":"a@b.co"}}';
 const SIG = 'mrts+LzYLON1CFt9H4c4oszDyylifj4pWdi3XzDpjfU=';
 const TS = 1700000000;
@@ -46,7 +51,31 @@ async function main() {
   const renew = renewalReminder({ brand: evil, memberName: 'Jo', tier: 'Senior', expires: '1 November 2026', expired: true, link: 'https://x' });
   assert.ok(renew.subject.includes('has expired'));
 
-  console.log('email: webhook signatures and templates OK');
+  // --- unsubscribe tokens ---
+  const k = 'test-cron-secret';
+  const tok = (await unsubscribeToken('club-1', ' Sam@Example.com ', k))!;
+  assert.ok(/^[A-Za-z0-9_-]+$/.test(tok), 'url-safe token');
+  assert.equal(await verifyUnsubscribeToken('club-1', 'sam@example.com', tok, k), true, 'same address, any case/spacing');
+  assert.equal(await verifyUnsubscribeToken('club-2', 'sam@example.com', tok, k), false, 'other club');
+  assert.equal(await verifyUnsubscribeToken('club-1', 'other@example.com', tok, k), false, 'other address');
+  assert.equal(await verifyUnsubscribeToken('club-1', 'sam@example.com', tok, 'another-secret'), false, 'other secret');
+  assert.equal(await verifyUnsubscribeToken('club-1', 'sam@example.com', 'garbage!!', k), false, 'garbage token');
+  assert.equal(await unsubscribeToken('club-1', 'sam@example.com', ''), null, 'no secret, no token');
+
+  // --- settings ---
+  assert.deepEqual(cleanSettings({ availability_reminders: true, event_reminders: 'yes', bogus: true }), { availability_reminders: true }, 'only known boolean switches');
+  assert.deepEqual(cleanSettings(null), {});
+
+  // --- notices ---
+  const news = newsNotice({ brand: evil, recipientName: 'Sam', title: 'Big <win>', summary: 'We won', image: 'http://insecure/img.jpg', link: 'https://x/#news', message: 'Hi <b>all</b>\n\nSecond para', unsubscribeUrl: 'https://itsfootball.club/unsubscribe?c=1&e=a&t=b' });
+  assert.ok(!news.html.includes('<b>all</b>') && news.html.includes('&lt;b&gt;all&lt;/b&gt;'), 'admin message escaped');
+  assert.ok(!news.html.includes('http://insecure'), 'non-https image dropped');
+  assert.ok(news.html.includes('Unsubscribe from') && news.text.includes('Unsubscribe: https://itsfootball.club/unsubscribe'), 'unsubscribe link in html and text');
+  assert.ok(news.text.includes('Second para'), 'message in plain text');
+  const match = matchNotice({ brand: evil, recipientName: 'Sam', fixture: 'A vs B', competition: null, when: 'Sun', venue: 'Park', link: 'https://x' });
+  assert.ok(!match.html.includes('Message from') && !match.html.includes('Unsubscribe from'), 'no message/unsubscribe blocks when absent');
+
+  console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

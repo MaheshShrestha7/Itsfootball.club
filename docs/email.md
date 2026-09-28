@@ -6,11 +6,23 @@ All email goes out through [Resend](https://resend.com) from `notifications@itsf
 | --- | --- | --- |
 | Club owner sign-up confirmation | Supabase Auth, via the send-email hook | itsfootball.club |
 | Member one-time sign-in link | Supabase Auth, via the send-email hook | The member's club (name, crest, colour) |
-| Match availability reminder (48 h before, unanswered only) | Daily cron | Club |
-| Event reminder (30 h before, registered attendees) | Daily cron | Club |
-| Membership renewal (14 days before expiry, and once after it lapses; clubs with paid plans only) | Daily cron | Club |
+| Match availability reminder (48 h before, unanswered only) | Daily cron, if the club switched it on | Club |
+| Event reminder (30 h before, registered attendees) | Daily cron, if the club switched it on | Club |
+| Membership renewal (14 days before expiry, and once after it lapses; clubs with paid plans only) | Daily cron, if the club switched it on | Club |
+| Notices: upcoming match, upcoming event, news article, membership renewal | A club admin, by hand | Club |
 
-Code: `lib/email/` (templates, sender, signature check), `app/api/auth/email-hook`, `app/api/cron/reminders`, `worker.ts` (cron trigger).
+Club admins manage all of this in **Admin -> People & Membership -> Email Notifications**: the three
+reminder switches (all **off** until a club turns them on), the notice composer (preview with the
+recipient count before sending), and a history of what went out.
+
+Every club email carries an unsubscribe link and the `List-Unsubscribe` headers Gmail/Outlook use for
+their own button. Unsubscribed addresses (`email_opt_outs`, per club) get no reminders or notices;
+sign-in links still arrive. Each email is sent at most once (`email_log`), however often a job runs
+or an admin presses Send.
+
+Code: `lib/email/` (templates, sender, notices, unsubscribe, signature check), `app/api/auth/email-hook`,
+`app/api/cron/reminders`, `app/api/admin/emails`, `app/api/email/unsubscribe`, `app/unsubscribe`,
+`app/[clubSlug]/admin/emails`, `worker.ts` (cron trigger).
 
 ## 1. Verify the domain in Resend
 
@@ -36,7 +48,7 @@ Set these in Cloudflare (`npx wrangler secret put NAME`) and in `.env.local` for
 | --- | --- |
 | `RESEND_API_KEY` | the key from step 2 |
 | `SEND_EMAIL_HOOK_SECRET` | from step 4 (`v1,whsec_...`) |
-| `CRON_SECRET` | any long random string, e.g. `openssl rand -hex 32` |
+| `CRON_SECRET` | any long random string, e.g. `openssl rand -hex 32`. Also signs unsubscribe links: changing it later makes old links show "invalid link" |
 | `EMAIL_FROM_ADDRESS` | optional, defaults to `notifications@itsfootball.club` |
 | `EMAIL_TIMEZONE` | optional, defaults to `Australia/Sydney` (times in reminders) |
 
@@ -61,8 +73,9 @@ from the default if members sign in in bursts (e.g. matchday).
 
 ## 5. Database
 
-Run `supabase/migrations/20261014_email_log.sql` (SQL editor). The reminder job refuses to send
-without it, so a reminder can never go out twice.
+Run `supabase/migrations/20261014_email.sql` (SQL editor). It adds `email_log`, `email_opt_outs` and
+`clubs.email_settings`. Nothing is sent without it (the admin page says so), so no email can ever go
+out twice.
 
 ## 6. Deploy
 
@@ -78,5 +91,5 @@ without it, so a reminder can never go out twice.
 - Resend -> **Emails** shows every message, its delivery status, and bounces.
 - `npm run check` covers the signature check and template escaping.
 
-Before enabling reminders, tell clubs: players with a pending availability for a match in the next
-48 hours get an email on the first run.
+When a club switches on availability reminders, players with a pending availability for a match in
+the next 48 hours get an email on the next morning's run.

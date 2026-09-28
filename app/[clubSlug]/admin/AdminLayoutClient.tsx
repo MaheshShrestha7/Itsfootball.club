@@ -36,8 +36,7 @@ import {
   ClipboardCheck,
   Flag,
   Flame,
-  Wallet
-} from 'lucide-react';
+  Wallet, BellRing } from 'lucide-react';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
@@ -140,6 +139,7 @@ export default function AdminLayout({
           badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
         },
         { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
+        { label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
         { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
       ],
     },

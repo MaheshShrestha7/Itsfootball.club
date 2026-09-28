@@ -31,6 +31,12 @@ interface EmailContent {
   note?: string;
   /** Why the recipient got this email */
   reason: string;
+  /** Optional personal message from the club, shown as a quote under the intro */
+  message?: string | null;
+  /** Optional wide image (https only), e.g. a news article's cover */
+  image?: string | null;
+  /** Footer unsubscribe link (club emails other than sign-in) */
+  unsubscribeUrl?: string | null;
 }
 
 const PLATFORM: EmailBrand = { name: 'itsfootball.club', logoUrl: `${SITE_URL}/logo-96.png`, color: '#047857', url: SITE_URL };
@@ -62,6 +68,14 @@ ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-t
 <p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">Button not working? Copy this link into your browser:<br><a href="${esc(c.cta.url)}" style="color:#334155;word-break:break-all">${esc(c.cta.url)}</a></p>`
     : '';
 
+  const message = c.message?.trim()
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px"><tr><td style="border-left:4px solid ${color};background:#F8FAFC;border-radius:0 10px 10px 0;padding:14px 18px">
+<p style="margin:0 0 6px;font:700 12px ${font};color:#64748B;text-transform:uppercase;letter-spacing:0.06em">Message from ${esc(brand.name)}</p>
+${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/1.6 ${font};color:#0F172A">${esc(p).replace(/\n/g, '<br>')}</p>`).join('')}
+</td></tr></table>`
+    : '';
+  const image = absolute(c.image);
+
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(c.subject)}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9">
@@ -75,14 +89,17 @@ ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-t
   </tr></table>
 </td></tr>
 <tr><td style="background:#FFFFFF;border-radius:16px;border:1px solid #E2E8F0;border-top:4px solid ${color};padding:32px 32px 8px">
+  ${image ? `<img src="${esc(image)}" width="496" alt="" style="display:block;width:100%;max-width:496px;height:auto;border-radius:10px;margin:0 0 20px">` : ''}
   <h1 style="margin:0 0 16px;font:800 24px/1.25 ${font};color:#0F172A">${esc(c.heading)}</h1>
   ${c.paragraphs.map(p => `<p style="margin:0 0 16px;font:16px/1.6 ${font};color:#334155">${esc(p)}</p>`).join('\n  ')}
+  ${message}
   ${details}
   ${cta}
   ${c.note ? `<p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">${esc(c.note)}</p>` : ''}
 </td></tr>
 <tr><td style="padding:20px 8px;font:12px/1.6 ${font};color:#64748B;text-align:center">
   ${esc(c.reason)}<br>
+  ${c.unsubscribeUrl ? `<a href="${esc(c.unsubscribeUrl)}" style="color:#475569">Unsubscribe from ${esc(brand.name)} emails</a><br>` : ''}
   ${isClub ? `Sent by <a href="${esc(brand.url)}" style="color:#475569">${esc(brand.name)}</a> via <a href="${SITE_URL}" style="color:#475569">itsfootball.club</a>` : `<a href="${SITE_URL}" style="color:#475569">itsfootball.club</a> &middot; Home of football clubs`}
 </td></tr>
 </table>
@@ -95,11 +112,13 @@ ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-t
     c.heading,
     '',
     ...c.paragraphs.flatMap(p => [p, '']),
+    ...(c.message?.trim() ? [`Message from ${brand.name}:`, c.message.trim(), ''] : []),
     ...(c.details?.length ? [...c.details.map(([k, v]) => `${k}: ${v}`), ''] : []),
     ...(c.cta ? [`${c.cta.label}: ${c.cta.url}`, ''] : []),
     ...(c.note ? [c.note, ''] : []),
     '--',
     c.reason,
+    ...(c.unsubscribeUrl ? [`Unsubscribe: ${c.unsubscribeUrl}`] : []),
     isClub ? `Sent by ${brand.name} via itsfootball.club` : 'itsfootball.club',
   ].join('\n');
 
@@ -184,9 +203,16 @@ export function authEmail(action: AuthAction, link: string, token: string, brand
 
 const firstName = (full: string) => full.trim().split(/\s+/)[0] || 'there';
 
-export function availabilityReminder(p: { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
+/** Shared by every club email other than sign-in */
+interface ClubEmailExtras {
+  unsubscribeUrl?: string | null;
+  /** Personal note from an admin (manual notices) */
+  message?: string | null;
+}
+
+export function availabilityReminder(p: ClubEmailExtras & { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
   return renderEmail({
-    brand: p.brand,
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
     subject: `Are you available? ${p.fixture}`,
     preheader: `${p.brand.name} needs your answer for ${p.when}.`,
     heading: 'Can you play?',
@@ -198,9 +224,9 @@ export function availabilityReminder(p: { brand: EmailBrand; memberName: string;
   });
 }
 
-export function eventReminder(p: { brand: EmailBrand; attendeeName: string; event: string; when: string; venue: string; link: string }): RenderedEmail {
+export function eventReminder(p: ClubEmailExtras & { brand: EmailBrand; attendeeName: string; event: string; when: string; venue: string; link: string }): RenderedEmail {
   return renderEmail({
-    brand: p.brand,
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
     subject: `Reminder: ${p.event} is coming up`,
     preheader: `${p.event}, ${p.when} at ${p.venue}.`,
     heading: `See you at ${p.event}`,
@@ -212,9 +238,9 @@ export function eventReminder(p: { brand: EmailBrand; attendeeName: string; even
   });
 }
 
-export function renewalReminder(p: { brand: EmailBrand; memberName: string; tier: string; expires: string; expired: boolean; link: string }): RenderedEmail {
+export function renewalReminder(p: ClubEmailExtras & { brand: EmailBrand; memberName: string; tier: string; expires: string; expired: boolean; link: string }): RenderedEmail {
   return renderEmail({
-    brand: p.brand,
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
     subject: p.expired ? `Your ${p.brand.name} membership has expired` : `Your ${p.brand.name} membership expires on ${p.expires}`,
     preheader: p.expired ? 'Renew now to keep your member pass active.' : 'Renew early and keep your remaining days.',
     heading: p.expired ? 'Your membership has expired' : 'Time to renew your membership',
@@ -225,6 +251,53 @@ export function renewalReminder(p: { brand: EmailBrand; memberName: string; tier
     ],
     details: [['Membership', p.tier], [p.expired ? 'Expired' : 'Expires', p.expires]],
     cta: { label: 'Renew my membership', url: p.link },
+    reason: `You're receiving this because you're a member of ${p.brand.name}.`,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Admin notices (sent from the Email notifications admin page)
+// ---------------------------------------------------------------------------------------------
+
+export function matchNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
+    subject: `Match: ${p.fixture} · ${p.when}`,
+    preheader: `${p.fixture} at ${p.venue}, ${p.when}.`,
+    heading: p.fixture,
+    paragraphs: [`Hi ${firstName(p.recipientName)}, here are the details for the next ${p.brand.name} match. Follow it live on the day from the match page.`],
+    details: [['Match', p.fixture], ...(p.competition ? [['Competition', p.competition] as [string, string]] : []), ['When', p.when], ['Where', p.venue]],
+    cta: { label: 'Open match centre', url: p.link },
+    reason: `You're receiving this because you're a member of ${p.brand.name}.`,
+  });
+}
+
+export function eventNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientName: string; event: string; description?: string | null; when: string; venue: string; link: string }): RenderedEmail {
+  const blurb = p.description?.trim().replace(/\s+/g, ' ');
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
+    subject: `${p.event} · ${p.when}`,
+    preheader: `${p.brand.name} event at ${p.venue}, ${p.when}.`,
+    heading: p.event,
+    paragraphs: [
+      `Hi ${firstName(p.recipientName)}, ${p.brand.name} has an event coming up and we'd love to see you there.`,
+      ...(blurb ? [blurb.length > 400 ? blurb.slice(0, 397) + '...' : blurb] : []),
+    ],
+    details: [['Event', p.event], ['When', p.when], ['Where', p.venue]],
+    cta: { label: 'View event and register', url: p.link },
+    reason: `You're receiving this because you're a member of ${p.brand.name}.`,
+  });
+}
+
+export function newsNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientName: string; title: string; summary?: string | null; image?: string | null; link: string }): RenderedEmail {
+  const summary = p.summary?.trim().replace(/\s+/g, ' ');
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message, image: p.image,
+    subject: `${p.brand.name}: ${p.title}`,
+    preheader: summary?.slice(0, 120) || `New from ${p.brand.name}`,
+    heading: p.title,
+    paragraphs: [summary || `Hi ${firstName(p.recipientName)}, there's news from ${p.brand.name}.`],
+    cta: { label: 'Read on the club site', url: p.link },
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }
