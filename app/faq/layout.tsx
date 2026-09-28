@@ -4,8 +4,7 @@ import { fitDescription, pageMetadata } from '@/lib/seo';
 export const metadata: Metadata = pageMetadata({
   title: 'FAQ | itsfootball.club',
   description: fitDescription(
-    'Answers for club representatives, club admins, managers, coaches, players, supporters and sponsors using itsfootball.club.',
-    'Free forever for at least the first 10 clubs.'
+    'Answers for club representatives, admins, managers, coaches, players, supporters and sponsors. Free to sign up, every feature included.'
   ),
   path: '/faq',
 });
