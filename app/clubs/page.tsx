@@ -113,7 +113,7 @@ export default function ClubsDirectoryPage() {
                     />
                     <div>
                       <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>{club.name}</h3>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{club.short_name} • Est. {club.founded_year}</span>
+                      <span className="text-meta">{club.short_name} • Est. {club.founded_year}</span>
                     </div>
                   </div>
                 </div>
@@ -126,7 +126,7 @@ export default function ClubsDirectoryPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div className="row">
                         <MapPin size={14} color={club.primary_color} />
                         <span>{club.stadium_name}</span>
                       </div>

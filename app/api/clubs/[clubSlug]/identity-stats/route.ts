@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { defaultSeasonLabel } from '@/lib/season';
 import { countsTowardClubRecord } from '@/lib/supabase/types';
 
+// Only what the response uses (never owner_id, email_settings and the like)
+const CLUB_COLUMNS = 'id, name, slug, short_name, motto, founded_year, stadium_name, stadium_address, config';
+
 // Server-side secure Supabase client initialization
 function getServerSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -52,13 +55,13 @@ export async function GET(
     let club: any = null;
 
     if (isUuid) {
-      const { data } = await supabase.from('clubs').select('*').eq('id', cleanSlug).maybeSingle();
+      const { data } = await supabase.from('clubs').select(CLUB_COLUMNS).eq('id', cleanSlug).maybeSingle();
       club = data;
     }
 
     // Case-insensitive, with % and _ escaped so they can't act as wildcards
     if (!club) {
-      const { data } = await supabase.from('clubs').select('*').ilike('slug', cleanSlug.replace(/[\\%_]/g, '\\$&')).maybeSingle();
+      const { data } = await supabase.from('clubs').select(CLUB_COLUMNS).ilike('slug', cleanSlug.replace(/[\\%_]/g, '\\$&')).maybeSingle();
       club = data;
     }
 
@@ -66,7 +69,7 @@ export async function GET(
     if (!club) {
       const { data } = await supabase
         .from('clubs')
-        .select('*')
+        .select(CLUB_COLUMNS)
         .contains('previous_slugs', JSON.stringify([cleanSlug]))
         .limit(1)
         .maybeSingle();

@@ -45,7 +45,17 @@ export function readPaymentInput(get: (key: string) => unknown) {
   };
 }
 
-export async function preparePayment(db: SupabaseClient, input: ReturnType<typeof readPaymentInput>): Promise<Result> {
+/**
+ * Who may pay for what (these routes are public, and ids alone must not be enough):
+ *   membership_signup   a pending application; its id is only known to the applicant (club_members is not public)
+ *   membership_renewal  only the signed-in member themselves (`payerUserId` from their session)
+ *   sponsorship         a sponsor still at 'prospect', i.e. one that just applied; active sponsors' ids are public
+ */
+export async function preparePayment(
+  db: SupabaseClient,
+  input: ReturnType<typeof readPaymentInput>,
+  payerUserId: string | null = null
+): Promise<Result> {
   const bad = (error: string, status = 400): Result => ({ ok: false, status, error });
   if (!input.clubId || !input.kind) return bad('Invalid payment request.');
 
@@ -66,10 +76,11 @@ export async function preparePayment(db: SupabaseClient, input: ReturnType<typeo
   if (input.kind === 'sponsorship') {
     if (!input.sponsorId || !input.packageId) return bad('Choose a sponsorship package.');
     const [{ data: sponsor }, { data: pkg }] = await Promise.all([
-      db.from('sponsors').select('id, name, contact_name, contact_email').eq('id', input.sponsorId).eq('club_id', club.id).maybeSingle(),
+      db.from('sponsors').select('id, name, contact_name, contact_email, package_status').eq('id', input.sponsorId).eq('club_id', club.id).maybeSingle(),
       db.from('sponsorship_packages').select('id, name, price_cents').eq('id', input.packageId).eq('club_id', club.id).eq('is_active', true).maybeSingle(),
     ]);
     if (!sponsor || !pkg) return bad('Sponsorship not found.', 404);
+    if (sponsor.package_status !== 'prospect') return bad('This sponsorship is already set up. Please contact the club about payment.', 409);
     if (pkg.price_cents <= 0) return bad('This package has nothing to pay.');
     const label = `${club.name} sponsorship: ${pkg.name}`;
     return {
@@ -90,13 +101,16 @@ export async function preparePayment(db: SupabaseClient, input: ReturnType<typeo
 
   if (!input.memberId || !input.planId) return bad('Choose a membership plan.');
   const [{ data: member }, { data: plan }] = await Promise.all([
-    db.from('club_members').select('id, full_name, email, membership_status').eq('id', input.memberId).eq('club_id', club.id).maybeSingle(),
+    db.from('club_members').select('id, user_id, full_name, email, membership_status').eq('id', input.memberId).eq('club_id', club.id).maybeSingle(),
     db.from('membership_plans').select('id, name, price_cents').eq('id', input.planId).eq('club_id', club.id).eq('is_active', true).maybeSingle(),
   ]);
   if (!member || !plan) return bad('Membership not found.', 404);
   if (member.membership_status === 'rejected') return bad('This application was not approved. Please contact the club.', 409);
   if (input.kind === 'membership_signup' && member.membership_status !== 'pending') {
     return bad('This membership is already active. Use renewal instead.', 409);
+  }
+  if (input.kind === 'membership_renewal' && (!payerUserId || member.user_id !== payerUserId)) {
+    return bad('Sign in as this member to renew.', 403);
   }
   if (plan.price_cents <= 0) return bad('This plan has nothing to pay.');
   const label = `${club.name}: ${plan.name}${input.kind === 'membership_renewal' ? ' (renewal)' : ''}`;

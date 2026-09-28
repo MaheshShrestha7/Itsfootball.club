@@ -10,6 +10,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { COVER_PRESETS } from '@/lib/cover-presets';
 import { defaultSeasonLabel } from '@/lib/season';
 import { STAGE_TITLES, effectiveGroupRules, knockoutStageFor, toDateTimeLocal } from '@/lib/tournament-engine';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'>;
 
@@ -81,7 +82,7 @@ export default function TournamentFormModal({
     setNewExternalCode('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     const start = new Date(startAt);
@@ -141,7 +142,7 @@ export default function TournamentFormModal({
       (format === 'group_knockout' && (groupCount !== tournament.group_count || teamsAdvancing !== tournament.teams_advancing_per_group)) ||
       teamKey(participantInputs) !== teamKey(existing);
     const played = matches.some(m => m.tournament_id === tournament.id && (m.status === 'completed' || m.status === 'live'));
-    if (structural && played && !confirm('Changing the format or teams regenerates all fixtures and clears recorded results. Continue?')) {
+    if (structural && played && !(await confirmAction({ title: 'Regenerate all fixtures?', message: 'Changing the format or teams regenerates all fixtures and clears recorded results.', confirmLabel: 'Save and regenerate', danger: true }))) {
       return;
     }
     saveTournament(tournament.id, fields, structural ? participantInputs : undefined);
@@ -192,7 +193,7 @@ export default function TournamentFormModal({
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="row">
             <Trophy size={20} color="var(--c-green)" />
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
               {isEdit ? 'Edit Tournament' : 'Tournament Setup Wizard'}
@@ -247,6 +248,7 @@ export default function TournamentFormModal({
 
           <div style={{ marginBottom: '1.25rem' }}>
             <ImageUploadZone
+              clubId={club.id}
               label="Tournament Cover Banner (16:9)"
               recommendedText="Wide 16:9 banner for bracket, spectator tiesheet, and matchday programs"
               currentImageUrl={bannerUrl}

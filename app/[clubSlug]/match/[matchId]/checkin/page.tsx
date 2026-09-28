@@ -146,7 +146,7 @@ export default function MatchDoorCheckinPage({
     <div style={{ minHeight: '100vh', padding: '2.5rem 1rem 5rem 1rem', background: 'radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 70%)' }}>
       <div className="container" style={{ maxWidth: '580px' }}>
         {/* Navigation Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div className="section-head">
           <Link
             href={`/${club.slug}/match/${match.id}`}
             style={{
@@ -223,15 +223,15 @@ export default function MatchDoorCheckinPage({
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-inline row-tight">
                 <Calendar size={13} color="var(--club-primary)" />
                 <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-inline row-tight">
                 <Clock size={13} color="var(--club-primary)" />
                 {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />}
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-inline row-tight">
                 <MapPin size={13} color="var(--club-primary)" />
                 {match.venue}
               </span>
@@ -312,15 +312,15 @@ export default function MatchDoorCheckinPage({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Turnstile Gate:</span>
+                <span className="text-muted">Turnstile Gate:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Main Entrance / Turnstile 2</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Timestamp:</span>
+                <span className="text-muted">Timestamp:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{result.checkedInAt}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Venue:</span>
+                <span className="text-muted">Venue:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{match.venue}</span>
               </div>
             </div>

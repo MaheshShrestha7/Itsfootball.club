@@ -140,11 +140,11 @@ export default function PlatformNavbar() {
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.06)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div className="row">
                       <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: club.primary_color }} />
                       <span>{club.name}</span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{club.short_name}</span>
+                    <span className="text-meta">{club.short_name}</span>
                   </Link>
                 ))}
               </div>
@@ -159,7 +159,7 @@ export default function PlatformNavbar() {
 
           {/* Auth Status / Sign In Trigger */}
           {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="row row-loose">
               <Link
                 href="/my-clubs"
                 style={{
@@ -230,8 +230,7 @@ export default function PlatformNavbar() {
             <button
               type="button"
               onClick={() => setAuthModalOpen(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              className="btn btn-secondary btn-sm row"
             >
               <User size={14} />
               <span>Sign In</span>
@@ -272,7 +271,7 @@ export default function PlatformNavbar() {
             <div>
               {/* Drawer Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div className="row">
                   <img src="/logo-96.png" alt="itsfootball.club logo" width={34} height={34} loading="lazy" decoding="async" style={{ width: '34px', height: '34px' }} />
                   <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>itsfootball<span style={{ color: '#C9A467' }}>.club</span></span>
                 </div>
@@ -381,11 +380,11 @@ export default function PlatformNavbar() {
                         fontWeight: 600,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div className="row">
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: c.primary_color, flexShrink: 0 }} />
                         <span>{c.name}</span>
                       </div>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{c.short_name}</span>
+                      <span className="text-meta">{c.short_name}</span>
                     </Link>
                   ))}
                 </div>
@@ -396,7 +395,7 @@ export default function PlatformNavbar() {
             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
               {isAuthenticated && user ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div className="row">
                     {user.avatar_url ? (
                       <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
@@ -406,7 +405,7 @@ export default function PlatformNavbar() {
                     )}
                     <div>
                       <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user.full_name}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user.email}</div>
+                      <div className="text-meta">{user.email}</div>
                     </div>
                   </div>
                   <button

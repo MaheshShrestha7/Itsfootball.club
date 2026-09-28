@@ -522,7 +522,7 @@ export default function CreateClubPage() {
 
                 {/* Color Preset Quick Pickers */}
                 <div style={{ marginBottom: '1.75rem' }}>
-                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label className="form-label row">
                     <Palette size={14} color="var(--club-primary)" />
                     <span>Quick Football Palettes</span>
                   </label>
@@ -567,7 +567,7 @@ export default function CreateClubPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 110px), 1fr))', gap: '0.75rem' }}>
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Primary Color</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div className="row">
                           <input aria-label="Primary colour"
                             type="color"
                             name="primary_color"
@@ -588,7 +588,7 @@ export default function CreateClubPage() {
 
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Secondary</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div className="row">
                           <input aria-label="Secondary colour"
                             type="color"
                             name="secondary_color"
@@ -609,7 +609,7 @@ export default function CreateClubPage() {
 
                       <div className="form-group">
                         <label className="form-label" style={{ fontSize: '0.78rem' }}>Accent / Gold</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div className="row">
                           <input aria-label="Accent colour"
                             type="color"
                             name="accent_color"
@@ -640,9 +640,9 @@ export default function CreateClubPage() {
                       justifyContent: 'space-between',
                       fontSize: '0.78rem',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="row">
                         <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: formData.primary_color }} />
-                        <span style={{ color: 'var(--text-secondary)' }}>
+                        <span className="text-secondary">
                           Contrast: <strong>{contrastInfo.ratioFormatted}</strong>
                         </span>
                       </div>
@@ -856,7 +856,7 @@ export default function CreateClubPage() {
                   <button type="button" onClick={() => setStep(3)} className="btn btn-secondary">
                     <ArrowLeft size={16} /> Back
                   </button>
-                  <button type="submit" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary btn-lg row">
                     <Sparkles size={18} />
                     <span>Launch & Enter Club</span>
                   </button>

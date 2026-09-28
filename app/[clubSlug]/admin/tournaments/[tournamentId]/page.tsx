@@ -13,6 +13,7 @@ import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
 import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function AdminTournamentDetailPage({
   params,
@@ -54,7 +55,7 @@ export default function AdminTournamentDetailPage({
     return (
       <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-primary)' }}>
         <h2>Tournament not found.</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>The requested tournament does not exist or has been deleted.</p>
+        <p className="text-secondary">The requested tournament does not exist or has been deleted.</p>
         <Link href={`/${club.slug}/admin/tournaments`} className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
           Back to Tournaments
         </Link>
@@ -65,7 +66,7 @@ export default function AdminTournamentDetailPage({
   const participants = tournamentParticipants.filter(p => p.tournament_id === tournament.id);
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
 
-  const handleGenerateTiesheet = (shuffle = false) => {
+  const handleGenerateTiesheet = async (shuffle = false) => {
     if (participants.length < 2) {
       setFeedbackTone('error');
       setFeedback('⚠ Add at least 2 teams before generating a tiesheet.');
@@ -73,7 +74,7 @@ export default function AdminTournamentDetailPage({
       return;
     }
     if (tourneyMatches.length > 0) {
-      if (!confirm('Regenerating the tiesheet will reset current tournament fixtures and scores. Proceed?')) {
+      if (!(await confirmAction({ title: 'Regenerate the tiesheet?', message: 'Current tournament fixtures and scores will be reset.', confirmLabel: 'Regenerate', danger: true }))) {
         return;
       }
     }
@@ -316,17 +317,17 @@ export default function AdminTournamentDetailPage({
                 <span>{formatLabel}</span>
               </span>
               <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-tight">
                 <Calendar size={14} />
                 <span>Season {tournament.season}</span>
               </span>
               <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-tight">
                 <Clock size={14} />
                 <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
               </span>
               <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span className="row row-tight">
                 <Users size={14} />
                 <span>{participants.length} Teams Enrolled</span>
               </span>
@@ -336,23 +337,23 @@ export default function AdminTournamentDetailPage({
 
         {/* Quick Stats Block */}
         <div style={{ display: 'flex', gap: '1rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '12px' }}>
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{tourneyMatches.length}</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Fixtures</div>
+            <div className="text-meta">Fixtures</div>
           </div>
           <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-green)' }}>
               {tourneyMatches.filter(m => m.status === 'completed').length}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Completed</div>
+            <div className="text-meta">Completed</div>
           </div>
           <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-red)' }}>
               {tourneyMatches.filter(m => m.status === 'live').length}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Live Now</div>
+            <div className="text-meta">Live Now</div>
           </div>
         </div>
       </div>
@@ -595,7 +596,7 @@ export default function AdminTournamentDetailPage({
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
                     </span>
                     {part.seed && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      <span className="text-meta">
                         Seed #{part.seed}
                       </span>
                     )}

@@ -28,10 +28,10 @@ export default function AdminAnalyticsPage({
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>AUDIENCE & CLUB ANALYTICS</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+        <h1 className="stat-value">
           Club Public Page Analytics
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        <p className="text-body">
           Real-time visitor metrics, live match-center attendance, turnstile scans, and audience engagement trends.
         </p>
       </div>
@@ -174,7 +174,7 @@ export default function AdminAnalyticsPage({
             Top Public Page Sections
           </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="stack">
             {analytics.topSections.map(sec => (
               <div key={sec.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>

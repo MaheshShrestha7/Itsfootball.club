@@ -344,7 +344,7 @@ export default function LineupWorkbench({
                         <GripVertical size={18} />
                       </span>
                       <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
-                      <div style={{ minWidth: 0 }}>
+                      <div className="min-w-0">
                         <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {player.full_name}
                         </div>
@@ -480,11 +480,11 @@ export default function LineupWorkbench({
                         color: 'var(--text-primary)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div className="row row-loose">
                         <PlayerAvatar photoUrl={benchP.photo_url} name={benchP.full_name} size={32} />
                         <div>
                           <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{benchP.full_name}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          <div className="text-meta">
                             #{benchP.jersey_number || '-'} • {benchP.player_position || 'Squad'}
                           </div>
                         </div>

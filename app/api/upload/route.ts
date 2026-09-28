@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadBufferToR2, isR2Configured } from '@/lib/storage/r2';
-import { requireClubAdmin } from '@/lib/supabase/server-auth';
-import { rateLimit } from '@/lib/rate-limit';
+import { requireAdminOfClub, requireUser } from '@/lib/supabase/server-auth';
+import { durableRateLimit } from '@/lib/rate-limit';
 import { matchesFileSignature } from '@/lib/file-signature';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -19,19 +19,14 @@ const EXTENSION_MAP: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// POST multipart { file, folder, clubId? }
+//   clubId set:   admins of that club; stored under clubs/<clubId>/
+//   clubId unset: any signed-in user creating a club (it doesn't exist yet); stored under
+//                 new-clubs/<userId>/ with a tight daily cap so it can't serve as free hosting
 export async function POST(req: NextRequest) {
   try {
-    // Only signed-in club administrators may upload
-    const auth = await requireClubAdmin(req);
-    if (!auth.ok) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-
-    // Anyone can create a club and become its admin, so cap uploads per account
-    if (!rateLimit(`upload:${auth.userId}`, 30, 10 * 60 * 1000).allowed) {
-      return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes and try again.' }, { status: 429 });
-    }
-
     // Reject oversized bodies before reading them
     const declaredLength = Number(req.headers.get('content-length') || 0);
     if (declaredLength > MAX_FILE_SIZE + 512 * 1024) {
@@ -46,6 +41,22 @@ export async function POST(req: NextRequest) {
     const rawFolder = (formData.get('folder') as string) || 'uploads';
     // Sanitize folder path to prevent path traversal
     const folder = rawFolder.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32) || 'uploads';
+    const clubId = String(formData.get('clubId') || '');
+    if (clubId && !UUID_RE.test(clubId)) {
+      return NextResponse.json({ error: 'Invalid club.' }, { status: 400 });
+    }
+
+    const auth = clubId ? await requireAdminOfClub(req, clubId) : await requireUser(req);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const allowed = clubId
+      ? await durableRateLimit(`upload:${auth.userId}`, 30, 10 * 60 * 1000)
+      : await durableRateLimit(`upload-new-club:${auth.userId}`, 10, 24 * 60 * 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many uploads. Please wait a while and try again.' }, { status: 429 });
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided in form data' }, { status: 400 });
@@ -70,7 +81,8 @@ export async function POST(req: NextRequest) {
 
     // Security Check 3: Sanitize extension and cryptographically randomize key
     const safeExt = EXTENSION_MAP[fileType] || 'jpg';
-    const uniqueKey = `${folder}/${crypto.randomUUID()}.${safeExt}`;
+    const owner = clubId ? `clubs/${clubId}` : `new-clubs/${auth.userId}`;
+    const uniqueKey = `${owner}/${folder}/${crypto.randomUUID()}.${safeExt}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 

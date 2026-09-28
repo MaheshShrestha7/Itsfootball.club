@@ -89,7 +89,7 @@ export default function PublicTournamentsPage({
             <h2 style={{ color: 'var(--text-primary)', fontWeight: 800, margin: '0 0 0.5rem 0' }}>
               No Active Tournaments
             </h2>
-            <p style={{ margin: 0 }}>There are currently no public tournaments scheduled for this club.</p>
+            <p className="m-0">There are currently no public tournaments scheduled for this club.</p>
           </div>
         ) : (
           <div
@@ -169,7 +169,7 @@ export default function PublicTournamentsPage({
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="row">
                       <Trophy size={18} color="var(--c-amber)" />
                       <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {tourn.name}
@@ -206,19 +206,19 @@ export default function PublicTournamentsPage({
                       }}
                     >
                       <div>
-                        <div style={{ color: 'var(--text-muted)' }}>Teams</div>
+                        <div className="text-muted">Teams</div>
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                           {participants.length}
                         </div>
                       </div>
                       <div>
-                        <div style={{ color: 'var(--text-muted)' }}>Fixtures</div>
+                        <div className="text-muted">Fixtures</div>
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                           {tourneyMatches.length}
                         </div>
                       </div>
                       <div>
-                        <div style={{ color: 'var(--text-muted)' }}>Played</div>
+                        <div className="text-muted">Played</div>
                         <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.95rem' }}>
                           {completedCount}
                         </div>

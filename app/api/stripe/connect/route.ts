@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
-import { requireAdminOfClub } from '@/lib/supabase/server-auth';
+import { requireClubOwner } from '@/lib/supabase/server-auth';
 
 // Connects a club's own Stripe account (Standard) so card payments go straight to the club.
+// Owner only: whoever controls this decides where the club's card money is paid out.
 // Returns an onboarding link, or { connected: true } once Stripe says the account can take charges.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const clubId = typeof body?.clubId === 'string' ? body.clubId : '';
   if (!clubId) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubOwner(req, clubId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const stripe = getStripe();
@@ -66,7 +67,7 @@ export async function DELETE(req: NextRequest) {
   const clubId = req.nextUrl.searchParams.get('clubId') || '';
   if (!clubId) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubOwner(req, clubId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const db = getServiceClient();

@@ -158,8 +158,7 @@ export default function DoorCheckinQrModal({
             href={checkinUrl || undefined}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            className="btn btn-secondary btn-sm row"
           >
             <ExternalLink size={14} />
             <span>Test Check-in</span>

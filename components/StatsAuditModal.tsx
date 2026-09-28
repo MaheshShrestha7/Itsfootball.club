@@ -198,7 +198,7 @@ export default function StatsAuditModal({
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="row row-loose">
             <div style={{
               width: '40px',
               height: '40px',
@@ -482,7 +482,7 @@ export default function StatsAuditModal({
                 color: 'var(--text-secondary)',
                 lineHeight: 1.45,
               }}>
-                ⚡ <strong>Production Guarantee:</strong> Clicking <em>&quot;Bake into Season Records&quot;</em> atomically updates cumulative <code style={{ color: 'var(--text-primary)' }}>player_stats</code>, deposits ClubScore fantasy points into player profiles, and records audit entries in the immutable ledger.
+                ⚡ <strong>Production Guarantee:</strong> Clicking <em>&quot;Bake into Season Records&quot;</em> atomically updates cumulative <code className="text-primary">player_stats</code>, deposits ClubScore fantasy points into player profiles, and records audit entries in the immutable ledger.
               </div>
             </>
           )}

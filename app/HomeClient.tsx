@@ -316,7 +316,7 @@ export default function PlatformHomePage() {
               </div>
               <div className="lp-club-head">
                 <div className="lp-crest">{initials(displayName)}</div>
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div className="lp-club-name">{displayName}</div>
                   <div className="lp-club-nav"><span>Fixtures</span><span>Squad</span><span>News</span><span>Membership</span></div>
                 </div>
@@ -443,7 +443,7 @@ export default function PlatformHomePage() {
                       <div className="lp-mc-line" />
                       <div className="lp-mc-ht" />
                       <div className="lp-mc-pin" style={{ left: '25%', '--d': '405ms' } as React.CSSProperties}><Goal size={12} /></div>
-                      <div className="lp-mc-pin y" style={{ left: '45%', '--d': '730ms' } as React.CSSProperties}><span className="lp-card-yellow" style={{ margin: 0 }} /></div>
+                      <div className="lp-mc-pin y" style={{ left: '45%', '--d': '730ms' } as React.CSSProperties}><span className="lp-card-yellow m-0" /></div>
                       <div className="lp-mc-pin s" style={{ left: '64%', '--d': '1040ms' } as React.CSSProperties}><ArrowLeftRight size={11} /></div>
                       <div className="lp-mc-pin" style={{ left: '72%', '--d': '1170ms' } as React.CSSProperties}><Goal size={12} /></div>
                     </div>
@@ -753,7 +753,7 @@ export default function PlatformHomePage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', width: '100%', justifyContent: 'center' }}>
                       <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt=""
                         style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'cover' }} />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{club.short_name} · <span style={{ textTransform: 'capitalize' }}>{sponsor.tier}</span></span>
+                      <span className="text-meta">{club.short_name} · <span style={{ textTransform: 'capitalize' }}>{sponsor.tier}</span></span>
                     </div>
                   </a>
                 );

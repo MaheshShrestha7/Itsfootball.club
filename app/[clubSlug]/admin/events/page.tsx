@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function AdminEventsPage({
   params,
@@ -166,15 +167,15 @@ export default function AdminEventsPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB OPERATIONS & EVENTS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             Club Events & Trainings Management
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Schedule fixtures, training sessions, AGM meetings, trials, and operate QR check-in gates.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="row row-loose row-wrap">
           {/* Season Filter Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
             <button
@@ -212,7 +213,7 @@ export default function AdminEventsPage({
             ))}
           </div>
 
-          <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <button onClick={handleOpenAdd} className="btn btn-primary row">
             <Plus size={16} />
             <span>Add New Event</span>
           </button>
@@ -223,7 +224,7 @@ export default function AdminEventsPage({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {filteredEvents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '12px' }}>
-            <p style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-secondary">
               No events found for season &quot;{seasonFilter}&quot;.
             </p>
           </div>
@@ -252,7 +253,7 @@ export default function AdminEventsPage({
                   <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.7rem' }}>
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span className="text-meta">
                     Checked in: {evt.rsvp_count} / {evt.max_capacity} capacity
                   </span>
                 </div>
@@ -265,11 +266,11 @@ export default function AdminEventsPage({
               </p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span className="row row-tight">
                   <Calendar size={14} color="var(--club-primary)" />
                   {new Date(evt.start_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span className="row row-tight">
                   <MapPin size={14} color="var(--club-primary)" />
                   {evt.location}
                 </span>
@@ -277,7 +278,7 @@ export default function AdminEventsPage({
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div className="row">
               {(() => {
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
                 return (
@@ -318,8 +319,7 @@ export default function AdminEventsPage({
 
               <button
                 onClick={() => setScannerEvent(evt)}
-                className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                className="btn btn-primary btn-sm row"
               >
                 <CheckCircle2 size={14} />
                 <span>Manual Check-In</span>
@@ -336,8 +336,8 @@ export default function AdminEventsPage({
               </button>
 
               <button
-                onClick={() => {
-                  if (confirm(`Are you sure you want to delete event "${evt.title}"? This cannot be undone.`)) {
+                onClick={async () => {
+                  if (await confirmAction({ title: `Delete "${evt.title}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete event', danger: true })) {
                     deleteEvent(evt.id);
                   }
                 }}
@@ -374,7 +374,7 @@ export default function AdminEventsPage({
             borderRadius: 'var(--radius-xl)',
             padding: '2rem',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingEventId ? 'Edit Club Event' : 'Add New Club Event'}
               </h3>
@@ -414,7 +414,7 @@ export default function AdminEventsPage({
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="events-category" className="form-label">Category</label>
                   <select id="events-category"
@@ -442,7 +442,7 @@ export default function AdminEventsPage({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="events-start-date-time" className="form-label">Start Date & Time</label>
                   <input id="events-start-date-time"

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireClubAdmin, requireAdminOfClub } from '@/lib/supabase/server-auth';
 import { storeReceipt, receiptUrl, MAX_RECEIPT_SIZE } from '@/lib/storage/receipts';
-import { rateLimit } from '@/lib/rate-limit';
+import { durableRateLimit } from '@/lib/rate-limit';
 
 // GET ?type=payment|expense&id=...  -> { url } short-lived link to a receipt (club admins only)
 export async function GET(req: NextRequest) {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   const auth = await requireAdminOfClub(req, clubId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  if (!rateLimit(`receipt:${auth.userId}`, 30, 10 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`receipt:${auth.userId}`, 30, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes.' }, { status: 429 });
   }
 

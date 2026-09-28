@@ -38,11 +38,11 @@ export default function ClubLayoutClient({
         {finishedLoading ? (
           <>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>Club not found</h1>
-            <p style={{ color: 'var(--text-muted)' }}>No club exists at this address yet.</p>
+            <p className="text-muted">No club exists at this address yet.</p>
             <Link href="/create-club" className="btn btn-primary">Launch a Club</Link>
           </>
         ) : (
-          <div style={{ color: 'var(--text-muted)' }}>Loading...</div>
+          <div className="text-muted">Loading...</div>
         )}
       </div>
     );

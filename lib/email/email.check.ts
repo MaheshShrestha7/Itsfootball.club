@@ -1,7 +1,7 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, availabilityReminder, renewalReminder, newsNotice, matchNotice } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 
@@ -44,6 +44,20 @@ async function main() {
 
   const code = authEmail('reauthentication', '', '654321');
   assert.ok(code.html.includes('654321') && code.text.includes('654321'), 'reauth shows the code');
+
+  // --- who auth emails go to ---
+  const user = { email: 'old@example.com', new_email: 'new@example.com' };
+  const base = { token: '111111', token_hash: 'h-new', email_action_type: 'email_change' as const };
+  assert.deepEqual(authRecipients(user, base), [{ to: 'new@example.com', token: '111111', tokenHash: 'h-new' }],
+    'email change, secure change off: only the new address');
+  const secure = authRecipients(user, { ...base, token_new: '222222', token_hash_new: 'h-cur' });
+  assert.deepEqual(secure.map(r => [r.to, r.tokenHash]), [['new@example.com', 'h-new'], ['old@example.com', 'h-cur']],
+    'email change, secure change on: both addresses, token names swapped');
+  assert.equal(secure[1].changeTo, 'new@example.com', 'current-address copy names the new address');
+  assert.deepEqual(authRecipients({ email: 'a@x.com' }, { token: 't', token_hash: 'h', email_action_type: 'magiclink' }).map(r => r.to), ['a@x.com']);
+  assert.deepEqual(authRecipients({}, { token: 't', token_hash: 'h', email_action_type: 'magiclink' }), [], 'no address, nothing to send');
+  const toCurrent = authEmail('email_change', link, '', undefined, 'new@example.com');
+  assert.ok(toCurrent.text.includes('new@example.com') && toCurrent.subject.includes('email change'), 'current-address wording');
 
   const avail = availabilityReminder({ brand: evil, memberName: '  Sam  Ray ', fixture: 'A vs B', when: 'Sat 4 Oct', venue: 'Park', link: 'https://itsfootball.club/evil/availability?token=t' });
   assert.ok(avail.text.startsWith(evil.name) && avail.text.includes('Hi Sam,'), 'first name greeting');

@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ClipboardList,
 } from 'lucide-react';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function DraftLineupPage() {
   const params = useParams();
@@ -171,8 +172,8 @@ export default function DraftLineupPage() {
     showFeedback(res.message, res.success ? 'success' : 'error');
   };
 
-  const handleSelectMatch = (matchId: string) => {
-    if (isDirty && !window.confirm('You have unsaved lineup changes for this fixture. Discard them?')) return;
+  const handleSelectMatch = async (matchId: string) => {
+    if (isDirty && !(await confirmAction({ title: 'Discard unsaved lineup changes?', message: "Your changes to this fixture's lineup haven't been saved.", confirmLabel: 'Discard changes', cancelLabel: 'Keep editing', danger: true }))) return;
     setIsDirty(false);
     setSelectedMatchId(matchId);
   };
@@ -183,13 +184,13 @@ export default function DraftLineupPage() {
 
         {/* Header Breadcrumbs & Action Bar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ minWidth: 0 }}>
+          <div className="min-w-0">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
               <Link href={`/${club.slug}/admin`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Admin</Link>
               <ChevronRight size={14} />
               <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Match Center</Link>
               <ChevronRight size={14} />
-              <span style={{ color: 'var(--text-primary)' }}>Draft Lineup Workbench</span>
+              <span className="text-primary">Draft Lineup Workbench</span>
             </div>
 
             <h1 style={{ fontSize: 'clamp(1.3rem, 5vw, 1.75rem)', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
@@ -202,7 +203,7 @@ export default function DraftLineupPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="row row-loose row-wrap">
             <Link
               href={`/${club.slug}/admin/availability`}
               className="btn btn-secondary btn-sm"
@@ -377,19 +378,19 @@ export default function DraftLineupPage() {
                 gap: '0.4rem',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Match:</span>
+                  <span className="text-muted">Match:</span>
                   <span style={{ fontWeight: 800, color: 'var(--text-primary)', textAlign: 'right' }}>{activeMatch.home_team_name} vs {activeMatch.away_team_name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Format:</span>
+                  <span className="text-muted">Format:</span>
                   <span style={{ fontWeight: 800, color: 'var(--c-green)' }}>{matchFormat}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Formation:</span>
+                  <span className="text-muted">Formation:</span>
                   <span style={{ fontWeight: 800, color: 'var(--c-amber)' }}>{formation}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Starting Players:</span>
+                  <span className="text-muted">Starting Players:</span>
                   <span style={{ fontWeight: 800, color: starterCount < lineupCoords.length ? 'var(--c-amber)' : 'var(--text-primary)' }}>
                     {starterCount} of {lineupCoords.length} positions filled
                   </span>

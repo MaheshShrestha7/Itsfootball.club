@@ -2014,3 +2014,80 @@ textarea {
   .team-name-full { display: none; }
   .team-name-short { display: inline; letter-spacing: 0.04em; }
 }
+
+/* ==============================================================================
+   Confirmation dialog (components/ConfirmDialog.tsx): replaces window.confirm/alert
+   ============================================================================== */
+dialog.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-width: none;
+  margin: auto;
+  padding: 1.5rem;
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-lg);
+}
+dialog.confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  dialog.confirm-dialog[open] { animation: confirm-dialog-in 0.2s var(--ease-out); }
+}
+@keyframes confirm-dialog-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+}
+.confirm-dialog-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: rgba(var(--club-primary-rgb), 0.15);
+  color: var(--club-primary);
+}
+.confirm-dialog-icon.is-danger { background: rgba(239, 68, 68, 0.15); color: var(--c-red); }
+.confirm-dialog-title { font-size: 1.1rem; font-weight: 800; line-height: 1.35; margin: 0.35rem 0 0; }
+.confirm-dialog-message { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0.5rem 0 0; }
+.confirm-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
+@media (max-width: 480px) {
+  .confirm-dialog-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* ==============================================================================
+   Shared layout & text utilities. Use these instead of repeating the same inline
+   style={{ }} objects; one spacing scale keeps pages consistent.
+   ============================================================================== */
+.row { display: flex; align-items: center; gap: 0.5rem; }
+.row-inline { display: inline-flex; }
+.row-tight { gap: 0.3rem; }
+.row-loose { gap: 0.75rem; }
+.row-wrap { flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.stack-sm { gap: 0.75rem; }
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-meta { font-size: 0.75rem; color: var(--text-muted); }
+.text-note { font-size: 0.8rem; color: var(--text-muted); }
+.text-body { font-size: 0.9rem; color: var(--text-secondary); }
+.eyebrow { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.text-center { text-align: center; }
+
+.stat-tile { background: rgba(var(--shade-rgb), 0.3); padding: 1rem; border-radius: var(--radius-md); text-align: center; }
+.stat-value { font-size: 2rem; font-weight: 900; color: var(--text-primary); }
+
+.min-w-0 { min-width: 0; }
+.shrink-0 { flex-shrink: 0; }
+.w-full { width: 100%; }
+.m-0 { margin: 0; }
+
+/* Two side-by-side panels (e.g. editor + library) that stack on tablets and phones */
+.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+@media (max-width: 900px) {
+  .split-2 { grid-template-columns: 1fr; }
+}

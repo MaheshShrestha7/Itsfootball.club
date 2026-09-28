@@ -5,6 +5,7 @@ import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
 import SyncStatusBanner from '@/components/SyncStatusBanner';
+import { ConfirmRoot } from '@/components/ConfirmDialog';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { loadInitialData } from '@/lib/supabase/server-data';
 
@@ -64,6 +65,7 @@ export default async function RootLayout({
             {children}
           </ClubProvider>
         </AuthProvider>
+        <ConfirmRoot />
       </body>
     </html>
   );

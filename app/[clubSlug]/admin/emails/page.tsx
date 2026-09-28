@@ -185,8 +185,8 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     <div style={{ maxWidth: '960px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EMAIL</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>Email Notifications</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        <h1 className="stat-value">Email Notifications</h1>
+        <p className="text-body">
           Automatic reminders and one-off notices to your members, sent from {club.name} via itsfootball.club.
         </p>
       </div>
@@ -201,7 +201,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
           <AlertTriangle size={20} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Email isn&apos;t fully set up yet.</strong>{' '}
+            <strong className="text-primary">Email isn&apos;t fully set up yet.</strong>{' '}
             {!ready.database && 'The email tables haven\'t been added to the database. '}
             {!ready.resend && 'The email service key hasn\'t been configured. '}
             You can change settings and preview notices, but nothing will send until the platform admin finishes setup.
@@ -332,7 +332,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         {preview && (
           <div style={{ marginTop: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>
+              <strong className="text-primary">
                 {preview.recipients ? `${preview.recipients} ${preview.recipients === 1 ? 'person' : 'people'} will get this.` : 'Nobody new to send this to.'}
               </strong>
               {preview.alreadySent > 0 && ` ${preview.alreadySent} already received it.`}
@@ -342,7 +342,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
             {preview.preview && (
               <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
                 <div style={{ padding: '0.6rem 0.9rem', fontSize: '0.85rem', background: 'rgba(var(--tint-rgb), 0.04)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Subject:</strong> {preview.preview.subject}
+                  <strong className="text-primary">Subject:</strong> {preview.preview.subject}
                 </div>
                 <iframe title="Email preview" sandbox="" srcDoc={preview.preview.html} style={{ width: '100%', height: '640px', border: 0, background: '#F1F5F9', display: 'block' }} />
               </div>
@@ -367,13 +367,13 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {overview.history.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.7rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{HISTORY_LABELS[h.kind] || 'Email'}</div>
                   {h.subject && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.subject}</div>}
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                   <div>{h.recipients} {h.recipients === 1 ? 'recipient' : 'recipients'}</div>
-                  <div style={{ color: 'var(--text-muted)' }}>{fmtDate(h.sentAt)}</div>
+                  <div className="text-muted">{fmtDate(h.sentAt)}</div>
                 </div>
               </div>
             ))}

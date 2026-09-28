@@ -208,7 +208,7 @@ export default function AdminMatchCenterControllerPage({
                   <label htmlFor="match-center-opponent-team" className="form-label">Opponent Team *</label>
                   <input id="match-center-opponent-team" type="text" required className="form-input" placeholder="e.g. Metro Rovers" value={fixtureOpponent} onChange={e => setFixtureOpponent(e.target.value)} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label htmlFor="match-center-competition" className="form-label">Competition</label>
                     <input id="match-center-competition" type="text" className="form-input" value={fixtureCompetition} onChange={e => setFixtureCompetition(e.target.value)} />
@@ -605,7 +605,7 @@ export default function AdminMatchCenterControllerPage({
               borderBottom: '1px solid var(--border-subtle)',
               paddingBottom: '1rem',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div className="row row-loose row-wrap">
                 <div style={{
                   fontFamily: 'var(--font-heading)',
                   fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
@@ -898,7 +898,7 @@ export default function AdminMatchCenterControllerPage({
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
+                    <div className="form-group m-0">
                       <label htmlFor="match-center-team-side" className="form-label">Team Side</label>
                       <select id="match-center-team-side"
                         className="form-select"
@@ -910,7 +910,7 @@ export default function AdminMatchCenterControllerPage({
                       </select>
                     </div>
 
-                    <div className="form-group" style={{ margin: 0 }}>
+                    <div className="form-group m-0">
                       <label htmlFor="match-center-match-minute" className="form-label">Match Minute</label>
                       <input id="match-center-match-minute"
                         type="number"
@@ -1047,7 +1047,7 @@ export default function AdminMatchCenterControllerPage({
                 No events recorded yet. Log goals, substitutions, and cards above.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className="stack stack-sm">
                 {events.map(evt => (
                   <div
                     key={evt.id}
@@ -1079,12 +1079,12 @@ export default function AdminMatchCenterControllerPage({
                           <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                             {evt.event_type.toUpperCase().replace('_', ' ')}
                           </span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>•</span>
+                          <span className="text-note">•</span>
                           <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                             {evt.player_name}
                           </span>
                           {evt.assist_player_name && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <span className="text-meta">
                               (Ast: {evt.assist_player_name})
                             </span>
                           )}
@@ -1227,7 +1227,7 @@ export default function AdminMatchCenterControllerPage({
                   fontWeight: 800,
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="row">
                   {match.is_paused ? <Play size={16} /> : <Pause size={16} />}
                   {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury, VAR check, etc.)'}
                 </span>
@@ -1235,7 +1235,7 @@ export default function AdminMatchCenterControllerPage({
               </button>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="stack stack-sm">
               <button
                 onClick={() => handlePeriodTransition('first_half', 'live', 1)}
                 className="btn btn-secondary"
@@ -1339,7 +1339,7 @@ export default function AdminMatchCenterControllerPage({
             background: 'var(--bg-surface)',
             boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CalendarDays size={20} color="var(--club-primary)" />
                 Schedule Match Fixture
@@ -1365,7 +1365,7 @@ export default function AdminMatchCenterControllerPage({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="match-center-competition-2" className="form-label">Competition</label>
                   <input id="match-center-competition-2"
@@ -1395,7 +1395,7 @@ export default function AdminMatchCenterControllerPage({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="match-center-kickoff-date-time" className="form-label">Kickoff Date & Time *</label>
                   <input id="match-center-kickoff-date-time"

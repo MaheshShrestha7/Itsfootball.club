@@ -170,16 +170,16 @@ export default function Footer({ club, sponsors }: FooterProps) {
             </p>
             {club && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span className="row">
                   <MapPin size={14} color="var(--club-primary)" /> {club.stadium_name}
                 </span>
                 {club.contact_email && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span className="row">
                     <Mail size={14} color="var(--club-primary)" /> {club.contact_email}
                   </span>
                 )}
                 {club.contact_phone && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span className="row">
                     <Phone size={14} color="var(--club-primary)" /> {club.contact_phone}
                   </span>
                 )}
@@ -275,7 +275,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
           <div>
             &copy; {new Date().getFullYear()} {club ? club.name : 'itsfootball.club'}. All rights reserved.
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="row row-tight">
             <span>Powered by</span>
             <Link href="/" style={{ color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <img src="/logo-96.png" alt="" width={20} height={20} loading="lazy" decoding="async" style={{ width: '20px', height: '20px' }} />

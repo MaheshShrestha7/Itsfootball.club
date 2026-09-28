@@ -105,7 +105,7 @@ export default function ClubScoreLeaderboard({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span className="badge badge-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="badge badge-gold row row-tight">
               <Zap size={12} fill="#F59E0B" /> FANTASY SQUAD LEAGUE
             </span>
             <span className="badge badge-primary">{getActiveSeason(club.id)?.name || defaultSeasonLabel()} ACTIVE</span>
@@ -204,7 +204,7 @@ export default function ClubScoreLeaderboard({
       </div>
 
       {/* Leaderboard Rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="stack stack-sm">
         {sortedProfiles.length === 0 && (
           <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             No ClubScore points recorded{season ? ` for ${season}` : ''} yet.
@@ -274,12 +274,12 @@ export default function ClubScoreLeaderboard({
                   )}
                 </div>
 
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem' }}>
                       {player.full_name}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <span className="text-meta">
                       #{player.jersey_number} • {player.player_position}
                     </span>
                     <span
@@ -305,7 +305,7 @@ export default function ClubScoreLeaderboard({
                       </span>
                     )}
                     {profile.badges.length > 0 && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      <span className="text-meta">
                         • {profile.badges.length} {profile.badges.length === 1 ? 'badge' : 'badges'}
                       </span>
                     )}
@@ -326,12 +326,12 @@ export default function ClubScoreLeaderboard({
                     {filter === 'weekly' && `+${profile.weekly_points} PTS`}
                     {filter === 'streak' && `${profile.current_streak} WEEKS`}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  <div className="text-meta">
                     {filter === 'season' ? 'Season Fantasy Total' : filter === 'weekly' ? 'Earned This Week' : `Best: ${profile.highest_streak} weeks`}
                   </div>
                 </div>
 
-                <div style={{ color: 'var(--text-muted)' }}>
+                <div className="text-muted">
                   <ChevronRight size={18} />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function ClubScoreLeaderboard({
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <PlayerAvatar photoUrl={selectedPlayerModal.member.photo_url} name={selectedPlayerModal.member.full_name} size={64} eager style={{ borderRadius: '12px', border: '2px solid var(--club-primary)' }} />
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div className="row">
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                     {selectedPlayerModal.member.full_name}
                   </h3>
@@ -464,21 +464,21 @@ export default function ClubScoreLeaderboard({
               marginBottom: '1.75rem'
             }}>
               <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SEASON PTS</div>
+                <div className="text-meta">SEASON PTS</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--club-primary)' }}>
                   {selectedPlayerModal.profile.total_points}
                 </div>
               </div>
 
               <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>THIS WEEK</div>
+                <div className="text-meta">THIS WEEK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-green)' }}>
                   +{selectedPlayerModal.profile.weekly_points}
                 </div>
               </div>
 
               <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>STREAK</div>
+                <div className="text-meta">STREAK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
                   <Flame size={16} color="var(--c-red)" fill="#EF4444" />
                   <span>{selectedPlayerModal.profile.current_streak}w</span>
@@ -523,11 +523,11 @@ export default function ClubScoreLeaderboard({
                       }}>
                         {getBadgeIcon(badge.icon)}
                       </div>
-                      <div style={{ minWidth: 0 }}>
+                      <div className="min-w-0">
                         <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {badge.name}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Verified</div>
+                        <div className="text-meta">Verified</div>
                       </div>
                     </div>
                   ))}

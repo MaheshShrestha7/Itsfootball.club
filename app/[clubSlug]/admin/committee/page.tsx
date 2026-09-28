@@ -55,10 +55,10 @@ export default function AdminCommitteePage({
     <div>
       <div style={{ marginBottom: '2rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+        <h1 className="stat-value">
           Executive Committee Appointments
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        <p className="text-body">
           Appoint club members and players to leadership posts (President, Secretary, Head Coach, Treasurer).
         </p>
       </div>
@@ -157,7 +157,7 @@ export default function AdminCommitteePage({
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button type="submit" className="btn btn-primary row">
               <Award size={16} />
               <span>Confirm Appointment</span>
             </button>
@@ -217,12 +217,12 @@ export default function AdminCommitteePage({
 
         {filteredExecutiveMembers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2.5rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '10px' }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            <p className="text-body">
               No executive members appointed for season &quot;{seasonFilter}&quot;.
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="stack">
             {filteredExecutiveMembers.map(exec => (
               <div
                 key={exec.id}

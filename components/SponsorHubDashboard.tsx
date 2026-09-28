@@ -130,9 +130,9 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
             Delivery, engagement, and audience reporting for every sponsor placement on {club.name}&apos;s site.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="row row-loose row-wrap">
           {range === 'custom' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="row">
               <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
               <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
@@ -233,18 +233,18 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       return avg > 0 ? `${(avg / 1000).toFixed(1)}s` : '—';
                     })()}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Avg. active time in view</div>
+                  <div className="text-meta">Avg. active time in view</div>
                 </div>
               </div>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.3rem' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>Repeat exposure rate</span>
+                  <span className="text-primary">Repeat exposure rate</span>
                   <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{data.totals.repeatExposureRate.toFixed(0)}%</span>
                 </div>
                 <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '0.4rem' }}>
                   <div style={{ width: `${data.totals.repeatExposureRate}%`, height: '100%', background: '#3B82F6' }} />
                 </div>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Share of unique visitors who saw a placement more than once.</p>
+                <p className="text-meta">Share of unique visitors who saw a placement more than once.</p>
               </div>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       </td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>{(stats?.impressions || 0).toLocaleString()}</td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>
-                        {(stats?.viewableImpressions || 0).toLocaleString()} <span style={{ color: 'var(--text-muted)' }}>({(stats?.viewabilityRate || 0).toFixed(0)}%)</span>
+                        {(stats?.viewableImpressions || 0).toLocaleString()} <span className="text-muted">({(stats?.viewabilityRate || 0).toFixed(0)}%)</span>
                       </td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>{(stats?.clicks || 0).toLocaleString()}</td>
                       <td style={{ padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' }}>{(stats?.ctr || 0).toFixed(2)}%</td>
@@ -326,7 +326,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     return (
                       <div key={c.country}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
-                          <span style={{ color: 'var(--text-primary)' }}>{c.country}</span>
+                          <span className="text-primary">{c.country}</span>
                           <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{c.count.toLocaleString()}</span>
                         </div>
                         <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -345,7 +345,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                 {data.byDevice.map(dev => (
                   <div key={dev.name}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.3rem' }}>
-                      <span style={{ color: 'var(--text-primary)' }}>{dev.name}</span>
+                      <span className="text-primary">{dev.name}</span>
                       <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
                     </div>
                     <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>

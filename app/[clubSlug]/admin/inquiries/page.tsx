@@ -3,7 +3,8 @@
 import React, { use, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { ContactInquiry } from '@/lib/supabase/types';
-import { Mail, Phone, Archive, CheckCheck, Reply } from 'lucide-react';
+import Link from 'next/link';
+import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, ArrowRight } from 'lucide-react';
 
 type Filter = 'all' | ContactInquiry['status'];
 
@@ -13,9 +14,11 @@ export default function AdminInquiriesPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus } = useClub();
+  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, memberMessages } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const [filter, setFilter] = useState<Filter>('all');
+  const memberThreads = memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member');
+  const unreadMemberMessages = memberThreads.filter(m => !m.is_read).length;
 
   const clubInquiries = useMemo(
     () =>
@@ -32,11 +35,32 @@ export default function AdminInquiriesPage({
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>INBOX</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>Contact Inquiries</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Messages sent from your public contact form: trials, sponsorship, media requests and general questions.
+        <h1 className="stat-value">Inbox</h1>
+        <p className="text-body">
+          Messages from signed-in members, and enquiries sent through your public contact form.
         </p>
       </div>
+
+      {/* Member messages live on the Member Approvals page, where admins can reply in the thread */}
+      <Link
+        href={`/${club.slug}/admin/members?tab=messages`}
+        className="glass-panel glass-panel-interactive"
+        style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '1rem 1.25rem', marginBottom: '2rem', textDecoration: 'none', borderLeft: unreadMemberMessages ? '3px solid #3B82F6' : '3px solid transparent' }}
+      >
+        <MessageSquare size={22} color="var(--c-blue)" className="shrink-0" />
+        <div className="min-w-0" style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Member messages</div>
+          <div className="text-note">
+            {memberThreads.length === 0
+              ? 'No messages from members yet.'
+              : `${memberThreads.length} message${memberThreads.length === 1 ? '' : 's'} from members${unreadMemberMessages ? `, ${unreadMemberMessages} new` : ''}.`}
+          </div>
+        </div>
+        {unreadMemberMessages > 0 && <span className="badge badge-live">{unreadMemberMessages} NEW</span>}
+        <ArrowRight size={18} className="shrink-0 text-muted" />
+      </Link>
+
+      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Contact form enquiries</h2>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {filters.map(f => (
@@ -57,7 +81,7 @@ export default function AdminInquiriesPage({
           No messages here yet.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="stack">
           {clubInquiries.map(item => (
             <div
               key={item.id}

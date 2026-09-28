@@ -1354,7 +1354,7 @@ export default function TacticalPitch({
         color: 'var(--text-muted)',
         padding: '0 0.25rem',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div className="row">
           <Info size={14} />
           <span>
             {isEditable
@@ -1395,7 +1395,7 @@ export default function TacticalPitch({
             />
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {isEmptySlot(activePlayer) ? `Empty ${activePlayer.position} slot` : `${activePlayer.number ? `#${activePlayer.number} ` : ''}${activePlayer.name}`}
                 </h4>
@@ -1409,14 +1409,14 @@ export default function TacticalPitch({
                 </span>
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Tactical Zone: <strong style={{ color: 'var(--text-primary)' }}>{getSectorZone(activePlayer.x, activePlayer.y)}</strong>
+                Tactical Zone: <strong className="text-primary">{getSectorZone(activePlayer.x, activePlayer.y)}</strong>
               </p>
             </div>
           </div>
 
           {/* Tactical Role Selector & Actions */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="row">
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
                 Assigned Role:
               </span>

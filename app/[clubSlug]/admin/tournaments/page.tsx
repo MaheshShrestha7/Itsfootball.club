@@ -8,6 +8,7 @@ import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import { Trophy, Swords, Users, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function AdminTournamentsPage({
   params,
@@ -41,8 +42,8 @@ export default function AdminTournamentsPage({
   const [feedback, setFeedback] = useState<string | null>(null);
   const handleOpenWizard = () => setFormTarget('new');
 
-  const handleDeleteTourn = (tournId: string, tournName: string) => {
-    if (confirm(`Are you sure you want to delete tournament "${tournName}" and its fixtures?`)) {
+  const handleDeleteTourn = async (tournId: string, tournName: string) => {
+    if (await confirmAction({ title: `Delete "${tournName}"?`, message: 'The tournament and all its fixtures will be removed.', confirmLabel: 'Delete tournament', danger: true })) {
       deleteTournament(tournId);
       setFeedback(`✓ Deleted ${tournName}`);
       setTimeout(() => setFeedback(null), 3000);
@@ -358,7 +359,7 @@ export default function AdminTournamentsPage({
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="row">
                         <Trophy size={16} color="var(--c-amber)" />
                         <h3
                           style={{
@@ -402,19 +403,19 @@ export default function AdminTournamentsPage({
                         }}
                       >
                         <div>
-                          <div style={{ color: 'var(--text-muted)' }}>Teams</div>
+                          <div className="text-muted">Teams</div>
                           <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                             {participants.length}
                           </div>
                         </div>
                         <div>
-                          <div style={{ color: 'var(--text-muted)' }}>Fixtures</div>
+                          <div className="text-muted">Fixtures</div>
                           <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                             {tourneyMatches.length}
                           </div>
                         </div>
                         <div>
-                          <div style={{ color: 'var(--text-muted)' }}>Completed</div>
+                          <div className="text-muted">Completed</div>
                           <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.9rem' }}>
                             {completedMatches}
                           </div>

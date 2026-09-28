@@ -50,7 +50,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries, memberMessages } = useClub();
   const { user, logout, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -78,7 +78,10 @@ export default function AdminLayout({
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
-  const unreadInquiries = inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length;
+  // The Inbox covers both the public contact form and signed-in members' messages
+  const unreadInquiries =
+    inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length +
+    memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
 
   interface NavItem {
@@ -203,7 +206,7 @@ export default function AdminLayout({
         <AdminSearch clubSlug={club.slug} clubId={club.id} />
 
         {/* Categorized Nav Sections */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <nav className="stack">
           {navSections.map(section => (
             <div key={section.title}>
               {section.title !== 'Overview' && (
@@ -256,7 +259,7 @@ export default function AdminLayout({
                         }
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div className="row row-loose">
                         <Icon size={16} color={isActive ? 'var(--club-primary)' : 'var(--text-muted)'} />
                         <span>{item.label}</span>
                       </div>

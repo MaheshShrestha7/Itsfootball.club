@@ -1,6 +1,7 @@
 'use client';
 
 import React, { use, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -47,7 +48,7 @@ export default function AdminMembersPage({
     members,
     approveMemberApplication,
     rejectMemberApplication,
-    memberMessages,
+    getClubMemberMessages,
     replyToMemberMessage,
     bulkAddMembers
   } = useClub();
@@ -56,7 +57,11 @@ export default function AdminMembersPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMembers = members.filter(m => m.club_id === club.id);
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'rejected' | 'messages'>('pending');
+  // The Inbox links here with ?tab=messages
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'rejected' | 'messages'>(
+    searchParams.get('tab') === 'messages' ? 'messages' : 'pending'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
@@ -81,7 +86,7 @@ export default function AdminMembersPage({
   const pendingMembers = clubMembers.filter(m => m.membership_status === 'pending');
   const approvedMembers = clubMembers.filter(m => !m.membership_status || m.membership_status === 'approved');
   const rejectedMembers = clubMembers.filter(m => m.membership_status === 'rejected');
-  const clubMessages = memberMessages.filter(m => m.club_id === club.id);
+  const clubMessages = getClubMemberMessages(club.id); // newest first
   const unreadMessagesCount = clubMessages.filter(m => !m.is_read && m.sender_type === 'member').length;
 
   const handleApprove = (member: ClubMember) => {
@@ -169,10 +174,10 @@ export default function AdminMembersPage({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span className="badge badge-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="badge badge-primary row row-tight">
               <Shield size={13} /> SQUAD &amp; GOVERNANCE
             </span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span className="text-note">
               {club.name} Administration
             </span>
           </div>
@@ -430,7 +435,7 @@ export default function AdminMembersPage({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                       <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{msg.sender_name}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      <span className="text-meta">
                         {new Date(msg.created_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -478,7 +483,7 @@ export default function AdminMembersPage({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                    From: <strong style={{ color: 'var(--text-primary)' }}>{selectedMessage.sender_name}</strong> • {new Date(selectedMessage.created_at).toLocaleString()}
+                    From: <strong className="text-primary">{selectedMessage.sender_name}</strong> • {new Date(selectedMessage.created_at).toLocaleString()}
                   </div>
                 </div>
 
@@ -578,13 +583,13 @@ export default function AdminMembersPage({
                     <div>
                       {/* Top Header of Card */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div className="row row-loose">
                           <PlayerAvatar photoUrl={member.photo_url} name={member.full_name} size={46} style={{ borderRadius: '12px', border: '1px solid var(--border-subtle)' }} />
                           <div>
                             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                               {member.full_name}
                             </h3>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <div className="text-meta">
                               {isPlayerMember(member) ? `Player • ${member.player_position || 'Roster'}` : 'Supporter Member'}
                             </div>
                           </div>
@@ -792,7 +797,7 @@ export default function AdminMembersPage({
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              You are rejecting the membership application for <strong style={{ color: 'var(--text-primary)' }}>{rejectModalMember.full_name}</strong>. Provide a reason so the applicant understands the committee decision.
+              You are rejecting the membership application for <strong className="text-primary">{rejectModalMember.full_name}</strong>. Provide a reason so the applicant understands the committee decision.
             </p>
 
             <div style={{ marginBottom: '1.25rem' }}>

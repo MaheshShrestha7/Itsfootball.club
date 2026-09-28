@@ -307,8 +307,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               <button
                 type="button"
                 onClick={() => setAuthModalOpen(true)}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                className="btn btn-secondary btn-sm row"
               >
                 <User size={14} />
                 <span>Sign In</span>
@@ -353,7 +352,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <div>
               {/* Drawer Club Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div className="row row-loose">
                   <img loading="lazy" decoding="async" width={32} height={32}
                     src={club.logo_url}
                     alt={`${club.name} crest`}
@@ -361,7 +360,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{club.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Official Matchday Portal</div>
+                    <div className="text-meta">Official Matchday Portal</div>
                   </div>
                 </div>
                 <button
@@ -499,7 +498,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
               {isAuthenticated && user ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div className="row">
                     {user.avatar_url ? (
                       <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
@@ -511,7 +510,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                         {user.full_name}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      <div className="text-meta">
                         {userRole || 'Member'}
                       </div>
                     </div>

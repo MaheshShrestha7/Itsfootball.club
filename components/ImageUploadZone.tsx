@@ -10,6 +10,8 @@ interface ImageUploadZoneProps {
   currentImageUrl?: string;
   onUploadComplete: (url: string) => void;
   folder?: string;
+  /** The club this image belongs to; leave out only while creating a new club */
+  clubId?: string;
   aspectRatio?: '1:1' | '16:9' | 'free';
   maxSizeBytes?: number; // Default 5MB
 }
@@ -64,6 +66,7 @@ export default function ImageUploadZone({
   currentImageUrl,
   onUploadComplete,
   folder = 'uploads',
+  clubId,
   aspectRatio = 'free',
   maxSizeBytes = 5 * 1024 * 1024, // 5MB
 }: ImageUploadZoneProps) {
@@ -115,6 +118,7 @@ export default function ImageUploadZone({
       const formData = new FormData();
       formData.append('file', fileToUpload);
       formData.append('folder', folder);
+      if (clubId) formData.append('clubId', clubId);
 
       setUploadProgress(50);
 
@@ -223,7 +227,7 @@ export default function ImageUploadZone({
         <label className="form-label" style={{ marginBottom: 0 }}>
           {label}
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="row">
           <button
             type="button"
             onClick={() => setShowUrlInput(prev => !prev)}
@@ -352,7 +356,7 @@ export default function ImageUploadZone({
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Asset configured
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <div className="text-meta">
                 Click or drag another file to replace
               </div>
             </div>
@@ -401,7 +405,7 @@ export default function ImageUploadZone({
               </span>
             </div>
 
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <div className="text-meta">
               {recommendedText}
             </div>
           </div>

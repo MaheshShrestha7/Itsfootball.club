@@ -131,7 +131,43 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
 
 export type AuthAction = 'signup' | 'magiclink' | 'recovery' | 'invite' | 'email_change' | 'email' | 'reauthentication';
 
-export function authEmail(action: AuthAction, link: string, token: string, brand?: EmailBrand): RenderedEmail {
+export interface AuthHookData {
+  token: string;
+  token_hash: string;
+  token_new?: string;
+  token_hash_new?: string;
+  email_action_type: AuthAction;
+}
+
+export interface AuthRecipient {
+  to: string;
+  token: string;
+  tokenHash: string;
+  /** email_change only: this copy goes to the current address and names the new one */
+  changeTo?: string;
+}
+
+/**
+ * Who the hook emails, with which token. Every action goes to the account's email, except
+ * email_change: its token/token_hash confirm the NEW address, and token_new/token_hash_new
+ * (only sent when "Secure email change" is on) confirm from the CURRENT one. Supabase keeps
+ * those names swapped for backward compatibility.
+ */
+export function authRecipients(user: { email?: string; new_email?: string }, data: AuthHookData): AuthRecipient[] {
+  if (data.email_action_type !== 'email_change') {
+    return user.email ? [{ to: user.email, token: data.token, tokenHash: data.token_hash }] : [];
+  }
+  const out: AuthRecipient[] = [];
+  if (user.new_email && data.token_hash) {
+    out.push({ to: user.new_email, token: data.token, tokenHash: data.token_hash });
+  }
+  if (user.email && data.token_hash_new) {
+    out.push({ to: user.email, token: data.token_new || '', tokenHash: data.token_hash_new, changeTo: user.new_email });
+  }
+  return out;
+}
+
+export function authEmail(action: AuthAction, link: string, token: string, brand?: EmailBrand, changeTo?: string): RenderedEmail {
   const where = brand ? brand.name : 'itsfootball.club';
   const reason = `You're receiving this because someone entered this email address on ${where}. If that wasn't you, you can ignore this email.`;
   switch (action) {
@@ -176,6 +212,19 @@ export function authEmail(action: AuthAction, link: string, token: string, brand
         cta: { label: 'Accept invitation', url: link },
       });
     case 'email_change':
+      if (changeTo) {
+        return renderEmail({
+          brand, reason,
+          subject: `Confirm your email change on ${where}`,
+          preheader: `Confirm changing your account email to ${changeTo}.`,
+          heading: 'Confirm your email change',
+          paragraphs: [
+            `Someone asked to change the email on your account to ${changeTo}. Confirm here to go ahead.`,
+            'If that wasn\'t you, don\'t confirm, and change your password.',
+          ],
+          cta: { label: 'Confirm email change', url: link },
+        });
+      }
       return renderEmail({
         brand, reason,
         subject: `Confirm your new email for ${where}`,

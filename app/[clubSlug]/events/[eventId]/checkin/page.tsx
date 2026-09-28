@@ -173,7 +173,7 @@ export default function EventDoorCheckinPage({
     <div style={{ minHeight: '100vh', padding: '2.5rem 1rem 5rem 1rem', background: 'radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 70%)' }}>
       <div className="container" style={{ maxWidth: '580px' }}>
         {/* Navigation Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div className="section-head">
           <Link
             href={`/${club.slug}/events/${event.id}`}
             style={{
@@ -233,15 +233,15 @@ export default function EventDoorCheckinPage({
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="row row-inline row-tight">
               <Calendar size={13} color="var(--club-primary)" />
               <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="row row-inline row-tight">
               <Clock size={13} color="var(--club-primary)" />
               <LocalTime value={event.start_time} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="row row-inline row-tight">
               <MapPin size={13} color="var(--club-primary)" />
               {event.location}
             </span>
@@ -319,11 +319,11 @@ export default function EventDoorCheckinPage({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Timestamp:</span>
+                <span className="text-muted">Timestamp:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{result.checkedInAt}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Location:</span>
+                <span className="text-muted">Location:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{event.location}</span>
               </div>
             </div>
@@ -402,13 +402,13 @@ export default function EventDoorCheckinPage({
                   flexWrap: 'wrap',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div className="row">
                   <LogIn size={18} color="var(--c-green)" />
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       Signed in as {signedInMemberName}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <div className="text-meta">
                       Check yourself in with one tap.
                     </div>
                   </div>

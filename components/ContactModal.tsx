@@ -84,8 +84,8 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
         boxShadow: 'var(--shadow-lg)',
         position: 'relative',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="section-head">
+          <div className="row row-loose">
             <div style={{
               width: '36px',
               height: '36px',
@@ -101,7 +101,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 Contact {club.name}
               </h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="text-meta">
                 Official inquiries, trials, sponsorships & club office
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-row-2" style={{ gap: '1rem' }}>
               <div className="form-group">
                 <label htmlFor="contactmodal-your-full-name" className="form-label">Your Full Name *</label>
                 <input id="contactmodal-your-full-name"
@@ -192,7 +192,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-row-2" style={{ gap: '1rem' }}>
               <div className="form-group">
                 <label htmlFor="contactmodal-phone-number-optional" className="form-label">Phone Number (Optional)</label>
                 <input id="contactmodal-phone-number-optional"
@@ -244,14 +244,14 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <div className="text-meta">
                 Club Office: {club.contact_email}
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="button" onClick={handleResetAndClose} className="btn btn-secondary btn-sm">
                   Cancel
                 </button>
-                <button type="submit" disabled={sending} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <button type="submit" disabled={sending} className="btn btn-primary btn-sm row">
                   <Send size={14} /> {sending ? 'Sending...' : 'Send Message'}
                 </button>
               </div>

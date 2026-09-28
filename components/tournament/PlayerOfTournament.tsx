@@ -70,7 +70,7 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
     }}>
       {editing ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', width: '100%' }}>
-          <div className="form-group" style={{ margin: 0 }}>
+          <div className="form-group m-0">
             <label className="form-label" htmlFor="potm-member">Club member</label>
             <select id="potm-member" className="form-select" value={memberId} onChange={e => setMemberId(e.target.value)}>
               <option value="">Not a club member (type name)</option>
@@ -78,12 +78,12 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
             </select>
           </div>
           {!memberId && (
-            <div className="form-group" style={{ margin: 0 }}>
+            <div className="form-group m-0">
               <label className="form-label" htmlFor="potm-name">Player name</label>
               <input id="potm-name" className="form-input" value={name} maxLength={255} onChange={e => setName(e.target.value)} placeholder="e.g. guest team player" />
             </div>
           )}
-          <div className="form-group" style={{ margin: 0 }}>
+          <div className="form-group m-0">
             <label className="form-label" htmlFor="potm-note">Citation (optional)</label>
             <input id="potm-note" className="form-input" value={note} maxLength={280} onChange={e => setNote(e.target.value)} placeholder="e.g. 7 goals, 3 assists" />
           </div>
@@ -111,7 +111,7 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
             )}
           </div>
           {isAdmin && (
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <button type="button" className="btn btn-secondary btn-sm row row-tight" onClick={() => setEditing(true)}>
               <Pencil size={14} /> {winnerName ? 'Change' : 'Award player'}
             </button>
           )}

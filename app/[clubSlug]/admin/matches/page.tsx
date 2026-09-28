@@ -38,6 +38,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 const FLYER_PRESETS = [
   {
@@ -352,8 +353,8 @@ export default function AdminMatchesPage({
   };
 
   // 1-Click Delete Confirmation
-  const handleDeleteMatch = (m: Match) => {
-    if (confirm(`Are you sure you want to delete fixture "${m.title || m.opponent_name || m.home_team_name}"?`)) {
+  const handleDeleteMatch = async (m: Match) => {
+    if (await confirmAction({ title: `Delete fixture "${m.title || m.opponent_name || m.home_team_name}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete fixture', danger: true })) {
       deleteMatch(m.id);
       showToast(`Deleted fixture record.`);
     }
@@ -573,7 +574,7 @@ export default function AdminMatchesPage({
         </div>
 
         {/* Filters and Search Input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="row row-loose row-wrap">
           {/* Match Type Dropdown */}
           <select aria-label="Match type"
             value={typeFilter}
@@ -633,7 +634,7 @@ export default function AdminMatchesPage({
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="stack">
           {filteredMatches.map(m => {
             const isCompleted = m.status === 'completed';
             const isLive = m.status === 'live' || m.status === 'halftime';
@@ -703,7 +704,7 @@ export default function AdminMatchesPage({
                 </div>
 
                 {/* Match Details */}
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                     <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {m.competition}
@@ -767,15 +768,15 @@ export default function AdminMatchesPage({
                   </h3>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span className="row row-inline row-tight">
                       <Calendar size={13} color="var(--club-primary)" />
                       {new Date(m.match_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span className="row row-inline row-tight">
                       <Clock size={13} color="var(--club-primary)" />
                       {m.match_time || new Date(m.match_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span className="row row-inline row-tight">
                       <MapPin size={13} color="var(--club-primary)" />
                       {m.venue}
                     </span>
@@ -966,7 +967,7 @@ export default function AdminMatchesPage({
               background: 'var(--bg-surface-elevated)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <div>
                 <span className="badge badge-primary" style={{ marginBottom: '0.25rem' }}>
                   {editingMatchId ? 'EDIT MATCH' : 'NEW SCHEDULED FIXTURE'}
@@ -1240,6 +1241,7 @@ export default function AdminMatchesPage({
                   Match Flyer / Promotional Banner
                 </label>
                 <ImageUploadZone
+                  clubId={club.id}
                   label="Matchday Flyer"
                   recommendedText="High-res 16:9 promotional flyer (PNG, JPG, WebP up to 5MB)"
                   currentImageUrl={form.match_flyer_url}
@@ -1366,7 +1368,7 @@ export default function AdminMatchesPage({
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       Current Match Score
                     </label>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    <span className="text-meta">
                       {form.is_club_home ? `${club.name} (Home) vs ${form.opponent_name || 'Opponent'} (Away)` : `${form.opponent_name || 'Opponent'} (Home) vs ${club.name} (Away)`}
                     </span>
                   </div>
@@ -1486,8 +1488,7 @@ export default function AdminMatchesPage({
                 setQrModalMatch(null);
                 setPrintPosterMatch(target);
               }}
-              className="btn btn-primary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              className="btn btn-primary btn-sm row"
             >
               <Printer size={14} />
               <span>Print Gate Poster</span>

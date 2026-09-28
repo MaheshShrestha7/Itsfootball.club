@@ -109,15 +109,15 @@ export default function AdminGamificationPage({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
-            <span className="badge badge-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <span className="badge badge-gold row row-tight">
               <Zap size={12} fill="#F59E0B" /> GRASSROOTS INCENTIVE SCHEME
             </span>
             <span className="badge badge-primary">RETENTION ENGINE</span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             🏆 ClubScore Gamification Controller
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Configure points formulas, award manual team-spirit bonuses, and monitor player attendance streaks.
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function AdminGamificationPage({
         {/* Quick KPI Badges */}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ACTIVE 3+ STREAKS</div>
+            <div className="text-meta">ACTIVE 3+ STREAKS</div>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
               <Flame size={18} color="var(--c-red)" fill="#EF4444" />
               <span>{activeStreaksCount} Players</span>
@@ -133,7 +133,7 @@ export default function AdminGamificationPage({
           </div>
 
           <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SEASON TOTAL PTS</div>
+            <div className="text-meta">SEASON TOTAL PTS</div>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--club-primary)' }}>
               {totalClubPoints} PTS
             </div>
@@ -149,13 +149,13 @@ export default function AdminGamificationPage({
       }}>
         {/* Column 1: Point Weighting Configuration */}
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 2rem)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+          <div className="section-head">
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={18} color="var(--c-amber)" />
                 <span>Point Weightings & Multipliers</span>
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <p className="text-note">
                 Customize how heavily training and match actions reward players.
               </p>
             </div>
@@ -171,8 +171,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_training_checkin}
                   onChange={e => setRulesForm({ ...rulesForm, points_training_checkin: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -184,8 +183,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_match_appearance}
                   onChange={e => setRulesForm({ ...rulesForm, points_match_appearance: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -197,8 +195,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_goal_forward}
                   onChange={e => setRulesForm({ ...rulesForm, points_goal_forward: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -210,8 +207,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_goal_midfielder}
                   onChange={e => setRulesForm({ ...rulesForm, points_goal_midfielder: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -223,8 +219,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_goal_defender}
                   onChange={e => setRulesForm({ ...rulesForm, points_goal_defender: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -236,8 +231,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_assist}
                   onChange={e => setRulesForm({ ...rulesForm, points_assist: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
 
@@ -249,8 +243,7 @@ export default function AdminGamificationPage({
                   type="number"
                   value={rulesForm.points_clean_sheet_gk_def}
                   onChange={e => setRulesForm({ ...rulesForm, points_clean_sheet_gk_def: Number(e.target.value) })}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 />
               </div>
             </div>
@@ -263,7 +256,7 @@ export default function AdminGamificationPage({
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                 <div>
-                  <label htmlFor="gamification-3-week-streak" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>3-Week Streak</label>
+                  <label htmlFor="gamification-3-week-streak" className="text-meta">3-Week Streak</label>
                   <input id="gamification-3-week-streak"
                     type="number"
                     step="0.05"
@@ -275,7 +268,7 @@ export default function AdminGamificationPage({
                 </div>
 
                 <div>
-                  <label htmlFor="gamification-5-week-streak" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>5-Week Streak</label>
+                  <label htmlFor="gamification-5-week-streak" className="text-meta">5-Week Streak</label>
                   <input id="gamification-5-week-streak"
                     type="number"
                     step="0.05"
@@ -287,7 +280,7 @@ export default function AdminGamificationPage({
                 </div>
 
                 <div>
-                  <label htmlFor="gamification-10-week-streak" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>10-Week Streak</label>
+                  <label htmlFor="gamification-10-week-streak" className="text-meta">10-Week Streak</label>
                   <input id="gamification-10-week-streak"
                     type="number"
                     step="0.05"
@@ -323,7 +316,7 @@ export default function AdminGamificationPage({
               Incentivize fair play, helping pitch prep, or extra training sessions.
             </p>
 
-            <form onSubmit={handleManualAward} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleManualAward} className="stack">
               <div>
                 <label htmlFor="gamification-select-player" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
                   Select Player
@@ -331,8 +324,7 @@ export default function AdminGamificationPage({
                 <select id="gamification-select-player"
                   value={selectedMemberId}
                   onChange={e => setSelectedMemberId(e.target.value)}
-                  className="input-field"
-                  style={{ width: '100%' }}
+                  className="input-field w-full"
                 >
                   {squadPlayers.map(p => (
                     <option key={p.id} value={p.id}>
@@ -351,8 +343,7 @@ export default function AdminGamificationPage({
                     type="number"
                     value={awardPoints}
                     onChange={e => setAwardPoints(Number(e.target.value))}
-                    className="input-field"
-                    style={{ width: '100%' }}
+                    className="input-field w-full"
                   />
                 </div>
 
@@ -364,8 +355,7 @@ export default function AdminGamificationPage({
                     type="text"
                     value={awardReason}
                     onChange={e => setAwardReason(e.target.value)}
-                    className="input-field"
-                    style={{ width: '100%' }}
+                    className="input-field w-full"
                   />
                 </div>
               </div>
@@ -423,23 +413,23 @@ export default function AdminGamificationPage({
                       fontSize: '0.82rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="row row-loose">
                       <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={30} style={{ borderRadius: '6px' }} />
                       <div>
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{player.full_name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <div className="text-meta">
                           #{player.jersey_number} • {profile?.tier || 'Rookie'}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="row row-loose">
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 800, color: streak >= 3 ? 'var(--c-red)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                           {streak >= 3 && <Flame size={12} color="var(--c-red)" fill="#EF4444" />}
                           <span>{streak}w streak</span>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <div className="text-meta">
                           {profile?.total_points || 0} pts
                         </div>
                       </div>

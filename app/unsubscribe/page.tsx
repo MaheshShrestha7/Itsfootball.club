@@ -45,12 +45,12 @@ export default function UnsubscribePage() {
       <PlatformNavbar />
       <main className="container" style={{ padding: '4rem 1.5rem', flex: 1, maxWidth: '560px' }}>
         <div className="glass-panel" style={{ padding: '2.25rem', textAlign: 'center' }}>
-          {state.step === 'loading' && <p style={{ color: 'var(--text-secondary)' }}>Checking your link...</p>}
+          {state.step === 'loading' && <p className="text-secondary">Checking your link...</p>}
 
           {state.step === 'invalid' && (
             <>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Link not valid</h1>
-              <p style={{ color: 'var(--text-secondary)' }}>{state.error} To stop emails, contact the club directly.</p>
+              <p className="text-secondary">{state.error} To stop emails, contact the club directly.</p>
             </>
           )}
 

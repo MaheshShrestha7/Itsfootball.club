@@ -288,7 +288,7 @@ export default function CameraQRScanner({
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               Initializing Stadium Camera Stream...
             </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            <span className="text-meta">
               Requesting hardware optical sensor
             </span>
           </div>

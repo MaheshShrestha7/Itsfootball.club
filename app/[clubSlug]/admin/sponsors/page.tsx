@@ -7,6 +7,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { sponsorHref } from '@/lib/sponsors';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   prospect: 'Prospect (In Talks)',
@@ -133,15 +134,15 @@ export default function AdminSponsorsPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB SPONSORS & PARTNERS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             Club Sponsors & Commercial Partners
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Manage commercial kit partners, home ground naming rights, and grassroots sponsors.
           </p>
         </div>
 
-        <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <button onClick={handleOpenAdd} className="btn btn-primary row">
           <Plus size={16} />
           <span>Add New Sponsor</span>
         </button>
@@ -158,7 +159,7 @@ export default function AdminSponsorsPage({
         borderRadius: '12px',
         marginBottom: '1.5rem',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div className="row">
           <Sparkles size={16} color="var(--c-amber)" />
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             Sponsor Space Scaling Active:
@@ -191,7 +192,7 @@ export default function AdminSponsorsPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <LayoutGrid size={14} /> Club Public Page Scaled Layout Preview
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span className="text-meta">
               Proportional space as displayed to fans
             </span>
           </div>
@@ -352,7 +353,7 @@ export default function AdminSponsorsPage({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div className="row">
                 {linkedEvent && (
                   <span className="badge badge-primary" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Calendar size={11} /> {linkedEvent.title}
@@ -362,8 +363,8 @@ export default function AdminSponsorsPage({
                   <Edit2 size={14} />
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm(`Are you sure you want to delete sponsor "${sponsor.name}"? This cannot be undone.`)) {
+                  onClick={async () => {
+                    if (await confirmAction({ title: `Delete sponsor "${sponsor.name}"?`, message: 'They will be removed from your club site. This cannot be undone.', confirmLabel: 'Delete sponsor', danger: true })) {
                       deleteSponsor(sponsor.id);
                     }
                   }}
@@ -403,7 +404,7 @@ export default function AdminSponsorsPage({
                 <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Shield size={14} /> Club-Wide Sponsors
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="stack">
                   {clubWideSponsors.map(renderSponsorRow)}
                 </div>
               </div>
@@ -414,7 +415,7 @@ export default function AdminSponsorsPage({
                 <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Calendar size={14} /> Event Sponsors • {event.title}
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="stack">
                   {list.map(renderSponsorRow)}
                 </div>
               </div>
@@ -425,7 +426,7 @@ export default function AdminSponsorsPage({
                 <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
                   Former Event Sponsors
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="stack">
                   {orphanedEventSponsors.map(renderSponsorRow)}
                 </div>
               </div>
@@ -455,7 +456,7 @@ export default function AdminSponsorsPage({
             borderRadius: 'var(--radius-xl)',
             padding: '2rem',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
               </h3>
@@ -540,7 +541,7 @@ export default function AdminSponsorsPage({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="sponsors-sponsorship-tier" className="form-label">Sponsorship Tier</label>
                   <select id="sponsors-sponsorship-tier"
@@ -570,7 +571,7 @@ export default function AdminSponsorsPage({
               <div className="form-group">
                 <label htmlFor="sponsors-display-size-space-scale-public-page-foo" className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>Display Size / Space Scale</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Public Page Footprint</span>
+                  <span className="text-meta">Public Page Footprint</span>
                 </label>
                 <select id="sponsors-display-size-space-scale-public-page-foo"
                   className="form-select"
@@ -590,6 +591,7 @@ export default function AdminSponsorsPage({
 
               <div className="form-group">
                 <ImageUploadZone
+                  clubId={club.id}
                   label="Sponsor Logo *"
                   recommendedText="Transparent PNG or square logo, up to 5MB"
                   currentImageUrl={form.logo_url}
@@ -628,9 +630,9 @@ export default function AdminSponsorsPage({
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-row-2" style={{ gap: '1rem' }}>
                   <div className="form-group">
-                    <label htmlFor="sponsors-contact-email" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <label htmlFor="sponsors-contact-email" className="form-label row row-tight">
                       <Mail size={12} /> Contact Email
                     </label>
                     <input id="sponsors-contact-email"
@@ -642,7 +644,7 @@ export default function AdminSponsorsPage({
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="sponsors-contact-phone" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <label htmlFor="sponsors-contact-phone" className="form-label row row-tight">
                       <Phone size={12} /> Contact Phone
                     </label>
                     <input id="sponsors-contact-phone"
@@ -664,7 +666,7 @@ export default function AdminSponsorsPage({
                   Internal only - never shown on the public site.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-row-2" style={{ gap: '1rem' }}>
                   <div className="form-group">
                     <label htmlFor="sponsors-package-value" className="form-label">Package Value</label>
                     <input id="sponsors-package-value"

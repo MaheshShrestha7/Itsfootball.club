@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
 import { preparePayment, readPaymentInput } from '@/lib/payments-server';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
+import { requireUser } from '@/lib/supabase/server-auth';
 
 // Starts a hosted Stripe Checkout on the club's connected account. The webhook completes it.
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`checkout:${getClientIp(req.headers)}`, 10, 10 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`checkout:${getClientIp(req.headers)}`, 10, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a few minutes.' }, { status: 429 });
   }
   const stripe = getStripe();
@@ -16,7 +17,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  const prepared = await preparePayment(db, readPaymentInput(k => (body as Record<string, unknown>)[k]));
+  // Renewals need the member's own session (see preparePayment)
+  const payer = await requireUser(req);
+  const prepared = await preparePayment(db, readPaymentInput(k => (body as Record<string, unknown>)[k]), payer.ok ? payer.userId : null);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { draft } = prepared;
   if (!draft.stripeAccountId || !draft.stripeChargesEnabled) {

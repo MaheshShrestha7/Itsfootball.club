@@ -59,7 +59,7 @@ export default function TournamentStandingsTable({
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="row">
             <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{groupTitle}</span>
             {advancingCount > 0 && (
               <span
@@ -77,7 +77,7 @@ export default function TournamentStandingsTable({
               </span>
             )}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <div className="text-meta">
             FIFA Rules • 3 PTS Win / 1 PTS Draw
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function TournamentStandingsTable({
 
                   {/* Team Crest & Name */}
                   <td style={{ padding: '0.85rem 1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div className="row row-loose">
                       <img loading="lazy" decoding="async" width={26} height={26}
                         src={team.logo_url || DEFAULT_CREST}
                         alt={`${team.name} crest`}
@@ -263,7 +263,7 @@ export default function TournamentStandingsTable({
                             );
                           })
                         ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                          <span className="text-meta">-</span>
                         )}
                       </div>
                     </td>

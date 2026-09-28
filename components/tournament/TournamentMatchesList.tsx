@@ -199,7 +199,7 @@ export default function TournamentMatchesList({
                   {match.match_time && <span>• {match.match_time}</span>}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div className="row">
                   {isLive && (
                     <span
                       style={{
@@ -236,7 +236,7 @@ export default function TournamentMatchesList({
                     </span>
                   )}
                   {!isLive && !isCompleted && (
-                    <span style={{ color: 'var(--text-muted)' }}>Upcoming</span>
+                    <span className="text-muted">Upcoming</span>
                   )}
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function TournamentMatchesList({
                   }}
                 >
                   {/* Home Team */}
-                  <div style={{ textAlign: 'center' }}>
+                  <div className="text-center">
                     <img loading="lazy" decoding="async" width={38} height={38}
                       src={match.home_team_logo || DEFAULT_CREST}
                       alt={`${match.home_team_name} crest`}
@@ -302,7 +302,7 @@ export default function TournamentMatchesList({
                   </div>
 
                   {/* Away Team */}
-                  <div style={{ textAlign: 'center' }}>
+                  <div className="text-center">
                     <img loading="lazy" decoding="async" width={38} height={38}
                       src={match.away_team_logo || DEFAULT_CREST}
                       alt={`${match.away_team_name} crest`}
@@ -357,7 +357,7 @@ export default function TournamentMatchesList({
                   {(match.tournament_stage || 'group') === 'group' && match.tournament_round ? ` • Round ${match.tournament_round}` : ''}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="row">
                   {isAdmin && onSelectMatch && (
                     <button
                       onClick={() => onSelectMatch(match)}

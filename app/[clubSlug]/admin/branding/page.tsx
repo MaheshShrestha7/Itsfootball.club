@@ -220,7 +220,7 @@ export default function AdminBrandingPage({
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
           Club Configuration & Visual Interface
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        <p className="text-body">
           Configure your club identity, establishment year, home ground specs, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
         </p>
       </div>
@@ -329,7 +329,7 @@ export default function AdminBrandingPage({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1.5rem' }}>
             <div className="form-group">
               <label className="form-label">Primary Color</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <input aria-label="Primary colour"
                   type="color"
                   name="primary_color"
@@ -349,7 +349,7 @@ export default function AdminBrandingPage({
 
             <div className="form-group">
               <label className="form-label">Secondary Color</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <input aria-label="Secondary colour"
                   type="color"
                   name="secondary_color"
@@ -369,7 +369,7 @@ export default function AdminBrandingPage({
 
             <div className="form-group">
               <label className="form-label">Accent / Gold</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <input aria-label="Accent colour"
                   type="color"
                   name="accent_color"
@@ -405,7 +405,7 @@ export default function AdminBrandingPage({
               <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: formData.primary_color }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem' }}>{formData.name}</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({formData.short_name})</span>
+                <span className="text-note">({formData.short_name})</span>
                 <span
                   style={{
                     fontSize: '0.72rem',
@@ -422,7 +422,7 @@ export default function AdminBrandingPage({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="row row-loose">
               <button
                 type="button"
                 className="btn btn-sm"
@@ -504,7 +504,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="branding-club-establishment-year" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-club-establishment-year" className="form-label row">
                 <Calendar size={15} color="var(--club-primary)" />
                 <span>Club Establishment Year *</span>
               </label>
@@ -549,7 +549,7 @@ export default function AdminBrandingPage({
                 </label>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <span style={{
                   padding: '0.7rem 0.85rem',
                   background: 'rgba(var(--tint-rgb), 0.05)',
@@ -635,6 +635,7 @@ export default function AdminBrandingPage({
           {/* Real Drag-and-Drop & Direct URL Upload Zones */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
             <ImageUploadZone
+              clubId={club.id}
               label="Official Club Crest / Logo"
               recommendedText="Square 500x500px PNG or SVG (transparent background recommended)"
               currentImageUrl={formData.logo_url}
@@ -647,6 +648,7 @@ export default function AdminBrandingPage({
             />
 
             <ImageUploadZone
+              clubId={club.id}
               label="Hero Home Ground Banner"
               recommendedText="Wide 1920x1080px (16:9) home ground photography for public hero showcase"
               currentImageUrl={formData.banner_url}
@@ -758,7 +760,7 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label htmlFor="branding-official-secretariat-email" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-official-secretariat-email" className="form-label row">
                 <Mail size={14} color="var(--club-primary)" />
                 <span>Official Secretariat Email</span>
               </label>
@@ -773,7 +775,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label row">
                 <Phone size={14} color="var(--club-primary)" />
                 <span>Secretariat Phone / Matchday Hotline</span>
               </label>
@@ -842,13 +844,12 @@ export default function AdminBrandingPage({
             href={`/${slugValidation.valid && formData.slug ? slugValidation.cleanSlug : club?.slug || 'clubs'}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            className="btn btn-secondary row"
           >
             <span>Preview Public Portal</span>
             <ExternalLink size={14} />
           </a>
-          <button type="submit" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button type="submit" className="btn btn-primary btn-lg row">
             <Save size={18} />
             <span>Save Branding Configuration</span>
           </button>

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 import SquadRoster from '@/components/SquadRoster';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = [
   { value: 'GK', label: 'GK', desc: 'Goalkeeper' },
@@ -244,6 +245,7 @@ export default function AdminSquadPage({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', 'members');
+      formData.append('clubId', club.id);
 
       const token = await getAccessToken();
       const res = await fetch('/api/upload', {
@@ -377,8 +379,8 @@ export default function AdminSquadPage({
     setModalOpen(false);
   };
 
-  const handleDeleteMember = (memberId: string, memberName: string) => {
-    if (!confirm(`Are you sure you want to remove ${memberName} from the club registry?`)) return;
+  const handleDeleteMember = async (memberId: string, memberName: string) => {
+    if (!(await confirmAction({ title: `Remove ${memberName}?`, message: 'They will be removed from the club registry.', confirmLabel: 'Remove member', danger: true }))) return;
 
     deleteMember(memberId);
 
@@ -461,22 +463,22 @@ export default function AdminSquadPage({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
             <span className="badge badge-primary">SQUAD ROSTER & PLAYERS</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span className="text-note">
               Total: {clubMembers.length} Members ({clubMembers.filter(m => {
                 const roles = getMemberRoles(m);
                 return roles.some(r => r.toLowerCase().includes('player')) || Boolean(m.player_position);
               }).length} Players)
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             Squad & Members Administration
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Manage first team roster, multi-role leadership (Player, Executive Committee, Manager, Club Admin), Cloudflare R2 photos, and player stats.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="row row-loose row-wrap">
           <button
             type="button"
             onClick={() => setBulkModalOpen(true)}
@@ -580,7 +582,7 @@ export default function AdminSquadPage({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            Showing <strong style={{ color: 'var(--text-primary)' }}>{filteredMembers.length}</strong> of {clubMembers.length} members
+            Showing <strong className="text-primary">{filteredMembers.length}</strong> of {clubMembers.length} members
           </span>
           <div role="group" aria-label="Roster layout" style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
             {([['list', List, 'List view'], ['grid', LayoutGrid, 'Grid view']] as const).map(([mode, Icon, label]) => (
@@ -665,7 +667,7 @@ export default function AdminSquadPage({
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                   {editingMember ? 'Edit Club Member' : 'Register New Club Member'}
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <span className="text-note">
                   Multi-Role Governance • Cloudflare R2 Media • Squad Hierarchy
                 </span>
               </div>
@@ -856,7 +858,7 @@ export default function AdminSquadPage({
               {/* 3. EMAIL & PHONE NUMBER */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
-                  <label htmlFor="squad-email-address" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-email-address" className="form-label row">
                     <Mail size={13} /> Email Address *
                   </label>
                   <input id="squad-email-address"
@@ -870,7 +872,7 @@ export default function AdminSquadPage({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="squad-phone-number" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label htmlFor="squad-phone-number" className="form-label row">
                     <Phone size={13} /> Phone Number
                   </label>
                   <input id="squad-phone-number"
@@ -962,7 +964,7 @@ export default function AdminSquadPage({
                     <Shield size={14} /> Player Positioning & Kit Specifications
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
                     {/* Primary Position */}
                     <div className="form-group">
                       <label htmlFor="squad-primary-position" className="form-label">
@@ -984,7 +986,7 @@ export default function AdminSquadPage({
 
                     {/* Jersey Number */}
                     <div className="form-group">
-                      <label htmlFor="squad-jersey-number" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <label htmlFor="squad-jersey-number" className="form-label row row-tight">
                         <Hash size={13} /> Jersey Number
                       </label>
                       <input id="squad-jersey-number"
@@ -1004,7 +1006,7 @@ export default function AdminSquadPage({
                   {/* Secondary Positions (Multi-select up to 5) */}
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <label className="form-label" style={{ margin: 0 }}>
+                      <label className="form-label m-0">
                         Secondary Positions (Option to select up to 5)
                       </label>
                       <span style={{
@@ -1169,7 +1171,7 @@ export default function AdminSquadPage({
             borderRadius: 'var(--radius-xl)',
             padding: 'clamp(1.2rem, 3vw, 2rem)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   Update Player Stats
@@ -1182,7 +1184,7 @@ export default function AdminSquadPage({
             </div>
 
             <form onSubmit={handleSaveStats}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="squad-appearances" className="form-label">Appearances</label>
                   <input id="squad-appearances"

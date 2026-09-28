@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { sponsorHref } from '@/lib/sponsors';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, max) : '');
@@ -9,7 +9,7 @@ const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>
 // Public sponsorship sign-up: creates a hidden 'prospect' sponsor the club can then take payment for.
 // It stays off the public site until an admin adds the logo and switches it on.
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`sponsor-apply:${getClientIp(req.headers)}`, 3, 10 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`sponsor-apply:${getClientIp(req.headers)}`, 3, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a few minutes.' }, { status: 429 });
   }
   const db = getServiceClient();

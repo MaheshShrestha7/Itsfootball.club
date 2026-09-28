@@ -137,15 +137,15 @@ export default function AdminContentPage({
       }}>
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CONTENT & MEDIA CMS</span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             Content & Media Management
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Publish club news, match reports, match highlights, and video embeds.
           </p>
         </div>
 
-        <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <button onClick={handleOpenAdd} className="btn btn-primary row">
           <Plus size={16} />
           <span>Publish Article / Video</span>
         </button>
@@ -180,7 +180,7 @@ export default function AdminContentPage({
                       <Play size={10} /> VIDEO
                     </span>
                   )}
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span className="text-meta">
                     {new Date(article.published_at).toLocaleDateString()} • {article.author_name}
                   </span>
                 </div>
@@ -194,7 +194,7 @@ export default function AdminContentPage({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div className="row">
               {(() => {
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'news' && p.target_id === article.id);
                 return (
@@ -251,7 +251,7 @@ export default function AdminContentPage({
             borderRadius: 'var(--radius-xl)',
             padding: '2rem',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingId ? 'Edit Article' : 'Publish New Story'}
               </h3>
@@ -293,7 +293,7 @@ export default function AdminContentPage({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="content-cover-image-url" className="form-label">Cover Image URL</label>
                   <input id="content-cover-image-url"
@@ -316,7 +316,7 @@ export default function AdminContentPage({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="content-author-name" className="form-label">Author Name</label>
                   <input id="content-author-name"

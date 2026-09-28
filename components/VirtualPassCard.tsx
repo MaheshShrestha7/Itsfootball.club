@@ -197,7 +197,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 transform: 'translateZ(20px)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="row row-loose">
                 <div
                   data-theme="dark" style={{
                     width: '44px',
@@ -314,8 +314,8 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 >
                   {member.is_executive ? member.executive_title : member.membership_tier}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Position: <strong style={{ color: 'var(--text-primary)' }}>{member.player_position || 'Squad Member'}</strong>
+                <div className="text-meta">
+                  Position: <strong className="text-primary">{member.player_position || 'Squad Member'}</strong>
                 </div>
               </div>
             </div>
@@ -447,12 +447,12 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Member Email & Phone</div>
-                  <div style={{ color: 'var(--text-primary)' }}>{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
+                  <div className="text-primary">{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
                 </div>
 
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Nationality & DOB</div>
-                  <div style={{ color: 'var(--text-primary)' }}>{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
+                  <div className="text-primary">{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
                 </div>
 
                 <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '0.65rem 0.8rem', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -481,7 +481,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
       </div>
 
       {/* Card Interactive Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="row row-loose">
         <button
           onClick={handleFlipToggle}
           className="btn btn-secondary btn-sm"

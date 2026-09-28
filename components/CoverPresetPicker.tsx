@@ -7,7 +7,7 @@ import { COVER_PRESETS, sameCover } from '@/lib/cover-presets';
 export default function CoverPresetPicker({ value, onPick }: { value?: string; onPick: (url: string) => void }) {
   return (
     <div style={{ marginTop: '0.5rem' }}>
-      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Or pick a preset:</span>
+      <span className="text-meta">Or pick a preset:</span>
       <div
         style={{
           display: 'grid',

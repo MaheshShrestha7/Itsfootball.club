@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { CreditCard, Landmark, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, paymentReference } from '@/lib/finance';
 import type { ClubPaymentSettings } from '@/lib/supabase/types';
 
@@ -19,6 +19,12 @@ interface PaymentStepProps {
 
 // Pay by card (hosted Stripe Checkout on the club's account) or by bank transfer with a receipt.
 // Used by membership sign-up, renewal and sponsorship sign-up.
+
+// Renewals are checked against the signed-in member's session (lib/payments-server.ts)
+async function authHeaders(base: Record<string, string> = {}) {
+  const token = await getAccessToken();
+  return token ? { ...base, Authorization: `Bearer ${token}` } : base;
+}
 export default function PaymentStep(props: PaymentStepProps) {
   const { clubId, kind, memberId, sponsorId, planId, packageId, amountCents, label } = props;
   const [settings, setSettings] = useState<ClubPaymentSettings | null | undefined>(undefined);
@@ -48,7 +54,7 @@ export default function PaymentStep(props: PaymentStepProps) {
     try {
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(ids),
       });
       const json = await res.json();
@@ -70,7 +76,7 @@ export default function PaymentStep(props: PaymentStepProps) {
     form.append('reference', payerRef);
     form.append('receipt', file);
     try {
-      const res = await fetch('/api/payments/bank-transfer', { method: 'POST', body: form });
+      const res = await fetch('/api/payments/bank-transfer', { method: 'POST', headers: await authHeaders(), body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Could not send your receipt.');
       setSent(true);
@@ -101,7 +107,7 @@ export default function PaymentStep(props: PaymentStepProps) {
       </div>
 
       {settings === undefined ? (
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading payment options…</p>
+        <p className="text-note">Loading payment options…</p>
       ) : !cardOn && !bankOn ? (
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
           Online payment isn&apos;t set up for this club yet. The club will be in touch about payment.
@@ -122,16 +128,16 @@ export default function PaymentStep(props: PaymentStepProps) {
           </div>
 
           {method === 'card' && (
-            <button type="button" className="btn btn-primary" onClick={payByCard} disabled={busy} style={{ width: '100%' }}>
+            <button type="button" className="btn btn-primary w-full" onClick={payByCard} disabled={busy}>
               {busy ? 'Opening secure checkout…' : `Pay ${formatMoney(amountCents, currency)} securely`}
             </button>
           )}
 
           {method === 'bank' && (
-            <form onSubmit={sendReceipt} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <form onSubmit={sendReceipt} className="stack stack-sm">
               <div style={{ background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.85rem', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
                 {settings?.bank_details}
-                {'\n\n'}Amount: <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(amountCents, currency)}</strong>
+                {'\n\n'}Amount: <strong className="text-primary">{formatMoney(amountCents, currency)}</strong>
                 {'\n'}Reference: <strong style={{ color: 'var(--c-amber)' }}>{reference}</strong>
               </div>
               <div className="form-group">

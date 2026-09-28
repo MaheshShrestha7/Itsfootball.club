@@ -97,28 +97,28 @@ export default function EventDetailsPage({
             gap: '1rem',
             marginBottom: '1.75rem',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="row row-loose">
               <Calendar size={18} color={categoryColor} />
               <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Date</div>
+                <div className="text-meta">Date</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="row row-loose">
               <Clock size={18} color={categoryColor} />
               <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Time</div>
+                <div className="text-meta">Time</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   <LocalTime value={event.start_time} format="time" locale="en-US" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="row row-loose">
               <MapPin size={18} color={categoryColor} />
               <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Location</div>
+                <div className="text-meta">Location</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                   {event.location || club.stadium_name}
                 </div>
@@ -132,7 +132,7 @@ export default function EventDetailsPage({
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <Users size={13} /> Checked In
                 </span>
-                <strong style={{ color: 'var(--text-primary)' }}>{event.rsvp_count} / {event.max_capacity} checked in</strong>
+                <strong className="text-primary">{event.rsvp_count} / {event.max_capacity} checked in</strong>
               </div>
               <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ width: `${rsvpPct}%`, height: '100%', background: categoryColor, borderRadius: '3px' }} />
@@ -143,8 +143,7 @@ export default function EventDetailsPage({
           <button
             type="button"
             onClick={() => setContactModalOpen(true)}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            className="btn btn-primary row"
           >
             <span>RSVP / Inquire for Event</span>
           </button>

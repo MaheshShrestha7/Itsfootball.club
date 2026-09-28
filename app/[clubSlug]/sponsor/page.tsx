@@ -91,7 +91,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={sponsorId} packageId={selected.id}
             amountCents={selected.price_cents} label={`${selected.name} sponsorship`} />
         ) : packages === null ? (
-          <p style={{ color: 'var(--text-muted)' }}>Loading packages…</p>
+          <p className="text-muted">Loading packages…</p>
         ) : packages.length === 0 ? (
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             The club hasn&apos;t published sponsorship packages yet. Get in touch through the contact form on the club page.

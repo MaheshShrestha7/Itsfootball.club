@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
+import { getServiceClient } from '@/lib/supabase/service';
 
 const EVENT_TYPES = new Set(['impression', 'viewable_impression', 'click']);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function getServerSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
+// The only way into sponsor_analytics (the public key can no longer insert, migration 20261015),
+// so the figures clubs show their sponsors can't be padded around this limit.
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req.headers);
     // Generous limit: a single page view can fire an impression + viewable_impression
     // per sponsor shown, plus the occasional click.
-    const throttle = rateLimit(`sponsor-track:${ip}`, 120, 5 * 60 * 1000);
-    if (!throttle.allowed) {
+    if (!(await durableRateLimit(`sponsor-track:${ip}`, 120, 5 * 60 * 1000))) {
       return NextResponse.json({ success: false }, { status: 429 });
     }
 
@@ -52,9 +42,22 @@ export async function POST(req: NextRequest) {
       req.headers.get('x-vercel-ip-country') ||
       null;
 
-    const client = getServerSupabaseClient();
+    const client = getServiceClient();
     if (!client) {
       return NextResponse.json({ success: false }, { status: 503 });
+    }
+
+    // What the old insert policy checked: an active sponsor of this (active) club
+    const { data: sponsor } = await client
+      .from('sponsors')
+      .select('id, clubs!inner(is_active)')
+      .eq('id', sponsorId)
+      .eq('club_id', clubId)
+      .eq('is_active', true)
+      .eq('clubs.is_active', true)
+      .maybeSingle();
+    if (!sponsor) {
+      return NextResponse.json({ success: false }, { status: 404 });
     }
 
     const { error } = await client.from('sponsor_analytics').insert({

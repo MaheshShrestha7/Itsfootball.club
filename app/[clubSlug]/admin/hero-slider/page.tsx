@@ -255,15 +255,15 @@ export default function AdminHeroSliderPage({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-            <span className="badge badge-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="badge badge-primary row row-tight">
               <Sparkles size={12} />
               <span>HERO SLIDER SPOTLIGHT</span>
             </span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span className="text-note">
               {pinnedItems.length} items pinned ({activePinned.length} active)
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+          <h1 className="stat-value">
             Hero Slider & Pinned Content Manager
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px' }}>
@@ -271,7 +271,7 @@ export default function AdminHeroSliderPage({
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="row row-loose">
           <Link
             href={`/${club.slug}`}
             target="_blank"
@@ -358,7 +358,7 @@ export default function AdminHeroSliderPage({
         boxShadow: '0 12px 36px rgba(0,0,0,0.4)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="row">
             <Sliders size={18} color="var(--club-primary)" />
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Live Carousel Simulator
@@ -368,7 +368,7 @@ export default function AdminHeroSliderPage({
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="row">
             <button
               onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : Math.max(0, activePinned.length - 1)))}
               className="btn btn-secondary btn-sm"
@@ -448,11 +448,11 @@ export default function AdminHeroSliderPage({
                   {currentPreview.subtitle}
                 </p>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="row row-loose">
                   <div className="btn btn-primary btn-sm" style={{ pointerEvents: 'none', fontWeight: 700 }}>
                     {currentPreview.cta_label || 'Explore Action'}
                   </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <span className="text-note">
                     Links to: {currentPreview.cta_link || `/${club.slug}`}
                   </span>
                 </div>
@@ -462,7 +462,7 @@ export default function AdminHeroSliderPage({
             <div style={{ textAlign: 'center', padding: '3rem', position: 'relative', zIndex: 2 }}>
               <Info size={32} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem' }} />
               <p style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>No active pinned slides.</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Select items from the library below to pin them to the carousel.</p>
+              <p className="text-note">Select items from the library below to pin them to the carousel.</p>
             </div>
           )}
         </div>
@@ -501,7 +501,7 @@ export default function AdminHeroSliderPage({
       </div>
 
       {/* Grid: Left Column = Pinned Items Manager, Right Column = Pin Library & Custom Banner Builder */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div className="split-2">
         {/* Left Column: Currently Pinned Items (Order & Settings) */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -525,7 +525,7 @@ export default function AdminHeroSliderPage({
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="stack stack-sm">
             {pinnedItems.length === 0 ? (
               <div style={{
                 background: 'var(--bg-surface)',
@@ -565,7 +565,7 @@ export default function AdminHeroSliderPage({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div className="row">
                         <span style={{
                           width: '24px',
                           height: '24px',
@@ -600,7 +600,7 @@ export default function AdminHeroSliderPage({
                       </div>
 
                       {/* Reorder and Delete Controls */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <div className="row row-tight">
                         <button
                           onClick={() => handleToggleActive(index)}
                           title={item.is_active ? 'Click to deactivate slide' : 'Click to activate slide'}
@@ -785,9 +785,9 @@ export default function AdminHeroSliderPage({
 
           {/* Tab 1: Events Library */}
           {pickerTab === 'event' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="stack stack-sm">
               {clubEvents.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No events found for this club.</p>
+                <p className="text-note">No events found for this club.</p>
               ) : (
                 clubEvents.map(evt => {
                   const isPinned = pinnedItems.some(p => p.type === 'event' && p.target_id === evt.id);
@@ -811,7 +811,7 @@ export default function AdminHeroSliderPage({
                           <span className="badge badge-primary" style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>
                             {evt.category}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <span className="text-meta">
                             {new Date(evt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
@@ -848,9 +848,9 @@ export default function AdminHeroSliderPage({
 
           {/* Tab 2: Fixtures Library */}
           {pickerTab === 'fixture' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="stack stack-sm">
               {clubMatches.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No fixtures found for this club.</p>
+                <p className="text-note">No fixtures found for this club.</p>
               ) : (
                 clubMatches.map(m => {
                   const isPinned = pinnedItems.some(p => p.type === 'fixture' && p.target_id === m.id);
@@ -875,7 +875,7 @@ export default function AdminHeroSliderPage({
                           <span className={`badge ${isLive ? 'badge-live' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
                             {isLive ? `LIVE ${getLiveMinute(m)}'` : m.status.toUpperCase()}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <span className="text-meta">
                             {m.competition}
                           </span>
                         </div>
@@ -912,9 +912,9 @@ export default function AdminHeroSliderPage({
 
           {/* Tab 3: News Library */}
           {pickerTab === 'news' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="stack stack-sm">
               {clubNews.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No news articles found for this club.</p>
+                <p className="text-note">No news articles found for this club.</p>
               ) : (
                 clubNews.map(n => {
                   const isPinned = pinnedItems.some(p => p.type === 'news' && p.target_id === n.id);
@@ -938,7 +938,7 @@ export default function AdminHeroSliderPage({
                           <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', fontSize: '0.7rem' }}>
                             {n.tags[0] || 'DISPATCH'}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <span className="text-meta">
                             By {n.author_name}
                           </span>
                         </div>
@@ -1019,7 +1019,7 @@ export default function AdminHeroSliderPage({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="form-row-2" style={{ gap: '0.75rem' }}>
                 <div>
                   <label htmlFor="hero-slider-tag-badge" className="form-label" style={{ fontSize: '0.8rem' }}>Tag Badge</label>
                   <input id="hero-slider-tag-badge"

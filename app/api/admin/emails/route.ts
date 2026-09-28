@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminOfClub } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
-import { rateLimit } from '@/lib/rate-limit';
+import { durableRateLimit } from '@/lib/rate-limit';
 import { CLUB_BRAND_COLUMNS, type ClubBrandRow } from '@/lib/email/club-brand';
 import { filterDrafts, materialize, sendClubEmails } from '@/lib/email/club-emails';
 import { cleanSettings } from '@/lib/email/settings';
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'Email sending is not set up yet (RESEND_API_KEY).' }, { status: 503 });
   if (!due.length) return NextResponse.json({ ...summary, sent: 0, failed: 0 });
   if (due.length > MAX_RECIPIENTS) return NextResponse.json({ error: `A notice can go to at most ${MAX_RECIPIENTS} people.` }, { status: 400 });
-  if (!rateLimit(`notice:${club.id}`, 10, 60 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`notice:${club.id}`, 10, 60 * 60 * 1000))) {
     return NextResponse.json({ error: 'That\'s a lot of notices in an hour. Please wait a while before sending more.' }, { status: 429 });
   }
 

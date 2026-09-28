@@ -410,12 +410,12 @@ export default function MatchCenterPage({
                   <>
                     <span className="team-name-full">
                       <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
-                      <span style={{ color: 'var(--text-muted)' }}> vs </span>
+                      <span className="text-muted"> vs </span>
                       <span style={{ color: titleColors.away }}>{match.away_team_name}</span>
                     </span>
                     <span className="team-name-short">
                       <span style={{ color: titleColors.home }}>{homeShort}</span>
-                      <span style={{ color: 'var(--text-muted)' }}> vs </span>
+                      <span className="text-muted"> vs </span>
                       <span style={{ color: titleColors.away }}>{awayShort}</span>
                     </span>
                   </>
@@ -453,7 +453,7 @@ export default function MatchCenterPage({
                 </>
               )}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            <span className="text-note">
               {(!match.competition || match.competition === 'Premier Regional League') ? (match.match_type ? `${match.match_type.toUpperCase()} FIXTURE` : 'CLUB FRIENDLY') : match.competition} • {match.venue}
             </span>
           </div>
@@ -516,7 +516,7 @@ export default function MatchCenterPage({
                 <span className="team-name-full">{match.home_team_name}</span>
                 <span className="team-name-short">{homeShort}</span>
               </h2>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>HOME</span>
+              <span className="text-meta">HOME</span>
             </div>
 
             {/* Stadium Mechanical Scoreboard Digit Display */}
@@ -623,7 +623,7 @@ export default function MatchCenterPage({
                 <span className="team-name-full">{match.away_team_name}</span>
                 <span className="team-name-short">{awayShort}</span>
               </h2>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>AWAY</span>
+              <span className="text-meta">AWAY</span>
             </div>
           </div>
         </div>
@@ -662,7 +662,7 @@ export default function MatchCenterPage({
                     <Star size={11} color="#040609" fill="#040609" />
                   </div>
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-amber)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Player of the Match
                   </div>
@@ -688,7 +688,7 @@ export default function MatchCenterPage({
                         {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
                       </span>
                       {evt.assist_player_name && (
-                        <span style={{ color: 'var(--text-secondary)' }}>(Assist: {evt.assist_player_name})</span>
+                        <span className="text-secondary">(Assist: {evt.assist_player_name})</span>
                       )}
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                         {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
@@ -796,7 +796,7 @@ export default function MatchCenterPage({
                         }}>
                           {evt.event_type.toUpperCase().replace('_', ' ')}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        <span className="text-meta">
                           {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                         </span>
                       </div>
@@ -867,7 +867,7 @@ export default function MatchCenterPage({
                       background: 'rgba(var(--tint-rgb), 0.03)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="row row-loose">
                       <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={32} />
                       <span style={{
                         fontFamily: 'var(--font-heading)',
@@ -936,7 +936,7 @@ export default function MatchCenterPage({
                   <div key={s.label} style={{ marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--c-green)', minWidth: '24px' }}>{s.home}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+                      <span className="text-muted">{s.label}</span>
                       <span style={{ color: 'var(--c-blue)', minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
                     </div>
                     <div style={{ height: '8px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>

@@ -117,7 +117,7 @@ export default function TournamentScoreModal({
             background: 'rgba(var(--tint-rgb), 0.02)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div className="row row-loose">
             <div
               style={{
                 width: '34px',
@@ -204,7 +204,7 @@ export default function TournamentScoreModal({
             }}
           >
             {/* Home Team */}
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <img loading="lazy" decoding="async" width={44} height={44}
                 src={match.home_team_logo || DEFAULT_CREST}
                 alt={`${match.home_team_name} crest`}
@@ -235,12 +235,12 @@ export default function TournamentScoreModal({
             </div>
 
             {/* VS / Divider */}
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-secondary)' }}>VS</span>
             </div>
 
             {/* Away Team */}
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <img loading="lazy" decoding="async" width={44} height={44}
                 src={match.away_team_logo || DEFAULT_CREST}
                 alt={`${match.away_team_name} crest`}
@@ -312,7 +312,7 @@ export default function TournamentScoreModal({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPensEnabled ? '0.75rem' : '0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="row">
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--c-amber)' }}>
                     Penalty Shootout (Ties)
                   </span>
@@ -333,7 +333,7 @@ export default function TournamentScoreModal({
               </div>
 
               {isPensEnabled && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
+                <div className="form-row-2" style={{ gap: '1rem', marginTop: '0.5rem' }}>
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{match.home_team_name} Pens</span>
                     <input aria-label={`${match.home_team_name} penalties`}

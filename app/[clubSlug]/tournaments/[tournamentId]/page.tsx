@@ -55,7 +55,7 @@ export default function PublicTournamentDetailPage({
       <div style={{ minHeight: '100vh', background: 'rgb(var(--dk-9-13-22))', color: 'var(--text-primary)' }}>
         <div style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
           <h2>Tournament Not Found</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>The requested tournament does not exist or has concluded.</p>
+          <p className="text-secondary">The requested tournament does not exist or has concluded.</p>
           <Link href={`/${club.slug}/tournaments`} className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
             Back to Tournaments
           </Link>
@@ -174,17 +174,17 @@ export default function PublicTournamentDetailPage({
                     <span>{formatLabel}</span>
                   </span>
                   <span>•</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span className="row row-tight">
                     <Calendar size={14} />
                     <span>Season {tournament.season}</span>
                   </span>
                   <span>•</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span className="row row-tight">
                     <Clock size={14} />
                     <span>{parseTournamentDate(tournament.start_date) ? <LocalTime value={parseTournamentDate(tournament.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
                   </span>
                   <span>•</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span className="row row-tight">
                     <MapPin size={14} />
                     <span>{tournament.venue || 'Stadium Arena'}</span>
                   </span>
@@ -388,7 +388,7 @@ export default function PublicTournamentDetailPage({
                   alt=""
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}
                 />
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0">
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {part.name}
                   </div>
@@ -409,7 +409,7 @@ export default function PublicTournamentDetailPage({
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
                     </span>
                     {part.seed && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      <span className="text-meta">
                         Seed #{part.seed}
                       </span>
                     )}

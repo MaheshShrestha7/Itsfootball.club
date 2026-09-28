@@ -301,8 +301,8 @@ export default function AdminSeasonsPage({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span>📅 From: <strong style={{ color: 'var(--text-primary)' }}>{activeSeason.start_date}</strong></span>
-                <span>🏁 Until: <strong style={{ color: 'var(--text-primary)' }}>{activeSeason.end_date}</strong></span>
+                <span>📅 From: <strong className="text-primary">{activeSeason.start_date}</strong></span>
+                <span>🏁 Until: <strong className="text-primary">{activeSeason.end_date}</strong></span>
               </div>
             </div>
 
@@ -343,7 +343,7 @@ export default function AdminSeasonsPage({
 
       {/* All Seasons List Card */}
       <div className="glass-panel" style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div className="section-head">
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Club Seasons Registry ({clubSeasons.length})
@@ -367,7 +367,7 @@ export default function AdminSeasonsPage({
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="stack">
             {clubSeasons.map(season => {
               const stats = getSeasonStats(season.name);
               return (
@@ -403,7 +403,7 @@ export default function AdminSeasonsPage({
                     </div>
 
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div className="row">
                         <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                           {season.name}
                         </span>
@@ -455,7 +455,7 @@ export default function AdminSeasonsPage({
                   </div>
 
                   {/* Right Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="row">
                     {!season.is_current && (
                       <button
                         onClick={() => handleSetCurrent(season)}
@@ -470,8 +470,7 @@ export default function AdminSeasonsPage({
 
                     <button
                       onClick={() => handleOpenEdit(season)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      className="btn btn-secondary btn-sm row row-tight"
                       title="Edit season details"
                     >
                       <Edit2 size={14} />
@@ -543,7 +542,7 @@ export default function AdminSeasonsPage({
             background: 'var(--bg-surface)',
             boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div className="section-head">
               <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CalendarDays size={20} color="var(--c-green)" />
                 {editingSeason ? 'Edit Season Details' : 'Create New Club Season'}
@@ -592,7 +591,7 @@ export default function AdminSeasonsPage({
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="seasons-start-date" className="form-label" style={{ fontWeight: 700 }}>
                     Start Date <span style={{ color: 'var(--c-red)' }}>*</span>
@@ -677,8 +676,7 @@ export default function AdminSeasonsPage({
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  className="btn btn-primary row"
                 >
                   <Check size={16} />
                   <span>{editingSeason ? 'Save Changes' : 'Create Season'}</span>

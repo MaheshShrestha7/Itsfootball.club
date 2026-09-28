@@ -227,7 +227,7 @@ function AvailabilityHub() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
             <Link href={`/${club.slug}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>{club.name}</Link>
             <ChevronRight size={14} />
-            <span style={{ color: 'var(--text-primary)' }}>Matchday Availability & RSVP</span>
+            <span className="text-primary">Matchday Availability & RSVP</span>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -241,11 +241,10 @@ function AvailabilityHub() {
             </div>
 
             {/* Quick Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="row row-loose">
               <button
                 onClick={handleCopyLink}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                className="btn btn-secondary btn-sm row"
                 title="Copy general availability link"
               >
                 {copiedLink ? <Check size={14} color="var(--c-green)" /> : <Copy size={14} />}
@@ -330,7 +329,7 @@ function AvailabilityHub() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="row row-loose">
                     <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                     <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{targetMatch.home_team_name}</span>
                   </div>
@@ -342,15 +341,15 @@ function AvailabilityHub() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="row">
                     <Calendar size={15} color={club.primary_color} />
                     <span>{new Date(targetMatch.match_date).toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="row">
                     <Clock size={15} color={club.primary_color} />
                     <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="row">
                     <MapPin size={15} color={club.primary_color} />
                     <span>{targetMatch.venue}</span>
                   </div>
@@ -643,8 +642,8 @@ function AvailabilityHub() {
                       {/* Player Info */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
                         <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={36} />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div className="min-w-0">
+                          <div className="row">
                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {player.full_name}
                             </span>
@@ -804,12 +803,12 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
   return (
     <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div className="glass-panel" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
-        {state === 'loading' && <p style={{ color: 'var(--text-muted)' }}>Checking your link...</p>}
+        {state === 'loading' && <p className="text-muted">Checking your link...</p>}
 
         {state === 'invalid' && (
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Link not recognised</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            <p className="text-body">
               This availability link is missing or no longer valid. Ask your club for your personal link.
             </p>
           </div>

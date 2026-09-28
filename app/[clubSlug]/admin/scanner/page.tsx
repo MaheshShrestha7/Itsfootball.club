@@ -133,10 +133,10 @@ export default function AdminScannerPage({
     <div>
       <div style={{ marginBottom: '2rem' }}>
         <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY ACCREDITATION</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+        <h1 className="stat-value">
           QR Scanner Reticle & Gate Check-In
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+        <p className="text-body">
           Scan digital QR passes for member verification and turnstile event check-in operations.
         </p>
       </div>
@@ -180,8 +180,8 @@ export default function AdminScannerPage({
           </div>
 
           {mode === 'match_checkin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Match:</span>
+            <div className="row row-loose row-wrap">
+              <span className="text-note">Target Match:</span>
               <select aria-label="Target match"
                 className="form-select"
                 style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
@@ -198,8 +198,8 @@ export default function AdminScannerPage({
           )}
 
           {mode === 'checkin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Event:</span>
+            <div className="row row-loose row-wrap">
+              <span className="text-note">Target Event:</span>
               <select aria-label="Target event"
                 className="form-select"
                 style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
@@ -342,17 +342,17 @@ export default function AdminScannerPage({
 
         {/* Right: Realtime Scan Log Stream */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+          <div className="section-head">
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <History size={18} color="var(--club-primary)" />
               <span>Turnstile Scan Stream</span>
             </h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span className="text-meta">
               {scanLogs.length} scans this session
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="stack stack-sm">
             {scanLogs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 Awaiting scans. Click any test member chip or position camera over a member pass.
@@ -372,7 +372,7 @@ export default function AdminScannerPage({
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="row">
                       <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                         {log.memberName || log.token}
                       </span>

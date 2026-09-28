@@ -166,7 +166,7 @@ export default function MyClubsPage() {
 
               {/* Users with no clubs get "Search for Club to Join" in the empty state instead */}
               {hasClubs && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div className="row row-loose row-wrap">
                   <Link href="/clubs" className="btn btn-secondary touch-target" style={{ minHeight: '44px' }}>
                     <Trophy size={16} /> <span>Browse Directory</span>
                   </Link>
@@ -256,7 +256,7 @@ export default function MyClubsPage() {
                             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                               {club.name}
                             </h3>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <span className="text-meta">
                               {club.short_name} • Founded {club.founded_year}
                             </span>
                           </div>
@@ -273,7 +273,7 @@ export default function MyClubsPage() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                               <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
-                              <span style={{ color: 'var(--text-primary)' }}>{club.stadium_name}</span>
+                              <span className="text-primary">{club.stadium_name}</span>
                             </div>
                             <div>
                               Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
@@ -418,7 +418,7 @@ export default function MyClubsPage() {
                               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                                 {club.name}
                               </h3>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              <span className="text-meta">
                                 {club.short_name} • Founded {club.founded_year}
                               </span>
                             </div>
@@ -434,7 +434,7 @@ export default function MyClubsPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                 <MapPin size={14} color={club.primary_color} style={{ flexShrink: 0 }} />
-                                <span style={{ color: 'var(--text-primary)' }}>{club.stadium_name}</span>
+                                <span className="text-primary">{club.stadium_name}</span>
                               </div>
                               <div>
                                 Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
@@ -600,7 +600,7 @@ export default function MyClubsPage() {
                     <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       ⚡ 60-Second Setup
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <div className="text-note">
                       Identity, crest, home ground, and team colours ready out of the box.
                     </div>
                   </div>
@@ -608,7 +608,7 @@ export default function MyClubsPage() {
                     <div style={{ fontWeight: 800, color: 'var(--c-amber)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       📻 Pitchside Live Desk
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <div className="text-note">
                       Broadcast commentary, cards, and goal events live to supporters.
                     </div>
                   </div>
@@ -616,7 +616,7 @@ export default function MyClubsPage() {
                     <div style={{ fontWeight: 800, color: 'var(--c-blue)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                       🎟️ Digital Turnstiles
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <div className="text-note">
                       Issue matchday passes with real-time QR code turnstile check-in.
                     </div>
                   </div>

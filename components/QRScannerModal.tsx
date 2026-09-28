@@ -243,7 +243,7 @@ export default function QRScannerModal({
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="row">
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
               style={{
@@ -498,7 +498,7 @@ export default function QRScannerModal({
 
         {/* Footer actions */}
         <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <span className="text-meta">
             Turnstile Controller • itsfootball.club Gate Protocol
           </span>
           <button onClick={onClose} className="btn btn-secondary btn-sm">

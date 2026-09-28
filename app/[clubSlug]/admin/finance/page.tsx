@@ -11,6 +11,7 @@ import {
 import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
@@ -32,7 +33,7 @@ async function openReceipt(type: 'payment' | 'expense', id: string) {
   const res = await fetch(`/api/payments/receipt?type=${type}&id=${id}`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json().catch(() => ({}));
   if (res.ok && json.url && win) win.location.href = json.url;
-  else { win?.close(); alert(json.error || 'Could not open the receipt.'); }
+  else { win?.close(); await notify(json.error || 'Could not open the receipt.'); }
 }
 
 export default function FinancePage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -123,7 +124,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <label className="form-label" htmlFor="finance-season" style={{ margin: 0 }}>Season</label>
+          <label className="form-label m-0" htmlFor="finance-season">Season</label>
           <select id="finance-season" className="form-select" style={{ width: 'auto' }} value={season} onChange={e => setSeason(e.target.value)}>
             <option value="all">All seasons</option>
             {seasons.map(s => <option key={s} value={s}>{s}</option>)}
@@ -231,7 +232,7 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Memberships due ({expiring.length})</h3>
-          {expiring.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nobody expires in the next 30 days.</p> : (
+          {expiring.length === 0 ? <p className="text-note">Nobody expires in the next 30 days.</p> : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
               {expiring.map(m => (
                 <li key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -244,11 +245,11 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
         </div>
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Unpaid sponsorships ({pledges.length})</h3>
-          {pledges.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No outstanding sponsor deals.</p> : (
+          {pledges.length === 0 ? <p className="text-note">No outstanding sponsor deals.</p> : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {pledges.map(s => (
                 <li key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <span>{s.name} <span style={{ color: 'var(--text-muted)' }}>({s.package_status})</span></span>
+                  <span>{s.name} <span className="text-muted">({s.package_status})</span></span>
                   <span style={{ fontWeight: 700 }}>{s.package_value ? money(Math.round(s.package_value * 100)) : '-'}</span>
                 </li>
               ))}
@@ -271,7 +272,7 @@ function Bars({ title, rows, money, color }: { title: string; rows: { label: str
   return (
     <div className="glass-panel" style={{ padding: '1.25rem' }}>
       <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>{title}</h3>
-      {rows.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nothing recorded yet.</p> : rows.map(r => (
+      {rows.length === 0 ? <p className="text-note">Nothing recorded yet.</p> : rows.map(r => (
         <div key={r.label} style={{ marginBottom: '0.6rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
             <span>{r.label}</span><strong>{money(r.value)}</strong>
@@ -347,7 +348,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
         <select className="form-select" style={{ width: 'auto' }} value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
           <option value="all">All statuses</option>
@@ -458,7 +459,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+      <p className="text-note">
         Total shown (paid): {money(rows.filter(p => p.status === 'paid').reduce((n, p) => n + p.amount_cents, 0))}. Card refunds are made in your Stripe dashboard and update here automatically.
       </p>
     </div>
@@ -508,14 +509,14 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
   };
 
   const remove = async (e: Expense) => {
-    if (!confirm(`Delete "${e.description}"?`)) return;
+    if (!(await confirmAction({ title: `Delete "${e.description}"?`, message: 'This expense will be removed from your records.', confirmLabel: 'Delete expense', danger: true }))) return;
     const { error } = await db!.from('expenses').delete().eq('id', e.id);
     if (error) return flash('error', error.message);
     load();
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack">
       <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setOpen(o => !o); }}><Plus size={16} /> Add expense</button>
 
       {open && (
@@ -605,7 +606,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total shown: {money(expenses.reduce((n, e) => n + e.amount_cents, 0))}</p>
+      <p className="text-note">Total shown: {money(expenses.reduce((n, e) => n + e.amount_cents, 0))}</p>
     </div>
   );
 }
@@ -646,7 +647,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
   };
 
   const disconnectStripe = async () => {
-    if (!confirm('Disconnect Stripe? Card payments will stop until you connect again. Bank transfers keep working, and your Stripe account itself is not closed.')) return;
+    if (!(await confirmAction({ title: 'Disconnect Stripe?', message: 'Card payments will stop until you connect again. Bank transfers keep working, and your Stripe account itself is not closed.', confirmLabel: 'Disconnect', danger: true }))) return;
     const res = await fetch(`/api/stripe/connect?clubId=${club.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${await getAccessToken()}` },
@@ -720,7 +721,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
         extraLabel="Tier"
         textField="benefits"
       />
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+      <p className="text-note">
         Public sign-up pages: <a href={`/${club.slug}/member`}>/{club.slug}/member</a> and <a href={`/${club.slug}/sponsor`}>/{club.slug}/sponsor</a>
       </p>
     </div>
@@ -755,7 +756,7 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
     load();
   };
   const remove = async (id: string) => {
-    if (!confirm('Delete this? Past payments keep their amounts. Untick "active" instead to just hide it.')) return;
+    if (!(await confirmAction({ title: 'Delete this?', message: 'Past payments keep their amounts. Untick "active" instead to just hide it.', confirmLabel: 'Delete', danger: true }))) return;
     const { error } = await db!.from(table).delete().eq('id', id);
     if (error) return flash('error', error.message);
     load();
@@ -767,8 +768,8 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
         <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h3>
         <button type="button" className="btn btn-secondary btn-sm" onClick={add}><Plus size={14} /> Add</button>
       </div>
-      {rows.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None yet.</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {rows.length === 0 && <p className="text-note">None yet.</p>}
+      <div className="stack stack-sm">
         {rows.map(r => {
           const row = draft[r.id] || r;
           const set = (patch: Partial<T>) => setDraft(d => ({ ...d, [r.id]: { ...row, ...patch } }));

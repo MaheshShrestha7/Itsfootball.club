@@ -592,7 +592,7 @@ export default function BulkMemberModal({
               <span className="badge badge-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem' }}>
                 <Shield size={12} /> ROSTER GOVERNANCE
               </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <span className="text-note">
                 {club.name}
               </span>
             </div>
@@ -686,7 +686,7 @@ export default function BulkMemberModal({
                   Choose which members to export. The resulting file includes membership status, role, player positions, contact information, and registration metadata.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.25rem' }}>
+                <div className="form-row-2" style={{ gap: '1rem', marginTop: '1.25rem' }}>
                   <div className="form-group">
                     <label htmlFor="bulkmembermodal-membership-status" className="form-label">Membership Status</label>
                     <select id="bulkmembermodal-membership-status"
@@ -782,7 +782,7 @@ export default function BulkMemberModal({
                 borderTop: '1px solid var(--border-subtle)',
               }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Ready to export <strong style={{ color: 'var(--text-primary)' }}>{filteredExportMembers.length}</strong> matching members.
+                  Ready to export <strong className="text-primary">{filteredExportMembers.length}</strong> matching members.
                 </div>
                 <button
                   type="button"
@@ -813,7 +813,7 @@ export default function BulkMemberModal({
                 border: '1px solid rgba(59, 130, 246, 0.2)',
                 borderRadius: '12px',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="row row-loose">
                   <FileSpreadsheet size={22} color="var(--c-sky)" />
                   <div>
                     <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
@@ -904,7 +904,7 @@ export default function BulkMemberModal({
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.25rem' }}>
                     {fileName ? fileName : 'Click or Drag & Drop member file here'}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div className="text-note">
                     Supports UTF-8 formatted .csv and .json roster records
                   </div>
                 </div>
@@ -926,7 +926,7 @@ export default function BulkMemberModal({
 
               {/* Duplicate Handling Policy */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="row">
                   <HelpCircle size={15} color="var(--text-muted)" />
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Duplicate Resolution (matched by email):</span>
                 </div>
@@ -954,27 +954,27 @@ export default function BulkMemberModal({
 
               {/* Parsing Validation Summary & Preview Table */}
               {parsedRows.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="stack">
                   {/* Stats Bar */}
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(var(--tint-rgb), 0.04)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Parsed: </span>
-                      <strong style={{ color: 'var(--text-primary)' }}>{parsedRows.length}</strong>
+                      <span className="text-meta">Total Parsed: </span>
+                      <strong className="text-primary">{parsedRows.length}</strong>
                     </div>
                     <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>Valid Entries: </span>
-                      <strong style={{ color: 'var(--text-primary)' }}>{validCount}</strong>
+                      <strong className="text-primary">{validCount}</strong>
                     </div>
                     {duplicateCount > 0 && (
                       <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)' }}>Existing Matches: </span>
-                        <strong style={{ color: 'var(--text-primary)' }}>{duplicateCount}</strong>
+                        <strong className="text-primary">{duplicateCount}</strong>
                       </div>
                     )}
                     {errorCount > 0 && (
                       <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--c-red)' }}>Errors: </span>
-                        <strong style={{ color: 'var(--text-primary)' }}>{errorCount}</strong>
+                        <strong className="text-primary">{errorCount}</strong>
                       </div>
                     )}
                   </div>

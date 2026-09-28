@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { preparePayment, readPaymentInput } from '@/lib/payments-server';
 import { storeReceipt, MAX_RECEIPT_SIZE } from '@/lib/storage/receipts';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
+import { requireUser } from '@/lib/supabase/server-auth';
 
 // Records a bank transfer with the payer's receipt (photo or PDF) for an admin to verify.
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`bank-transfer:${getClientIp(req.headers)}`, 5, 10 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`bank-transfer:${getClientIp(req.headers)}`, 5, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes.' }, { status: 429 });
   }
   if (Number(req.headers.get('content-length') || 0) > MAX_RECEIPT_SIZE + 512 * 1024) {
@@ -18,7 +19,9 @@ export async function POST(req: NextRequest) {
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  const prepared = await preparePayment(db, readPaymentInput(k => form.get(k)));
+  // Renewals need the member's own session (see preparePayment)
+  const payer = await requireUser(req);
+  const prepared = await preparePayment(db, readPaymentInput(k => form.get(k)), payer.ok ? payer.userId : null);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { row } = prepared.draft;
 

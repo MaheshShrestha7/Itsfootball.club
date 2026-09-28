@@ -155,7 +155,7 @@ export default function VerifyPassPage({
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                       Position: {result.member.player_position || 'Staff'} • Number: #{result.member.jersey_number || 'N/A'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <div className="text-meta">
                       Valid Thru: {result.member.membership_expires_at}
                     </div>
                   </div>

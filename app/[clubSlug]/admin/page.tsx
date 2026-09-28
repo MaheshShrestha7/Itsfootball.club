@@ -66,7 +66,7 @@ export default function AdminDashboardPage({
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {club.name} Dashboard
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-body">
             Real-time club control room, match operations, squad accreditation, and public portal configurations.
           </p>
         </div>
@@ -197,7 +197,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Match Controller</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Score & live events</div>
+              <div className="text-meta">Score & live events</div>
             </div>
           </Link>
 
@@ -211,7 +211,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Branding</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Colors, logo & domain</div>
+              <div className="text-meta">Colors, logo & domain</div>
             </div>
           </Link>
 
@@ -225,7 +225,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Squad & Players</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roster & stats</div>
+              <div className="text-meta">Roster & stats</div>
             </div>
           </Link>
 
@@ -239,7 +239,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Events</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainings & social</div>
+              <div className="text-meta">Trainings & social</div>
             </div>
           </Link>
 
@@ -253,7 +253,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Hero Slider Pins</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Curate pinned slides</div>
+              <div className="text-meta">Curate pinned slides</div>
             </div>
           </Link>
 
@@ -267,7 +267,7 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Tournaments & Cups</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Brackets & Tiesheets</div>
+              <div className="text-meta">Brackets & Tiesheets</div>
             </div>
           </Link>
         </div>
@@ -299,18 +299,18 @@ export default function AdminDashboardPage({
                 justifyContent: 'space-between',
                 marginBottom: '1.25rem',
               }}>
-                <div style={{ textAlign: 'center' }}>
+                <div className="text-center">
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.home_team_name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Home</div>
+                  <div className="text-meta">Home</div>
                 </div>
 
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                   {liveMatch.home_score} : {liveMatch.away_score}
                 </div>
 
-                <div style={{ textAlign: 'center' }}>
+                <div className="text-center">
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.away_team_name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Away</div>
+                  <div className="text-meta">Away</div>
                 </div>
               </div>
 
@@ -353,8 +353,8 @@ export default function AdminDashboardPage({
                   fontSize: '0.825rem',
                 }}
               >
-                <div style={{ color: 'var(--text-primary)' }}>{act.description}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(act.created_at).toLocaleString()}</div>
+                <div className="text-primary">{act.description}</div>
+                <div className="text-meta">{new Date(act.created_at).toLocaleString()}</div>
               </div>
             ))}
           </div>

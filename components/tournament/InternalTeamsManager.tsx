@@ -8,6 +8,7 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 interface InternalTeamsManagerProps {
   clubSlug: string;
@@ -126,8 +127,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const handleDelete = (teamId: string, teamName: string) => {
-    if (confirm(`Are you sure you want to delete internal team "${teamName}"?`)) {
+  const handleDelete = async (teamId: string, teamName: string) => {
+    if (await confirmAction({ title: `Delete team "${teamName}"?`, message: 'The internal team will be removed.', confirmLabel: 'Delete team', danger: true })) {
       deleteInternalTeam(teamId);
       setFeedback(`✓ Removed ${teamName}`);
       setTimeout(() => setFeedback(null), 3000);
@@ -365,13 +366,13 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     }}
                   >
                     <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Captain: </span>
+                      <span className="text-muted">Captain: </span>
                       <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
                         {captain ? captain.full_name : 'Unassigned'}
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Squad Size: </span>
+                      <span className="text-muted">Squad Size: </span>
                       <span style={{ color: 'var(--c-green)', fontWeight: 800 }}>
                         {teamPlayers.length} Athletes
                       </span>
@@ -414,7 +415,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         </span>
                       )}
                       {teamPlayers.length === 0 && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No players assigned yet.</span>
+                        <span className="text-meta">No players assigned yet.</span>
                       )}
                     </div>
                   </div>
@@ -465,7 +466,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="row">
                 <Shield size={18} color="var(--c-green)" />
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
                   {editingTeam ? 'Edit Internal Team' : 'Create Internal Team'}
@@ -481,7 +482,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
 
             {/* Form */}
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <label htmlFor="internalteamsmanager-team-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                     Team Name *
@@ -582,6 +583,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   {/* Team Crest / Logo */}
                   <div>
                     <ImageUploadZone
+                      clubId={club.id}
                       label="Team Crest (Logo)"
                       recommendedText="Square 500x500px PNG or SVG"
                       currentImageUrl={logoUrl}
@@ -604,6 +606,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   {/* Team Cover Photo */}
                   <div>
                     <ImageUploadZone
+                      clubId={club.id}
                       label="Team Cover Photo"
                       recommendedText="Wide 16:9 banner for squad roster"
                       currentImageUrl={coverUrl}
@@ -617,7 +620,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               </div>
 
               {/* Coach & Captain */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <label htmlFor="internalteamsmanager-coach-manager" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
                     Coach / Manager

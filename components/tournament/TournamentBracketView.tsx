@@ -73,7 +73,7 @@ export default function TournamentBracketView({
   };
 
   return (
-    <div style={{ width: '100%' }}>
+    <div className="w-full">
       {/* Visual Bracket Container with Horizontal Scroll */}
       <div
         style={{
@@ -135,7 +135,7 @@ export default function TournamentBracketView({
                       {heading}
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  <span className="text-meta">
                     {roundMatches.length} {roundMatches.length === 1 ? 'Match' : 'Matches'}
                   </span>
                 </div>
@@ -209,7 +209,7 @@ export default function TournamentBracketView({
                             M#{match.tournament_match_number || '-'}
                           </span>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <div className="row">
                             {isLive && (
                               <span
                                 style={{
@@ -238,7 +238,7 @@ export default function TournamentBracketView({
                               </span>
                             )}
                             {!isLive && !isCompleted && (
-                              <span style={{ color: 'var(--text-secondary)' }}>
+                              <span className="text-secondary">
                                 {match.match_date ? `${match.match_date.slice(5, 10)}${match.match_time ? ` ${match.match_time}` : ''}` : 'Upcoming'}
                               </span>
                             )}
@@ -268,7 +268,7 @@ export default function TournamentBracketView({
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
                               />
-                              <div style={{ minWidth: 0 }}>
+                              <div className="min-w-0">
                                 <div
                                   style={{
                                     fontSize: '0.8rem',
@@ -283,7 +283,7 @@ export default function TournamentBracketView({
                                   {match.home_team_name}
                                 </div>
                                 {match.home_team_source && (
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                  <div className="text-meta">
                                     {match.home_team_source}
                                   </div>
                                 )}
@@ -328,7 +328,7 @@ export default function TournamentBracketView({
                                 alt=""
                                 style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }}
                               />
-                              <div style={{ minWidth: 0 }}>
+                              <div className="min-w-0">
                                 <div
                                   style={{
                                     fontSize: '0.8rem',
@@ -343,7 +343,7 @@ export default function TournamentBracketView({
                                   {match.away_team_name}
                                 </div>
                                 {match.away_team_source && (
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                  <div className="text-meta">
                                     {match.away_team_source}
                                   </div>
                                 )}
@@ -398,7 +398,7 @@ export default function TournamentBracketView({
           }}
           onClick={() => onSelectMatch && onSelectMatch(thirdPlaceMatch)}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="row row-loose">
             <Award size={22} color="var(--c-amber)" />
             <div>
               <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
@@ -409,7 +409,7 @@ export default function TournamentBracketView({
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="row row-loose">
             <span
               style={{
                 fontSize: '1rem',

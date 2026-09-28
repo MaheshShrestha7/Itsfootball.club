@@ -6,7 +6,9 @@
 // naive floods from a single client/isolate. Where a hard, deployment-topology
 // -independent ceiling matters (e.g. contact form spam), pair this with a
 // durable check enforced in Postgres, which is centralized regardless of how
-// many edge instances are running.
+// many edge instances are running: durableRateLimit() below does that.
+
+import { getServiceClient } from '@/lib/supabase/service';
 
 interface Bucket {
   count: number;
@@ -42,6 +44,27 @@ export function rateLimit(
 
   existing.count += 1;
   return { allowed: true, remaining: limit - existing.count, resetAt: existing.resetAt };
+}
+
+/**
+ * rateLimit() plus a Postgres counter shared by every isolate (hit_rate_limit, migration
+ * 20261015). The in-memory check runs first so floods don't reach the database. If the
+ * database can't be asked (not configured, migration not run), the in-memory answer stands.
+ */
+export async function durableRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+  if (!rateLimit(key, limit, windowMs).allowed) return false;
+  const db = getServiceClient();
+  if (!db) return true;
+  const { data, error } = await db.rpc('hit_rate_limit', {
+    p_key: key,
+    p_limit: limit,
+    p_window_seconds: Math.ceil(windowMs / 1000),
+  });
+  if (error) {
+    console.error('[rate-limit] hit_rate_limit failed:', error.message);
+    return true;
+  }
+  return data === true;
 }
 
 export function getClientIp(headers: Headers): string {

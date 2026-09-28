@@ -145,7 +145,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
                 {statusBadge(m)}
               </div>
             </div>
-            <div style={{ minWidth: 0 }}>
+            <div className="min-w-0">
               <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
               {(m.email || m.phone) && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -178,7 +178,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
         <div key={m.id} className="squad-list-row">
           <div className="squad-cell-member">
             <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
-            <div style={{ minWidth: 0 }}>
+            <div className="min-w-0">
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
               {(m.email || m.phone) && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

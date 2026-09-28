@@ -78,8 +78,7 @@ export default function Error({
           <button
             type="button"
             onClick={() => reset()}
-            className="btn btn-primary touch-target"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            className="btn btn-primary touch-target row"
           >
             <RefreshCw size={16} />
             <span>Try Again</span>
