@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
 
 export default function PlatformNavbar() {
   const { clubs } = useClub();
@@ -75,6 +75,10 @@ export default function PlatformNavbar() {
           <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Trophy size={16} />
             Clubs Directory
+          </Link>
+          <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <HelpCircle size={16} />
+            FAQ
           </Link>
 
           {/* Quick Demo Club Jump Dropdown */}
@@ -329,6 +333,24 @@ export default function PlatformNavbar() {
                 >
                   <Trophy size={18} color="#F59E0B" />
                   <span>Clubs Directory</span>
+                </Link>
+                <Link
+                  href="/faq"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                  }}
+                >
+                  <HelpCircle size={18} color="#3B82F6" />
+                  <span>FAQ</span>
                 </Link>
               </div>
 

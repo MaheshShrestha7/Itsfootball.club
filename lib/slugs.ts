@@ -1,7 +1,7 @@
 // Shared by the browser (club-context) and the server (root layout), so kept free of 'use client'.
 
 export const RESERVED_SLUGS = [
-  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'verify', 'match', 'member',
+  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'faq', 'verify', 'match', 'member',
   'squad', 'events', 'news', 'sponsors', 'branding', 'analytics', 'scanner',
   'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets'
 ];
