@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 
 // Offers to add the club site to the home screen, so the member pass opens like an app (and offline).
-// Chrome and Android fire beforeinstallprompt; iPhone Safari has no prompt, so it gets the Share steps.
+// Chrome on Android and desktop fire beforeinstallprompt and get an Install button; every other browser
+// gets the steps for its platform. Hidden once installed or dismissed.
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -20,15 +21,39 @@ function isInstalled() {
   );
 }
 
-function isIosSafari() {
+type Platform = 'ios' | 'android' | 'desktop';
+
+function detectPlatform(): Platform {
   const ua = navigator.userAgent;
-  const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
-  return ios && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  if (/iPhone|iPad|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'desktop';
 }
+
+// Shown when the browser doesn't offer its own install prompt (iPhone, Firefox, Samsung Internet,
+// or Chrome before it decides the site is installable)
+const MANUAL_STEPS: Record<Platform, React.ReactNode> = {
+  ios: (
+    <>
+      Tap <Share size={14} aria-label="Share" style={{ verticalAlign: '-2px' }} /> Share in your browser, then choose{' '}
+      <strong>Add to Home Screen</strong>.
+    </>
+  ),
+  android: (
+    <>
+      Open your browser menu (<strong>⋮</strong>), then tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.
+    </>
+  ),
+  desktop: (
+    <>
+      Use the install icon at the right of the address bar, or <strong>Install</strong> in the browser menu.
+    </>
+  ),
+};
 
 export default function InstallAppPrompt({ clubName }: { clubName: string }) {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosSteps, setShowIosSteps] = useState(false);
+  const [platform, setPlatform] = useState<Platform>('desktop');
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -39,7 +64,7 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
       // Storage blocked: still offer it
     }
     setDismissed(false);
-    setShowIosSteps(isIosSafari());
+    setPlatform(detectPlatform());
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -71,7 +96,7 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
     if (outcome === 'accepted') setDismissed(true);
   };
 
-  if (dismissed || (!installEvent && !showIosSteps)) return null;
+  if (dismissed) return null;
 
   return (
     <div
@@ -88,8 +113,7 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
           </p>
         ) : (
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Tap <Share size={14} aria-label="Share" style={{ verticalAlign: '-2px' }} /> in Safari, then choose{' '}
-            <strong>Add to Home Screen</strong>. Your pass will open in one tap, even offline.
+            {MANUAL_STEPS[platform]} Your pass will then open in one tap, even offline.
           </p>
         )}
         {installEvent && (
