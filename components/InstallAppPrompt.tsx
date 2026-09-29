@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 
-// Offers to add the club site to the home screen, so the member pass opens like an app (and offline).
+// Offers to add the club site to the home screen: under the member pass (opens offline at the gate) and,
+// as "Get the app", to every visitor on the club home page.
 // Chrome on Android and desktop fire beforeinstallprompt and get an Install button; every other browser
 // gets the steps for its platform. Hidden once installed or dismissed.
 
@@ -12,7 +13,26 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const DISMISSED_KEY = 'itsfootball_install_dismissed';
+type Variant = 'pass' | 'visitor';
+
+// Dismissed separately, so closing the home page card still leaves the reminder under the member pass
+const DISMISSED_KEYS: Record<Variant, string> = {
+  pass: 'itsfootball_install_dismissed',
+  visitor: 'itsfootball_install_dismissed_home',
+};
+
+const COPY: Record<Variant, { title: string; lead: (club: string) => string; after: string }> = {
+  pass: {
+    title: 'Keep your pass on your home screen',
+    lead: club => `Add ${club} as an app to open your pass in one tap, even without signal at the gate.`,
+    after: 'Your pass will then open in one tap, even offline.',
+  },
+  visitor: {
+    title: 'Get the app',
+    lead: club => `Add ${club} to your home screen for live scores, fixtures and news in one tap.`,
+    after: 'The club will then open in one tap, like an app.',
+  },
+};
 
 function isInstalled() {
   return (
@@ -51,7 +71,9 @@ const MANUAL_STEPS: Record<Platform, React.ReactNode> = {
   ),
 };
 
-export default function InstallAppPrompt({ clubName }: { clubName: string }) {
+export default function InstallAppPrompt({ clubName, variant = 'pass' }: { clubName: string; variant?: Variant }) {
+  const dismissedKey = DISMISSED_KEYS[variant];
+  const copy = COPY[variant];
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [platform, setPlatform] = useState<Platform>('desktop');
   const [dismissed, setDismissed] = useState(true);
@@ -59,7 +81,7 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
   useEffect(() => {
     if (isInstalled()) return;
     try {
-      if (localStorage.getItem(DISMISSED_KEY)) return;
+      if (localStorage.getItem(dismissedKey)) return;
     } catch {
       // Storage blocked: still offer it
     }
@@ -77,12 +99,12 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, []);
+  }, [dismissedKey]);
 
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(DISMISSED_KEY, '1');
+      localStorage.setItem(dismissedKey, '1');
     } catch {
       // Not remembered, shows again next visit
     }
@@ -103,17 +125,17 @@ export default function InstallAppPrompt({ clubName }: { clubName: string }) {
       className="glass-panel"
       role="region"
       aria-label="Add to home screen"
-      style={{ width: '100%', maxWidth: '400px', marginTop: '1.25rem', padding: '1rem 1.25rem', display: 'flex', gap: '0.9rem', alignItems: 'flex-start' }}
+      style={{ width: '100%', maxWidth: variant === 'pass' ? '400px' : '560px', marginTop: variant === 'pass' ? '1.25rem' : '2rem', padding: '1rem 1.25rem', display: 'flex', gap: '0.9rem', alignItems: 'flex-start' }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.25rem' }}>Keep your pass on your home screen</div>
+        <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.25rem' }}>{copy.title}</div>
         {installEvent ? (
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Add {clubName} as an app to open your pass in one tap, even without signal at the gate.
+            {copy.lead(clubName)}
           </p>
         ) : (
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            {MANUAL_STEPS[platform]} Your pass will then open in one tap, even offline.
+            {MANUAL_STEPS[platform]} {copy.after}
           </p>
         )}
         {installEvent && (
