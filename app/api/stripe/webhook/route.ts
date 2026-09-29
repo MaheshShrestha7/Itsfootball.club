@@ -64,7 +64,15 @@ export async function POST(req: NextRequest) {
       const intent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
       // Partial refunds stay 'paid'; the Stripe dashboard has the detail
       if (charge.refunded && intent) {
-        await db.from('payments').update({ status: 'refunded' }).eq('stripe_payment_intent_id', intent);
+        const { data: refunded } = await db.from('payments').update({ status: 'refunded' }).eq('stripe_payment_intent_id', intent).select('id');
+        // A club refunding from its own dashboard pays back the whole charge, booking fee included, but Stripe
+        // keeps our fee on the platform. Hand it back so a full refund never costs the club money.
+        // ponytail: full refunds only; partial refunds keep the fee (add a proportional fee refund if clubs ask)
+        const feeId = typeof charge.application_fee === 'string' ? charge.application_fee : charge.application_fee?.id;
+        if (feeId && refunded?.length) {
+          // Logged, not retried: it also fails harmlessly when the fee was already refunded
+          await stripe.applicationFees.createRefund(feeId).catch(err => console.error('Booking fee refund failed:', feeId, (err as Error).message));
+        }
       }
       break;
     }

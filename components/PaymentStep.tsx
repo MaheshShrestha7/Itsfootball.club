@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { CreditCard, Landmark, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
-import { formatMoney, paymentReference } from '@/lib/finance';
+import { bookingFeeCents, formatMoney, paymentReference } from '@/lib/finance';
 import type { ClubPaymentSettings } from '@/lib/supabase/types';
 
 interface PaymentStepProps {
@@ -47,6 +47,7 @@ export default function PaymentStep(props: PaymentStepProps) {
   const currency = settings?.currency || 'AUD';
   const cardOn = Boolean(settings?.stripe_charges_enabled);
   const bankOn = Boolean(settings?.bank_details?.trim());
+  const fee = bookingFeeCents(amountCents);
 
   const payByCard = async () => {
     setBusy(true);
@@ -128,9 +129,17 @@ export default function PaymentStep(props: PaymentStepProps) {
           </div>
 
           {method === 'card' && (
-            <button type="button" className="btn btn-primary w-full" onClick={payByCard} disabled={busy}>
-              {busy ? 'Opening secure checkout…' : `Pay ${formatMoney(amountCents, currency)} securely`}
-            </button>
+            <>
+              {fee > 0 && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>
+                  {formatMoney(amountCents, currency)} to the club + {formatMoney(fee, currency)} booking fee. The club&apos;s price stays the same;
+                  the small booking fee is what keeps itsfootball.club free for every club.
+                </p>
+              )}
+              <button type="button" className="btn btn-primary w-full" onClick={payByCard} disabled={busy}>
+                {busy ? 'Opening secure checkout…' : `Pay ${formatMoney(amountCents + fee, currency)} securely`}
+              </button>
+            </>
           )}
 
           {method === 'bank' && (
@@ -167,7 +176,7 @@ export default function PaymentStep(props: PaymentStepProps) {
         <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: 1.5, marginTop: '1rem', marginBottom: 0 }}>
           {cardOn && (
             <>
-              Card payments are processed securely by Stripe on the club&apos;s behalf and paid directly to the club.
+              Card payments are processed securely by Stripe on the club&apos;s behalf and paid directly to the club{fee > 0 && ', apart from the booking fee'}.
               Your card details go straight to Stripe and are never seen or stored by the club or itsfootball.club
               (<a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Stripe Privacy Policy</a>).{' '}
             </>

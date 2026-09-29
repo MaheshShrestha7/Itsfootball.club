@@ -55,6 +55,24 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
 
 export const CURRENCIES = ['AUD', 'NZD', 'GBP', 'EUR', 'USD', 'CAD', 'NPR', 'INR', 'ZAR', 'SGD'];
 
+// Booking fee: added on top of card payments and routed to the platform by Stripe Connect, so the club
+// still receives its full price. NEXT_PUBLIC_ so the payment screen shows exactly what the server charges.
+// fee = max(price x percent + flat, minimum); all unset or 0 = no fee.
+const feeSetting = (v: string | undefined) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+export const BOOKING_FEE = {
+  percent: feeSetting(process.env.NEXT_PUBLIC_BOOKING_FEE_PERCENT),
+  flatCents: Math.round(feeSetting(process.env.NEXT_PUBLIC_BOOKING_FEE_FLAT_CENTS)),
+  minCents: Math.round(feeSetting(process.env.NEXT_PUBLIC_BOOKING_FEE_MIN_CENTS)),
+};
+
+export function bookingFeeCents(amountCents: number, fee = BOOKING_FEE): number {
+  if (!(amountCents > 0)) return 0;
+  return Math.max(Math.round((amountCents * fee.percent) / 100) + fee.flatCents, fee.minCents);
+}
+
 export function formatMoney(cents: number, currency: string): string {
   try {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100);

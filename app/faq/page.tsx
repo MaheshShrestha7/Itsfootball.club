@@ -25,13 +25,16 @@ const FAQ: Section[] = [
     audience: 'Is it really free?',
     Icon: Sparkles,
     color: 'var(--c-green)',
-    pitch: 'Yes. Free to sign up, free to use, and every feature is included.',
+    pitch: 'Yes. Your club never pays a penny: no subscription, no premium tier, every feature included from day one.',
     cta: { label: 'Create your club free', href: '/create-club' },
     items: [
-      { q: 'How much does itsfootball.club cost?', a: 'Nothing. Signing up is free and every feature is included for clubs, admins, coaches, players and supporters. No trial, no premium tier, no locked features. Free forever.' },
+      { q: 'How much does itsfootball.club cost?', a: 'Nothing for your club. Your website, live match centre, member passes, lineups, finance, sponsor reports and everything else are included from the moment you sign up. No trial that runs out, no premium tier, no locked features, no invoice at the end of the season.' },
+      { q: 'Why is it free?', a: 'Because grassroots clubs run on volunteers and tight budgets, and a monthly bill is exactly what keeps most of them stuck on group chats and spreadsheets. We believe the Sunday league side deserves the same matchday as the big clubs, so every club, however small, gets the full kit from day one.' },
+      { q: 'So what\'s the catch?', a: 'No catch, just one small detail we\'d rather tell you upfront. When someone pays your club by card through itsfootball.club, for a membership or a sponsorship, a small booking fee is added at checkout, like the one you see when you buy a match ticket online. It\'s shown clearly before anyone pays, and your club\'s price never changes: the money goes straight into your club\'s own Stripe account, less Stripe\'s standard card fee. We don\'t show ads to your players, we don\'t sell your data, and we never take a cut of what your club charges.' },
+      { q: 'How does itsfootball.club make money?', a: 'Through that small booking fee on card payments, and nothing else. It keeps us on the same side as your club: we only earn when your club is thriving online, collecting its subs and signing up sponsors, never by charging you to use the platform. And if your club refunds a card payment in full, the booking fee is refunded with it.' },
       { q: 'Do I need a card to create a club?', a: 'No. You only need an email address. Create your club in a few minutes and start using everything straight away, with no limits.' },
       { q: 'Are some features kept behind a paid plan?', a: 'No. Match Center, lineups, tournaments, the QR pass and scanner, finance, sponsors, news, branding, custom domain and analytics are all available to every club from day one.' },
-      { q: 'Do players or supporters pay the platform?', a: 'No. The only payments on the site are fees your own club chooses to set, such as membership tiers or event tickets. They are paid by card through Stripe and go to the club, not to itsfootball.club.' },
+      { q: 'Do players or supporters pay anything?', a: 'Following the live match centre, getting a member pass, checking your stats and replying to availability are always free. The only payments are the ones your club chooses to set, like a membership fee. If you pay one by card, you\'ll see a small booking fee before you confirm; it\'s what keeps the whole platform free for your club.' },
     ],
   },
   {
@@ -103,7 +106,7 @@ const FAQ: Section[] = [
     items: [
       { q: 'How do I follow a live match?', a: 'Open your club\'s page and pick the match from the fixtures. The match page updates live with goals, cards and substitutions as the game is played.' },
       { q: 'What is the virtual member pass?', a: 'A QR code pass in the Pass tab of your member area. Show it on your phone to be checked in at matches and club events. Nothing to print, nothing to lose.' },
-      { q: 'How do I pay my membership?', a: 'If your chosen tier has a fee, you pay it by card during sign-up. Payment is handled securely by Stripe and goes straight to the club.' },
+      { q: 'How do I pay my membership?', a: 'If your chosen tier has a fee, you pay it by card during sign-up. Payment is handled securely by Stripe and goes straight to the club, with a small booking fee shown before you pay.' },
       { q: 'How do I contact my club?', a: 'Signed-in members can use the Messages tab in their member area. Anyone else can use the contact form on the club\'s page.' },
     ],
   },
@@ -134,7 +137,7 @@ const FAQ: Section[] = [
   },
 ];
 
-const FREE_POINTS = ['Free to sign up', 'Every feature included', 'No card needed', 'No fees for players or supporters'];
+const FREE_POINTS = ['Free to sign up', 'Every feature included', 'No card needed', 'No subscription, ever'];
 
 const faqSchema = {
   '@context': 'https://schema.org',
@@ -157,7 +160,7 @@ export default function FaqPage() {
       <main className="container" style={{ padding: '3.5rem 1rem', flex: 1, maxWidth: '960px' }}>
         {/* Hero */}
         <header style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>100% FREE · EVERY FEATURE</div>
+          <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE FOR EVERY CLUB · EVERY FEATURE</div>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', fontWeight: 900, lineHeight: 1.1 }}>
             Questions? Here&apos;s why clubs sign up.
           </h1>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
 import { preparePayment, readPaymentInput } from '@/lib/payments-server';
+import { bookingFeeCents } from '@/lib/finance';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase/server-auth';
 
@@ -35,22 +36,24 @@ export async function POST(req: NextRequest) {
 
   const origin = new URL(req.url).origin;
   const path = draft.row.kind === 'sponsorship' ? `/${draft.club.slug}/sponsor` : `/${draft.club.slug}/member`;
+  const currency = draft.currency.toLowerCase();
+  // Booking fee sits on top of the club's price as its own line; Stripe routes it to the platform
+  // (application fee), so the club still receives amount_cents, which is what its ledger records.
+  const fee = bookingFeeCents(draft.row.amount_cents);
   try {
     const session = await stripe.checkout.sessions.create(
       {
         mode: 'payment',
-        line_items: [{
-          quantity: 1,
-          price_data: {
-            currency: draft.currency.toLowerCase(),
-            unit_amount: draft.row.amount_cents,
-            product_data: { name: draft.label },
-          },
-        }],
+        line_items: [
+          { quantity: 1, price_data: { currency, unit_amount: draft.row.amount_cents, product_data: { name: draft.label } } },
+          ...(fee > 0
+            ? [{ quantity: 1, price_data: { currency, unit_amount: fee, product_data: { name: 'Booking fee', description: 'Keeps itsfootball.club free for every club' } } }]
+            : []),
+        ],
         customer_email: draft.row.payer_email || undefined,
         client_reference_id: payment.id,
         metadata: { payment_id: payment.id },
-        payment_intent_data: { metadata: { payment_id: payment.id } },
+        payment_intent_data: { metadata: { payment_id: payment.id }, ...(fee > 0 ? { application_fee_amount: fee } : {}) },
         success_url: `${origin}${path}?payment=success`,
         cancel_url: `${origin}${path}?payment=cancelled`,
       },

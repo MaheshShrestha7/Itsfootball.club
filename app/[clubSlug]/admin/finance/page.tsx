@@ -6,7 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
-  formatMoney, parseMoneyToCents, toCsv,
+  bookingFeeCents, formatMoney, parseMoneyToCents, toCsv,
 } from '@/lib/finance';
 import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
@@ -668,6 +668,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
           {stripeState === 'connected' && 'Connected. Card payments go straight into the club’s own Stripe account.'}
           {stripeState === 'incomplete' && 'Stripe setup isn’t finished yet. Continue to add the club’s details and bank account.'}
           {stripeState === 'none' && 'Connect the club’s Stripe account (or create one) to take card payments. Money goes straight to the club.'}
+          {bookingFeeCents(10000) > 0 && ' Payers see a small booking fee on top of your price at checkout; it goes to itsfootball.club, so the club still receives its full price (less Stripe’s card fee). A full refund returns the booking fee too.'}
         </p>
         <button type="button" className="btn btn-primary" onClick={connectStripe} disabled={connecting}>
           {connecting ? 'Opening Stripe…' : stripeState === 'connected' ? 'Refresh status' : stripeState === 'incomplete' ? 'Continue Stripe setup' : 'Connect Stripe'}
