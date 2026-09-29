@@ -10,6 +10,7 @@ import PaymentStep from '@/components/PaymentStep';
 import { formatMoney } from '@/lib/finance';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
+import InstallAppPrompt from '@/components/InstallAppPrompt';
 import QRScannerModal from '@/components/QRScannerModal';
 import {
   Shield,
@@ -1005,6 +1006,7 @@ export default function MemberPortalPage({
                 <div style={{ width: '100%', maxWidth: '400px' }}>
                   <VirtualPassCard club={club} member={activeMember} />
                 </div>
+                <InstallAppPrompt clubName={club.short_name || club.name} />
               </div>
             )}
 

@@ -1,0 +1,14 @@
+{
+  "id": "/",
+  "name": "itsfootball.club",
+  "short_name": "itsfootball",
+  "description": "Live match center, digital member passes and club management for football clubs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070A0F",
+  "theme_color": "#070A0F",
+  "icons": [
+    { "src": "/logo-96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
