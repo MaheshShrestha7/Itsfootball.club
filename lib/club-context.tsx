@@ -54,7 +54,7 @@ import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
-import { RESERVED_SLUGS, clubSlugFromPath } from './slugs';
+import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
@@ -334,10 +334,13 @@ function withCached<T extends { id: string }>(current: T[], cached: T[]): T[] {
 export function ClubProvider({
   children,
   initialData,
+  hostSlug,
 }: {
   children: React.ReactNode;
   /** Public data loaded on the server (lib/supabase/server-data.ts), so the first render already has the page */
   initialData?: Partial<SyncState> | null;
+  /** The club whose own domain the site is on (middleware.ts); its paths don't carry the slug */
+  hostSlug?: string;
 }) {
   const initialDataRef = useRef(initialData);
   const [clubs, setClubs] = useState<Club[]>(() => initialData?.clubs ?? []);
@@ -513,7 +516,7 @@ export function ClubProvider({
   // What to load: the club in the URL plus the signed-in user's own clubs (see SupabaseSync.load)
   const pathname = usePathname();
   const { user, isLoading: authLoading } = useAuth();
-  const scopeSlug = clubSlugFromPath(pathname);
+  const scopeSlug = hostSlug || clubSlugFromPath(pathname);
   const scopeClubIdsKey = Object.keys(user?.club_roles || {}).sort().join(',');
   const [loadedClubIds, setLoadedClubIds] = useState<string[]>([]);
 
@@ -1054,7 +1057,7 @@ export function ClubProvider({
       stadium_parking_info: sanitizeText(clubData.stadium_parking_info),
       contact_email: sanitizeText(clubData.contact_email),
       contact_phone: sanitizeText(clubData.contact_phone),
-      custom_domain: sanitizeText(clubData.custom_domain) || undefined,
+      custom_domain: normalizeDomain(clubData.custom_domain) || undefined,
       hero_pinned_items: clubData.hero_pinned_items || [],
       is_active: true,
       created_at: new Date().toISOString(),

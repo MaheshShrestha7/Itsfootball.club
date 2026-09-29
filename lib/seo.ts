@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import { findClubBySlug, type ClubMetadataRow } from './supabase/club-lookup';
+import { SITE_URL } from './slugs';
 
+export { SITE_URL };
 export const SITE_NAME = 'itsfootball.club';
-// Deliberately not NEXT_PUBLIC_APP_URL: that one is localhost in local .env files, and NEXT_PUBLIC_
-// values are inlined at build time, so a local build would ship localhost canonical URLs.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://itsfootball.club').replace(/\/+$/, '');
 export const DEFAULT_OG_IMAGE = '/og-default.jpg';
 
 const TITLE_MAX = 60;

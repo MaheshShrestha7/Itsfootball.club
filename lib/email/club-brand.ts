@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SITE_URL } from '@/lib/seo';
-import { clubSlugFromPath } from '@/lib/slugs';
+import { clubSlugFromPath, isPlatformHost } from '@/lib/slugs';
 import type { EmailBrand } from './templates';
 
 export const CLUB_BRAND_COLUMNS = 'id, slug, name, logo_url, primary_color, custom_domain';
@@ -33,11 +33,9 @@ export async function clubForUrl(db: SupabaseClient, url: string): Promise<ClubB
   } catch {
     return null;
   }
-  const siteHost = new URL(SITE_URL).host;
   const host = parsed.host.toLowerCase();
-  const isPlatformHost = host === siteHost || host === `www.${siteHost}` || host.startsWith('localhost');
   const query = db.from('clubs').select(CLUB_BRAND_COLUMNS).eq('is_active', true);
-  if (!isPlatformHost) {
+  if (!isPlatformHost(host)) {
     const { data } = await query.eq('custom_domain', host).maybeSingle();
     return (data as ClubBrandRow | null) ?? null;
   }

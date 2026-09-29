@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
@@ -205,7 +206,7 @@ export default function MemberPortalPage({
     setSendingLink(true);
     const { error } = await client.auth.signInWithOtp({
       email: loginEmail.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/${club.slug}/member` },
+      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member`) },
     });
     setSendingLink(false);
     if (error) {

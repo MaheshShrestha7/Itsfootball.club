@@ -53,14 +53,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   // Server-rendered pages start from real data (see ClubProvider's initialData)
-  const initialData = await loadInitialData((await headers()).get('x-pathname') || '/');
+  const requestHeaders = await headers();
+  const initialData = await loadInitialData(requestHeaders.get('x-pathname') || '/');
   const theme = await getTheme();
 
   return (
     <html lang="en" data-theme={theme} className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <body>
         <AuthProvider>
-          <ClubProvider initialData={initialData}>
+          <ClubProvider initialData={initialData} hostSlug={requestHeaders.get('x-club-host-slug') || undefined}>
             <SyncStatusBanner />
             {children}
           </ClubProvider>

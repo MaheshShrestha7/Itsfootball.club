@@ -60,7 +60,6 @@ export default function CreateClubPage() {
     stadium_parking_info: '',
     contact_email: '',
     contact_phone: '',
-    custom_domain: '',
   });
 
   // Carry over the name and palette picked on the home page hero (?name=&palette=)
@@ -794,28 +793,13 @@ export default function CreateClubPage() {
                   4. Custom Domain & Launch Setup
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                  Link your own custom domain (e.g. yourclub.com) or use our managed subpath.
+                  Your contact details, then launch. Your club lives at itsfootball.club/your-club, or your own domain later.
                 </p>
 
-                <div className="form-group">
-                  <label className="form-label">Custom Domain (Optional)</label>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ background: 'rgba(var(--tint-rgb), 0.05)', padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRight: 'none', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', color: 'var(--text-muted)' }}>
-                      <Globe size={16} />
-                    </span>
-                    <input aria-label="Custom domain"
-                      type="text"
-                      name="custom_domain"
-                      className="form-input"
-                      style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                      placeholder="yourclub.com"
-                      value={formData.custom_domain}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    Point your domain CNAME record to <code>cname.itsfootball.club</code> for automatic SSL & routing.
-                  </div>
+                {/* Connected after the club exists: that registers it with Cloudflare (Branding -> CustomDomainPanel) */}
+                <div className="form-group" style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <Globe size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                  <span>Have your own domain, like <code>www.yourclub.com</code>? Once your club is live, connect it in <strong>Admin → Branding</strong>. It sets itself up once you add one DNS record.</span>
                 </div>
 
                 <div className="form-row-2">

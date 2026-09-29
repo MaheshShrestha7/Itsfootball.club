@@ -4,6 +4,7 @@ import React, { useState, useEffect, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
+import CustomDomainPanel from './CustomDomainPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
@@ -12,7 +13,6 @@ import {
   Palette,
   CheckCircle2,
   Save,
-  Globe,
   Shield,
   MapPin,
   Sparkles,
@@ -61,7 +61,6 @@ export default function AdminBrandingPage({
     stadium_capacity: club?.stadium_capacity || 5000,
     stadium_pitch_type: club?.stadium_pitch_type || 'Natural Hybrid Turf',
     stadium_parking_info: club?.stadium_parking_info || '',
-    custom_domain: club?.custom_domain || '',
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
   });
@@ -86,7 +85,6 @@ export default function AdminBrandingPage({
         stadium_capacity: club.stadium_capacity || 5000,
         stadium_pitch_type: club.stadium_pitch_type || 'Natural Hybrid Turf',
         stadium_parking_info: club.stadium_parking_info || '',
-        custom_domain: club.custom_domain || '',
         contact_email: club.contact_email || '',
         contact_phone: club.contact_phone || '',
       });
@@ -186,7 +184,6 @@ export default function AdminBrandingPage({
       ...restData,
       slider_images: sliderImages,
       slug: newSlug,
-      custom_domain: formData.custom_domain?.trim() || undefined,
     });
 
     setHasUserEdited(false);
@@ -791,52 +788,8 @@ export default function AdminBrandingPage({
           </div>
         </div>
 
-        {/* SECTION 5: CUSTOM DOMAIN & WEB INTEGRATION */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Globe size={20} color="var(--club-primary)" /> Custom Domain Linking & DNS Guide
-          </h3>
-          <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            Link your own top-level domain (e.g. <code>yourclub.com</code>) or keep your default <code>itsfootball.club/{club?.slug}</code> subpath.
-          </p>
-
-          <div className="form-group">
-            <label className="form-label">Custom Domain</label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{
-                background: 'rgba(var(--tint-rgb), 0.05)',
-                padding: '0.7rem 0.8rem',
-                border: '1px solid var(--border-subtle)',
-                borderRight: 'none',
-                borderTopLeftRadius: '8px',
-                borderBottomLeftRadius: '8px',
-                color: 'var(--text-muted)',
-              }}>
-                <Globe size={16} />
-              </span>
-              <input aria-label="Custom domain"
-                type="text"
-                name="custom_domain"
-                className="form-input"
-                style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                placeholder="e.g. yourclub.com"
-                value={formData.custom_domain}
-                onChange={handleChange}
-              />
-            </div>
-            <div style={{
-              background: 'rgba(var(--shade-rgb), 0.3)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '8px',
-              padding: '0.85rem 1rem',
-              marginTop: '0.75rem',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-            }}>
-              <strong>DNS Setup Instructions:</strong> At your domain registrar (GoDaddy, Namecheap, Cloudflare), create a <code>CNAME</code> record pointing to <code>cname.itsfootball.club</code> with TTL Automatic. Edge SSL certificates will be provisioned automatically.
-            </div>
-          </div>
-        </div>
+        {/* SECTION 5: CUSTOM DOMAIN (saved on its own, see CustomDomainPanel) */}
+        {club && <CustomDomainPanel club={club} />}
 
         {/* SAVE SUBMIT BAR */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>

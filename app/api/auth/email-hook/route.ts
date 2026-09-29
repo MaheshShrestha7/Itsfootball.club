@@ -4,6 +4,7 @@ import { verifyWebhook } from '@/lib/email/webhook';
 import { authEmail, authRecipients, type AuthAction, type AuthHookData } from '@/lib/email/templates';
 import { clubForUrl, clubBrand } from '@/lib/email/club-brand';
 import { sendEmail } from '@/lib/email/send';
+import { authReturnTarget } from '@/lib/slugs';
 
 // Supabase Auth "Send Email" hook: Supabase calls this instead of sending its own email, and we
 // send a branded one through Resend. Set up in Supabase -> Authentication -> Hooks (see docs/email.md).
@@ -47,13 +48,19 @@ export async function POST(req: NextRequest) {
   if (!recipients.length) return fail(400, 'Unsupported email');
 
   const redirectTo = data.redirect_to || data.site_url;
-  const linkFor = (tokenHash: string) =>
-    `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/verify?token=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(data.email_action_type)}&redirect_to=${encodeURIComponent(redirectTo)}`;
 
   // Member sign-in links point back at the club's own page: brand those emails as the club
   const db = getServiceClient();
-  const club = db && redirectTo ? await clubForUrl(db, redirectTo).catch(() => null) : null;
+  const target = authReturnTarget(redirectTo);
+  const club = db && redirectTo ? await clubForUrl(db, target?.href || redirectTo).catch(() => null) : null;
   const brand = club ? clubBrand(club) : undefined;
+
+  // A page on the club's own domain (see authReturnUrl) gets a link to that domain, which verifies
+  // the token itself; clubForUrl only found the club if the domain is really one of ours
+  const ownDomain = target && club?.custom_domain === target.host ? target : null;
+  const linkFor = (tokenHash: string) => ownDomain
+    ? `https://${ownDomain.host}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(data.email_action_type)}&next=${encodeURIComponent(ownDomain.pathname + ownDomain.search)}`
+    : `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/verify?token=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(data.email_action_type)}&redirect_to=${encodeURIComponent(redirectTo)}`;
 
   const results = await Promise.all(recipients.map(r => {
     const email = authEmail(data.email_action_type, linkFor(r.tokenHash), r.token, brand, r.changeTo);
