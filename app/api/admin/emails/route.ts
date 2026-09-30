@@ -6,6 +6,7 @@ import { CLUB_BRAND_COLUMNS, type ClubBrandRow } from '@/lib/email/club-brand';
 import { filterDrafts, materialize, sendClubEmails } from '@/lib/email/club-emails';
 import { cleanSettings } from '@/lib/email/settings';
 import { MAX_MESSAGE_LENGTH, NOTICE_KINDS, prepareNotice, type NoticeRequest } from '@/lib/email/notices';
+import { pushConfigured, pushToClub } from '@/lib/push';
 
 // Admin -> Email Notifications. Club admins only (checked with their own session token).
 //   GET    ?clubId=           switches, setup status, opt-out count, recent sends
@@ -90,7 +91,17 @@ export async function POST(req: NextRequest) {
   const prepared = await prepareNotice(db, club, request);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { due, optedOut, alreadySent } = await filterDrafts(db, prepared.drafts);
-  const summary = { label: prepared.label, recipients: due.length, optedOut, alreadySent, noEmail: prepared.skippedNoEmail };
+  // Push followers (anyone who tapped the bell on the club site) for public notices
+  const push = pushConfigured() ? prepared.push : undefined;
+  const { count: followers } = push
+    ? await db.from('push_subscriptions').select('endpoint', { count: 'exact', head: true }).eq('club_id', club.id)
+    : { count: 0 };
+  const summary = { label: prepared.label, recipients: due.length, optedOut, alreadySent, noEmail: prepared.skippedNoEmail, followers: followers || 0 };
+  // Once per notice a day, however often Send is pressed (the emails dedupe through email_log)
+  const pushFollowers = async () =>
+    push && followers && (await durableRateLimit(`notice-push:${club.id}:${request.kind}:${request.refId}`, 1, 24 * 60 * 60 * 1000))
+      ? pushToClub(db, club.id, push)
+      : 0;
 
   if (!body.send) {
     // Preview with the first recipient's details (or any, if everyone already has it)
@@ -99,15 +110,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'Email sending is not set up yet (RESEND_API_KEY).' }, { status: 503 });
-  if (!due.length) return NextResponse.json({ ...summary, sent: 0, failed: 0 });
+  if (!due.length) return NextResponse.json({ ...summary, sent: 0, failed: 0, pushed: await pushFollowers() });
   if (due.length > MAX_RECIPIENTS) return NextResponse.json({ error: `A notice can go to at most ${MAX_RECIPIENTS} people.` }, { status: 400 });
   if (!(await durableRateLimit(`notice:${club.id}`, 10, 60 * 60 * 1000))) {
     return NextResponse.json({ error: 'That\'s a lot of notices in an hour. Please wait a while before sending more.' }, { status: 429 });
   }
 
-  const report = await sendClubEmails(db, await materialize(due));
+  const [report, pushed] = await Promise.all([sendClubEmails(db, await materialize(due)), pushFollowers()]);
   if (report.error && !report.sent) {
     return NextResponse.json({ ...summary, ...report, error: report.error.startsWith('email_log') ? 'Emails are not set up in the database yet (run the email migration).' : 'Sending failed. Please try again.' }, { status: 502 });
   }
-  return NextResponse.json({ ...summary, ...report, alreadySent: alreadySent + report.alreadySent });
+  return NextResponse.json({ ...summary, ...report, pushed, alreadySent: alreadySent + report.alreadySent });
 }

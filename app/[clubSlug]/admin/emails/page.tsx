@@ -21,6 +21,8 @@ interface Preview {
   optedOut: number;
   alreadySent: number;
   noEmail: number;
+  /** Phones/browsers following the club that also get it as a push notification */
+  followers: number;
   preview: { subject: string; html: string } | null;
 }
 
@@ -168,7 +170,8 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     setBusy(null);
     if (r.ok) {
       const sent = r.data.sent ?? 0;
-      setFeedback({ type: 'success', text: sent ? `Sent to ${sent} ${sent === 1 ? 'person' : 'people'}.` : 'Everyone already had this one. Nothing new to send.' });
+      const pushed = r.data.pushed ? ` Notified ${r.data.pushed} follower${r.data.pushed === 1 ? '' : 's'}.` : '';
+      setFeedback({ type: 'success', text: (sent ? `Sent to ${sent} ${sent === 1 ? 'person' : 'people'}.` : 'Everyone already had this one. Nothing new to send.') + pushed });
       setPreview(null);
       load();
     } else {
@@ -338,6 +341,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
               {preview.alreadySent > 0 && ` ${preview.alreadySent} already received it.`}
               {preview.optedOut > 0 && ` ${preview.optedOut} unsubscribed.`}
               {preview.noEmail > 0 && ` ${preview.noEmail} member${preview.noEmail === 1 ? ' has' : 's have'} no email address.`}
+              {preview.followers > 0 && ` ${preview.followers} follower${preview.followers === 1 ? '' : 's'} also get a push notification (headline and link only).`}
             </div>
             {preview.preview && (
               <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>

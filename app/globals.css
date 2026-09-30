@@ -161,6 +161,11 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  /* No grey flash on tap; buttons and links have their own pressed states */
+  -webkit-tap-highlight-color: transparent;
+  /* Keep text size when a phone rotates to landscape */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -172,9 +177,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  /* Mobile browsers: the visible height, not the height with the address bar hidden */
+  min-height: 100dvh;
   max-width: 100%;
   overflow-x: hidden;
   position: relative;
+  /* Landscape iPhone: keep content clear of the notch */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Subtle stadium turf pattern overlay */
@@ -217,6 +227,15 @@ select,
 textarea {
   font-family: inherit;
   font-size: inherit;
+}
+
+/* iOS zooms the page into any field under 16px when it's focused */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 /* Container */
@@ -1494,7 +1513,7 @@ textarea {
   background: var(--bg-surface-elevated);
   border-left: 1px solid var(--border-medium);
   box-shadow: -8px 0 35px rgba(0, 0, 0, 0.85);
-  padding: 1.5rem 1.25rem;
+  padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
   z-index: 100;
   overflow-y: auto;
   display: flex;

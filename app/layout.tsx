@@ -6,6 +6,7 @@ import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
 import SyncStatusBanner from '@/components/SyncStatusBanner';
 import { ConfirmRoot } from '@/components/ConfirmDialog';
+import ServiceWorker from '@/components/ServiceWorker';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { loadInitialData } from '@/lib/supabase/server-data';
 
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'itsfootball.club team' }],
   openGraph: { siteName: SITE_NAME, type: 'website', images: [DEFAULT_OG_IMAGE] },
   twitter: { card: 'summary_large_image', images: [DEFAULT_OG_IMAGE] },
+  // Home-screen app on iPhone (the web manifest is app/manifest.ts). 'default' keeps the status bar
+  // above the page, so nothing slides under the notch.
+  appleWebApp: { capable: true, title: 'itsfootball', statusBarStyle: 'default' },
 };
 
 // Self-hosted at build time by next/font: no render-blocking request to fonts.googleapis.com, and each
@@ -67,6 +71,7 @@ export default async function RootLayout({
           </ClubProvider>
         </AuthProvider>
         <ConfirmRoot />
+        <ServiceWorker />
       </body>
     </html>
   );

@@ -9,6 +9,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
+import PushToggle from '@/components/PushToggle';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut } from 'lucide-react';
 
 interface ClubNavbarProps {
@@ -317,6 +318,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem' }}>
+        <PushToggle clubId={club.id} clubName={club.name} />
         <ThemeToggle />
         {/* Mobile menu trigger */}
         <button

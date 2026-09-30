@@ -8,6 +8,8 @@ import AuthModal from '@/components/AuthModal';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { DEFAULT_BANNER } from '@/lib/crest';
+import { getAccessToken } from '@/lib/supabase/client';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 import {
   Shield,
   PlusCircle,
@@ -623,6 +625,8 @@ export default function MyClubsPage() {
                 </div>
               </div>
             )}
+
+            <DeleteAccount />
           </>
         )}
       </main>
@@ -635,5 +639,40 @@ export default function MyClubsPage() {
 
       <Footer />
     </div>
+  );
+}
+
+/** Account deletion (the App Store and Google Play require it in the app itself) */
+function DeleteAccount() {
+  const { logout } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  const remove = async () => {
+    const ok = await confirmAction({
+      title: 'Delete your account?',
+      message: 'Your sign-in is removed for good. Clubs keep their own records of your membership, but they are no longer linked to you. This cannot be undone.',
+      confirmLabel: 'Delete account',
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    const res = await fetch('/api/account', { method: 'DELETE', headers: { Authorization: `Bearer ${await getAccessToken()}` } });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return notify('Account not deleted', data.error || 'Please try again.');
+    await notify('Your account has been deleted');
+    await logout();
+  };
+
+  return (
+    <section style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div>
+        <h2 style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>Delete account</h2>
+        <p className="text-note">Permanently remove your itsfootball.club sign-in.</p>
+      </div>
+      <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={remove} style={{ color: 'var(--c-red)' }}>
+        {busy ? 'Deleting…' : 'Delete account'}
+      </button>
+    </section>
   );
 }
