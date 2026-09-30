@@ -1778,6 +1778,13 @@ textarea {
   gap: 1.25rem;
 }
 
+/* Grid columns may shrink below their content's natural width (upload boxes, long inputs), so a
+   form never gets wider than a phone screen */
+.form-row-2 > *,
+.form-row-2-1 > * {
+  min-width: 0;
+}
+
 @media (max-width: 640px) {
   .form-row-2-1,
   .form-row-2 {
@@ -2143,3 +2150,15 @@ dialog.confirm-dialog::backdrop {
 .spin { animation: rte-spin 0.8s linear infinite; }
 @keyframes rte-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+
+/* ClubScore standings rows (components/ClubScoreLeaderboard.tsx) */
+.cs-row { padding: 0.9rem 1.25rem; }
+.cs-points { font-size: 1.45rem; }
+@media (max-width: 560px) {
+  .cs-row { padding: 0.75rem 0.8rem; }
+  .cs-left { gap: 0.6rem !important; }
+  .cs-avatar { display: none; }
+  .cs-rank { width: 26px !important; height: 26px !important; font-size: 0.75rem !important; }
+  .cs-points { font-size: 1.1rem; }
+  .cs-caption, .cs-chevron { display: none; }
+}

@@ -7,11 +7,18 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
+import { sponsorTierLabel } from '@/lib/sponsors';
 
 interface FooterProps {
   club?: Club | null;
   sponsors?: Sponsor[];
 }
+
+/** "Community strength through sports" -> "Community strength through sports." */
+const sentence = (text: string | null | undefined) => {
+  const t = (text || '').trim();
+  return t && !/[.!?…]$/.test(t) ? `${t}.` : t;
+};
 
 export default function Footer({ club, sponsors }: FooterProps) {
   const { clubs } = useClub();
@@ -111,7 +118,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
                       backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.05)',
                       color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)'
                     }}>
-                      {sponsor.tier}
+                      {sponsorTierLabel(sponsor.tier)}
                     </span>
                   </SponsorTrackedLink>
                 );
@@ -165,7 +172,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
               {club
-                ? `${club.motto || 'Dedicated to the beautiful game.'} Home matches played at ${club.stadium_name}.`
+                ? `${sentence(club.motto) || 'Dedicated to the beautiful game.'} Home matches played at ${club.stadium_name}.`
                 : 'The premier digital platform for football clubs worldwide. Live match centers, official member passes, and dedicated club websites.'}
             </p>
             {club && (

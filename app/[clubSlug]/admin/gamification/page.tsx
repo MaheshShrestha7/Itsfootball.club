@@ -95,7 +95,7 @@ export default function AdminGamificationPage({
   const totalClubPoints = clubProfiles.reduce((acc, p) => acc + p.total_points, 0);
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ paddingBottom: '2rem' }}>
       {/* Top Banner */}
       <div style={{
         display: 'flex',

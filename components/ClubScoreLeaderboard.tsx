@@ -27,6 +27,10 @@ interface ClubScoreLeaderboardProps {
   profiles: ClubScoreProfile[];
 }
 
+/** "#9 • RW", "#9", "RW" or "" (no stray "#" or "•" for players without a number or position) */
+const shirtAndPosition = (m: { jersey_number?: number | string | null; player_position?: string | null }) =>
+  [m.jersey_number ? `#${m.jersey_number}` : '', m.player_position || ''].filter(Boolean).join(' • ');
+
 export default function ClubScoreLeaderboard({
   club,
   members,
@@ -133,7 +137,7 @@ export default function ClubScoreLeaderboard({
         )}
 
         {/* Metric Selector Buttons */}
-        <div style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', background: 'rgba(var(--shade-rgb), 0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
           <button
             id="tab-clubscore-season"
             onClick={() => setFilter('season')}
@@ -149,7 +153,8 @@ export default function ClubScoreLeaderboard({
               transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.35rem'
+              gap: '0.35rem',
+              whiteSpace: 'nowrap',
             }}
           >
             <Trophy size={13} />
@@ -171,7 +176,8 @@ export default function ClubScoreLeaderboard({
               transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.35rem'
+              gap: '0.35rem',
+              whiteSpace: 'nowrap',
             }}
           >
             <TrendingUp size={13} />
@@ -193,7 +199,8 @@ export default function ClubScoreLeaderboard({
               transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.35rem'
+              gap: '0.35rem',
+              whiteSpace: 'nowrap',
             }}
           >
             <Flame size={13} color={filter === 'streak' ? '#FFFFFF' : '#EF4444'} />
@@ -224,12 +231,12 @@ export default function ClubScoreLeaderboard({
                 const logs = activityLogs.filter(l => l.member_id === player.id);
                 setSelectedPlayerModal({ member: player, profile, logs });
               }}
-              className="glass-panel glass-panel-interactive"
+              className="glass-panel glass-panel-interactive cs-row"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0.9rem 1.25rem',
+                gap: '0.75rem',
                 borderRadius: '10px',
                 border: isTopThree ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-subtle)',
                 background: isTopThree ? 'rgba(245, 158, 11, 0.04)' : 'rgba(var(--shade-rgb), 0.25)',
@@ -237,8 +244,8 @@ export default function ClubScoreLeaderboard({
               }}
             >
               {/* Left Side: Rank, Player Details & Tier */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-                <div style={{
+              <div className="cs-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0, flex: '1 1 auto' }}>
+                <div className="cs-rank" style={{
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
@@ -254,7 +261,7 @@ export default function ClubScoreLeaderboard({
                   {idx + 1}
                 </div>
 
-                <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div className="cs-avatar" style={{ position: 'relative', flexShrink: 0 }}>
                   <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
                   {profile.current_streak >= 3 && (
                     <div style={{
@@ -279,9 +286,7 @@ export default function ClubScoreLeaderboard({
                     <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem' }}>
                       {player.full_name}
                     </span>
-                    <span className="text-meta">
-                      #{player.jersey_number} • {player.player_position}
-                    </span>
+                    {shirtAndPosition(player) && <span className="text-meta">{shirtAndPosition(player)}</span>}
                     <span
                       className="badge"
                       style={{
@@ -297,9 +302,9 @@ export default function ClubScoreLeaderboard({
                   </div>
 
                   {/* Badges preview row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem', marginTop: '3px' }}>
                     {profile.current_streak > 0 && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--c-red)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--c-red)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}>
                         <Flame size={12} color="var(--c-red)" />
                         {profile.current_streak}-week streak
                       </span>
@@ -316,22 +321,22 @@ export default function ClubScoreLeaderboard({
               {/* Right Side: Points & Click Prompt */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{
+                  <div className="cs-points" style={{
                     fontFamily: 'var(--font-heading)',
                     fontWeight: 900,
-                    fontSize: '1.45rem',
+                    whiteSpace: 'nowrap',
                     color: filter === 'streak' ? 'var(--c-red)' : filter === 'weekly' ? 'var(--c-green)' : 'var(--club-primary)'
                   }}>
                     {filter === 'season' && `${profile.total_points} PTS`}
                     {filter === 'weekly' && `+${profile.weekly_points} PTS`}
                     {filter === 'streak' && `${profile.current_streak} WEEKS`}
                   </div>
-                  <div className="text-meta">
+                  <div className="text-meta cs-caption">
                     {filter === 'season' ? 'Season Fantasy Total' : filter === 'weekly' ? 'Earned This Week' : `Best: ${profile.highest_streak} weeks`}
                   </div>
                 </div>
 
-                <div className="text-muted">
+                <div className="text-muted cs-chevron">
                   <ChevronRight size={18} />
                 </div>
               </div>
@@ -451,7 +456,7 @@ export default function ClubScoreLeaderboard({
                   </span>
                 </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  #{selectedPlayerModal.member.jersey_number} • {selectedPlayerModal.member.player_position} • {club.name}
+                  {[shirtAndPosition(selectedPlayerModal.member), club.name].filter(Boolean).join(' • ')}
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@ import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
-import { sortSponsorsByTier } from '@/lib/sponsors';
+import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 import ArticleBody from '@/components/ArticleBody';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
@@ -1352,14 +1352,7 @@ export default function ClubPublicPage({
                   const isLG = scale === 'lg';
                   const isMD = scale === 'md';
 
-                  const badgeText =
-                    sponsor.tier === 'platinum'
-                      ? '★ PRINCIPAL PARTNER'
-                      : sponsor.tier === 'gold'
-                      ? 'GOLD PARTNER'
-                      : sponsor.tier === 'silver'
-                      ? 'OFFICIAL SUPPLIER'
-                      : 'COMMUNITY SUPPORTER';
+                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorTierLabel(sponsor.tier).toUpperCase();
 
                   return (
                     <SponsorTrackedLink
@@ -1429,7 +1422,7 @@ export default function ClubPublicPage({
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
                           <span className="badge" style={{
-                            fontSize: isXL ? '0.65rem' : isLG ? '0.6rem' : '0.55rem',
+                            fontSize: isXL ? '0.72rem' : '0.68rem',
                             padding: isXL ? '0.2rem 0.55rem' : '0.15rem 0.4rem',
                             fontWeight: 800,
                             backgroundColor: sponsor.tier === 'platinum'
@@ -1944,9 +1937,11 @@ export default function ClubPublicPage({
                       <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
-                      <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', marginBottom: '4px' }}>
-                        {player.player_position}
-                      </span>
+                      {player.player_position && (
+                        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', marginBottom: '4px' }}>
+                          {player.player_position}
+                        </span>
+                      )}
                       <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                         {player.full_name}
                       </h3>
@@ -2023,7 +2018,7 @@ export default function ClubPublicPage({
                 }}
               >
                 <Trophy size={16} color={leaderboardMode === 'clubscore' ? '#FFFFFF' : '#F59E0B'} />
-                <span>🏆 ClubScore Fantasy League</span>
+                <span>ClubScore Fantasy League</span>
               </button>
 
               <button
@@ -2044,7 +2039,7 @@ export default function ClubPublicPage({
                 }}
               >
                 <Award size={16} />
-                <span>⚽ Traditional Match Stats</span>
+                <span>Traditional Match Stats</span>
               </button>
             </div>
           </div>

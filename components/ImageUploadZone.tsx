@@ -327,7 +327,7 @@ export default function ImageUploadZone({
         }}
       >
         {previewUrl ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem 1rem' }}>
             <div
               data-theme="dark" style={{
                 width: aspectRatio === '16:9' ? '120px' : '64px',
@@ -353,7 +353,7 @@ export default function ImageUploadZone({
               />
             </div>
 
-            <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
+            <div style={{ textAlign: 'left', flex: '1 1 120px', minWidth: 0 }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Asset configured
               </div>

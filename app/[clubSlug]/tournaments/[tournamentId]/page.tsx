@@ -168,22 +168,19 @@ export default function PublicTournamentDetailPage({
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', columnGap: '1.25rem', rowGap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
                     <Layers size={14} />
                     <span>{formatLabel}</span>
                   </span>
-                  <span>•</span>
                   <span className="row row-tight">
                     <Calendar size={14} />
                     <span>Season {tournament.season}</span>
                   </span>
-                  <span>•</span>
                   <span className="row row-tight">
                     <Clock size={14} />
                     <span>{parseTournamentDate(tournament.start_date) ? <LocalTime value={parseTournamentDate(tournament.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
                   </span>
-                  <span>•</span>
                   <span className="row row-tight">
                     <MapPin size={14} />
                     <span>{tournament.venue || 'Stadium Arena'}</span>

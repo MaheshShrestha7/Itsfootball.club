@@ -34,6 +34,7 @@ import {
   Target
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import { periodLabel } from '@/lib/match-clock';
 
 export default function MatchCenterPage({
   params,
@@ -572,7 +573,7 @@ export default function MatchCenterPage({
                 marginTop: '8px',
                 textAlign: 'center',
               }}>
-                {match.period === 'second_half' ? '2nd Half' : match.period}
+                {periodLabel(match.period)}
               </div>
             </div>
 
@@ -683,15 +684,17 @@ export default function MatchCenterPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   {goalEvents.map(evt => (
                     <div key={evt.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{evt.minute}&apos;</span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                        {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
-                      </span>
-                      {evt.assist_player_name && (
-                        <span className="text-secondary">(Assist: {evt.assist_player_name})</span>
-                      )}
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                        {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
+                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{evt.minute}&apos;</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                          {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
+                        </span>
+                        {evt.assist_player_name && (
+                          <span className="text-secondary"> (Assist: {evt.assist_player_name})</span>
+                        )}
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                          {' · '}{evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
+                        </span>
                       </span>
                     </div>
                   ))}

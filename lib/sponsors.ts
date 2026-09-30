@@ -19,3 +19,11 @@ export function sortSponsorsByTier<T extends Pick<Sponsor, 'tier' | 'display_ord
     (a, b) => (TIER_RANK[a.tier] ?? 9) - (TIER_RANK[b.tier] ?? 9) || (a.display_order ?? 0) - (b.display_order ?? 0)
   );
 }
+
+/** What each tier is called on club pages (the admin picks platinum / gold / silver / bronze) */
+export function sponsorTierLabel(tier: string | undefined): string {
+  return tier === 'platinum' ? 'Principal Partner'
+    : tier === 'gold' ? 'Gold Partner'
+    : tier === 'silver' ? 'Official Supplier'
+    : 'Community Supporter';
+}

@@ -32,3 +32,11 @@ export function useNowTick(ms = 15000): number {
   }, [ms]);
   return now;
 }
+
+const PERIOD_LABELS: Record<string, string> = {
+  pre_match: 'Pre-match', first_half: '1st Half', halftime: 'Half-time', second_half: '2nd Half',
+  extra_time: 'Extra Time', penalties: 'Penalties', full_time: 'Full Time',
+};
+
+/** A match period as people say it ("Half-time", not "halftime") */
+export const periodLabel = (period: string | null | undefined) => (period && PERIOD_LABELS[period]) || '';

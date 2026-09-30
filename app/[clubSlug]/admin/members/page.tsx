@@ -185,7 +185,7 @@ export default function AdminMembersPage({
       : filterList(rejectedMembers);
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{

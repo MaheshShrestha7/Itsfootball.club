@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -42,18 +42,39 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
 
+  // The full link bar only when it fits beside the crest and club name; otherwise the menu button.
+  // Measured, not a fixed breakpoint: what fits depends on the club's name, who is signed in
+  // (admins get extra controls) and whether a match is live.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const sideRef = useRef<HTMLDivElement>(null);
+  const [navFits, setNavFits] = useState(true);
+  useEffect(() => {
+    const row = rowRef.current, nav = navRef.current, side = sideRef.current;
+    if (!row || !nav || !side) return;
+    const BRAND_MIN = 200; // crest, short-name badge and a few letters of the club name
+    const check = () => setNavFits(BRAND_MIN + nav.scrollWidth + side.offsetWidth + 32 <= row.clientWidth);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(row);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <header style={{
+    <header data-nav-fits={navFits ? undefined : 'false'} style={{
       position: 'sticky',
       top: 0,
       zIndex: 50,
+      // The link bar is still laid out (to be measured) while hidden; never let it widen the page
+      overflowX: 'clip',
       background: 'rgba(var(--dk-10-15-23), 0.94)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border-subtle)',
     }}>
       {/* Main Club Navigation */}
-      <div className="container" style={{
+      <div ref={rowRef} className="container" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -70,6 +91,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             textDecoration: 'none',
             minWidth: 0,
             flex: 1,
+            overflow: 'hidden',
           }}
         >
           {/* Shield / Crest Container */}
@@ -153,7 +175,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         </Link>
 
         {/* Desktop Links */}
-        <nav style={{ display: 'none', alignItems: 'center', gap: '1.5rem', marginLeft: 'auto' }} className="desktop-nav">
+        <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1.5rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
           <Link href={`/${club.slug}`} style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
             Club
           </Link>
@@ -317,7 +339,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           )}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem' }}>
+        <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem', flexShrink: 0 }}>
         <PushToggle clubId={club.id} clubName={club.name} />
         <ThemeToggle />
         {/* Mobile menu trigger */}
@@ -551,6 +573,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           }
           .mobile-trigger {
             display: none !important;
+          }
+          /* Too narrow for the full link bar: keep it measurable but out of sight, show the menu */
+          header[data-nav-fits='false'] .desktop-nav {
+            position: absolute;
+            top: 0;
+            left: 0;
+            visibility: hidden;
+            pointer-events: none;
+          }
+          header[data-nav-fits='false'] .mobile-trigger {
+            display: flex !important;
           }
         }
         @media (max-width: 480px) {

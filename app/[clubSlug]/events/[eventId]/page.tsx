@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
-import { sortSponsorsByTier } from '@/lib/sponsors';
+import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 import {
   Shield,
   Calendar,
@@ -196,9 +196,8 @@ export default function EventDetailsPage({
                       fontSize: '0.7rem',
                       backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
                       color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)',
-                      textTransform: 'capitalize',
                     }}>
-                      {sponsor.tier}
+                      {sponsorTierLabel(sponsor.tier)}
                     </span>
                     {sponsor.website_url && (
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

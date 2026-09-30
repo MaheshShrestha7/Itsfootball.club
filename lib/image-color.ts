@@ -38,8 +38,22 @@ export async function extractCrestTextColor(imageUrl: string | undefined): Promi
       }
     };
     img.onerror = () => resolve(null);
-    img.src = imageUrl;
+    img.src = corsCopy(imageUrl);
   });
+}
+
+// The page shows the same crest with a plain <img>, and storage (R2) answers that without CORS
+// headers and without "Vary: Origin", so the browser would reuse that cached copy for this CORS
+// read and block it. A distinct URL gets its own copy, fetched with CORS headers.
+function corsCopy(imageUrl: string): string {
+  if (/^(data|blob):/i.test(imageUrl)) return imageUrl;
+  try {
+    const url = new URL(imageUrl, window.location.href);
+    url.searchParams.set('cors', '1');
+    return url.href;
+  } catch {
+    return imageUrl;
+  }
 }
 
 // Converts an averaged RGB sample to HSL and clamps lightness/saturation so the result reads

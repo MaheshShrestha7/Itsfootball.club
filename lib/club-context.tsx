@@ -2304,6 +2304,8 @@ export function ClubProvider({
     opts?: { placement?: string; dwellMs?: number }
   ) => {
     if (typeof window === 'undefined' || !isUuid(clubId) || !isUuid(sponsorId)) return;
+    // The club's own admins browsing the admin panel aren't sponsor audience (same rule as page views)
+    if (window.location.pathname.includes('/admin')) return;
 
     // One impression per sponsor per placement per browser per 30 minutes; clicks are never deduped.
     if (eventType !== 'click') {

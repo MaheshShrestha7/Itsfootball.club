@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { AvailabilityStatus, isPlayerMember } from '@/lib/supabase/types';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { periodLabel } from '@/lib/match-clock';
 import {
   Calendar,
   Clock,
@@ -324,7 +325,7 @@ function AvailabilityHub() {
                     {targetMatch.competition}
                   </span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--c-amber)', fontWeight: 800 }}>
-                    {targetMatch.period.toUpperCase().replace('_', ' ')}
+                    {periodLabel(targetMatch.period).toUpperCase()}
                   </span>
                 </div>
 
