@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Club, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
 import { Trophy, X, Sparkles, Save } from 'lucide-react';
@@ -355,7 +356,8 @@ export default function TournamentFormModal({
             </div>
             {clubInternalTeams.length === 0 ? (
               <div style={{ padding: '0.75rem', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                No internal teams yet. Create squads in the &quot;Internal Teams&quot; tab, or add guest teams below.
+                No internal teams yet. Create them in{' '}
+                <Link href={`/${club.slug}/admin/teams`} style={{ color: 'var(--c-green)', fontWeight: 700 }}>People &amp; Membership → Internal Teams</Link>, or add guest teams below.
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>

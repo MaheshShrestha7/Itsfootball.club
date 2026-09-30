@@ -137,6 +137,7 @@ export default function AdminLayout({
       title: 'People & Membership',
       items: [
         { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
+        { label: 'Internal Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
         {
           label: 'Member Approvals',
           href: `/${club.slug}/admin/members`,

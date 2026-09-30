@@ -4,9 +4,8 @@ import React, { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Tournament } from '@/lib/supabase/types';
-import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
-import { Trophy, Swords, Users, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
+import { Trophy, Swords, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 
@@ -34,7 +33,6 @@ export default function AdminTournamentsPage({
   const clubTournaments = tournaments.filter(t => t.club_id === club.id);
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
 
-  const [activeTab, setActiveTab] = useState<'tournaments' | 'internal_teams'>('tournaments');
   // Upgrade tournaments made by older versions (missing fixtures, old 3rd place slots)
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
 
@@ -152,14 +150,15 @@ export default function AdminTournamentsPage({
           <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>{activeTournaments} Currently Active</span>
         </div>
 
-        <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
+        {/* Teams are set up under People & Membership -> Internal Teams */}
+        <Link href={`/${club.slug}/admin/teams`} style={{ display: 'block', color: 'inherit', textDecoration: 'none', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Internal Teams</span>
             <Shield size={18} color="var(--c-blue)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Ready for Tournament Draw</span>
-        </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Manage teams →</span>
+        </Link>
 
         <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
@@ -171,59 +170,8 @@ export default function AdminTournamentsPage({
         </div>
       </div>
 
-      {/* Tabs Switcher */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <button
-          onClick={() => setActiveTab('tournaments')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'tournaments' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'tournaments' ? 'var(--c-green)' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-          }}
-        >
-          <Trophy size={16} />
-          <span>Tournaments List ({clubTournaments.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('internal_teams')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'internal_teams' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'internal_teams' ? 'var(--c-green)' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-          }}
-        >
-          <Users size={16} />
-          <span>Internal Teams & Squads ({clubInternalTeams.length})</span>
-        </button>
-      </div>
-
-      {/* Tab 1: Tournaments List */}
-      {activeTab === 'tournaments' && (
-        <div>
+      {/* Tournaments List */}
+      <div>
           {clubTournaments.length === 0 ? (
             <div
               style={{
@@ -464,13 +412,7 @@ export default function AdminTournamentsPage({
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Tab 2: Internal Teams Manager */}
-      {activeTab === 'internal_teams' && (
-        <InternalTeamsManager clubSlug={club.slug} />
-      )}
+      </div>
 
       {formTarget && (
         <TournamentFormModal

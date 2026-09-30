@@ -5,6 +5,10 @@ import { fallbackToBrandImage } from "@/lib/image-fallback";
 import { useClub } from '@/lib/club-context';
 import { NewsArticle } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
+import RichTextEditor from '@/components/RichTextEditor';
+import ImageUploadZone from '@/components/ImageUploadZone';
+import { notify } from '@/components/ConfirmDialog';
+import { isArticleEmpty } from '@/lib/article-text';
 import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles } from 'lucide-react';
 
 export default function AdminContentPage({
@@ -103,6 +107,10 @@ export default function AdminContentPage({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
+    if (isArticleEmpty(form.content)) {
+      notify('The article is empty', 'Write the story, or add a picture or video, before publishing.');
+      return;
+    }
 
     const slug = form.slug || form.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const tagsArray = form.tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -243,7 +251,7 @@ export default function AdminContentPage({
         }}>
           <div className="glass-panel" style={{
             width: '100%',
-            maxWidth: '650px',
+            maxWidth: '820px',
             maxHeight: '90vh',
             overflowY: 'auto',
             background: 'var(--bg-surface-elevated)',
@@ -284,28 +292,31 @@ export default function AdminContentPage({
 
               <div className="form-group">
                 <label htmlFor="content-full-article-content" className="form-label">Full Article Content *</label>
-                <textarea id="content-full-article-content"
-                  rows={5}
-                  required
-                  className="form-textarea"
+                <RichTextEditor
+                  key={editingId || 'new'}
+                  id="content-full-article-content"
                   value={form.content}
-                  onChange={e => setForm({ ...form, content: e.target.value })}
+                  onChange={content => setForm(f => ({ ...f, content }))}
+                  clubId={club.id}
                 />
+                <span className="text-note">Add pictures and YouTube videos anywhere in the story from the toolbar. You can also paste or drop pictures straight in.</span>
               </div>
 
               <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
-                  <label htmlFor="content-cover-image-url" className="form-label">Cover Image URL</label>
-                  <input id="content-cover-image-url"
-                    type="url"
-                    className="form-input"
-                    value={form.cover_image_url}
-                    onChange={e => setForm({ ...form, cover_image_url: e.target.value })}
+                  <ImageUploadZone
+                    label="Cover Image"
+                    recommendedText="Shown on the news card and at the top of the article. 16:9 works best."
+                    currentImageUrl={form.cover_image_url}
+                    onUploadComplete={url => setForm(f => ({ ...f, cover_image_url: url }))}
+                    folder="news"
+                    clubId={club.id}
+                    aspectRatio="16:9"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="content-video-link-youtube-or-mp4" className="form-label">Video Link (YouTube or .mp4)</label>
+                  <label htmlFor="content-video-link-youtube-or-mp4" className="form-label">Featured Video (YouTube or .mp4)</label>
                   <input id="content-video-link-youtube-or-mp4"
                     type="text"
                     className="form-input"

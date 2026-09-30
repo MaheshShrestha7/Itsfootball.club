@@ -60,6 +60,35 @@ const compressImage = async (file: File, maxDim: number): Promise<File> => {
   });
 };
 
+/** Compresses an image and uploads it through /api/upload; returns its public URL. Throws a readable message on failure. */
+export async function uploadImage(file: File, { folder = 'uploads', clubId, maxDimension = 1200 }: { folder?: string; clubId?: string; maxDimension?: number } = {}): Promise<string> {
+  // Auto-compress image before upload to avoid massive base64 payloads
+  const fileToUpload = await compressImage(file, maxDimension);
+
+  const formData = new FormData();
+  formData.append('file', fileToUpload);
+  formData.append('folder', folder);
+  if (clubId) formData.append('clubId', clubId);
+
+  const token = await getAccessToken();
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => ({}));
+    throw new Error(errJson.error || `Upload failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.url) {
+    throw new Error('Upload service did not return an asset URL');
+  }
+  return data.url;
+}
+
 export default function ImageUploadZone({
   label,
   recommendedText = 'PNG, JPG, WebP or GIF up to 5MB',
@@ -111,40 +140,12 @@ export default function ImageUploadZone({
     setUploadProgress(20);
 
     try {
-      // Auto-compress image before upload to avoid massive base64 payloads
-      const maxDimension = aspectRatio === '16:9' ? 1200 : 500;
-      const fileToUpload = await compressImage(file, maxDimension);
-
-      const formData = new FormData();
-      formData.append('file', fileToUpload);
-      formData.append('folder', folder);
-      if (clubId) formData.append('clubId', clubId);
-
       setUploadProgress(50);
-
-      const token = await getAccessToken();
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: formData,
-      });
-
-      setUploadProgress(85);
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || `Upload failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.url) {
-        throw new Error('Upload service did not return an asset URL');
-      }
-
+      const url = await uploadImage(file, { folder, clubId, maxDimension: aspectRatio === '16:9' ? 1200 : 500 });
       setUploadProgress(100);
-      setPreviewUrl(data.url);
-      setUrlInputValue(data.url);
-      onUploadComplete(data.url);
+      setPreviewUrl(url);
+      setUrlInputValue(url);
+      onUploadComplete(url);
     } catch (err: any) {
       console.error('Image upload failed:', err);
       setErrorMsg(err.message || 'Failed to upload image. Please try again.');

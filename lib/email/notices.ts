@@ -5,6 +5,7 @@ import { eventNotice, matchNotice, newsNotice, renewalReminder } from './templat
 import { clubBaseUrl, clubBrand, type ClubBrandRow } from './club-brand';
 import { looksLikeEmail, normalizeEmail, type EmailDraft } from './club-emails';
 import { formatDay, formatWhen, localDate } from './format';
+import { articleText } from '@/lib/article-text';
 import type { PushMessage } from '@/lib/push';
 
 export const NOTICE_KINDS = ['renewal', 'match', 'event', 'news'] as const;
@@ -149,7 +150,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         .select('id, title, summary, content, cover_image_url')
         .eq('club_id', club.id).eq('id', req.refId || '').maybeSingle();
       if (!article) return { ok: false, status: 404, error: 'Article not found.' };
-      const summary = article.summary || article.content?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 280);
+      const summary = article.summary || articleText(article.content).slice(0, 280);
       return {
         ok: true, label: `News: ${article.title}`, skippedNoEmail,
         push: { title: `${club.name}: ${article.title}`, body: summary?.slice(0, 140) || 'New from the club', url: `/${club.slug}#news`, tag: `news:${article.id}` },

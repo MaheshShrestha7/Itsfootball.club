@@ -11,6 +11,7 @@ import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier } from '@/lib/sponsors';
+import ArticleBody from '@/components/ArticleBody';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
@@ -2359,9 +2360,7 @@ export default function ClubPublicPage({
               Published by {activeNewsModal.author_name} • <LocalTime value={activeNewsModal.published_at} />
             </div>
             <NewsVideo url={activeNewsModal.video_embed_url} title={activeNewsModal.title} />
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: '2rem' }}>
-              {activeNewsModal.content}
-            </div>
+            <ArticleBody content={activeNewsModal.content} style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', lineHeight: 1.7, marginBottom: '2rem' }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setActiveNewsModal(null)} className="btn btn-primary btn-sm">
                 Close
