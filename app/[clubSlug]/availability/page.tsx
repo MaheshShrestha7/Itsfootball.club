@@ -637,20 +637,21 @@ function AvailabilityHub() {
                         background: 'rgba(var(--dk-15-23-42), 0.6)',
                         border: '1px solid var(--border-subtle)',
                         gap: '0.75rem',
+                        flexWrap: 'wrap',
                       }}
                     >
-                      {/* Player Info */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                      {/* Player Info: takes the whole first line on narrow screens, status + actions wrap below */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: '1 1 12rem' }}>
                         <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={36} />
                         <div className="min-w-0">
                           <div className="row">
-                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                               {player.full_name}
                             </span>
-                            <span style={{ fontSize: '0.7rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                            <span className="shrink-0" style={{ fontSize: '0.7rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
                               #{player.jersey_number || '-'}
                             </span>
-                            <span className="badge badge-secondary" style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem' }}>
+                            <span className="badge badge-secondary shrink-0" style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem' }}>
                               {player.player_position || 'Squad'}
                             </span>
                           </div>

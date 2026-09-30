@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AvailabilityStatus, ClubMember, MatchFormat, PitchPosition } from '@/lib/supabase/types';
 import TacticalPitch, { isEmptySlot, placeOnSlot } from './TacticalPitch';
 import PlayerAvatar from './PlayerAvatar';
-import { ArrowLeftRight, CheckCircle2, XCircle, HelpCircle, AlertCircle, Users, GripVertical, X } from 'lucide-react';
+import { ArrowLeftRight, CheckCircle2, XCircle, HelpCircle, AlertCircle, Users, GripVertical, X, Search } from 'lucide-react';
 
 const STATUS: Record<AvailabilityStatus, { icon: typeof CheckCircle2; color: string; label: string }> = {
   available: { icon: CheckCircle2, color: 'var(--c-green)', label: 'Available' },
@@ -61,6 +61,15 @@ export default function LineupWorkbench({
 
   const onPitchIds = new Set(positions.map(p => p.member_id).filter(Boolean));
   const benchPlayers = players.filter(p => !onPitchIds.has(p.id));
+  const [search, setSearch] = useState('');
+  const q = search.trim().toLowerCase();
+  const shownBench = q
+    ? benchPlayers.filter(p =>
+        p.full_name.toLowerCase().includes(q) ||
+        String(p.jersey_number ?? '') === q ||
+        (p.player_position || '').toLowerCase() === q
+      )
+    : benchPlayers;
   // A pending player who has since been placed (e.g. by drag) is no longer pending
   const pendingSub = pendingSubState && !onPitchIds.has(pendingSubState.id) ? pendingSubState : null;
 
@@ -174,6 +183,26 @@ export default function LineupWorkbench({
 
   const swapSlot = positions.find(p => p.id === swapSlotId);
 
+  const searchBox = (
+    <label style={{ position: 'relative', display: 'block' }}>
+      <Search size={15} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+      <input
+        type="search"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search name, number or position"
+        aria-label="Search bench players"
+        className="form-input"
+        style={{ width: '100%', paddingLeft: '2.1rem', fontSize: '16px' }}
+      />
+    </label>
+  );
+  const noMatch = (
+    <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '1.5rem 0' }}>
+      No bench player matches &ldquo;{search.trim()}&rdquo;.
+    </p>
+  );
+
   return (
     <>
       <div className="lineup-workbench-layout">
@@ -274,13 +303,17 @@ export default function LineupWorkbench({
             <span>Drop a pitch player here to send them to the bench</span>
           </div>
 
+          {benchPlayers.length > 0 && searchBox}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '580px', overflowY: 'auto' }}>
             {benchPlayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                 All squad players are currently placed in the starting lineup.
               </div>
+            ) : shownBench.length === 0 ? (
+              noMatch
             ) : (
-              benchPlayers.map(player => {
+              shownBench.map(player => {
                 const st = STATUS[getAvailability(player.id)];
                 const Icon = st.icon;
                 const isPending = pendingSub?.id === player.id;
@@ -450,13 +483,17 @@ export default function LineupWorkbench({
               </button>
             </div>
 
+            {benchPlayers.length > 0 && <div style={{ marginBottom: '0.75rem' }}>{searchBox}</div>}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
               {benchPlayers.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
                   Nobody on the bench: every eligible player is already in the lineup.
                 </p>
+              ) : shownBench.length === 0 ? (
+                noMatch
               ) : (
-                benchPlayers.map(benchP => {
+                shownBench.map(benchP => {
                   const st = STATUS[getAvailability(benchP.id)];
                   const Icon = st.icon;
                   return (

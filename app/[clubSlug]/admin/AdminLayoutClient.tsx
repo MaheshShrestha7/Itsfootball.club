@@ -36,10 +36,11 @@ import {
   ClipboardCheck,
   Flag,
   Flame,
-  Wallet, BellRing } from 'lucide-react';
+  Wallet, BellRing, LifeBuoy } from 'lucide-react';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
+import SupportModal from '@/components/SupportModal';
 
 export default function AdminLayout({
   children,
@@ -57,6 +58,7 @@ export default function AdminLayout({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   useEscapeToClose(mobileDrawerOpen, setMobileDrawerOpen);
   const [isMounted, setIsMounted] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -346,6 +348,16 @@ export default function AdminLayout({
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => { onItemClick?.(); setSupportOpen(true); }}
+          className="btn btn-secondary btn-sm touch-target"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+        >
+          <LifeBuoy size={13} />
+          <span>Contact itsfootball.club Support</span>
+        </button>
+
         <Link
           href={`/${club.slug}`}
           onClick={onItemClick}
@@ -386,6 +398,8 @@ export default function AdminLayout({
         </div>
 
         {/* Desktop Admin Sidebar */}
+        <SupportModal clubId={club.id} open={supportOpen} setOpen={setSupportOpen} />
+
         <aside className="admin-desktop-sidebar">
           {renderSidebarContent()}
         </aside>

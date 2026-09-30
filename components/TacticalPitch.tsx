@@ -267,6 +267,11 @@ export function isEmptySlot(p: PitchPosition): boolean {
   return !p.member_id && (!p.name || /^Position /.test(p.name));
 }
 
+/** Pitch name label size: ~10 bold chars fit the 72px label at full size (0.7rem), so step down
+ *  for longer names. Relative to the label's own 0.7rem, so 0.8em ≈ 9px is the legibility floor. */
+export const nameFontSize = (name: string): string =>
+  name.length <= 10 ? '1em' : name.length <= 12 ? '0.88em' : '0.8em';
+
 function uniqueSlotId(taken: Set<string>, idx: number): string {
   let n = idx;
   while (taken.has(`slot-${n}`)) n++;
@@ -1270,9 +1275,15 @@ export default function TacticalPitch({
                   gap: '0.3rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
               }}>
-                <span style={{ maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis', color: empty ? 'var(--text-muted)' : undefined }}>
-                  {empty ? 'Empty' : nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()}
-                </span>
+                {/* Long names shrink a step (never below ~9px), and wrap only past that, instead of truncating to "…" */}
+                {(() => {
+                  const label = empty ? 'Empty' : (nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()) || '';
+                  return (
+                    <span className="player-node-label" style={{ maxWidth: '72px', fontSize: nameFontSize(label), whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'center', lineHeight: 1.15, color: empty ? 'var(--text-muted)' : undefined }}>
+                      {label}
+                    </span>
+                  );
+                })()}
                 <span style={{
                   fontSize: '0.7rem',
                   color: primaryColor,

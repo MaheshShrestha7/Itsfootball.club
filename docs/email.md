@@ -50,6 +50,7 @@ Set these in Cloudflare (`npx wrangler secret put NAME`) and in `.env.local` for
 | `SEND_EMAIL_HOOK_SECRET` | from step 4 (`v1,whsec_...`) |
 | `CRON_SECRET` | any long random string, e.g. `openssl rand -hex 32`. Also signs unsubscribe links: changing it later makes old links show "invalid link" |
 | `EMAIL_FROM_ADDRESS` | optional, defaults to `notifications@itsfootball.club` |
+| `SUPPORT_EMAIL` | inbox for club admins' "Contact itsfootball.club Support" messages (`/api/support`); unset = the form says support isn't set up |
 | `EMAIL_TIMEZONE` | optional, defaults to `Australia/Sydney` (times in reminders) |
 
 ## 4. Point Supabase Auth at the hook
