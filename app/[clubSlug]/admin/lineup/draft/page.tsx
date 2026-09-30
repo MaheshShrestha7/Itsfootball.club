@@ -345,6 +345,8 @@ export default function DraftLineupPage() {
           <div style={{
             position: 'fixed',
             inset: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             background: 'rgba(0, 0, 0, 0.85)',
             backdropFilter: 'blur(8px)',
             zIndex: 9999,
@@ -353,7 +355,7 @@ export default function DraftLineupPage() {
             justifyContent: 'center',
             padding: '1rem',
           }}>
-            <div className="glass-panel" style={{ maxWidth: '480px', width: '100%', padding: '2rem', animation: 'fadeIn 0.25s ease' }}>
+            <div className="glass-panel" style={{ margin: 'auto', maxWidth: '480px', width: '100%', padding: '2rem', animation: 'fadeIn 0.25s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 <div style={{ width: '42px', height: '42px', flexShrink: 0, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Send size={22} color="var(--c-green)" />

@@ -39,6 +39,8 @@ export default function DoorCheckinQrModal({
       style={{
         position: 'fixed',
         inset: 0,
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
         background: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
@@ -54,6 +56,7 @@ export default function DoorCheckinQrModal({
       <div
         className="glass-panel"
         style={{
+          margin: 'auto',
           maxWidth: '520px',
           width: '100%',
           padding: '2rem',

@@ -525,6 +525,8 @@ export default function AdminSeasonsPage({
         <div style={{
           position: 'fixed',
           inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           background: 'rgba(0, 0, 0, 0.8)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
@@ -534,6 +536,7 @@ export default function AdminSeasonsPage({
           padding: '1rem',
         }}>
           <div className="glass-panel" style={{
+            margin: 'auto',
             width: '100%',
             maxWidth: '560px',
             padding: '2rem',
@@ -692,6 +695,8 @@ export default function AdminSeasonsPage({
         <div style={{
           position: 'fixed',
           inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           background: 'rgba(0, 0, 0, 0.8)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
@@ -701,6 +706,7 @@ export default function AdminSeasonsPage({
           padding: '1rem',
         }}>
           <div className="glass-panel" style={{
+            margin: 'auto',
             width: '100%',
             maxWidth: '480px',
             padding: '2rem',

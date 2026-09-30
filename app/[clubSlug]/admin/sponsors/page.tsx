@@ -440,6 +440,8 @@ export default function AdminSponsorsPage({
         <div style={{
           position: 'fixed',
           inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           zIndex: 999,
           background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(12px)',
@@ -449,6 +451,7 @@ export default function AdminSponsorsPage({
           padding: '1rem',
         }}>
           <div className="glass-panel" style={{
+            margin: 'auto',
             width: '100%',
             maxWidth: '540px',
             background: 'var(--bg-surface-elevated)',

@@ -636,6 +636,8 @@ export default function AdminTournamentDetailPage({
           style={{
             position: 'fixed',
             inset: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             background: 'rgba(var(--dk-4-6-9), 0.85)',
             display: 'flex',
             alignItems: 'center',
@@ -647,6 +649,7 @@ export default function AdminTournamentDetailPage({
         >
           <div
             style={{
+              margin: 'auto',
               background: 'rgb(var(--dk-17-24-39))',
               border: '1px solid rgba(var(--tint-rgb), 0.12)',
               borderRadius: '14px',

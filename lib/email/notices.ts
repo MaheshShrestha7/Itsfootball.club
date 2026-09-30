@@ -20,6 +20,8 @@ export interface NoticeRequest {
   audience?: NoticeAudience;
   /** Optional personal note from the admin */
   message?: string;
+  /** Renewal only: just this member (sent from Members Administration), whatever their expiry date */
+  memberId?: string;
 }
 
 export const MAX_MESSAGE_LENGTH = 1000;
@@ -72,14 +74,26 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
 
   switch (req.kind) {
     case 'renewal': {
-      // Expiring within 30 days, or lapsed within the last 60
       const today = localDate();
-      const from = localDate(-60), to = localDate(30);
-      const due = everyone.filter(m => m.membership_expires_at && m.membership_expires_at >= from && m.membership_expires_at <= to);
+      let due: (MemberRow & { email: string })[];
+      if (req.memberId) {
+        const { data: member } = await db.from('club_members')
+          .select('id, full_name, email, role, roles, status, membership_tier, membership_expires_at')
+          .eq('club_id', club.id).eq('id', req.memberId).eq('membership_status', 'approved').maybeSingle();
+        if (!member) return { ok: false, status: 404, error: 'Member not found.' };
+        if (!looksLikeEmail(member.email)) return { ok: false, status: 400, error: `${member.full_name} has no email address.` };
+        if (!member.membership_expires_at) return { ok: false, status: 400, error: `${member.full_name} has no membership expiry date yet.` };
+        due = [member as MemberRow & { email: string }];
+      } else {
+        // Expiring within 30 days, or lapsed within the last 60
+        const from = localDate(-60), to = localDate(30);
+        due = everyone.filter(m => m.membership_expires_at && m.membership_expires_at >= from && m.membership_expires_at <= to);
+      }
       return {
         ok: true, label: 'Membership renewal notice', skippedNoEmail,
         drafts: due.map(m => ({
-          key: `notice_renewal:${m.id}:${m.membership_expires_at}`,
+          // Sent by hand to one member: once a day, separate from the once-a-term bulk notice
+          key: req.memberId ? `notice_renewal:${m.id}:${m.membership_expires_at}:manual:${today}` : `notice_renewal:${m.id}:${m.membership_expires_at}`,
           club, kind: 'notice_renewal', refId: `${m.id}:${m.membership_expires_at}`, to: m.email,
           render: unsubscribeUrl => renewalReminder({
             brand, unsubscribeUrl, message,

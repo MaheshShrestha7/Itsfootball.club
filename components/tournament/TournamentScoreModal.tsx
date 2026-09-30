@@ -83,6 +83,8 @@ export default function TournamentScoreModal({
       style={{
         position: 'fixed',
         inset: 0,
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
         backgroundColor: 'rgba(var(--dk-4-6-9), 0.85)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
@@ -95,6 +97,7 @@ export default function TournamentScoreModal({
     >
       <div
         style={{
+          margin: 'auto',
           background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
           border: '1px solid rgba(var(--tint-rgb), 0.12)',
           borderRadius: '16px',

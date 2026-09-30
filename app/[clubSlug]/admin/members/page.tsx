@@ -2,7 +2,8 @@
 
 import React, { use, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { ClubMember, MemberMessage, isPlayerMember } from '@/lib/supabase/types';
@@ -35,6 +36,13 @@ import {
 import BulkMemberModal from '@/components/BulkMemberModal';
 import { newId } from '@/lib/ids';
 import PlayerAvatar from '@/components/PlayerAvatar';
+
+/** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export default function AdminMembersPage({
   params,
@@ -77,6 +85,46 @@ export default function AdminMembersPage({
       .eq('club_id', club.id).eq('kind', 'membership_signup').in('status', ['paid', 'awaiting_review'])
       .then(({ data }) => setSignupPayments(Object.fromEntries((data || []).map(p => [p.member_id, p.status]))));
   }, [club.id]);
+
+  // Last paid renewal per member (newest first, so the first one seen wins)
+  const [lastRenewed, setLastRenewed] = useState<Record<string, string>>({});
+  useEffect(() => {
+    getSupabaseClient()?.from('payments').select('member_id, paid_at')
+      .eq('club_id', club.id).eq('kind', 'membership_renewal').eq('status', 'paid').not('paid_at', 'is', null)
+      .order('paid_at', { ascending: false })
+      .then(({ data }) => {
+        const latest: Record<string, string> = {};
+        (data || []).forEach(p => { if (p.member_id && !latest[p.member_id]) latest[p.member_id] = p.paid_at; });
+        setLastRenewed(latest);
+      });
+  }, [club.id]);
+
+  // Renewal reminder email to one member (same email as the bulk notice in Email Notifications)
+  const [sendingRenewal, setSendingRenewal] = useState<string | null>(null);
+  const sendRenewalEmail = async (member: ClubMember) => {
+    const ok = await confirmAction({
+      title: `Send a renewal email to ${member.full_name}?`,
+      message: `It goes to ${member.email} with their expiry date (${formatDate(member.membership_expires_at)}) and a link to renew.`,
+      confirmLabel: 'Send email',
+    });
+    if (!ok) return;
+    setSendingRenewal(member.id);
+    try {
+      const res = await fetch('/api/admin/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, kind: 'renewal', memberId: member.id, send: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return notify('Email not sent', data.error || 'Please try again.');
+      if (data.sent) showToast(`✓ Renewal email sent to ${member.full_name}.`);
+      else if (data.optedOut) notify('Email not sent', `${member.full_name} has unsubscribed from ${club.name} emails.`);
+      else if (data.alreadySent) notify('Already sent today', `${member.full_name} got a renewal email from you today. You can send another tomorrow.`);
+      else notify('Email not sent', data.error || 'Please try again.');
+    } finally {
+      setSendingRenewal(null);
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -643,10 +691,24 @@ export default function AdminMembersPage({
                           <Calendar size={14} color="var(--text-muted)" />
                           <span>
                             {isPending
-                              ? `Applied: ${new Date(member.applied_at || member.created_at || Date.now()).toLocaleDateString()}`
-                              : `Pass Valid Until: ${member.membership_expires_at}`}
+                              ? `Applied: ${formatDate(member.applied_at || member.created_at)}`
+                              : `Pass Valid Until: ${formatDate(member.membership_expires_at)}`}
                           </span>
                         </div>
+
+                        {isApproved && (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                              <UserCheck size={14} color="var(--text-muted)" />
+                              {/* Approval date: when they became a member (the application date if it was never reviewed) */}
+                              <span>Joined: {formatDate(member.reviewed_at || member.applied_at || member.created_at)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                              <RotateCw size={14} color="var(--text-muted)" />
+                              <span>Last Renewed: {lastRenewed[member.id] ? formatDate(lastRenewed[member.id]) : 'Not renewed yet'}</span>
+                            </div>
+                          </>
+                        )}
 
                         {member.qr_code_token && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
@@ -711,10 +773,33 @@ export default function AdminMembersPage({
                           </button>
                         </>
                       ) : isApproved ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '0.5rem', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
                             <CheckCircle2 size={14} /> Turnstile Pass Active
                           </span>
+                          {member.email && member.membership_expires_at && (
+                            <button
+                              type="button"
+                              onClick={() => sendRenewalEmail(member)}
+                              disabled={sendingRenewal === member.id}
+                              title="Email this member a reminder to renew their membership"
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--c-amber)',
+                                fontWeight: 700,
+                                cursor: sendingRenewal === member.id ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                marginLeft: 'auto',
+                                marginRight: '0.75rem',
+                              }}
+                            >
+                              <Mail size={13} />
+                              <span>{sendingRenewal === member.id ? 'Sending…' : 'Send Renewal Email'}</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -773,6 +858,8 @@ export default function AdminMembersPage({
         <div style={{
           position: 'fixed',
           inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           background: 'rgba(0, 0, 0, 0.8)',
           backdropFilter: 'blur(5px)',
           display: 'flex',
@@ -781,7 +868,7 @@ export default function AdminMembersPage({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+          <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <XCircle size={20} color="var(--c-red)" />

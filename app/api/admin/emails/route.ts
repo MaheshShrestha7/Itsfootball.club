@@ -7,11 +7,13 @@ import { filterDrafts, materialize, sendClubEmails } from '@/lib/email/club-emai
 import { cleanSettings } from '@/lib/email/settings';
 import { MAX_MESSAGE_LENGTH, NOTICE_KINDS, prepareNotice, type NoticeRequest } from '@/lib/email/notices';
 import { pushConfigured, pushToClub } from '@/lib/push';
+import { isUuid } from '@/lib/ids';
 
 // Admin -> Email Notifications. Club admins only (checked with their own session token).
 //   GET    ?clubId=           switches, setup status, opt-out count, recent sends
 //   PATCH  { clubId, settings }   save the automatic-reminder switches
-//   POST   { clubId, kind, refId?, audience?, message?, send? }
+//   POST   { clubId, kind, refId?, audience?, message?, memberId?, send? }
+//          (memberId: a renewal email to that one member, from Members Administration)
 //          without send: who would get it + a preview; with send: true: sends it
 
 const MAX_RECIPIENTS = 2000;
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest) {
     refId: typeof body.refId === 'string' ? body.refId : undefined,
     audience: body.audience === 'players' ? 'players' : 'members',
     message: typeof body.message === 'string' ? body.message : undefined,
+    memberId: body.kind === 'renewal' && isUuid(body.memberId) ? body.memberId : undefined,
   };
 
   const prepared = await prepareNotice(db, club, request);
@@ -112,7 +115,8 @@ export async function POST(req: NextRequest) {
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'Email sending is not set up yet (RESEND_API_KEY).' }, { status: 503 });
   if (!due.length) return NextResponse.json({ ...summary, sent: 0, failed: 0, pushed: await pushFollowers() });
   if (due.length > MAX_RECIPIENTS) return NextResponse.json({ error: `A notice can go to at most ${MAX_RECIPIENTS} people.` }, { status: 400 });
-  if (!(await durableRateLimit(`notice:${club.id}`, 10, 60 * 60 * 1000))) {
+  // One-member renewal emails get their own, bigger allowance (admins send them one by one)
+  if (!(await durableRateLimit(request.memberId ? `notice-member:${club.id}` : `notice:${club.id}`, request.memberId ? 100 : 10, 60 * 60 * 1000))) {
     return NextResponse.json({ error: 'That\'s a lot of notices in an hour. Please wait a while before sending more.' }, { status: 429 });
   }
 

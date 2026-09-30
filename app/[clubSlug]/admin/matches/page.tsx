@@ -1505,6 +1505,8 @@ export default function AdminMatchesPage({
           style={{
             position: 'fixed',
             inset: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             background: 'rgba(0, 0, 0, 0.9)',
             display: 'flex',
             alignItems: 'center',
@@ -1518,6 +1520,7 @@ export default function AdminMatchesPage({
         >
           <div
             style={{
+              margin: 'auto',
               background: '#FFFFFF',
               color: '#0F172A',
               padding: '3rem',

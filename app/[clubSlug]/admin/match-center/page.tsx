@@ -193,6 +193,8 @@ export default function AdminMatchCenterControllerPage({
           <div style={{
             position: 'fixed',
             inset: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             background: 'rgba(0,0,0,0.8)',
             display: 'flex',
             alignItems: 'center',
@@ -200,7 +202,7 @@ export default function AdminMatchCenterControllerPage({
             zIndex: 9999,
             padding: '1rem',
           }}>
-            <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
+            <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Schedule New Fixture</h3>
                 <button onClick={() => setIsCreateFixtureOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}><X size={20} /></button>
@@ -1328,6 +1330,8 @@ export default function AdminMatchCenterControllerPage({
         <div style={{
           position: 'fixed',
           inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           background: 'rgba(0, 0, 0, 0.8)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
@@ -1337,6 +1341,7 @@ export default function AdminMatchCenterControllerPage({
           padding: '1rem',
         }}>
           <div className="glass-panel" style={{
+            margin: 'auto',
             width: '100%',
             maxWidth: '560px',
             padding: '2rem',
