@@ -5,6 +5,7 @@ import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
 import SyncStatusBanner from '@/components/SyncStatusBanner';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import { ConfirmRoot } from '@/components/ConfirmDialog';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { loadInitialData } from '@/lib/supabase/server-data';
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'itsfootball.club team' }],
   openGraph: { siteName: SITE_NAME, type: 'website', images: [DEFAULT_OG_IMAGE] },
   twitter: { card: 'summary_large_image', images: [DEFAULT_OG_IMAGE] },
+  // Installable site. Club pages swap in their own manifest (app/[clubSlug]/layout.tsx)
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'black' },
 };
 
 // Self-hosted at build time by next/font: no render-blocking request to fonts.googleapis.com, and each
@@ -67,6 +71,7 @@ export default async function RootLayout({
           </ClubProvider>
         </AuthProvider>
         <ConfirmRoot />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

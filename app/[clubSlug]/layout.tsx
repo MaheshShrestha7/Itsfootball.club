@@ -8,8 +8,8 @@ import ClubLayoutClient from './ClubLayoutClient';
 // The club home page. Every child route sets its own metadata, so this only ever applies to /[clubSlug].
 export async function generateMetadata({ params }: { params: Promise<{ clubSlug: string }> }): Promise<Metadata> {
   const { clubSlug } = await params;
-  return clubPageMetadata(clubSlug, club =>
-    pageMetadata({
+  return clubPageMetadata(clubSlug, club => ({
+    ...pageMetadata({
       title: fitTitle(clubName(club), 'Fixtures, Squad & Live Scores', SITE_NAME),
       description: fitDescription(
         `Official website of ${club.name}: live match center, fixtures, results, squad, club news and sponsors.`,
@@ -21,8 +21,11 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
       // Canonical always uses the club's current slug, consolidating old slug aliases
       path: `/${club.slug}`,
       ...clubImage(club),
-    })
-  );
+    }),
+    // Inherited by every page under the club, so "Add to home screen" installs this club's site
+    manifest: `/api/clubs/${club.slug}/manifest`,
+    appleWebApp: { capable: true, title: club.short_name || club.name, statusBarStyle: 'black' },
+  }));
 }
 
 export default async function ClubLayout({

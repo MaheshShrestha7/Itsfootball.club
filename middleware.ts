@@ -72,7 +72,7 @@ export const config = {
   matcher: [
     {
       // Pages and API routes; static files and prefetches don't need a policy of their own
-      source: '/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|txt|xml)$).*)',
+      source: '/((?!_next/static|_next/image|sw\\.js$|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|txt|xml|webmanifest)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

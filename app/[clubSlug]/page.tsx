@@ -13,6 +13,7 @@ import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
+import InstallAppPrompt from '@/components/InstallAppPrompt';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
   Shield,
@@ -1455,6 +1456,11 @@ export default function ClubPublicPage({
           </section>
         );
       })()}
+
+      {/* Install the club site as an app (hidden once installed or dismissed) */}
+      <div className="container" style={{ display: 'flex', justifyContent: 'center' }}>
+        <InstallAppPrompt variant="visitor" clubName={club.short_name || club.name} />
+      </div>
 
       {/* 4.3 FIXTURES & RESULTS */}
       <section id="fixtures" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>

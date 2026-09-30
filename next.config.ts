@@ -54,6 +54,8 @@ const CSP_DIRECTIVES = [
     " https://*.r2.cloudflarestorage.com",
   // www.google.com: the stadium map embed on club home pages (www.google.com/maps -> /maps/embed)
   "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com",
+  // The offline service worker (public/sw.js). Without this, 'strict-dynamic' above would block it
+  "worker-src 'self'",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
