@@ -830,6 +830,7 @@ export default function MatchCenterPage({
               <TacticalPitch
                 players={squadPlayers}
                 formation={match.home_formation || '4-3-3'}
+                matchFormat={match.match_format}
                 savedPositions={match.home_lineup_coords}
                 primaryColor={club.primary_color}
                 isEditable={false}
@@ -839,9 +840,6 @@ export default function MatchCenterPage({
                 teamName={match.is_club_home ? match.home_team_name : match.away_team_name}
               />
             </div>
-
-            {/* Club partners, shown ahead of the full squad list */}
-            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
 
             {/* Starting XI & Substitutes List */}
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
@@ -950,6 +948,12 @@ export default function MatchCenterPage({
           );
         })()}
 
+        {/* Club partners, under whichever tab is open */}
+        {matchSponsors.length > 0 && (
+          <div style={{ marginTop: '2rem' }}>
+            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import React, { useState, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { MatchEventType, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
+import { MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import {
@@ -124,6 +124,8 @@ export default function AdminMatchCenterControllerPage({
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+  // Format switched on the tactics pitch but not saved yet (keyed by match, so it never leaks to another fixture)
+  const [pitchFormat, setPitchFormat] = useState<{ matchId: string; format: MatchFormat } | null>(null);
 
   // Picked players belong to one side's roster, so switching sides clears them
   const chooseSide = (side: 'home' | 'away') => {
@@ -360,6 +362,8 @@ export default function AdminMatchCenterControllerPage({
     updateMatch(match.id, {
       home_formation: formationName,
       home_lineup_coords: positions,
+      // The format picked on the pitch (11v11 / 9v9 / 7v7), else the one already published
+      match_format: pitchFormat?.matchId === match.id ? pitchFormat.format : match.match_format,
     });
     showFeedback(`Tactical lineup & ${formationName} formation published live to Match Center!`);
   };
@@ -1139,6 +1143,8 @@ export default function AdminMatchCenterControllerPage({
             <TacticalPitch
               players={(match.is_club_home ? homePlayers : awayPlayers) ?? squadPlayers}
               formation={match.home_formation || '4-3-3'}
+              matchFormat={match.match_format}
+              onFormatChange={format => setPitchFormat({ matchId: match.id, format })}
               savedPositions={match.home_lineup_coords}
               primaryColor={club.primary_color}
               isEditable={true}
