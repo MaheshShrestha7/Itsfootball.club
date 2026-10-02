@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { row } = prepared.draft;
 
+  // Shop orders are card only: a receipt per order would be unbounded admin work and storage
+  if (row.kind === 'shop_order') return NextResponse.json({ error: 'Shop orders are paid by card.' }, { status: 400 });
+
   // One receipt waiting per membership / sponsorship is enough
   let pending = db.from('payments').select('id').eq('club_id', row.club_id).eq('kind', row.kind).eq('status', 'awaiting_review');
   pending = row.member_id ? pending.eq('member_id', row.member_id) : pending.eq('sponsor_id', row.sponsor_id!);

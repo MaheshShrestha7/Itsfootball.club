@@ -36,8 +36,9 @@ import {
   ClipboardCheck,
   Flag,
   Flame,
-  Wallet, BellRing, LifeBuoy } from 'lucide-react';
+  Wallet, BellRing, LifeBuoy, ShoppingBag } from 'lucide-react';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
+import { DEFAULT_CREST } from '@/lib/crest';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
@@ -69,12 +70,16 @@ export default function AdminLayout({
     setMobileDrawerOpen(false);
   }, [pathname]);
 
-  // Bank transfer receipts waiting for the treasurer (refreshed on navigation)
+  // Bank transfer receipts waiting for the treasurer, and paid shop orders to hand over (refreshed on navigation)
   const [receiptsToReview, setReceiptsToReview] = useState(0);
+  const [ordersToHandOut, setOrdersToHandOut] = useState(0);
   useEffect(() => {
     getSupabaseClient()?.from('payments').select('id', { count: 'exact', head: true })
       .eq('club_id', club.id).eq('status', 'awaiting_review')
       .then(({ count }) => setReceiptsToReview(count || 0));
+    getSupabaseClient()?.from('payments').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('kind', 'shop_order').eq('status', 'paid').is('fulfilled_at', null)
+      .then(({ count }) => setOrdersToHandOut(count || 0));
   }, [club.id, pathname]);
 
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -159,6 +164,7 @@ export default function AdminLayout({
           icon: Wallet,
           badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
         },
+        { label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag, badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined },
         { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
       ],
     },
@@ -192,7 +198,7 @@ export default function AdminLayout({
           border: '1px solid var(--border-subtle)',
         }}>
           <img loading="eager" decoding="async" width={40} height={40}
-            src={club.logo_url}
+            src={club.logo_url || DEFAULT_CREST}
             alt={`${club.name} crest`}
             style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', border: `2px solid ${club.primary_color}` }}
           />

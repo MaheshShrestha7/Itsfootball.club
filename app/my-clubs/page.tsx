@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { DEFAULT_BANNER } from '@/lib/crest';
+import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { getAccessToken } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import {
@@ -242,7 +242,7 @@ export default function MyClubsPage() {
                           gap: '0.75rem',
                         }}>
                           <img loading="lazy" decoding="async" width={48} height={48}
-                            src={club.logo_url}
+                            src={club.logo_url || DEFAULT_CREST}
                             alt={`${club.name} crest`}
                             style={{
                               width: '48px',
@@ -404,7 +404,7 @@ export default function MyClubsPage() {
                             gap: '0.75rem',
                           }}>
                             <img loading="lazy" decoding="async" width={48} height={48}
-                              src={club.logo_url}
+                              src={club.logo_url || DEFAULT_CREST}
                               alt={`${club.name} crest`}
                               style={{
                                 width: '48px',

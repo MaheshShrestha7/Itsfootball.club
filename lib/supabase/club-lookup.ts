@@ -196,15 +196,17 @@ export interface SitemapData {
   matches: { id: string; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
+  shopClubIds: string[];
 }
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
-  const [clubs, matches, events, tournaments] = await Promise.all([
+  const [clubs, matches, events, tournaments, products] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
+    fetchRows<{ club_id: string }>('shop_products?select=club_id&is_active=eq.true&order=id'),
   ]);
-  return { clubs, matches, events, tournaments };
+  return { clubs, matches, events, tournaments, shopClubIds: Array.from(new Set(products.map(p => p.club_id))) };
 }

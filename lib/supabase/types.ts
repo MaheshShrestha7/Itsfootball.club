@@ -2,6 +2,8 @@
 // itsfootball.club: Complete TypeScript Database Models & Types
 // ==============================================================================
 
+import type { OrderItem } from '../shop';
+
 export type ClubRole = 'owner' | 'admin' | 'staff' | 'player' | 'member' | 'supporter' | 'Player' | 'Executive committe' | 'Manager' | 'Executive Committee';
 export type PlayerPosition = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' | 'RW' | 'ST' | 'SUB';
 export type PlayerStatus = 'active' | 'inactive' | 'injured' | 'suspended' | 'alumni';
@@ -681,7 +683,7 @@ export interface TournamentStanding {
 // ==============================================================================
 // Finance (supabase/migrations/20261010_finance.sql). Read and written directly, not synced.
 // ==============================================================================
-export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'income_other';
+export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'income_other';
 export type PaymentMethod = 'stripe' | 'bank_transfer' | 'cash' | 'other';
 export type PaymentStatus = 'pending' | 'awaiting_review' | 'paid' | 'rejected' | 'refunded' | 'failed';
 
@@ -737,7 +739,23 @@ export interface Payment {
   notes?: string | null;
   rejection_reason?: string | null;
   paid_at?: string | null;
+  /** Shop orders: what was bought, and when the club handed it over */
+  items?: OrderItem[] | null;
+  fulfilled_at?: string | null;
   created_at: string;
+}
+
+// Club shop (supabase/migrations/20261017_club_shop.sql)
+export interface ShopProduct {
+  id: string;
+  club_id: string;
+  name: string;
+  description?: string | null;
+  photos: string[];
+  sizes: string[];
+  price_cents: number;
+  is_active: boolean;
+  sort_order: number;
 }
 
 export interface Expense {

@@ -8,17 +8,21 @@ import type { ClubPaymentSettings } from '@/lib/supabase/types';
 
 interface PaymentStepProps {
   clubId: string;
-  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship';
+  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order';
   memberId?: string;
   sponsorId?: string;
   planId?: string;
   packageId?: string;
   amountCents: number;
   label: string;
+  /** Extra fields for the payment routes (shop: items, buyerName, buyerEmail) */
+  extra?: Record<string, string>;
+  /** Card only, no bank transfer (shop orders) */
+  cardOnly?: boolean;
 }
 
 // Pay by card (hosted Stripe Checkout on the club's account) or by bank transfer with a receipt.
-// Used by membership sign-up, renewal and sponsorship sign-up.
+// Used by membership sign-up, renewal, sponsorship sign-up and the club shop.
 
 // Renewals are checked against the signed-in member's session (lib/payments-server.ts)
 async function authHeaders(base: Record<string, string> = {}) {
@@ -26,9 +30,10 @@ async function authHeaders(base: Record<string, string> = {}) {
   return token ? { ...base, Authorization: `Bearer ${token}` } : base;
 }
 export default function PaymentStep(props: PaymentStepProps) {
-  const { clubId, kind, memberId, sponsorId, planId, packageId, amountCents, label } = props;
+  const { clubId, kind, memberId, sponsorId, planId, packageId, amountCents, label, extra, cardOnly } = props;
   const [settings, setSettings] = useState<ClubPaymentSettings | null | undefined>(undefined);
-  const [method, setMethod] = useState<'card' | 'bank' | null>(null);
+  // Card only: nothing to choose, so go straight to the pay button
+  const [method, setMethod] = useState<'card' | 'bank' | null>(cardOnly ? 'card' : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -43,10 +48,10 @@ export default function PaymentStep(props: PaymentStepProps) {
       .then(({ data }) => setSettings(data ?? null));
   }, [clubId]);
 
-  const ids = { clubId, kind, memberId, sponsorId, planId, packageId };
+  const ids = { ...extra, clubId, kind, memberId, sponsorId, planId, packageId };
   const currency = settings?.currency || 'AUD';
   const cardOn = Boolean(settings?.stripe_charges_enabled);
-  const bankOn = Boolean(settings?.bank_details?.trim());
+  const bankOn = !cardOnly && Boolean(settings?.bank_details?.trim());
   const fee = bookingFeeCents(amountCents);
 
   const payByCard = async () => {
@@ -111,22 +116,26 @@ export default function PaymentStep(props: PaymentStepProps) {
         <p className="text-note">Loading payment options…</p>
       ) : !cardOn && !bankOn ? (
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-          Online payment isn&apos;t set up for this club yet. The club will be in touch about payment.
+          {cardOnly
+            ? 'Card payments aren’t set up for this club yet, so orders can’t be paid online.'
+            : 'Online payment isn’t set up for this club yet. The club will be in touch about payment.'}
         </p>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            {cardOn && (
-              <button type="button" className={`btn ${method === 'card' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMethod('card')} aria-pressed={method === 'card'}>
-                <CreditCard size={16} /> Pay by card
-              </button>
-            )}
-            {bankOn && (
-              <button type="button" className={`btn ${method === 'bank' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMethod('bank')} aria-pressed={method === 'bank'}>
-                <Landmark size={16} /> Bank transfer
-              </button>
-            )}
-          </div>
+          {!cardOnly && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {cardOn && (
+                <button type="button" className={`btn ${method === 'card' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMethod('card')} aria-pressed={method === 'card'}>
+                  <CreditCard size={16} /> Pay by card
+                </button>
+              )}
+              {bankOn && (
+                <button type="button" className={`btn ${method === 'bank' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMethod('bank')} aria-pressed={method === 'bank'}>
+                  <Landmark size={16} /> Bank transfer
+                </button>
+              )}
+            </div>
+          )}
 
           {method === 'card' && (
             <>

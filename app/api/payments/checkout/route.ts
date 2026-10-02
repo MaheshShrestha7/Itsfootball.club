@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
   if (error || !payment) return NextResponse.json({ error: 'Could not start the payment.' }, { status: 500 });
 
   const origin = new URL(req.url).origin;
-  const path = draft.row.kind === 'sponsorship' ? `/${draft.club.slug}/sponsor` : `/${draft.club.slug}/member`;
+  const page = draft.row.kind === 'sponsorship' ? 'sponsor' : draft.row.kind === 'shop_order' ? 'shop' : 'member';
+  const path = `/${draft.club.slug}/${page}`;
   const currency = draft.currency.toLowerCase();
   // Booking fee sits on top of the club's price as its own line; Stripe routes it to the platform
   // (application fee), so the club still receives amount_cents, which is what its ledger records.
@@ -45,7 +46,10 @@ export async function POST(req: NextRequest) {
       {
         mode: 'payment',
         line_items: [
-          { quantity: 1, price_data: { currency, unit_amount: draft.row.amount_cents, product_data: { name: draft.label } } },
+          // Free items stay on the order (row.items) but not on Stripe, which may refuse a $0 line
+          ...(draft.lines ?? [{ name: draft.label, unit_cents: draft.row.amount_cents, quantity: 1 }]).filter(l => l.unit_cents > 0).map(l => (
+            { quantity: l.quantity, price_data: { currency, unit_amount: l.unit_cents, product_data: { name: l.name } } }
+          )),
           ...(fee > 0
             ? [{ quantity: 1, price_data: { currency, unit_amount: fee, product_data: { name: 'Booking fee', description: 'Keeps itsfootball.club free for every club' } } }]
             : []),

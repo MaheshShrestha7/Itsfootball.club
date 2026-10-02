@@ -8,6 +8,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import { formatMoney } from '@/lib/finance';
+import { DEFAULT_CREST } from '@/lib/crest';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -328,7 +329,7 @@ export default function MemberPortalPage({
 
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
                 <img loading="eager" decoding="async" width={74} height={74}
-                  src={club.logo_url}
+                  src={club.logo_url || DEFAULT_CREST}
                   alt={`${club.name} crest`}
                   style={{
                     width: '74px',

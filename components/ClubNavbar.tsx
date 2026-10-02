@@ -10,7 +10,9 @@ import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut } from 'lucide-react';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { DEFAULT_CREST } from '@/lib/crest';
+import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag } from 'lucide-react';
 
 interface ClubNavbarProps {
   club: Club;
@@ -38,6 +40,14 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     setLogoError(false);
   }, [club.logo_url]);
 
+
+  // The Shop link only once the club has something on sale
+  const [hasShop, setHasShop] = useState(false);
+  useEffect(() => {
+    getSupabaseClient()?.from('shop_products').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('is_active', true)
+      .then(({ count }) => setHasShop(Boolean(count)));
+  }, [club.id]);
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -237,6 +247,12 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <Trophy size={15} color="var(--c-amber)" />
             <span>Tournaments</span>
           </Link>
+          {hasShop && (
+            <Link href={`/${club.slug}/shop`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+              <ShoppingBag size={15} color="var(--club-primary)" />
+              <span>Shop</span>
+            </Link>
+          )}
           <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Squad
           </Link>
@@ -378,7 +394,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
                 <div className="row row-loose">
                   <img loading="lazy" decoding="async" width={32} height={32}
-                    src={club.logo_url}
+                    src={club.logo_url || DEFAULT_CREST}
                     alt={`${club.name} crest`}
                     style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain' }}
                   />
@@ -466,6 +482,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <Trophy size={16} color="var(--c-amber)" />
                   <span>Tournaments & Cups</span>
                 </Link>
+
+                {hasShop && (
+                  <Link
+                    href={`/${club.slug}/shop`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                  >
+                    <ShoppingBag size={16} color="var(--club-primary)" />
+                    <span>Club Shop</span>
+                  </Link>
+                )}
 
                 <Link
                   href={`/${club.slug}#squad`}

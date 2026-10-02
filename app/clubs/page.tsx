@@ -5,6 +5,7 @@ import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { useClub } from '@/lib/club-context';
+import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { Shield, Search, Radio, CreditCard, Settings, PlusCircle, MapPin, Users } from 'lucide-react';
 
 export default function ClubsDirectoryPage() {
@@ -87,7 +88,7 @@ export default function ClubsDirectoryPage() {
                 {/* Banner & Crest */}
                 <div style={{ height: '130px', position: 'relative' }}>
                   <img loading="lazy" decoding="async"
-                    src={club.banner_url}
+                    src={club.banner_url || DEFAULT_BANNER}
                     alt={`${club.name} banner`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -101,7 +102,7 @@ export default function ClubsDirectoryPage() {
                   )}
                   <div style={{ position: 'absolute', bottom: '12px', left: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <img loading="lazy" decoding="async" width={44} height={44}
-                      src={club.logo_url}
+                      src={club.logo_url || DEFAULT_CREST}
                       alt={`${club.name} crest`}
                       style={{
                         width: '44px',

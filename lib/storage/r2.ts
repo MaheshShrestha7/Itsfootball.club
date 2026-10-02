@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID;
@@ -74,6 +74,14 @@ export async function uploadBufferToR2(key: string, buffer: Buffer, contentType:
   return publicDomain 
     ? `${publicDomain.replace(/\/$/, '')}/${key}` 
     : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${key}`;
+}
+
+/** Delete an object from the public bucket; false when R2 isn't configured */
+export async function deleteR2Object(key: string): Promise<boolean> {
+  const client = getR2Client();
+  if (!client) return false;
+  await client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+  return true;
 }
 
 /**
