@@ -82,6 +82,14 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
         </p>
       </div>
 
+      {/* Saved state, not unsaved ticks: this is what members actually see */}
+      {products && products.length > 0 && !products.some(p => p.is_active) && (
+        <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #F59E0B' }}>
+          <strong>Your shop is hidden.</strong> No product is on sale, so members and visitors don&apos;t see the Shop link yet.
+          Tick <strong>On sale</strong> on a product and click <strong>Save</strong>.
+        </div>
+      )}
+
       {!cardsOn && (
         <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #F59E0B' }}>
           The shop takes card payments only, and card payments aren&apos;t set up yet. Connect Stripe in{' '}
@@ -146,7 +154,7 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
           <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Products</h2>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addProduct}><Plus size={14} /> Add product</button>
         </div>
-        {products === null ? <p className="text-note">Loading…</p> : products.length === 0 && <p className="text-note">No products yet. Add your first one.</p>}
+        {products === null ? <p className="text-note">Loading…</p> : products.length === 0 && <p className="text-note">No products yet. Add your first one: the Shop link appears for members once a product is on sale.</p>}
         <div className="stack">
           {products?.map(p => <ProductEditor key={p.id} product={p} db={db!} clubId={club.id} currency={currency} onChange={load} />)}
         </div>
@@ -250,7 +258,10 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
 
       <div style={{ flex: '1 1 320px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', alignContent: 'start' }}>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label className="form-label" htmlFor={`shop-name-${id}`}>Name</label>
+          <label className="form-label" htmlFor={`shop-name-${id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Name
+            {!product.is_active && <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)' }}>Hidden from shop</span>}
+          </label>
           <input id={`shop-name-${id}`} className="form-input" maxLength={120} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} />
         </div>
         <div className="form-group">

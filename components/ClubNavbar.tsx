@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag } from 'lucide-react';
 
@@ -42,12 +42,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
 
   // The Shop link only once the club has something on sale
-  const [hasShop, setHasShop] = useState(false);
-  useEffect(() => {
-    getSupabaseClient()?.from('shop_products').select('id', { count: 'exact', head: true })
-      .eq('club_id', club.id).eq('is_active', true)
-      .then(({ count }) => setHasShop(Boolean(count)));
-  }, [club.id]);
+  const hasShop = useShopOpen(club.id);
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -608,6 +603,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             left: 0;
             visibility: hidden;
             pointer-events: none;
+          }
+          /* Hide at once: links transition 'all', so visibility would lag the jump to the corner and flash over the crest */
+          header[data-nav-fits='false'] .desktop-nav,
+          header[data-nav-fits='false'] .desktop-nav :global(*) {
+            transition: none !important;
           }
           header[data-nav-fits='false'] .mobile-trigger {
             display: flex !important;

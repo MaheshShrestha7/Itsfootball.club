@@ -9,6 +9,7 @@ import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } fro
 import PaymentStep from '@/components/PaymentStep';
 import { formatMoney } from '@/lib/finance';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -35,6 +36,7 @@ import {
   Phone,
   Send,
   MessageSquare,
+  ShoppingBag,
   LogOut,
   Clock,
   AlertCircle,
@@ -105,6 +107,7 @@ export default function MemberPortalPage({
 
   // Authenticated Member Clubhouse State
   const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages'>('pass');
+  const shopOpen = useShopOpen(club.id);
   const [scannerOpen, setScannerOpen] = useState(false);
 
   // Messaging Form State
@@ -998,6 +1001,27 @@ export default function MemberPortalPage({
                   </span>
                 )}
               </button>
+
+              {/* Not a tab: the shop is its own page, so this links there */}
+              {shopOpen && (
+                <Link
+                  href={`/${club.slug}/shop`}
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                  }}
+                >
+                  <ShoppingBag size={17} />
+                  <span>Club Shop</span>
+                </Link>
+              )}
             </div>
 
             {/* SUB-TAB 1: VIRTUAL PASS */}

@@ -148,6 +148,10 @@ export default function PaymentStep(props: PaymentStepProps) {
               <button type="button" className="btn btn-primary w-full" onClick={payByCard} disabled={busy}>
                 {busy ? 'Opening secure checkout…' : `Pay ${formatMoney(amountCents + fee, currency)} securely`}
               </button>
+              {/* Wallets come from the Stripe payment method settings; Stripe shows them only on supported devices */}
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textAlign: 'center', margin: '0.5rem 0 0' }}>
+                Card, Apple Pay or Google Pay on the next screen
+              </p>
             </>
           )}
 

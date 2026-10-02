@@ -8,6 +8,11 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 
+// Platform help (not club matters). Written as plain text in answers so the FAQ schema keeps it; linked when shown.
+const CONTACT_EMAIL = 'contact@itsfootball.club';
+const withEmailLink = (text: string) => text.split(CONTACT_EMAIL).flatMap((part, i) =>
+  i === 0 ? [part] : [<a key={i} href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>, part]);
+
 type Section = {
   id: string;
   audience: string;
@@ -45,7 +50,7 @@ const FAQ: Section[] = [
     pitch: 'Give your club a professional home online in minutes, without paying a web designer.',
     cta: { label: 'Claim your club', href: '/create-club' },
     items: [
-      { q: 'How do I put my club on itsfootball.club?', a: 'Go to Create Club (/create-club), sign up free with your email and a password, and fill in your club details. You become the club Owner with full admin access, and your club site is live right away.' },
+      { q: 'How do I put my club on itsfootball.club?', a: 'Go to Create Club (/create-club), sign up free with your email and a password, and fill in your club details. You become the club Owner with full admin access, and your club site is live right away. Need a hand getting set up? Email contact@itsfootball.club.' },
       { q: 'Can the club site use our own colours, logo and domain?', a: 'Yes. In your club admin, open Branding to set your colours, logo and a custom domain, and Hero Slider to choose the images on your club home page. It looks like your club, not like us.' },
       { q: 'How do supporters find our club?', a: 'Every active club is listed in the Clubs Directory (/clubs) and gets its own public page at itsfootball.club/your-club-name, ready to share on social media and in group chats.' },
       { q: 'Where do I find the clubs I manage or belong to?', a: 'Sign in and open My Clubs (/my-clubs). Every club you own, administer or are a member of is listed there.' },
@@ -106,7 +111,7 @@ const FAQ: Section[] = [
     items: [
       { q: 'How do I follow a live match?', a: 'Open your club\'s page and pick the match from the fixtures. The match page updates live with goals, cards and substitutions as the game is played.' },
       { q: 'What is the virtual member pass?', a: 'A QR code pass in the Pass tab of your member area. Show it on your phone to be checked in at matches and club events. Nothing to print, nothing to lose.' },
-      { q: 'How do I pay my membership?', a: 'If your chosen tier has a fee, you pay it by card during sign-up. Payment is handled securely by Stripe and goes straight to the club, with a small booking fee shown before you pay.' },
+      { q: 'How do I pay my membership?', a: 'If your chosen tier has a fee, you pay it during sign-up by card, Apple Pay or Google Pay. Payment is handled securely by Stripe and goes straight to the club, with a small booking fee shown before you pay. For a refund, contact your club. If the payment page itself isn\'t working, email contact@itsfootball.club.' },
       { q: 'How do I contact my club?', a: 'Signed-in members can use the Messages tab in their member area. Anyone else can use the contact form on the club\'s page.' },
     ],
   },
@@ -128,11 +133,11 @@ const FAQ: Section[] = [
     audience: 'Account & help',
     Icon: LifeBuoy,
     color: 'var(--text-secondary)',
-    pitch: 'Quick fixes for sign-in and privacy questions.',
+    pitch: 'Quick fixes for sign-in and privacy questions, and how to reach us.',
     items: [
-      { q: 'I didn\'t get my sign-in email.', a: 'Check your spam or promotions folder, make sure the address is spelled correctly, and wait a minute before requesting another link.' },
-      { q: 'Who can see my information?', a: 'Your club\'s admins can see your membership details. Public club pages show only what the club chooses to publish, such as the squad list and match stats.' },
-      { q: 'Where do I get more help?', a: 'Contact your club through the form on its page, or ask your club admin. They manage everything in the club.' },
+      { q: 'I didn\'t get my sign-in email.', a: 'Check your spam or promotions folder, make sure the address is spelled correctly, and wait a minute before requesting another link. Still nothing? Email contact@itsfootball.club from the address you\'re signing in with.' },
+      { q: 'Who can see my information?', a: 'Your club\'s admins can see your membership details. Public club pages show only what the club chooses to publish, such as the squad list and match stats. You can delete your account from My Clubs (/my-clubs). For any other privacy request, email contact@itsfootball.club.' },
+      { q: 'Where do I get more help?', a: 'For anything about your club, such as memberships, fixtures or refunds, contact the club through the form on its page or ask a club admin. For help with itsfootball.club itself, such as sign-in problems, something not working or setting up a club, email contact@itsfootball.club.' },
     ],
   },
 ];
@@ -220,7 +225,7 @@ export default function FaqPage() {
               {items.map((i, n) => (
                 <details key={i.q} open={id === 'pricing' && n === 0} className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: `3px solid ${color}` }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-primary)' }}>{i.q}</summary>
-                  <p style={{ color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.65 }}>{i.a}</p>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.65 }}>{withEmailLink(i.a)}</p>
                 </details>
               ))}
             </div>
@@ -232,7 +237,8 @@ export default function FaqPage() {
           <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 900 }}>Ready when you are. It&apos;s free.</h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0.6rem auto 0', lineHeight: 1.6 }}>
             Sign up in minutes, no card needed, and unlock every feature from day one.
-            Still have a question? Contact your club through its page.
+            Still have a question? Ask your club through its page, or email us at{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>
