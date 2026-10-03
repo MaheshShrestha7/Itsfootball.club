@@ -44,7 +44,7 @@ export default function TrainingAttendance({ club, events }: { club: Club; event
         The last {sessions.length} training session{sessions.length === 1 ? '' : 's'}, from QR check-ins at the door or the scanner.
       </p>
       {/* Scrolls sideways on phones; the name column stays put */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', overscrollBehaviorX: 'contain' }}>
         <table aria-labelledby="training-attendance-heading" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.82rem' }}>
           <thead>
             <tr>
@@ -60,7 +60,7 @@ export default function TrainingAttendance({ club, events }: { club: Club; event
           <tbody>
             {rows.map(({ member, count }) => (
               <tr key={member.id}>
-                <th scope="row" style={{ ...cell, textAlign: 'left', fontWeight: 600, position: 'sticky', left: 0, background: 'var(--bg-surface-elevated)' }}>{member.full_name}</th>
+                <th scope="row" style={{ ...cell, textAlign: 'left', fontWeight: 600, whiteSpace: 'normal', minWidth: '7.5rem', maxWidth: '10rem', position: 'sticky', left: 0, background: 'var(--bg-surface-elevated)' }}>{member.full_name}</th>
                 {sessions.map(s => {
                   const here = attended.get(member.id)?.has(s.id);
                   return (

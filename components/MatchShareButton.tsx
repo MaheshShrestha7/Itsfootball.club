@@ -75,14 +75,14 @@ export default function MatchShareButton({ match, club }: { match: Match; club: 
       <dialog
         ref={ref}
         className="confirm-dialog glass-panel"
-        style={{ width: 'min(480px, calc(100vw - 32px))' }}
+        style={{ width: 'min(480px, calc(100vw - 32px))', overscrollBehavior: 'contain' }}
         aria-labelledby="share-card-title"
         onClose={() => setOpen(false)}
         onClick={e => { if (e.target === e.currentTarget) hide(); }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
           <h2 id="share-card-title" className="confirm-dialog-title" style={{ margin: 0 }}>Share this match</h2>
-          <button type="button" onClick={hide} className="btn btn-secondary btn-sm" aria-label="Close" style={{ minWidth: '38px', minHeight: '38px' }}>
+          <button type="button" onClick={hide} className="btn btn-secondary btn-sm" aria-label="Close" style={{ minWidth: '44px', minHeight: '44px' }}>
             <X size={16} aria-hidden="true" />
           </button>
         </div>

@@ -63,7 +63,7 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
         <p style={{ margin: 0, fontWeight: 700 }}>Sold out</p>
       ) : checkout ? (
         <div className="stack stack-sm">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCheckout(false)} style={{ alignSelf: 'flex-start' }}>Edit order</button>
+          <button type="button" className="btn btn-secondary btn-sm touch-target" onClick={() => setCheckout(false)} style={{ alignSelf: 'flex-start' }}>Edit order</button>
           <PaymentStep clubId={event.club_id} kind="event_ticket" amountCents={price * quantity} label={`${quantity} × ${event.title}`} cardOnly
             extra={{ eventId: event.id, quantity: String(quantity), buyerName: buyer.name, buyerEmail: buyer.email }} />
         </div>
@@ -72,11 +72,11 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
           <div className="form-group">
             <span className="form-label" id="ticket-qty-label">Number of tickets</span>
             <div role="group" aria-labelledby="ticket-qty-label" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1} aria-label="One fewer ticket">
+              <button type="button" className="btn btn-secondary btn-sm touch-target" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1} aria-label="One fewer ticket">
                 <Minus size={14} aria-hidden="true" />
               </button>
               <output aria-live="polite" style={{ minWidth: '2ch', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem' }}>{quantity}</output>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setQuantity(q => Math.min(max, q + 1))} disabled={quantity >= max} aria-label="One more ticket">
+              <button type="button" className="btn btn-secondary btn-sm touch-target" onClick={() => setQuantity(q => Math.min(max, q + 1))} disabled={quantity >= max} aria-label="One more ticket">
                 <Plus size={14} aria-hidden="true" />
               </button>
               {left !== null && left <= 20 && <span className="text-note">{left} left</span>}
@@ -88,10 +88,10 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="ticket-email">Email *</label>
-            <input id="ticket-email" className="form-input" type="email" required autoComplete="email" value={buyer.email} onChange={e => setBuyer({ ...buyer, email: e.target.value })} />
+            <input id="ticket-email" className="form-input" type="email" required autoComplete="email" autoCapitalize="none" spellCheck={false} value={buyer.email} onChange={e => setBuyer({ ...buyer, email: e.target.value })} />
           </div>
           <p className="text-note" style={{ margin: 0 }}>Your tickets arrive by email and on screen straight after payment.</p>
-          <button type="submit" className="btn btn-primary">Continue to payment · {formatMoney(price * quantity, currency)}</button>
+          <button type="submit" className="btn btn-primary" style={{ whiteSpace: 'normal' }}>Continue to payment · {formatMoney(price * quantity, currency)}</button>
         </form>
       )}
     </section>

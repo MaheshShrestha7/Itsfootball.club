@@ -168,6 +168,13 @@ html {
   text-size-adjust: 100%;
 }
 
+/* Taps fire at once: no double-tap-zoom wait, and quick repeated taps don't zoom */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 body {
   background-color: var(--bg-pitch);
   color: var(--text-primary);
@@ -264,10 +271,12 @@ textarea {
   border-color: var(--border-medium);
 }
 
-.glass-panel-interactive:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md), 0 0 20px rgba(var(--club-primary-rgb), 0.15);
-  border-color: rgba(var(--club-primary-rgb), 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .glass-panel-interactive:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md), 0 0 20px rgba(var(--club-primary-rgb), 0.15);
+    border-color: rgba(var(--club-primary-rgb), 0.4);
+  }
 }
 
 /* Button System */
@@ -293,10 +302,26 @@ textarea {
   box-shadow: 0 4px 14px rgba(var(--club-primary-rgb), 0.35);
 }
 
-.btn-primary:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 20px rgba(var(--club-primary-rgb), 0.5);
-  filter: brightness(1.08);
+/* Hover lifts only where there's a real hover: on touch, a tapped button would stay lifted */
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 20px rgba(var(--club-primary-rgb), 0.5);
+    filter: brightness(1.08);
+  }
+  .btn-secondary:hover {
+    background: rgba(var(--tint-rgb), 0.12);
+    border-color: var(--border-medium);
+    transform: translateY(-1.5px);
+  }
+  .btn-outline:hover {
+    background: rgba(var(--club-primary-rgb), 0.1);
+    box-shadow: 0 0 15px rgba(var(--club-primary-rgb), 0.25);
+  }
+  .btn-danger:hover {
+    background: #EF4444;
+    color: #FFFFFF;
+  }
 }
 
 .btn-primary:active {
@@ -309,21 +334,10 @@ textarea {
   border: 1px solid var(--border-subtle);
 }
 
-.btn-secondary:hover {
-  background: rgba(var(--tint-rgb), 0.12);
-  border-color: var(--border-medium);
-  transform: translateY(-1.5px);
-}
-
 .btn-outline {
   background: transparent;
   color: var(--club-primary);
   border: 1px solid var(--club-primary);
-}
-
-.btn-outline:hover {
-  background: rgba(var(--club-primary-rgb), 0.1);
-  box-shadow: 0 0 15px rgba(var(--club-primary-rgb), 0.25);
 }
 
 .btn-danger {
@@ -332,10 +346,6 @@ textarea {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.btn-danger:hover {
-  background: #EF4444;
-  color: #FFFFFF;
-}
 
 .btn-sm {
   padding: 0.4rem 0.75rem;
@@ -2056,6 +2066,9 @@ dialog.confirm-dialog {
   color: var(--text-primary);
   border: 1px solid var(--border-medium);
   box-shadow: var(--shadow-lg);
+}
+html:has(dialog.confirm-dialog[open]) {
+  overflow: hidden;
 }
 dialog.confirm-dialog::backdrop {
   background: rgba(0, 0, 0, 0.55);

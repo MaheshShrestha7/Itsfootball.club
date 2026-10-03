@@ -1460,15 +1460,18 @@ export default function ClubPublicPage({
               <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>SCHEDULE</span>
               <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Fixtures & Match Results</h2>
               {/* webcal:// opens the device's calendar app with a subscription that keeps itself up to date */}
-              <a
-                href={`${SITE_URL.replace(/^https?:/, 'webcal:')}/${club.slug}/calendar.ics`}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-primary)' }}
-              >
-                <CalendarPlus size={15} aria-hidden="true" /> Subscribe to fixtures &amp; events
-              </a>
-              <a href={`/${club.slug}/calendar.ics`} download style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                or download .ics
-              </a>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '1rem' }}>
+                <a
+                  href={`${SITE_URL.replace(/^https?:/, 'webcal:')}/${club.slug}/calendar.ics`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-primary)' }}
+                >
+                  <CalendarPlus size={15} aria-hidden="true" /> Subscribe to fixtures &amp; events
+                </a>
+                {/* Android and desktop browsers often have no webcal:// handler; the file imports anywhere */}
+                <a href={`/${club.slug}/calendar.ics`} download style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  or download .ics
+                </a>
+              </div>
             </div>
 
             {/* Filter controls: Season dropdown & Tab switcher */}
