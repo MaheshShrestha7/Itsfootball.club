@@ -263,6 +263,8 @@ export interface ClubEvent {
   rsvp_count: number;
   is_public: boolean;
   door_qr_checkin_enabled?: boolean;
+  /** > 0: a paid, ticketed event (supabase/migrations/20261018_event_tickets.sql) */
+  ticket_price_cents?: number;
   created_at?: string;
 }
 
@@ -276,6 +278,8 @@ export interface EventAttendee {
   checkin_status: 'registered' | 'checked_in' | 'cancelled';
   checked_in_at?: string;
   qr_ticket_code: string;
+  /** The ticket order that created this attendee */
+  payment_id?: string | null;
 }
 
 export interface Sponsor {
@@ -683,7 +687,7 @@ export interface TournamentStanding {
 // ==============================================================================
 // Finance (supabase/migrations/20261010_finance.sql). Read and written directly, not synced.
 // ==============================================================================
-export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'income_other';
+export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket' | 'income_other';
 export type PaymentMethod = 'stripe' | 'bank_transfer' | 'cash' | 'other';
 export type PaymentStatus = 'pending' | 'awaiting_review' | 'paid' | 'rejected' | 'refunded' | 'failed';
 
@@ -742,6 +746,8 @@ export interface Payment {
   /** Shop orders: what was bought, and when the club handed it over */
   items?: OrderItem[] | null;
   fulfilled_at?: string | null;
+  /** Ticket orders: the event the tickets are for */
+  event_id?: string | null;
   created_at: string;
 }
 

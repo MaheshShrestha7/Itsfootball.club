@@ -175,7 +175,7 @@ export default function AdminScannerPage({
                 color: mode === 'checkin' ? '#FFFFFF' : 'var(--text-secondary)',
               }}
             >
-              <span>Event Attendance Check-In</span>
+              <span>Event &amp; Ticket Check-In</span>
             </button>
           </div>
 

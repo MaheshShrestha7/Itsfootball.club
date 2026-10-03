@@ -43,6 +43,7 @@ export const PAYMENT_KIND_LABEL: Record<string, string> = {
   membership_renewal: 'Membership renewal',
   sponsorship: 'Sponsorship',
   shop_order: 'Shop order',
+  event_ticket: 'Event tickets',
   income_other: 'Other income',
 };
 

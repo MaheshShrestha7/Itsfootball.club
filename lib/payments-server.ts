@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describeItems, parseCart, priceCart, type OrderItem, type PricedProduct } from './shop';
+import { ticketOrderError, type TicketedEvent } from './tickets';
 
 // Server-only: works out what a payer owes from ids alone. The amount always comes from the
 // club's plan / package / product rows, never from the client.
 
-export type PayableKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order';
+export type PayableKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket';
 
 export interface PaymentDraft {
   club: { id: string; slug: string; name: string };
@@ -18,7 +19,7 @@ export interface PaymentDraft {
   row: {
     club_id: string;
     kind: PayableKind;
-    category: 'membership' | 'sponsorship' | 'merchandise';
+    category: 'membership' | 'sponsorship' | 'merchandise' | 'events_tickets';
     member_id: string | null;
     sponsor_id: string | null;
     plan_id: string | null;
@@ -29,6 +30,7 @@ export interface PaymentDraft {
     payer_name: string | null;
     payer_email: string | null;
     items?: OrderItem[];
+    event_id?: string;
   };
 }
 
@@ -43,11 +45,13 @@ export function readPaymentInput(get: (key: string) => unknown) {
   const kind = get('kind');
   return {
     clubId: uuid(get('clubId')),
-    kind: (['membership_signup', 'membership_renewal', 'sponsorship', 'shop_order'].includes(kind as string) ? kind : null) as PayableKind | null,
+    kind: (['membership_signup', 'membership_renewal', 'sponsorship', 'shop_order', 'event_ticket'].includes(kind as string) ? kind : null) as PayableKind | null,
     memberId: uuid(get('memberId')),
     sponsorId: uuid(get('sponsorId')),
     planId: uuid(get('planId')),
     packageId: uuid(get('packageId')),
+    eventId: uuid(get('eventId')),
+    quantity: Number(get('quantity')),
     cart: parseCart(get('items')),
     buyerName: text(get('buyerName'), 120),
     buyerEmail: text(get('buyerEmail'), 255).toLowerCase(),
@@ -60,6 +64,7 @@ export function readPaymentInput(get: (key: string) => unknown) {
  *   membership_renewal  only the signed-in member themselves (`payerUserId` from their session)
  *   sponsorship         a sponsor still at 'prospect', i.e. one that just applied; active sponsors' ids are public
  *   shop_order          anyone: it pays for new goods, never for someone else's record
+ *   event_ticket        anyone: new tickets for a public event, priced from the event row
  */
 export async function preparePayment(
   db: SupabaseClient,
@@ -103,6 +108,35 @@ export async function preparePayment(
           amount_cents: priced.totalCents, currency,
           payer_name: input.buyerName, payer_email: input.buyerEmail,
           items: priced.items,
+        },
+      },
+    };
+  }
+
+  if (input.kind === 'event_ticket') {
+    if (!input.eventId) return bad('Event not found.', 404);
+    if (!input.buyerName || !EMAIL_RE.test(input.buyerEmail)) return bad('Enter your name and a valid email.');
+    const [{ data: event }, { data: left }] = await Promise.all([
+      db.from('events').select('id, title, is_public, ticket_price_cents, start_time, end_time').eq('id', input.eventId).eq('club_id', club.id).maybeSingle(),
+      db.rpc('tickets_left', { p_event_id: input.eventId }),
+    ]);
+    // ponytail: capacity is checked here, not held: two buyers racing for the last seats can both pay. Reserve seats if clubs sell out often.
+    const problem = ticketOrderError(event as TicketedEvent | null, input.quantity, typeof left === 'number' ? left : null);
+    if (problem) return bad(problem, problem === 'Event not found.' ? 404 : 400);
+    const item: OrderItem = { product_id: event!.id, name: `Ticket: ${event!.title}`, size: null, quantity: input.quantity, unit_cents: event!.ticket_price_cents };
+    return {
+      ok: true,
+      draft: {
+        ...base,
+        label: `${club.name}: ${event!.title} tickets`,
+        lines: [{ name: item.name, unit_cents: item.unit_cents, quantity: item.quantity }],
+        row: {
+          club_id: club.id, kind: 'event_ticket', category: 'events_tickets',
+          member_id: null, sponsor_id: null, plan_id: null, package_id: null,
+          description: describeItems([item]).slice(0, 500),
+          amount_cents: item.unit_cents * item.quantity, currency,
+          payer_name: input.buyerName, payer_email: input.buyerEmail,
+          items: [item], event_id: event!.id,
         },
       },
     };

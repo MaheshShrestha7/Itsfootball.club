@@ -34,6 +34,7 @@ import {
   Target
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import MatchShareButton from '@/components/MatchShareButton';
 import { periodLabel } from '@/lib/match-clock';
 
 export default function MatchCenterPage({
@@ -321,6 +322,8 @@ export default function MatchCenterPage({
             >
               {audioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
+
+            <MatchShareButton match={match} club={club} />
 
             {isClubAdmin && (
               <Link

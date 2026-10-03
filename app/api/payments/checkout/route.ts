@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
   const origin = new URL(req.url).origin;
   const page = draft.row.kind === 'sponsorship' ? 'sponsor' : draft.row.kind === 'shop_order' ? 'shop' : 'member';
   const path = `/${draft.club.slug}/${page}`;
+  // Tickets: the buyer lands on their tickets; the order id is the (unguessable) key to that page
+  const ticketsPath = `/${draft.club.slug}/tickets/${payment.id}`;
   const currency = draft.currency.toLowerCase();
   // Booking fee sits on top of the club's price as its own line; Stripe routes it to the platform
   // (application fee), so the club still receives amount_cents, which is what its ledger records.
@@ -58,8 +60,10 @@ export async function POST(req: NextRequest) {
         client_reference_id: payment.id,
         metadata: { payment_id: payment.id },
         payment_intent_data: { metadata: { payment_id: payment.id }, ...(fee > 0 ? { application_fee_amount: fee } : {}) },
-        success_url: `${origin}${path}?payment=success`,
-        cancel_url: `${origin}${path}?payment=cancelled`,
+        success_url: draft.row.kind === 'event_ticket' ? `${origin}${ticketsPath}` : `${origin}${path}?payment=success`,
+        cancel_url: draft.row.kind === 'event_ticket'
+          ? `${origin}/${draft.club.slug}/events/${draft.row.event_id}?payment=cancelled`
+          : `${origin}${path}?payment=cancelled`,
       },
       { stripeAccount: draft.stripeAccountId }
     );

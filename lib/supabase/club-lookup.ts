@@ -1,3 +1,4 @@
+import type { CalendarEvent, CalendarMatch } from '../calendar';
 import { fetchPaged } from '../paged';
 
 // Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
@@ -209,4 +210,15 @@ export async function listSitemapData(): Promise<SitemapData> {
     fetchRows<{ club_id: string }>('shop_products?select=club_id&is_active=eq.true&order=id'),
   ]);
   return { clubs, matches, events, tournaments, shopClubIds: Array.from(new Set(products.map(p => p.club_id))) };
+}
+
+/** A club's fixtures and public events from `sinceIso` on, for its calendar feed (public rows only, by RLS) */
+export async function listCalendarData(clubId: string, sinceIso: string) {
+  const id = encodeURIComponent(clubId);
+  const since = encodeURIComponent(sinceIso);
+  const [matches, events] = await Promise.all([
+    fetchRows<CalendarMatch>(`matches?select=id,title,competition,home_team_name,away_team_name,match_date,match_time,venue,status,home_score,away_score&club_id=eq.${id}&match_date=gte.${since}&order=match_date,id`, 2000),
+    fetchRows<CalendarEvent>(`events?select=id,title,description,start_time,end_time,location&club_id=eq.${id}&is_public=eq.true&start_time=gte.${since}&order=start_time,id`, 2000),
+  ]);
+  return { matches, events };
 }

@@ -28,7 +28,8 @@ export default function ClubLayoutClient({
   // Track real public page visits for live club analytics
   useEffect(() => {
     if (club?.id && pathname && !pathname.includes('/admin')) {
-      trackPageView(club.id, pathname);
+      // The order id in a tickets URL unlocks the tickets, so it never reaches analytics
+      trackPageView(club.id, pathname.replace(/\/tickets\/[^/]+/, '/tickets'));
     }
   }, [club?.id, pathname, trackPageView]);
 

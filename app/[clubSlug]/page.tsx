@@ -39,13 +39,15 @@ import {
   Newspaper,
   Image as ImageIcon,
   QrCode,
-  X
+  X,
+  CalendarPlus
 } from 'lucide-react';
 import { Match, ClubEvent, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
+import { SITE_URL } from '@/lib/slugs';
 
 interface HomeHeroSlide {
   id: string;
@@ -1457,6 +1459,16 @@ export default function ClubPublicPage({
             <div>
               <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>SCHEDULE</span>
               <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Fixtures & Match Results</h2>
+              {/* webcal:// opens the device's calendar app with a subscription that keeps itself up to date */}
+              <a
+                href={`${SITE_URL.replace(/^https?:/, 'webcal:')}/${club.slug}/calendar.ics`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-primary)' }}
+              >
+                <CalendarPlus size={15} aria-hidden="true" /> Subscribe to fixtures &amp; events
+              </a>
+              <a href={`/${club.slug}/calendar.ics`} download style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                or download .ics
+              </a>
             </div>
 
             {/* Filter controls: Season dropdown & Tab switcher */}

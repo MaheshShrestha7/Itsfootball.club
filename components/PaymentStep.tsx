@@ -8,21 +8,21 @@ import type { ClubPaymentSettings } from '@/lib/supabase/types';
 
 interface PaymentStepProps {
   clubId: string;
-  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order';
+  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket';
   memberId?: string;
   sponsorId?: string;
   planId?: string;
   packageId?: string;
   amountCents: number;
   label: string;
-  /** Extra fields for the payment routes (shop: items, buyerName, buyerEmail) */
+  /** Extra fields for the payment routes (shop: items; tickets: eventId, quantity; both: buyerName, buyerEmail) */
   extra?: Record<string, string>;
-  /** Card only, no bank transfer (shop orders) */
+  /** Card only, no bank transfer (shop orders, tickets) */
   cardOnly?: boolean;
 }
 
 // Pay by card (hosted Stripe Checkout on the club's account) or by bank transfer with a receipt.
-// Used by membership sign-up, renewal, sponsorship sign-up and the club shop.
+// Used by membership sign-up, renewal, sponsorship sign-up, the club shop and event tickets.
 
 // Renewals are checked against the signed-in member's session (lib/payments-server.ts)
 async function authHeaders(base: Record<string, string> = {}) {

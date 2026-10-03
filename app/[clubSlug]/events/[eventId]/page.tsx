@@ -5,6 +5,7 @@ import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
+import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 import {
@@ -145,9 +146,11 @@ export default function EventDetailsPage({
             onClick={() => setContactModalOpen(true)}
             className="btn btn-primary row"
           >
-            <span>RSVP / Inquire for Event</span>
+            <span>{(event.ticket_price_cents ?? 0) > 0 ? 'Ask about this event' : 'RSVP / Inquire for Event'}</span>
           </button>
         </div>
+
+        <EventTickets event={event} />
 
         {/* Event Sponsors */}
         {eventSponsors.length > 0 && (

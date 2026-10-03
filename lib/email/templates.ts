@@ -287,6 +287,22 @@ export function eventReminder(p: ClubEmailExtras & { brand: EmailBrand; attendee
   });
 }
 
+/** Sent once a ticket order is paid: transactional, so no unsubscribe link */
+export function ticketsEmail(p: { brand: EmailBrand; buyerName: string; event: string; quantity: number; when: string; venue: string; link: string }): RenderedEmail {
+  const tickets = `${p.quantity} ticket${p.quantity === 1 ? '' : 's'}`;
+  return renderEmail({
+    brand: p.brand,
+    subject: `Your tickets: ${p.event}`,
+    preheader: `${tickets} for ${p.event}, ${p.when}.`,
+    heading: 'You’re going!',
+    paragraphs: [`Hi ${firstName(p.buyerName)}, thanks for your order. Your ${tickets} for ${p.event} ${p.quantity === 1 ? 'is' : 'are'} ready.`],
+    details: [['Event', p.event], ['When', p.when], ['Where', p.venue], ['Tickets', String(p.quantity)]],
+    cta: { label: 'Show my tickets', url: p.link },
+    note: 'Each ticket has its own QR code and can be scanned once at the door. Anyone with this link can use your tickets, so keep it to yourself.',
+    reason: `You're receiving this because you bought tickets from ${p.brand.name}.`,
+  });
+}
+
 export function renewalReminder(p: ClubEmailExtras & { brand: EmailBrand; memberName: string; tier: string; expires: string; expired: boolean; link: string }): RenderedEmail {
   return renderEmail({
     brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
@@ -20,6 +20,13 @@ import {
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { confirmAction } from '@/components/ConfirmDialog';
+import TrainingAttendance from '@/components/TrainingAttendance';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { formatMoney } from '@/lib/finance';
+import { toDateTimeLocal } from '@/lib/tournament-engine';
+
+const MAX_REPEAT_WEEKS = 26;
+const WEEK_MS = 7 * 24 * 3600 * 1000;
 
 export default function AdminEventsPage({
   params,
@@ -40,6 +47,22 @@ export default function AdminEventsPage({
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
+
+  // Tickets sold per event (door list rows created by paid orders); admins read them under RLS
+  const [ticketsSold, setTicketsSold] = useState<Record<string, number>>({});
+  const [currency, setCurrency] = useState('AUD');
+  useEffect(() => {
+    const client = getSupabaseClient();
+    client?.from('event_attendees').select('event_id').eq('club_id', club.id)
+      .not('payment_id', 'is', null).neq('checkin_status', 'cancelled')
+      .then(({ data }) => {
+        const sold: Record<string, number> = {};
+        (data || []).forEach(a => { sold[a.event_id] = (sold[a.event_id] || 0) + 1; });
+        setTicketsSold(sold);
+      });
+    client?.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => data?.currency && setCurrency(data.currency));
+  }, [club.id]);
 
   const doorCheckinUrl = useDoorCheckinUrl(qrModalEvent ? `/${club.slug}/events/${qrModalEvent.id}/checkin` : null, qrModalEvent?.id);
 
@@ -88,11 +111,13 @@ export default function AdminEventsPage({
     description: '',
     category: 'training' as EventCategory,
     season: activeSeason?.name || defaultSeasonLabel(),
-    start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
+    start_time: toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
     location: club.stadium_name,
     max_capacity: 150,
     is_public: true,
     door_qr_checkin_enabled: true,
+    ticket_price: '',
+    repeat_weeks: 1,
   });
 
   const handleOpenAdd = () => {
@@ -102,11 +127,13 @@ export default function AdminEventsPage({
       description: '',
       category: 'training',
       season: activeSeason?.name || defaultSeasonLabel(),
-      start_time: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 16),
+      start_time: toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
       location: club.stadium_name,
       max_capacity: 150,
       is_public: true,
       door_qr_checkin_enabled: true,
+      ticket_price: '',
+      repeat_weeks: 1,
     });
     setModalOpen(true);
   };
@@ -118,11 +145,14 @@ export default function AdminEventsPage({
       description: evt.description,
       category: evt.category,
       season: evt.season || activeSeason?.name || defaultSeasonLabel(),
-      start_time: new Date(evt.start_time).toISOString().slice(0, 16),
+      // Local time, as the input shows it (an ISO slice shows UTC and shifted the event on every save)
+      start_time: toDateTimeLocal(evt.start_time),
       location: evt.location,
       max_capacity: evt.max_capacity,
       is_public: evt.is_public,
       door_qr_checkin_enabled: evt.door_qr_checkin_enabled ?? true,
+      ticket_price: evt.ticket_price_cents ? (evt.ticket_price_cents / 100).toFixed(2) : '',
+      repeat_weeks: 1,
     });
     setModalOpen(true);
   };
@@ -130,26 +160,38 @@ export default function AdminEventsPage({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
+    const { ticket_price, repeat_weeks, ...fields } = form;
+    const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
+    const start = new Date(form.start_time).getTime();
 
     if (editingEventId) {
       updateEvent(editingEventId, {
-        ...form,
-        start_time: new Date(form.start_time).toISOString(),
+        ...fields,
+        start_time: new Date(start).toISOString(),
+        ticket_price_cents,
       });
     } else {
-      addEvent({
-        club_id: club.id,
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        season: form.season,
-        start_time: new Date(form.start_time).toISOString(),
-        location: form.location,
-        max_capacity: Number(form.max_capacity),
-        rsvp_count: 0,
-        is_public: form.is_public,
-        door_qr_checkin_enabled: form.door_qr_checkin_enabled,
-      });
+      // Weekly sessions are separate events, so one can be moved or cancelled without touching the rest
+      for (let week = 0; week < repeat_weeks; week++) {
+        addEvent({
+          club_id: club.id,
+          title: form.title,
+          description: form.description,
+          category: form.category,
+          season: form.season,
+          start_time: new Date(start + week * WEEK_MS).toISOString(),
+          location: form.location,
+          max_capacity: Number(form.max_capacity),
+          rsvp_count: 0,
+          is_public: form.is_public,
+          door_qr_checkin_enabled: form.door_qr_checkin_enabled,
+          ticket_price_cents,
+        });
+      }
+      if (repeat_weeks > 1) {
+        setToastMessage(`✓ Scheduled ${repeat_weeks} weekly sessions of "${form.title}"`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
     }
 
     setModalOpen(false);
@@ -256,6 +298,11 @@ export default function AdminEventsPage({
                   <span className="text-meta">
                     Checked in: {evt.rsvp_count} / {evt.max_capacity} capacity
                   </span>
+                  {(evt.ticket_price_cents ?? 0) > 0 && (
+                    <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
+                      {formatMoney(evt.ticket_price_cents ?? 0, currency)} ticket · {ticketsSold[evt.id] || 0} sold
+                    </span>
+                  )}
                 </div>
 
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
@@ -352,6 +399,8 @@ export default function AdminEventsPage({
           </div>
         )))}
       </div>
+
+      <TrainingAttendance club={club} events={filteredEvents} />
 
       {/* Add / Edit Event Modal */}
       {modalOpen && (
@@ -477,6 +526,42 @@ export default function AdminEventsPage({
                 />
               </div>
 
+              <div className="form-row-2" style={{ gap: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="events-ticket-price" className="form-label">Ticket price ({currency})</label>
+                  <input id="events-ticket-price"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    placeholder="Free entry"
+                    className="form-input"
+                    value={form.ticket_price}
+                    onChange={e => setForm({ ...form, ticket_price: e.target.value })}
+                    aria-describedby="events-ticket-price-hint"
+                  />
+                  <p id="events-ticket-price-hint" className="text-note" style={{ margin: '0.3rem 0 0' }}>
+                    A price sells tickets by card on the public event page, up to the capacity. Only ticket holders get in.
+                  </p>
+                </div>
+
+                {!editingEventId && (
+                  <div className="form-group">
+                    <label htmlFor="events-repeat-weeks" className="form-label">Repeat</label>
+                    <select id="events-repeat-weeks"
+                      className="form-select"
+                      value={form.repeat_weeks}
+                      onChange={e => setForm({ ...form, repeat_weeks: Number(e.target.value) })}
+                    >
+                      <option value={1}>Does not repeat</option>
+                      {Array.from({ length: MAX_REPEAT_WEEKS - 1 }, (_, i) => i + 2).map(n => (
+                        <option key={n} value={n}>Weekly, {n} sessions</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -491,7 +576,7 @@ export default function AdminEventsPage({
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Save Event
+                  {!editingEventId && form.repeat_weeks > 1 ? `Create ${form.repeat_weeks} Sessions` : 'Save Event'}
                 </button>
               </div>
             </form>
