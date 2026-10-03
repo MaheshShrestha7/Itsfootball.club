@@ -58,6 +58,7 @@ export default function AdminMembersPage({
     rejectMemberApplication,
     getClubMemberMessages,
     replyToMemberMessage,
+    markMemberMessageRead,
     bulkAddMembers
   } = useClub();
   const { user } = useAuth();
@@ -471,7 +472,10 @@ export default function AdminMembersPage({
                 clubMessages.map(msg => (
                   <div
                     key={msg.id}
-                    onClick={() => setSelectedMessage(msg)}
+                    onClick={() => {
+                      setSelectedMessage(msg);
+                      if (msg.sender_type === 'member') markMemberMessageRead(msg.id);
+                    }}
                     style={{
                       padding: '0.85rem',
                       borderRadius: '8px',

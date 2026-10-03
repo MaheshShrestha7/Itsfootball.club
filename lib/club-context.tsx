@@ -219,6 +219,7 @@ interface ClubContextType {
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
+  markMemberMessageRead: (messageId: string) => void;
   getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
   getClubMemberMessages: (clubId: string) => MemberMessage[];
   getClubSeasonStats: (clubId: string) => ClubSeasonStatsSummary;
@@ -734,6 +735,9 @@ export function ClubProvider({
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'member_messages', filter: filterOn('club_id') }, payload =>
         apply<MemberMessage>('memberMessages', setMemberMessages, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_inquiries', filter: filterOn('club_id') }, payload =>
+        apply<ContactInquiry>('inquiries', setInquiries, payload)
       )
       .subscribe();
 
@@ -2694,6 +2698,11 @@ export function ClubProvider({
     return { success: true, message: replyMsg };
   }, [memberMessages]);
 
+  // An admin opening a member's message has read it (the Inbox badge counts the unread ones)
+  const markMemberMessageRead = useCallback((messageId: string) => {
+    setMemberMessages(prev => prev.map(m => (m.id === messageId && !m.is_read ? { ...m, is_read: true } : m)));
+  }, []);
+
   const getMemberMessages = useCallback((clubId: string, memberId: string): MemberMessage[] => {
     return memberMessages
       .filter(m => m.club_id === clubId && m.member_id === memberId)
@@ -3096,6 +3105,7 @@ export function ClubProvider({
         rejectMemberApplication,
         sendMemberMessage,
         replyToMemberMessage,
+        markMemberMessageRead,
         getMemberMessages,
         getClubMemberMessages,
         getClubSeasonStats,
