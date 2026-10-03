@@ -174,6 +174,7 @@ function buildBracket(
   for (let r = 1; r <= totalRounds; r++) {
     const stage = knockoutStageFor(2 ** (totalRounds - r + 1));
     const next: (Entry | Match)[] = [];
+    let played = 0; // match label within the round, skipping byes
     if (r === totalRounds) semiFeeds = feeds;
 
     for (let i = 0; i < feeds.length; i += 2) {
@@ -194,7 +195,7 @@ function buildBracket(
       const a = side(away, 'away');
       const match = baseMatch(tournament, {
         id,
-        title: stage === 'final' ? 'Grand Final' : `${STAGE_TITLES[stage]} • Match ${i / 2 + 1}`,
+        title: stage === 'final' ? 'Grand Final' : `${STAGE_TITLES[stage]} • Match ${++played}`,
         tournament_stage: stage,
         tournament_round: r,
         tournament_match_number: number++,

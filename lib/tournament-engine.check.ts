@@ -61,7 +61,18 @@ for (let n = 2; n <= 17; n++) {
   play('knockout', n);
   play('knockout', n, 2, 2, false);
   play('league', n);
-  for (const [g, adv] of [[1, 2], [1, 4], [2, 1], [2, 2], [3, 1], [3, 2], [4, 2], [8, 1]]) play('group_knockout', n, g, adv);
+  for (const [g, adv] of [[1, 2], [1, 3], [1, 4], [2, 1], [2, 2], [3, 1], [3, 2], [4, 2], [8, 1]]) play('group_knockout', n, g, adv);
+}
+// League + top-3 playoff: 1st waits in the Grand Final, 2nd v 3rd in the only semi
+{
+  const t = { id: 'top3', club_id: 'c', name: 'Top 3', slug: 't3', season: '2026', format: 'group_knockout', status: 'draft',
+    points_win: 3, points_draw: 1, points_loss: 0, group_count: 1, teams_advancing_per_group: 3, has_third_place_match: true, start_date: '2026-10-03' } as Tournament;
+  const parts = Array.from({ length: 6 }, (_, i) => ({ id: `q${i}`, tournament_id: 'top3', team_type: 'internal', name: `Q${i}`, short_name: `Q${i}`, logo_url: '' })) as TournamentParticipant[];
+  const ko = buildTiesheet(t, parts).matches.filter(m => m.tournament_stage !== 'group');
+  assert.deepEqual(ko.map(m => [m.tournament_stage, m.title, m.home_team_source, m.away_team_source]), [
+    ['semi_final', 'Semi-Finals • Match 1', '2nd Group A', '3rd Group A'],
+    ['final', 'Grand Final', '1st Group A', `Winner M#${ko[0].tournament_match_number}`],
+  ], 'top-3 playoff shape');
 }
 // Legacy bracket: old 3rd place sources get upgraded, and repair is idempotent
 {

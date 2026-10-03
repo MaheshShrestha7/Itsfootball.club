@@ -153,6 +153,8 @@ export default function TournamentFormModal({
   const formatSummary =
     qualifiers < 2
       ? 'Needs more teams for a knockout stage.'
+      : qualifiers === 3 && rules.groupCount === 1
+      ? 'Single group (round-robin) → 1st gets a bye to the Grand Final, 2nd vs 3rd in the Semi-Final, winner faces 1st for the title'
       : `${rules.groupCount === 1 ? 'Single group (round-robin)' : `${rules.groupCount} groups (round-robin)`} → top ${rules.advancing} per group (${qualifiers} teams) → ${STAGE_TITLES[knockoutStageFor(qualifiers)]}${qualifiers & (qualifiers - 1) ? ' (top seeds get byes)' : ''}`;
   const clamped = teamCount >= 2 && (rules.groupCount !== groupCount || rules.advancing !== teamsAdvancing);
 
@@ -318,8 +320,8 @@ export default function TournamentFormModal({
                       {groupCount === 1 ? 'Teams advancing to knockout' : 'Teams advancing per group'}
                     </label>
                     <select id="tournamentformmodal-groupcount-1-teams-advancing-to-knockout" value={teamsAdvancing} onChange={e => setTeamsAdvancing(parseInt(e.target.value, 10))} style={{ ...inputStyle, padding: '0.5rem', marginTop: '3px' }}>
-                      {(groupCount === 1 ? [2, 4, 8, 16] : [1, 2, 3, 4]).map(n => (
-                        <option key={n} value={n}>{groupCount === 1 ? `Top ${n}` : `Top ${n} per group`}</option>
+                      {(groupCount === 1 ? [2, 3, 4, 8, 16] : [1, 2, 3, 4]).map(n => (
+                        <option key={n} value={n}>{groupCount === 1 ? (n === 3 ? 'Top 3 (1st gets bye to Final)' : `Top ${n}`) : `Top ${n} per group`}</option>
                       ))}
                     </select>
                   </div>
