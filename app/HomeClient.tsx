@@ -39,10 +39,10 @@ const AUDIENCES = [
   {
     id: 'committee', tab: 'Committee', Icon: Shield, color: 'var(--c-green)',
     headline: 'One dashboard instead of five apps.',
-    body: 'Squad, fixtures, members, money, content and sponsors in one place, with roles for your president, secretary and treasurer.',
+    body: 'Squad, fixtures, members, money, merch, content and sponsors in one place, with roles for your president, secretary and treasurer.',
     points: [
       'Memberships paid by card or bank transfer, with receipts',
-      'Income and expenses in one ledger',
+      'A club shop for kits and merch, with every order in one ledger',
       'Bulk member import and a QR member pass for everyone',
       'A club website with your crest, colours and own domain',
     ],
@@ -223,7 +223,7 @@ export default function PlatformHomePage() {
             </h1>
 
             <p className="lp-hero-sub">
-              Your official club website, live match centre, digital member passes, subs collection and sponsor
+              Your official club website, live match centre, digital member passes, subs collection, a merch shop and sponsor
               reporting, run by your committee from one dashboard. No developer. No spreadsheets. No 40-message group chats.
             </p>
 
@@ -498,8 +498,8 @@ export default function PlatformHomePage() {
             <article className="lp-tile lp-reveal" style={{ '--tc': '#FBBF24' } as React.CSSProperties}>
               <div>
                 <div className="lp-tile-ico"><Wallet size={19} /></div>
-                <h3>Subs &amp; club finances</h3>
-                <p>Membership plans paid by card (Stripe) or bank transfer, with automatic receipts. Income and expenses sit in one ledger.</p>
+                <h3>Subs, shop &amp; finances</h3>
+                <p>Membership plans paid by card (Stripe) or bank transfer, with automatic receipts, and a club shop for kits and merch. Every payment lands in one ledger.</p>
               </div>
               <div className="lp-viz lp-play">
                 <div className="lp-money">
@@ -507,6 +507,7 @@ export default function PlatformHomePage() {
                   <div className="lp-bar"><i /></div>
                   <div className="lp-tx"><span>Senior membership · J. Park</span><em>+$120</em></div>
                   <div className="lp-tx"><span>Kit sponsor · Northside Motors</span><em>+$800</em></div>
+                  <div className="lp-tx"><span>Shop · Home shirt (M) ×2</span><em>+$90</em></div>
                 </div>
               </div>
             </article>

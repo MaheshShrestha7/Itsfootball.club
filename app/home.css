@@ -475,6 +475,7 @@
   .lp-armed .lp-play .lp-bar i { transform-origin: left; animation: lpGrowX 900ms var(--ease-out) backwards var(--lp-run); }
   .lp-armed .lp-play .lp-tx { animation: lpFadeUp 250ms var(--ease-out) 700ms backwards var(--lp-run); }
   .lp-armed .lp-play .lp-tx + .lp-tx { animation-delay: 820ms; }
+  .lp-armed .lp-play .lp-tx + .lp-tx + .lp-tx { animation-delay: 940ms; }
 
   /* Member pass: the stamp lands after the laser's first sweep (reuses the gate scanner's stampSlam) */
   .lp-armed .lp-play .lp-stamp { animation: stampSlam 420ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 1200ms backwards var(--lp-run); }

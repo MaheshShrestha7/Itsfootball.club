@@ -46,7 +46,7 @@ export function homeSchema() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: { '@type': 'ImageObject', url: abs('/logo.png'), width: 512, height: 512 },
-      description: 'The digital platform for football clubs: club websites, live match centers, lineups, digital member passes and sponsor showcases.',
+      description: 'The digital platform for football clubs: club websites, live match centers, lineups, digital member passes, club merch shops and sponsor showcases.',
     },
     {
       '@type': 'WebSite',

@@ -7,7 +7,7 @@ import HomeClient from './HomeClient';
 export const metadata: Metadata = pageMetadata({
   title: 'Football Club Website & Live Match Center | itsfootball.club',
   description: fitDescription(
-    'Launch your football club website with live match centers, digital member passes, squad lineups and sponsor showcases.',
+    'Launch your football club website with live match centers, digital member passes, squad lineups, a club shop and sponsor showcases.',
     'Create your club free today.'
   ),
   path: '/',

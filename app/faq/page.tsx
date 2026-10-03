@@ -35,11 +35,11 @@ const FAQ: Section[] = [
     items: [
       { q: 'How much does itsfootball.club cost?', a: 'Nothing for your club. Your website, live match centre, member passes, lineups, finance, sponsor reports and everything else are included from the moment you sign up. No trial that runs out, no premium tier, no locked features, no invoice at the end of the season.' },
       { q: 'Why is it free?', a: 'Because grassroots clubs run on volunteers and tight budgets, and a monthly bill is exactly what keeps most of them stuck on group chats and spreadsheets. We believe the Sunday league side deserves the same matchday as the big clubs, so every club, however small, gets the full kit from day one.' },
-      { q: 'So what\'s the catch?', a: 'No catch, just one small detail we\'d rather tell you upfront. When someone pays your club by card through itsfootball.club, for a membership or a sponsorship, a small booking fee is added at checkout, like the one you see when you buy a match ticket online. It\'s shown clearly before anyone pays, and your club\'s price never changes: the money goes straight into your club\'s own Stripe account, less Stripe\'s standard card fee. We don\'t show ads to your players, we don\'t sell your data, and we never take a cut of what your club charges.' },
-      { q: 'How does itsfootball.club make money?', a: 'Through that small booking fee on card payments, and nothing else. It keeps us on the same side as your club: we only earn when your club is thriving online, collecting its subs and signing up sponsors, never by charging you to use the platform. And if your club refunds a card payment in full, the booking fee is refunded with it.' },
+      { q: 'So what\'s the catch?', a: 'No catch, just one small detail we\'d rather tell you upfront. When someone pays your club by card through itsfootball.club, for a membership, a sponsorship or an order from the club shop, a small booking fee is added at checkout, like the one you see when you buy a match ticket online. It\'s shown clearly before anyone pays, and your club\'s price never changes: the money goes straight into your club\'s own Stripe account, less Stripe\'s standard card fee. We don\'t show ads to your players, we don\'t sell your data, and we never take a cut of what your club charges.' },
+      { q: 'How does itsfootball.club make money?', a: 'Through that small booking fee on card payments, and nothing else. It keeps us on the same side as your club: we only earn when your club is thriving online, collecting its subs, selling its merch and signing up sponsors, never by charging you to use the platform. And if your club refunds a card payment in full, the booking fee is refunded with it.' },
       { q: 'Do I need a card to create a club?', a: 'No. You only need an email address. Create your club in a few minutes and start using everything straight away, with no limits.' },
-      { q: 'Are some features kept behind a paid plan?', a: 'No. Match Center, lineups, tournaments, the QR pass and scanner, finance, sponsors, news, branding, custom domain and analytics are all available to every club from day one.' },
-      { q: 'Do players or supporters pay anything?', a: 'Following the live match centre, getting a member pass, checking your stats and replying to availability are always free. The only payments are the ones your club chooses to set, like a membership fee. If you pay one by card, you\'ll see a small booking fee before you confirm; it\'s what keeps the whole platform free for your club.' },
+      { q: 'Are some features kept behind a paid plan?', a: 'No. Match Center, lineups, tournaments, the QR pass and scanner, finance, sponsors, the club shop, news, branding, custom domain and analytics are all available to every club from day one.' },
+      { q: 'Do players or supporters pay anything?', a: 'Following the live match centre, getting a member pass, checking your stats and replying to availability are always free. The only payments are the ones your club chooses to set, like a membership fee or merch from the club shop. If you pay by card, you\'ll see a small booking fee before you confirm; it\'s what keeps the whole platform free for your club.' },
     ],
   },
   {
@@ -64,9 +64,10 @@ const FAQ: Section[] = [
     pitch: 'Replace the spreadsheets, group chats and paper forms with one place to run the club.',
     cta: { label: 'Set up your admin area', href: '/create-club' },
     items: [
-      { q: 'What can a club admin do?', a: 'Everything in one place: matchday tools (Match Center, availability, lineups, QR scanner), planning (matches, tournaments, events, seasons), people (squad, members, committee, ClubScore), money (finance, sponsors) and the club site (branding, news, analytics, enquiries).' },
+      { q: 'What can a club admin do?', a: 'Everything in one place: matchday tools (Match Center, availability, lineups, QR scanner), planning (matches, tournaments, events, seasons), people (squad, members, committee, ClubScore), money (finance, sponsors, club shop) and the club site (branding, news, analytics, enquiries).' },
       { q: 'How do I share the workload with other volunteers?', a: 'Open Squad in the admin area, edit the person and add the "Club Admin" role. They get the full admin area too, so the work doesn\'t all land on one person.' },
       { q: 'How do I track club money and sponsors?', a: 'Use Finance to log income and expenses, and Sponsors to review sponsor applications and manage your existing sponsors, so the treasurer always has an up-to-date picture.' },
+      { q: 'Can we sell club merch?', a: 'Yes. Open Club Shop in the admin area and add your products with photos, sizes and a price. A Shop link appears on your club site as soon as something is on sale. Buyers pay by card, Apple Pay or Google Pay and collect their order from the club; every order is recorded in Finance, and you mark it handed out when it\'s picked up.' },
       { q: 'How do I post club news?', a: 'Open Content in the admin area. Published articles appear on your club home page for members and supporters.' },
       { q: 'Where do messages from the public contact form go?', a: 'To Inquiries in the admin area, so nothing gets lost in someone\'s personal inbox. Messages from signed-in members arrive in their member messages.' },
     ],
@@ -112,6 +113,7 @@ const FAQ: Section[] = [
       { q: 'How do I follow a live match?', a: 'Open your club\'s page and pick the match from the fixtures. The match page updates live with goals, cards and substitutions as the game is played.' },
       { q: 'What is the virtual member pass?', a: 'A QR code pass in the Pass tab of your member area. Show it on your phone to be checked in at matches and club events. Nothing to print, nothing to lose.' },
       { q: 'How do I pay my membership?', a: 'If your chosen tier has a fee, you pay it during sign-up by card, Apple Pay or Google Pay. Payment is handled securely by Stripe and goes straight to the club, with a small booking fee shown before you pay. For a refund, contact your club. If the payment page itself isn\'t working, email contact@itsfootball.club.' },
+      { q: 'How do I buy club merch?', a: 'Open the Shop on your club\'s site (itsfootball.club/your-club/shop), pick your items and sizes, and pay by card, Apple Pay or Google Pay. You don\'t need to be a member. Orders are collection only: pick yours up from the club. For questions about an order or a refund, contact your club.' },
       { q: 'How do I contact my club?', a: 'Signed-in members can use the Messages tab in their member area. Anyone else can use the contact form on the club\'s page.' },
     ],
   },
@@ -170,7 +172,7 @@ export default function FaqPage() {
             Questions? Here&apos;s why clubs sign up.
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0.9rem auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
-            Club site, matchday tools, member passes, tournaments, finance and sponsors. Everything your club needs,
+            Club site, matchday tools, member passes, tournaments, finance, sponsors and a club shop. Everything your club needs,
             free to sign up and free to use.
           </p>
           <ul style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem 1.25rem', listStyle: 'none', padding: 0, margin: '1.25rem 0 0' }}>

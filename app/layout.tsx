@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
   title: SITE_NAME,
-  keywords: ['football club platform', 'soccer management', 'live match center', 'digital member pass', 'club website builder'],
+  keywords: ['football club platform', 'soccer management', 'live match center', 'digital member pass', 'club website builder', 'football club merch shop'],
   authors: [{ name: 'itsfootball.club team' }],
   openGraph: { siteName: SITE_NAME, type: 'website', images: [DEFAULT_OG_IMAGE] },
   twitter: { card: 'summary_large_image', images: [DEFAULT_OG_IMAGE] },
