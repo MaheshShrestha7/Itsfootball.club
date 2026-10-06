@@ -668,3 +668,23 @@ export function clubSidePlayers(
   if (match.match_type === 'internal') return squad;
   return (side === 'home') === (match.is_club_home ?? true) ? squad : null;
 }
+
+/**
+ * Short scoreboard name for one side (shown on narrow screens). Tournament sides use their
+ * participant's short name, since is_club_home is true for every tournament fixture; otherwise
+ * the club's or opponent's short name. Falls back to the team name's initials.
+ */
+export function sideShortName(
+  match: Match,
+  side: 'home' | 'away',
+  clubShortName: string | undefined,
+  participants: TournamentParticipant[],
+): string {
+  const name = (side === 'home' ? match.home_team_name : match.away_team_name) || '';
+  const explicit = match.tournament_id
+    ? participants.find(p => p.tournament_id === match.tournament_id && p.name === name)?.short_name
+    : (side === 'home') === (match.is_club_home ?? true) ? clubShortName : match.opponent_short_name;
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const initials = words.length > 1 ? words.map(w => w[0]).join('') : words[0] || '';
+  return (explicit || initials.slice(0, 4)).toUpperCase();
+}

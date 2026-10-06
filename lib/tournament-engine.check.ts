@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers, sideShortName } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -139,6 +139,18 @@ for (let n = 2; n <= 17; n++) {
   assert.deepEqual([side(league(false), 'home'), side(league(false), 'away')], [null, ['a', 'b', 'c', 'd']], 'club away');
   const intra = { match_type: 'internal', is_club_home: true } as Match;
   assert.ok(side(intra, 'home') && side(intra, 'away'), 'internal friendly: both sides are the club');
+
+  // Mobile scoreboard short names: tournament sides are never the club's own short name
+  const shortParts = [
+    { tournament_id: 't', name: 'Red Lions', short_name: 'RDL' },
+    { tournament_id: 't', name: 'Blue Hawks', short_name: '' },
+  ] as TournamentParticipant[];
+  const short = (m: Match) => [sideShortName(m, 'home', 'ITS', shortParts), sideShortName(m, 'away', 'ITS', shortParts)];
+  assert.deepEqual(short(tm('Red Lions', 'Blue Hawks')), ['RDL', 'BH'], 'tournament: participant short name, else initials');
+  assert.deepEqual(short(tm('Blue Hawks', 'Red Lions')), ['BH', 'RDL'], 'tournament: home side is not the club');
+  const fixture = (isHome: boolean) => ({ is_club_home: isHome, home_team_name: isHome ? 'Its FC' : 'Rival Town', away_team_name: isHome ? 'Rival Town' : 'Its FC', opponent_short_name: 'RVT' }) as Match;
+  assert.deepEqual(short(fixture(true)), ['ITS', 'RVT'], 'league: club at home');
+  assert.deepEqual(short(fixture(false)), ['RVT', 'ITS'], 'league: club away');
 }
 
 console.log('tournament engine: all formats OK');

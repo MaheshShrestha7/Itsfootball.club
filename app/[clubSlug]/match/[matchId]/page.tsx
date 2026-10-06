@@ -36,6 +36,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import { periodLabel } from '@/lib/match-clock';
+import { sideShortName } from '@/lib/tournament-engine';
 
 export default function MatchCenterPage({
   params,
@@ -43,7 +44,7 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs, sponsors } = useClub();
+  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -233,19 +234,9 @@ export default function MatchCenterPage({
     );
   }
 
-  // Short team names for narrow screens: the club's / opponent's own short name, else initials
-  const abbreviate = (name: string) => {
-    const words = (name || '').trim().split(/\s+/).filter(Boolean);
-    if (words.length > 1) return words.map(w => w[0]).join('').slice(0, 4);
-    return (words[0] || '').slice(0, 4);
-  };
-  const shortTeamName = (side: 'home' | 'away') => {
-    const isClubSide = side === 'home' ? match.is_club_home : !match.is_club_home;
-    const explicit = isClubSide ? club.short_name : match.opponent_short_name;
-    return (explicit || abbreviate(side === 'home' ? match.home_team_name : match.away_team_name)).toUpperCase();
-  };
-  const homeShort = shortTeamName('home');
-  const awayShort = shortTeamName('away');
+  // Short team names for narrow screens
+  const homeShort = sideShortName(match, 'home', club.short_name, tournamentParticipants);
+  const awayShort = sideShortName(match, 'away', club.short_name, tournamentParticipants);
   const titleIsTeams = match.title === `${match.home_team_name} vs ${match.away_team_name}`;
 
   return (
