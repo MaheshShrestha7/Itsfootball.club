@@ -6,18 +6,23 @@ interface ScoreboardDigitRollProps {
   value: number;
   isGoal?: boolean;
   accentColor?: string;
+  /** Digit font size; the tile scales with it (any CSS length, e.g. a clamp() for small screens) */
+  size?: string;
 }
 
 export default function ScoreboardDigitRoll({
   value,
   isGoal = false,
   accentColor = '#10B981',
+  size = '3.6rem',
 }: ScoreboardDigitRollProps) {
   const [displayValue, setDisplayValue] = useState(value);
   const [prevValue, setPrevValue] = useState<number | null>(null);
   const [direction, setDirection] = useState<'up' | 'down'>('up');
   const [isAnimating, setIsAnimating] = useState(false);
   const isFirstMount = useRef(true);
+  // Wide enough for the longer of the outgoing and incoming number, so "10" isn't clipped
+  const digits = String(Math.max(displayValue, prevValue ?? 0)).length;
 
   useEffect(() => {
     if (isFirstMount.current) {
@@ -47,8 +52,9 @@ export default function ScoreboardDigitRoll({
     <div
       data-theme="dark" style={{
         position: 'relative',
-        width: '68px',
-        height: '84px',
+        fontSize: size,
+        width: `${0.6 * digits + 0.6}em`,
+        height: '1.45em',
         background: 'linear-gradient(180deg, #0c121d 0%, rgb(var(--dk-4-6-9)) 100%)',
         borderRadius: '12px',
         border: `1.5px solid ${isGoal ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.14)'}`,
@@ -100,7 +106,7 @@ export default function ScoreboardDigitRoll({
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: 'var(--font-heading)',
-            fontSize: '3.6rem',
+            fontSize: '1em',
             fontWeight: 900,
             color: 'var(--text-primary)',
             lineHeight: 1,
@@ -125,7 +131,7 @@ export default function ScoreboardDigitRoll({
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: 'var(--font-heading)',
-          fontSize: '3.6rem',
+          fontSize: '1em',
           fontWeight: 900,
           color: isGoal ? 'var(--c-amber)' : 'var(--text-primary)',
           textShadow: isGoal

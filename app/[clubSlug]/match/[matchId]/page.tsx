@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, use } from 'react';
+import dynamic from 'next/dynamic';
 import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
-import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import TacticalPitch from '@/components/TacticalPitch';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorMarquee from '@/components/SponsorMarquee';
@@ -36,7 +35,14 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import { periodLabel } from '@/lib/match-clock';
-import { sideShortName } from '@/lib/tournament-engine';
+import { OPPONENT_COLOR, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
+
+// Only needed once the lineups tab opens
+const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
+  loading: () => <p className="text-note" style={{ textAlign: 'center', padding: '2rem' }}>Loading pitch…</p>,
+});
+
+type Side = 'home' | 'away';
 
 export default function MatchCenterPage({
   params,
@@ -44,16 +50,18 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, matches, matchEvents, updateMatch, members, isHydrated, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants } = useClub();
+  const { selectClubBySlug, matches, matchEvents, members, isHydrated, syncStatus, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams } = useClub();
 
-  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  // No fallback to another club, and only this club's own fixtures: a match cached from another
+  // club's site must not show under this club's name
+  const club = selectClubBySlug(resolvedParams.clubSlug);
 
   // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
   const { user, hasClubAdminAccess } = useAuth();
   const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
-  const match = matches.find(m => m.id === resolvedParams.matchId);
+  const match = club ? matches.find(m => m.id === resolvedParams.matchId && m.club_id === club.id) : undefined;
   const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
-  const allSquadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+  const allSquadPlayers = club ? members.filter(m => m.club_id === club.id && isPlayerMember(m)) : [];
 
   // Only players explicitly marked "available" for this fixture are shown as the matchday squad
   const matchAvailabilities = match ? getMatchAvailabilities(match.id) : [];
@@ -61,41 +69,66 @@ export default function MatchCenterPage({
   const squadPlayers = allSquadPlayers.filter(p => attendingIds.has(p.id));
 
   // Club-wide partners (event-scoped sponsors belong to their event's page)
-  const matchSponsors = sponsors.filter(s => s.club_id === club.id && !s.event_id && s.is_active);
+  const matchSponsors = club ? sponsors.filter(s => s.club_id === club.id && !s.event_id && s.is_active) : [];
 
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
   const motmMember = motmLog ? members.find(m => m.id === motmLog.member_id) : undefined;
   const goalEvents = events.filter(e => e.event_type === 'goal' || e.event_type === 'penalty').slice().sort((a, b) => a.minute - b.minute);
 
+  // Each side's color: the club's goes to the club's own side, not simply to "home"
+  const clubColor = club?.primary_color || '#10B981';
+  const homeColor = match ? sideColor(match, 'home', clubColor, tournamentParticipants, internalTeams) : clubColor;
+  const awayColor = match ? sideColor(match, 'away', clubColor, tournamentParticipants, internalTeams) : OPPONENT_COLOR;
+  const isLive = match?.status === 'live' || match?.status === 'halftime';
+  // Tournament fixtures store is_club_home = true for every match, so neither side is "the club" there
+  const isClubSide = (side: Side) => !!match && !match.tournament_id && (side === 'home') === (match.is_club_home ?? true);
+
   const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  // Off until the visitor turns it on: browsers only let a click start audio, so "on" by default would be silent
+  const [audioEnabled, setAudioEnabled] = useState(false);
   const [liveSyncPulse, setLiveSyncPulse] = useState(false);
-  const [titleColors, setTitleColors] = useState<{ home: string; away: string }>({
-    home: match?.is_club_home !== false ? (club.primary_color || '#10B981') : '#3B82F6',
-    away: match?.is_club_home === false ? (club.primary_color || '#10B981') : '#3B82F6',
-  });
+  const [titleColors, setTitleColors] = useState<{ home: string; away: string }>({ home: homeColor, away: awayColor });
 
   // Goal Strobe Alert State
   const [goalAlert, setGoalAlert] = useState<{
     active: boolean;
     teamName: string;
-    teamSide: 'home' | 'away';
+    teamSide: Side;
   } | null>(null);
 
-  const prevHomeScoreRef = useRef(match?.home_score ?? 0);
-  const prevAwayScoreRef = useRef(match?.away_score ?? 0);
-  const isInitialMount = useRef(true);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const goalQueueRef = useRef<{ side: Side; teamName: string }[]>([]);
+  const goalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevScoresRef = useRef<{ id: string; home: number; away: number } | null>(null);
 
-  // Synthesized stadium goal chime using Web Audio API
-  const playGoalAudio = useCallback(() => {
-    if (!audioEnabled || typeof window === 'undefined') return;
+  // One AudioContext for the page, started by the click that turns sound on and suspended when muted
+  const toggleAudio = () => {
+    const next = !audioEnabled;
+    setAudioEnabled(next);
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
+      if (next && !audioCtxRef.current) {
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        if (Ctx) audioCtxRef.current = new Ctx();
+      }
+      if (next) audioCtxRef.current?.resume();
+      else audioCtxRef.current?.suspend();
+    } catch {
+      // Audio unavailable: the page works silently
+    }
+  };
 
+  useEffect(() => () => {
+    audioCtxRef.current?.close();
+    if (goalTimerRef.current) clearTimeout(goalTimerRef.current);
+  }, []);
+
+  // Synthesized stadium goal chime, only while sound is switched on
+  const playGoalAudio = useCallback(() => {
+    const ctx = audioCtxRef.current;
+    if (!ctx || ctx.state !== 'running') return;
+    try {
       // Pitch whistle chime
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -109,125 +142,103 @@ export default function MatchCenterPage({
       osc.start();
       osc.stop(ctx.currentTime + 0.65);
     } catch {
-      // Graceful silence if audio context is blocked
+      // Graceful silence if audio is blocked
     }
-  }, [audioEnabled]);
+  }, []);
 
-  // Trigger Goal Celebration (Confetti, Strobe Wave, Crest Glow, Chime)
-  const triggerGoalCelebration = useCallback((side: 'home' | 'away', teamName: string) => {
-    setGoalAlert({
-      active: true,
-      teamName,
-      teamSide: side,
-    });
-
+  // Goals celebrate one at a time (Confetti, Strobe Wave, Crest Glow, Chime), each for its full 3.2s
+  const showNextGoal = useCallback(function next() {
+    const goal = goalQueueRef.current.shift();
+    if (!goal) {
+      goalTimerRef.current = null;
+      setGoalAlert(null);
+      return;
+    }
+    setGoalAlert({ active: true, teamName: goal.teamName, teamSide: goal.side });
     playGoalAudio();
-
-    try {
-      const scoringColor = side === 'home' ? (club.primary_color || '#10B981') : '#3B82F6';
-      confetti({
+    const color = goal.side === 'home' ? homeColor : awayColor;
+    import('canvas-confetti')
+      .then(({ default: confetti }) => confetti({
         particleCount: 65,
         spread: 80,
         origin: { y: 0.35 },
-        colors: [scoringColor, '#F59E0B', '#FFFFFF'],
-      });
-    } catch {
-      // Fallback
-    }
+        colors: [color, '#F59E0B', '#FFFFFF'],
+        disableForReducedMotion: true,
+      }))
+      .catch(() => {});
+    goalTimerRef.current = setTimeout(next, 3200);
+  }, [playGoalAudio, homeColor, awayColor]);
 
-    const timer = setTimeout(() => {
-      setGoalAlert(null);
-    }, 3200);
-
-    return () => clearTimeout(timer);
-  }, [club.primary_color, playGoalAudio]);
-
-  // Watch for real-time score changes
+  // Celebrate each goal as the live score moves, for both sides. Only during play, so a stale cached
+  // score being corrected after the page loads isn't mistaken for a goal.
   useEffect(() => {
     if (!match) return;
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      prevHomeScoreRef.current = match.home_score;
-      prevAwayScoreRef.current = match.away_score;
-      return;
-    }
+    const prev = prevScoresRef.current;
+    prevScoresRef.current = { id: match.id, home: match.home_score, away: match.away_score };
+    if (!prev || prev.id !== match.id || !isLive) return;
+    for (let i = prev.home; i < match.home_score; i++) goalQueueRef.current.push({ side: 'home', teamName: match.home_team_name });
+    for (let i = prev.away; i < match.away_score; i++) goalQueueRef.current.push({ side: 'away', teamName: match.away_team_name });
+    if (!goalTimerRef.current) showNextGoal();
+  }, [match?.id, match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, isLive, showNextGoal]);
 
-    if (match.home_score > prevHomeScoreRef.current) {
-      triggerGoalCelebration('home', match.home_team_name);
-    } else if (match.away_score > prevAwayScoreRef.current) {
-      triggerGoalCelebration('away', match.away_team_name);
-    }
-
-    prevHomeScoreRef.current = match.home_score;
-    prevAwayScoreRef.current = match.away_score;
-  }, [match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
-
-  // Real-time live synchronization: BroadcastChannel + Supabase Realtime + Live Polling Heartbeat
+  // Cross-tab pulse for the live badge. Goals themselves come from the score above, so a goal logged
+  // in another tab isn't celebrated twice (once from the message, again when the score arrives).
   useEffect(() => {
-    if (!match) return;
-    // 1. BroadcastChannel cross-tab synchronization
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('itsfootball_live_matchday');
-        channel.onmessage = (e) => {
-          const data = e.data;
-          if (!data) return;
-          if (data.matchId === match.id) {
-            setLiveSyncPulse(true);
-            setTimeout(() => setLiveSyncPulse(false), 2000);
-            if (data.type === 'MATCH_EVENT_ADDED' && data.event) {
-              if (data.event.event_type === 'goal' || data.event.event_type === 'penalty') {
-                const scoringTeam = data.event.team_side === 'home' ? match.home_team_name : match.away_team_name;
-                triggerGoalCelebration(data.event.team_side, scoringTeam);
-              }
-            }
-          }
-        };
-        return () => {
-          channel.close();
-        };
-      } catch {}
-    }
-  }, [match?.id, match?.home_team_name, match?.away_team_name, triggerGoalCelebration]);
+    if (!match?.id || typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const matchId = match.id;
+    let pulseTimer: ReturnType<typeof setTimeout> | undefined;
+    const channel = new BroadcastChannel('itsfootball_live_matchday');
+    channel.onmessage = e => {
+      if (e.data?.matchId !== matchId) return;
+      setLiveSyncPulse(true);
+      clearTimeout(pulseTimer);
+      pulseTimer = setTimeout(() => setLiveSyncPulse(false), 2000);
+    };
+    return () => {
+      channel.close();
+      clearTimeout(pulseTimer);
+    };
+  }, [match?.id]);
 
-  // Derive each team's title/scoreboard text color from its crest; falls back to the club's
-  // brand color (for our own side) or a neutral blue (opponent) if the crest can't be sampled.
+  // Derive each team's title/scoreboard text color from its crest; falls back to that side's color
+  // if the crest can't be sampled.
   useEffect(() => {
     if (!match) return;
     let cancelled = false;
-    const homeLogo = match.home_team_logo || (match.is_club_home ? club.logo_url : undefined);
-    const awayLogo = match.away_team_logo || (!match.is_club_home ? club.logo_url : undefined);
+    const homeLogo = match.home_team_logo || (isClubSide('home') ? club?.logo_url : undefined);
+    const awayLogo = match.away_team_logo || (isClubSide('away') ? club?.logo_url : undefined);
     extractCrestTextColor(homeLogo).then(c => { if (!cancelled && c) setTitleColors(prev => ({ ...prev, home: c })); });
     extractCrestTextColor(awayLogo).then(c => { if (!cancelled && c) setTitleColors(prev => ({ ...prev, away: c })); });
     return () => { cancelled = true; };
-  }, [match?.id, match?.home_team_logo, match?.away_team_logo, match?.is_club_home, club.logo_url]);
+  }, [match?.id, match?.home_team_logo, match?.away_team_logo, match?.is_club_home, match?.tournament_id, club?.logo_url]);
 
-  if (!isHydrated) {
+  // The server already has the club's public data, so the page renders straight into the first HTML.
+  // Without the fixture yet, wait for the browser's own load before calling it missing.
+  if (!club || !match) {
+    if (!isHydrated || syncStatus.phase === 'loading') {
+      return (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', padding: '2rem' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            border: '3px solid rgba(var(--tint-rgb), 0.1)',
+            borderTopColor: '#10B981',
+            animation: 'spin 0.8s linear infinite',
+            marginBottom: '1rem',
+          }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading match fixture...</p>
+        </div>
+      );
+    }
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', padding: '2rem' }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          borderRadius: '50%',
-          border: '3px solid rgba(var(--tint-rgb), 0.1)',
-          borderTopColor: '#10B981',
-          animation: 'spin 0.8s linear infinite',
-          marginBottom: '1rem',
-        }} />
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading match fixture...</p>
-      </div>
-    );
-  }
-
-  if (!match) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-pitch)', color: 'var(--text-primary)', padding: '6rem 1.5rem', textAlign: 'center' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg-pitch)', color: 'var(--text-primary)', padding: '6rem 1.5rem', textAlign: 'center' }}>
         <Shield size={48} style={{ opacity: 0.3, margin: '0 auto 1.25rem auto' }} />
         <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>Match Fixture Not Found</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
           The requested fixture does not exist or may have been rescheduled.
         </p>
-        <Link href={`/${club.slug}`} className="btn btn-primary">
+        <Link href={club ? `/${club.slug}` : '/'} className="btn btn-primary">
           Return to Club Headquarters
         </Link>
       </div>
@@ -238,6 +249,77 @@ export default function MatchCenterPage({
   const homeShort = sideShortName(match, 'home', club.short_name, tournamentParticipants);
   const awayShort = sideShortName(match, 'away', club.short_name, tournamentParticipants);
   const titleIsTeams = match.title === `${match.home_team_name} vs ${match.away_team_name}`;
+  // Door check-in is for arriving spectators, so it goes once the match is over
+  const checkInOpen = match.door_qr_checkin_enabled && ['upcoming', 'live', 'halftime'].includes(match.status);
+
+  // Lineups for each side that fields the club's own players: the club's side in a league fixture,
+  // both internal teams in a tournament. Tournament teams without availability use their roster.
+  const lineupSquad = match.tournament_id && attendingIds.size === 0 ? allSquadPlayers : squadPlayers;
+  const lineupSides = (match.tournament_id ? ['home', 'away'] as Side[] : [isClubSide('home') ? 'home' : 'away'] as Side[])
+    .map(side => ({
+      side,
+      teamName: side === 'home' ? match.home_team_name : match.away_team_name,
+      color: side === 'home' ? homeColor : awayColor,
+      players: clubSidePlayers(match, side, lineupSquad, tournamentParticipants, internalTeams),
+    }))
+    .filter((s): s is typeof s & { players: NonNullable<typeof s.players> } => s.players !== null);
+
+  // One team's crest and name. The club's crest only stands in on the club's own side.
+  const teamBlock = (side: Side) => {
+    const name = side === 'home' ? match.home_team_name : match.away_team_name;
+    const logo = side === 'home' ? match.home_team_logo : match.away_team_logo;
+    const color = side === 'home' ? homeColor : awayColor;
+    const celebrating = !!goalAlert?.active && goalAlert.teamSide === side;
+    const crest = logo && !logoFailed[side] ? logo : isClubSide(side) ? club.logo_url : undefined;
+    const FallbackIcon = side === 'home' ? Shield : Trophy;
+    const markFailed = () => setLogoFailed(prev => (prev[side] ? prev : { ...prev, [side]: true }));
+    return (
+      <div style={{ textAlign: 'center', minWidth: 0 }}>
+        <div
+          className={celebrating ? 'crest-celebrating' : ''}
+          style={{
+            width: 'clamp(44px, 12vw, 80px)',
+            height: 'clamp(44px, 12vw, 80px)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            margin: '0 auto 0.5rem auto',
+            border: `2.5px solid ${color}`,
+            boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px color-mix(in srgb, ${color} 35%, transparent)`,
+            background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 35%, #000))`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px',
+            animation: celebrating ? 'crestGoalPulse 1.4s ease-out' : 'none',
+          }}
+        >
+          {crest ? (
+            <img loading="eager" decoding="async"
+              src={crest}
+              alt={`${name} crest`}
+              onError={crest === logo ? markFailed : undefined}
+              // A server-rendered image can fail before React attaches onError, so check it on mount too
+              ref={el => { if (crest === logo && el?.complete) el.decode().catch(markFailed); }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <>
+              <FallbackIcon size={20} color="#FFFFFF" strokeWidth={2.4} aria-hidden="true" />
+              <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
+                {(side === 'home' ? homeShort : awayShort).slice(0, 4)}
+              </span>
+            </>
+          )}
+        </div>
+        <h2 className="scoreboard-team-name" title={name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
+          <span className="team-name-full">{name}</span>
+          <span className="team-name-short">{side === 'home' ? homeShort : awayShort}</span>
+        </h2>
+        <span className="text-meta">{side === 'home' ? 'HOME' : 'AWAY'}</span>
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: '2.5rem 0 5rem 0' }}>
@@ -261,8 +343,8 @@ export default function MatchCenterPage({
           </Link>
 
           <div className="scroll-pill-strip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', maxWidth: '100%' }}>
-            {/* Live Feed Synced Badge */}
-            <div
+            {/* Live Feed Synced Badge, only while the match is being played */}
+            {isLive && <div
               className="scroll-pill-item"
               style={{
                 display: 'inline-flex',
@@ -275,16 +357,16 @@ export default function MatchCenterPage({
                 color: 'var(--c-green)',
                 fontSize: '0.74rem',
                 fontWeight: 800,
-                minHeight: '38px',
+                minHeight: '44px',
                 transition: 'all 0.3s ease',
               }}
               title="Real-time match feed synced directly from club touchline controller"
             >
               <span className="pulse-dot" style={{ background: '#10B981', width: '7px', height: '7px' }} />
               <span>LIVE FEED SYNCED</span>
-            </div>
+            </div>}
 
-            {match.door_qr_checkin_enabled && (
+            {checkInOpen && (
               <Link
                 href={`/${club.slug}/match/${match.id}/checkin`}
                 className="btn btn-sm scroll-pill-item touch-target"
@@ -295,7 +377,7 @@ export default function MatchCenterPage({
                   background: 'rgba(59, 130, 246, 0.15)',
                   border: '1px solid #3B82F6',
                   color: 'var(--c-blue)',
-                  minHeight: '38px',
+                  minHeight: '44px',
                   fontWeight: 700
                 }}
                 title="Door Turnstile Self-Check-in Station"
@@ -306,12 +388,15 @@ export default function MatchCenterPage({
             )}
 
             <button
-              onClick={() => setAudioEnabled(!audioEnabled)}
+              type="button"
+              onClick={toggleAudio}
               className="btn btn-secondary btn-sm scroll-pill-item touch-target"
-              style={{ minHeight: '38px', minWidth: '38px' }}
-              title={audioEnabled ? 'Mute commentary audio' : 'Enable commentary audio'}
+              style={{ minHeight: '44px', minWidth: '44px' }}
+              title={audioEnabled ? 'Mute goal sound' : 'Play a sound on goals'}
+              aria-label={audioEnabled ? 'Mute goal sound' : 'Play a sound on goals'}
+              aria-pressed={audioEnabled}
             >
-              {audioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
             <MatchShareButton match={match} club={club} />
@@ -320,7 +405,7 @@ export default function MatchCenterPage({
               <Link
                 href={`/${club.slug}/admin/match-center`}
                 className="btn btn-secondary btn-sm scroll-pill-item touch-target"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '38px' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px' }}
               >
                 <Settings size={14} />
                 <span>Admin</span>
@@ -333,7 +418,7 @@ export default function MatchCenterPage({
         <div
           className="glass-panel"
           style={{
-            padding: '2.5rem 1.5rem',
+            padding: 'clamp(1.5rem, 6vw, 2.5rem) clamp(0.75rem, 4vw, 1.5rem)',
             marginBottom: '2.5rem',
             background: 'linear-gradient(180deg, rgba(var(--dk-18-26-38), 0.95) 0%, rgba(var(--dk-10-15-23), 0.98) 100%)',
             border: goalAlert?.active
@@ -360,7 +445,7 @@ export default function MatchCenterPage({
                 top: 0,
                 bottom: 0,
                 width: '40%',
-                background: `linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.35) 45%, rgba(${goalAlert.teamSide === 'home' ? '16, 185, 129' : '59, 130, 246'}, 0.4) 55%, transparent 100%)`,
+                background: `linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.35) 45%, color-mix(in srgb, ${goalAlert.teamSide === 'home' ? homeColor : awayColor} 40%, transparent) 55%, transparent 100%)`,
                 pointerEvents: 'none',
                 zIndex: 8,
                 animation: 'goalStrobeSweep 1.6s ease-out forwards',
@@ -464,62 +549,14 @@ export default function MatchCenterPage({
             position: 'relative',
             zIndex: 5,
           }}>
-            {/* Home Team */}
-            <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <div
-                className={goalAlert?.active && goalAlert.teamSide === 'home' ? 'crest-celebrating' : ''}
-                style={{
-                  width: 'clamp(52px, 14vw, 80px)',
-                  height: 'clamp(52px, 14vw, 80px)',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  margin: '0 auto 0.5rem auto',
-                  border: `2.5px solid ${match.is_club_home ? club.primary_color : 'var(--border-subtle)'}`,
-                  boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(var(--club-primary-rgb), 0.35)`,
-                  background: `linear-gradient(135deg, ${club.primary_color}, #064e3b)`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '6px',
-                  animation: goalAlert?.active && goalAlert.teamSide === 'home' ? 'crestGoalPulse 1.4s ease-out' : 'none',
-                }}
-              >
-                {match.home_team_logo && !logoFailed.home ? (
-                  <img loading="eager" decoding="async"
-                    src={match.home_team_logo}
-                    alt={`${match.home_team_name} crest`}
-                    onError={() => setLogoFailed(prev => ({ ...prev, home: true }))}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                ) : match.is_club_home && club.logo_url ? (
-                  <img loading="eager" decoding="async"
-                    src={club.logo_url}
-                    alt={`${match.home_team_name} crest`}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                ) : (
-                  <>
-                    <Shield size={28} color="var(--text-primary)" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px', letterSpacing: '0.05em' }}>
-                      {match.home_team_name ? match.home_team_name.slice(0, 3).toUpperCase() : 'HOM'}
-                    </span>
-                  </>
-                )}
-              </div>
-              <h2 className="scoreboard-team-name" title={match.home_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
-                <span className="team-name-full">{match.home_team_name}</span>
-                <span className="team-name-short">{homeShort}</span>
-              </h2>
-              <span className="text-meta">HOME</span>
-            </div>
+            {teamBlock('home')}
 
             {/* Stadium Mechanical Scoreboard Digit Display */}
             <div data-theme="dark" style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(0.75rem, 3vw, 2rem)',
+              padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(0.5rem, 2.5vw, 2rem)',
               background: 'rgb(var(--dk-4-6-9))',
               borderRadius: '20px',
               border: `2px solid ${goalAlert?.active ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.12)'}`,
@@ -537,12 +574,13 @@ export default function MatchCenterPage({
                 <ScoreboardDigitRoll
                   value={match.home_score}
                   isGoal={goalAlert?.active && goalAlert.teamSide === 'home'}
-                  accentColor={club.primary_color}
+                  accentColor={homeColor}
+                  size="clamp(2rem, 10vw, 3.6rem)"
                 />
 
                 <span style={{
                   color: 'var(--text-muted)',
-                  fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
+                  fontSize: 'clamp(1.4rem, 5vw, 2.5rem)',
                   fontWeight: 900,
                   lineHeight: 1,
                   fontFamily: 'var(--font-heading)',
@@ -554,7 +592,8 @@ export default function MatchCenterPage({
                 <ScoreboardDigitRoll
                   value={match.away_score}
                   isGoal={goalAlert?.active && goalAlert.teamSide === 'away'}
-                  accentColor="#3B82F6"
+                  accentColor={awayColor}
+                  size="clamp(2rem, 10vw, 3.6rem)"
                 />
               </div>
 
@@ -571,55 +610,7 @@ export default function MatchCenterPage({
               </div>
             </div>
 
-            {/* Away Team */}
-            <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <div
-                className={goalAlert?.active && goalAlert.teamSide === 'away' ? 'crest-celebrating' : ''}
-                style={{
-                  width: 'clamp(52px, 14vw, 80px)',
-                  height: 'clamp(52px, 14vw, 80px)',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  margin: '0 auto 0.5rem auto',
-                  border: `2.5px solid ${!match.is_club_home ? club.primary_color : '#3B82F6'}`,
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(59, 130, 246, 0.35)',
-                  background: 'linear-gradient(135deg, #2563EB, #1E3A8A)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '6px',
-                  animation: goalAlert?.active && goalAlert.teamSide === 'away' ? 'crestGoalPulse 1.4s ease-out' : 'none',
-                }}
-              >
-                {match.away_team_logo && !logoFailed.away ? (
-                  <img loading="eager" decoding="async"
-                    src={match.away_team_logo}
-                    alt={`${match.away_team_name} crest`}
-                    onError={() => setLogoFailed(prev => ({ ...prev, away: true }))}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                ) : !match.is_club_home && club.logo_url ? (
-                  <img loading="eager" decoding="async"
-                    src={club.logo_url}
-                    alt={`${match.away_team_name} crest`}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                ) : (
-                  <>
-                    <Trophy size={28} color="var(--text-primary)" strokeWidth={2.4} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px', letterSpacing: '0.05em' }}>
-                      {match.away_team_name ? match.away_team_name.slice(0, 3).toUpperCase() : 'AWY'}
-                    </span>
-                  </>
-                )}
-              </div>
-              <h2 className="scoreboard-team-name" title={match.away_team_name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
-                <span className="team-name-full">{match.away_team_name}</span>
-                <span className="team-name-short">{awayShort}</span>
-              </h2>
-              <span className="text-meta">AWAY</span>
-            </div>
+            {teamBlock('away')}
           </div>
         </div>
 
@@ -687,7 +678,9 @@ export default function MatchCenterPage({
                           <span className="text-secondary"> (Assist: {evt.assist_player_name})</span>
                         )}
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                          {' · '}{evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
+                          {' · '}
+                          <span className="team-name-full">{evt.team_side === 'home' ? match.home_team_name : match.away_team_name}</span>
+                          <span className="team-name-short">{evt.team_side === 'home' ? homeShort : awayShort}</span>
                         </span>
                       </span>
                     </div>
@@ -752,7 +745,9 @@ export default function MatchCenterPage({
                   No match events recorded yet. Updates will appear in real time as logged by club officials.
                 </div>
               ) : (
-                events.map(evt => (
+                events.map(evt => {
+                  const isGoal = evt.event_type === 'goal' || evt.event_type === 'penalty';
+                  return (
                   <div
                     key={evt.id}
                     className="glass-panel"
@@ -763,7 +758,7 @@ export default function MatchCenterPage({
                       gap: '1.25rem',
                       position: 'relative',
                       zIndex: 1,
-                      borderLeft: evt.event_type === 'goal' ? `4px solid #10B981` : evt.event_type === 'red_card' ? '4px solid #EF4444' : evt.event_type === 'yellow_card' ? '4px solid #F59E0B' : '1px solid var(--border-subtle)',
+                      borderLeft: isGoal ? `4px solid #10B981` : evt.event_type === 'red_card' ? '4px solid #EF4444' : evt.event_type === 'yellow_card' ? '4px solid #F59E0B' : '1px solid var(--border-subtle)',
                     }}
                   >
                     {/* Minute Circle Badge */}
@@ -771,7 +766,7 @@ export default function MatchCenterPage({
                       width: '42px',
                       height: '42px',
                       borderRadius: '50%',
-                      background: evt.event_type === 'goal' ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'var(--bg-surface-elevated)',
+                      background: isGoal ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'var(--bg-surface-elevated)',
                       border: '2px solid rgba(255, 255, 255, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
@@ -788,10 +783,10 @@ export default function MatchCenterPage({
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
                         <span className="badge" style={{
-                          backgroundColor: evt.event_type === 'goal' ? 'rgba(16, 185, 129, 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
-                          color: evt.event_type === 'goal' ? 'var(--c-green)' : evt.event_type === 'yellow_card' ? 'var(--c-amber)' : 'var(--text-primary)',
+                          backgroundColor: isGoal ? 'rgba(16, 185, 129, 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
+                          color: isGoal ? 'var(--c-green)' : evt.event_type === 'yellow_card' ? 'var(--c-amber)' : 'var(--text-primary)',
                         }}>
-                          {evt.event_type.toUpperCase().replace('_', ' ')}
+                          {evt.event_type.toUpperCase().replace(/_/g, ' ')}
                         </span>
                         <span className="text-meta">
                           {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
@@ -809,79 +804,88 @@ export default function MatchCenterPage({
                       )}
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         )}
 
-        {/* TAB 2: TACTICAL LINEUPS & PITCH */}
+        {/* TAB 2: TACTICAL LINEUPS & PITCH, one per side that fields the club's own players */}
         {activeTab === 'lineups' && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '2rem',
           }}>
-            {/* The Tactical Pitch Component */}
-            <div>
-              <TacticalPitch
-                players={squadPlayers}
-                formation={match.home_formation || '4-3-3'}
-                matchFormat={match.match_format}
-                savedPositions={match.home_lineup_coords}
-                primaryColor={club.primary_color}
-                isEditable={false}
-                allowOrientationToggle={true}
-                showFormationControls={false}
-                matchEvents={events}
-                teamName={match.is_club_home ? match.home_team_name : match.away_team_name}
-              />
-            </div>
+            {lineupSides.map(({ side, teamName, color, players }) => (
+              <React.Fragment key={side}>
+                {/* The Tactical Pitch Component */}
+                <div>
+                  <TacticalPitch
+                    players={players}
+                    formation={(side === 'home' ? match.home_formation : match.away_formation) || '4-3-3'}
+                    matchFormat={match.match_format}
+                    savedPositions={side === 'home' ? match.home_lineup_coords : match.away_lineup_coords}
+                    primaryColor={color}
+                    isEditable={false}
+                    allowOrientationToggle={true}
+                    showFormationControls={false}
+                    matchEvents={events.filter(e => e.team_side === side)}
+                    teamName={teamName}
+                  />
+                </div>
 
-            {/* Starting XI & Substitutes List */}
-            <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
-                {club.name} Matchday Squad
-              </h3>
+                {/* Starting XI & Substitutes List */}
+                <div className="glass-panel" style={{ padding: '1.75rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
+                    {teamName} Matchday Squad
+                  </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {squadPlayers.length === 0 && (
-                  <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    No players have confirmed their availability for this match yet.
-                  </p>
-                )}
-                {squadPlayers.map(p => (
-                  <div
-                    key={p.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.55rem 0.85rem',
-                      borderRadius: '8px',
-                      background: 'rgba(var(--tint-rgb), 0.03)',
-                    }}
-                  >
-                    <div className="row row-loose">
-                      <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={32} />
-                      <span style={{
-                        fontFamily: 'var(--font-heading)',
-                        fontWeight: 900,
-                        color: 'var(--club-primary)',
-                        width: '24px',
-                      }}>
-                        {p.jersey_number ? `#${p.jersey_number}` : ''}
-                      </span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.full_name}</span>
-                    </div>
-                    <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)' }}>
-                      {p.player_position}
-                    </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {players.length === 0 && (
+                      <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        No players have confirmed their availability for this match yet.
+                      </p>
+                    )}
+                    {players.map(p => (
+                      <div
+                        key={p.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.55rem 0.85rem',
+                          borderRadius: '8px',
+                          background: 'rgba(var(--tint-rgb), 0.03)',
+                        }}
+                      >
+                        <div className="row row-loose">
+                          <PlayerAvatar photoUrl={p.photo_url} name={p.full_name} size={32} />
+                          <span style={{
+                            fontFamily: 'var(--font-heading)',
+                            fontWeight: 900,
+                            color: 'var(--club-primary)',
+                            width: '24px',
+                          }}>
+                            {p.jersey_number ? `#${p.jersey_number}` : ''}
+                          </span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.full_name}</span>
+                        </div>
+                        <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)' }}>
+                          {p.player_position}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-
+                </div>
+              </React.Fragment>
+            ))}
+            {lineupSides.length === 0 && (
+              <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                No club lineups for this match.
+              </p>
+            )}
           </div>
         )}
 
@@ -915,10 +919,10 @@ export default function MatchCenterPage({
 
               {/* Home vs Away header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem', padding: '0 0.25rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--c-green)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: titleColors.home, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {match.home_team_name}
                 </span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--c-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: titleColors.away, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
                   {match.away_team_name}
                 </span>
               </div>
@@ -930,13 +934,13 @@ export default function MatchCenterPage({
                 return (
                   <div key={s.label} style={{ marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                      <span style={{ color: 'var(--c-green)', minWidth: '24px' }}>{s.home}</span>
+                      <span style={{ color: titleColors.home, minWidth: '24px' }}>{s.home}</span>
                       <span className="text-muted">{s.label}</span>
-                      <span style={{ color: 'var(--c-blue)', minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
+                      <span style={{ color: titleColors.away, minWidth: '24px', textAlign: 'right' }}>{s.away}</span>
                     </div>
                     <div style={{ height: '8px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
-                      <div style={{ width: `${homePercent}%`, background: '#10B981', transition: 'width 0.6s ease' }} />
-                      <div style={{ width: `${100 - homePercent}%`, background: '#3B82F6', transition: 'width 0.6s ease' }} />
+                      <div style={{ width: `${homePercent}%`, background: homeColor, transition: 'width 0.6s ease' }} />
+                      <div style={{ width: `${100 - homePercent}%`, background: awayColor, transition: 'width 0.6s ease' }} />
                     </div>
                   </div>
                 );

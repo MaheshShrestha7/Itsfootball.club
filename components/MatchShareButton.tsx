@@ -67,7 +67,7 @@ export default function MatchShareButton({ match, club }: { match: Match; club: 
   return (
     <>
       <button type="button" onClick={show} className="btn btn-secondary btn-sm scroll-pill-item touch-target"
-        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '38px' }}>
+        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px' }}>
         <Share2 size={14} aria-hidden="true" />
         <span>Share</span>
       </button>

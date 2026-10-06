@@ -2052,6 +2052,8 @@ textarea {
 @media (max-width: 720px) {
   .team-name-full { display: none; }
   .team-name-short { display: inline; letter-spacing: 0.04em; }
+  /* One line under the crest: a long short name ends in "..." (the full name is in the title) */
+  .scoreboard-team-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* ==============================================================================

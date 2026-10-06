@@ -682,9 +682,37 @@ export function sideShortName(
 ): string {
   const name = (side === 'home' ? match.home_team_name : match.away_team_name) || '';
   const explicit = match.tournament_id
-    ? participants.find(p => p.tournament_id === match.tournament_id && p.name === name)?.short_name
+    ? sideParticipant(match, side, participants)?.short_name
     : (side === 'home') === (match.is_club_home ?? true) ? clubShortName : match.opponent_short_name;
   const words = name.trim().split(/\s+/).filter(Boolean);
   const initials = words.length > 1 ? words.map(w => w[0]).join('') : words[0] || '';
   return (explicit || initials.slice(0, 4)).toUpperCase();
+}
+
+const sideParticipant = (match: Match, side: 'home' | 'away', participants: TournamentParticipant[]) => {
+  const name = side === 'home' ? match.home_team_name : match.away_team_name;
+  return participants.find(p => p.tournament_id === match.tournament_id && p.name === name);
+};
+
+export const OPPONENT_COLOR = '#3B82F6';
+
+/**
+ * Brand color for one side of a fixture (crest, confetti, stat bars). The club's color goes to the
+ * club's own side, never just "home". Tournament sides use their participant's or internal team's color.
+ */
+export function sideColor(
+  match: Match,
+  side: 'home' | 'away',
+  clubColor: string,
+  participants: TournamentParticipant[],
+  internalTeams: InternalTeam[],
+): string {
+  const hex = (c?: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : undefined);
+  if (match.tournament_id) {
+    const p = sideParticipant(match, side, participants);
+    const own = hex(p?.color) || hex(internalTeams.find(t => t.id === p?.internal_team_id)?.color);
+    if (own) return own;
+    return side === 'home' ? clubColor : OPPONENT_COLOR;
+  }
+  return (side === 'home') === (match.is_club_home ?? true) ? clubColor : OPPONENT_COLOR;
 }

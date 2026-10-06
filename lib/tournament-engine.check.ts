@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers, sideShortName } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -151,6 +151,19 @@ for (let n = 2; n <= 17; n++) {
   const fixture = (isHome: boolean) => ({ is_club_home: isHome, home_team_name: isHome ? 'Its FC' : 'Rival Town', away_team_name: isHome ? 'Rival Town' : 'Its FC', opponent_short_name: 'RVT' }) as Match;
   assert.deepEqual(short(fixture(true)), ['ITS', 'RVT'], 'league: club at home');
   assert.deepEqual(short(fixture(false)), ['RVT', 'ITS'], 'league: club away');
+
+  // Side colors: the club's color follows the club's side; tournament teams use their own
+  const colorParts = [
+    { tournament_id: 't', name: 'Red Lions', color: '#DC2626' },
+    { tournament_id: 't', name: 'Blue Hawks', internal_team_id: 'it9' },
+    { tournament_id: 't', name: 'Odd Ones', color: 'red' },
+  ] as TournamentParticipant[];
+  const colorTeams = [{ id: 'it9', color: '#1D4ED8' }] as InternalTeam[];
+  const color = (m: Match) => [sideColor(m, 'home', '#E11D48', colorParts, colorTeams), sideColor(m, 'away', '#E11D48', colorParts, colorTeams)];
+  assert.deepEqual(color(fixture(true)), ['#E11D48', OPPONENT_COLOR], 'league: club at home wears club color');
+  assert.deepEqual(color(fixture(false)), [OPPONENT_COLOR, '#E11D48'], 'league: club away, opponent at home is not club-colored');
+  assert.deepEqual(color(tm('Blue Hawks', 'Red Lions')), ['#1D4ED8', '#DC2626'], 'tournament: participant color, else internal team color');
+  assert.deepEqual(color(tm('Odd Ones', 'Nobody')), ['#E11D48', OPPONENT_COLOR], 'tournament: non-hex or missing color falls back');
 }
 
 console.log('tournament engine: all formats OK');
