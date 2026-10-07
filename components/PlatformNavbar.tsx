@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
+import { BrandWordmark } from '@/components/BrandLogo';
 import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
 
 export default function PlatformNavbar() {
@@ -41,32 +42,8 @@ export default function PlatformNavbar() {
         height: '70px',
       }}>
         {/* Brand Logo */}
-        <Link href="/" aria-label="itsfootball.club home" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', flexShrink: 0 }}>
-          <img
-            src="/logo-96.png"
-            alt="itsfootball.club logo"
-            width={46}
-            height={46}
-            loading="eager"
-            decoding="async"
-            style={{ width: '46px', height: '46px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45))' }}
-          />
-          <div>
-            <span style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '1.2rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              background: 'linear-gradient(to right, var(--text-primary), rgba(var(--tint-rgb), 0.78))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              itsfootball<span style={{ color: 'var(--c-gold)', WebkitTextFillColor: 'var(--c-gold)' }}>.club</span>
-            </span>
-            <div style={{ fontSize: '0.7rem', color: 'var(--c-gold)', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '-3px' }}>
-              Home of Football Clubs
-            </div>
-          </div>
+        <Link href="/" aria-label="itsfootball.club home" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <BrandWordmark height={40} decorative />
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -271,10 +248,7 @@ export default function PlatformNavbar() {
             <div>
               {/* Drawer Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
-                <div className="row">
-                  <img src="/logo-96.png" alt="itsfootball.club logo" width={34} height={34} loading="lazy" decoding="async" style={{ width: '34px', height: '34px' }} />
-                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>itsfootball<span style={{ color: '#C9A467' }}>.club</span></span>
-                </div>
+                <BrandWordmark height={34} />
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
                   style={{ background: 'rgba(var(--tint-rgb), 0.06)', border: 'none', color: 'var(--text-primary)', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

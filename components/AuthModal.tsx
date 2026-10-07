@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { BrandWordmark } from '@/components/BrandLogo';
 import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -151,14 +152,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         </button>
 
         {/* Header Logo */}
-        <img
-          src="/logo-96.png"
-          alt="itsfootball.club logo"
-          width={72}
-          height={72}
-          decoding="async"
-          style={{ display: 'block', width: '72px', height: '72px', margin: '0 auto 1rem auto', filter: 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5))' }}
-        />
+        <BrandWordmark height={48} style={{ margin: '0.25rem auto 1.25rem auto' }} />
 
         <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
           {mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
