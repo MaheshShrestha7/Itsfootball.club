@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Club, ClubMember, ClubScoreProfile, GamificationActivityLog } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { defaultSeasonLabel } from '@/lib/season';
+import { liveStreak, liveWeeklyPoints } from '@/lib/clubscore-defaults';
 import {
   Trophy,
   Flame,
@@ -59,8 +60,8 @@ export default function ClubScoreLeaderboard({
     .filter(p => !season || p.season === season)
     .sort((a, b) => {
       if (filter === 'season') return b.total_points - a.total_points;
-      if (filter === 'weekly') return b.weekly_points - a.weekly_points;
-      return b.current_streak - a.current_streak;
+      if (filter === 'weekly') return liveWeeklyPoints(b) - liveWeeklyPoints(a);
+      return liveStreak(b) - liveStreak(a);
     });
 
   const getTierColor = (tier: string) => {
@@ -263,7 +264,7 @@ export default function ClubScoreLeaderboard({
 
                 <div className="cs-avatar" style={{ position: 'relative', flexShrink: 0 }}>
                   <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
-                  {profile.current_streak >= 3 && (
+                  {liveStreak(profile) >= 3 && (
                     <div style={{
                       position: 'absolute',
                       bottom: '-4px',
@@ -303,10 +304,10 @@ export default function ClubScoreLeaderboard({
 
                   {/* Badges preview row */}
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem', marginTop: '3px' }}>
-                    {profile.current_streak > 0 && (
+                    {liveStreak(profile) > 0 && (
                       <span style={{ fontSize: '0.72rem', color: 'var(--c-red)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}>
                         <Flame size={12} color="var(--c-red)" />
-                        {profile.current_streak}-week streak
+                        {liveStreak(profile)}-week streak
                       </span>
                     )}
                     {profile.badges.length > 0 && (
@@ -328,8 +329,8 @@ export default function ClubScoreLeaderboard({
                     color: filter === 'streak' ? 'var(--c-red)' : filter === 'weekly' ? 'var(--c-green)' : 'var(--club-primary)'
                   }}>
                     {filter === 'season' && `${profile.total_points} PTS`}
-                    {filter === 'weekly' && `+${profile.weekly_points} PTS`}
-                    {filter === 'streak' && `${profile.current_streak} WEEKS`}
+                    {filter === 'weekly' && `+${liveWeeklyPoints(profile)} PTS`}
+                    {filter === 'streak' && `${liveStreak(profile)} WEEKS`}
                   </div>
                   <div className="text-meta cs-caption">
                     {filter === 'season' ? 'Season Fantasy Total' : filter === 'weekly' ? 'Earned This Week' : `Best: ${profile.highest_streak} weeks`}
@@ -478,7 +479,7 @@ export default function ClubScoreLeaderboard({
               <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                 <div className="text-meta">THIS WEEK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-green)' }}>
-                  +{selectedPlayerModal.profile.weekly_points}
+                  +{liveWeeklyPoints(selectedPlayerModal.profile)}
                 </div>
               </div>
 
@@ -486,7 +487,7 @@ export default function ClubScoreLeaderboard({
                 <div className="text-meta">STREAK</div>
                 <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
                   <Flame size={16} color="var(--c-red)" fill="#EF4444" />
-                  <span>{selectedPlayerModal.profile.current_streak}w</span>
+                  <span>{liveStreak(selectedPlayerModal.profile)}w</span>
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { isPlayerMember } from '@/lib/supabase/types';
+import { liveStreak } from '@/lib/clubscore-defaults';
 import {
   Trophy,
   Flame,
@@ -91,7 +92,7 @@ export default function AdminGamificationPage({
   };
 
   // Analytics
-  const activeStreaksCount = clubProfiles.filter(p => p.current_streak >= 3).length;
+  const activeStreaksCount = clubProfiles.filter(p => liveStreak(p) >= 3).length;
   const totalClubPoints = clubProfiles.reduce((acc, p) => acc + p.total_points, 0);
 
   return (
@@ -396,7 +397,7 @@ export default function AdminGamificationPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {squadPlayers.map(player => {
                 const profile = clubProfiles.find(p => p.member_id === player.id);
-                const streak = profile?.current_streak || 0;
+                const streak = profile ? liveStreak(profile) : 0;
                 const isAtRisk = streak > 0 && streak < 3;
 
                 return (

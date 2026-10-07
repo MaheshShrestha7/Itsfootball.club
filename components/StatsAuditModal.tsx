@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
+import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import {
@@ -34,7 +35,8 @@ export default function StatsAuditModal({
   onClose,
   onAuditCompleted,
 }: StatsAuditModalProps) {
-  const { auditAndBakeMatchStats } = useClub();
+  const { auditAndBakeMatchStats, clubScoreRules } = useClub();
+  const rules = clubScoreRules[match.club_id] || getDefaultClubScoreRules(match.club_id);
 
   // Filter home events (club's own events)
   const initialAuditEvents: MatchAuditItem[] = useMemo(() => {
@@ -379,7 +381,7 @@ export default function StatsAuditModal({
               {/* 2. Clean Sheet Bonus */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldCheck size={16} color="var(--c-green)" /> 2. Clean Sheet Verification (+10 XP)
+                  <ShieldCheck size={16} color="var(--c-green)" /> 2. Clean Sheet Verification (+{rules.points_clean_sheet_gk_def ?? 10} XP)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                   {isCleanSheetGame
@@ -421,7 +423,7 @@ export default function StatsAuditModal({
               {/* 3. Man of the Match (MOTM) */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Star size={16} color="var(--c-amber)" /> 3. Man of the Match Award (+15 XP)
+                  <Star size={16} color="var(--c-amber)" /> 3. Man of the Match Award (+{rules.points_motm ?? 15} XP)
                 </h4>
                 <PlayerSearchSelect
                   id="motm-search"
@@ -435,7 +437,7 @@ export default function StatsAuditModal({
               {/* 4. Match Appearances Verification */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <User size={16} color="var(--c-blue)" /> 4. Matchday Appearances (+5 XP)
+                  <User size={16} color="var(--c-blue)" /> 4. Matchday Appearances (+{rules.points_match_appearance ?? 5} XP)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                   Select squad members who played minutes in this fixture ({appearanceMemberIds.length} checked):
