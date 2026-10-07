@@ -431,7 +431,7 @@ export default function AdminMembersPage({
         </div>
 
         {activeTab !== 'messages' && (
-          <div style={{ position: 'relative', minWidth: '240px' }}>
+          <div style={{ position: 'relative', minWidth: 'min(240px, 100%)' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input aria-label="Search members"
               type="text"

@@ -503,7 +503,7 @@ export default function ClubScoreLeaderboard({
                   No badges unlocked yet. Attend 5 consecutive trainings to unlock the Iron Man badge!
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.6rem' }}>
                   {selectedPlayerModal.profile.badges.map(badge => (
                     <div
                       key={badge.id}

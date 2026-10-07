@@ -482,7 +482,7 @@ export default function AdminMatchCenterControllerPage({
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
             {/* Season Filter Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '160px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 'min(160px, 100%)' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                 <CalendarDays size={14} color="var(--club-primary)" /> Season:
               </span>
@@ -501,7 +501,7 @@ export default function AdminMatchCenterControllerPage({
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '200px', maxWidth: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 Fixture:
               </span>
@@ -838,7 +838,7 @@ export default function AdminMatchCenterControllerPage({
                   {/* Quick Action Buttons */}
                   <div className="form-group">
                     <label className="form-label">Event</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 120px), 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       {quickActions.map(a => {
                         const isActive = eventType === a.eventType && teamSide === a.side;
                         return (
@@ -903,7 +903,7 @@ export default function AdminMatchCenterControllerPage({
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
                     <div className="form-group m-0">
                       <label htmlFor="match-center-team-side" className="form-label">Team Side</label>
                       <select id="match-center-team-side"
@@ -930,7 +930,7 @@ export default function AdminMatchCenterControllerPage({
                   </div>
 
                   {/* Dynamic Player Selector */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                     {isClubSelected ? (
                       <div className="form-group">
                         <label className="form-label">
@@ -1032,7 +1032,7 @@ export default function AdminMatchCenterControllerPage({
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                    <button type="submit" className="btn btn-primary touch-target" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: club.primary_color, minWidth: '180px' }}>
+                    <button type="submit" className="btn btn-primary touch-target" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: club.primary_color, minWidth: 'min(180px, 100%)' }}>
                       <Send size={16} />
                       <span>Broadcast Event Live</span>
                     </button>
@@ -1192,7 +1192,7 @@ export default function AdminMatchCenterControllerPage({
             </div>
 
             {/* Quick Added Time Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 48px), 1fr))', gap: '0.5rem' }}>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 10].map(mins => (
                 <button
                   key={mins}

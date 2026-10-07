@@ -236,12 +236,13 @@ textarea {
   font-size: inherit;
 }
 
-/* iOS zooms the page into any field under 16px when it's focused */
+/* iOS zooms the page into any field under 16px when it's focused, and the page then stays zoomed in
+   and looks cropped. !important so it also beats the inline font sizes many fields set. */
 @media (pointer: coarse) {
   input,
   select,
   textarea {
-    font-size: max(16px, 1em);
+    font-size: max(16px, 1em) !important;
   }
 }
 
@@ -1642,6 +1643,110 @@ textarea {
   justify-content: space-between;
   padding: 1.5rem 1rem;
   flex-shrink: 0;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+/* Collapsed desktop sidebar: an icon rail, labels shown as tooltips */
+.admin-desktop-sidebar.is-collapsed {
+  width: 76px;
+  padding: 1.25rem 0.6rem;
+}
+
+.admin-sidebar-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-sidebar-toggle:hover,
+.admin-sidebar-toggle:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+/* Menu group heading that folds its links away */
+.admin-nav-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: left;
+  color: var(--text-muted);
+  padding: 0.35rem 0.65rem;
+  margin-bottom: 0.15rem;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.admin-nav-section-toggle:hover,
+.admin-nav-section-toggle:focus-visible {
+  color: var(--text-primary);
+  background: rgba(var(--tint-rgb), 0.04);
+}
+
+.admin-nav-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.admin-nav-chevron.is-closed {
+  transform: rotate(-90deg);
+}
+
+.admin-nav-fold-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.admin-nav-fold-all:hover,
+.admin-nav-fold-all:focus-visible {
+  color: var(--text-primary);
+}
+
+/* Something in this (folded or icon-only) entry needs attention */
+.admin-nav-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 0 2px var(--bg-surface);
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-desktop-sidebar,
+  .admin-nav-chevron {
+    transition: none;
+  }
 }
 
 .admin-mobile-subbar {
@@ -1656,6 +1761,13 @@ textarea {
   position: relative;
   z-index: 30;
   width: 100%;
+}
+
+/* Smallest phones: the menu button drops its text so the page title has room */
+@media (max-width: 359px) {
+  .admin-subbar-menu-label {
+    display: none;
+  }
 }
 
 .admin-match-center-actions {
@@ -1733,6 +1845,7 @@ textarea {
 
   .admin-mobile-subbar {
     display: flex !important;
+    gap: 0.5rem;
   }
 
   .admin-main-canvas {

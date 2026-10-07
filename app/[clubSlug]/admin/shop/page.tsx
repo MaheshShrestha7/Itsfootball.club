@@ -256,7 +256,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={addPhoto} aria-label={`Upload a photo of ${draft.name}`} />
       </div>
 
-      <div style={{ flex: '1 1 320px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', alignContent: 'start' }}>
+      <div style={{ flex: '1 1 320px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '0.5rem', alignContent: 'start' }}>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           <label className="form-label" htmlFor={`shop-name-${id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             Name

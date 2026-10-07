@@ -604,7 +604,7 @@ export default function KitDesignerPreview({
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 135px), 1fr))', gap: '0.5rem' }}>
             {KIT_PALETTE_PRESETS.map(preset => {
               const isSelected =
                 primaryColor.toLowerCase() === preset.primary.toLowerCase() &&

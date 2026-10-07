@@ -284,7 +284,7 @@ export default function AdminEventsPage({
                 gap: '1.5rem',
               }}
             >
-              <div style={{ flex: 1, minWidth: '260px' }}>
+              <div style={{ flex: 1, minWidth: 'min(260px, 100%)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
                   <span className="badge" style={{
                     backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.2)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',

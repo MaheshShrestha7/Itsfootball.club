@@ -69,7 +69,7 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
       border: '1px solid rgba(245, 158, 11, 0.35)',
     }}>
       {editing ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem', width: '100%' }}>
           <div className="form-group m-0">
             <label className="form-label" htmlFor="potm-member">Club member</label>
             <select id="potm-member" className="form-select" value={memberId} onChange={e => setMemberId(e.target.value)}>

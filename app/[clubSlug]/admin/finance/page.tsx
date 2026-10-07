@@ -211,7 +211,7 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
         {stat('Income', money(income), '#10B981')}
         {stat('Expenses', money(spent), '#EF4444')}
         {stat('Net', money(income - spent), income - spent >= 0 ? '#10B981' : '#EF4444')}
@@ -224,12 +224,12 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
         </button>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
         <Bars title="Income by category" rows={byCategory(paid, INCOME_CATEGORIES)} money={money} color="var(--c-green)" />
         <Bars title="Expenses by category" rows={byCategory(expenses, EXPENSE_CATEGORIES)} money={money} color="var(--c-red)" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Memberships due ({expiring.length})</h3>
           {expiring.length === 0 ? <p className="text-note">Nobody expires in the next 30 days.</p> : (
@@ -362,7 +362,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
       </div>
 
       {adding && (
-        <form onSubmit={record} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+        <form onSubmit={record} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
           <div className="form-group">
             <label className="form-label" htmlFor="inc-type">Type</label>
             <select id="inc-type" className="form-select" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
@@ -520,7 +520,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
       <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setOpen(o => !o); }}><Plus size={16} /> Add expense</button>
 
       {open && (
-        <form onSubmit={save} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+        <form onSubmit={save} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
           <div className="form-group">
             <label className="form-label" htmlFor="exp-cat">Category</label>
             <select id="exp-cat" className="form-select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>

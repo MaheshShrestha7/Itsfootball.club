@@ -243,7 +243,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
           Preview first: you&apos;ll see who it goes to and exactly what they&apos;ll receive. Nobody gets the same notice twice.
         </p>
 
-        <div role="radiogroup" aria-label="Notice type" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
+        <div role="radiogroup" aria-label="Notice type" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
           {NOTICE_TYPES.map(t => {
             const active = kind === t.kind;
             const Icon = t.icon;
