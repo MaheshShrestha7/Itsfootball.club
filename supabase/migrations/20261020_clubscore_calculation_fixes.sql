@@ -15,6 +15,12 @@
 --    point rules instead of '2025/2026' and hardcoded points.
 -- ==============================================================================
 
+-- Rows from before this migration never set streak_updated_at; their best guess for the last
+-- attendance is last_activity_date. Set it now, before any award can move last_activity_date.
+UPDATE member_clubscore_profiles
+   SET streak_updated_at = last_activity_date::timestamptz
+ WHERE streak_updated_at IS NULL AND last_activity_date IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION fn_award_clubscore(
     p_club_id UUID,
     p_member_id UUID,
@@ -56,7 +62,8 @@ BEGIN
     v_streak_week := date_trunc('week', COALESCE(v_profile.streak_updated_at, v_profile.last_activity_date::timestamptz))::date;
     -- A streak is only alive if the last attendance was this week or last week
     v_streak := CASE WHEN v_streak_week >= v_this_week - 7 THEN v_profile.current_streak ELSE 0 END;
-    v_streak_at := v_profile.streak_updated_at;
+    -- Kept on non-attendance awards, which move last_activity_date but not the streak week
+    v_streak_at := COALESCE(v_profile.streak_updated_at, v_profile.last_activity_date::timestamptz);
 
     IF v_streak >= 10 THEN
         v_multiplier := COALESCE(v_rules.streak_multiplier_10w, 1.50);
