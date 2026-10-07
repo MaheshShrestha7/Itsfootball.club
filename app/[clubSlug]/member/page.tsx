@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
+import { liveStreak } from '@/lib/clubscore-defaults';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import { formatMoney } from '@/lib/finance';
@@ -1237,7 +1238,7 @@ export default function MemberPortalPage({
                           Total XP Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{currentClubScore.total_points} PTS</strong>
                         </span>
                         <span className="text-meta">
-                          Streak: {currentClubScore.current_streak}w active
+                          Streak: {liveStreak(currentClubScore)}w active
                         </span>
                       </div>
 

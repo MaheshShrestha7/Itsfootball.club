@@ -1,4 +1,4 @@
-import { ClubBadge, ClubScoreRuleConfig, PlayerPosition } from './supabase/types';
+import { ClubBadge, ClubScoreProfile, ClubScoreRuleConfig, PlayerPosition } from './supabase/types';
 
 const MIDFIELDER_POSITIONS: PlayerPosition[] = ['CDM', 'CM', 'CAM'];
 const DEFENDER_POSITIONS: PlayerPosition[] = ['GK', 'CB', 'LB', 'RB'];
@@ -20,6 +20,29 @@ export function getGoalPointsForPosition(
     return rules.points_goal_midfielder ?? 12;
   }
   return rules.points_goal_forward ?? 10;
+}
+
+/** Monday 00:00 UTC of the week containing `date` (the database's date_trunc('week', ...)) */
+function weekStartUtc(date: Date): number {
+  const day = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return day - ((date.getUTCDay() + 6) % 7) * 86_400_000;
+}
+
+/**
+ * The stored weekly_points / current_streak only change when the member gets points, so a
+ * member who has been inactive still shows last week's numbers. These read them as the
+ * database would on the next award: weekly points from an earlier week count as 0, and a
+ * streak whose last attendance is older than last week is broken.
+ */
+export function liveWeeklyPoints(profile: ClubScoreProfile, now = new Date()): number {
+  if (!profile.last_activity_date) return 0;
+  return weekStartUtc(new Date(profile.last_activity_date)) >= weekStartUtc(now) ? profile.weekly_points : 0;
+}
+
+export function liveStreak(profile: ClubScoreProfile, now = new Date()): number {
+  const last = profile.streak_updated_at || profile.last_activity_date;
+  if (!last) return 0;
+  return weekStartUtc(new Date(last)) >= weekStartUtc(now) - 7 * 86_400_000 ? profile.current_streak : 0;
 }
 
 export const STANDARD_BADGES: ClubBadge[] = [

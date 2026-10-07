@@ -1347,12 +1347,14 @@ export function ClubProvider({
   // Gamification & ClubScore Engine. Points, streaks, tiers and badges are all worked out by the
   // database (admin_award_clubscore), the same code door check-ins use, so the two never disagree
   // and a stale copy here can't overwrite points awarded elsewhere.
+  // Awards go out one at a time so the last profile applied here is also the newest one.
+  const awardQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const awardClubScorePoints = useCallback(
     (memberId: string, basePoints: number, eventType: GamificationActivityLog['event_type'], description: string, referenceId?: string) => {
       const client = getSupabaseClient();
       const member = members.find(m => m.id === memberId);
       if (!client || !member) return;
-      client
+      awardQueueRef.current = awardQueueRef.current.then(() => client
         .rpc('admin_award_clubscore', {
           p_member_id: memberId,
           p_event_type: eventType,
@@ -1368,7 +1370,10 @@ export function ClubProvider({
           }
           applyServerRow('clubScoreProfiles', setClubScoreProfiles, data.profile);
           applyServerRow('activityLogs', setActivityLogs, data.log);
-        });
+        }, err => {
+          // A rejected award must not stall the ones queued after it
+          setSyncStatus({ phase: 'error', message: `Could not award ClubScore points: ${err?.message || 'network error'}` });
+        }));
     },
     [members, seasonLabelFor, applyServerRow]
   );
@@ -1959,7 +1964,7 @@ export function ClubProvider({
 
     // 1. Process and award Clean Sheet points to GK & Defenders
     payload.clean_sheet_member_ids.forEach((memId: string) => {
-      const pts = rules.points_clean_sheet_gk_def || 10;
+      const pts = rules.points_clean_sheet_gk_def ?? 10;
       awardClubScorePoints(
         memId,
         pts,
@@ -1976,7 +1981,7 @@ export function ClubProvider({
 
     // 2. Process and award Man of the Match (MOTM)
     if (payload.motm_member_id) {
-      const pts = rules.points_motm || 15;
+      const pts = rules.points_motm ?? 15;
       awardClubScorePoints(
         payload.motm_member_id,
         pts,
@@ -2003,14 +2008,14 @@ export function ClubProvider({
             prev.map(s => (s.member_id === evt.player_id ? { ...s, goals: s.goals + 1 } : s))
           );
         } else if (evt.event_type === 'yellow_card') {
-          const pts = rules.points_yellow_card_penalty || -3;
+          const pts = rules.points_yellow_card_penalty ?? -3;
           awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow Card (${evt.minute}') audited`, matchId);
           totalXP += pts;
           setPlayerStats(prev =>
             prev.map(s => (s.member_id === evt.player_id ? { ...s, yellow_cards: s.yellow_cards + 1 } : s))
           );
         } else if (evt.event_type === 'red_card') {
-          const pts = rules.points_red_card_penalty || -10;
+          const pts = rules.points_red_card_penalty ?? -10;
           awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red Card (${evt.minute}') audited`, matchId);
           totalXP += pts;
           setPlayerStats(prev =>
@@ -2020,7 +2025,7 @@ export function ClubProvider({
       }
 
       if (evt.assist_player_id) {
-        const pts = rules.points_assist || 7;
+        const pts = rules.points_assist ?? 7;
         awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Match Assist (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId);
         totalXP += pts;
         setPlayerStats(prev =>
@@ -2029,11 +2034,17 @@ export function ClubProvider({
       }
     });
 
-    // 4. Record appearance for squad participants
+    // 4. Record appearance for squad participants. Appearance points are once per match: players
+    // who already got them at the turnstile only get the stat (the database enforces this too).
     payload.appearance_member_ids.forEach((memId: string) => {
-      const pts = rules.points_match_appearance || 5;
-      awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
-      totalXP += pts;
+      const alreadyAwarded = activityLogs.some(
+        l => l.member_id === memId && l.event_type === 'match_appearance' && l.reference_id === matchId
+      );
+      if (!alreadyAwarded) {
+        const pts = rules.points_match_appearance ?? 5;
+        awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
+        totalXP += pts;
+      }
       setPlayerStats(prev =>
         prev.map(s => (s.member_id === memId ? { ...s, appearances: s.appearances + 1, minutes_played: s.minutes_played + 90 } : s))
       );
@@ -2055,9 +2066,9 @@ export function ClubProvider({
     return {
       success: true,
       totalPointsAwarded: totalXP,
-      message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad.`,
+      message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad (before streak bonuses).`,
     };
-  }, [matches, members, clubScoreRules, awardClubScorePoints]);
+  }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints]);
 
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
