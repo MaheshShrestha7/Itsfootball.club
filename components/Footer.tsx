@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
+import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorTierLabel } from '@/lib/sponsors';
 
 interface FooterProps {
@@ -164,11 +165,13 @@ export default function Footer({ club, sponsors }: FooterProps) {
                   <Shield size={18} color="var(--text-primary)" />
                 </div>
               ) : (
-                <img src="/logo-96.png" alt="itsfootball.club logo" width={48} height={48} loading="lazy" decoding="async" style={{ width: '48px', height: '48px' }} />
+                <BrandWordmark height={44} />
               )}
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem' }}>
-                {club ? club.name : 'itsfootball.club'}
-              </span>
+              {club && (
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem' }}>
+                  {club.name}
+                </span>
+              )}
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
               {club
@@ -285,8 +288,8 @@ export default function Footer({ club, sponsors }: FooterProps) {
           <div className="row row-tight">
             <span>Powered by</span>
             <Link href="/" style={{ color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-              <img src="/logo-96.png" alt="" width={20} height={20} loading="lazy" decoding="async" style={{ width: '20px', height: '20px' }} />
-              ItsFootball.club
+              <BrandIcon height={12} decorative />
+              itsfootball.club
             </Link>
             <Heart size={13} color="var(--c-red)" fill="#EF4444" />
           </div>

@@ -38,7 +38,7 @@ self.addEventListener('push', event => {
   event.waitUntil(self.registration.showNotification(data.title || 'itsfootball.club', {
     body: data.body || '',
     icon: '/icon.png',
-    badge: '/logo-96.png',
+    badge: '/badge-96.png', // white on transparent: Android draws the badge from its alpha channel
     tag: data.tag,
     data: { url: data.url || '/' },
   }));
