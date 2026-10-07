@@ -5,13 +5,11 @@ import { useClub } from '@/lib/club-context';
 import { defaultSeasonLabel } from '@/lib/season';
 import {
   Shield,
-  MapPin,
   Calendar,
   Users,
   Trophy,
   Flame,
-  Award,
-  ExternalLink
+  Award
 } from 'lucide-react';
 import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
 
@@ -510,99 +508,11 @@ export default function ClubIdentitySection({
           })}
         </div>
 
-        {/* HOME GROUND SPECIFICATIONS SUB-PANEL */}
-        <div
-          className="glass-panel stadium-subpanel"
-          style={{
-            padding: '1.25rem 1.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1.25rem',
-            background: 'rgba(var(--dk-14-20-30), 0.85)',
-            border: '1px solid rgba(var(--tint-rgb), 0.08)',
-            opacity: isInView ? 1 : 0,
-            transform: isInView ? 'translateY(0)' : 'translateY(8px)',
-            transition: 'opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1) 240ms, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) 240ms',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: `rgba(var(--club-primary-rgb), 0.15)`,
-                border: `1px solid ${primaryColor}40`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.2s ease',
-                flexShrink: 0,
-              }}
-            >
-              <MapPin size={20} color={primaryColor} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>
-                Official Home Ground
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {club.stadium_name}
-                {club.stadium_address && (
-                  <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.6rem' }}>
-                    • {club.stadium_address}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="stadium-specs-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {club.stadium_pitch_type && (
-              <div className="stadium-spec-item" style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Pitch Surface
-                </div>
-                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: primaryColor }}>
-                  {club.stadium_pitch_type}
-                </div>
-              </div>
-            )}
-
-            {club.stadium_address && (
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(club.stadium_address)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary btn-sm touch-target"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  transition: 'transform 0.15s ease, background 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                }}
-              >
-                <span>Directions</span>
-                <ExternalLink size={13} />
-              </a>
-            )}
-          </div>
-        </div>
-
         <style jsx>{`
           .club-impact-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
             gap: 1.15rem;
-            margin-bottom: 2rem;
           }
           @media (max-width: 640px) {
             .club-impact-grid {
@@ -614,19 +524,6 @@ export default function ClubIdentitySection({
             }
             .impact-stat-value {
               font-size: 1.55rem !important;
-            }
-            .stadium-subpanel {
-              padding: 1.1rem 1rem !important;
-              flex-direction: column !important;
-              align-items: flex-start !important;
-              gap: 1rem !important;
-            }
-            .stadium-specs-group {
-              width: 100% !important;
-              justify-content: space-between !important;
-            }
-            .stadium-spec-item {
-              text-align: left !important;
             }
           }
         `}</style>

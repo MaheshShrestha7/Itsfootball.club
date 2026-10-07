@@ -902,11 +902,11 @@ export default function AdminMembersPage({
                 placeholder="e.g. Senior squad roster is currently at full capacity for this division."
                 style={{
                   width: '100%',
-                  background: 'rgba(0,0,0,0.5)',
+                  background: 'rgba(var(--shade-rgb), 0.5)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '8px',
                   padding: '0.75rem',
-                  color: '#FFFFFF',
+                  color: 'var(--text-primary)',
                   fontSize: '0.85rem',
                   resize: 'none',
                 }}

@@ -35,7 +35,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import { periodLabel } from '@/lib/match-clock';
-import { OPPONENT_COLOR, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
+import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 
 // Only needed once the lineups tab opens
 const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
@@ -255,7 +255,7 @@ export default function MatchCenterPage({
   // Lineups for each side that fields the club's own players: the club's side in a league fixture,
   // both internal teams in a tournament. Tournament teams without availability use their roster.
   const lineupSquad = match.tournament_id && attendingIds.size === 0 ? allSquadPlayers : squadPlayers;
-  const lineupSides = (match.tournament_id ? ['home', 'away'] as Side[] : [isClubSide('home') ? 'home' : 'away'] as Side[])
+  const lineupSides = (match.tournament_id ? ['home', 'away'] as Side[] : [clubLineupSide(match)])
     .map(side => ({
       side,
       teamName: side === 'home' ? match.home_team_name : match.away_team_name,

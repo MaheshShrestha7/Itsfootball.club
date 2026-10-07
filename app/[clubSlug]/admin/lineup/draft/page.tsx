@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import { FORMAT_PRESETS, buildLineupForPreset, defaultPresetFor, normalizeLineup } from '@/components/TacticalPitch';
 import LineupWorkbench from '@/components/LineupWorkbench';
+import { clubLineupSide } from '@/lib/tournament-engine';
 import AdminGuard from '@/components/AdminGuard';
 import {
   Layers,
@@ -73,12 +74,15 @@ export default function DraftLineupPage() {
     if (currentDraft?.lineup_coords?.length) {
       return { format: currentDraft.format, formation: currentDraft.formation, coords: currentDraft.lineup_coords, notes: currentDraft.tactical_notes || '' };
     }
-    if (activeMatch.home_lineup_coords?.length) {
-      return { format: activeMatch.match_format || '11v11', formation: activeMatch.home_formation || '4-3-3', coords: activeMatch.home_lineup_coords, notes: '' };
+    const side = clubLineupSide(activeMatch);
+    const publishedFormation = activeMatch[`${side}_formation`];
+    const publishedCoords = activeMatch[`${side}_lineup_coords`];
+    if (publishedCoords?.length) {
+      return { format: activeMatch.match_format || '11v11', formation: publishedFormation || '4-3-3', coords: publishedCoords, notes: '' };
     }
     const fmt: MatchFormat = activeMatch.match_format || '11v11';
-    const presetKey = activeMatch.home_formation && FORMAT_PRESETS[fmt]?.[activeMatch.home_formation]
-      ? activeMatch.home_formation
+    const presetKey = publishedFormation && FORMAT_PRESETS[fmt]?.[publishedFormation]
+      ? publishedFormation
       : defaultPresetFor(fmt);
     return { format: fmt, formation: presetKey, coords: buildLineupForPreset(squadPlayers, presetKey), notes: '' };
   }, [activeMatch, currentDraft, squadPlayers]);

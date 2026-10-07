@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -164,6 +164,16 @@ for (let n = 2; n <= 17; n++) {
   assert.deepEqual(color(fixture(false)), [OPPONENT_COLOR, '#E11D48'], 'league: club away, opponent at home is not club-colored');
   assert.deepEqual(color(tm('Blue Hawks', 'Red Lions')), ['#1D4ED8', '#DC2626'], 'tournament: participant color, else internal team color');
   assert.deepEqual(color(tm('Odd Ones', 'Nobody')), ['#E11D48', OPPONENT_COLOR], 'tournament: non-hex or missing color falls back');
+}
+
+// The club lineup is saved on, and read from, the club's own side
+{
+  const m = (o: Partial<Match>) => ({ id: 'm', club_id: 'c', ...o }) as Match;
+  assert.equal(clubLineupSide(m({ match_type: 'friendly', is_club_home: false })), 'away', 'away fixture: away columns');
+  assert.equal(clubLineupSide(m({ match_type: 'league', is_club_home: true })), 'home');
+  assert.equal(clubLineupSide(m({ match_type: 'league' })), 'home', 'unset is_club_home means home');
+  assert.equal(clubLineupSide(m({ match_type: 'tournament', is_club_home: false, tournament_id: 't' })), 'home', 'tournament: home');
+  assert.equal(clubLineupSide(m({ match_type: 'internal', is_club_home: false })), 'home', 'internal: home');
 }
 
 console.log('tournament engine: all formats OK');

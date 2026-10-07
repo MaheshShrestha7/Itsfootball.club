@@ -36,7 +36,7 @@ import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubSidePlayers } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
 
 export default function AdminMatchCenterControllerPage({
@@ -88,6 +88,8 @@ export default function AdminMatchCenterControllerPage({
   // Each side's own club players (null = outside team); tournament sides come from their participants
   const homePlayers = match ? clubSidePlayers(match, 'home', squadPlayers, tournamentParticipants, internalTeams) : null;
   const awayPlayers = match ? clubSidePlayers(match, 'away', squadPlayers, tournamentParticipants, internalTeams) : null;
+  // The club's lineup lives on its own side's columns (away when the club plays away), as the public page reads it
+  const lineupSide = match ? clubLineupSide(match) : 'home';
 
   // Post-match verification only offers players explicitly marked "available" for this fixture.
   // If attendance was never tracked for it, fall back to the full squad.
@@ -362,8 +364,8 @@ export default function AdminMatchCenterControllerPage({
   // Save Tactical Lineup to Match
   const handleSaveTacticalLineup = (formationName: string, positions: PitchPosition[]) => {
     updateMatch(match.id, {
-      home_formation: formationName,
-      home_lineup_coords: positions,
+      [`${lineupSide}_formation`]: formationName,
+      [`${lineupSide}_lineup_coords`]: positions,
       // The format picked on the pitch (11v11 / 9v9 / 7v7), else the one already published
       match_format: pitchFormat?.matchId === match.id ? pitchFormat.format : match.match_format,
     });
@@ -525,7 +527,7 @@ export default function AdminMatchCenterControllerPage({
               <CalendarDays size={12} /> {match.season}
             </span>
             <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-              Formation: {match.home_formation || '4-3-3'}
+              Formation: {match[`${lineupSide}_formation`] || '4-3-3'}
             </span>
             {match.added_time > 0 && (
               <span className="badge badge-gold" style={{ fontSize: '0.75rem' }}>
@@ -1143,11 +1145,11 @@ export default function AdminMatchCenterControllerPage({
           {/* Interactive Tactical Pitch */}
           <div className="glass-panel" style={{ padding: 'clamp(0.75rem, 2vw, 1.75rem)' }}>
             <TacticalPitch
-              players={(match.is_club_home ? homePlayers : awayPlayers) ?? squadPlayers}
-              formation={match.home_formation || '4-3-3'}
+              players={(lineupSide === 'home' ? homePlayers : awayPlayers) ?? squadPlayers}
+              formation={match[`${lineupSide}_formation`] || '4-3-3'}
               matchFormat={match.match_format}
               onFormatChange={format => setPitchFormat({ matchId: match.id, format })}
-              savedPositions={match.home_lineup_coords}
+              savedPositions={match[`${lineupSide}_lineup_coords`]}
               primaryColor={club.primary_color}
               isEditable={true}
               matchEvents={events}

@@ -647,6 +647,14 @@ function parseGroupSource(source: string): { rank: number; group: string } | nul
 }
 
 /**
+ * The side whose formation / lineup columns hold the club's lineup: the away side when the club
+ * plays away. Tournament and internal fixtures field the club on both sides and edit the home one.
+ */
+export function clubLineupSide(match: Match): 'home' | 'away' {
+  return !match.tournament_id && match.match_type !== 'internal' && match.is_club_home === false ? 'away' : 'home';
+}
+
+/**
  * The club's own players on one side of a fixture, or null when that side is an outside team.
  * Tournament fixtures store is_club_home = true for every match, so their sides come from the
  * tournament's participants instead: an internal team fields its roster (the whole squad if it has none).

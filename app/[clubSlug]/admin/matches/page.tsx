@@ -558,7 +558,7 @@ export default function AdminMatchesPage({
               style={{
                 border: 'none',
                 background: statusTab === tab ? club.primary_color : 'transparent',
-                color: '#FFFFFF',
+                color: statusTab === tab ? '#FFFFFF' : 'var(--text-secondary)',
                 padding: '0.45rem 0.9rem',
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.8rem',

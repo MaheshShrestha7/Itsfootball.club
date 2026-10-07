@@ -45,6 +45,7 @@ import {
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import {
   buildTiesheet,
+  clubLineupSide,
   computeStandings,
   resolveTournament,
   upgradeLegacyMatches
@@ -1919,8 +1920,8 @@ export function ClubProvider({
         m.id === matchId
           ? {
               ...m,
-              home_formation: draft.formation,
-              home_lineup_coords: draft.lineup_coords,
+              [`${clubLineupSide(m)}_formation`]: draft.formation,
+              [`${clubLineupSide(m)}_lineup_coords`]: draft.lineup_coords,
               match_format: draft.format,
             }
           : m

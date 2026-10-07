@@ -358,7 +358,7 @@ export default function AdminLayout({
                       onMouseEnter={e => {
                         if (!isActive) {
                           e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.04)';
-                          e.currentTarget.style.color = '#FFFFFF';
+                          e.currentTarget.style.color = 'var(--text-primary)';
                         }
                       }}
                       onMouseLeave={e => {
