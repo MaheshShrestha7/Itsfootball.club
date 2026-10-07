@@ -2034,11 +2034,17 @@ export function ClubProvider({
       }
     });
 
-    // 4. Record appearance for squad participants
+    // 4. Record appearance for squad participants. Appearance points are once per match: players
+    // who already got them at the turnstile only get the stat (the database enforces this too).
     payload.appearance_member_ids.forEach((memId: string) => {
-      const pts = rules.points_match_appearance ?? 5;
-      awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
-      totalXP += pts;
+      const alreadyAwarded = activityLogs.some(
+        l => l.member_id === memId && l.event_type === 'match_appearance' && l.reference_id === matchId
+      );
+      if (!alreadyAwarded) {
+        const pts = rules.points_match_appearance ?? 5;
+        awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
+        totalXP += pts;
+      }
       setPlayerStats(prev =>
         prev.map(s => (s.member_id === memId ? { ...s, appearances: s.appearances + 1, minutes_played: s.minutes_played + 90 } : s))
       );
@@ -2062,7 +2068,7 @@ export function ClubProvider({
       totalPointsAwarded: totalXP,
       message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad (before streak bonuses).`,
     };
-  }, [matches, members, clubScoreRules, awardClubScorePoints]);
+  }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints]);
 
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
