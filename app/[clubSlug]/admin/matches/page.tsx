@@ -484,7 +484,7 @@ export default function AdminMatchesPage({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
           gap: '1rem',
           marginBottom: '2rem'
         }}
@@ -602,7 +602,7 @@ export default function AdminMatchesPage({
           </select>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: '220px' }}>
+          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input aria-label="Search fixtures"
               type="text"

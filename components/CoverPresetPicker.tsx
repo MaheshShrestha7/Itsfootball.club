@@ -11,7 +11,7 @@ export default function CoverPresetPicker({ value, onPick }: { value?: string; o
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 72px), 1fr))',
           gap: '0.35rem',
           marginTop: '0.3rem',
           maxHeight: '170px',

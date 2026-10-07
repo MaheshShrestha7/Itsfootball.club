@@ -174,7 +174,7 @@ export default function AdminContentPage({
               gap: '1.5rem',
             }}
           >
-            <div style={{ display: 'flex', gap: '1.25rem', flex: 1, minWidth: '300px' }}>
+            <div style={{ display: 'flex', gap: '1.25rem', flex: 1, minWidth: 'min(300px, 100%)' }}>
               <img loading="lazy" decoding="async" width={120} height={80}
                 src={article.cover_image_url} onError={fallbackToBrandImage}
                 alt={article.title}

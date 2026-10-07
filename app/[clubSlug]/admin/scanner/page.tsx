@@ -184,7 +184,7 @@ export default function AdminScannerPage({
               <span className="text-note">Target Match:</span>
               <select aria-label="Target match"
                 className="form-select"
-                style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                style={{ width: 'auto', minWidth: 'min(240px, 100%)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedMatchId}
                 onChange={e => setSelectedMatchId(e.target.value)}
               >
@@ -202,7 +202,7 @@ export default function AdminScannerPage({
               <span className="text-note">Target Event:</span>
               <select aria-label="Target event"
                 className="form-select"
-                style={{ width: 'auto', minWidth: '240px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                style={{ width: 'auto', minWidth: 'min(240px, 100%)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedEventId}
                 onChange={e => setSelectedEventId(e.target.value)}
               >

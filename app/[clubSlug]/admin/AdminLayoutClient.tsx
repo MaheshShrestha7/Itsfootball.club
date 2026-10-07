@@ -36,12 +36,29 @@ import {
   ClipboardCheck,
   Flag,
   Flame,
-  Wallet, BellRing, LifeBuoy, ShoppingBag } from 'lucide-react';
+  Wallet, BellRing, LifeBuoy, ShoppingBag,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  PanelLeftClose,
+  PanelLeftOpen } from 'lucide-react';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
+
+// Menu layout preferences, remembered per browser
+const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
+const CLOSED_SECTIONS_KEY = 'itsfootball_admin_closed_sections';
+
+function savePref(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage unavailable: the choice just isn't remembered
+  }
+}
 
 export default function AdminLayout({
   children,
@@ -61,9 +78,36 @@ export default function AdminLayout({
   const [isMounted, setIsMounted] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
 
+  // Desktop sidebar shrunk to an icon rail, and the menu groups the admin has folded away
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [closedSections, setClosedSections] = useState<string[]>([]);
+
   useEffect(() => {
     setIsMounted(true);
+    try {
+      setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true');
+      const closed = JSON.parse(localStorage.getItem(CLOSED_SECTIONS_KEY) || '[]');
+      if (Array.isArray(closed)) setClosedSections(closed.filter((t): t is string => typeof t === 'string'));
+    } catch {
+      // storage unavailable or unreadable: start with everything open
+    }
   }, []);
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      savePref(SIDEBAR_COLLAPSED_KEY, !prev);
+      return !prev;
+    });
+  };
+
+  const updateClosedSections = (next: string[]) => {
+    setClosedSections(next);
+    savePref(CLOSED_SECTIONS_KEY, next);
+  };
+
+  const toggleSection = (title: string) => {
+    updateClosedSections(closedSections.includes(title) ? closedSections.filter(t => t !== title) : [...closedSections, title]);
+  };
 
   // Close drawer on navigation
   useEffect(() => {
@@ -182,16 +226,27 @@ export default function AdminLayout({
 
   const allNavItems = navSections.flatMap(s => s.items);
   const currentNavItem = allNavItems.find(item => item.href === pathname);
+  // Overview has no heading, so it is never folded away
+  const collapsibleTitles = navSections.filter(s => s.title !== 'Overview').map(s => s.title);
+  const allSectionsClosed = collapsibleTitles.every(t => closedSections.includes(t));
 
-  const renderSidebarContent = (onItemClick?: () => void) => (
+  // Landing on a page whose group is folded away opens that group, so the current page is always visible
+  const activeSectionTitle = navSections.find(s => s.items.some(i => i.href === pathname))?.title;
+  useEffect(() => {
+    if (activeSectionTitle) setClosedSections(prev => prev.includes(activeSectionTitle) ? prev.filter(t => t !== activeSectionTitle) : prev);
+  }, [activeSectionTitle]);
+
+  // rail: the collapsed desktop sidebar, icons only. inDrawer: the mobile slide-over copy of the menu.
+  const renderSidebarContent = ({ onItemClick, rail = false, inDrawer = false }: { onItemClick?: () => void; rail?: boolean; inDrawer?: boolean } = {}) => (
     <>
       <div>
         {/* Club Header Badge */}
         <div style={{
           display: 'flex',
+          flexDirection: rail ? 'column' : 'row',
           alignItems: 'center',
-          gap: '0.75rem',
-          padding: '0.75rem',
+          gap: rail ? '0.6rem' : '0.75rem',
+          padding: rail ? '0.5rem 0' : '0.75rem',
           background: 'rgba(var(--shade-rgb), 0.35)',
           borderRadius: 'var(--radius-md)',
           marginBottom: '1.25rem',
@@ -200,37 +255,79 @@ export default function AdminLayout({
           <img loading="eager" decoding="async" width={40} height={40}
             src={club.logo_url || DEFAULT_CREST}
             alt={`${club.name} crest`}
-            style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', border: `2px solid ${club.primary_color}` }}
+            title={rail ? club.name : undefined}
+            style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', border: `2px solid ${club.primary_color}`, flexShrink: 0 }}
           />
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              {club.name}
+          {!rail && (
+            <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {club.name}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--club-primary)', fontWeight: 700 }}>
+                Management Control Room
+              </div>
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--club-primary)', fontWeight: 700 }}>
-              Management Control Room
-            </div>
-          </div>
+          )}
+          {!inDrawer && (
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className="admin-sidebar-toggle"
+              title={rail ? 'Expand menu' : 'Collapse menu'}
+              aria-label={rail ? 'Expand menu' : 'Collapse menu'}
+              aria-expanded={!rail}
+            >
+              {rail ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+          )}
         </div>
 
-        <AdminSearch clubSlug={club.slug} clubId={club.id} />
+        {!rail && (
+          <>
+            <AdminSearch clubSlug={club.slug} clubId={club.id} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-0.25rem 0 0.35rem' }}>
+              <button
+                type="button"
+                className="admin-nav-fold-all"
+                onClick={() => updateClosedSections(allSectionsClosed ? [] : collapsibleTitles)}
+              >
+                {allSectionsClosed ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                <span>{allSectionsClosed ? 'Expand all' : 'Collapse all'}</span>
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Categorized Nav Sections */}
-        <nav className="stack">
-          {navSections.map(section => (
+        <nav className={rail ? undefined : 'stack'} aria-label="Admin menu">
+          {navSections.map((section, sectionIndex) => {
+            const collapsible = !rail && section.title !== 'Overview';
+            const open = !collapsible || !closedSections.includes(section.title);
+            const groupId = `admin-nav-${inDrawer ? 'drawer' : 'side'}-${sectionIndex}`;
+            const hasAlert = section.items.some(i => i.badge);
+
+            return (
             <div key={section.title}>
-              {section.title !== 'Overview' && (
-                <div style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--text-muted)',
-                  padding: '0.2rem 0.65rem 0.4rem 0.65rem',
-                }}>
-                  {section.title}
-                </div>
+              {rail && sectionIndex > 0 && (
+                <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0.5rem 0.4rem' }} />
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {collapsible && (
+                <button
+                  type="button"
+                  className="admin-nav-section-toggle"
+                  onClick={() => toggleSection(section.title)}
+                  aria-expanded={open}
+                  aria-controls={groupId}
+                >
+                  <span>{section.title}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {!open && hasAlert && <span className="admin-nav-dot" aria-label="Has updates" />}
+                    <ChevronDown size={14} className={open ? 'admin-nav-chevron' : 'admin-nav-chevron is-closed'} />
+                  </span>
+                </button>
+              )}
+              {open && (
+              <div id={groupId} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {section.items.map(item => {
                   const isActive = pathname === item.href;
                   const Icon = item.icon;
@@ -240,11 +337,14 @@ export default function AdminLayout({
                       key={item.href}
                       href={item.href}
                       onClick={onItemClick}
+                      title={rail ? (item.badge ? `${item.label} (${item.badge})` : item.label) : undefined}
+                      aria-label={rail ? item.label : undefined}
                       style={{
+                        position: 'relative',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.6rem 0.85rem',
+                        justifyContent: rail ? 'center' : 'space-between',
+                        padding: rail ? '0.6rem' : '0.6rem 0.85rem',
                         borderRadius: 'var(--radius-sm)',
                         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                         background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
@@ -268,37 +368,50 @@ export default function AdminLayout({
                         }
                       }}
                     >
-                      <div className="row row-loose">
-                        <Icon size={16} color={isActive ? 'var(--club-primary)' : 'var(--text-muted)'} />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge && (
-                        <span className="badge badge-live" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
-                          {item.badge}
-                        </span>
+                      {rail ? (
+                        <>
+                          <Icon size={18} color={isActive ? 'var(--club-primary)' : 'var(--text-muted)'} />
+                          {item.badge && <span className="admin-nav-dot" style={{ position: 'absolute', top: '6px', right: '6px' }} />}
+                        </>
+                      ) : (
+                        <>
+                          <div className="row row-loose" style={{ minWidth: 0 }}>
+                            <Icon size={16} color={isActive ? 'var(--club-primary)' : 'var(--text-muted)'} />
+                            <span>{item.label}</span>
+                          </div>
+                          {item.badge && (
+                            <span className="badge badge-live" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
                       )}
                     </Link>
                   );
                 })}
               </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </nav>
       </div>
 
       {/* Bottom Sidebar: Authenticated Administrator Profile & Links */}
-      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', alignItems: rail ? 'center' : 'stretch' }}>
         {user && (
           <div style={{
             background: 'rgba(var(--shade-rgb), 0.35)',
             border: '1px solid var(--border-subtle)',
             borderRadius: '8px',
-            padding: '0.65rem 0.75rem',
+            padding: rail ? '0.5rem 0.35rem' : '0.65rem 0.75rem',
             display: 'flex',
+            flexDirection: rail ? 'column' : 'row',
+            gap: rail ? '0.35rem' : 0,
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+            <div title={rail ? user.full_name : undefined} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
               {user.avatar_url ? (
                 <img loading="eager" decoding="async" width={32} height={32}
                   src={user.avatar_url}
@@ -310,14 +423,14 @@ export default function AdminLayout({
                   {user.full_name.substring(0, 2).toUpperCase()}
                 </div>
               )}
-              <div style={{ overflow: 'hidden' }}>
+              {!rail && <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                   {user.full_name}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700, textTransform: 'uppercase' }}>
                   {userRole === 'owner' ? 'Club Owner' : 'Club Admin'}
                 </div>
-              </div>
+              </div>}
             </div>
 
             <button
@@ -344,7 +457,7 @@ export default function AdminLayout({
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem' }}>
+        {!rail && <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isSupabaseConfigured ? 'var(--c-green)' : 'var(--c-amber)' }}>
             <Database size={12} />
             <span>Security: RBAC Strict Session Active</span>
@@ -353,26 +466,30 @@ export default function AdminLayout({
             <Cloud size={12} />
             <span>Storage: {isR2Configured ? 'Cloudflare R2 Encrypted' : 'Local Storage Engine'}</span>
           </div>
-        </div>
+        </div>}
 
         <button
           type="button"
           onClick={() => { onItemClick?.(); setSupportOpen(true); }}
           className="btn btn-secondary btn-sm touch-target"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+          title={rail ? 'Contact itsfootball.club Support' : undefined}
+          aria-label={rail ? 'Contact itsfootball.club Support' : undefined}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: rail ? '0.4rem' : undefined }}
         >
-          <LifeBuoy size={13} />
-          <span>Contact itsfootball.club Support</span>
+          <LifeBuoy size={rail ? 16 : 13} />
+          {!rail && <span>Contact itsfootball.club Support</span>}
         </button>
 
         <Link
           href={`/${club.slug}`}
           onClick={onItemClick}
           className="btn btn-secondary btn-sm touch-target"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+          title={rail ? 'View Public Portal' : undefined}
+          aria-label={rail ? 'View Public Portal' : undefined}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: rail ? '0.4rem' : undefined }}
         >
-          <span>View Public Portal</span>
-          <ExternalLink size={13} />
+          {!rail && <span>View Public Portal</span>}
+          <ExternalLink size={rail ? 16 : 13} />
         </Link>
       </div>
     </>
@@ -387,18 +504,19 @@ export default function AdminLayout({
             type="button"
             onClick={() => setMobileDrawerOpen(true)}
             className="btn btn-secondary btn-sm touch-target"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+            aria-label="Open admin menu"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}
           >
             <Menu size={18} />
-            <span>Admin Menu</span>
+            <span className="admin-subbar-menu-label">Admin Menu</span>
           </button>
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {currentNavItem?.label || 'Control Room'}
           </div>
           <Link
             href={`/${club.slug}`}
             className="btn btn-outline btn-sm touch-target"
-            style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+            style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', flexShrink: 0 }}
           >
             Public &rarr;
           </Link>
@@ -407,8 +525,8 @@ export default function AdminLayout({
         {/* Desktop Admin Sidebar */}
         <SupportModal clubId={club.id} open={supportOpen} setOpen={setSupportOpen} />
 
-        <aside className="admin-desktop-sidebar">
-          {renderSidebarContent()}
+        <aside className={sidebarCollapsed ? 'admin-desktop-sidebar is-collapsed' : 'admin-desktop-sidebar'}>
+          {renderSidebarContent({ rail: sidebarCollapsed })}
         </aside>
 
         {/* Mobile Slide-Over Drawer Portal */}
@@ -439,7 +557,7 @@ export default function AdminLayout({
                 </button>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                {renderSidebarContent(() => setMobileDrawerOpen(false))}
+                {renderSidebarContent({ onItemClick: () => setMobileDrawerOpen(false), inDrawer: true })}
               </div>
             </div>
           </div>,

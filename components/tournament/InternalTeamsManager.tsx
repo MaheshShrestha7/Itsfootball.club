@@ -720,7 +720,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     borderRadius: '8px',
                     padding: '0.5rem',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 160px), 1fr))',
                     gap: '0.4rem',
                   }}
                 >

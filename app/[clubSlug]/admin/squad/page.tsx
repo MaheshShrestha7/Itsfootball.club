@@ -521,7 +521,7 @@ export default function AdminSquadPage({
         padding: '1rem 1.25rem',
         marginBottom: '1.5rem',
       }}>
-        <div style={{ position: 'relative', flex: '2 1 220px', minWidth: '200px' }}>
+        <div style={{ position: 'relative', flex: '2 1 220px', minWidth: 'min(200px, 100%)' }}>
           <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
           <input aria-label="Search squad"
             type="text"
@@ -537,7 +537,7 @@ export default function AdminSquadPage({
           className="form-select"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
-          style={{ flex: '1 1 150px', minWidth: '150px' }}
+          style={{ flex: '1 1 150px', minWidth: 'min(150px, 100%)' }}
         >
           <option value="all">All Roles</option>
           {AVAILABLE_ROLES.map(r => (
@@ -549,7 +549,7 @@ export default function AdminSquadPage({
           className="form-select"
           value={positionFilter}
           onChange={e => setPositionFilter(e.target.value)}
-          style={{ flex: '1 1 150px', minWidth: '150px' }}
+          style={{ flex: '1 1 150px', minWidth: 'min(150px, 100%)' }}
         >
           <option value="all">All Positions</option>
           {ALL_POSITIONS.map(pos => (
@@ -561,7 +561,7 @@ export default function AdminSquadPage({
           className="form-select"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          style={{ flex: '1 1 130px', minWidth: '130px' }}
+          style={{ flex: '1 1 130px', minWidth: 'min(130px, 100%)' }}
         >
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
@@ -829,7 +829,7 @@ export default function AdminSquadPage({
               </div>
 
               {/* 2. FIRST NAME & LAST NAME */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="squad-first-name" className="form-label">First Name *</label>
                   <input id="squad-first-name"
@@ -856,7 +856,7 @@ export default function AdminSquadPage({
               </div>
 
               {/* 3. EMAIL & PHONE NUMBER */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="squad-email-address" className="form-label row">
                     <Mail size={13} /> Email Address *
@@ -894,7 +894,7 @@ export default function AdminSquadPage({
                   </span>
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.65rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.65rem' }}>
                   {AVAILABLE_ROLES.map(r => {
                     const Icon = r.icon;
                     const isSelected = form.roles.includes(r.id);

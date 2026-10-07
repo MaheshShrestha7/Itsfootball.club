@@ -88,7 +88,7 @@ export default function AdminCommitteePage({
         </h3>
 
         <form onSubmit={handleAppoint}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
               <label htmlFor="committee-select-member" className="form-label">Select Member</label>
               <select id="committee-select-member"

@@ -819,7 +819,7 @@ export default function TacticalPitch({
           <div style={{ width: '1px', height: '20px', background: 'var(--border-subtle)' }} />
 
           {/* Presets Button Group for Active Format */}
-          <div className="scroll-pill-strip" style={{ flex: 1, minWidth: '140px', paddingBottom: '2px', display: 'flex', alignItems: 'center', gap: '0.35rem', overflowX: 'auto' }}>
+          <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 'min(140px, 100%)', paddingBottom: '2px', display: 'flex', alignItems: 'center', gap: '0.35rem', overflowX: 'auto' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginRight: '0.15rem', flexShrink: 0 }}>
               Shape:
             </span>
@@ -1433,7 +1433,7 @@ export default function TacticalPitch({
               </span>
               <select
                 className="form-select"
-                style={{ padding: '0.4rem 0.65rem', fontSize: '0.8rem', width: 'auto', minWidth: '180px' }}
+                style={{ padding: '0.4rem 0.65rem', fontSize: '0.8rem', width: 'auto', minWidth: 'min(180px, 100%)' }}
                 value={activePlayer.role || ''}
                 onChange={e => {
                   const newRole = e.target.value;

@@ -362,7 +362,7 @@ export default function TournamentFormModal({
                 <Link href={`/${club.slug}/admin/teams`} style={{ color: 'var(--c-green)', fontWeight: 700 }}>People &amp; Membership → Internal Teams</Link>, or add guest teams below.
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 180px), 1fr))', gap: '0.5rem' }}>
                 {clubInternalTeams.map(t => {
                   const isSelected = selectedInternalTeamIds.includes(t.id);
                   return (

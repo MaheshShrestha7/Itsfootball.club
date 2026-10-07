@@ -387,7 +387,7 @@ export default function AdminSeasonsPage({
                   }}
                 >
                   {/* Left info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '260px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: 'min(260px, 100%)' }}>
                     <div style={{
                       width: '46px',
                       height: '46px',
