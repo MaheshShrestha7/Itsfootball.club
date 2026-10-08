@@ -297,6 +297,11 @@ textarea {
   white-space: nowrap;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary {
   background-color: var(--club-primary);
   color: var(--club-primary-contrast, #FFFFFF);
@@ -2247,6 +2252,29 @@ dialog.confirm-dialog::backdrop {
 .split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
 @media (max-width: 900px) {
   .split-2 { grid-template-columns: 1fr; }
+}
+
+/* Photo gallery (components/PhotoGallery.tsx, admin/gallery and the public gallery page) */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 1rem; }
+.gallery-tile { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: rgba(var(--shade-rgb), 0.3); color: #fff; text-align: left; cursor: pointer; }
+.gallery-tile img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (hover: hover) { .gallery-tile:hover img { transform: scale(1.04); } }
+.gallery-tile:focus-visible { outline: 2px solid var(--club-primary); outline-offset: 2px; }
+.gallery-tile-caption { position: absolute; inset: auto 0 0 0; padding: 2rem 0.85rem 0.7rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); }
+.lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(0, 0, 0, 0.94); color: #fff; }
+.lightbox::backdrop { background: rgba(0, 0, 0, 0.6); }
+.lightbox-inner { position: relative; height: 100%; display: grid; place-items: center; padding: 4rem 4.5rem 5rem; }
+.lightbox-inner img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.lightbox-btn { position: absolute; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: #fff; cursor: pointer; }
+.lightbox-btn:hover, .lightbox-btn:focus-visible { background: rgba(255, 255, 255, 0.24); }
+.lightbox-close { top: 1rem; right: 1rem; }
+.lightbox-prev, .lightbox-next { top: 50%; transform: translateY(-50%); }
+.lightbox-prev { left: 1rem; }
+.lightbox-next { right: 1rem; }
+.lightbox-caption { position: absolute; left: 4rem; right: 4rem; bottom: 1.25rem; text-align: center; font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .lightbox-inner { padding: 4rem 0.5rem 5.5rem; }
+  .lightbox-prev, .lightbox-next { top: auto; bottom: 1rem; transform: none; }
 }
 
 /* News article bodies (public article view and the editor) */

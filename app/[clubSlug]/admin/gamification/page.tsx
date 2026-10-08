@@ -1,24 +1,49 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
-import { isPlayerMember } from '@/lib/supabase/types';
+import { isPlayerMember, type ClubScoreRuleConfig } from '@/lib/supabase/types';
 import { liveStreak } from '@/lib/clubscore-defaults';
-import {
-  Trophy,
-  Flame,
-  Zap,
-  Save,
-  CheckCircle2,
-  AlertTriangle,
-  Award,
-  Sparkles,
-  TrendingUp,
-  History,
-  ShieldAlert,
-  UserCheck
-} from 'lucide-react';
+import { Flame, Save, CheckCircle2, Award, Sparkles, Search } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import PlayerSearchSelect from '@/components/PlayerSearchSelect';
+
+type NumericRule = { [K in keyof ClubScoreRuleConfig]-?: ClubScoreRuleConfig[K] extends number ? K : never }[keyof ClubScoreRuleConfig];
+
+const POINT_FIELDS: { key: NumericRule; label: string }[] = [
+  { key: 'points_training_checkin', label: 'Training check-in' },
+  { key: 'points_social_checkin', label: 'Social check-in' },
+  { key: 'points_match_appearance', label: 'Match appearance' },
+  { key: 'points_goal_forward', label: 'Goal (forward)' },
+  { key: 'points_goal_midfielder', label: 'Goal (midfielder)' },
+  { key: 'points_goal_defender', label: 'Goal (defender/GK)' },
+  { key: 'points_assist', label: 'Assist' },
+  { key: 'points_clean_sheet_gk_def', label: 'Clean sheet (GK/DEF)' },
+  { key: 'points_motm', label: 'Man of the match' },
+  { key: 'points_yellow_card_penalty', label: 'Yellow card' },
+  { key: 'points_red_card_penalty', label: 'Red card' },
+];
+
+const MULTIPLIER_FIELDS: { key: NumericRule; label: string }[] = [
+  { key: 'streak_multiplier_3w', label: '3-week streak' },
+  { key: 'streak_multiplier_5w', label: '5-week streak' },
+  { key: 'streak_multiplier_10w', label: '10-week streak' },
+];
+
+type StreakStatus = 'iron' | 'fire' | 'building' | 'inactive';
+
+const STATUS: Record<StreakStatus, { label: string; color: string }> = {
+  iron: { label: 'Iron Man', color: 'var(--c-green)' },
+  fire: { label: 'On Fire', color: 'var(--c-red)' },
+  building: { label: 'Building', color: 'var(--c-amber)' },
+  inactive: { label: 'Inactive', color: 'var(--text-muted)' },
+};
+
+function streakStatus(streak: number): StreakStatus {
+  if (streak >= 5) return 'iron';
+  if (streak >= 3) return 'fire';
+  return streak > 0 ? 'building' : 'inactive';
+}
 
 export default function AdminGamificationPage({
   params,
@@ -34,13 +59,14 @@ export default function AdminGamificationPage({
     clubScoreRules,
     updateClubScoreRules,
     awardClubScorePoints,
-    activityLogs,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
   const clubProfiles = clubScoreProfiles.filter(p => p.club_id === club.id);
-  const currentRules = clubScoreRules[club.id] || {
+  const savedRules = clubScoreRules[club.id];
+
+  const [rulesForm, setRulesForm] = useState<ClubScoreRuleConfig>(() => savedRules || {
     club_id: club.id,
     points_training_checkin: 10,
     points_social_checkin: 5,
@@ -57,17 +83,21 @@ export default function AdminGamificationPage({
     streak_multiplier_5w: 1.25,
     streak_multiplier_10w: 1.50,
     is_active: true,
-  };
-
-  // Rule Form State
-  const [rulesForm, setRulesForm] = useState(currentRules);
+  });
   const [rulesSaved, setRulesSaved] = useState(false);
 
-  // Manual Award Form State
-  const [selectedMemberId, setSelectedMemberId] = useState(squadPlayers[0]?.id || '');
+  // Saved rules can arrive after the first render; show them so Save never writes the defaults over them
+  useEffect(() => {
+    if (savedRules) setRulesForm(savedRules);
+  }, [savedRules]);
+
+  const [selectedMemberId, setSelectedMemberId] = useState('');
   const [awardPoints, setAwardPoints] = useState(15);
   const [awardReason, setAwardReason] = useState("Coach's Fair Play & Leadership Award");
   const [awardSuccess, setAwardSuccess] = useState(false);
+
+  const [streakQuery, setStreakQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StreakStatus | 'all'>('all');
 
   const handleSaveRules = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,380 +109,214 @@ export default function AdminGamificationPage({
   const handleManualAward = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMemberId) return;
-
-    awardClubScorePoints(
-      selectedMemberId,
-      awardPoints,
-      'admin_award',
-      awardReason
-    );
-
+    awardClubScorePoints(selectedMemberId, awardPoints, 'admin_award', awardReason);
     setAwardSuccess(true);
     setTimeout(() => setAwardSuccess(false), 3000);
   };
 
-  // Analytics
-  const activeStreaksCount = clubProfiles.filter(p => liveStreak(p) >= 3).length;
+  const ruleInput = (f: { key: NumericRule; label: string }, step?: string) => (
+    <div key={f.key} className="form-group m-0">
+      <label htmlFor={`gamification-${f.key}`} className="form-label">{f.label}</label>
+      <input id={`gamification-${f.key}`}
+        type="number"
+        step={step}
+        value={rulesForm[f.key]}
+        onChange={e => setRulesForm({ ...rulesForm, [f.key]: Number(e.target.value) })}
+        className="form-input"
+      />
+    </div>
+  );
+
+  const streakRows = squadPlayers
+    .map(player => {
+      const profile = clubProfiles.find(p => p.member_id === player.id);
+      const streak = profile ? liveStreak(profile) : 0;
+      return { player, profile, streak, status: streakStatus(streak) };
+    })
+    .sort((a, b) => b.streak - a.streak || (b.profile?.total_points || 0) - (a.profile?.total_points || 0));
+
+  const q = streakQuery.trim().toLowerCase().replace(/^#/, '');
+  const visibleRows = streakRows.filter(r =>
+    (statusFilter === 'all' || r.status === statusFilter) &&
+    (!q || r.player.full_name.toLowerCase().includes(q) || String(r.player.jersey_number ?? '') === q)
+  );
+
+  const activeStreaksCount = streakRows.filter(r => r.streak >= 3).length;
   const totalClubPoints = clubProfiles.reduce((acc, p) => acc + p.total_points, 0);
 
   return (
-    <div style={{ paddingBottom: '2rem' }}>
-      {/* Top Banner */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1.5rem',
-        marginBottom: '2.5rem',
-        borderBottom: '1px solid var(--border-subtle)',
-        paddingBottom: '1.5rem',
-      }}>
+    <div className="stack" style={{ gap: '1.5rem', paddingBottom: '2rem' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
-            <span className="badge badge-gold row row-tight">
-              <Zap size={12} fill="#F59E0B" /> GRASSROOTS INCENTIVE SCHEME
-            </span>
-            <span className="badge badge-primary">RETENTION ENGINE</span>
-          </div>
-          <h1 className="stat-value">
-            🏆 ClubScore Gamification Controller
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>PEOPLE & MEMBERSHIP • CLUBSCORE</span>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Flame size={30} /> ClubScore
           </h1>
-          <p className="text-body">
-            Configure points formulas, award manual team-spirit bonuses, and monitor player attendance streaks.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
+            Set how many points players earn, award coach bonuses, and keep an eye on attendance streaks.
           </p>
-        </div>
-
-        {/* Quick KPI Badges */}
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div className="text-meta">ACTIVE 3+ STREAKS</div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-              <Flame size={18} color="var(--c-red)" fill="#EF4444" />
-              <span>{activeStreaksCount} Players</span>
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div className="text-meta">SEASON TOTAL PTS</div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--club-primary)' }}>
-              {totalClubPoints} PTS
-            </div>
-          </div>
         </div>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-        gap: '2rem',
-        alignItems: 'flex-start',
-      }}>
-        {/* Column 1: Point Weighting Configuration */}
-        <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 2rem)' }}>
-          <div className="section-head">
-            <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={18} color="var(--c-amber)" />
-                <span>Point Weightings & Multipliers</span>
-              </h3>
-              <p className="text-note">
-                Customize how heavily training and match actions reward players.
-              </p>
-            </div>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
+        <div className="stat-tile">
+          <div className="eyebrow">Players on a 3+ week streak</div>
+          <div className="stat-value" style={{ color: 'var(--c-red)' }}>{activeStreaksCount}</div>
+        </div>
+        <div className="stat-tile">
+          <div className="eyebrow">Season points awarded</div>
+          <div className="stat-value" style={{ color: 'var(--club-primary)' }}>{totalClubPoints}</div>
+        </div>
+        <div className="stat-tile">
+          <div className="eyebrow">Players tracked</div>
+          <div className="stat-value">{squadPlayers.length}</div>
+        </div>
+      </div>
 
-          <form onSubmit={handleSaveRules} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '1rem' }}>
-              <div>
-                <label htmlFor="gamification-training-qr-check-in-pts" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Training QR Check-In (pts)
-                </label>
-                <input id="gamification-training-qr-check-in-pts"
-                  type="number"
-                  value={rulesForm.points_training_checkin}
-                  onChange={e => setRulesForm({ ...rulesForm, points_training_checkin: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
+      <div className="split-2" style={{ alignItems: 'start' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
+          <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            <Sparkles size={18} /> Points & multipliers
+          </h3>
+          <p className="text-note" style={{ margin: '0.25rem 0 1.25rem' }}>
+            How many points each training and match action is worth.
+          </p>
 
-              <div>
-                <label htmlFor="gamification-match-appearance-pts" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Match Appearance (pts)
-                </label>
-                <input id="gamification-match-appearance-pts"
-                  type="number"
-                  value={rulesForm.points_match_appearance}
-                  onChange={e => setRulesForm({ ...rulesForm, points_match_appearance: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gamification-goal-forward" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Goal (Forward)
-                </label>
-                <input id="gamification-goal-forward"
-                  type="number"
-                  value={rulesForm.points_goal_forward}
-                  onChange={e => setRulesForm({ ...rulesForm, points_goal_forward: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gamification-goal-midfielder" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Goal (Midfielder)
-                </label>
-                <input id="gamification-goal-midfielder"
-                  type="number"
-                  value={rulesForm.points_goal_midfielder}
-                  onChange={e => setRulesForm({ ...rulesForm, points_goal_midfielder: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gamification-goal-defender-gk" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Goal (Defender/GK)
-                </label>
-                <input id="gamification-goal-defender-gk"
-                  type="number"
-                  value={rulesForm.points_goal_defender}
-                  onChange={e => setRulesForm({ ...rulesForm, points_goal_defender: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gamification-assist" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Assist
-                </label>
-                <input id="gamification-assist"
-                  type="number"
-                  value={rulesForm.points_assist}
-                  onChange={e => setRulesForm({ ...rulesForm, points_assist: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gamification-clean-sheet-gk-def" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Clean Sheet (GK/DEF)
-                </label>
-                <input id="gamification-clean-sheet-gk-def"
-                  type="number"
-                  value={rulesForm.points_clean_sheet_gk_def}
-                  onChange={e => setRulesForm({ ...rulesForm, points_clean_sheet_gk_def: Number(e.target.value) })}
-                  className="input-field w-full"
-                />
-              </div>
+          <form onSubmit={handleSaveRules} className="stack">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
+              {POINT_FIELDS.map(f => ruleInput(f))}
             </div>
 
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Flame size={14} color="var(--c-red)" />
-                <span>Streak Multipliers</span>
+              <h4 className="row" style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+                <Flame size={14} /> Streak multipliers
               </h4>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div>
-                  <label htmlFor="gamification-3-week-streak" className="text-meta">3-Week Streak</label>
-                  <input id="gamification-3-week-streak"
-                    type="number"
-                    step="0.05"
-                    value={rulesForm.streak_multiplier_3w}
-                    onChange={e => setRulesForm({ ...rulesForm, streak_multiplier_3w: Number(e.target.value) })}
-                    className="input-field"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="gamification-5-week-streak" className="text-meta">5-Week Streak</label>
-                  <input id="gamification-5-week-streak"
-                    type="number"
-                    step="0.05"
-                    value={rulesForm.streak_multiplier_5w}
-                    onChange={e => setRulesForm({ ...rulesForm, streak_multiplier_5w: Number(e.target.value) })}
-                    className="input-field"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="gamification-10-week-streak" className="text-meta">10-Week Streak</label>
-                  <input id="gamification-10-week-streak"
-                    type="number"
-                    step="0.05"
-                    value={rulesForm.streak_multiplier_10w}
-                    onChange={e => setRulesForm({ ...rulesForm, streak_multiplier_10w: Number(e.target.value) })}
-                    className="input-field"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
-                  />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '1rem' }}>
+                {MULTIPLIER_FIELDS.map(f => ruleInput(f, '0.05'))}
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
-            >
+            <button type="submit" className="btn btn-primary" style={{ justifyContent: 'center' }}>
               {rulesSaved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-              <span>{rulesSaved ? 'Rules Saved Successfully!' : 'Save ClubScore Rules'}</span>
+              <span>{rulesSaved ? 'Rules saved' : 'Save rules'}</span>
             </button>
           </form>
         </div>
 
-        {/* Column 2: Fast Manual Award & Retention Health */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Quick Bonus Points Awarder */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Award size={18} color="var(--club-primary)" />
-              <span>Award Coach Discretionary Bonus</span>
+        <div className="stack" style={{ gap: '1.5rem' }}>
+          <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
+            <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <Award size={18} /> Coach bonus
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Incentivize fair play, helping pitch prep, or extra training sessions.
+            <p className="text-note" style={{ margin: '0.25rem 0 1.25rem' }}>
+              Reward fair play, helping with pitch prep, or extra training.
             </p>
 
-            <form onSubmit={handleManualAward} className="stack">
-              <div>
-                <label htmlFor="gamification-select-player" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                  Select Player
-                </label>
-                <select id="gamification-select-player"
+            <form onSubmit={handleManualAward}>
+              <div className="form-group">
+                <span className="form-label">Player</span>
+                <PlayerSearchSelect
+                  id="gamification-select-player"
+                  players={squadPlayers}
                   value={selectedMemberId}
-                  onChange={e => setSelectedMemberId(e.target.value)}
-                  className="input-field w-full"
-                >
-                  {squadPlayers.map(p => (
-                    <option key={p.id} value={p.id}>
-                      #{p.jersey_number} {p.full_name} ({p.player_position})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedMemberId}
+                />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '1rem' }}>
-                <div>
-                  <label htmlFor="gamification-points" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                    Points (+/-)
-                  </label>
-                  <input id="gamification-points"
-                    type="number"
-                    value={awardPoints}
-                    onChange={e => setAwardPoints(Number(e.target.value))}
-                    className="input-field w-full"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="gamification-award-reason" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                    Award Reason
-                  </label>
+              <div className="form-row-2-1">
+                <div className="form-group">
+                  <label htmlFor="gamification-award-reason" className="form-label">Reason</label>
                   <input id="gamification-award-reason"
                     type="text"
                     value={awardReason}
                     onChange={e => setAwardReason(e.target.value)}
-                    className="input-field w-full"
+                    className="form-input"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="gamification-points" className="form-label">Points (+/-)</label>
+                  <input id="gamification-points"
+                    type="number"
+                    value={awardPoints}
+                    onChange={e => setAwardPoints(Number(e.target.value))}
+                    className="form-input"
                   />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-secondary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  marginTop: '0.5rem',
-                  border: '1px solid rgba(16, 185, 129, 0.4)'
-                }}
-              >
-                {awardSuccess ? <CheckCircle2 size={16} color="var(--c-green)" /> : <Sparkles size={16} color="var(--c-green)" />}
-                <span>{awardSuccess ? 'Points Allocated & Logged!' : 'Award Points & Record in Ledger'}</span>
+              <button type="submit" className="btn btn-primary w-full" style={{ justifyContent: 'center' }} disabled={!selectedMemberId}>
+                {awardSuccess ? <CheckCircle2 size={16} /> : <Sparkles size={16} />}
+                <span>{awardSuccess ? 'Points awarded' : selectedMemberId ? 'Award points' : 'Pick a player first'}</span>
               </button>
             </form>
           </div>
 
-          {/* Player Retention & Attendance Streak Health */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Flame size={18} color="var(--c-red)" />
-                <span>Squad Streak Retention Monitor</span>
-              </h3>
-              <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', fontSize: '0.7rem' }}>
-                TOUCHLINE HEALTH
-              </span>
-            </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-              Spot players at risk of losing their streaks or dropping out of training.
+          <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
+            <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <Flame size={18} /> Streak monitor
+            </h3>
+            <p className="text-note" style={{ margin: '0.25rem 0 1rem' }}>
+              Spot players about to lose their streak or drifting away from training.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {squadPlayers.map(player => {
-                const profile = clubProfiles.find(p => p.member_id === player.id);
-                const streak = profile ? liveStreak(profile) : 0;
-                const isAtRisk = streak > 0 && streak < 3;
-
-                return (
-                  <div
-                    key={player.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '8px',
-                      background: 'rgba(var(--shade-rgb), 0.2)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    <div className="row row-loose">
-                      <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={30} style={{ borderRadius: '6px' }} />
-                      <div>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{player.full_name}</div>
-                        <div className="text-meta">
-                          #{player.jersey_number} • {profile?.tier || 'Rookie'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="row row-loose">
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: streak >= 3 ? 'var(--c-red)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                          {streak >= 3 && <Flame size={12} color="var(--c-red)" fill="#EF4444" />}
-                          <span>{streak}w streak</span>
-                        </div>
-                        <div className="text-meta">
-                          {profile?.total_points || 0} pts
-                        </div>
-                      </div>
-
-                      {streak >= 5 ? (
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', fontSize: '0.7rem' }}>
-                          Iron Man
-                        </span>
-                      ) : isAtRisk ? (
-                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
-                          Building
-                        </span>
-                      ) : (
-                        <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+              <input aria-label="Search players"
+                type="search"
+                className="form-input"
+                placeholder="Search by name or squad number..."
+                value={streakQuery}
+                onChange={e => setStreakQuery(e.target.value)}
+                style={{ paddingLeft: '2.1rem' }}
+              />
             </div>
+
+            <div className="row row-wrap" style={{ marginBottom: '1rem' }}>
+              {(['all', 'iron', 'fire', 'building', 'inactive'] as const).map(s => (
+                <button key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}
+                  className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}>
+                  {s === 'all' ? 'All' : STATUS[s].label} ({s === 'all' ? streakRows.length : streakRows.filter(r => r.status === s).length})
+                </button>
+              ))}
+            </div>
+
+            {visibleRows.length === 0 ? (
+              <p className="text-note">No players match.</p>
+            ) : (
+              <ul className="stack stack-sm" style={{ listStyle: 'none', padding: 0, margin: 0, gap: '0.5rem', maxHeight: '480px', overflowY: 'auto' }}>
+                {visibleRows.map(({ player, profile, streak, status }) => (
+                  <li key={player.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(var(--shade-rgb), 0.2)',
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: '0.85rem',
+                  }}>
+                    <div className="row row-loose min-w-0">
+                      <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
+                      <div className="min-w-0">
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.full_name}</div>
+                        <div className="text-meta">#{player.jersey_number ?? '-'} • {profile?.tier || 'Rookie'} • {profile?.total_points || 0} pts</div>
+                      </div>
+                    </div>
+                    <div className="row row-loose shrink-0">
+                      <span className="row row-tight" style={{ fontWeight: 800, color: streak >= 3 ? 'var(--c-red)' : 'var(--text-muted)' }}>
+                        {streak >= 3 && <Flame size={12} />}
+                        {streak}w
+                      </span>
+                      <span className="badge" style={{ color: STATUS[status].color, background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)' }}>
+                        {STATUS[status].label}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

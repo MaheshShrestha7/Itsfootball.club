@@ -58,8 +58,11 @@ export function parseSizes(text: string): string[] {
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
-/** Storage key of an uploaded shop photo of this club, or null for anything else (other clubs, other folders, odd URLs) */
-export function shopPhotoKey(clubId: string, url: string): string | null {
+/** Folders whose uploaded photos admins may delete again */
+export type DeletablePhotoFolder = 'shop' | 'gallery';
+
+/** Storage key of a photo this club uploaded to `folder`, or null for anything else (other clubs, other folders, odd URLs) */
+export function clubPhotoKey(clubId: string, url: string, folder: DeletablePhotoFolder = 'shop'): string | null {
   if (!new RegExp(`^${UUID}$`, 'i').test(clubId)) return null;
-  return url.match(new RegExp(`/(clubs/${clubId}/shop/${UUID}\\.(?:jpg|png|webp|gif))$`, 'i'))?.[1] ?? null;
+  return url.match(new RegExp(`/(clubs/${clubId}/${folder}/${UUID}\\.(?:jpg|png|webp|gif))$`, 'i'))?.[1] ?? null;
 }

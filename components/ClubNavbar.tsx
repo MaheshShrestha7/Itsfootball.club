@@ -12,14 +12,14 @@ import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images } from 'lucide-react';
 
 interface ClubNavbarProps {
   club: Club;
 }
 
 export default function ClubNavbar({ club }: ClubNavbarProps) {
-  const { matches } = useClub();
+  const { matches, gallery } = useClub();
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
@@ -43,6 +43,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   // The Shop link only once the club has something on sale
   const hasShop = useShopOpen(club.id);
+  const hasGallery = gallery.some(g => g.club_id === club.id && g.media_type === 'image');
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -257,6 +258,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           <Link href={`/${club.slug}#news`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             News
           </Link>
+          {hasGallery && (
+            <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+              Gallery
+            </Link>
+          )}
 
           {/* Admin Portal Gateway */}
           {isAdmin && (
@@ -515,6 +521,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <Radio size={16} />
                   <span>Latest News & Video</span>
                 </Link>
+
+                {hasGallery && (
+                  <Link
+                    href={`/${club.slug}/gallery`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                  >
+                    <Images size={16} />
+                    <span>Photo Gallery</span>
+                  </Link>
+                )}
 
                 {isAdmin && (
                   <Link

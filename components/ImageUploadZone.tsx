@@ -89,6 +89,18 @@ export async function uploadImage(file: File, { folder = 'uploads', clubId, maxD
   return data.url;
 }
 
+/** Deletes the stored file behind a shop or gallery photo nothing uses any more (the server refuses one still in use).
+ *  A failure only leaves an unused file behind, so it is logged rather than shown. */
+export async function deleteUploadedPhoto(clubId: string, url: string, folder: 'shop' | 'gallery' = 'shop') {
+  const token = await getAccessToken();
+  const res = await fetch('/api/upload', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ clubId, url, folder }),
+  }).catch(() => null);
+  if (!res?.ok) console.warn('Photo file was not deleted:', url, res?.status);
+}
+
 export default function ImageUploadZone({
   label,
   recommendedText = 'PNG, JPG, WebP or GIF up to 5MB',

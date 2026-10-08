@@ -328,6 +328,8 @@ export interface MediaGalleryItem {
   media_url: string;
   thumbnail_url?: string;
   album_name: string;
+  /** The photo shown on its album's cover; an album without one shows its newest photo */
+  is_album_cover?: boolean;
   created_at?: string;
 }
 

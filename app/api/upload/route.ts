@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadBufferToR2, isR2Configured, deleteR2Object } from '@/lib/storage/r2';
 import { getServiceClient } from '@/lib/supabase/service';
-import { shopPhotoKey } from '@/lib/shop';
+import { clubPhotoKey, type DeletablePhotoFolder } from '@/lib/shop';
 import { requireAdminOfClub, requireUser } from '@/lib/supabase/server-auth';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { matchesFileSignature } from '@/lib/file-signature';
@@ -132,27 +132,32 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE { clubId, url }: removes a shop photo the club no longer uses (admins of that club only).
-// ponytail: shop photos only; other club images are replaced in place and their old files stay
+// DELETE { clubId, url, folder? }: removes a shop ('shop', the default) or gallery ('gallery') photo the
+// club no longer uses (admins of that club only).
+// ponytail: shop and gallery photos only; other club images are replaced in place and their old files stay
 export async function DELETE(req: NextRequest) {
-  const body = await req.json().catch(() => null) as { clubId?: unknown; url?: unknown } | null;
+  const body = await req.json().catch(() => null) as { clubId?: unknown; url?: unknown; folder?: unknown } | null;
   const clubId = String(body?.clubId || '');
   const url = String(body?.url || '');
+  const folder: DeletablePhotoFolder = body?.folder === 'gallery' ? 'gallery' : 'shop';
   if (!UUID_RE.test(clubId)) return NextResponse.json({ error: 'Invalid club.' }, { status: 400 });
   // The key must sit under the club the caller administers, so no other club's files are reachable
-  const key = shopPhotoKey(clubId, url);
-  if (!key) return NextResponse.json({ error: 'Only shop photos can be deleted.' }, { status: 400 });
+  const key = clubPhotoKey(clubId, url, folder);
+  if (!key) return NextResponse.json({ error: 'Only shop and gallery photos can be deleted.' }, { status: 400 });
 
   const auth = await requireAdminOfClub(req, clubId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'File storage is not available right now.' }, { status: 503 });
 
-  // Never delete a photo a product still shows. Compared by storage key: supabase-js doesn't quote array
-  // filters, so a crafted URL (with a comma) could slip past a `contains` check on the URL itself.
-  const { data: products, error } = await db.from('shop_products').select('photos').eq('club_id', clubId);
+  // Never delete a photo a product or gallery entry still shows. Compared by storage key: supabase-js doesn't quote
+  // filters, so a crafted URL (with a comma) could slip past a `contains`/`eq` check on the URL itself.
+  const { data: rows, error } = folder === 'gallery'
+    ? await db.from('media_gallery').select('media_url').eq('club_id', clubId)
+    : await db.from('shop_products').select('photos').eq('club_id', clubId);
   if (error) return NextResponse.json({ error: 'Could not check the photo.' }, { status: 500 });
-  if ((products || []).some(p => (p.photos as string[]).some(src => shopPhotoKey(clubId, src) === key))) {
+  const inUse = (rows || []).flatMap(r => ('photos' in r ? r.photos as string[] : [r.media_url as string]));
+  if (inUse.some(src => clubPhotoKey(clubId, src, folder) === key)) {
     return NextResponse.json({ error: 'This photo is still in use.' }, { status: 409 });
   }
 
@@ -165,7 +170,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'File storage is not available right now.' }, { status: 503 });
     }
   } catch (err) {
-    console.error('Shop photo delete failed:', key, (err as Error).message);
+    console.error('Photo delete failed:', key, (err as Error).message);
     return NextResponse.json({ error: 'Could not delete the photo file.' }, { status: 502 });
   }
   return NextResponse.json({ success: true });

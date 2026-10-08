@@ -170,8 +170,8 @@ for (let n = 2; n <= 17; n++) {
 {
   const m = (o: Partial<Match>) => ({ id: 'm', club_id: 'c', ...o }) as Match;
   assert.equal(clubLineupSide(m({ match_type: 'friendly', is_club_home: false })), 'away', 'away fixture: away columns');
-  assert.equal(clubLineupSide(m({ match_type: 'league', is_club_home: true })), 'home');
-  assert.equal(clubLineupSide(m({ match_type: 'league' })), 'home', 'unset is_club_home means home');
+  assert.equal(clubLineupSide(m({ match_type: 'friendly', is_club_home: true })), 'home');
+  assert.equal(clubLineupSide(m({ match_type: 'friendly' })), 'home', 'unset is_club_home means home');
   assert.equal(clubLineupSide(m({ match_type: 'tournament', is_club_home: false, tournament_id: 't' })), 'home', 'tournament: home');
   assert.equal(clubLineupSide(m({ match_type: 'internal', is_club_home: false })), 'home', 'internal: home');
 }

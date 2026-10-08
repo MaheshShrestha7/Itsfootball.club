@@ -156,6 +156,8 @@ interface ClubContextType {
   updateNewsArticle: (articleId: string, updates: Partial<NewsArticle>) => void;
   deleteNewsArticle: (articleId: string) => void;
   addMediaItem: (mediaData: Omit<MediaGalleryItem, 'id' | 'created_at'>) => void;
+  updateMediaItems: (itemIds: string[], updates: Partial<MediaGalleryItem>) => void;
+  deleteMediaItems: (itemIds: string[]) => void;
   
   // QR Verification & Check-in
   verifyMemberPass: (token: string, clubId?: string) => { valid: boolean; member?: ClubMember; message: string };
@@ -1672,6 +1674,15 @@ export function ClubProvider({
     setGallery(prev => [newMedia, ...prev]);
   }, []);
 
+  const updateMediaItems = useCallback((itemIds: string[], updates: Partial<MediaGalleryItem>) => {
+    setGallery(prev => prev.map(m => (itemIds.includes(m.id) ? { ...m, ...updates } : m)));
+  }, []);
+
+  const deleteMediaItems = useCallback((itemIds: string[]) => {
+    queueDelete('gallery', itemIds);
+    setGallery(prev => prev.filter(m => !itemIds.includes(m.id)));
+  }, [queueDelete]);
+
   // 9. QR Verification & Check-in
   const recordGateScan = useCallback((scan: Omit<GateScanRecord, 'id' | 'scanned_at'>) => {
     const newScan: GateScanRecord = {
@@ -3092,6 +3103,8 @@ export function ClubProvider({
         updateNewsArticle,
         deleteNewsArticle,
         addMediaItem,
+        updateMediaItems,
+        deleteMediaItems,
         verifyMemberPass,
         verifyMemberPassPublic,
         publicMatchCheckin,

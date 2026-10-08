@@ -4,26 +4,14 @@ import React, { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Plus, Save, Trash2, ImagePlus, X, PackageCheck, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
-import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
 import { MAX_PHOTOS, parseSizes } from '@/lib/shop';
 import type { Payment, ShopProduct } from '@/lib/supabase/types';
-import { uploadImage } from '@/components/ImageUploadZone';
+import { deleteUploadedPhoto, uploadImage } from '@/components/ImageUploadZone';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 type Db = NonNullable<ReturnType<typeof getSupabaseClient>>;
-// Deletes the stored file behind a photo no product uses any more (the server refuses one still in use).
-// A failure only leaves an unused file behind, so it is logged rather than shown.
-async function deletePhotoFile(clubId: string, url: string) {
-  const token = await getAccessToken();
-  const res = await fetch('/api/upload', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ clubId, url }),
-  }).catch(() => null);
-  if (!res?.ok) console.warn('Shop photo file was not deleted:', url, res?.status);
-}
-
 const cell: React.CSSProperties = { padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left', verticalAlign: 'top' };
 
 export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -205,7 +193,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
     return true;
   };
   const removePhoto = async (src: string) => {
-    if (await savePhotos(photos.filter(p => p !== src))) deletePhotoFile(clubId, src);
+    if (await savePhotos(photos.filter(p => p !== src))) deleteUploadedPhoto(clubId, src);
   };
 
   const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,7 +205,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
     try {
       // 800px covers a ~300px shop card on a 3x phone screen; bigger only costs buyers data
       const url = await uploadImage(file, { folder: 'shop', clubId, maxDimension: 800 });
-      if (!(await savePhotos([...photos, url].slice(0, MAX_PHOTOS)))) deletePhotoFile(clubId, url);
+      if (!(await savePhotos([...photos, url].slice(0, MAX_PHOTOS)))) deleteUploadedPhoto(clubId, url);
     } catch (err) {
       notify((err as Error).message);
     } finally {
@@ -229,7 +217,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
     if (!(await confirmAction({ title: `Delete ${product.name}?`, message: 'Past orders keep what was bought. Untick "On sale" instead to just hide it.', confirmLabel: 'Delete', danger: true }))) return;
     const { error } = await db.from('shop_products').delete().eq('id', id);
     if (error) return notify(error.message);
-    photos.forEach(src => deletePhotoFile(clubId, src));
+    photos.forEach(src => deleteUploadedPhoto(clubId, src));
     onChange();
   };
 

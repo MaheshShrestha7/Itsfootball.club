@@ -10,7 +10,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   events: ['id', 'club_id', 'title', 'description', 'category', 'season', 'start_time', 'end_time', 'location', 'max_capacity', 'rsvp_count', 'is_public', 'door_qr_checkin_enabled', 'ticket_price_cents', 'created_at'],
   sponsors: ['id', 'club_id', 'event_id', 'name', 'logo_url', 'website_url', 'tier', 'size_scale', 'display_order', 'is_active', 'contact_name', 'contact_email', 'contact_phone', 'package_value', 'package_status', 'season'],
   news_articles: ['id', 'club_id', 'title', 'slug', 'summary', 'content', 'cover_image_url', 'video_embed_url', 'author_name', 'tags', 'is_featured', 'published_at'],
-  media_gallery: ['id', 'club_id', 'title', 'media_type', 'media_url', 'thumbnail_url', 'album_name', 'created_at'],
+  media_gallery: ['id', 'club_id', 'title', 'media_type', 'media_url', 'thumbnail_url', 'album_name', 'is_album_cover', 'created_at'],
   member_clubscore_profiles: ['id', 'club_id', 'member_id', 'season', 'total_points', 'weekly_points', 'monthly_points', 'current_streak', 'highest_streak', 'tier', 'badges', 'last_activity_date', 'streak_updated_at', 'created_at', 'updated_at'],
   gamification_activity_log: ['id', 'club_id', 'member_id', 'event_type', 'points_awarded', 'multiplier', 'final_points', 'description', 'reference_id', 'created_by', 'created_at'],
   clubscore_rules: ['id', 'club_id', 'points_training_checkin', 'points_social_checkin', 'points_match_appearance', 'points_goal_forward', 'points_goal_midfielder', 'points_goal_defender', 'points_assist', 'points_clean_sheet_gk_def', 'points_motm', 'points_yellow_card_penalty', 'points_red_card_penalty', 'streak_multiplier_3w', 'streak_multiplier_5w', 'streak_multiplier_10w', 'is_active'],

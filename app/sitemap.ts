@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // are deliberately left out: listing them here would contradict their robots meta tag.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
-  const { clubs, matches, events, tournaments, shopClubIds } = await listSitemapData();
+  const { clubs, matches, events, tournaments, shopClubIds, galleryClubIds } = await listSitemapData();
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
   const url = (path: string) => `${SITE_URL}${path}`;
   const date = (...values: (string | null | undefined)[]) => {
@@ -33,6 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: url(`/${club.slug}/tournaments`), lastModified, changeFrequency: 'weekly', priority: 0.6 },
     );
     if (shopClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/shop`), changeFrequency: 'weekly', priority: 0.5 });
+    if (galleryClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/gallery`), changeFrequency: 'weekly', priority: 0.4 });
   }
 
   for (const m of matches) {

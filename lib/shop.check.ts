@@ -1,7 +1,7 @@
 // Self-check for shop cart pricing.
 // Run: npx esbuild lib/shop.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { describeItems, parseCart, parseSizes, priceCart, shopPhotoKey } from './shop';
+import { describeItems, parseCart, parseSizes, priceCart, clubPhotoKey } from './shop';
 
 const shirt = { id: 'shirt', name: 'Home shirt', price_cents: 4500, sizes: ['S', 'M', 'L'], is_active: true };
 const scarf = { id: 'scarf', name: 'Scarf', price_cents: 1500, sizes: [], is_active: true };
@@ -39,13 +39,16 @@ assert.deepEqual(parseSizes(''), []);
 const club = '11111111-2222-4333-8444-555555555555';
 const photo = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const cdn = 'https://cdn.example.com';
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg`), `clubs/${club}/shop/${photo}.jpg`);
-assert.equal(shopPhotoKey(club, `https://x.supabase.co/storage/v1/object/public/club-assets/clubs/${club}/shop/${photo}.webp`), `clubs/${club}/shop/${photo}.webp`);
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/${club}/logos/${photo}.jpg`), null); // not a shop photo
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/99999999-2222-4333-8444-555555555555/shop/${photo}.jpg`), null); // other club
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}xjpg`), null); // the dot is literal
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/${club}/shop/../logos/${photo}.jpg`), null);
-assert.equal(shopPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg?x=1`), null);
-assert.equal(shopPhotoKey('.*', `${cdn}/clubs/${club}/shop/${photo}.jpg`), null); // the club id is never a pattern
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg`), `clubs/${club}/shop/${photo}.jpg`);
+assert.equal(clubPhotoKey(club, `https://x.supabase.co/storage/v1/object/public/club-assets/clubs/${club}/shop/${photo}.webp`), `clubs/${club}/shop/${photo}.webp`);
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/logos/${photo}.jpg`), null); // not a shop photo
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/99999999-2222-4333-8444-555555555555/shop/${photo}.jpg`), null); // other club
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}xjpg`), null); // the dot is literal
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/../logos/${photo}.jpg`), null);
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg?x=1`), null);
+assert.equal(clubPhotoKey('.*', `${cdn}/clubs/${club}/shop/${photo}.jpg`), null); // the club id is never a pattern
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/gallery/${photo}.jpg`, 'gallery'), `clubs/${club}/gallery/${photo}.jpg`);
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/gallery/${photo}.jpg`), null); // a gallery photo is not a shop photo
+assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg`, 'gallery'), null);
 
 console.log('shop: cart pricing, sizes, parsing and photo keys OK');
