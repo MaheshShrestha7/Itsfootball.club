@@ -4,7 +4,7 @@ import { SITE_URL } from './slugs';
 
 export { SITE_URL };
 export const SITE_NAME = 'itsfootball.club';
-export const DEFAULT_OG_IMAGE = '/og-default.jpg';
+export const DEFAULT_OG_IMAGE = '/og-image.jpg';
 
 const TITLE_MAX = 60;
 const DESC_MIN = 140;

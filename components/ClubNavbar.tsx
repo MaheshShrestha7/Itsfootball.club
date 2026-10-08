@@ -19,7 +19,7 @@ interface ClubNavbarProps {
 }
 
 export default function ClubNavbar({ club }: ClubNavbarProps) {
-  const { matches, gallery } = useClub();
+  const { matches } = useClub();
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
@@ -43,7 +43,6 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   // The Shop link only once the club has something on sale
   const hasShop = useShopOpen(club.id);
-  const hasGallery = gallery.some(g => g.club_id === club.id && g.media_type === 'image');
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -181,36 +180,22 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         </Link>
 
         {/* Desktop Links */}
-        <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1.5rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
+        <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
           <Link href={`/${club.slug}`} style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
             Club
           </Link>
 
-          {/* Live Match-Day Center Link */}
-          <Link
-            href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)',
-            }}
-          >
-            {liveMatch ? (
+          {/* Live match: otherwise the match center is just the Fixtures link below, so it isn't listed twice */}
+          {liveMatch && (
+            <Link href={`/${club.slug}/match/${liveMatch.id}`} aria-label="Live match: open the match center" style={{ display: 'flex', alignItems: 'center' }}>
               <span className="badge badge-live" style={{ padding: '0.2rem 0.5rem' }}>
-                <span className="pulse-dot" /> LIVE MATCH
+                <span className="pulse-dot" /> LIVE
               </span>
-            ) : (
-              <>
-                <Radio size={16} />
-                <span>Match Center</span>
-              </>
-            )}
-          </Link>
+            </Link>
+          )}
 
-          {/* Virtual Member Pass */}
+          {/* Virtual Member Pass (signed-in members reach it from their avatar instead) */}
+          {!(isAuthenticated && user) && (
           <Link
             href={`/${club.slug}/member`}
             style={{
@@ -225,6 +210,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <CreditCard size={16} color="var(--club-primary)" />
             <span>Member Pass</span>
           </Link>
+          )}
 
           <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Fixtures
@@ -258,11 +244,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           <Link href={`/${club.slug}#news`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             News
           </Link>
-          {hasGallery && (
-            <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-              Gallery
-            </Link>
-          )}
+          <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+            Gallery & Videos
+          </Link>
 
           {/* Admin Portal Gateway */}
           {isAdmin && (
@@ -289,11 +273,12 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
               <Link
                 href={`/${club.slug}/member`}
+                aria-label={`${user.full_name}${userRole ? ` (${userRole})` : ''}: my member pass`}
+                title={`${user.full_name}${userRole ? ` (${userRole})` : ''}: my member pass`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.35rem 0.65rem',
+                  padding: '0.2rem',
                   borderRadius: 'var(--radius-full)',
                   background: 'rgba(var(--tint-rgb), 0.05)',
                   border: '1px solid var(--border-subtle)',
@@ -310,14 +295,6 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--club-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
                     {user.full_name.substring(0, 1)}
                   </div>
-                )}
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                  {user.full_name.split(' ')[0]}
-                </span>
-                {userRole && (
-                  <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isAdmin ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.08)', color: isAdmin ? 'var(--c-green)' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                    {userRole}
-                  </span>
                 )}
               </Link>
 
@@ -519,19 +496,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
                 >
                   <Radio size={16} />
-                  <span>Latest News & Video</span>
+                  <span>Latest News</span>
                 </Link>
 
-                {hasGallery && (
-                  <Link
-                    href={`/${club.slug}/gallery`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                  >
-                    <Images size={16} />
-                    <span>Photo Gallery</span>
-                  </Link>
-                )}
+                <Link
+                  href={`/${club.slug}/gallery`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Images size={16} />
+                  <span>Gallery & Videos</span>
+                </Link>
 
                 {isAdmin && (
                   <Link

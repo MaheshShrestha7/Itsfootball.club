@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use, useMemo } from 'react';
-import { fallbackToBrandImage } from "@/lib/image-fallback";
+import { BRAND_IMAGE, fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -979,7 +979,7 @@ export default function ClubPublicPage({
                       >
                         <div style={{ height: '200px', position: 'relative' }}>
                           <img loading="eager" decoding="async"
-                            src={activeSlideNews.cover_image_url || club.banner_url} onError={fallbackToBrandImage}
+                            src={activeSlideNews.cover_image_url || club.banner_url || BRAND_IMAGE} onError={fallbackToBrandImage}
                             alt={activeSlideNews.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -1768,7 +1768,7 @@ export default function ClubPublicPage({
               >
                 <div style={{ height: '240px', position: 'relative' }}>
                   <img loading="lazy" decoding="async"
-                    src={featuredArticle.cover_image_url} onError={fallbackToBrandImage}
+                    src={featuredArticle.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
                     alt={featuredArticle.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -1813,7 +1813,7 @@ export default function ClubPublicPage({
                   }}
                 >
                   <img loading="lazy" decoding="async" width={90} height={90}
-                    src={article.cover_image_url} onError={fallbackToBrandImage}
+                    src={article.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
                     alt={article.title}
                     style={{ width: '90px', height: '90px', borderRadius: '10px', objectFit: 'cover' }}
                   />
@@ -2359,7 +2359,7 @@ export default function ClubPublicPage({
             padding: '2rem',
           }}>
             <img loading="lazy" decoding="async"
-              src={activeNewsModal.cover_image_url} onError={fallbackToBrandImage}
+              src={activeNewsModal.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
               alt={activeNewsModal.title}
               style={{ width: '100%', height: '220px', borderRadius: '12px', objectFit: 'cover', marginBottom: '1.25rem' }}
             />

@@ -187,7 +187,9 @@ body {
   /* Mobile browsers: the visible height, not the height with the address bar hidden */
   min-height: 100dvh;
   max-width: 100%;
+  /* clip, not hidden: hidden would make body its own scroll container and break the sticky navbars */
   overflow-x: hidden;
+  overflow-x: clip;
   position: relative;
   /* Landscape iPhone: keep content clear of the notch */
   padding-left: env(safe-area-inset-left);
@@ -342,7 +344,8 @@ textarea {
 
 .btn-outline {
   background: transparent;
-  color: var(--club-primary);
+  /* Same ink as .badge-primary: pure club colour on dark, darkened on light so pale club colours stay readable */
+  color: color-mix(in srgb, var(--club-primary), var(--text-primary) var(--accent-ink));
   border: 1px solid var(--club-primary);
 }
 

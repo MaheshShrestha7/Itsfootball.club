@@ -5,9 +5,9 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
   const { clubSlug } = await params;
   return clubPageMetadata(clubSlug, club =>
     pageMetadata({
-      title: fitTitle('Photo Gallery', clubName(club), SITE_NAME),
+      title: fitTitle('Gallery & Videos', clubName(club), SITE_NAME),
       description: fitDescription(
-        `Photo albums from ${club.name}: matchdays, training and club life.`,
+        `Photos and videos from ${club.name}: matchdays, training and club life.`,
         'Matchday moments.'
       ),
       path: `/${club.slug}/gallery`,

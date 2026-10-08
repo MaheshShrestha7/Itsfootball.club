@@ -2,10 +2,10 @@ import React from 'react';
 import { videoEmbed } from '@/lib/video';
 
 /** A news article's video (YouTube or .mp4); renders nothing for a missing or unsupported link */
-export default function NewsVideo({ url, title }: { url?: string; title: string }) {
+export default function NewsVideo({ url, title, style: extra }: { url?: string; title: string; style?: React.CSSProperties }) {
   const video = videoEmbed(url);
   if (!video) return null;
-  const style: React.CSSProperties = { width: '100%', aspectRatio: '16 / 9', border: 'none', borderRadius: '12px', marginBottom: '1.5rem', background: '#000' };
+  const style: React.CSSProperties = { width: '100%', aspectRatio: '16 / 9', border: 'none', borderRadius: '12px', marginBottom: '1.5rem', background: '#000', ...extra };
   return video.kind === 'youtube' ? (
     <iframe
       src={video.src}
