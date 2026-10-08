@@ -98,10 +98,12 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
     updateMediaItems([photo.id], { is_album_cover: true });
   };
 
-  // A photo leaving its album stops being that album's cover, so the album it joins keeps its own
-  const moveToAlbum = (photos: MediaGalleryItem[], name: string) => {
+  // A photo leaving its album stops being that album's cover, so the album it joins keeps its own.
+  // A whole album merged in (keepCover) brings its cover along when the album it joins has none chosen.
+  const moveToAlbum = (photos: MediaGalleryItem[], name: string, keepCover = false) => {
+    const targetHasCover = albums.some(a => a.name === name && a.photos.some(p => p.is_album_cover));
     const covers = photos.filter(p => p.is_album_cover).map(p => p.id);
-    if (covers.length) updateMediaItems(covers, { is_album_cover: false });
+    if (covers.length && (!keepCover || targetHasCover)) updateMediaItems(covers, { is_album_cover: false });
     updateMediaItems(photos.map(p => p.id), { album_name: name });
   };
 
@@ -115,7 +117,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
       message: `An album called "${name}" already exists. Its photos and these ones will be in one album.`,
       confirmLabel: 'Merge albums',
     }))) return;
-    if (merging) moveToAlbum(album.photos, name);
+    if (merging) moveToAlbum(album.photos, name, true);
     else updateMediaItems(album.photos.map(p => p.id), { album_name: name });
     if (draftName === album.name) setDraftName(name);
     openAlbum(name);
@@ -173,7 +175,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
               <div className="min-w-0">
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{album.name}</h3>
                 <p className="text-note">
-                  {photoCount(album.photos.length)}{album.photos.length > 1 && ' • Star a photo to make it the album cover'}
+                  {photoCount(album.photos.length)}{album.photos.length > 1 && ' • Use Make cover to choose the album cover'}
                 </p>
               </div>
             ) : (
@@ -236,22 +238,22 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
                         const title = e.target.value.trim();
                         if (title !== photo.title) updateMediaItems([photo.id], { title });
                       }} />
+                    <select aria-label="Move to album" className="form-select" style={{ fontSize: '0.8rem', padding: '0.45rem 0.6rem' }}
+                      value={photo.album_name} onChange={e => moveToAlbum([photo], e.target.value)}>
+                      {albums.filter(a => a.photos.length > 0 || a.name === draftName).map(a => (
+                        <option key={a.name} value={a.name}>{a.name === album.name ? a.name : `Move to ${a.name}`}</option>
+                      ))}
+                    </select>
                     <div className="row">
-                      <select aria-label="Move to album" className="form-select" style={{ fontSize: '0.8rem', padding: '0.45rem 0.6rem' }}
-                        value={photo.album_name} onChange={e => moveToAlbum([photo], e.target.value)}>
-                        {albums.filter(a => a.photos.length > 0 || a.name === draftName).map(a => (
-                          <option key={a.name} value={a.name}>{a.name === album.name ? a.name : `Move to ${a.name}`}</option>
-                        ))}
-                      </select>
-                      <button type="button" className="btn btn-secondary btn-sm shrink-0"
+                      <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1, minWidth: 0 }}
                         aria-label={album.cover?.id === photo.id ? 'Album cover' : 'Use as album cover'}
-                        title={album.cover?.id === photo.id ? 'Album cover' : 'Use as album cover'}
                         aria-pressed={album.cover?.id === photo.id}
                         disabled={album.cover?.id === photo.id}
                         onClick={() => setCover(photo)}>
                         <Star size={14} fill={album.cover?.id === photo.id ? 'currentColor' : 'none'} />
+                        {album.cover?.id === photo.id ? 'Cover' : 'Make cover'}
                       </button>
-                      <button type="button" className="btn btn-danger btn-sm shrink-0" aria-label="Delete photo" onClick={() => deletePhoto(photo)}>
+                      <button type="button" className="btn btn-danger btn-sm shrink-0" aria-label="Delete photo" title="Delete photo" onClick={() => deletePhoto(photo)}>
                         <Trash2 size={14} />
                       </button>
                     </div>
