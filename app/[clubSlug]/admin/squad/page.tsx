@@ -7,6 +7,7 @@ import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { useAccessRoles } from '@/lib/access-roles';
+import { membershipTermEnd, todayIso } from '@/lib/finance';
 import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
 import {
   Users,
@@ -383,7 +384,6 @@ export default function AdminSquadPage({
       photo_url: form.photo_url || undefined,
       nationality: form.nationality.trim(),
       membership_tier: isPlayer ? 'Senior Player' : isExec ? 'Executive Board' : 'Club Staff',
-      membership_expires_at: '2026-12-31',
       is_executive: isExec,
       executive_title: isExec ? form.executive_title || 'Committee Member' : undefined,
     };
@@ -391,8 +391,10 @@ export default function AdminSquadPage({
     if (editingMember) {
       updateMember(editingMember.id, memberPayload);
     } else {
+      // Only a new member gets an expiry; editing someone keeps theirs (the club's renewal method decides it)
       addMember({
         ...memberPayload,
+        membership_expires_at: membershipTermEnd(todayIso(), club),
         qr_code_token: secureToken('pass'),
       });
     }

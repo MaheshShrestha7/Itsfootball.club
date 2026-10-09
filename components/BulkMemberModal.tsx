@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { secureToken } from '@/lib/ids';
+import { membershipTermEnd, todayIso } from '@/lib/finance';
 import { Club, ClubMember, PlayerPosition, PlayerStatus, ClubRole, MembershipStatus } from '@/lib/supabase/types';
 import {
   Download,
@@ -393,7 +394,7 @@ export default function BulkMemberModal({
             membership_expires_at: withDefault(
               item.membership_expires_at,
               isDuplicate,
-              new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+              membershipTermEnd(todayIso(), club)
             ),
             qr_code_token: withDefault(item.qr_code_token, isDuplicate, secureToken('pass')),
             is_executive:
@@ -485,7 +486,7 @@ export default function BulkMemberModal({
         status: statusCol ? normalizeStatus(statusCol) : (isDuplicate ? undefined : 'active'),
         membership_status: withDefault(rawObj['membershipstatus'] as MembershipStatus | undefined, isDuplicate, 'approved' as MembershipStatus),
         membership_tier: withDefault(rawObj['membershiptier'] || rawObj['tier'], isDuplicate, 'Full Senior Member'),
-        membership_expires_at: isDuplicate ? undefined : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        membership_expires_at: isDuplicate ? undefined : membershipTermEnd(todayIso(), club),
         qr_code_token: isDuplicate ? undefined : secureToken('pass'),
         is_executive: (roleCol || rawObj['isexecutive'])
           ? (roleCol || '').toLowerCase().includes('exec') || Boolean(rawObj['isexecutive'])

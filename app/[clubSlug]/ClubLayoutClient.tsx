@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
+import ClubTabBar from '@/components/ClubTabBar';
 import { hexToRgb, evaluateColorContrast } from '@/lib/theme-utils';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 
@@ -81,6 +82,7 @@ export default function ClubLayoutClient({
         {children}
       </div>
       <Footer club={club} sponsors={clubSponsors} />
+      <ClubTabBar club={club} />
     </div>
   );
 }

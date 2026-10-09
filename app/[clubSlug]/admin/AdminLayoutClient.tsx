@@ -49,6 +49,7 @@ import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
 import { areaFromPath } from '@/lib/permissions';
+import { useClubAppIcons } from '@/lib/app-icons';
 
 // Menu layout preferences, remembered per browser
 const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
@@ -71,9 +72,12 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries, memberMessages } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries, memberMessages, updateClubBranding } = useClub();
   const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  // The club app's home-screen icons follow the crest (drawn here by whoever may edit the branding)
+  useClubAppIcons(club, can(club.id, 'branding', 'edit'), icons => updateClubBranding(club.id, { app_icons: icons }));
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   useEscapeToClose(mobileDrawerOpen, setMobileDrawerOpen);

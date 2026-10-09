@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import type { OrderItem } from '../shop';
+import type { AppIcons } from '../app-icons';
 
 export type ClubRole = 'owner' | 'admin' | 'staff' | 'player' | 'member' | 'supporter' | 'Player' | 'Executive committe' | 'Manager' | 'Executive Committee';
 export type PlayerPosition = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' | 'RW' | 'ST' | 'SUB';
@@ -80,6 +81,14 @@ export interface Club {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  /** How memberships renew (set through set_membership_renewal(); not synced) */
+  membership_renewal?: 'anniversary' | 'fiscal';
+  /** 1-12: the fiscal year starts on the 1st of this month */
+  fiscal_year_start_month?: number;
+  /** Fiscal year: joining this many days (or fewer) before it starts counts for the next year */
+  fiscal_grace_days?: number;
+  /** Home-screen icons drawn from the crest (lib/app-icons.ts) */
+  app_icons?: AppIcons | null;
 }
 
 export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';

@@ -57,6 +57,7 @@ import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
+import { membershipTermEnd, todayIso } from './finance';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -379,6 +380,9 @@ export function ClubProvider({
   // Label of a club's current season (falls back to the calendar-based default)
   const seasonsRef = useRef<ClubSeason[]>([]);
   seasonsRef.current = seasons;
+  // New members' expiry follows the club's renewal method (year to year / fiscal year)
+  const clubsRef = useRef<Club[]>([]);
+  clubsRef.current = clubs;
   const seasonLabelFor = useCallback((clubId: string): string => {
     const clubSeasons = seasonsRef.current.filter(x => x.club_id === clubId);
     const current = clubSeasons.find(x => x.is_current) || clubSeasons.find(x => x.status === 'active') || clubSeasons[0];
@@ -1559,7 +1563,7 @@ export function ClubProvider({
           membership_tier: memData.membership_tier || 'Full Senior Member',
           membership_expires_at:
             memData.membership_expires_at ||
-            new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            membershipTermEnd(todayIso(), clubsRef.current.find(c => c.id === memData.club_id)),
           is_executive: memData.is_executive ?? false,
           qr_code_token: memData.qr_code_token || secureToken('pass'),
           created_at: now,
@@ -2562,7 +2566,7 @@ export function ClubProvider({
       status: 'active',
       membership_status: 'pending',
       membership_tier: input.membership_tier || 'Supporter Season Pass',
-      membership_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      membership_expires_at: membershipTermEnd(todayIso(), clubsRef.current.find(c => c.id === clubId)),
       qr_code_token: pendingToken,
       is_executive: false,
       applied_at: new Date().toISOString(),

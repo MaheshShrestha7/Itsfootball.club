@@ -110,3 +110,46 @@ export function toCsv(rows: (string | number | null | undefined)[][]): string {
     )
     .join('\r\n');
 }
+
+// ------------------------------------------------------------------------------------------------
+// Membership terms. Same rule as membership_term_end() in supabase/migrations/20261025_membership_renewal.sql
+// ------------------------------------------------------------------------------------------------
+export type RenewalMode = 'anniversary' | 'fiscal';
+
+export interface RenewalRule {
+  membership_renewal?: RenewalMode | null;
+  /** 1-12; the fiscal year starts on the 1st of this month */
+  fiscal_year_start_month?: number | null;
+  /** Fiscal year: joining this many days (or fewer) before it starts counts for the next year */
+  fiscal_grace_days?: number | null;
+}
+
+export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/** Today as YYYY-MM-DD in local time */
+export function todayIso(now = new Date()): string {
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * When a membership starting (or renewed) on `from` (YYYY-MM-DD) runs out.
+ * Year to year: `months` later (1 Aug 2025 -> 1 Aug 2026; 29 Feb -> 28 Feb, as Postgres does).
+ * Fiscal year: the next fiscal year start after `from` (July year: 1 Aug 2025 -> 1 Jul 2026), or the
+ * one after that when `from` is within the grace period before it (30 days: 15 Jun 2026 -> 1 Jul 2027).
+ */
+export function membershipTermEnd(from: string, rule: RenewalRule | null | undefined, months = 12): string {
+  const [y, m, d] = from.slice(0, 10).split('-').map(Number);
+  if (rule?.membership_renewal === 'fiscal') {
+    const start = rule.fiscal_year_start_month || 7;
+    const nextYear = m >= start ? y + 1 : y;
+    const daysBefore = (Date.UTC(nextYear, start - 1, 1) - Date.UTC(y, m - 1, d)) / 86400000;
+    return `${daysBefore <= (rule.fiscal_grace_days || 0) ? nextYear + 1 : nextYear}-${pad(start)}-01`;
+  }
+  const total = m - 1 + months;
+  const year = y + Math.floor(total / 12);
+  const month = (total % 12) + 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${pad(month)}-${pad(Math.min(d, lastDay))}`;
+}

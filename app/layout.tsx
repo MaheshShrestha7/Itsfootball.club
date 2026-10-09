@@ -21,8 +21,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'itsfootball.club team' }],
   openGraph: { siteName: SITE_NAME, type: 'website', images: [DEFAULT_OG_IMAGE] },
   twitter: { card: 'summary_large_image', images: [DEFAULT_OG_IMAGE] },
-  // Home-screen app on iPhone (the web manifest is app/manifest.ts). 'default' keeps the status bar
-  // above the page, so nothing slides under the notch.
+  // Installable app (app/manifest.webmanifest; club pages swap in their own in [clubSlug]/layout.tsx)
+  manifest: '/manifest.webmanifest',
+  // Home-screen app on iPhone. 'default' keeps the status bar above the page, so nothing slides under the notch.
   appleWebApp: { capable: true, title: 'itsfootball', statusBarStyle: 'default' },
 };
 

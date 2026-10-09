@@ -1,7 +1,7 @@
 // Self-check for finance helpers.
 // Run: npx esbuild lib/finance.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { bookingFeeCents, parseMoneyToCents, paymentReference, toCsv } from './finance';
+import { bookingFeeCents, membershipTermEnd, parseMoneyToCents, paymentReference, toCsv } from './finance';
 import { matchesFileSignature } from './file-signature';
 
 assert.equal(parseMoneyToCents('12.50'), 1250);
@@ -35,4 +35,24 @@ assert.ok(!matchesFileSignature(text('MZ\x90\x00'), 'application/pdf'));
 assert.ok(matchesFileSignature(text('RIFF\0\0\0\0WEBPVP8 '), 'image/webp'));
 assert.ok(!matchesFileSignature(text('%PDF-1.7'), 'image/svg+xml'));
 
-console.log('finance: money, booking fee, CSV and file signatures OK');
+// Membership terms: year to year (the request's example) and fiscal year
+assert.equal(membershipTermEnd('2025-08-01', null), '2026-08-01');
+assert.equal(membershipTermEnd('2025-08-01', { membership_renewal: 'anniversary' }, 6), '2026-02-01');
+assert.equal(membershipTermEnd('2024-02-29', null), '2025-02-28');
+assert.equal(membershipTermEnd('2025-11-30', null, 3), '2026-02-28');
+const july = { membership_renewal: 'fiscal' as const, fiscal_year_start_month: 7 };
+assert.equal(membershipTermEnd('2025-08-01', july), '2026-07-01');
+assert.equal(membershipTermEnd('2026-06-30', july), '2026-07-01');
+assert.equal(membershipTermEnd('2026-07-01', july), '2027-07-01'); // renewing from the renewal date
+assert.equal(membershipTermEnd('2026-01-15', { membership_renewal: 'fiscal', fiscal_year_start_month: 1 }), '2027-01-01');
+// Grace period: joining within N days before the fiscal year starts runs to the next one
+const grace = { ...july, fiscal_grace_days: 30 };
+assert.equal(membershipTermEnd('2026-06-15', grace), '2027-07-01');
+assert.equal(membershipTermEnd('2026-06-01', grace), '2027-07-01'); // exactly 30 days before
+assert.equal(membershipTermEnd('2026-05-31', grace), '2026-07-01'); // 31 days before: this year
+assert.equal(membershipTermEnd('2026-07-01', grace), '2027-07-01'); // renewing from the renewal date
+assert.equal(membershipTermEnd('2026-06-15', { ...july, fiscal_grace_days: 0 }), '2026-07-01');
+assert.equal(membershipTermEnd('2025-12-20', { membership_renewal: 'fiscal', fiscal_year_start_month: 1, fiscal_grace_days: 14 }), '2027-01-01');
+assert.equal(membershipTermEnd('2026-06-15', { membership_renewal: 'anniversary', fiscal_grace_days: 30 }), '2027-06-15'); // year to year ignores it
+
+console.log('finance: money, booking fee, CSV, file signatures and membership terms OK');

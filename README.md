@@ -53,7 +53,9 @@ Built with **Next.js 15 (App Router) + React 19**, **Supabase** (Postgres, Auth,
 - Self-service membership applications, approval workflow and membership tiers
 - Virtual member pass with a unique QR code; admins verify members by scanning it
 - One-time email sign-in for members, and a "claim my memberships" flow for existing records
-- Availability RSVPs for matches through personal links, and a public matchday squad
+- Availability RSVPs for matches through personal links or, signed in, from the club app, and a public matchday squad
+- Membership renewal per club (Finance → Settings): year to year from the join date, or fiscal year to fiscal year from a chosen month
+- Club app (`/{club}/app`, installable per club): what's coming up, your availability, your pass, and the admin tools your roles allow, with a phone tab bar across the club site
 - ClubScore gamification: points for attendance, goals, assists, clean sheets and MOTM awards, with streaks, tiers and badges
 
 ### Admin portal (`/{club}/admin`)
@@ -294,7 +296,7 @@ app/
   api/                     Server routes (payments, upload, stripe, cron, email, push, custom-domain, ...)
   clubs/ create-club/ my-clubs/ faq/ auth/ unsubscribe/   Platform pages
   layout.tsx               Root layout: loads initialData, providers, fonts
-  sitemap.ts robots.ts manifest.ts
+  sitemap.ts robots.ts manifest.webmanifest/
 components/                Shared UI (TacticalPitch, ScoreboardDigitRoll, VirtualPassCard, tournament/*, ...)
 lib/
   club-context.tsx         Client app state, Realtime and cache (ClubProvider / useClub)

@@ -8,7 +8,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
-import { formatMoney } from '@/lib/finance';
+import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -889,7 +889,9 @@ export default function MemberPortalPage({
                         {daysLeft < 0 ? 'Your membership has expired' : `Your membership expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
                       </div>
                       <div className="text-note">
-                        Expiry date {activeMember.membership_expires_at}. Renewing early keeps your remaining days.
+                        {/* Same rule as the payment: from today or the current expiry, whichever is later */}
+                        Expiry date {activeMember.membership_expires_at}. Renewing now runs to{' '}
+                        {membershipTermEnd([todayIso(), activeMember.membership_expires_at.slice(0, 10)].sort()[1], club, plan.duration_months)}.
                       </div>
                     </div>
                     {!renewOpen && (

@@ -6,8 +6,9 @@ import { useClub } from '@/lib/club-context';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
-  bookingFeeCents, formatMoney, parseMoneyToCents, toCsv,
+  bookingFeeCents, formatMoney, parseMoneyToCents, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
 } from '@/lib/finance';
+import type { RenewalMode } from '@/lib/finance';
 import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
@@ -612,6 +613,85 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
 }
 
 // ------------------------------------------------------------------------------------------------
+const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+
+// How memberships renew. Saved through set_membership_renewal(), so Finance roles don't need the
+// branding page's rights over the rest of the club record.
+function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db']; flash: Shared['flash'] }) {
+  const { clubs, updateClubBranding } = useClub();
+  const club = clubs.find(c => c.id === clubId);
+  const savedMode = club?.membership_renewal || 'anniversary';
+  const savedMonth = club?.fiscal_year_start_month || 7;
+  const savedGrace = club?.fiscal_grace_days || 0;
+  const [mode, setMode] = useState<RenewalMode>(savedMode);
+  const [month, setMonth] = useState(savedMonth);
+  const [grace, setGrace] = useState(savedGrace);
+  useEffect(() => { setMode(savedMode); setMonth(savedMonth); setGrace(savedGrace); }, [savedMode, savedMonth, savedGrace]);
+
+  const rule = { membership_renewal: mode, fiscal_year_start_month: month, fiscal_grace_days: grace };
+  const today = todayIso();
+  const firstEnd = membershipTermEnd(today, rule);
+  const dirty = mode !== savedMode || (mode === 'fiscal' && (month !== savedMonth || grace !== savedGrace));
+  // The fiscal year start this year's joiners renew on, and the first day the grace period moves them to the next one
+  const nextStart = membershipTermEnd(today, { ...rule, fiscal_grace_days: 0 });
+  const graceFrom = (() => { const d = new Date(`${nextStart}T00:00:00Z`); d.setUTCDate(d.getUTCDate() - grace); return d.toISOString().slice(0, 10); })();
+
+  const save = async () => {
+    const { error } = await db!.rpc('set_membership_renewal', { p_club_id: clubId, p_mode: mode, p_fiscal_start_month: month, p_grace_days: grace });
+    if (error) return flash('error', error.message);
+    updateClubBranding(clubId, { membership_renewal: mode, fiscal_year_start_month: month, fiscal_grace_days: grace });
+    flash('ok', 'Renewal method saved. It applies to new members and renewals from now on.');
+  };
+
+  const option = (value: RenewalMode, title: string, desc: string) => (
+    <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.75rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+      border: `1px solid ${mode === value ? 'var(--club-primary)' : 'var(--border-subtle)'}` }}>
+      <input type="radio" name="renewal-mode" checked={mode === value} onChange={() => setMode(value)} style={{ marginTop: '0.2rem' }} />
+      <span>
+        <strong style={{ color: 'var(--text-primary)' }}>{title}</strong>
+        <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{desc}</span>
+      </span>
+    </label>
+  );
+
+  return (
+    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Membership renewal</h3>
+      <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))' }}>
+        {option('anniversary', 'Year to year', 'Each membership renews on the anniversary of the day it started: joined 1 August 2025, renews 1 August 2026.')}
+        {option('fiscal', 'Fiscal year to fiscal year', 'Everyone renews together at the start of the club’s fiscal year, whenever they joined.')}
+      </div>
+      {mode === 'fiscal' && (
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" htmlFor="fiscal-month">Fiscal year starts on the 1st of</label>
+          <select id="fiscal-month" className="form-select" style={{ maxWidth: 220 }} value={month} onChange={e => setMonth(Number(e.target.value))}>
+            {MONTH_NAMES.map((name, i) => <option key={name} value={i + 1}>{name}</option>)}
+          </select>
+        </div>
+      )}
+      {mode === 'fiscal' && (
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" htmlFor="fiscal-grace">Grace period (days before the fiscal year starts)</label>
+          <input id="fiscal-grace" className="form-input" type="number" inputMode="numeric" min={0} max={183} style={{ maxWidth: 140 }}
+            value={grace} onChange={e => setGrace(Math.max(0, Math.min(183, Math.round(Number(e.target.value) || 0))))} />
+          <p className="text-meta" style={{ marginTop: '0.35rem' }}>
+            {grace > 0
+              ? <>Anyone joining from <strong>{longDate(graceFrom)}</strong> renews on <strong>{longDate(membershipTermEnd(nextStart, rule))}</strong>, not {longDate(nextStart)}. 0 turns it off.</>
+              : 'Off: someone joining just before the fiscal year starts renews a few days later. Set the number of days that should count towards the next year instead.'}
+          </p>
+        </div>
+      )}
+      <p className="text-meta" role="status">
+        Someone joining today ({longDate(today)}) renews on <strong>{longDate(firstEnd)}</strong>, then on{' '}
+        <strong>{longDate(membershipTermEnd(firstEnd, rule))}</strong>.
+        {mode === 'fiscal' && ' Plan lengths (Months) are not used: every plan runs to the next fiscal year.'}
+        {' '}Existing members keep their current expiry until they next renew.
+      </p>
+      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={!dirty}><Save size={16} /> Save</button>
+    </div>
+  );
+}
+
 function SettingsTab({ club, db, load, flash, settings, plans, packages }: Shared & {
   settings: ClubPaymentSettings | null; plans: MembershipPlan[]; packages: SponsorshipPackage[];
 }) {
@@ -685,6 +765,8 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
           </>
         )}
       </div>
+
+      <RenewalPanel clubId={club.id} db={db} flash={flash} />
 
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Currency & bank transfer</h3>

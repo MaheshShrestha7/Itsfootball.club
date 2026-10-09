@@ -2330,3 +2330,153 @@ dialog.confirm-dialog::backdrop {
   .cs-points { font-size: 1.1rem; }
   .cs-caption, .cs-chevron { display: none; }
 }
+
+/* ==============================================================================
+   Club app: phone tab bar (components/ClubTabBar.tsx) and the My Club home (/[club]/app)
+   ============================================================================== */
+.club-tabbar,
+.club-tabbar-spacer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .club-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90; /* under the menu drawer (99/100) */
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    background: var(--bg-surface-elevated);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* Keeps the footer clear of the fixed bar */
+  .club-tabbar-spacer {
+    display: block;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.club-tabbar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 58px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out, color 100ms ease-out;
+}
+
+.club-tabbar a[aria-current='page'] {
+  color: var(--club-primary);
+}
+
+.club-tabbar a:active {
+  transform: scale(0.94);
+}
+
+.app-heading {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.app-live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  border-left: 4px solid var(--c-red);
+}
+
+.app-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 104px), 1fr));
+  gap: 0.6rem;
+}
+
+.app-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 88px;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(var(--tint-rgb), 0.03);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out, border-color 100ms ease-out;
+}
+
+.app-tile svg {
+  color: var(--club-primary);
+}
+
+.app-tile small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.app-tile:active {
+  transform: scale(0.97);
+}
+
+.app-answers {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.app-answers button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 100ms ease-out, background 100ms ease-out;
+}
+
+.app-answers button:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-tile:hover {
+    border-color: var(--club-primary);
+  }
+}

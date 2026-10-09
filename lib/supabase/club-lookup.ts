@@ -229,3 +229,27 @@ export async function listCalendarData(clubId: string, sinceIso: string) {
   ]);
   return { matches, events };
 }
+
+export interface ClubAppIconsRow {
+  slug: string;
+  app_icons: { icon192?: string; icon512?: string; maskable512?: string } | null;
+}
+
+/** The club's home-screen icons (null: none made yet, or the column isn't there yet) */
+export async function findClubAppIcons(slug: string): Promise<ClubAppIconsRow['app_icons']> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const club = await findClubBySlug(slug);
+  if (!url || !key || !club) return null;
+  try {
+    const res = await fetch(`${url}/rest/v1/clubs?select=app_icons&id=eq.${club.id}&is_active=eq.true`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as ClubAppIconsRow[];
+    return rows[0]?.app_icons ?? null;
+  } catch {
+    return null;
+  }
+}
