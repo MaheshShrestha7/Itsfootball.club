@@ -168,7 +168,7 @@ export default function AdminSponsorsPage({
             Platinum sponsors receive premier width &amp; larger logos, cascading down to Gold, Silver, and Grassroots.
           </span>
         </div>
-        <button
+        <button data-view-ok
           type="button"
           onClick={() => setShowLivePreview(!showLivePreview)}
           className="btn btn-secondary btn-sm"
@@ -362,7 +362,7 @@ export default function AdminSponsorsPage({
                 <button onClick={() => handleOpenEdit(sponsor)} title={`Edit ${sponsor.name}`} aria-label={`Edit ${sponsor.name}`} className="btn btn-secondary btn-sm" style={{ minWidth: '40px', minHeight: '40px' }}>
                   <Edit2 size={14} />
                 </button>
-                <button
+                <button data-needs-full
                   onClick={async () => {
                     if (await confirmAction({ title: `Delete sponsor "${sponsor.name}"?`, message: 'They will be removed from your club site. This cannot be undone.', confirmLabel: 'Delete sponsor', danger: true })) {
                       deleteSponsor(sponsor.id);

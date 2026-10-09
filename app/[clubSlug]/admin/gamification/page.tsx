@@ -262,7 +262,7 @@ export default function AdminGamificationPage({
 
             <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
               <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input aria-label="Search players"
+              <input data-view-ok aria-label="Search players"
                 type="search"
                 className="form-input"
                 placeholder="Search by name or squad number..."
@@ -274,7 +274,7 @@ export default function AdminGamificationPage({
 
             <div className="row row-wrap" style={{ marginBottom: '1rem' }}>
               {(['all', 'iron', 'fire', 'building', 'inactive'] as const).map(s => (
-                <button key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}
+                <button data-view-ok key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}
                   className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}>
                   {s === 'all' ? 'All' : STATUS[s].label} ({s === 'all' ? streakRows.length : streakRows.filter(r => r.status === s).length})
                 </button>

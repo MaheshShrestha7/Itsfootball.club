@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireClubAdmin, requireAdminOfClub } from '@/lib/supabase/server-auth';
+import { requireClubPerm, requireUser } from '@/lib/supabase/server-auth';
 import { storeReceipt, receiptUrl, MAX_RECEIPT_SIZE } from '@/lib/storage/receipts';
 import { durableRateLimit } from '@/lib/rate-limit';
 
-// GET ?type=payment|expense&id=...  -> { url } short-lived link to a receipt (club admins only)
+// GET ?type=payment|expense&id=...  -> { url } short-lived link to a receipt (finance viewers only)
 export async function GET(req: NextRequest) {
-  const auth = await requireClubAdmin(req);
+  const auth = await requireUser(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const type = req.nextUrl.searchParams.get('type');
@@ -16,15 +16,15 @@ export async function GET(req: NextRequest) {
   // Read with the caller's own session: row-level security only returns rows of clubs they run
   const { data } = await auth.supabase.from(table).select('club_id, receipt_key').eq('id', id).maybeSingle();
   if (!data?.receipt_key) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
-  const { data: isAdmin } = await auth.supabase.rpc('is_club_admin', { p_club_id: data.club_id });
-  if (isAdmin !== true) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
+  const { data: canSee } = await auth.supabase.rpc('has_club_perm', { p_club_id: data.club_id, p_areas: ['finance'], p_level: 'view' });
+  if (canSee !== true) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
 
   const url = await receiptUrl(data.receipt_key);
   if (!url) return NextResponse.json({ error: 'Receipt storage is not available right now.' }, { status: 503 });
   return NextResponse.json({ url });
 }
 
-// POST multipart { clubId, receipt } -> { key }  receipt upload for an expense (club admins only)
+// POST multipart { clubId, receipt } -> { key }  receipt upload for an expense (finance editors only)
 export async function POST(req: NextRequest) {
   if (Number(req.headers.get('content-length') || 0) > MAX_RECEIPT_SIZE + 512 * 1024) {
     return NextResponse.json({ error: 'Receipt must be 5 MB or smaller.' }, { status: 413 });
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const file = form?.get('receipt');
   if (!clubId || !(file instanceof File)) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubPerm(req, clubId, ['finance'], 'edit');
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   if (!(await durableRateLimit(`receipt:${auth.userId}`, 30, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes.' }, { status: 429 });

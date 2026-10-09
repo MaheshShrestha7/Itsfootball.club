@@ -166,7 +166,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
         </div>
       ) : (
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openAlbum(null)} style={{ marginBottom: '1rem' }}>
+          <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openAlbum(null)} style={{ marginBottom: '1rem' }}>
             <ArrowLeft size={14} /> All albums
           </button>
 
@@ -189,7 +189,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
             {renameTo === null && (
               <div className="row">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenameTo(album.name)}><Pencil size={14} /> Rename</button>
-                <button type="button" className="btn btn-danger btn-sm" onClick={deleteAlbum}><Trash2 size={14} /> Delete album</button>
+                <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={deleteAlbum}><Trash2 size={14} /> Delete album</button>
               </div>
             )}
           </div>
@@ -253,7 +253,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
                         <Star size={14} fill={album.cover?.id === photo.id ? 'currentColor' : 'none'} />
                         {album.cover?.id === photo.id ? 'Cover' : 'Make cover'}
                       </button>
-                      <button type="button" className="btn btn-danger btn-sm shrink-0" aria-label="Delete photo" title="Delete photo" onClick={() => deletePhoto(photo)}>
+                      <button data-needs-full type="button" className="btn btn-danger btn-sm shrink-0" aria-label="Delete photo" title="Delete photo" onClick={() => deletePhoto(photo)}>
                         <Trash2 size={14} />
                       </button>
                     </div>

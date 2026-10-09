@@ -337,7 +337,7 @@ export interface ClubAnalytics {
   id: string;
   club_id: string;
   event_type: string;
-  page_path: string;
+  page_path: string | null;
   visitor_hash?: string;
   referrer?: string;
   metadata?: Record<string, unknown>;

@@ -376,7 +376,7 @@ export default function AdminTournamentDetailPage({
         }}
       >
         {tournament.format !== 'league' && (
-          <button
+          <button data-view-ok
             onClick={() => setActiveTab('bracket')}
             style={{
               padding: '0.75rem 1.25rem',
@@ -399,7 +399,7 @@ export default function AdminTournamentDetailPage({
         )}
 
         {tournament.format !== 'knockout' && (
-          <button
+          <button data-view-ok
             onClick={() => setActiveTab('standings')}
             style={{
               padding: '0.75rem 1.25rem',
@@ -421,7 +421,7 @@ export default function AdminTournamentDetailPage({
           </button>
         )}
 
-        <button
+        <button data-view-ok
           onClick={() => setActiveTab('fixtures')}
           style={{
             padding: '0.75rem 1.25rem',
@@ -442,7 +442,7 @@ export default function AdminTournamentDetailPage({
           <span>Fixtures & Results ({tourneyMatches.length})</span>
         </button>
 
-        <button
+        <button data-view-ok
           onClick={() => setActiveTab('teams')}
           style={{
             padding: '0.75rem 1.25rem',

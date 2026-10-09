@@ -267,7 +267,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             <span style={{ color: 'var(--c-amber)', fontWeight: 700, textTransform: 'uppercase' }}>
               {userRole || 'Supporter'}
             </span>
-            . Only the club&apos;s owner and admins can open this page. Ask a club admin to give your account admin access.
+            . Only the club&apos;s Owner and people with an admin role can open this page. Ask the Owner or a Club Admin to give your account a role.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>

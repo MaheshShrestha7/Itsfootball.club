@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { requireAdminOfClub, requireClubOwner } from '@/lib/supabase/server-auth';
+import { requireClubPerm, requireClubOwner } from '@/lib/supabase/server-auth';
 import { addHostname, findHostname, isCloudflareConfigured, isLive, removeHostname } from '@/lib/cloudflare';
 import { normalizeDomain } from '@/lib/slugs';
 
@@ -26,10 +26,10 @@ async function statusOf(domain: string): Promise<DomainStatus> {
   return { domain, status: isLive(await findHostname(domain)) ? 'live' : 'pending' };
 }
 
-/** Where the club's domain is up to. Any admin of the club. */
+/** Where the club's domain is up to. Anyone who can see the branding page. */
 export async function GET(req: NextRequest) {
   const clubId = req.nextUrl.searchParams.get('clubId') || '';
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubPerm(req, clubId, ['branding']);
   if (!auth.ok) return error(auth.status, auth.error);
   const db = getServiceClient();
   if (!db || !isCloudflareConfigured()) return notConfigured(db);

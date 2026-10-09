@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { toClubRole } from './types';
+import type { AccessLevel } from '../permissions';
 
 export type AuthCheck =
   | { ok: true; userId: string; token: string; supabase: SupabaseClient }
@@ -29,23 +29,6 @@ export async function requireUser(request: Request): Promise<AuthCheck> {
   return { ok: true, userId: data.user.id, token, supabase };
 }
 
-/** requireUser, and the caller runs at least one club (owner, or an owner/admin member) */
-export async function requireClubAdmin(request: Request): Promise<AuthCheck> {
-  const auth = await requireUser(request);
-  if (!auth.ok) return auth;
-  const { userId, supabase } = auth;
-  const [owned, memberships] = await Promise.all([
-    supabase.from('clubs').select('id').eq('owner_id', userId).limit(1),
-    supabase.from('club_members').select('role, roles').eq('user_id', userId),
-  ]);
-  // Roles are squad labels such as 'Player, Club Admin'
-  const isAdmin = (memberships.data || []).some(m => ['owner', 'admin'].includes(toClubRole(m.role, m.roles)));
-  if (!owned.data?.length && !isAdmin) {
-    return { ok: false, status: 403, error: 'Only club administrators can upload files.' };
-  }
-  return auth;
-}
-
 /** requireUser, and the caller is the club's Owner (not just a Club Admin) */
 export async function requireClubOwner(request: Request, clubId: string): Promise<AuthCheck> {
   const auth = await requireUser(request);
@@ -56,10 +39,18 @@ export async function requireClubOwner(request: Request, clubId: string): Promis
     : { ok: false, status: 403, error: 'Only the club Owner can do this.' };
 }
 
-/** requireClubAdmin, narrowed to one club (admins of other clubs get 403) */
-export async function requireAdminOfClub(request: Request, clubId: string): Promise<AuthCheck> {
-  const auth = await requireClubAdmin(request);
+/**
+ * requireUser, and the caller's access roles at this club reach `level` on one of `areas`
+ * (null: on any area). Owner and Club Admin always pass. See lib/permissions.ts.
+ */
+export async function requireClubPerm(
+  request: Request,
+  clubId: string,
+  areas: string[] | null,
+  level: AccessLevel = 'view'
+): Promise<AuthCheck> {
+  const auth = await requireUser(request);
   if (!auth.ok) return auth;
-  const { data } = await auth.supabase.rpc('is_club_admin', { p_club_id: clubId });
-  return data === true ? auth : { ok: false, status: 403, error: 'You are not an administrator of this club.' };
+  const { data } = await auth.supabase.rpc('has_club_perm', { p_club_id: clubId, p_areas: areas, p_level: level });
+  return data === true ? auth : { ok: false, status: 403, error: 'Your role at this club does not allow this.' };
 }

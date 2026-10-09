@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminOfClub } from '@/lib/supabase/server-auth';
+import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sendEmail } from '@/lib/email/send';
 
@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
   if (!message) return NextResponse.json({ error: 'Please write a message.' }, { status: 400 });
   if (message.length > 4000) return NextResponse.json({ error: 'Your message is too long (4000 characters maximum).' }, { status: 400 });
 
-  const auth = await requireAdminOfClub(req, clubId);
+  // Anyone with an admin role at the club
+  const auth = await requireClubPerm(req, clubId, null);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   // ponytail: per-isolate throttle only; add a support_requests table if abuse ever shows up

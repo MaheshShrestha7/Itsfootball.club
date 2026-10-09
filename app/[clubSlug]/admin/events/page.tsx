@@ -220,7 +220,7 @@ export default function AdminEventsPage({
         <div className="row row-loose row-wrap">
           {/* Season Filter Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button
+            <button data-view-ok
               onClick={() => setSeasonFilter('ALL')}
               style={{
                 padding: '0.35rem 0.85rem',
@@ -236,7 +236,7 @@ export default function AdminEventsPage({
               All Seasons
             </button>
             {clubSeasons.map(s => (
-              <button
+              <button data-view-ok
                 key={s.id}
                 onClick={() => setSeasonFilter(s.name)}
                 style={{
@@ -382,7 +382,7 @@ export default function AdminEventsPage({
                 <Edit2 size={14} />
               </button>
 
-              <button
+              <button data-needs-full
                 onClick={async () => {
                   if (await confirmAction({ title: `Delete "${evt.title}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete event', danger: true })) {
                     deleteEvent(evt.id);

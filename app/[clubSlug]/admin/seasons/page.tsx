@@ -477,7 +477,7 @@ export default function AdminSeasonsPage({
                       <span>Edit</span>
                     </button>
 
-                    <button
+                    <button data-needs-full
                       onClick={() => setSeasonToDelete(season)}
                       className="btn btn-secondary btn-sm"
                       style={{ color: 'var(--c-red)', display: 'flex', alignItems: 'center' }}

@@ -119,7 +119,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
       <button onClick={() => onEdit(m)} className="btn btn-secondary btn-sm" title={`Edit ${m.full_name}`} aria-label={`Edit ${m.full_name}`}>
         <Edit2 size={14} />
       </button>
-      <button onClick={() => onDelete(m.id, m.full_name)} className="btn btn-danger btn-sm" title={`Delete ${m.full_name}`} aria-label={`Delete ${m.full_name}`}>
+      <button data-needs-full onClick={() => onDelete(m.id, m.full_name)} className="btn btn-danger btn-sm" title={`Delete ${m.full_name}`} aria-label={`Delete ${m.full_name}`}>
         <Trash2 size={14} />
       </button>
     </>

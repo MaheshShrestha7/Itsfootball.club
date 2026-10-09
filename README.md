@@ -242,13 +242,20 @@ availability, event and renewal reminders. Each email is sent at most once (`ema
 
 | Role | Can do |
 | --- | --- |
-| `owner` | Everything for their club, including billing (Stripe Connect), custom domain and ownership-level settings |
-| `admin` | Full admin portal access |
-| `staff`, `player`, `member`, `supporter` | Member features: pass, availability, ClubScore. What they can see is limited by RLS |
+| Owner (`clubs.owner_id`) | Everything for their club, including billing (Stripe Connect), custom domain and ownership-level settings |
+| Club Admin (super user) | Every admin area, plus creating access roles, setting their permissions and deciding who holds them |
+| Access roles (Treasurer, Manager, Youth Coach, Secretary, Welfare Officer, Media Officer, Commercial Officer, Volunteer, or the club's own) | The admin areas their role allows, each at view, edit (create and change) or full (also delete) |
+| `player`, `member`, `supporter` | Member features: pass, availability, ClubScore. What they can see is limited by RLS |
 | Visitor (signed out) | Public pages only, read through public-safe views |
 
-The UI hides admin controls by role (`AdminGuard`, `hasClubAdminAccess`), but **the database is the
-authority**: RLS policies use helpers such as `is_club_admin(club_id)`.
+Every club starts with the default access roles above (`club_access_roles`); a Club Admin edits them or
+adds new ones on **Admin → Roles & Permissions**. A member holds a role by carrying its name as a squad
+label (Squad & Players page), and several roles combine to the highest level per area. Only the Owner or
+a Club Admin can give or remove access roles.
+
+The UI hides admin pages by permission (`AdminGuard`, `useAuth().can`), but **the database is the
+authority**: RLS policies use `has_club_perm(club_id, areas, level)`, and `is_club_admin(club_id)` for
+super-user actions. Area keys live in `lib/permissions.ts`.
 
 ---
 

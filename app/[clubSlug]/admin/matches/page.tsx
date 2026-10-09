@@ -552,7 +552,7 @@ export default function AdminMatchesPage({
         {/* Status Tabs */}
         <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
           {(['all', 'upcoming', 'completed', 'live'] as const).map(tab => (
-            <button
+            <button data-view-ok
               key={tab}
               onClick={() => setStatusTab(tab)}
               style={{
@@ -576,7 +576,7 @@ export default function AdminMatchesPage({
         {/* Filters and Search Input */}
         <div className="row row-loose row-wrap">
           {/* Match Type Dropdown */}
-          <select aria-label="Match type"
+          <select data-view-ok aria-label="Match type"
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="form-input"
@@ -589,7 +589,7 @@ export default function AdminMatchesPage({
           </select>
 
           {/* Season Dropdown */}
-          <select aria-label="Season"
+          <select data-view-ok aria-label="Season"
             value={seasonFilter}
             onChange={e => setSeasonFilter(e.target.value)}
             className="form-input"
@@ -604,7 +604,7 @@ export default function AdminMatchesPage({
           {/* Search Box */}
           <div style={{ position: 'relative', minWidth: 'min(220px, 100%)' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input aria-label="Search fixtures"
+            <input data-view-ok aria-label="Search fixtures"
               type="text"
               placeholder="Search opponent, title, venue..."
               value={searchQuery}
@@ -917,7 +917,7 @@ export default function AdminMatchesPage({
                       <Edit2 size={13} />
                     </button>
 
-                    <button
+                    <button data-needs-full
                       type="button"
                       onClick={() => handleDeleteMatch(m)}
                       className="btn btn-secondary btn-sm"

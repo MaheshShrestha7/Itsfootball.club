@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { User } from '@supabase/supabase-js';
 import { ClubRole, toClubRole } from './supabase/types';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
+import { AccessLevel, levelAtLeast } from './permissions';
 
 export interface UserProfile {
   id: string;
@@ -13,6 +14,16 @@ export interface UserProfile {
   // club_id -> role. Read from the database (club owner / club_members), never from the browser.
   club_roles: Record<string, ClubRole>;
   created_at: string;
+}
+
+/** What the signed-in user may do in one club's admin area (from my_club_permissions()) */
+export interface ClubAccess {
+  /** Owner or Club Admin: everything, including managing roles */
+  isAdmin: boolean;
+  /** Names of the access roles they hold, e.g. ['Treasurer'] */
+  roleNames: string[];
+  /** Highest level per admin area across those roles */
+  areas: Record<string, AccessLevel>;
 }
 
 export interface AuthResult {
@@ -32,7 +43,13 @@ interface AuthContextType {
   resendConfirmation: (email: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   getUserRoleForClub: (clubId: string) => ClubRole | null;
+  /** Can open the admin area at all: Owner, Club Admin, or any access role */
   hasClubAdminAccess: (clubId: string) => boolean;
+  /** Owner or Club Admin: every area, plus managing access roles */
+  isClubSuperUser: (clubId: string) => boolean;
+  /** Reaches `level` on an admin area (see lib/permissions.ts) */
+  can: (clubId: string, area: string, level?: AccessLevel) => boolean;
+  getClubAccess: (clubId: string) => ClubAccess | null;
   /** Shows a role in the UI straight away (e.g. right after creating a club). The database still decides what is allowed. */
   assignClubRole: (clubId: string, role: ClubRole) => void;
   refreshRoles: () => Promise<void>;
@@ -83,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [dbRoles, setDbRoles] = useState<Record<string, ClubRole>>({});
   const [uiRoles, setUiRoles] = useState<Record<string, ClubRole>>({});
+  const [access, setAccess] = useState<Record<string, ClubAccess>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const loadRoles = useCallback(async (userId: string) => {
@@ -90,11 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!client) return;
     // Links approved memberships made under this email (by a club admin) to the account first,
     // then reads every linked row, including the `roles` labels the claim RPC doesn't return
-    const [owned, memberships] = await Promise.all([
+    const [owned, memberships, perms] = await Promise.all([
       client.from('clubs').select('id').eq('owner_id', userId),
       client.rpc('claim_my_memberships').then(() =>
         client.from('club_members').select('club_id, role, roles').eq('user_id', userId)
       ),
+      client.rpc('my_club_permissions'),
     ]);
 
     const roles: Record<string, ClubRole> = {};
@@ -106,6 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       roles[row.id] = 'owner';
     });
     setDbRoles(roles);
+    // Without the access-roles migration this errors and only Owner / Club Admin get in, as before
+    const byClub: Record<string, ClubAccess> = {};
+    ((perms.data || []) as { club_id: string; is_admin: boolean; role_names: string[] | null; permissions: Record<string, AccessLevel> | null }[]).forEach(row => {
+      byClub[row.club_id] = { isAdmin: row.is_admin, roleNames: row.role_names || [], areas: row.permissions || {} };
+    });
+    setAccess(byClub);
     // Anything the database now confirms no longer needs a UI-only override
     setUiRoles(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => !roles[id])));
   }, []);
@@ -130,18 +155,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false;
+    let rolesFor: string | null = null;
     const apply = async (user: User | null) => {
       if (cancelled) return;
       if (!user) {
+        rolesFor = null;
         setAuthUser(null);
         setDbRoles({});
         setUiRoles({});
+        setAccess({});
         setIsLoading(false);
         return;
       }
+      // A newly signed-in user waits for their roles (otherwise the admin area flashes "Access
+      // Restricted"); token refreshes for the same user reload them in the background
+      if (user.id !== rolesFor) setIsLoading(true);
       setAuthUser(user);
       try {
         await loadRoles(user.id);
+        rolesFor = user.id;
       } catch (err) {
         console.warn('Could not load club roles:', err);
       }
@@ -238,13 +270,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
-  const hasClubAdminAccess = useCallback(
+  const isClubSuperUser = useCallback(
     (clubId: string): boolean => {
       const role = getUserRoleForClub(clubId);
-      return role === 'owner' || role === 'admin';
+      return role === 'owner' || role === 'admin' || !!access[clubId]?.isAdmin;
     },
-    [getUserRoleForClub]
+    [getUserRoleForClub, access]
   );
+
+  const hasClubAdminAccess = useCallback(
+    (clubId: string): boolean => isClubSuperUser(clubId) || Object.keys(access[clubId]?.areas || {}).length > 0,
+    [isClubSuperUser, access]
+  );
+
+  const can = useCallback(
+    (clubId: string, area: string, level: AccessLevel = 'view'): boolean =>
+      isClubSuperUser(clubId) || levelAtLeast(access[clubId]?.areas[area], level),
+    [isClubSuperUser, access]
+  );
+
+  const getClubAccess = useCallback((clubId: string): ClubAccess | null => access[clubId] || null, [access]);
 
   const assignClubRole = useCallback((clubId: string, role: ClubRole) => {
     setUiRoles(prev => ({ ...prev, [clubId]: role }));
@@ -266,6 +311,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         getUserRoleForClub,
         hasClubAdminAccess,
+        isClubSuperUser,
+        can,
+        getClubAccess,
         assignClubRole,
         refreshRoles,
       }}

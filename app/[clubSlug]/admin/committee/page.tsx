@@ -179,7 +179,7 @@ export default function AdminCommitteePage({
 
           {/* Season Filter Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button
+            <button data-view-ok
               onClick={() => setSeasonFilter('ALL')}
               style={{
                 padding: '0.35rem 0.85rem',
@@ -195,7 +195,7 @@ export default function AdminCommitteePage({
               All Seasons
             </button>
             {clubSeasons.map(s => (
-              <button
+              <button data-view-ok
                 key={s.id}
                 onClick={() => setSeasonFilter(s.name)}
                 style={{

@@ -4,6 +4,7 @@ import React, { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Plus, Save, Trash2, ImagePlus, X, PackageCheck, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
 import { MAX_PHOTOS, parseSizes } from '@/lib/shop';
@@ -18,6 +19,9 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
+  // A role may hand orders out (shop-orders) while only viewing the products
+  const { can } = useAuth();
+  const canHandOut = can(club.id, 'shop', 'edit') || can(club.id, 'shop-orders', 'edit');
   const db = getSupabaseClient();
 
   const [products, setProducts] = useState<ShopProduct[] | null>(null);
@@ -49,7 +53,8 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
   };
 
   const handOut = async (o: Payment, done: boolean) => {
-    const { error } = await db!.from('payments').update({ fulfilled_at: done ? new Date().toISOString() : null }).eq('id', o.id);
+    // Through a function: shop roles may hand orders out but not edit payments
+    const { error } = await db!.rpc('set_order_handed_out', { p_payment_id: o.id, p_done: done });
     if (error) return notify(error.message);
     load();
   };
@@ -92,7 +97,7 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
             Orders {open.length > 0 && <span className="badge" style={{ marginLeft: '0.4rem', background: '#F59E0B', color: '#000' }}>{open.length} open</span>}
           </h2>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-            <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> Show handed out &amp; refunded
+            <input data-view-ok type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> Show handed out &amp; refunded
           </label>
         </div>
         <div className="admin-table-container">
@@ -123,10 +128,10 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
                   </td>
                   <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                     {o.status === 'paid' && !o.fulfilled_at && (
-                      <button type="button" className="btn btn-primary btn-sm" onClick={() => handOut(o, true)}><PackageCheck size={14} /> Handed out</button>
+                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-primary btn-sm" onClick={() => handOut(o, true)}><PackageCheck size={14} /> Handed out</button>
                     )}
                     {o.fulfilled_at && (
-                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => handOut(o, false)}><Undo2 size={14} /> Undo</button>
+                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-secondary btn-sm" onClick={() => handOut(o, false)}><Undo2 size={14} /> Undo</button>
                     )}
                   </td>
                 </tr>
@@ -270,7 +275,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
             <input type="checkbox" checked={draft.is_active} onChange={e => setDraft({ ...draft, is_active: e.target.checked })} /> On sale
           </label>
           <button type="button" className="btn btn-primary btn-sm" onClick={save}>{saved ? <CheckCircle2 size={14} /> : <Save size={14} />} {saved ? 'Saved' : 'Save'}</button>
-          <button type="button" className="btn btn-danger btn-sm" onClick={remove} aria-label={`Delete ${product.name}`}><Trash2 size={14} /></button>
+          <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={remove} aria-label={`Delete ${product.name}`}><Trash2 size={14} /></button>
         </div>
       </div>
     </div>

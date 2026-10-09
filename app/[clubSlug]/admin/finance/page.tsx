@@ -125,11 +125,11 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <label className="form-label m-0" htmlFor="finance-season">Season</label>
-          <select id="finance-season" className="form-select" style={{ width: 'auto' }} value={season} onChange={e => setSeason(e.target.value)}>
+          <select data-view-ok id="finance-season" className="form-select" style={{ width: 'auto' }} value={season} onChange={e => setSeason(e.target.value)}>
             <option value="all">All seasons</option>
             {seasons.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} /> CSV</button>
+          <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} /> CSV</button>
         </div>
       </div>
 
@@ -144,7 +144,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
 
       <div role="tablist" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
         {TABS.map(t => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+          <button data-view-ok key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
             className={`btn btn-sm ${tab === t.id ? 'btn-primary' : 'btn-secondary'}`}>
             {t.label}
             {t.id === 'income' && payments.some(p => p.status === 'awaiting_review') && (
@@ -350,11 +350,11 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
   return (
     <div className="stack">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-        <select className="form-select" style={{ width: 'auto' }} value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
+        <select data-view-ok className="form-select" style={{ width: 'auto' }} value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
           <option value="all">All statuses</option>
           {Object.keys(STATUS_COLOR).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
         </select>
-        <select className="form-select" style={{ width: 'auto' }} value={kind} onChange={e => setKind(e.target.value)} aria-label="Filter by type">
+        <select data-view-ok className="form-select" style={{ width: 'auto' }} value={kind} onChange={e => setKind(e.target.value)} aria-label="Filter by type">
           <option value="all">All types</option>
           {Object.entries(PAYMENT_KIND_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
@@ -446,7 +446,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                   {p.rejection_reason && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{p.rejection_reason}</div>}
                 </td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
-                  {p.receipt_key && <button type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} /> Receipt</button>}
+                  {p.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} /> Receipt</button>}
                   {p.status === 'awaiting_review' && (
                     <>
                       <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> Verify</button>
@@ -597,9 +597,9 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
                 <td style={cell}>{e.vendor}</td>
                 <td style={{ ...cell, fontWeight: 800 }}>{formatMoney(e.amount_cents, e.currency)}</td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
-                  {e.receipt_key && <button type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('expense', e.id)}><FileText size={14} /></button>}
+                  {e.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('expense', e.id)}><FileText size={14} /></button>}
                   <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} onClick={() => edit(e)}>Edit</button>
-                  <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => remove(e)} aria-label="Delete expense"><Trash2 size={14} /></button>
+                  <button data-needs-full type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => remove(e)} aria-label="Delete expense"><Trash2 size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -783,7 +783,7 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
                 <input type="checkbox" checked={row.is_active} onChange={e => set({ is_active: e.target.checked } as Partial<T>)} /> Active
               </label>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => save(r.id)}><Save size={14} /></button>
-              <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(r.id)} aria-label="Delete"><Trash2 size={14} /></button>
+              <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={() => remove(r.id)} aria-label="Delete"><Trash2 size={14} /></button>
               <textarea className="form-textarea" rows={2} style={{ flexBasis: '100%' }} aria-label={textField === 'benefits' ? 'Benefits' : 'Description'}
                 placeholder={textField === 'benefits' ? 'Benefits (logo on kit, website, matchday banner…)' : 'Short description (optional)'}
                 value={(row[textField] as string) || ''} onChange={e => set({ [textField]: e.target.value } as Partial<T>)} />

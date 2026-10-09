@@ -2267,7 +2267,7 @@ export function ClubProvider({
 
     // Match Center peak viewers
     const liveMatch = matches.find(m => m.club_id === clubId && m.status === 'live');
-    const matchViews = clubViews.filter(v => v.page_path.includes('/match') || v.page_path.includes('match-center')).length;
+    const matchViews = clubViews.filter(v => v.page_path?.includes('/match') || v.page_path?.includes('match-center')).length;
     const matchCenterFans = liveMatch ? matchViews : 0;
 
     // Device breakdown
@@ -2281,11 +2281,11 @@ export function ClubProvider({
 
     // Section breakdown
     const sectionHits: Record<string, number> = {
-      'Live Match-Day Center': clubViews.filter(v => v.page_path.includes('/match')).length * 5,
-      'First Team Squad & Stats': clubViews.filter(v => v.page_path.includes('/squad') || v.page_path.includes('#squad')).length * 5,
-      'Fixtures & Results': clubViews.filter(v => v.page_path.includes('/events') || v.page_path.includes('#fixtures')).length * 5,
-      'Digital Member Pass Portal': clubViews.filter(v => v.page_path.includes('/member')).length * 5,
-      'Home Ground Guide': clubViews.filter(v => v.page_path.includes('/branding') || v.page_path.includes('stadium')).length * 5,
+      'Live Match-Day Center': clubViews.filter(v => v.page_path?.includes('/match')).length * 5,
+      'First Team Squad & Stats': clubViews.filter(v => v.page_path?.includes('/squad') || v.page_path?.includes('#squad')).length * 5,
+      'Fixtures & Results': clubViews.filter(v => v.page_path?.includes('/events') || v.page_path?.includes('#fixtures')).length * 5,
+      'Digital Member Pass Portal': clubViews.filter(v => v.page_path?.includes('/member')).length * 5,
+      'Home Ground Guide': clubViews.filter(v => v.page_path?.includes('/branding') || v.page_path?.includes('stadium')).length * 5,
     };
     const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
 

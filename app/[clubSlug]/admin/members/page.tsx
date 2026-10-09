@@ -321,7 +321,7 @@ export default function AdminMembersPage({
         paddingBottom: '0.75rem',
       }}>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
+          <button data-view-ok
             type="button"
             onClick={() => setActiveTab('pending')}
             style={{
@@ -354,7 +354,7 @@ export default function AdminMembersPage({
             )}
           </button>
 
-          <button
+          <button data-view-ok
             type="button"
             onClick={() => setActiveTab('active')}
             style={{
@@ -375,7 +375,7 @@ export default function AdminMembersPage({
             <span>Active Members ({approvedMembers.length})</span>
           </button>
 
-          <button
+          <button data-view-ok
             type="button"
             onClick={() => setActiveTab('rejected')}
             style={{
@@ -396,7 +396,7 @@ export default function AdminMembersPage({
             <span>Rejected ({rejectedMembers.length})</span>
           </button>
 
-          <button
+          <button data-view-ok
             type="button"
             onClick={() => setActiveTab('messages')}
             style={{
@@ -433,7 +433,7 @@ export default function AdminMembersPage({
         {activeTab !== 'messages' && (
           <div style={{ position: 'relative', minWidth: 'min(240px, 100%)' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input aria-label="Search members"
+            <input data-view-ok aria-label="Search members"
               type="text"
               placeholder="Search by name, email..."
               value={searchQuery}

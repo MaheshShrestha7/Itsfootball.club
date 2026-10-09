@@ -36,7 +36,7 @@ export function AlbumGrid({ albums, onOpen }: { albums: Album[]; onOpen: (name: 
   return (
     <div className="gallery-grid">
       {albums.map(a => (
-        <button key={a.name} type="button" className="gallery-tile" onClick={() => onOpen(a.name)}>
+        <button data-view-ok key={a.name} type="button" className="gallery-tile" onClick={() => onOpen(a.name)}>
           {a.cover ? (
             <img src={a.cover.media_url} alt="" loading="lazy" decoding="async" />
           ) : (

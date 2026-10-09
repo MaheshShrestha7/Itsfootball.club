@@ -369,7 +369,7 @@ export default function AdminHeroSliderPage({
           </div>
 
           <div className="row">
-            <button
+            <button data-view-ok
               onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : Math.max(0, activePinned.length - 1)))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
@@ -377,7 +377,7 @@ export default function AdminHeroSliderPage({
             >
               <ChevronLeft size={16} />
             </button>
-            <button
+            <button data-view-ok
               onClick={() => setPreviewIndex(prev => (prev + 1) % Math.max(1, activePinned.length))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
@@ -478,7 +478,7 @@ export default function AdminHeroSliderPage({
             borderTop: '1px solid var(--border-subtle)'
           }}>
             {activePinned.map((item, idx) => (
-              <button
+              <button data-view-ok
                 key={item.id}
                 onClick={() => setPreviewIndex(idx)}
                 style={{

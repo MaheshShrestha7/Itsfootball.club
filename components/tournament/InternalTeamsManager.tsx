@@ -296,7 +296,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     >
                       <Edit2 size={13} />
                     </button>
-                    <button
+                    <button data-needs-full
                       onClick={() => handleDelete(team.id, team.name)}
                       style={{
                         background: 'transparent',

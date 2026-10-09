@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -303,7 +303,7 @@ function AvailabilityHub() {
                 <label htmlFor="availability-availability-for" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                   Availability For:
                 </label>
-                <select id="availability-availability-for"
+                <select data-view-ok id="availability-availability-for"
                   className="form-select"
                   value={selectedMatchId}
                   onChange={e => setSelectedMatchId(e.target.value)}
@@ -577,7 +577,7 @@ function AvailabilityHub() {
 
             {/* Filter Bar */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '1rem' }}>
-              <input aria-label="Search players"
+              <input data-view-ok aria-label="Search players"
                 type="text"
                 className="form-input"
                 placeholder="Search player or position..."
@@ -588,7 +588,7 @@ function AvailabilityHub() {
 
               <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                 {['all', 'available', 'maybe', 'unavailable'].map(st => (
-                  <button
+                  <button data-view-ok
                     key={st}
                     onClick={() => setStatusFilter(st)}
                     style={{
@@ -869,10 +869,12 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
 export default function PlayerAvailabilityPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  // The admin menu re-uses this page; only there does it lock controls for view-only roles
+  const inAdmin = usePathname()?.includes('/admin/') ?? false;
   const slug = params?.clubSlug as string;
   const token = searchParams?.get('token') || '';
   const { selectClubBySlug } = useClub();
-  const { isLoading, hasClubAdminAccess } = useAuth();
+  const { isLoading, can } = useAuth();
   const club = selectClubBySlug(slug);
 
   if (isLoading) {
@@ -884,6 +886,6 @@ export default function PlayerAvailabilityPage() {
   }
 
   // Coaches / admins get the full squad hub; everyone else only their own personal link
-  if (club && hasClubAdminAccess(club.id)) return <AvailabilityHub />;
+  if (club && can(club.id, 'availability', inAdmin ? 'view' : 'edit')) return <AvailabilityHub />;
   return <PlayerRsvp slug={slug} token={token} />;
 }

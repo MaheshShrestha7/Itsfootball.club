@@ -488,7 +488,7 @@ export default function AdminMatchCenterControllerPage({
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                 <CalendarDays size={14} color="var(--club-primary)" /> Season:
               </span>
-              <select aria-label="Season"
+              <select data-view-ok aria-label="Season"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
                 value={seasonFilter}
@@ -507,7 +507,7 @@ export default function AdminMatchCenterControllerPage({
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
                 Fixture:
               </span>
-              <select aria-label="Fixture"
+              <select data-view-ok aria-label="Fixture"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '100%' }}
                 value={match?.id || ''}
@@ -564,7 +564,7 @@ export default function AdminMatchCenterControllerPage({
           const Icon = tab.icon;
           const isActive = adminTab === tab.id;
           return (
-            <button
+            <button data-view-ok
               key={tab.id}
               onClick={() => setAdminTab(tab.id as any)}
               className="btn btn-sm"
@@ -1108,7 +1108,7 @@ export default function AdminMatchCenterControllerPage({
                       </div>
                     </div>
 
-                    <button
+                    <button data-needs-full
                       onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
                       className="btn btn-secondary btn-sm touch-target"
                       style={{ padding: '0.35rem 0.65rem', color: 'var(--c-red)', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}

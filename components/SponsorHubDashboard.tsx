@@ -120,7 +120,8 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   };
 
   return (
-    <div>
+    // Display only: stays usable on view-only admin pages
+    <div data-view-ok>
       {/* Header toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.75rem' }}>
         <div>

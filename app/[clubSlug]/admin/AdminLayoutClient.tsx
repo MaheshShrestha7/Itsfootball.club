@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState, useEffect } from 'react';
+import React, { use, useState, useEffect, useRef } from 'react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -37,7 +37,7 @@ import {
   Flag,
   Flame,
   Images,
-  Wallet, BellRing, LifeBuoy, ShoppingBag,
+  Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
   ChevronDown,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -48,6 +48,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
+import { areaFromPath } from '@/lib/permissions';
 
 // Menu layout preferences, remembered per browser
 const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
@@ -71,7 +72,7 @@ export default function AdminLayout({
   const resolvedParams = use(params);
   const pathname = usePathname();
   const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries, memberMessages } = useClub();
-  const { user, logout, getUserRoleForClub } = useAuth();
+  const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -141,6 +142,8 @@ export default function AdminLayout({
     href: string;
     icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
     badge?: string;
+    /** Access area (lib/permissions.ts); the item only shows to people who can view it */
+    area?: string;
   }
 
   interface NavSection {
@@ -148,7 +151,7 @@ export default function AdminLayout({
     items: NavItem[];
   }
 
-  const navSections: NavSection[] = [
+  const navSections: NavSection[] = ([
     {
       // Always-visible entry points (this section has no heading)
       title: 'Overview',
@@ -156,6 +159,7 @@ export default function AdminLayout({
         { label: 'Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
         {
           label: 'Inbox',
+          area: 'inquiries',
           href: `/${club.slug}/admin/inquiries`,
           icon: Mail,
           badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
@@ -166,37 +170,39 @@ export default function AdminLayout({
       // The day itself: picking the team, running the game, the gate
       title: 'Matchday',
       items: [
-        { label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
-        { label: 'Player Availability', href: `/${club.slug}/admin/availability`, icon: ClipboardCheck },
-        { label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
-        { label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
+        { area: 'match-center', label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
+        { area: 'availability', label: 'Player Availability', href: `/${club.slug}/admin/availability`, icon: ClipboardCheck },
+        { area: 'lineup', label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
+        { area: 'scanner', label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
       ],
     },
     {
       // Planning the season: what's on and when
       title: 'Fixtures & Competitions',
       items: [
-        { label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
-        { label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
-        { label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
-        { label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, badge: activeSeason?.name },
+        { area: 'matches', label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
+        { area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
+        { area: 'events', label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
+        { area: 'seasons', label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, badge: activeSeason?.name },
       ],
     },
     {
       // Squad, members and the committee
       title: 'People & Membership',
       items: [
-        { label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
-        { label: 'Internal Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
+        { area: 'squad', label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
+        { area: 'teams', label: 'Internal Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
         {
           label: 'Member Approvals',
+          area: 'members',
           href: `/${club.slug}/admin/members`,
           icon: UserCheck,
           badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
         },
-        { label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
-        { label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
-        { label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
+        { area: 'committee', label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
+        { area: 'emails', label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
+        { area: 'gamification', label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
+        { area: 'roles', label: 'Roles & Permissions', href: `/${club.slug}/admin/roles`, icon: KeyRound },
       ],
     },
     {
@@ -205,26 +211,61 @@ export default function AdminLayout({
       items: [
         {
           label: 'Finance',
+          area: 'finance',
           href: `/${club.slug}/admin/finance`,
           icon: Wallet,
           badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
         },
-        { label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag, badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined },
-        { label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
+        { area: 'shop', label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag, badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined },
+        { area: 'sponsors', label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
       ],
     },
     {
       // The public-facing site: look, content, and its numbers
       title: 'Website & Marketing',
       items: [
-        { label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
-        { label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
-        { label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
-        { label: 'Photo Gallery', href: `/${club.slug}/admin/gallery`, icon: Images },
-        { label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
+        { area: 'branding', label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
+        { area: 'hero-slider', label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
+        { area: 'content', label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
+        { area: 'gallery', label: 'Photo Gallery', href: `/${club.slug}/admin/gallery`, icon: Images },
+        { area: 'analytics', label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
       ],
     },
-  ];
+  ] as NavSection[])
+    .map(section => ({ ...section, items: section.items.filter(i => !i.area || can(club.id, i.area)) }))
+    .filter(section => section.items.length > 0);
+
+  // The page's area: someone whose roles don't cover it gets a notice instead of the page
+  const currentArea = areaFromPath(pathname);
+  // Shop orders have their own area, so a role may hand them out without editing the shop
+  const canViewPage = !currentArea || can(club.id, currentArea) || (currentArea === 'shop' && can(club.id, 'shop-orders'));
+  const viewOnly = canViewPage && !!currentArea && !can(club.id, currentArea, 'edit');
+  // Edit without Full: delete buttons (marked data-needs-full) are hidden (globals.css)
+  const noDelete = !viewOnly && !!currentArea && !can(club.id, currentArea, 'full');
+  const roleLabel = userRole === 'owner'
+    ? 'Club Owner'
+    : isClubSuperUser(club.id)
+      ? 'Club Admin'
+      : getClubAccess(club.id)?.roleNames.join(', ') || 'Club Staff';
+
+  // View-only pages: every control not marked data-view-ok (tabs, filters, search) is disabled and
+  // its buttons hidden (globals.css). Unmarked controls fail safe, so new pages and components are
+  // read-only too; the database refuses the writes either way.
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = pageRef.current;
+    if (!viewOnly || !root) return;
+    const lock = () =>
+      root.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('button, input, select, textarea')
+        .forEach(el => {
+          if (!el.disabled && !el.closest('[data-view-ok]')) el.disabled = true;
+        });
+    lock();
+    // Re-applied as the page renders more (modals, tabs) or React re-enables a control
+    const observer = new MutationObserver(lock);
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    return () => observer.disconnect();
+  }, [viewOnly]);
 
   const allNavItems = navSections.flatMap(s => s.items);
   const currentNavItem = allNavItems.find(item => item.href === pathname);
@@ -430,7 +471,7 @@ export default function AdminLayout({
                   {user.full_name}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700, textTransform: 'uppercase' }}>
-                  {userRole === 'owner' ? 'Club Owner' : 'Club Admin'}
+                  {roleLabel}
                 </div>
               </div>}
             </div>
@@ -597,7 +638,21 @@ export default function AdminLayout({
                 </button>
               </div>
             )}
-            {children}
+            {viewOnly && (
+              <div className="row" style={{ gap: '0.5rem', marginBottom: '1rem', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', background: 'rgba(var(--tint-rgb), 0.04)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                <Eye size={14} />
+                <span>View only: anything your role can&apos;t change on this page is locked.</span>
+              </div>
+            )}
+            {canViewPage ? <div ref={pageRef} className={viewOnly ? 'admin-view-only' : noDelete ? 'admin-no-delete' : undefined}>{children}</div> : (
+              <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', maxWidth: '520px', margin: '3rem auto' }}>
+                <Lock size={28} color="var(--text-muted)" />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0.75rem 0 0.5rem' }}>Not part of your role</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Your role at {club.name} doesn&apos;t include this page. Ask the club Owner or a Club Admin if you need it.
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>

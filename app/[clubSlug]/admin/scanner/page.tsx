@@ -2,6 +2,7 @@
 
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
 import CameraQRScanner from '@/components/CameraQRScanner';
 import {
@@ -34,8 +35,11 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, verifyMemberPass, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, events, matches, verifyMemberPass, verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  // View level: verify passes only (check-ins and the scan log are changes)
+  const { can } = useAuth();
+  const canCheckIn = can(club.id, 'scanner', 'edit');
 
   const clubEvents = events.filter(e => e.club_id === club.id);
   const clubMatches = matches.filter(m => m.club_id === club.id);
@@ -98,7 +102,12 @@ export default function AdminScannerPage({
       setScanLogs(prev => [newLog, ...prev]);
       // publicEventCheckin already persists the scan server-side; no separate recordGateScan needed.
     } else {
-      const res = verifyMemberPass(token, club.id);
+      let res = verifyMemberPass(token, club.id);
+      // Pass tokens are only loaded for roles that can see member records; ask the database otherwise
+      if (!res.member) {
+        const remote = await verifyMemberPassPublic(token);
+        if (remote.member?.club_id === club.id) res = remote;
+      }
       const newLog: ScanLogEntry = {
         id: `log-${Date.now()}`,
         timestamp: timeStr,
@@ -113,7 +122,7 @@ export default function AdminScannerPage({
       setScanLogs(prev => [newLog, ...prev]);
 
       // Record to live club analytics engine
-      recordGateScan({
+      if (canCheckIn) recordGateScan({
         club_id: club.id,
         scan_type: 'pass_verification',
         token,
@@ -145,7 +154,7 @@ export default function AdminScannerPage({
       <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
+            <button data-view-ok
               onClick={() => { setMode('verify'); setCurrentResult(null); }}
               className="btn btn-sm"
               style={{
@@ -234,7 +243,7 @@ export default function AdminScannerPage({
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.5rem',
           }}>
-            <button
+            <button data-view-ok
               onClick={() => setActiveTab('camera')}
               style={{
                 flex: 1,
@@ -255,7 +264,7 @@ export default function AdminScannerPage({
               <Camera size={16} /> Live Scanner
             </button>
 
-            <button
+            <button data-view-ok
               onClick={() => setActiveTab('manual')}
               style={{
                 flex: 1,
@@ -278,7 +287,7 @@ export default function AdminScannerPage({
           </div>
 
           {activeTab === 'camera' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+            <div data-view-ok style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
               <CameraQRScanner
                 onScanSuccess={processToken}
                 isActive={activeTab === 'camera'}
@@ -290,7 +299,7 @@ export default function AdminScannerPage({
               <div className="form-group">
                 <label className="form-label">Enter or Paste QR Code Token</label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input aria-label="Pass token"
+                  <input data-view-ok aria-label="Pass token"
                     type="text"
                     className="form-input"
                     placeholder="e.g. apex-player-pass-10"
@@ -298,7 +307,7 @@ export default function AdminScannerPage({
                     onChange={e => setManualCode(e.target.value)}
                     style={{ fontFamily: 'var(--font-mono)' }}
                   />
-                  <button type="submit" className="btn btn-primary">
+                  <button data-view-ok type="submit" className="btn btn-primary">
                     Scan
                   </button>
                 </div>

@@ -228,7 +228,7 @@ export default function AdminContentPage({
               <button onClick={() => handleOpenEdit(article)} className="btn btn-secondary btn-sm">
                 <Edit2 size={14} />
               </button>
-              <button onClick={() => deleteNewsArticle(article.id)} className="btn btn-danger btn-sm">
+              <button data-needs-full onClick={() => deleteNewsArticle(article.id)} className="btn btn-danger btn-sm">
                 <Trash2 size={14} />
               </button>
             </div>

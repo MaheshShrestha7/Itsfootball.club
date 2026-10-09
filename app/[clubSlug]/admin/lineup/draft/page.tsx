@@ -267,7 +267,7 @@ export default function DraftLineupPage() {
             <label htmlFor="fixture-select" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
               Fixture Target:
             </label>
-            <select
+            <select data-view-ok
               id="fixture-select"
               className="form-select"
               value={activeMatch.id}

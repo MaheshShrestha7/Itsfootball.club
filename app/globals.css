@@ -1803,6 +1803,15 @@ textarea {
   }
 }
 
+/* View-only admin pages: the action buttons AdminLayoutClient disabled are hidden, view controls stay */
+.admin-view-only button:disabled:not([data-view-ok], [data-view-ok] *) {
+  display: none !important; /* beats the buttons' own inline display */
+}
+/* Edit-level admin pages: deleting needs Full */
+.admin-no-delete [data-needs-full] {
+  display: none !important; /* beats the buttons' own inline display */
+}
+
 .admin-main-canvas {
   flex: 1;
   padding: 2.5rem;

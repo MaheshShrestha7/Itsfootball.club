@@ -289,7 +289,7 @@ export default function AdminTournamentsPage({
                         >
                           <Pencil size={14} />
                         </button>
-                        <button
+                        <button data-needs-full
                           onClick={() => handleDeleteTourn(tourn.id, tourn.name)}
                           data-theme="dark" style={{
                             background: 'rgba(0, 0, 0, 0.5)',

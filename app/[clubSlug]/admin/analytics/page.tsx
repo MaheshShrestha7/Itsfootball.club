@@ -38,7 +38,7 @@ export default function AdminAnalyticsPage({
 
       {/* View toggle */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-subtle)' }}>
-        <button
+        <button data-view-ok
           type="button"
           onClick={() => setView('overview')}
           style={{
@@ -50,7 +50,7 @@ export default function AdminAnalyticsPage({
         >
           <BarChart3 size={15} /> Club Overview
         </button>
-        <button
+        <button data-view-ok
           type="button"
           onClick={() => setView('sponsors')}
           style={{

@@ -5,6 +5,8 @@ import React, { useState, use, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import { useAccessRoles } from '@/lib/access-roles';
 import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
 import {
   Users,
@@ -49,11 +51,15 @@ const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = 
   { value: 'SUB', label: 'SUB', desc: 'Substitute / Utility' },
 ];
 
-const AVAILABLE_ROLES = [
-  { id: 'Player', label: 'Player', icon: Shield, desc: 'First Team & Squad Athlete' },
-  { id: 'Executive Committee', label: 'Executive Committee', icon: Award, desc: 'Governance & Board Post' },
-  { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Head Coach & Technical Staff' },
-  { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Platform Administrator' },
+// Squad labels that give no admin access
+const BASE_ROLES = [
+  { id: 'Player', label: 'Player', icon: Shield, desc: 'First Team & Squad Athlete', access: false },
+  { id: 'Executive Committee', label: 'Executive Committee', icon: Award, desc: 'Governance & Board Post', access: false },
+];
+// Shown when the club's access roles can't be loaded (no database connected)
+const FALLBACK_ACCESS_ROLES = [
+  { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Head Coach & Technical Staff', access: true },
+  { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Platform Administrator', access: true },
 ];
 
 export default function AdminSquadPage({
@@ -64,6 +70,17 @@ export default function AdminSquadPage({
   const resolvedParams = use(params);
   const { clubs, selectClubBySlug, members, addMember, bulkAddMembers, updateMember, deleteMember, playerStats, updatePlayerStats } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  // Access roles (Roles & Permissions page) are labels too; only the Owner / a Club Admin hands them out
+  const { isClubSuperUser } = useAuth();
+  const canAssignAccess = isClubSuperUser(club.id);
+  const { roles: accessRoles } = useAccessRoles(club.id);
+  const AVAILABLE_ROLES = [
+    ...BASE_ROLES,
+    ...(accessRoles.length
+      ? accessRoles.map(r => ({ id: r.name, label: r.name, icon: r.is_super ? User : Briefcase, desc: r.description || 'Admin access role', access: true }))
+      : FALLBACK_ACCESS_ROLES),
+  ];
 
   const clubMembers = members.filter(m => m.club_id === club.id);
   const [modalOpen, setModalOpen] = useState(false);
@@ -168,7 +185,12 @@ export default function AdminSquadPage({
     const normalizedRoles: string[] = [];
     memberRoles.forEach(r => {
       const lower = r.toLowerCase();
-      if (lower === 'player' && !normalizedRoles.includes('Player')) normalizedRoles.push('Player');
+      // A label that is one of the options (incl. the club's own access roles) stays as it is
+      const known = AVAILABLE_ROLES.find(o => o.id.toLowerCase() === lower);
+      if (known) {
+        if (!normalizedRoles.includes(known.id)) normalizedRoles.push(known.id);
+      }
+      else if (lower === 'player' && !normalizedRoles.includes('Player')) normalizedRoles.push('Player');
       else if ((lower.includes('executive') || m.is_executive) && !normalizedRoles.includes('Executive Committee')) normalizedRoles.push('Executive Committee');
       else if ((lower.includes('manager') || lower.includes('coach') || lower.includes('staff')) && !normalizedRoles.includes('Manager')) normalizedRoles.push('Manager');
       else if ((lower.includes('admin') || lower.includes('owner')) && !normalizedRoles.includes('Club Admin')) normalizedRoles.push('Club Admin');
@@ -271,6 +293,7 @@ export default function AdminSquadPage({
 
   // Toggle Multiple Roles
   const handleToggleRole = (roleId: string) => {
+    if (AVAILABLE_ROLES.some(r => r.id === roleId && r.access) && !canAssignAccess) return;
     setForm(prev => {
       let newRoles: string[];
       if (prev.roles.includes(roleId)) {
@@ -523,7 +546,7 @@ export default function AdminSquadPage({
       }}>
         <div style={{ position: 'relative', flex: '2 1 220px', minWidth: 'min(200px, 100%)' }}>
           <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-          <input aria-label="Search squad"
+          <input data-view-ok aria-label="Search squad"
             type="text"
             className="form-input"
             placeholder="Search by name, email, phone, jersey #..."
@@ -533,7 +556,7 @@ export default function AdminSquadPage({
           />
         </div>
 
-        <select aria-label="Filter by role"
+        <select data-view-ok aria-label="Filter by role"
           className="form-select"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
@@ -545,7 +568,7 @@ export default function AdminSquadPage({
           ))}
         </select>
 
-        <select aria-label="Filter by position"
+        <select data-view-ok aria-label="Filter by position"
           className="form-select"
           value={positionFilter}
           onChange={e => setPositionFilter(e.target.value)}
@@ -557,7 +580,7 @@ export default function AdminSquadPage({
           ))}
         </select>
 
-        <select
+        <select data-view-ok
           className="form-select"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -569,7 +592,7 @@ export default function AdminSquadPage({
         </select>
 
         {filtersActive && (
-          <button
+          <button data-view-ok
             type="button"
             onClick={clearFilters}
             className="btn btn-secondary btn-sm"
@@ -586,7 +609,7 @@ export default function AdminSquadPage({
           </span>
           <div role="group" aria-label="Roster layout" style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
             {([['list', List, 'List view'], ['grid', LayoutGrid, 'Grid view']] as const).map(([mode, Icon, label]) => (
-              <button
+              <button data-view-ok
                 key={mode}
                 type="button"
                 onClick={() => changeViewMode(mode)}
@@ -885,7 +908,7 @@ export default function AdminSquadPage({
                 </div>
               </div>
 
-              {/* 4. MULTI-ROLE SELECTION (Player, Executive Committee, Manager, Club Admin) */}
+              {/* 4. MULTI-ROLE SELECTION (Player, Executive Committee, and the club's access roles) */}
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Member Roles * (A member can have multiple roles)</span>
@@ -893,24 +916,33 @@ export default function AdminSquadPage({
                     {form.roles.length} {form.roles.length === 1 ? 'role' : 'roles'} selected
                   </span>
                 </label>
+                <p className="text-meta" style={{ marginBottom: '0.6rem' }}>
+                  {canAssignAccess
+                    ? <>Access roles decide what someone can do in this admin area. <Link href={`/${club.slug}/admin/roles`}>Manage roles</Link></>
+                    : 'Only the club Owner or a Club Admin can give or remove access roles.'}
+                </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.65rem' }}>
                   {AVAILABLE_ROLES.map(r => {
                     const Icon = r.icon;
                     const isSelected = form.roles.includes(r.id);
+                    const locked = r.access && !canAssignAccess;
 
                     return (
                       <button
                         key={r.id}
                         type="button"
                         onClick={() => handleToggleRole(r.id)}
+                        disabled={locked}
+                        aria-pressed={isSelected}
                         style={{
+                          opacity: locked ? 0.55 : 1,
                           position: 'relative',
                           padding: '0.85rem 0.65rem',
                           borderRadius: 'var(--radius-md)',
                           border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
                           background: isSelected ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--tint-rgb), 0.03)',
-                          cursor: 'pointer',
+                          cursor: locked ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',

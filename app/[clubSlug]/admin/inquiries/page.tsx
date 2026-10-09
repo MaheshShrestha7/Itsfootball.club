@@ -64,7 +64,7 @@ export default function AdminInquiriesPage({
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {filters.map(f => (
-          <button
+          <button data-view-ok
             key={f}
             type="button"
             onClick={() => setFilter(f)}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { uploadBufferToR2, isR2Configured, deleteR2Object } from '@/lib/storage/r2';
 import { getServiceClient } from '@/lib/supabase/service';
 import { clubPhotoKey, type DeletablePhotoFolder } from '@/lib/shop';
-import { requireAdminOfClub, requireUser } from '@/lib/supabase/server-auth';
+import { requireClubPerm, requireUser } from '@/lib/supabase/server-auth';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { matchesFileSignature } from '@/lib/file-signature';
 
@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid club.' }, { status: 400 });
     }
 
-    const auth = clubId ? await requireAdminOfClub(req, clubId) : await requireUser(req);
+    // Any role that may edit something at the club (photos, logos, flyers, products...)
+    const auth = clubId ? await requireClubPerm(req, clubId, null, 'edit') : await requireUser(req);
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -145,7 +146,7 @@ export async function DELETE(req: NextRequest) {
   const key = clubPhotoKey(clubId, url, folder);
   if (!key) return NextResponse.json({ error: 'Only shop and gallery photos can be deleted.' }, { status: 400 });
 
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubPerm(req, clubId, [folder], 'edit');
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'File storage is not available right now.' }, { status: 503 });

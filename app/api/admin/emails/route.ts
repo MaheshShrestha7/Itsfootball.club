@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminOfClub } from '@/lib/supabase/server-auth';
+import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { CLUB_BRAND_COLUMNS, type ClubBrandRow } from '@/lib/email/club-brand';
@@ -18,9 +18,9 @@ import { isUuid } from '@/lib/ids';
 
 const MAX_RECIPIENTS = 2000;
 
-async function authorise(req: NextRequest, clubId: string | null | undefined) {
+async function authorise(req: NextRequest, clubId: string | null | undefined, level: 'view' | 'edit' = 'edit') {
   if (!clubId) return { error: NextResponse.json({ error: 'Missing club.' }, { status: 400 }) };
-  const auth = await requireAdminOfClub(req, clubId);
+  const auth = await requireClubPerm(req, clubId, ['emails'], level);
   if (!auth.ok) return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   const db = getServiceClient();
   if (!db) return { error: NextResponse.json({ error: 'Email is not configured on the server.' }, { status: 503 }) };
@@ -32,7 +32,7 @@ async function authorise(req: NextRequest, clubId: string | null | undefined) {
 }
 
 export async function GET(req: NextRequest) {
-  const a = await authorise(req, req.nextUrl.searchParams.get('clubId'));
+  const a = await authorise(req, req.nextUrl.searchParams.get('clubId'), 'view');
   if ('error' in a) return a.error;
   const { db, club } = a;
 

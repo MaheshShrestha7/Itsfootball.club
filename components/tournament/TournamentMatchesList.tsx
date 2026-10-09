@@ -77,7 +77,7 @@ export default function TournamentMatchesList({
       >
         {/* Stage Filter Pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          <button
+          <button data-view-ok
             onClick={() => setStageFilter('all')}
             style={{
               padding: '0.35rem 0.75rem',
@@ -109,7 +109,7 @@ export default function TournamentMatchesList({
             const count = matches.filter(m => (m.tournament_stage || 'group') === stage).length;
 
             return (
-              <button
+              <button data-view-ok
                 key={stage}
                 onClick={() => setStageFilter(stage)}
                 style={{
@@ -133,7 +133,7 @@ export default function TournamentMatchesList({
         {/* Status Filter */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {(['all', 'live', 'upcoming', 'completed'] as const).map(st => (
-            <button
+            <button data-view-ok
               key={st}
               onClick={() => setStatusFilter(st)}
               style={{

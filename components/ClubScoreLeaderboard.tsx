@@ -85,7 +85,8 @@ export default function ClubScoreLeaderboard({
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
+    // Display only: stays usable on view-only admin pages
+    <div data-view-ok className="glass-panel" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
       {/* Background Accent Glow */}
       <div style={{
         position: 'absolute',
