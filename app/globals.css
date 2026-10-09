@@ -910,7 +910,8 @@ textarea {
   .admin-save-toast {
     left: 1rem !important;
     right: 1rem !important;
-    bottom: 1rem !important;
+    /* Clear of the club tab bar (58px + the home indicator) */
+    bottom: calc(1rem + 58px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: none !important;
   }
 }

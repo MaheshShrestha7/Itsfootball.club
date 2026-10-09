@@ -8,16 +8,14 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 
 /**
- * Phone tab bar for the club site (shown under 769px by globals.css), so the site works like an
- * app. Members get their pass, staff get the admin area; the admin area has its own menu, so it's
- * hidden there.
+ * Phone tab bar for the club site (shown under 769px, and at any width in the installed app, by
+ * globals.css), so the site works like an app. Members get their pass, staff get the admin area.
+ * It stays on admin pages too: the My Club tiles open admin tools, and the bar is the way back.
  */
 export default function ClubTabBar({ club }: { club: Club }) {
   const pathname = usePathname() || '';
   const { matches, members } = useClub();
   const { user, hasClubAdminAccess } = useAuth();
-  if (pathname.includes('/admin')) return null;
-
   const base = `/${club.slug}`;
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const member = !!user && members.some(m => m.club_id === club.id && m.user_id === user.id);
@@ -32,6 +30,9 @@ export default function ClubTabBar({ club }: { club: Club }) {
     ...(user && hasClubAdminAccess(club.id) ? [{ label: 'Admin', href: `${base}/admin`, icon: Shield }] : []),
   ];
 
+  // A tab stays lit on the pages under it (Admin on every admin tool); Home only on the home page
+  const isActive = (href: string) => (href === base ? pathname === base : pathname === href || pathname.startsWith(`${href}/`));
+
   return (
     <>
       <div className="club-tabbar-spacer" aria-hidden="true" />
@@ -39,7 +40,7 @@ export default function ClubTabBar({ club }: { club: Club }) {
         {tabs.map(t => {
           const Icon = t.icon;
           return (
-            <Link key={t.label} href={t.href} aria-current={pathname === t.href ? 'page' : undefined}>
+            <Link key={t.label} href={t.href} aria-current={isActive(t.href) ? 'page' : undefined}>
               <Icon size={20} />
               <span>{t.label}</span>
             </Link>
