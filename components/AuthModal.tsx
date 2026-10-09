@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { BrandWordmark } from '@/components/BrandLogo';
+import PasswordInput from '@/components/PasswordInput';
 import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -242,8 +243,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
 
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label htmlFor="authmodal-password" className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
-            <input id="authmodal-password"
-              type="password"
+            <PasswordInput id="authmodal-password"
               required
               minLength={mode === 'signup' ? 8 : undefined}
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}

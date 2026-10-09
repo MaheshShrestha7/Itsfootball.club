@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useAuth } from '@/lib/auth-context';
+import PasswordInput from '@/components/PasswordInput';
 import {
   ShieldAlert,
   ArrowLeft,
@@ -177,9 +178,8 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
 
             <div className="form-group">
               <label className="form-label" htmlFor="admin-guard-password" style={{ fontSize: '0.8rem' }}>Password</label>
-              <input
+              <PasswordInput
                 id="admin-guard-password"
-                type="password"
                 required
                 autoComplete="current-password"
                 className="form-input"
