@@ -910,7 +910,8 @@ textarea {
   .admin-save-toast {
     left: 1rem !important;
     right: 1rem !important;
-    bottom: 1rem !important;
+    /* Clear of the club tab bar (58px + the home indicator) */
+    bottom: calc(1rem + 58px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: none !important;
   }
 }
@@ -2339,7 +2340,8 @@ dialog.confirm-dialog::backdrop {
   display: none;
 }
 
-@media (max-width: 768px) {
+/* Phones, and the installed app at any width (a landscape phone or tablet is wider than 768px) */
+@media (max-width: 768px), (display-mode: standalone) {
   .club-tabbar {
     position: fixed;
     left: 0;
@@ -2348,10 +2350,22 @@ dialog.confirm-dialog::backdrop {
     z-index: 90; /* under the menu drawer (99/100) */
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-auto-columns: minmax(0, 132px);
+    justify-content: space-evenly;
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     background: var(--bg-surface-elevated);
     border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
+    /* Its own layer, so it doesn't repaint or shift while the page scrolls under it */
+    transform: translateZ(0);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .club-tabbar {
+      background: color-mix(in srgb, var(--bg-surface-elevated) 82%, transparent);
+      backdrop-filter: blur(18px) saturate(1.6);
+      -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    }
   }
 
   /* Keeps the footer clear of the fixed bar */
@@ -2377,8 +2391,29 @@ dialog.confirm-dialog::backdrop {
   transition: transform 100ms ease-out, color 100ms ease-out;
 }
 
+/* Active tab: coloured label with a soft pill behind the icon */
+.club-tabbar a svg {
+  box-sizing: content-box;
+  padding: 3px 14px;
+  border-radius: 999px;
+  transition: background 150ms ease-out;
+}
+
 .club-tabbar a[aria-current='page'] {
   color: var(--club-primary);
+}
+
+.club-tabbar a[aria-current='page'] svg {
+  background: rgba(var(--club-primary-rgb), 0.16);
+}
+
+/* Installed app: no rubber-band bounce dragging the fixed bars around (iOS), and no pull-to-refresh
+   reloading the page (Android); content scrolls under the bars like a native app */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 .club-tabbar a:active {
