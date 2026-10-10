@@ -24,7 +24,12 @@ it at the source listed, not by hand in each place.
 | Social profiles | https://www.facebook.com/ItsFootball.Club, https://www.tiktok.com/@itsfootball.club | `SOCIAL_PROFILES` in `lib/seo.ts` |
 
 The llms.txt / llms-full.txt / pricing.md routes are built at build time, so a fee change in the env
-vars needs a redeploy to show up there (same as the payment screen).
+vars needs a redeploy to show up there (same as the payment screen). They are served with
+`Cache-Control: s-maxage=31536000`, so Cloudflare's edge can keep the old copy after a deploy: purge
+`/llms.txt`, `/llms-full.txt` and `/pricing.md` (Caching → Purge Cache → Custom Purge) after any change.
+
+Deploys: pushing to `main` on GitHub deploys through Cloudflare Workers Builds about 3 minutes later.
+Deployed and live on 2026-10-10 (version `4c124c12`), verified against production.
 
 ## Baseline audit (2026-10-10)
 
@@ -93,12 +98,19 @@ grassroots football clubs: …" (copy change; reword freely, but keep a plain "X
 
 ## Not done yet / next session
 
-1. Commit and deploy, then run the checks below against production.
-2. Submit the sitemap again in Google Search Console and Bing Webmaster Tools so the new
-   `/news/...` URLs get crawled; Bing also feeds ChatGPT search and Copilot.
+1. ~~Commit and deploy~~ DONE 2026-10-10, production verified.
+2. ~~Submit the sitemap~~ DONE 2026-10-10: Google Search Console (Domain property) and Bing Webmaster
+   Tools (imported from GSC). GSC first showed "Couldn't fetch" with no "Last read" date, which is its
+   placeholder before the first crawl; the sitemap itself checked out (200, valid XML, 31 URLs). If it
+   still says that after a day: remove and resubmit, or check Cloudflare Security → Events for Googlebot.
 3. Run the first Phase 5 baseline (prompt list below) before Phase 3 content ships, so later changes
    can be compared against it.
-4. Phase 3 needs a content route (`/guides/[slug]`) and real written guides.
+4. Update the Facebook and TikTok bios to the one-line positioning (drafts were given in chat on
+   2026-10-10: TikTok "Free club websites + live scores for grassroots football ⚽ AU · NZ · UK";
+   Facebook intro "Free platform for grassroots football clubs: club website, live scores, member
+   passes and club shop.").
+5. Phase 3 needs a content route (`/guides/[slug]`) and real written guides.
+6. Around 2026-10-24: check GSC Pages/Performance and Bing for the `/news/` URLs being indexed.
 
 ## Phase 3: content (TODO)
 

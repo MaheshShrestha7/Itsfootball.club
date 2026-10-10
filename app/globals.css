@@ -1042,6 +1042,26 @@ textarea {
   color: var(--text-primary);
 }
 
+/* Platform footer: Facebook / TikTok icon links, in the brand colour (--brand, set per link) on hover */
+.social-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: rgba(var(--tint-rgb), 0.04);
+  color: var(--text-secondary);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.social-icon-link:hover,
+.social-icon-link:focus-visible {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
 .sponsor-marquee-item img {
   height: 60px;
   max-width: 210px;
