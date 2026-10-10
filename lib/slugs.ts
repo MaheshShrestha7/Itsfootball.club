@@ -57,7 +57,7 @@ export function normalizeDomain(input: string | null | undefined): string {
 }
 
 export const RESERVED_SLUGS = [
-  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'verify', 'match', 'member',
+  'api', 'admin', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'privacy', 'terms', 'verify', 'match', 'member',
   'squad', 'events', 'news', 'sponsors', 'branding', 'analytics', 'scanner',
   'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets'
 ];

@@ -26,7 +26,7 @@ it at the source listed, not by hand in each place.
 The llms.txt / llms-full.txt / pricing.md routes are built at build time, so a fee change in the env
 vars needs a redeploy to show up there (same as the payment screen). They are served with
 `Cache-Control: s-maxage=31536000`, so Cloudflare's edge can keep the old copy after a deploy: purge
-`/llms.txt`, `/llms-full.txt` and `/pricing.md` (Caching → Purge Cache → Custom Purge) after any change.
+`/llms.txt`, `/llms-full.txt` and `/pricing.md` (Caching â†’ Purge Cache â†’ Custom Purge) after any change.
 
 Deploys: pushing to `main` on GitHub deploys through Cloudflare Workers Builds about 3 minutes later.
 Deployed and live on 2026-10-10 (version `4c124c12`), verified against production.
@@ -47,7 +47,7 @@ Already in place before this work, verified against production:
 
 Gaps found: pricing missing from llms.txt (strongest selling point invisible to AI), no number for
 the booking fee anywhere, no `SoftwareApplication` entity, no `sameAs`, no quotable definition
-sentence on the homepage, news articles only reachable as `#news-…` fragments inside a modal (not
+sentence on the homepage, news articles only reachable as `#news-â€¦` fragments inside a modal (not
 citable, not crawlable links), FAQ written for existing users rather than the questions people ask an
 assistant.
 
@@ -65,7 +65,7 @@ assistant.
 | 8 | `/llms-full.txt` generated from the FAQ data | 2 | DONE | `app/llms-full.txt/route.ts` |
 | 9 | Guides for problem-aware queries | 3 | TODO | see Phase 3 |
 | 10 | Comparison pages | 3 | TODO | see Phase 3 |
-| 11 | Directory listings | 4 | TODO (owner) | see Phase 4 |
+| 11 | Directory listings | 4 | IN PROGRESS: kit ready, Batch 1 to submit | `docs/directory-submissions.md`, `docs/directory-tracker.csv` |
 | 12 | Community presence | 4 | TODO (owner) | see Phase 4 |
 | 13 | Club case studies / backlinks | 4 | TODO (owner) | see Phase 4 |
 | 14 | Monthly AI visibility tracking | 5 | TODO | prompt list below |
@@ -94,7 +94,7 @@ renders the article's words as plain paragraphs; the sanitised HTML replaces the
 Pictures and embedded videos inside the body only appear after that swap.
 
 **Homepage definition**: the hero sub-line now opens with "itsfootball.club is the free platform for
-grassroots football clubs: …" (copy change; reword freely, but keep a plain "X is Y" sentence).
+grassroots football clubs: â€¦" (copy change; reword freely, but keep a plain "X is Y" sentence).
 
 ## Not done yet / next session
 
@@ -102,11 +102,11 @@ grassroots football clubs: …" (copy change; reword freely, but keep a plain "X
 2. ~~Submit the sitemap~~ DONE 2026-10-10: Google Search Console (Domain property) and Bing Webmaster
    Tools (imported from GSC). GSC first showed "Couldn't fetch" with no "Last read" date, which is its
    placeholder before the first crawl; the sitemap itself checked out (200, valid XML, 31 URLs). If it
-   still says that after a day: remove and resubmit, or check Cloudflare Security → Events for Googlebot.
+   still says that after a day: remove and resubmit, or check Cloudflare Security â†’ Events for Googlebot.
 3. Run the first Phase 5 baseline (prompt list below) before Phase 3 content ships, so later changes
    can be compared against it.
 4. Update the Facebook and TikTok bios to the one-line positioning (drafts were given in chat on
-   2026-10-10: TikTok "Free club websites + live scores for grassroots football ⚽ AU · NZ · UK";
+   2026-10-10: TikTok "Free club websites + live scores for grassroots football âš½ AU Â· NZ Â· UK";
    Facebook intro "Free platform for grassroots football clubs: club website, live scores, member
    passes and club shop.").
 5. Phase 3 needs a content route (`/guides/[slug]`) and real written guides.
@@ -133,6 +133,10 @@ Overviews, Gemini and Perplexity still use them. Needs a content route (e.g. `/g
 any of this can ship; not built yet.
 
 ## Phase 4: presence off the site (owner actions)
+
+**Directory kit**: `docs/directory-submissions.md` (copy per directory type, batches, review plan,
+Product Hunt timeline for Tue 3 Nov 2026) and `docs/directory-tracker.csv` (log every submission).
+Blocker found 2026-10-10: no privacy policy or terms page, which Capterra/G2/Product Hunt require. Drafted the same day: `/privacy`, `/terms` (review, then deploy).
 
 - Directories: Product Hunt, Capterra, AlternativeTo, SaaSHub, GetApp (the `directory-submissions`
   skill has the list and tracker). Describe the product with the one-line positioning above, word

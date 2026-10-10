@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
@@ -836,7 +837,12 @@ export default function CreateClubPage() {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1.25rem' }}>
+                  By launching your club you agree to the <Link href="/terms" target="_blank" style={{ color: 'var(--club-primary)' }}>Terms of Service</Link> and
+                  confirm your club will handle its members&apos; information as described in the <Link href="/privacy" target="_blank" style={{ color: 'var(--club-primary)' }}>Privacy Policy</Link>.
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.25rem' }}>
                   <button type="button" onClick={() => setStep(3)} className="btn btn-secondary">
                     <ArrowLeft size={16} /> Back
                   </button>

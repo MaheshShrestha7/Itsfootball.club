@@ -1042,6 +1042,20 @@ textarea {
   color: var(--text-primary);
 }
 
+/* /privacy and /terms body text */
+.legal-page section p + p,
+.legal-page section p + ul,
+.legal-page section ul + p {
+  margin-top: 0.75rem;
+}
+
+.legal-page section ul {
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 /* Platform footer: Facebook / TikTok icon links, in the brand colour (--brand, set per link) on hover */
 .social-icon-link {
   display: inline-flex;

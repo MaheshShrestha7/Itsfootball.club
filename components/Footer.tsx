@@ -316,8 +316,10 @@ export default function Footer({ club, sponsors }: FooterProps) {
           fontSize: '0.8rem',
           color: 'var(--text-muted)',
         }}>
-          <div>
-            &copy; {new Date().getFullYear()} {club ? club.name : 'itsfootball.club'}. All rights reserved.
+          <div className="row" style={{ gap: '0.4rem 1rem', flexWrap: 'wrap' }}>
+            <span>&copy; {new Date().getFullYear()} {club ? club.name : 'itsfootball.club'}. All rights reserved.</span>
+            <Link href="/privacy" style={{ color: 'var(--text-muted)' }}>Privacy</Link>
+            <Link href="/terms" style={{ color: 'var(--text-muted)' }}>Terms</Link>
           </div>
           <div className="row row-tight">
             <span>Powered by</span>
