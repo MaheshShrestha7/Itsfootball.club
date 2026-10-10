@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
+import { newsPath } from '@/lib/slugs';
 
 // Generated per request from live data. Not ISR: open-next.config.ts has no incremental cache store,
 // so on Cloudflare a revalidated sitemap would never be saved and the build-time copy would be served forever.
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // are deliberately left out: listing them here would contradict their robots meta tag.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
-  const { clubs, matches, events, tournaments, shopClubIds, galleryClubIds } = await listSitemapData();
+  const { clubs, matches, events, tournaments, news, shopClubIds, galleryClubIds } = await listSitemapData();
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
   const url = (path: string) => `${SITE_URL}${path}`;
   const date = (...values: (string | null | undefined)[]) => {
@@ -59,6 +60,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: date(e.created_at),
       changeFrequency: future ? 'weekly' : 'yearly',
       priority: future ? 0.7 : 0.4,
+    });
+  }
+
+  for (const n of news) {
+    const slug = slugById.get(n.club_id);
+    if (!slug || !n.slug) continue;
+    entries.push({
+      url: url(newsPath(slug, n.slug)),
+      lastModified: date(n.published_at, n.updated_at),
+      changeFrequency: 'monthly',
+      priority: 0.6,
     });
   }
 

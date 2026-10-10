@@ -1,9 +1,12 @@
 // schema.org JSON-LD builders, rendered server-side from live data (see components/JsonLd.tsx).
-import { SITE_NAME, SITE_URL } from './seo';
+import { AREA_SERVED, SITE_NAME, SITE_URL, SOCIAL_PROFILES } from './seo';
+import { CONTACT_EMAIL, FEE_PHRASE } from './faq';
+import { newsPath } from './slugs';
 import type {
   ClubMetadataRow,
   EventMetadataRow,
   MatchMetadataRow,
+  NewsArticleRow,
   NewsMetadataRow,
   TournamentMetadataRow,
 } from './supabase/club-lookup';
@@ -37,7 +40,7 @@ export const WEBSITE_ID = `${SITE_URL}/#website`;
 const clubUrl = (club: ClubMetadataRow) => abs(`/${club.slug}`);
 const clubId = (club: ClubMetadataRow) => `${clubUrl(club)}#club`;
 
-/** Platform homepage: the publisher plus the site, with a sitelinks search box backed by /clubs?q= */
+/** Platform homepage: the publisher, the product (free for clubs) and the site, with a sitelinks search box backed by /clubs?q= */
 export function homeSchema() {
   return graph(
     {
@@ -46,7 +49,38 @@ export function homeSchema() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: { '@type': 'ImageObject', url: abs('/logo.png'), width: 512, height: 512 },
-      description: 'The digital platform for football clubs: club websites, live match centers, lineups, digital member passes, club merch shops and sponsor showcases.',
+      description: 'A free platform for grassroots and community football clubs: club websites, live match centres, lineups, digital member passes, club merch shops and sponsor showcases.',
+      email: CONTACT_EMAIL,
+      areaServed: AREA_SERVED,
+      sameAs: SOCIAL_PROFILES.map(p => p.url),
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE_URL}/#app`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      applicationCategory: 'SportsApplication',
+      operatingSystem: 'Any (web browser; installable on iPhone and Android)',
+      description: 'Free club website and management platform for grassroots football clubs, run by club volunteers from one dashboard.',
+      featureList: [
+        'Club website with custom colours, logo and domain',
+        'Live match centre with goals, cards and substitutions',
+        'Player availability and lineups',
+        'Digital member passes with QR check-in',
+        'Online membership payments',
+        'Club merch shop',
+        'Tournaments with group tables and knockout brackets',
+        'Sponsor showcase and applications',
+        'Club news, gallery and analytics',
+      ],
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'AUD',
+        description: `Free for clubs, every feature included. Card payments made to a club carry ${FEE_PHRASE}, paid by the payer.`,
+      },
+      areaServed: AREA_SERVED,
+      publisher: { '@id': ORGANIZATION_ID },
     },
     {
       '@type': 'WebSite',
@@ -73,6 +107,41 @@ const author = (name: string | null, club: ClubMetadataRow): Json =>
     ? { '@type': 'Organization', name: name || `${club.name} Media Team`, url: clubUrl(club) }
     : { '@type': 'Person', name };
 
+/** A news article, identified by its own page (/{club}/news/{slug}) */
+function articleNode(club: ClubMetadataRow, article: NewsMetadataRow & { updated_at?: string | null }): Json {
+  const url = abs(newsPath(club.slug, article.slug));
+  const logo = absUrl(club.logo_url);
+  return {
+    '@type': 'BlogPosting',
+    '@id': `${url}#article`,
+    url,
+    mainEntityOfPage: url,
+    // Google truncates headlines past 110 characters
+    headline: article.title.length > 110 ? `${article.title.slice(0, 109)}…` : article.title,
+    description: article.summary,
+    image: absUrl(article.cover_image_url) ? [absUrl(article.cover_image_url)] : undefined,
+    datePublished: article.published_at,
+    dateModified: article.updated_at && article.updated_at > article.published_at ? article.updated_at : undefined,
+    author: author(article.author_name, club),
+    publisher: { '@type': 'Organization', name: club.name, url: clubUrl(club), logo: logo ? { '@type': 'ImageObject', url: logo } : undefined },
+    about: { '@id': clubId(club) },
+    keywords: article.tags?.join(', '),
+    articleSection: article.tags?.[0],
+  };
+}
+
+/** A news article's own page: the article plus a breadcrumb back to its club */
+export function newsArticleSchema(club: ClubMetadataRow, article: NewsArticleRow) {
+  return graph(articleNode(club, article), {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: club.name, item: clubUrl(club) },
+      { '@type': 'ListItem', position: 2, name: 'News', item: `${clubUrl(club)}#news` },
+      { '@type': 'ListItem', position: 3, name: article.title },
+    ],
+  });
+}
+
 /** Club homepage: the club itself plus a BlogPosting for each news article shown in its News section */
 export function clubSchema(club: ClubMetadataRow, news: NewsMetadataRow[]) {
   const logo = absUrl(club.logo_url);
@@ -92,21 +161,7 @@ export function clubSchema(club: ClubMetadataRow, news: NewsMetadataRow[]) {
         ? { '@type': 'Place', name: club.stadium_name, address: club.stadium_address || club.stadium_name }
         : undefined,
     },
-    ...news.map(article => ({
-      '@type': 'BlogPosting',
-      '@id': `${clubUrl(club)}#news-${article.slug}`,
-      url: `${clubUrl(club)}#news-${article.slug}`,
-      mainEntityOfPage: clubUrl(club),
-      // Google truncates headlines past 110 characters
-      headline: article.title.length > 110 ? `${article.title.slice(0, 109)}…` : article.title,
-      description: article.summary,
-      image: absUrl(article.cover_image_url) ? [absUrl(article.cover_image_url)] : undefined,
-      datePublished: article.published_at,
-      author: author(article.author_name, club),
-      publisher: { '@type': 'Organization', name: club.name, url: clubUrl(club), logo: logo ? { '@type': 'ImageObject', url: logo } : undefined },
-      keywords: article.tags?.join(', '),
-      articleSection: article.tags?.[0],
-    }))
+    ...news.map(article => articleNode(club, article))
   );
 }
 

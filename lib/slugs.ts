@@ -6,6 +6,18 @@
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://itsfootball.club').replace(/\/+$/, '');
 const SITE_HOST = new URL(SITE_URL).host;
 
+/** A club news article's own page */
+export const newsPath = (clubSlug: string, articleSlug: string) => `/${clubSlug}/news/${encodeURIComponent(articleSlug)}`;
+
+/** A route param back to the slug it was built from; a malformed "%" sequence is left as typed instead of throwing */
+export function decodeSlugParam(param: string): string {
+  try {
+    return decodeURIComponent(param);
+  } catch {
+    return param;
+  }
+}
+
 /** itsfootball.club itself (any subdomain), local dev or a workers.dev preview, i.e. not a club's own domain */
 export function isPlatformHost(host: string): boolean {
   const h = host.toLowerCase().split(':')[0];

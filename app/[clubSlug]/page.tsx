@@ -11,8 +11,6 @@ import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
-import ArticleBody from '@/components/ArticleBody';
-import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
@@ -47,7 +45,7 @@ import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
-import { SITE_URL } from '@/lib/slugs';
+import { SITE_URL, newsPath } from '@/lib/slugs';
 
 interface HomeHeroSlide {
   id: string;
@@ -115,7 +113,6 @@ export default function ClubPublicPage({
   const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
   const [leaderboardMode, setLeaderboardMode] = useState<'clubscore' | 'traditional'>('clubscore');
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [activeNewsModal, setActiveNewsModal] = useState<any | null>(null);
 
   // Hero Slider states
   const [activeSlide, setActiveSlide] = useState(0);
@@ -600,13 +597,13 @@ export default function ClubPublicPage({
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
                           {activeSlideNews && (
-                            <button
-                              onClick={() => setActiveNewsModal(activeSlideNews)}
+                            <Link
+                              href={newsPath(club.slug, activeSlideNews.slug)}
                               className="btn btn-primary row"
                             >
                               <Newspaper size={16} />
                               <span>{currentSlide.ctaLabel || 'Read Full Story'}</span>
-                            </button>
+                            </Link>
                           )}
 
                           <a
@@ -966,11 +963,10 @@ export default function ClubPublicPage({
                     const activeSlideNews = currentSlide.targetNews || featuredArticle;
                     if (!activeSlideNews) return null;
                     return (
-                      <div
-                        onClick={() => setActiveNewsModal(activeSlideNews)}
+                      <Link
+                        href={newsPath(club.slug, activeSlideNews.slug)}
                         className="glass-panel glass-panel-interactive"
                         style={{
-                          cursor: 'pointer',
                           overflow: 'hidden',
                           display: 'flex',
                           flexDirection: 'column',
@@ -1000,7 +996,7 @@ export default function ClubPublicPage({
                             <span style={{ color: 'var(--club-primary)', fontWeight: 700 }}>Read Article &rarr;</span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })()}
                 </div>
@@ -1754,13 +1750,12 @@ export default function ClubPublicPage({
           }}>
             {/* Featured Article */}
             {featuredArticle && (
-              <div
+              <Link
                 id={`news-${featuredArticle.slug}`}
-                onClick={() => setActiveNewsModal(featuredArticle)}
+                href={newsPath(club.slug, featuredArticle.slug)}
                 className="glass-panel glass-panel-interactive"
                 style={{
                   scrollMarginTop: '6rem',
-                  cursor: 'pointer',
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
@@ -1792,16 +1787,16 @@ export default function ClubPublicPage({
                     <span style={{ color: 'var(--club-primary)', fontWeight: 700 }}>Read Article &rarr;</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             )}
 
             {/* News Feed Grid */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {clubNews.filter(n => n.id !== featuredArticle?.id).map(article => (
-                <div
+                <Link
                   key={article.id}
                   id={`news-${article.slug}`}
-                  onClick={() => setActiveNewsModal(article)}
+                  href={newsPath(club.slug, article.slug)}
                   className="glass-panel glass-panel-interactive"
                   style={{
                     scrollMarginTop: '6rem',
@@ -1809,7 +1804,6 @@ export default function ClubPublicPage({
                     display: 'flex',
                     gap: '1.25rem',
                     alignItems: 'center',
-                    cursor: 'pointer',
                   }}
                 >
                   <img loading="lazy" decoding="async" width={90} height={90}
@@ -1832,7 +1826,7 @@ export default function ClubPublicPage({
                       <LocalTime value={article.published_at} />
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -2255,7 +2249,6 @@ export default function ClubPublicPage({
         onClose={() => setContactModalOpen(false)}
       />
 
-      {/* News Article Modal */}
       {rosterOpen && (
         <div
           role="dialog"
@@ -2336,49 +2329,6 @@ export default function ClubPublicPage({
         </div>
       )}
 
-      {activeNewsModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999,
-          background: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-        }}>
-          <div className="glass-panel" style={{
-            width: '100%',
-            maxWidth: '650px',
-            maxHeight: '85vh',
-            overflowY: 'auto',
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-medium)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '2rem',
-          }}>
-            <img loading="lazy" decoding="async"
-              src={activeNewsModal.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
-              alt={activeNewsModal.title}
-              style={{ width: '100%', height: '220px', borderRadius: '12px', objectFit: 'cover', marginBottom: '1.25rem' }}
-            />
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-              {activeNewsModal.title}
-            </h3>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Published by {activeNewsModal.author_name} • <LocalTime value={activeNewsModal.published_at} />
-            </div>
-            <NewsVideo url={activeNewsModal.video_embed_url} title={activeNewsModal.title} />
-            <ArticleBody content={activeNewsModal.content} style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', lineHeight: 1.7, marginBottom: '2rem' }} />
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setActiveNewsModal(null)} className="btn btn-primary btn-sm">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

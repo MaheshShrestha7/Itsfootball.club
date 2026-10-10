@@ -75,6 +75,15 @@ export function bookingFeeCents(amountCents: number, fee = BOOKING_FEE): number 
   return Math.max(Math.round((amountCents * fee.percent) / 100) + fee.flatCents, fee.minCents);
 }
 
+/** The fee in words, for llms.txt, pricing.md and the FAQ: "1.5% of the payment (minimum 0.30 in the payment's currency)" */
+export function bookingFeeText(fee = BOOKING_FEE): string {
+  const amount = (cents: number) => (cents / 100).toFixed(2);
+  const parts = [fee.percent && `${fee.percent}% of the payment`, fee.flatCents && amount(fee.flatCents)].filter(Boolean);
+  if (!parts.length) return fee.minCents ? `${amount(fee.minCents)} per payment (in the payment's currency)` : 'no booking fee';
+  const min = fee.minCents ? `minimum ${amount(fee.minCents)} ` : '';
+  return `${parts.join(' + ')}${fee.flatCents || fee.minCents ? ` (${min}in the payment's currency)` : ''}`;
+}
+
 export function formatMoney(cents: number, currency: string): string {
   try {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100);

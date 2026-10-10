@@ -223,8 +223,9 @@ export default function PlatformHomePage() {
             </h1>
 
             <p className="lp-hero-sub">
-              Your official club website, live match centre, digital member passes, subs collection, a merch shop and sponsor
-              reporting, run by your committee from one dashboard. No developer. No spreadsheets. No 40-message group chats.
+              itsfootball.club is the free platform for grassroots football clubs: your official club website, live match centre,
+              digital member passes, subs collection, a merch shop and sponsor reporting, run by your committee from one
+              dashboard. No developer. No spreadsheets. No 40-message group chats.
             </p>
 
             <form className="lp-claim" onSubmit={claim}>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SITE_URL, isPlatformHost } from './lib/slugs';
 
 // Pages that only exist on itsfootball.club itself: on a club's own domain they send you back there
-const PLATFORM_PAGES = ['clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe'];
+const PLATFORM_PAGES = ['clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'pricing.md'];
 
 // Club domain -> slug (null = no club has it). Per isolate; a changed domain shows up within a minute.
 const HOST_TTL_MS = 60_000;

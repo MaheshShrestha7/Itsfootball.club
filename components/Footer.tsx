@@ -9,6 +9,7 @@ import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorTierLabel } from '@/lib/sponsors';
+import { SOCIAL_PROFILES } from '@/lib/seo';
 
 interface FooterProps {
   club?: Club | null;
@@ -176,8 +177,25 @@ export default function Footer({ club, sponsors }: FooterProps) {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
               {club
                 ? `${sentence(club.motto) || 'Dedicated to the beautiful game.'} Home matches played at ${club.stadium_name}.`
-                : 'The premier digital platform for football clubs worldwide. Live match centers, official member passes, and dedicated club websites.'}
+                : 'The free platform for grassroots football clubs: club websites, live match centres, digital member passes and club shops.'}
             </p>
+            {!club && (
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                {SOCIAL_PROFILES.map(p => (
+                  <a
+                    key={p.url}
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer me"
+                    aria-label={`itsfootball.club on ${p.name} (opens in a new tab)`}
+                    className="badge"
+                    style={{ color: 'var(--text-secondary)', background: 'rgba(var(--tint-rgb), 0.06)', fontWeight: 600 }}
+                  >
+                    {p.name}
+                  </a>
+                ))}
+              </div>
+            )}
             {club && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
                 <span className="row">

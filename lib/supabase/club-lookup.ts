@@ -171,6 +171,31 @@ export async function listClubNews(clubId: string, limit = 20): Promise<NewsMeta
   }
 }
 
+export interface NewsArticleRow extends NewsMetadataRow {
+  club_id: string;
+  updated_at: string | null;
+}
+
+/** One article of a club by its slug, for the article page's metadata and JSON-LD */
+export async function findNewsBySlug(clubId: string, slug: string): Promise<NewsArticleRow | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId) || !slug) return null;
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/news_articles?select=id,club_id,title,slug,summary,cover_image_url,author_name,tags,published_at,updated_at&club_id=eq.${clubId}&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    );
+    if (!res.ok) return null;
+    const rows: NewsArticleRow[] = await res.json();
+    return rows[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Up to 5,000 rows of a REST query, a page at a time (Supabase returns at most 1,000 per request) */
 async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -197,23 +222,26 @@ export interface SitemapData {
   matches: { id: string; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
+  news: { club_id: string; slug: string; published_at: string | null; updated_at: string | null }[];
   shopClubIds: string[];
   galleryClubIds: string[];
 }
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
-  const [clubs, matches, events, tournaments, products, photos] = await Promise.all([
+  const [clubs, matches, events, tournaments, news, products, photos] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
+    // Published only: a scheduled article joins the sitemap once its time comes
+    fetchRows<SitemapData['news'][number]>(`news_articles?select=club_id,slug,published_at,updated_at&published_at=lte.${new Date().toISOString().slice(0, 13)}:59:59Z&order=id`),
     fetchRows<{ club_id: string }>('shop_products?select=club_id&is_active=eq.true&order=id'),
     // ponytail: reads one row per photo; a distinct-club_id view if galleries grow into the tens of thousands
     fetchRows<{ club_id: string }>('media_gallery?select=club_id&media_type=eq.image&order=id'),
   ]);
   return {
-    clubs, matches, events, tournaments,
+    clubs, matches, events, tournaments, news,
     shopClubIds: Array.from(new Set(products.map(p => p.club_id))),
     galleryClubIds: Array.from(new Set(photos.map(p => p.club_id))),
   };

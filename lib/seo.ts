@@ -5,6 +5,13 @@ import { SITE_URL } from './slugs';
 export { SITE_URL };
 export const SITE_NAME = 'itsfootball.club';
 export const DEFAULT_OG_IMAGE = '/og-image.jpg';
+/** The platform's own social accounts: linked from the platform footer and emitted as schema.org sameAs, so AI and search engines tie them to this site */
+export const SOCIAL_PROFILES = [
+  { name: 'Facebook', url: 'https://www.facebook.com/ItsFootball.Club' },
+  { name: 'TikTok', url: 'https://www.tiktok.com/@itsfootball.club' },
+];
+/** Where the platform is aimed, for schema.org areaServed */
+export const AREA_SERVED = ['Australia', 'New Zealand', 'Oceania', 'United Kingdom'];
 
 const TITLE_MAX = 60;
 const DESC_MIN = 140;

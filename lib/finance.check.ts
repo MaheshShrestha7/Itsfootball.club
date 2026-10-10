@@ -1,7 +1,7 @@
 // Self-check for finance helpers.
 // Run: npx esbuild lib/finance.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { bookingFeeCents, membershipTermEnd, parseMoneyToCents, paymentReference, toCsv } from './finance';
+import { bookingFeeCents, bookingFeeText, membershipTermEnd, parseMoneyToCents, paymentReference, toCsv } from './finance';
 import { matchesFileSignature } from './file-signature';
 
 assert.equal(parseMoneyToCents('12.50'), 1250);
@@ -18,6 +18,10 @@ assert.equal(bookingFeeCents(6000, none), 0);
 assert.equal(bookingFeeCents(6000, { ...none, flatCents: 100 }), 100);
 assert.equal(bookingFeeCents(6000, { ...none, percent: 2 }), 120);
 assert.equal(bookingFeeCents(500, { ...none, percent: 2, minCents: 30 }), 30);
+assert.equal(bookingFeeText(none), 'no booking fee');
+assert.equal(bookingFeeText({ ...none, percent: 1.5, minCents: 30 }), "1.5% of the payment (minimum 0.30 in the payment's currency)");
+assert.equal(bookingFeeText({ ...none, percent: 2 }), '2% of the payment');
+assert.equal(bookingFeeText({ ...none, percent: 1, flatCents: 20 }), "1% of the payment + 0.20 (in the payment's currency)");
 assert.equal(bookingFeeCents(6000, { percent: 1.5, flatCents: 20, minCents: 30 }), 110);
 assert.equal(bookingFeeCents(0, { ...none, minCents: 30 }), 0);
 
