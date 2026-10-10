@@ -95,6 +95,8 @@ export interface Club {
   welfare_officer_name?: string;
   welfare_officer_email?: string;
   welfare_officer_phone?: string;
+  /** The club's story for the About page: news-editor HTML (sanitised when shown) */
+  about_story?: string;
 }
 
 export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
