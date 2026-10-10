@@ -89,6 +89,8 @@ export interface Club {
   fiscal_grace_days?: number;
   /** Home-screen icons drawn from the crest (lib/app-icons.ts) */
   app_icons?: AppIcons | null;
+  /** The club's story for the About page: news-editor HTML (sanitised when shown) */
+  about_story?: string;
 }
 
 export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';

@@ -7,6 +7,8 @@ import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-conte
 import CustomDomainPanel from './CustomDomainPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
+import RichTextEditor from '@/components/RichTextEditor';
+import { isArticleEmpty } from '@/lib/article-text';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import {
   AlertTriangle,
@@ -24,6 +26,7 @@ import {
   Phone,
   Shirt,
   Calendar,
+  BookOpen,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -64,6 +67,10 @@ export default function AdminBrandingPage({
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
   });
+  // The club story is edited apart from formData: the editor reads its value once on mount, so it
+  // is remounted (storyVersion) whenever the saved story is reloaded into the form
+  const [story, setStory] = useState(club?.about_story || '');
+  const [storyVersion, setStoryVersion] = useState(0);
 
   // Keep formData synchronized when club resolves or updates from storage
   useEffect(() => {
@@ -88,6 +95,8 @@ export default function AdminBrandingPage({
         contact_email: club.contact_email || '',
         contact_phone: club.contact_phone || '',
       });
+      setStory(club.about_story || '');
+      setStoryVersion(v => v + 1);
     }
   }, [club?.id, club?.updated_at, club?.slug, isHydrated]);
 
@@ -179,11 +188,15 @@ export default function AdminBrandingPage({
       : undefined;
 
     const { slider_images_text, ...restData } = formData;
+    // Only sent when it changed, so saving the rest of the branding never depends on the story column
+    const cleanStory = isArticleEmpty(story) ? '' : story;
+    const storyChanged = cleanStory !== (club.about_story || '');
 
     updateClubBranding(club.id, {
       ...restData,
       slider_images: sliderImages,
       slug: newSlug,
+      ...(storyChanged ? { about_story: cleanStory } : {}),
     });
 
     setHasUserEdited(false);
@@ -686,6 +699,32 @@ export default function AdminBrandingPage({
               value={formData.slider_images_text}
               onChange={handleChange}
             />
+          </div>
+        </div>
+
+        {/* SECTION 2B: CLUB STORY (the About page) */}
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BookOpen size={20} color="var(--club-primary)" /> Club Story
+          </h3>
+          <p className="text-note" style={{ marginBottom: '1.25rem' }}>
+            Shown on your <Link href={`/${club?.slug || resolvedParams.clubSlug}/about`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>About page</Link>: how the club started, what it stands for, its proudest moments. Add pictures and YouTube videos from the toolbar.
+          </p>
+          <div className="form-group">
+            <label htmlFor="branding-club-story" className="form-label">Our Story</label>
+            {club && (
+              <RichTextEditor
+                key={`${club.id}-${storyVersion}`}
+                id="branding-club-story"
+                value={story}
+                onChange={html => {
+                  setHasUserEdited(true);
+                  setStory(html);
+                }}
+                clubId={club.id}
+                placeholder="Tell visitors how the club began and what it's about…"
+              />
+            )}
           </div>
         </div>
 
