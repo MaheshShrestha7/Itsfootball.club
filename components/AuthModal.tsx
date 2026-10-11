@@ -12,12 +12,14 @@ interface AuthModalProps {
   onClose: () => void;
   defaultMode?: 'login' | 'signup';
   redirectTo?: string;
+  /** False on club sites: new people join a club through its membership application instead */
+  allowSignup?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redirectTo = '/my-clubs' }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redirectTo = '/my-clubs', allowSignup = true }: AuthModalProps) {
   const router = useRouter();
   const { login, signup, resendConfirmation } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
+  const [mode, setMode] = useState<'login' | 'signup'>(allowSignup ? defaultMode : 'login');
 
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -164,6 +166,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         </p>
 
         {/* Tab switch */}
+        {allowSignup && (
         <div style={{
           display: 'flex',
           background: 'rgba(var(--shade-rgb), 0.3)',
@@ -209,6 +212,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             Register
           </button>
         </div>
+        )}
 
         {/* Error Alert */}
 

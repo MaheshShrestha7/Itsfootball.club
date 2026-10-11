@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import AuthModal from '@/components/AuthModal';
 import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
@@ -23,7 +22,6 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -32,6 +30,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   const isAdmin = hasClubAdminAccess(club.id);
   const userRole = user ? getUserRoleForClub(club.id) : null;
+  // Signed in but not a member here (or not approved yet): still offered "Join the Club"
+  const isClubMember = !!(isAuthenticated && user && userRole);
 
   const [logoError, setLogoError] = useState(false);
 
@@ -215,8 +215,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             </Link>
           )}
 
-          {/* Join the Club (signed-in members reach their pass from their avatar instead) */}
-          {!(isAuthenticated && user) && (
+          {/* Join the Club, for anyone who isn't a member here (members reach their pass from their avatar) */}
+          {!isClubMember && (
           <Link
             href={`/${club.slug}/member?join=1`}
             style={{
@@ -346,14 +346,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(true)}
-                className="btn btn-secondary btn-sm row"
-              >
+              {/* Members sign in on the club's member page (emailed link), not with a platform account */}
+              <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm row">
                 <User size={14} />
                 <span>Sign In</span>
-              </button>
+              </Link>
             </div>
           )}
         </nav>
@@ -437,15 +434,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <span>{liveMatch ? 'Watch Match Center (LIVE)' : 'Match-Day Center'}</span>
                 </Link>
 
-                {/* Signed in: their member pass. Visitors: join the club */}
+                {/* Members: their member pass. Everyone else: join the club */}
                 <Link
-                  href={isAuthenticated && user ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
+                  href={isClubMember ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-primary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem' }}
                 >
-                  {isAuthenticated && user ? <CreditCard size={16} /> : <UserPlus size={16} />}
-                  <span>{isAuthenticated && user ? 'Digital Member Pass' : 'Join the Club'}</span>
+                  {isClubMember ? <CreditCard size={16} /> : <UserPlus size={16} />}
+                  <span>{isClubMember ? 'Digital Member Pass' : 'Join the Club'}</span>
                 </Link>
               </div>
 
@@ -584,7 +581,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                         {user.full_name}
                       </div>
                       <div className="text-meta">
-                        {userRole || 'Member'}
+                        {userRole || 'Not a member yet'}
                       </div>
                     </div>
                   </div>
@@ -597,23 +594,21 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => { setMobileMenuOpen(false); setAuthModalOpen(true); }}
+                <Link
+                  href={`/${club.slug}/member`}
+                  onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-secondary"
                   style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   <User size={16} />
                   <span>Sign in to the Club</span>
-                </button>
+                </Link>
               )}
             </div>
           </div>
         </div>,
         document.body
       )}
-
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <style jsx>{`
         @media (min-width: 900px) {

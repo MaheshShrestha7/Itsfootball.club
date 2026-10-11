@@ -29,7 +29,7 @@ export default function ClubTabBar({ club }: { club: Club }) {
       ? { label: 'Live', href: `${base}/match/${live.id}`, icon: Radio }
       : { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
     { label: 'My Club', href: `${base}/app`, icon: LayoutGrid },
-    member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard } : { label: 'Join', href: `${base}/member`, icon: UserPlus },
+    member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard } : { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus },
     ...(user && hasClubAdminAccess(club.id) ? [{ label: 'Admin', href: `${base}/admin`, icon: Shield }] : []),
   ];
 
