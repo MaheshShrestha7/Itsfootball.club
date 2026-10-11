@@ -286,22 +286,6 @@ export default function Footer({ club, sponsors }: FooterProps) {
               )}
             </div>
           </div>
-
-          {/* Col 4: Matchday & Club Standards */}
-          <div>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
-              Matchday Standards &amp; Trust
-            </h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', lineHeight: 1.6, marginBottom: '0.8rem' }}>
-              Engineered to professional league standards with protected squad records, instant pitchside updates, and encrypted matchday passes.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--c-green)' }}>Protected Squad Data</span>
-              <span className="badge" style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--c-blue)' }}>Match Media Hub</span>
-              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--c-amber)' }}>Dedicated Club Sites</span>
-              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'var(--c-purple)' }}>Verified Turnstiles</span>
-            </div>
-          </div>
         </div>
 
         {/* Bottom copyright */}
