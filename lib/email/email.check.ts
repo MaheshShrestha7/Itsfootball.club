@@ -1,7 +1,7 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 
@@ -88,6 +88,15 @@ async function main() {
   assert.ok(news.text.includes('Second para'), 'message in plain text');
   const match = matchNotice({ brand: evil, recipientName: 'Sam', fixture: 'A vs B', competition: null, when: 'Sun', venue: 'Park', link: 'https://x' });
   assert.ok(!match.html.includes('Message from') && !match.html.includes('Unsubscribe from'), 'no message/unsubscribe blocks when absent');
+
+  // --- membership applications ---
+  const received = applicationReceived({ brand: evil, memberName: 'Jo Bloggs', tier: 'Senior', link: 'https://x/member', payable: true });
+  assert.ok(received.text.includes('Hi Jo,') && received.text.includes('membership fee') && !received.html.includes('Unsubscribe from'), 'received: name, fee hint, no unsubscribe');
+  const approved = applicationApproved({ brand: evil, memberName: 'Jo', tier: 'Senior', link: 'https://x/member' });
+  assert.ok(approved.text.includes('Open my member pass: https://x/member'), 'approved: sign-in link');
+  const rejected = applicationRejected({ brand: evil, memberName: 'Jo', tier: 'Senior', reason: 'Squad <full>', link: 'https://x/member' });
+  assert.ok(rejected.html.includes('Squad &lt;full&gt;') && rejected.text.includes('Squad <full>'), 'rejected: reason escaped and in text');
+  assert.ok(!applicationRejected({ brand: evil, memberName: 'Jo', tier: 'Senior', reason: null, link: 'https://x' }).html.includes('Message from'), 'rejected: no reason block when empty');
 
   console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }

@@ -366,3 +366,59 @@ export function newsNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientNa
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Membership applications (sent from /api/members/application-email). Transactional: they answer
+// something the applicant did, so no unsubscribe link.
+// ---------------------------------------------------------------------------------------------
+
+export function applicationReceived(p: { brand: EmailBrand; memberName: string; tier: string; link: string; payable: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `We've received your ${p.brand.name} membership application`,
+    preheader: 'The committee will review it and email you the outcome.',
+    heading: 'Application received',
+    paragraphs: [
+      `Hi ${firstName(p.memberName)}, thanks for applying to join ${p.brand.name}. The committee will review your application and we'll email you as soon as there's a decision.`,
+      p.payable
+        ? 'If you haven\'t paid the membership fee yet, you can do it any time from the member page: sign in with this email address to see your application.'
+        : 'You can check where it stands any time on the member page: sign in with this email address to see your application.',
+    ],
+    details: [['Membership', p.tier], ['Status', 'Waiting for committee review']],
+    cta: { label: 'View my application', url: p.link },
+    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+  });
+}
+
+export function applicationApproved(p: { brand: EmailBrand; memberName: string; tier: string; link: string }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `Welcome to ${p.brand.name}! Your membership is approved`,
+    preheader: 'Your digital member pass is ready.',
+    heading: `Welcome to ${p.brand.name}!`,
+    paragraphs: [
+      `Hi ${firstName(p.memberName)}, great news: the committee has approved your membership. Your digital member pass is now active.`,
+      'Open the member page and sign in with this email address. We\'ll email you a one-time sign-in link, no password needed.',
+    ],
+    details: [['Membership', p.tier], ['Status', 'Approved']],
+    cta: { label: 'Open my member pass', url: p.link },
+    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+  });
+}
+
+export function applicationRejected(p: { brand: EmailBrand; memberName: string; tier: string; reason?: string | null; link: string }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    message: p.reason,
+    subject: `Your ${p.brand.name} membership application`,
+    preheader: 'An update on your membership application.',
+    heading: 'About your application',
+    paragraphs: [
+      `Hi ${firstName(p.memberName)}, thank you for applying to join ${p.brand.name}. Unfortunately the committee wasn't able to approve your application this time.`,
+      'If your circumstances change, you can apply again from the member page: sign in with this email address.',
+    ],
+    details: [['Membership', p.tier], ['Status', 'Not approved']],
+    cta: { label: 'View my application', url: p.link },
+    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+  });
+}
