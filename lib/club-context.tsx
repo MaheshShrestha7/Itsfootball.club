@@ -50,7 +50,7 @@ import {
   resolveTournament,
   upgradeLegacyMatches
 } from './tournament-engine';
-import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
+import { getAccessToken, getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
@@ -219,8 +219,9 @@ interface ClubContextType {
   // Member Portal, Application Lifecycle & Messaging
   memberMessages: MemberMessage[];
   applyForMembership: (clubId: string, input: MemberApplicationInput) => Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }>;
-  approveMemberApplication: (memberId: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
-  rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => { success: boolean; member?: ClubMember; message: string };
+  /** Saved to the database straight away, then the applicant is emailed (emailed: false if that failed) */
+  approveMemberApplication: (memberId: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
+  rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
   markMemberMessageRead: (messageId: string) => void;
@@ -2523,6 +2524,23 @@ export function ClubProvider({
   }, [sponsorAnalyticsEvents]);
 
   // 17. Member Portal Workflow, Applications, Magic Links & Admin Messaging
+
+  /** Emails the applicant about their application (see app/api/members/application-email). True when it went out or already had. */
+  const sendApplicationEmail = useCallback(async (clubId: string, memberId: string, kind: 'applied' | 'approved' | 'rejected'): Promise<boolean> => {
+    try {
+      const token = kind === 'applied' ? null : await getAccessToken();
+      const res = await fetch('/api/members/application-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId, memberId, kind }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return res.ok && (data.sent || data.alreadySent);
+    } catch {
+      return false;
+    }
+  }, []);
+
   const applyForMembership = useCallback(async (clubId: string, input: MemberApplicationInput): Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }> => {
     const cleanEmail = input.email.toLowerCase().trim();
     const cleanName = sanitizeText(input.full_name.trim());
@@ -2591,6 +2609,8 @@ export function ClubProvider({
         };
       }
       applyServerRow('members', setMembers, newMem);
+      // Not awaited: the application is in either way, the email is a courtesy
+      void sendApplicationEmail(clubId, newMem.id, 'applied');
     } else {
       setMembers(prev => [...prev, newMem]);
     }
@@ -2600,9 +2620,36 @@ export function ClubProvider({
       member: newMem,
       message: 'Membership application submitted successfully! Your application is in the committee queue for approval.'
     };
-  }, [members, applyServerRow]);
+  }, [members, applyServerRow, sendApplicationEmail]);
 
-  const approveMemberApplication = useCallback((memberId: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
+  /**
+   * Writes an application decision to the database now (not via the background sync), so the email
+   * that follows can rely on it. Without Supabase (local demo data) it just updates the screen.
+   */
+  const saveApplicationDecision = useCallback(async (updated: ClubMember): Promise<string | null> => {
+    const client = getSupabaseClient();
+    if (!client) {
+      setMembers(prev => prev.map(m => (m.id === updated.id ? updated : m)));
+      return null;
+    }
+    const { data, error } = await client.from('club_members')
+      .update({
+        membership_status: updated.membership_status,
+        rejection_reason: updated.rejection_reason ?? null,
+        reviewed_at: updated.reviewed_at,
+        reviewed_by: updated.reviewed_by,
+        qr_code_token: updated.qr_code_token,
+        updated_at: updated.updated_at,
+      })
+      .eq('id', updated.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) return error?.message || 'You are not allowed to review this application.';
+    applyServerRow('members', setMembers, data);
+    return null;
+  }, [applyServerRow]);
+
+  const approveMemberApplication = useCallback(async (memberId: string, adminName: string = 'Club Committee'): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
     const member = members.find(m => m.id === memberId);
     if (!member) {
       return { success: false, message: 'Member record not found.' };
@@ -2613,13 +2660,15 @@ export function ClubProvider({
     const updatedMember: ClubMember = {
       ...member,
       membership_status: 'approved',
+      rejection_reason: undefined,
       reviewed_at: new Date().toISOString(),
       reviewed_by: adminName,
       qr_code_token: activeToken,
       updated_at: new Date().toISOString(),
     };
 
-    setMembers(prev => prev.map(m => (m.id === memberId ? updatedMember : m)));
+    const saveError = await saveApplicationDecision(updatedMember);
+    if (saveError) return { success: false, message: `Could not approve ${member.full_name}: ${saveError}` };
 
     // Stats start with the approved membership (a signed-out applicant can't save them)
     setPlayerStats(prev => prev.some(st => st.member_id === memberId) ? prev : [...prev, {
@@ -2656,14 +2705,16 @@ export function ClubProvider({
 
     setMemberMessages(prev => [...prev, welcomeMsg]);
 
+    const emailed = await sendApplicationEmail(member.club_id, memberId, 'approved');
     return {
       success: true,
       member: updatedMember,
+      emailed,
       message: `Approved ${member.full_name}'s membership application!`
     };
-  }, [members, awardClubScorePoints, seasonLabelFor]);
+  }, [members, awardClubScorePoints, seasonLabelFor, saveApplicationDecision, sendApplicationEmail]);
 
-  const rejectMemberApplication = useCallback((memberId: string, reason: string, adminName: string = 'Club Committee'): { success: boolean; member?: ClubMember; message: string } => {
+  const rejectMemberApplication = useCallback(async (memberId: string, reason: string, adminName: string = 'Club Committee'): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
     const member = members.find(m => m.id === memberId);
     if (!member) {
       return { success: false, message: 'Member record not found.' };
@@ -2678,14 +2729,17 @@ export function ClubProvider({
       updated_at: new Date().toISOString(),
     };
 
-    setMembers(prev => prev.map(m => (m.id === memberId ? updatedMember : m)));
+    const saveError = await saveApplicationDecision(updatedMember);
+    if (saveError) return { success: false, message: `Could not reject ${member.full_name}'s application: ${saveError}` };
 
+    const emailed = await sendApplicationEmail(member.club_id, memberId, 'rejected');
     return {
       success: true,
       member: updatedMember,
+      emailed,
       message: `Application for ${member.full_name} marked as rejected.`
     };
-  }, [members]);
+  }, [members, saveApplicationDecision, sendApplicationEmail]);
 
   const sendMemberMessage = useCallback((messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>): MemberMessage => {
     const newMsg: MemberMessage = {

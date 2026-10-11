@@ -47,6 +47,26 @@ import {
 } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
 
+/** The signed-in user's own pending or rejected application (my_membership_application RPC) */
+interface MyApplication {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  membership_tier: string;
+  membership_status: 'pending' | 'rejected';
+  rejection_reason: string | null;
+  application_notes: string | null;
+  player_position: string | null;
+  jersey_number: number | null;
+  applied_at: string | null;
+  reviewed_at: string | null;
+  signup_paid: boolean;
+}
+
+const formatDay = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
 export default function MemberPortalPage({
   params,
 }: {
@@ -98,6 +118,10 @@ export default function MemberPortalPage({
   });
   const [signupError, setSignupError] = useState<string | null>(null);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
+  // Signed in, not a member yet: their own application, and whether they're filling it in again
+  const [myApplication, setMyApplication] = useState<MyApplication | null>(null);
+  const [reapplying, setReapplying] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -118,6 +142,16 @@ export default function MemberPortalPage({
   const [messageSentToast, setMessageSentToast] = useState(false);
 
 
+  /** Reads the signed-in user's pending or rejected application here (null if none, or before the migration) */
+  const loadMyApplication = async (): Promise<MyApplication | null> => {
+    const client = getSupabaseClient();
+    if (!client) return null;
+    const { data } = await client.rpc('my_membership_application', { p_club_id: club.id });
+    const application = Array.isArray(data) ? ((data[0] as MyApplication | undefined) ?? null) : null;
+    setMyApplication(application);
+    return application;
+  };
+
   // 1. Follow the Supabase session; once signed in, link it to this club's member record
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -133,6 +167,8 @@ export default function MemberPortalPage({
       if (!userId) {
         setActiveMember(null);
         setSignedInEmail(null);
+        setMyApplication(null);
+        setReapplying(false);
         setAuthChecked(true);
         return;
       }
@@ -143,11 +179,15 @@ export default function MemberPortalPage({
       if (error || !row) {
         setActiveMember(null);
         if (!error) {
+          // Applied but not approved (yet): show them where their application stands
+          const application = await loadMyApplication();
+          if (cancelled) return;
           setLoginNotice(null);
-          setLoginError(`No approved membership was found for ${email || 'this email'} at ${club.name}. If you have applied, the committee still needs to approve you.`);
+          setLoginError(application ? null : `No membership or application was found for ${email || 'this email'} at ${club.name}. You can apply below.`);
         }
       } else {
         setActiveMember(row);
+        setMyApplication(null);
         setLoginError(null);
         reloadFromServer();
       }
@@ -197,7 +237,27 @@ export default function MemberPortalPage({
   // Handle Logout
   const handleLogout = async () => {
     setActiveMember(null);
+    setMyApplication(null);
+    setReapplying(false);
     await getSupabaseClient()?.auth.signOut();
+  };
+
+  // "Apply again" on a rejected application: the form, filled in with what they sent last time
+  const startReapply = (application: MyApplication) => {
+    setSignupForm(f => ({
+      ...f,
+      fullName: application.full_name,
+      email: application.email,
+      phone: application.phone || '',
+      tier: plans.length && !plans.some(p => p.name === application.membership_tier) ? plans[0].name : application.membership_tier,
+      position: (application.player_position || '') as PlayerPosition | '',
+      jerseyNumber: application.jersey_number ? String(application.jersey_number) : '',
+      notes: application.application_notes || '',
+    }));
+    setSignupError(null);
+    setSubmittedApplication(null);
+    setGatewayTab('signup');
+    setReapplying(true);
   };
 
   // Email a one-time sign-in link (Supabase Auth)
@@ -222,14 +282,50 @@ export default function MemberPortalPage({
       return;
     }
     // Same message whether or not the email belongs to a member (no account enumeration)
-    setLoginNotice('If this email belongs to an approved member, a sign-in link is on its way. Check your inbox.');
+    setLoginNotice('If this email has a membership or an application with us, a sign-in link is on its way. Check your inbox.');
   };
 
   // Handle Membership Application Submit
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      if (reapplying && myApplication) await handleReapply(myApplication);
+      else await submitNewApplication();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
+  // Apply again after a rejection: the same application goes back to the committee
+  const handleReapply = async (application: MyApplication) => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const { error } = await client.rpc('reapply_for_membership', {
+      p_club_id: club.id,
+      p_full_name: signupForm.fullName.trim(),
+      p_phone: signupForm.phone.trim(),
+      p_tier: signupForm.tier,
+      p_position: signupForm.position || null,
+      p_jersey: signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
+      p_notes: signupForm.notes.trim(),
+    });
+    if (error) {
+      setSignupError('Your application could not be sent. Please try again in a moment.');
+      return;
+    }
+    void fetch('/api/members/application-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clubId: club.id, memberId: application.id, kind: 'applied' }),
+    }).catch(() => undefined);
+    setReapplying(false);
+    await loadMyApplication();
+  };
+
+  const submitNewApplication = async () => {
     const res = await applyForMembership(club.id, {
       full_name: signupForm.fullName,
       email: signupForm.email,
@@ -362,7 +458,69 @@ export default function MemberPortalPage({
               </p>
             </div>
 
+            {/* Signed in with an application that isn't approved: where it stands, instead of the tabs */}
+            {myApplication && !reapplying && (() => {
+              const pending = myApplication.membership_status === 'pending';
+              const plan = plans.find(p => p.name === myApplication.membership_tier);
+              const unpaid = pending && !myApplication.signup_paid && !!plan && plan.price_cents > 0;
+              return (
+                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
+                  <span className="badge" style={pending
+                    ? { background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', marginBottom: '0.75rem' }
+                    : { background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', marginBottom: '0.75rem' }}>
+                    {pending ? '⏳ WAITING FOR COMMITTEE REVIEW' : 'NOT APPROVED'}
+                  </span>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                    {pending ? 'Your application is with the committee' : 'Your application wasn\u2019t approved'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 1.25rem auto' }}>
+                    {pending
+                      ? `We'll email ${myApplication.email} as soon as ${club.name} has made a decision. Once you're approved, your member pass appears here.`
+                      : `${club.name} wasn't able to approve your application this time. If your circumstances have changed, you can apply again.`}
+                  </p>
+
+                  <div style={{ textAlign: 'left', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'grid', gap: '0.35rem' }}>
+                    <div>Applicant: <strong className="text-primary">{myApplication.full_name}</strong></div>
+                    <div>Membership: <strong className="text-primary">{myApplication.membership_tier}</strong></div>
+                    {myApplication.applied_at && <div>Applied: <strong className="text-primary">{formatDay(myApplication.applied_at)}</strong></div>}
+                    {pending && plan && plan.price_cents > 0 && (
+                      <div>Membership fee: <strong style={{ color: myApplication.signup_paid ? 'var(--c-green)' : 'var(--c-amber)' }}>{myApplication.signup_paid ? 'Paid' : `${formatMoney(plan.price_cents, currency)} to pay`}</strong></div>
+                    )}
+                    {!pending && myApplication.reviewed_at && <div>Decided: <strong className="text-primary">{formatDay(myApplication.reviewed_at)}</strong></div>}
+                    {!pending && myApplication.rejection_reason && <div>Reason: <strong className="text-primary">{myApplication.rejection_reason}</strong></div>}
+                  </div>
+
+                  {unpaid && plan && (
+                    <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+                      <PaymentStep
+                        clubId={club.id}
+                        kind="membership_signup"
+                        memberId={myApplication.id}
+                        planId={plan.id}
+                        amountCents={plan.price_cents}
+                        label={`Pay for ${plan.name}`}
+                      />
+                    </div>
+                  )}
+
+                  {!pending && (
+                    <button type="button" onClick={() => startReapply(myApplication)} className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>
+                      Apply again
+                    </button>
+                  )}
+
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Signed in as {signedInEmail}.{' '}
+                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Gateway Switcher Tabs */}
+            {!(myApplication && !reapplying) && (<>
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
@@ -541,7 +699,7 @@ export default function MemberPortalPage({
 
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 1.5rem auto' }}>
                       Your membership application for <strong>{submittedApplication.membership_tier}</strong> has been safely recorded in the {club.name} administrative queue.
-                      Once approved by the club executive committee, your digital pass will be activated and you will be able to sign in.
+                      We&apos;ll email you as soon as the committee has decided. Once you&apos;re approved, your digital pass is activated and you can sign in.
                     </p>
 
                     <div style={{
@@ -644,6 +802,7 @@ export default function MemberPortalPage({
                           type="email"
                           required
                           value={signupForm.email}
+                          readOnly={reapplying}
                           onChange={e => setSignupForm({ ...signupForm, email: e.target.value })}
                           placeholder="e.g. liam@email.com"
                           style={{
@@ -807,16 +966,24 @@ export default function MemberPortalPage({
 
                     <button
                       type="submit"
+                      disabled={submitting}
                       className="btn btn-primary"
                       style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                     >
                       <Zap size={18} />
-                      <span>Submit Membership Application</span>
+                      <span>{submitting ? 'Sending...' : reapplying ? 'Send My Application Again' : 'Submit Membership Application'}</span>
                     </button>
+
+                    {reapplying && (
+                      <button type="button" onClick={() => setReapplying(false)} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }}>
+                        Cancel
+                      </button>
+                    )}
                   </form>
                 )}
               </div>
             )}
+            </>)}
           </div>
         ) : (
           /* ==================================================================== */

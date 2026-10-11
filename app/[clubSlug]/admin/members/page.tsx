@@ -138,20 +138,36 @@ export default function AdminMembersPage({
   const clubMessages = getClubMemberMessages(club.id); // newest first
   const unreadMessagesCount = clubMessages.filter(m => !m.is_read && m.sender_type === 'member').length;
 
-  const handleApprove = (member: ClubMember) => {
-    const res = approveMemberApplication(member.id, user?.full_name || 'Club Committee');
-    if (res.success) {
-      showToast(`✓ Approved ${member.full_name}! Virtual pass and credentials generated.`);
+  const [reviewing, setReviewing] = useState<string | null>(null);
+
+  const handleApprove = async (member: ClubMember) => {
+    if (reviewing) return;
+    setReviewing(member.id);
+    try {
+      const res = await approveMemberApplication(member.id, user?.full_name || 'Club Committee');
+      if (!res.success) return notify('Not approved', res.message);
+      showToast(res.emailed
+        ? `✓ Approved ${member.full_name}. We've emailed them how to sign in.`
+        : `✓ Approved ${member.full_name}. The email to them didn't go out, so let them know they can sign in.`);
+    } finally {
+      setReviewing(null);
     }
   };
 
-  const handleRejectConfirm = () => {
-    if (!rejectModalMember) return;
-    const res = rejectMemberApplication(rejectModalMember.id, rejectReason || 'Application not approved for current season.', user?.full_name || 'Club Committee');
-    if (res.success) {
-      showToast(`Application for ${rejectModalMember.full_name} has been rejected.`);
+  const handleRejectConfirm = async () => {
+    if (!rejectModalMember || reviewing) return;
+    const member = rejectModalMember;
+    setReviewing(member.id);
+    try {
+      const res = await rejectMemberApplication(member.id, rejectReason || 'Application not approved for current season.', user?.full_name || 'Club Committee');
+      if (!res.success) return notify('Not rejected', res.message);
+      showToast(res.emailed
+        ? `Application for ${member.full_name} rejected. We've emailed them.`
+        : `Application for ${member.full_name} rejected. The email to them didn't go out.`);
       setRejectModalMember(null);
       setRejectReason('');
+    } finally {
+      setReviewing(null);
     }
   };
 
@@ -759,11 +775,12 @@ export default function AdminMembersPage({
                           <button
                             type="button"
                             onClick={() => handleApprove(member)}
+                            disabled={reviewing === member.id}
                             className="btn btn-primary btn-sm"
                             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                           >
                             <Check size={16} />
-                            <span>Approve Pass</span>
+                            <span>{reviewing === member.id ? 'Approving...' : 'Approve Pass'}</span>
                           </button>
 
                           <button
@@ -888,7 +905,7 @@ export default function AdminMembersPage({
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              You are rejecting the membership application for <strong className="text-primary">{rejectModalMember.full_name}</strong>. Provide a reason so the applicant understands the committee decision.
+              You are rejecting the membership application for <strong className="text-primary">{rejectModalMember.full_name}</strong>. We&apos;ll email them, and the reason you give here is included in that email.
             </p>
 
             <div style={{ marginBottom: '1.25rem' }}>
@@ -924,10 +941,11 @@ export default function AdminMembersPage({
               <button
                 type="button"
                 onClick={handleRejectConfirm}
+                disabled={!!reviewing}
                 className="btn btn-sm"
                 style={{ background: '#EF4444', color: '#FFFFFF', border: 'none' }}
               >
-                Confirm Rejection
+                {reviewing ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </div>
           </div>
