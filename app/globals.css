@@ -1124,6 +1124,8 @@ textarea {
 /* Interactive Player Node on Tactical Pitch */
 .pitch-player-node {
   position: absolute;
+  /* Size to the content, not the space left before the pitch edge, so labels near the touchline don't wrap */
+  width: max-content;
   transform: translate(-50%, -50%);
   cursor: grab;
   display: flex;
@@ -1153,16 +1155,19 @@ textarea {
 
 @media (max-width: 640px) {
   .pitch-player-node .player-node-circle {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 0.75rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 0.8rem !important;
   }
-  /* Name above position so the name gets the full label width instead of collapsing to "…" */
+  .pitch-player-node .player-node-number {
+    font-size: 0.6rem !important;
+    min-width: 15px !important;
+    padding: 1px 3px !important;
+  }
   .pitch-player-node .player-node-name {
+    margin-top: 5px !important;
     font-size: 0.7rem !important;
     padding: 1px 4px !important;
-    flex-direction: column !important;
-    gap: 0 !important;
     line-height: 1.15;
   }
   .pitch-player-node .player-node-label {

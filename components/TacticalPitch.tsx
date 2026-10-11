@@ -11,8 +11,8 @@ import {
   Info,
   ArrowLeftRight,
   Crosshair,
-  User,
   Flame,
+  ArrowDown,
   Smartphone,
   Monitor
 } from 'lucide-react';
@@ -272,6 +272,40 @@ export function isEmptySlot(p: PitchPosition): boolean {
 export const nameFontSize = (name: string): string =>
   name.length <= 10 ? '1em' : name.length <= 12 ? '0.88em' : '0.8em';
 
+/** How player names read on the pitch and bench, picked from the name-format dropdown. */
+export type PitchNameDisplay = 'first' | 'last' | 'firstLastInitial' | 'initialLast';
+const NAME_DISPLAY_ORDER: PitchNameDisplay[] = ['firstLastInitial', 'initialLast', 'first', 'last'];
+const NAME_DISPLAY_LABEL: Record<PitchNameDisplay, string> = {
+  firstLastInitial: 'First name, last initial',
+  initialLast: 'First initial, last name',
+  first: 'First name',
+  last: 'Last name',
+};
+
+/** "Mahesh Shrestha" -> "Mahesh" | "Shrestha" | "Mahesh S." | "M. Shrestha". Single-word names stay as-is. */
+export function formatPitchName(fullName: string, mode: PitchNameDisplay): string {
+  const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  if (parts.length === 1) return first;
+  switch (mode) {
+    case 'last': return last;
+    case 'firstLastInitial': return `${first}\u00A0${last.charAt(0).toUpperCase()}.`; // non-breaking: keep "Mahesh S." on one line
+    case 'initialLast': return `${first.charAt(0).toUpperCase()}.\u00A0${last}`;
+    default: return first;
+  }
+}
+
+/** Marker initials when a player has no photo: first + last name ("Mahesh Shrestha" -> "MS"). */
+function pitchInitials(fullName: string): string {
+  const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0].charAt(0);
+  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+  return (first + last).toUpperCase();
+}
+
 function uniqueSlotId(taken: Set<string>, idx: number): string {
   let n = idx;
   while (taken.has(`slot-${n}`)) n++;
@@ -406,7 +440,7 @@ export default function TacticalPitch({
   const [selectedFormationKey, setSelectedFormationKeyState] = useState<string>(startsCustom ? 'Custom' : initialPresetKey);
   const [isFreeFormMode, setIsFreeFormMode] = useState<boolean>(startsCustom);
   const lastPresetRef = useRef<string>(initialPresetKey);
-  const [nameDisplay, setNameDisplay] = useState<'first' | 'last'>('first');
+  const [nameDisplay, setNameDisplay] = useState<PitchNameDisplay>('firstLastInitial');
 
   const changeFormationKey = (key: string) => {
     setSelectedFormationKeyState(key);
@@ -904,16 +938,16 @@ export default function TacticalPitch({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => setNameDisplay(d => (d === 'first' ? 'last' : 'first'))}
-              className="btn btn-secondary btn-sm touch-target"
-              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              title="Toggle between showing player first or last name on the pitch"
+            <select
+              aria-label="Player name format"
+              title="How player names show on the pitch"
+              className="form-select touch-target"
+              value={nameDisplay}
+              onChange={e => setNameDisplay(e.target.value as PitchNameDisplay)}
+              style={{ width: 'auto', padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
             >
-              <User size={13} />
-              <span>{nameDisplay === 'first' ? 'First Name' : 'Last Name'}</span>
-            </button>
+              {NAME_DISPLAY_ORDER.map(mode => <option key={mode} value={mode}>{NAME_DISPLAY_LABEL[mode]}</option>)}
+            </select>
 
             {showFormationControls && isFreeFormMode && (
               <button
@@ -1108,13 +1142,13 @@ export default function TacticalPitch({
                 </div>
               )}
 
-              {/* Jersey Node Pin */}
+              {/* Player marker: photo (or initials in club colours), with a shirt-number tag, captain badge and one match-events pill */}
               <div
                 className="player-node-circle"
                 style={{
                   position: 'relative',
-                  width: '36px',
-                  height: '36px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   background: empty
                     ? 'rgba(var(--tint-rgb), 0.08)'
@@ -1140,10 +1174,11 @@ export default function TacticalPitch({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--text-primary)',
+                  color: '#FFFFFF',
                   fontFamily: 'var(--font-heading)',
                   fontWeight: 900,
-                  fontSize: '0.9rem',
+                  fontSize: '0.95rem',
+                  letterSpacing: '0.02em',
                   textShadow: '0 1px 3px rgba(0,0,0,0.8)',
                   transition: 'border-color 0.15s, box-shadow 0.15s',
                 }}
@@ -1151,50 +1186,50 @@ export default function TacticalPitch({
                 {empty ? (
                   '+'
                 ) : photoUrl ? (
-                  <>
-                    <img loading="lazy" decoding="async"
-                      src={photoUrl}
-                      alt={`${pos.name} photo`}
-                      draggable={false}
-                      onError={() => setBrokenPhotos(prev => new Set(prev).add(photoUrl))}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    {pos.number > 0 && (
-                      <span style={{
-                        position: 'absolute',
-                        bottom: '-3px',
-                        right: '-3px',
-                        background: pos.position === 'GK' ? '#F59E0B' : primaryColor,
-                        color: '#FFFFFF',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                        minWidth: '14px',
-                        height: '14px',
-                        padding: '0 2px',
-                        borderRadius: '7px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1.5px solid rgba(0,0,0,0.6)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                      }}>
-                        {pos.number}
-                      </span>
-                    )}
-                  </>
+                  <img loading="lazy" decoding="async"
+                    src={photoUrl}
+                    alt={`${pos.name} photo`}
+                    draggable={false}
+                    onError={() => setBrokenPhotos(prev => new Set(prev).add(photoUrl))}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                  />
                 ) : (
-                  pos.number || ''
+                  pitchInitials(pos.name)
                 )}
 
-                {/* Captain's Armband */}
-                {pos.is_captain && (
-                  <span style={{
+                {/* Shirt number tag (bottom-left) */}
+                {!empty && pos.number > 0 && (
+                  <span className="player-node-number" style={{
                     position: 'absolute',
-                    top: '-6px',
+                    bottom: '-4px',
                     left: '-6px',
+                    background: 'rgba(8, 12, 18, 0.92)',
+                    color: '#FFFFFF',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    minWidth: '18px',
+                    padding: '2px 4px',
+                    borderRadius: '5px',
+                    textAlign: 'center',
+                    textShadow: 'none',
+                    border: `1px solid ${pos.position === 'GK' ? '#F59E0B' : primaryColor}`,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                  }}>
+                    {pos.number}
+                  </span>
+                )}
+
+                {/* Captain's armband (top-left) */}
+                {pos.is_captain && (
+                  <span title="Captain" style={{
+                    position: 'absolute',
+                    top: '-5px',
+                    left: '-5px',
                     background: '#F59E0B',
                     color: '#000',
-                    fontSize: '0.7rem',
+                    fontSize: '0.62rem',
                     fontWeight: 900,
                     width: '16px',
                     height: '16px',
@@ -1203,64 +1238,46 @@ export default function TacticalPitch({
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: '1.5px solid #000',
+                    textShadow: 'none',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
                   }}>
                     C
                   </span>
                 )}
 
-                {/* Yellow / Red Card Status Overlays */}
-                {badges.hasRed ? (
-                  <span style={{
+                {/* Match events (top-right): goal, card and subbed-off grouped in one pill */}
+                {(badges.hasGoal || badges.hasYellow || badges.hasRed || badges.isSubbedOff) && (
+                  <span className="player-node-events" style={{
                     position: 'absolute',
-                    top: '-5px',
-                    right: '-5px',
-                    background: '#EF4444',
-                    width: '10px',
-                    height: '14px',
-                    borderRadius: '2px',
-                    border: '1px solid #FFFFFF',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
-                  }} title="Red Card" />
-                ) : badges.hasYellow ? (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-5px',
-                    right: '-5px',
-                    background: '#F59E0B',
-                    width: '10px',
-                    height: '14px',
-                    borderRadius: '2px',
-                    border: '1px solid #000000',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
-                  }} title="Yellow Card" />
-                ) : null}
-
-                {/* Goal Scored Indicator Flame */}
-                {badges.hasGoal && (
-                  <span style={{
-                    position: 'absolute',
-                    bottom: '-6px',
-                    right: '-6px',
-                    background: '#10B981',
-                    borderRadius: '50%',
-                    width: '16px',
-                    height: '16px',
+                    top: '-7px',
+                    right: '-10px',
+                    background: 'rgba(8, 12, 18, 0.92)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    borderRadius: '8px',
+                    padding: '2px 3px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1.5px solid #FFFFFF',
+                    gap: '2px',
+                    lineHeight: 1,
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
                   }}>
-                    <Flame size={10} color="var(--text-primary)" />
+                    {badges.hasGoal && <Flame size={10} color="#10B981" aria-label="Goal" />}
+                    {(badges.hasRed || badges.hasYellow) && (
+                      <span
+                        title={badges.hasRed ? 'Red Card' : 'Yellow Card'}
+                        style={{ width: '7px', height: '10px', borderRadius: '1.5px', background: badges.hasRed ? '#EF4444' : '#F59E0B' }}
+                      />
+                    )}
+                    {badges.isSubbedOff && <ArrowDown size={10} color="#EF4444" aria-label="Subbed off" />}
                   </span>
                 )}
               </div>
 
-              {/* Player Name & Role Label Badge */}
+              {/* Player name: one clean line (empty slots show which position they are) */}
               <div
                 className="player-node-name"
                 style={{
-                  marginTop: '4px',
+                  marginTop: '6px',
                   background: 'rgba(var(--dk-8-12-18), 0.88)',
                   backdropFilter: 'blur(6px)',
                   padding: '2px 7px',
@@ -1269,29 +1286,22 @@ export default function TacticalPitch({
                   fontSize: '0.7rem',
                   fontWeight: 700,
                   color: 'var(--text-primary)',
-                  whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-              }}>
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                }}
+                title={empty ? undefined : `${pos.name} · ${pos.position}`}
+              >
                 {/* Long names shrink a step (never below ~9px), and wrap only past that, instead of truncating to "…" */}
                 {(() => {
-                  const label = empty ? 'Empty' : (nameDisplay === 'first' ? pos.name.split(' ')[0] : pos.name.split(' ').pop()) || '';
+                  const label = empty ? pos.position : formatPitchName(pos.name, nameDisplay);
                   return (
-                    <span className="player-node-label" style={{ maxWidth: '72px', fontSize: nameFontSize(label), whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'center', lineHeight: 1.15, color: empty ? 'var(--text-muted)' : undefined }}>
+                    <span className="player-node-label" style={{ maxWidth: '80px', fontSize: nameFontSize(label), whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'center', lineHeight: 1.15, color: empty ? 'var(--text-muted)' : undefined, fontFamily: empty ? 'var(--font-mono)' : undefined }}>
                       {label}
                     </span>
                   );
                 })()}
-                <span style={{
-                  fontSize: '0.7rem',
-                  color: primaryColor,
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 800,
-                }}>
-                  {pos.position}
-                </span>
               </div>
             </div>
           );
@@ -1337,7 +1347,7 @@ export default function TacticalPitch({
                     </span>
                   )}
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {nameDisplay === 'first' ? sub.full_name.split(' ')[0] : sub.full_name.split(' ').pop()}
+                    {formatPitchName(sub.full_name, nameDisplay)}
                   </span>
                   {sub.player_position && (
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{sub.player_position}</span>
