@@ -145,7 +145,10 @@ export default function AdminLayout({
     label: string;
     href: string;
     icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+    /** Something needs attention: red pill, and a dot on the collapsed section / icon rail */
     badge?: string;
+    /** Plain information (e.g. the current season): grey pill, no dot */
+    note?: string;
     /** Access area (lib/permissions.ts); the item only shows to people who can view it */
     area?: string;
   }
@@ -187,7 +190,7 @@ export default function AdminLayout({
         { area: 'matches', label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         { area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
         { area: 'events', label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
-        { area: 'seasons', label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, badge: activeSeason?.name },
+        { area: 'seasons', label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
       ],
     },
     {
@@ -384,7 +387,7 @@ export default function AdminLayout({
                       key={item.href}
                       href={item.href}
                       onClick={onItemClick}
-                      title={rail ? (item.badge ? `${item.label} (${item.badge})` : item.label) : undefined}
+                      title={rail ? (item.badge || item.note ? `${item.label} (${item.badge || item.note})` : item.label) : undefined}
                       aria-label={rail ? item.label : undefined}
                       style={{
                         position: 'relative',
@@ -429,6 +432,11 @@ export default function AdminLayout({
                           {item.badge && (
                             <span className="badge badge-live" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
                               {item.badge}
+                            </span>
+                          )}
+                          {!item.badge && item.note && (
+                            <span className="badge" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', textAlign: 'right' }}>
+                              {item.note}
                             </span>
                           )}
                         </>

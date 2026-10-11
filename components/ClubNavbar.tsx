@@ -53,18 +53,34 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const sideRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLSpanElement>(null);
   const [navFits, setNavFits] = useState(true);
   useEffect(() => {
-    const row = rowRef.current, nav = navRef.current, side = sideRef.current;
-    if (!row || !nav || !side) return;
-    const BRAND_MIN = 200; // crest, short-name badge and a few letters of the club name
-    const check = () => setNavFits(BRAND_MIN + nav.scrollWidth + side.offsetWidth + 32 <= row.clientWidth);
+    const row = rowRef.current, nav = navRef.current, side = sideRef.current, name = nameRef.current;
+    if (!row || !nav || !side || !name) return;
+    const ctx = document.createElement('canvas').getContext('2d');
+    const check = () => {
+      // Room the club name needs on two lines (it wraps rather than cutting off): crest and gap,
+      // a bit over half its one-line width, and the short-name badge beside it
+      const style = getComputedStyle(name);
+      let oneLine = name.scrollWidth;
+      if (ctx) {
+        ctx.font = style.font;
+        oneLine = ctx.measureText(club.name).width + (parseFloat(style.letterSpacing) || 0) * club.name.length;
+      }
+      const badge = name.nextElementSibling as HTMLElement | null;
+      const brandMin = 56 + Math.ceil(oneLine * 0.6) + (badge ? badge.offsetWidth + 6 : 0);
+      setNavFits(brandMin + nav.scrollWidth + side.offsetWidth + 32 <= row.clientWidth);
+    };
     check();
+    // The heading webfont swaps in after first paint and changes the name's width
+    document.fonts?.ready.then(check);
     const observer = new ResizeObserver(check);
     observer.observe(row);
     observer.observe(nav);
+    observer.observe(name);
     return () => observer.disconnect();
-  }, []);
+  }, [club.name, club.short_name]);
 
   return (
     <header data-nav-fits={navFits ? undefined : 'false'} style={{
@@ -146,19 +162,24 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-              <span style={{
+              {/* Long names wrap to a second line; only a name too long for two lines ends in "..." */}
+              <span ref={nameRef} className="club-nav-name" title={club.name} style={{
                 fontFamily: 'var(--font-heading)',
                 fontSize: 'clamp(1rem, 3.8vw, 1.25rem)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
+                lineHeight: 1.1,
                 color: 'var(--text-primary)',
-                whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+                textWrap: 'balance',
+                overflowWrap: 'anywhere',
               }}>
                 {club.name}
               </span>
-              <span className="badge" style={{ backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
+              <span className="badge club-nav-badge" style={{ backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
                 {club.short_name}
               </span>
             </div>
@@ -603,6 +624,12 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           }
           header[data-nav-fits='false'] .mobile-trigger {
             display: flex !important;
+          }
+        }
+        /* Phones and tablets: the crest already carries the club, so the short-name badge gives its room to the name */
+        @media (max-width: 899px) {
+          .club-nav-badge {
+            display: none !important;
           }
         }
         @media (max-width: 480px) {
