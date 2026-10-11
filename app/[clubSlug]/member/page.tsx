@@ -167,8 +167,11 @@ export default function MemberPortalPage({
   }, [club.id]);
 
   useEffect(() => {
-    const payment = new URLSearchParams(window.location.search).get('payment');
+    const search = new URLSearchParams(window.location.search);
+    const payment = search.get('payment');
     if (payment === 'success' || payment === 'cancelled') setPaymentNotice(payment);
+    // "Join the Club" links open straight on the membership application
+    if (search.has('join')) setGatewayTab('signup');
     const client = getSupabaseClient();
     if (!client) return;
     client.from('membership_plans').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')

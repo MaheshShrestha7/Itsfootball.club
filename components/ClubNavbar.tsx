@@ -12,7 +12,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake } from 'lucide-react';
 
 interface ClubNavbarProps {
   club: Club;
@@ -215,10 +215,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             </Link>
           )}
 
-          {/* Virtual Member Pass (signed-in members reach it from their avatar instead) */}
+          {/* Join the Club (signed-in members reach their pass from their avatar instead) */}
           {!(isAuthenticated && user) && (
           <Link
-            href={`/${club.slug}/member`}
+            href={`/${club.slug}/member?join=1`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -228,8 +228,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               fontSize: '0.9rem',
             }}
           >
-            <CreditCard size={16} color="var(--club-primary)" />
-            <span>Member Pass</span>
+            <UserPlus size={16} color="var(--club-primary)" />
+            <span>Join the Club</span>
           </Link>
           )}
 
@@ -267,6 +267,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           </Link>
           <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Gallery & Videos
+          </Link>
+          <Link href={`/${club.slug}/sponsor`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+            <Handshake size={15} color="var(--club-primary)" />
+            <span>Become a Sponsor</span>
           </Link>
 
           {/* Admin Portal Gateway */}
@@ -433,14 +437,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <span>{liveMatch ? 'Watch Match Center (LIVE)' : 'Match-Day Center'}</span>
                 </Link>
 
+                {/* Signed in: their member pass. Visitors: join the club */}
                 <Link
-                  href={`/${club.slug}/member`}
+                  href={isAuthenticated && user ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-primary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem' }}
                 >
-                  <CreditCard size={16} />
-                  <span>Digital Member Pass</span>
+                  {isAuthenticated && user ? <CreditCard size={16} /> : <UserPlus size={16} />}
+                  <span>{isAuthenticated && user ? 'Digital Member Pass' : 'Join the Club'}</span>
                 </Link>
               </div>
 
@@ -529,6 +534,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <span>Gallery & Videos</span>
                 </Link>
 
+                <Link
+                  href={`/${club.slug}/sponsor`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <Handshake size={16} color="var(--club-primary)" />
+                  <span>Become a Sponsor</span>
+                </Link>
+
                 {isAdmin && (
                   <Link
                     href={`/${club.slug}/admin`}
@@ -590,7 +604,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   <User size={16} />
-                  <span>Sign In to itsfootball.club</span>
+                  <span>Sign in to the Club</span>
                 </button>
               )}
             </div>
