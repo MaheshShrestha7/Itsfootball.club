@@ -148,8 +148,6 @@ const sections: LegalSection[] = [
           <li>Ask your club to update, correct or remove your member details and the other records it keeps (club admins manage these).</li>
           <li>Email us at {mail} for anything else. We&rsquo;ll reply within 30 days.</li>
         </ul>
-        <p>If you&rsquo;re in the UK you also have the right to object to or restrict how your information is used and to receive a copy in a portable format.</p>
-        <p>If you&rsquo;re unhappy with how we handled a privacy concern, tell us first so we can fix it. You can also complain to the <a href="https://www.oaic.gov.au" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-primary)' }}>Office of the Australian Information Commissioner</a> or, in the UK, the <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-primary)' }}>Information Commissioner&rsquo;s Office</a>.</p>
       </>
     ),
   },
