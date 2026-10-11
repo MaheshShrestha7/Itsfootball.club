@@ -11,7 +11,6 @@ import {
   Info,
   ArrowLeftRight,
   Crosshair,
-  User,
   Flame,
   ArrowDown,
   Smartphone,
@@ -273,14 +272,14 @@ export function isEmptySlot(p: PitchPosition): boolean {
 export const nameFontSize = (name: string): string =>
   name.length <= 10 ? '1em' : name.length <= 12 ? '0.88em' : '0.8em';
 
-/** How player names read on the pitch and bench, cycled by the name button. */
+/** How player names read on the pitch and bench, picked from the name-format dropdown. */
 export type PitchNameDisplay = 'first' | 'last' | 'firstLastInitial' | 'initialLast';
-const NAME_DISPLAY_ORDER: PitchNameDisplay[] = ['first', 'last', 'firstLastInitial', 'initialLast'];
+const NAME_DISPLAY_ORDER: PitchNameDisplay[] = ['firstLastInitial', 'initialLast', 'first', 'last'];
 const NAME_DISPLAY_LABEL: Record<PitchNameDisplay, string> = {
-  first: 'First Name',
-  last: 'Last Name',
-  firstLastInitial: 'First L.',
-  initialLast: 'F. Last',
+  firstLastInitial: 'First name, last initial',
+  initialLast: 'First initial, last name',
+  first: 'First name',
+  last: 'Last name',
 };
 
 /** "Mahesh Shrestha" -> "Mahesh" | "Shrestha" | "Mahesh S." | "M. Shrestha". Single-word names stay as-is. */
@@ -292,8 +291,8 @@ export function formatPitchName(fullName: string, mode: PitchNameDisplay): strin
   if (parts.length === 1) return first;
   switch (mode) {
     case 'last': return last;
-    case 'firstLastInitial': return `${first} ${last.charAt(0).toUpperCase()}.`;
-    case 'initialLast': return `${first.charAt(0).toUpperCase()}. ${last}`;
+    case 'firstLastInitial': return `${first}\u00A0${last.charAt(0).toUpperCase()}.`; // non-breaking: keep "Mahesh S." on one line
+    case 'initialLast': return `${first.charAt(0).toUpperCase()}.\u00A0${last}`;
     default: return first;
   }
 }
@@ -441,7 +440,7 @@ export default function TacticalPitch({
   const [selectedFormationKey, setSelectedFormationKeyState] = useState<string>(startsCustom ? 'Custom' : initialPresetKey);
   const [isFreeFormMode, setIsFreeFormMode] = useState<boolean>(startsCustom);
   const lastPresetRef = useRef<string>(initialPresetKey);
-  const [nameDisplay, setNameDisplay] = useState<PitchNameDisplay>('first');
+  const [nameDisplay, setNameDisplay] = useState<PitchNameDisplay>('firstLastInitial');
 
   const changeFormationKey = (key: string) => {
     setSelectedFormationKeyState(key);
@@ -939,16 +938,16 @@ export default function TacticalPitch({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => setNameDisplay(d => NAME_DISPLAY_ORDER[(NAME_DISPLAY_ORDER.indexOf(d) + 1) % NAME_DISPLAY_ORDER.length])}
-              className="btn btn-secondary btn-sm touch-target"
-              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              title="Change how player names show on the pitch: first name, last name, first name + last initial, or first initial + last name"
+            <select
+              aria-label="Player name format"
+              title="How player names show on the pitch"
+              className="form-select touch-target"
+              value={nameDisplay}
+              onChange={e => setNameDisplay(e.target.value as PitchNameDisplay)}
+              style={{ width: 'auto', padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
             >
-              <User size={13} />
-              <span>{NAME_DISPLAY_LABEL[nameDisplay]}</span>
-            </button>
+              {NAME_DISPLAY_ORDER.map(mode => <option key={mode} value={mode}>{NAME_DISPLAY_LABEL[mode]}</option>)}
+            </select>
 
             {showFormationControls && isFreeFormMode && (
               <button

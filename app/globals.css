@@ -1124,6 +1124,8 @@ textarea {
 /* Interactive Player Node on Tactical Pitch */
 .pitch-player-node {
   position: absolute;
+  /* Size to the content, not the space left before the pitch edge, so labels near the touchline don't wrap */
+  width: max-content;
   transform: translate(-50%, -50%);
   cursor: grab;
   display: flex;
