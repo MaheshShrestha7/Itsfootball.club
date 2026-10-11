@@ -141,13 +141,6 @@ const sections: LegalSection[] = [
     heading: 'Changes to these terms',
     body: <p>We may update these terms. We&rsquo;ll show the date of the latest version at the top of this page and tell club owners by email about significant changes. Continuing to use the service after a change means you accept the updated terms.</p>,
   },
-  {
-    id: 'law',
-    heading: 'Governing law and contact',
-    body: (
-      <p>These terms are governed by the laws of {LEGAL.jurisdiction}, and the courts there have jurisdiction, without affecting any right you have to bring a claim where you live. Questions about these terms: {mail}.</p>
-    ),
-  },
 ];
 
 export default function TermsPage() {
