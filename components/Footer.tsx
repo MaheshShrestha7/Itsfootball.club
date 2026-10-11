@@ -239,6 +239,7 @@ export default function Footer({ club, sponsors }: FooterProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
               {club ? (
                 <>
+                  <Link href={`/${club.slug}/about`} style={{ color: 'var(--text-secondary)' }}>About the Club</Link>
                   <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
                   <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Fixtures &amp; Results</Link>
                   <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)' }}>First Team Squad</Link>

@@ -34,6 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: url(`/${club.slug}`), lastModified, changeFrequency: 'daily', priority: 0.9 },
       { url: url(`/${club.slug}/member`), lastModified, changeFrequency: 'monthly', priority: 0.5 },
       { url: url(`/${club.slug}/tournaments`), lastModified, changeFrequency: 'weekly', priority: 0.6 },
+      { url: url(`/${club.slug}/about`), lastModified, changeFrequency: 'monthly', priority: 0.5 },
     );
     if (shopClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/shop`), changeFrequency: 'weekly', priority: 0.5 });
     if (galleryClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/gallery`), changeFrequency: 'weekly', priority: 0.4 });

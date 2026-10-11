@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Radio, ClipboardCheck, Layers, QrCode, CalendarDays, Trophy, Calendar, Flag, Users, Shield, UserCheck, Award,
   BellRing, Flame, Wallet, ShoppingBag, DollarSign, Palette, Sparkles, FileText, Images, BarChart3, Mail, KeyRound,
-  LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download,
+  LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download, BookOpen,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -168,6 +168,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'Shop', href: `${base}/shop`, icon: ShoppingBag },
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         { label: 'Gallery', href: `${base}/gallery`, icon: Images },
+        { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ]
     : [
         { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
@@ -175,6 +176,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         { label: 'Shop', href: `${base}/shop`, icon: ShoppingBag },
         { label: 'Gallery', href: `${base}/gallery`, icon: Images },
+        { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ];
 
   const canAnswer = (kind: 'match' | 'event') => (kind === 'match' ? player : approved);
