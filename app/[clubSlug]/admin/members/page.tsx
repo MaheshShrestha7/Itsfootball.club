@@ -2,11 +2,13 @@
 
 import React, { use, useState, useEffect } from 'react';
 import { useUrlTab } from '@/lib/use-url-tab';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { ClubMember, MemberMessage, isPlayerMember } from '@/lib/supabase/types';
+import { ClubMember, isPlayerMember } from '@/lib/supabase/types';
 import {
   UserCheck,
   Users,
@@ -20,7 +22,6 @@ import {
   Shield,
   CreditCard,
   MessageSquare,
-  Send,
   AlertCircle,
   Eye,
   Check,
@@ -34,7 +35,6 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
-import { newId } from '@/lib/ids';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
 
@@ -53,7 +53,7 @@ function ageOn(dateOfBirth: string): number | null {
   return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0);
 }
 
-const MEMBER_TABS = ['pending', 'active', 'rejected', 'messages'] as const;
+const MEMBER_TABS = ['pending', 'active', 'rejected'] as const;
 
 export default function AdminMembersPage({
   params,
@@ -68,25 +68,27 @@ export default function AdminMembersPage({
     approveMemberApplication,
     rejectMemberApplication,
     getClubMemberMessages,
-    replyToMemberMessage,
-    markMemberMessageRead,
     bulkAddMembers,
     clubTeams,
     getActiveSeason,
   } = useClub();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMembers = members.filter(m => m.club_id === club.id);
 
-  // ?tab= in the URL: the admin menu's Members sub-items and the Inbox (?tab=messages) open a tab
+  // ?tab= in the URL: the admin menu's Members sub-items open a tab
   const [activeTab, setActiveTab] = useUrlTab(MEMBER_TABS);
+  // Member messages moved to the Inbox; old links to ?tab=messages land there
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('tab') === 'messages') router.replace(`/${resolvedParams.clubSlug}/admin/inquiries`);
+  }, [searchParams, router, resolvedParams.clubSlug]);
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [selectedMessage, setSelectedMessage] = useState<MemberMessage | null>(null);
-  const [replyText, setReplyText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Sign-up payment status per member (paid by card, or a bank receipt waiting in Finance)
@@ -146,7 +148,6 @@ export default function AdminMembersPage({
   const approvedMembers = clubMembers.filter(m => !m.membership_status || m.membership_status === 'approved');
   const rejectedMembers = clubMembers.filter(m => m.membership_status === 'rejected');
   const clubMessages = getClubMemberMessages(club.id); // newest first
-  const unreadMessagesCount = clubMessages.filter(m => !m.is_read && m.sender_type === 'member').length;
 
   const [reviewing, setReviewing] = useState<string | null>(null);
 
@@ -178,17 +179,6 @@ export default function AdminMembersPage({
       setRejectReason('');
     } finally {
       setReviewing(null);
-    }
-  };
-
-  const handleSendReply = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedMessage || !replyText.trim()) return;
-
-    const res = replyToMemberMessage(selectedMessage.id, replyText, user?.full_name || `${club.name} Committee`);
-    if (res.success) {
-      showToast('✓ Reply sent to member inbox.');
-      setReplyText('');
     }
   };
 
@@ -318,20 +308,23 @@ export default function AdminMembersPage({
             </div>
           </div>
 
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
-            borderRadius: '10px',
-            padding: '0.6rem 1rem',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--c-sky)', fontWeight: 700, textTransform: 'uppercase' }}>
-              Messages
-            </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-              {clubMessages.length}
-            </div>
-          </div>
+          {/* Member messages are answered in the Inbox */}
+          {can(club.id, 'inquiries') && (
+            <Link href={`/${club.slug}/admin/inquiries`} data-view-ok style={{
+              background: 'rgba(59, 130, 246, 0.08)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              borderRadius: '10px',
+              padding: '0.6rem 1rem',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--c-sky)', fontWeight: 700, textTransform: 'uppercase' }}>
+                Messages
+              </div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                {clubMessages.length}
+              </div>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -422,41 +415,9 @@ export default function AdminMembersPage({
             <span>Rejected ({rejectedMembers.length})</span>
           </button>
 
-          <button data-view-ok
-            type="button"
-            onClick={() => setActiveTab('messages')}
-            style={{
-              padding: '0.6rem 1.1rem',
-              borderRadius: '8px',
-              border: activeTab === 'messages' ? '1px solid #3B82F6' : '1px solid transparent',
-              background: activeTab === 'messages' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: activeTab === 'messages' ? 'var(--c-sky)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <MessageSquare size={16} />
-            <span>Member Inquiries</span>
-            {unreadMessagesCount > 0 && (
-              <span style={{
-                background: '#3B82F6',
-                color: '#FFFFFF',
-                borderRadius: '10px',
-                padding: '0.1rem 0.45rem',
-                fontSize: '0.7rem',
-                fontWeight: 900,
-              }}>
-                {unreadMessagesCount} NEW
-              </span>
-            )}
-          </button>
         </div>
 
-        {activeTab !== 'messages' && (
+        {(
           <div style={{ position: 'relative', minWidth: 'min(240px, 100%)' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input data-view-ok aria-label="Search members"
@@ -479,151 +440,7 @@ export default function AdminMembersPage({
       </div>
 
       {/* Main Content Area */}
-      {activeTab === 'messages' ? (
-        /* Member Inquiries & Messages View */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
-          {/* Messages List Left */}
-          <div className="glass-panel" style={{ padding: '1.25rem', height: '620px', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <MessageSquare size={18} color="var(--c-blue)" />
-              <span>Inbox Correspondence ({clubMessages.length})</span>
-            </h3>
-
-            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {clubMessages.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  No member messages recorded yet.
-                </div>
-              ) : (
-                clubMessages.map(msg => (
-                  <div
-                    key={msg.id}
-                    onClick={() => {
-                      setSelectedMessage(msg);
-                      if (msg.sender_type === 'member') markMemberMessageRead(msg.id);
-                    }}
-                    style={{
-                      padding: '0.85rem',
-                      borderRadius: '8px',
-                      background: selectedMessage?.id === msg.id ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--shade-rgb), 0.25)',
-                      border: selectedMessage?.id === msg.id ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{msg.sender_name}</span>
-                      <span className="text-meta">
-                        {new Date(msg.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.78rem', color: 'var(--c-sky)', fontWeight: 600, marginBottom: '0.2rem' }}>
-                      {msg.subject || 'Member Question'}
-                    </div>
-
-                    <p style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      margin: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {msg.content}
-                    </p>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
-                        {msg.category || 'General'}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: msg.sender_type === 'admin' ? 'var(--c-green)' : 'var(--c-amber)' }}>
-                        {msg.sender_type === 'admin' ? '✓ Committee Sent' : '• From Member'}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Message Thread & Reply Right */}
-          <div className="glass-panel" style={{ padding: '1.5rem', height: '620px', display: 'flex', flexDirection: 'column' }}>
-            {selectedMessage ? (
-              <>
-                <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                      {selectedMessage.subject || 'Member Inquiry'}
-                    </h3>
-                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                      {selectedMessage.category || 'General'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                    From: <strong className="text-primary">{selectedMessage.sender_name}</strong> • {new Date(selectedMessage.created_at).toLocaleString()}
-                  </div>
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', background: 'rgba(var(--shade-rgb), 0.3)', borderRadius: '8px', padding: '1rem' }}>
-                  <div style={{
-                    padding: '1rem',
-                    background: 'rgba(var(--tint-rgb), 0.03)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                    marginBottom: '1rem',
-                  }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--c-sky)', fontWeight: 700, marginBottom: '0.4rem' }}>
-                      ORIGINAL INQUIRY
-                    </div>
-                    <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>
-                      {selectedMessage.content}
-                    </p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSendReply} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.4rem' }}>
-                    Reply as {user?.full_name || 'Club Committee'}:
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <textarea aria-label="Reply to member"
-                      rows={2}
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                      placeholder="Type official response to member..."
-                      style={{
-                        flex: 1,
-                        background: 'rgba(var(--shade-rgb), 0.4)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: '8px',
-                        padding: '0.6rem 0.8rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.85rem',
-                        resize: 'none',
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!replyText.trim()}
-                      className="btn btn-primary"
-                      style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: replyText.trim() ? 1 : 0.5 }}
-                    >
-                      <Send size={16} />
-                      <span>Reply</span>
-                    </button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                <MessageSquare size={42} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>Select an inquiry from the inbox to read and reply.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
+      {(
         /* Applications / Members Grid */
         <div>
           {displayedList.length === 0 ? (
@@ -866,38 +683,23 @@ export default function AdminMembersPage({
                               <span>{sendingRenewal === member.id ? 'Sending…' : 'Send Renewal Email'}</span>
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedMessage({
-                                id: newId(),
-                                club_id: club.id,
-                                member_id: member.id,
-                                sender_type: 'member',
-                                sender_name: member.full_name,
-                                sender_email: member.email,
-                                subject: `Direct Outreach to ${member.full_name}`,
-                                category: 'Committee',
-                                content: `Member accreditation inquiry for ${member.full_name}.`,
-                                is_read: true,
-                                created_at: new Date().toISOString(),
-                              });
-                              setActiveTab('messages');
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--c-blue)',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                            }}
-                          >
-                            <MessageSquare size={13} />
-                            <span>Message</span>
-                          </button>
+                          {/* Member messages live in the Inbox, which opens this member's conversation */}
+                          {can(club.id, 'inquiries') && (
+                            <Link
+                              href={`/${club.slug}/admin/inquiries?member=${member.id}`}
+                              data-view-ok
+                              style={{
+                                color: 'var(--c-blue)',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                            >
+                              <MessageSquare size={13} />
+                              <span>Message</span>
+                            </Link>
+                          )}
                         </div>
                       ) : (
                         <button
