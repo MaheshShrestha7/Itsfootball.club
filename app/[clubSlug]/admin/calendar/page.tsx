@@ -2,12 +2,12 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Clock, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Clock, Plus, X } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { clubTeamsOf, teamLabel } from '@/lib/teams';
 import {
-  addDays, buildCalendarItems, CALENDAR_KINDS, dayKey, filterItems, itemsOnDay, layoutDay, monthGrid, sameDay,
+  addDays, buildCalendarItems, CALENDAR_KINDS, dayKey, filterItems, itemsOnDay, layoutDay, monthGrid, newItemHref, sameDay,
   startOfDay, weekDays, type CalendarItem, type CalendarKind,
 } from '@/lib/admin-calendar';
 
@@ -61,6 +61,7 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
   const [teamFilter, setTeamFilter] = useState('ALL');
   const [kinds, setKinds] = useState<Set<CalendarKind>>(() => new Set(CALENDAR_KINDS.map(k => k.key)));
   const [open, setOpen] = useState<{ item: CalendarItem; rect: DOMRect } | null>(null);
+  const [adding, setAdding] = useState<{ day: Date; time?: string; rect: DOMRect } | null>(null);
   const today = startOfDay(new Date());
 
   // Remembered view and filters; phones start on the list, where a month grid is too cramped
@@ -122,21 +123,38 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
   };
 
   const step = (dir: 1 | -1) => {
-    setOpen(null);
+    closeAll();
     setAnchor(a => (view === 'week' ? addDays(a, 7 * dir) : new Date(a.getFullYear(), a.getMonth() + dir, 1)));
   };
   const goToday = () => {
-    setOpen(null);
+    closeAll();
     setAnchor(startOfDay(new Date()));
   };
   const openDay = (day: Date) => {
-    setOpen(null);
+    closeAll();
     setAnchor(day);
     pickView('week');
   };
   const show = (item: CalendarItem, e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
+    setAdding(null);
     setOpen({ item, rect: e.currentTarget.getBoundingClientRect() });
+  };
+
+  // Adding from a day or time slot opens the existing add forms, prefilled; only for people who can add
+  const canAddMatch = can(club.id, 'matches', 'edit');
+  const canAddEvent = can(club.id, 'events', 'edit');
+  const canAdd = canAddMatch || canAddEvent;
+  const addAt = (day: Date, time: string | undefined, e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setOpen(null);
+    const rect = e.currentTarget.getBoundingClientRect();
+    // A time slot is a whole column: anchor the popover where it was clicked
+    setAdding({ day, time, rect: time ? new DOMRect(e.clientX, e.clientY, 0, 0) : rect });
+  };
+  const closeAll = () => {
+    setOpen(null);
+    setAdding(null);
   };
 
   const week = weekDays(anchor);
@@ -145,13 +163,18 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
     : fmtMonth(anchor);
 
   return (
-    <div className="admin-cal" onClick={() => setOpen(null)}>
+    <div className="admin-cal" onClick={closeAll}>
       <div className="admin-cal-head">
         <div>
           <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>FIXTURES & EVENTS</span>
           <h1 className="stat-value">Calendar</h1>
           <p className="text-body">Matches, training, events and tournaments in one place, past and upcoming.</p>
         </div>
+        {canAdd && (
+          <button type="button" className="btn btn-primary btn-sm row" onClick={e => addAt(view === 'week' || anchor.getMonth() !== today.getMonth() ? anchor : today, undefined, e)}>
+            <Plus size={16} /> Add
+          </button>
+        )}
       </div>
 
       <div className="admin-cal-bar">
@@ -191,11 +214,23 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
       </div>
 
       {view === 'month' && (
-        <MonthView anchor={anchor} today={today} items={items} label={label} onItem={show} onDay={openDay} />
+        <MonthView anchor={anchor} today={today} items={items} label={label} onItem={show} onDay={openDay} onAdd={canAdd ? addAt : undefined} />
       )}
-      {view === 'week' && <WeekView days={week} today={today} items={items} label={label} onItem={show} />}
+      {view === 'week' && <WeekView days={week} today={today} items={items} label={label} onItem={show} onAdd={canAdd ? addAt : undefined} />}
       {view === 'list' && <ListView anchor={anchor} today={today} items={items} label={label} onItem={show} />}
 
+      {adding && (
+        <AddPopover
+          day={adding.day}
+          time={adding.time}
+          rect={adding.rect}
+          links={[
+            ...(canAddMatch ? [{ href: newItemHref(`/${club.slug}/admin/matches`, adding.day, adding.time, multiTeam ? teamFilter : undefined), text: 'Add match' }] : []),
+            ...(canAddEvent ? [{ href: newItemHref(`/${club.slug}/admin/events`, adding.day, adding.time), text: 'Add event or training' }] : []),
+          ]}
+          onClose={() => setAdding(null)}
+        />
+      )}
       {open && (
         <ItemPopover
           item={open.item}
@@ -226,8 +261,10 @@ function Chip({ item, text, onItem, time = true, continues }: { item: CalendarIt
   );
 }
 
-function MonthView({ anchor, today, items, label, onItem, onDay }: {
-  anchor: Date; today: Date; items: CalendarItem[]; label: (i: CalendarItem) => string; onItem: ItemHandler; onDay: (d: Date) => void;
+type AddHandler = (day: Date, time: string | undefined, e: React.MouseEvent<HTMLElement>) => void;
+
+function MonthView({ anchor, today, items, label, onItem, onDay, onAdd }: {
+  anchor: Date; today: Date; items: CalendarItem[]; label: (i: CalendarItem) => string; onItem: ItemHandler; onDay: (d: Date) => void; onAdd?: AddHandler;
 }) {
   const days = monthGrid(anchor);
   return (
@@ -238,10 +275,11 @@ function MonthView({ anchor, today, items, label, onItem, onDay }: {
         const extra = dayItems.length - MONTH_CELL_ITEMS;
         const out = day.getMonth() !== anchor.getMonth();
         const isToday = sameDay(day, today);
-        const cls = ['admin-cal-day', out && 'is-out', day < today && 'is-past', isToday && 'is-today'].filter(Boolean).join(' ');
+        const cls = ['admin-cal-day', out && 'is-out', day < today && 'is-past', isToday && 'is-today', onAdd && 'is-addable'].filter(Boolean).join(' ');
         return (
-          <div key={dayKey(day)} className={cls}>
-            <button data-view-ok type="button" className="admin-cal-daynum" aria-label={`Open the week of ${fmtDay(day)}`} onClick={() => onDay(day)}>
+          // Clicking the empty part of a day offers to add something on it
+          <div key={dayKey(day)} className={cls} onClick={onAdd ? e => onAdd(day, undefined, e) : undefined}>
+            <button data-view-ok type="button" className="admin-cal-daynum" aria-label={`Open the week of ${fmtDay(day)}`} onClick={e => { e.stopPropagation(); onDay(day); }}>
               {day.getDate()}
             </button>
             {dayItems.slice(0, extra > 0 ? MONTH_CELL_ITEMS - 1 : MONTH_CELL_ITEMS).map(i => {
@@ -253,7 +291,7 @@ function MonthView({ anchor, today, items, label, onItem, onDay }: {
               return <Chip key={i.key} item={i} text={text} onItem={onItem} continues={multi ? { before, after } : undefined} />;
             })}
             {extra > 0 && (
-              <button data-view-ok type="button" className="admin-cal-more" onClick={() => onDay(day)}>+{extra + 1} more</button>
+              <button data-view-ok type="button" className="admin-cal-more" onClick={e => { e.stopPropagation(); onDay(day); }}>+{extra + 1} more</button>
             )}
           </div>
         );
@@ -262,8 +300,8 @@ function MonthView({ anchor, today, items, label, onItem, onDay }: {
   );
 }
 
-function WeekView({ days, today, items, label, onItem }: {
-  days: Date[]; today: Date; items: CalendarItem[]; label: (i: CalendarItem) => string; onItem: ItemHandler;
+function WeekView({ days, today, items, label, onItem, onAdd }: {
+  days: Date[]; today: Date; items: CalendarItem[]; label: (i: CalendarItem) => string; onItem: ItemHandler; onAdd?: AddHandler;
 }) {
   const perDay = days.map(d => itemsOnDay(items, d));
   // 08:00 to 22:00, stretched to fit anything earlier or later that week
@@ -304,7 +342,16 @@ function WeekView({ days, today, items, label, onItem }: {
           const top = (d: Date) => Math.max(0, ((d.getTime() - day.getTime()) / 3600000 - first) * HOUR_PX);
           const timed = list.filter(i => !i.allDay);
           return (
-            <div key={idx} className={`admin-cal-col${sameDay(day, today) ? ' is-today' : ''}`} style={{ height: hours.length * HOUR_PX }}>
+            <div
+              key={idx}
+              className={`admin-cal-col${sameDay(day, today) ? ' is-today' : ''}${onAdd ? ' is-addable' : ''}`}
+              style={{ height: hours.length * HOUR_PX }}
+              // Clicking an empty slot offers to add something at that hour
+              onClick={onAdd ? e => {
+                const hour = Math.min(23, first + Math.floor((e.clientY - e.currentTarget.getBoundingClientRect().top) / HOUR_PX));
+                onAdd(day, `${String(hour).padStart(2, '0')}:00`, e);
+              } : undefined}
+            >
               {layoutDay(timed).map(({ item, lane, lanes }) => {
                 const y = top(item.start < day ? day : item.start);
                 const end = Math.min(item.end.getTime(), addDays(day, 1).getTime());
@@ -446,6 +493,34 @@ function ItemPopover({ item, rect, title, teamName, clubSlug, can, onClose }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddPopover({ day, time, rect, links, onClose }: {
+  day: Date; time?: string; rect: DOMRect; links: { href: string; text: string }[]; onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const width = 240;
+  const left = Math.min(Math.max(12, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 12);
+  const top = Math.min(Math.max(12, rect.top + Math.min(rect.height, 40)), window.innerHeight - 180);
+  const title = `${fmtDay(day)}${time ? `, ${time}` : ''}`;
+
+  return (
+    <div className="admin-cal-pop" role="dialog" aria-label={`Add on ${title}`} style={{ left, top, width }} onClick={e => e.stopPropagation()}>
+      <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} /></button>
+      <span className="admin-cal-pop-tag" style={{ '--k': 'var(--club-primary)' } as React.CSSProperties}>Add</span>
+      <h3>{title}</h3>
+      <div className="admin-cal-pop-links admin-cal-pop-stack">
+        {links.map(l => (
+          <Link key={l.href} href={l.href} className="btn btn-sm btn-secondary"><Plus size={14} /> {l.text}</Link>
+        ))}
+      </div>
     </div>
   );
 }

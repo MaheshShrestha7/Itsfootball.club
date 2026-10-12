@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, use, useMemo, useRef } from 'react';
+import React, { useState, use, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
 import { clubTeamsOf, defaultTeamOf, isTeamFixture, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
@@ -78,6 +80,7 @@ export default function AdminMatchesPage({
     clubTeams,
   } = useClub();
 
+  const { can } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = useMemo(() => matches.filter(m => m.club_id === club.id), [matches, club.id]);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
@@ -152,8 +155,10 @@ export default function AdminMatchesPage({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Open modal for creating match
-  const handleOpenAddModal = () => {
+  // Open modal for creating match; the calendar can prefill the day, kick-off and team
+  const handleOpenAddModal = (prefill?: NewItemRequest) => {
+    // Teams may still be loading when the form opens from a link; the calendar only links real teams
+    const prefillTeam = prefill?.team && (!teams.length || teams.some(t => t.id === prefill.team)) ? prefill.team : undefined;
     setEditingMatchId(null);
     setForm({
       title: '',
@@ -161,8 +166,8 @@ export default function AdminMatchesPage({
       opponent_name: '',
       opponent_short_name: '',
       is_club_home: true,
-      match_date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
-      match_time: '15:00',
+      match_date: prefill?.date || new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+      match_time: prefill?.time || '15:00',
       venue: club.stadium_name || 'Home Ground',
       match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
       description: 'Official club fixture. Gates open 60 minutes prior to kickoff.',
@@ -174,10 +179,20 @@ export default function AdminMatchesPage({
       door_qr_checkin_enabled: true,
       home_score: 0,
       away_score: 0,
-      team_id: teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId,
+      team_id: prefillTeam || (teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId),
     });
     setIsFormModalOpen(true);
   };
+
+  // "Add match" from a calendar day (?new=YYYY-MM-DD): open the form once, for people who can add
+  const canAddMatch = can(club.id, 'matches', 'edit');
+  useEffect(() => {
+    if (!canAddMatch) return;
+    const req = takeNewItemRequest();
+    if (req) handleOpenAddModal(req);
+    // Only on arrival; the request is removed from the URL once read
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAddMatch]);
 
   // Open modal for editing match
   const handleOpenEditModal = (m: Match) => {
@@ -496,7 +511,7 @@ export default function AdminMatchesPage({
           </Link>
 
           <button
-            onClick={handleOpenAddModal}
+            onClick={() => handleOpenAddModal()}
             className="btn btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
           >
@@ -669,7 +684,7 @@ export default function AdminMatchesPage({
               ? 'Try changing your search keywords or clearing active filters.'
               : 'Start by scheduling your first club fixture or friendly match.'}
           </p>
-          <button onClick={handleOpenAddModal} className="btn btn-primary btn-sm">
+          <button onClick={() => handleOpenAddModal()} className="btn btn-primary btn-sm">
             <Plus size={14} style={{ marginRight: '4px' }} />
             Schedule a Match
           </button>

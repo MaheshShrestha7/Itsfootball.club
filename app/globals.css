@@ -2696,7 +2696,7 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-empty { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 2.5rem 1rem; text-align: center; }
 
 /* Popover */
-.admin-cal-pop { position: fixed; z-index: 60; padding: 1rem; border: 1px solid var(--border-medium); border-radius: var(--radius-md); background: var(--bg-surface-elevated); box-shadow: var(--shadow-lg); }
+.admin-cal-pop { position: fixed; z-index: 95; max-height: calc(100dvh - 24px); overflow-y: auto; padding: 1rem; border: 1px solid var(--border-medium); border-radius: var(--radius-md); background: var(--bg-surface-elevated); box-shadow: var(--shadow-lg); }
 .admin-cal-pop h3 { font-family: var(--font-heading); font-size: 1.05rem; margin: 0.4rem 1.5rem 0.6rem 0; }
 .admin-cal-pop p { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.35rem; font-size: 0.82rem; color: var(--text-secondary); }
 .admin-cal-pop-status { justify-content: space-between; }
@@ -2704,6 +2704,13 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-pop-x { position: absolute; top: 0.6rem; right: 0.6rem; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 4px; }
 .admin-cal-pop-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .admin-cal-pop-links .btn { flex: 1; justify-content: center; }
+.admin-cal-pop-stack { flex-direction: column; }
+.admin-cal-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-cal-day.is-addable { cursor: pointer; }
+  .admin-cal-day.is-addable:hover { background: rgba(var(--tint-rgb), 0.03); }
+  .admin-cal-col.is-addable { cursor: copy; }
+}
 
 @media (max-width: 640px) {
   .admin-cal-title { font-size: 1.05rem; width: 100%; margin: 0.3rem 0 0; order: 5; }
@@ -2711,5 +2718,17 @@ dialog.confirm-dialog::backdrop {
   .admin-cal-chip { font-size: 0.62rem; padding: 1px 3px; }
   .admin-cal-chip b { display: none; }
   .admin-cal-chip .admin-cal-res { display: none; }
-  .admin-cal-pop { left: 0.75rem !important; right: 0.75rem; top: auto !important; bottom: 0.75rem; width: auto !important; }
+}
+
+/* Phones (and the installed app): a sheet along the bottom, above the club's tab bar (58px, globals
+   .club-tabbar at z-index 90) and under the menu drawer (99) */
+@media (max-width: 768px), (display-mode: standalone) {
+  .admin-cal-pop {
+    left: 0.75rem !important;
+    right: 0.75rem;
+    top: auto !important;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    width: auto !important;
+    max-height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px) - 1.5rem);
+  }
 }
