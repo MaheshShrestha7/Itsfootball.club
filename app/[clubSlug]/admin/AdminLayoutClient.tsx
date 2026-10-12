@@ -182,13 +182,14 @@ export default function AdminLayout({
     },
     {
       // What's on and when
-      title: 'Fixtures & Competitions',
+      title: 'Fixtures & Events',
       items: [
         { area: 'matches', label: 'Fixtures & Results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         { area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
         // The tournament tab of the Teams page: tournament sides are kept apart from club teams
         { area: 'teams', label: 'Tournament Sides', href: `/${club.slug}/admin/teams#tournament-sides`, icon: Swords },
-        { area: 'events', label: 'Events', href: `/${club.slug}/admin/events`, icon: Calendar },
+        // The club calendar: training sessions, socials and match-day events, with tickets and check-in
+        { area: 'events', label: 'Events & Training', href: `/${club.slug}/admin/events`, icon: Calendar },
       ],
     },
     {
@@ -223,12 +224,18 @@ export default function AdminLayout({
       ],
     },
     {
-      // The public site and keeping members and fans engaged
-      title: 'Website & Fans',
+      // What the club publishes: stories, photos and the homepage banners that feature them
+      title: 'Club Content',
       items: [
         { area: 'content', label: 'News', href: `/${club.slug}/admin/content`, icon: FileText },
-        { area: 'hero-slider', label: 'Homepage Slider', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
         { area: 'gallery', label: 'Photo Gallery', href: `/${club.slug}/admin/gallery`, icon: Images },
+        { area: 'hero-slider', label: 'Homepage Slider', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
+      ],
+    },
+    {
+      // Reaching members and fans, and seeing who's listening
+      title: 'Fans & Engagement',
+      items: [
         { area: 'emails', label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
         { area: 'gamification', label: 'ClubScore', href: `/${club.slug}/admin/gamification`, icon: Flame },
         { area: 'analytics', label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
