@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, use } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, use } from 'react';
 import dynamic from 'next/dynamic';
 import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorMarquee from '@/components/SponsorMarquee';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
-import { isPlayerMember } from '@/lib/supabase/types';
+import { isPlayerMember, type PitchPosition } from '@/lib/supabase/types';
 import { extractCrestTextColor } from '@/lib/image-color';
 import {
   Shield,
@@ -35,6 +35,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import { periodLabel } from '@/lib/match-clock';
+import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 
 // Only needed once the lineups tab opens
@@ -50,17 +51,39 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { selectClubBySlug, matches, matchEvents, members, isHydrated, syncStatus, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams } = useClub();
+  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers } = useClub();
 
   // No fallback to another club, and only this club's own fixtures: a match cached from another
   // club's site must not show under this club's name
   const club = selectClubBySlug(resolvedParams.clubSlug);
 
+  // Junior players are shown as "Sam T.", without a photo unless a guardian allowed it
+  const juniorIds = useMemo(() => juniorMemberIds(allMembers, clubTeams, clubTeamMembers), [allMembers, clubTeams, clubTeamMembers]);
+  const members = useMemo(() => allMembers.map(m => publicMember(m, juniorIds)), [allMembers, juniorIds]);
+
   // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
   const { user, hasClubAdminAccess } = useAuth();
   const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
-  const match = club ? matches.find(m => m.id === resolvedParams.matchId && m.club_id === club.id) : undefined;
-  const events = match ? matchEvents.filter(e => e.match_id === match.id).sort((a, b) => b.minute - a.minute) : [];
+  const storedMatch = club ? matches.find(m => m.id === resolvedParams.matchId && m.club_id === club.id) : undefined;
+  // Saved lineups keep each player's name: shortened for juniors (every name, in a junior team's fixture)
+  const juniorFixture = !!storedMatch && isJuniorFixture(storedMatch, clubTeams);
+  const match = useMemo(() => {
+    if (!storedMatch || (!juniorFixture && juniorIds.size === 0)) return storedMatch;
+    const publicLineup = (coords: PitchPosition[] | undefined) => coords?.map(p =>
+      juniorFixture || (p.member_id && juniorIds.has(p.member_id)) ? { ...p, name: juniorPublicName(p.name) } : p);
+    return { ...storedMatch, home_lineup_coords: publicLineup(storedMatch.home_lineup_coords), away_lineup_coords: publicLineup(storedMatch.away_lineup_coords) };
+  }, [storedMatch, juniorFixture, juniorIds]);
+  // A team with "hide scores" on (junior grassroots rules): no score, goals or scorers here.
+  // A junior team's fixture shows player names shortened ("Sam T."), for both sides.
+  const scoreHidden = !!match && publicScoreHidden(match, clubTeams);
+  const events = match
+    ? matchEvents
+        .filter(e => e.match_id === match.id && !(scoreHidden && GOAL_EVENT_TYPES.includes(e.event_type)))
+        .map(e => juniorFixture
+          ? { ...e, player_name: juniorPublicName(e.player_name), assist_player_name: e.assist_player_name ? juniorPublicName(e.assist_player_name) : e.assist_player_name }
+          : e)
+        .sort((a, b) => b.minute - a.minute)
+    : [];
   const allSquadPlayers = club ? members.filter(m => m.club_id === club.id && isPlayerMember(m)) : [];
 
   // Only players explicitly marked "available" for this fixture are shown as the matchday squad
@@ -175,11 +198,11 @@ export default function MatchCenterPage({
     if (!match) return;
     const prev = prevScoresRef.current;
     prevScoresRef.current = { id: match.id, home: match.home_score, away: match.away_score };
-    if (!prev || prev.id !== match.id || !isLive) return;
+    if (!prev || prev.id !== match.id || !isLive || scoreHidden) return;
     for (let i = prev.home; i < match.home_score; i++) goalQueueRef.current.push({ side: 'home', teamName: match.home_team_name });
     for (let i = prev.away; i < match.away_score; i++) goalQueueRef.current.push({ side: 'away', teamName: match.away_team_name });
     if (!goalTimerRef.current) showNextGoal();
-  }, [match?.id, match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, isLive, showNextGoal]);
+  }, [match?.id, match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, isLive, scoreHidden, showNextGoal]);
 
   // Cross-tab pulse for the live badge. Goals themselves come from the score above, so a goal logged
   // in another tab isn't celebrated twice (once from the message, again when the score arrives).
@@ -399,7 +422,7 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
-            <MatchShareButton match={match} club={club} />
+            <MatchShareButton match={match} club={club} hideScore={scoreHidden} />
 
             {isClubAdmin && (
               <Link
@@ -570,31 +593,46 @@ export default function MatchCenterPage({
                 alignItems: 'center',
                 gap: 'clamp(0.4rem, 1.5vw, 0.75rem)',
               }}>
-                {/* Home Score Animated Digit */}
-                <ScoreboardDigitRoll
-                  value={match.home_score}
-                  isGoal={goalAlert?.active && goalAlert.teamSide === 'home'}
-                  accentColor={homeColor}
-                  size="clamp(2rem, 10vw, 3.6rem)"
-                />
+                {scoreHidden ? (
+                  <span style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: 'clamp(1.1rem, 4vw, 1.6rem)',
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    fontFamily: 'var(--font-heading)',
+                    letterSpacing: '0.06em',
+                  }}>
+                    VS
+                  </span>
+                ) : (
+                  <>
+                    {/* Home Score Animated Digit */}
+                    <ScoreboardDigitRoll
+                      value={match.home_score}
+                      isGoal={goalAlert?.active && goalAlert.teamSide === 'home'}
+                      accentColor={homeColor}
+                      size="clamp(2rem, 10vw, 3.6rem)"
+                    />
 
-                <span style={{
-                  color: 'var(--text-muted)',
-                  fontSize: 'clamp(1.4rem, 5vw, 2.5rem)',
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  fontFamily: 'var(--font-heading)',
-                }}>
-                  :
-                </span>
+                    <span style={{
+                      color: 'var(--text-muted)',
+                      fontSize: 'clamp(1.4rem, 5vw, 2.5rem)',
+                      fontWeight: 900,
+                      lineHeight: 1,
+                      fontFamily: 'var(--font-heading)',
+                    }}>
+                      :
+                    </span>
 
-                {/* Away Score Animated Digit */}
-                <ScoreboardDigitRoll
-                  value={match.away_score}
-                  isGoal={goalAlert?.active && goalAlert.teamSide === 'away'}
-                  accentColor={awayColor}
-                  size="clamp(2rem, 10vw, 3.6rem)"
-                />
+                    {/* Away Score Animated Digit */}
+                    <ScoreboardDigitRoll
+                      value={match.away_score}
+                      isGoal={goalAlert?.active && goalAlert.teamSide === 'away'}
+                      accentColor={awayColor}
+                      size="clamp(2rem, 10vw, 3.6rem)"
+                    />
+                  </>
+                )}
               </div>
 
               <div style={{
@@ -902,7 +940,7 @@ export default function MatchCenterPage({
           const awaySubs = events.filter(e => e.event_type === 'sub' && e.team_side === 'away').length;
 
           const trackedStats = [
-            { label: 'Goals Scored', home: homeGoals, away: awayGoals },
+            ...(scoreHidden ? [] : [{ label: 'Goals Scored', home: homeGoals, away: awayGoals }]),
             { label: 'Yellow Cards', home: homeYellows, away: awayYellows },
             { label: 'Red Cards', home: homeReds, away: awayReds },
             { label: 'Substitutions', home: homeSubs, away: awaySubs },

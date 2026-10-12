@@ -67,6 +67,11 @@ export interface MatchMetadataRow {
   is_club_home: boolean | null;
   home_team_logo: string | null;
   away_team_logo: string | null;
+  team_id?: string | null;
+  match_type?: string | null;
+  tournament_id?: string | null;
+  /** Its team hides scores publicly (junior grassroots rules): metadata must not give the score away */
+  score_hidden?: boolean;
 }
 
 export async function findMatchById(matchId: string): Promise<MatchMetadataRow | null> {
@@ -78,7 +83,7 @@ export async function findMatchById(matchId: string): Promise<MatchMetadataRow |
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo&id=eq.${encodeURIComponent(matchId)}`,
+      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id&id=eq.${encodeURIComponent(matchId)}`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },
@@ -86,7 +91,9 @@ export async function findMatchById(matchId: string): Promise<MatchMetadataRow |
     );
     if (!res.ok) return null;
     const rows: MatchMetadataRow[] = await res.json();
-    return rows[0] || null;
+    const row = rows[0];
+    if (!row) return null;
+    return { ...row, score_hidden: matchScoreHidden(row, await hiddenScoreTeams(row.club_id)) };
   } catch {
     return null;
   }
@@ -277,14 +284,44 @@ export async function listSitemapData(): Promise<SitemapData> {
   };
 }
 
+export interface HiddenScoreTeams {
+  /** Teams with "hide scores publicly" on */
+  hidden: Set<string>;
+  /** The main team hides its scores (applies to team fixtures saved without a team) */
+  defaultHidden: boolean;
+}
+
+/** Which of a club's teams hide their scores publicly (none if the teams table can't be read) */
+export async function hiddenScoreTeams(clubId: string): Promise<HiddenScoreTeams> {
+  const rows = /^[0-9a-f-]{36}$/i.test(clubId)
+    ? await fetchRows<{ id: string; is_default: boolean; hide_public_scores: boolean }>(
+        `club_teams?select=id,is_default,hide_public_scores&club_id=eq.${clubId}&is_active=eq.true&order=id`, 500)
+    : [];
+  return {
+    hidden: new Set(rows.filter(t => t.hide_public_scores).map(t => t.id)),
+    defaultHidden: rows.some(t => t.is_default && t.hide_public_scores),
+  };
+}
+
+/** Same rule as publicScoreHidden in lib/teams.ts, for rows read on the server */
+export function matchScoreHidden(
+  m: { team_id?: string | null; match_type?: string | null; tournament_id?: string | null },
+  teams: HiddenScoreTeams
+): boolean {
+  if (m.team_id) return teams.hidden.has(m.team_id);
+  return teams.defaultHidden && !m.tournament_id && (m.match_type || 'friendly') !== 'internal';
+}
+
 /** A club's fixtures and public events from `sinceIso` on, for its calendar feed (public rows only, by RLS) */
 export async function listCalendarData(clubId: string, sinceIso: string) {
   const id = encodeURIComponent(clubId);
   const since = encodeURIComponent(sinceIso);
-  const [matches, events] = await Promise.all([
-    fetchRows<CalendarMatch>(`matches?select=id,title,competition,home_team_name,away_team_name,match_date,match_time,venue,status,home_score,away_score&club_id=eq.${id}&match_date=gte.${since}&order=match_date,id`, 2000),
+  const [rows, events, hidden] = await Promise.all([
+    fetchRows<CalendarMatch & { team_id?: string | null; match_type?: string | null; tournament_id?: string | null }>(`matches?select=id,title,competition,home_team_name,away_team_name,match_date,match_time,venue,status,home_score,away_score,team_id,match_type,tournament_id&club_id=eq.${id}&match_date=gte.${since}&order=match_date,id`, 2000),
     fetchRows<CalendarEvent>(`events?select=id,title,description,start_time,end_time,location&club_id=eq.${id}&is_public=eq.true&start_time=gte.${since}&order=start_time,id`, 2000),
+    hiddenScoreTeams(clubId),
   ]);
+  const matches: CalendarMatch[] = rows.map(m => ({ ...m, score_hidden: matchScoreHidden(m, hidden) }));
   return { matches, events };
 }
 

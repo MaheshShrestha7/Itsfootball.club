@@ -2,15 +2,17 @@
 
 import React, { useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import type { ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamRole, ClubTeamType } from '@/lib/supabase/types';
 import {
   AGE_GROUPS, STAFF_ROLES, TEAM_FORMATS, TEAM_GENDERS, TEAM_ROLE_LABELS, TEAM_TYPES,
-  ageGroupAge, clubTeamsOf, suggestedFormat, teamMemberIds, uniqueTeamSlug,
+  ageGroupAge, ageGroupCutoff, ageGroupFit, clubTeamsOf, isJuniorAgeGroup, safeguardingCheckStatus, suggestedFormat,
+  teamMemberIds, uniqueTeamSlug, type SafeguardingCheckStatus,
 } from '@/lib/teams';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 const COLOR_PRESETS = ['#10B981', '#2563EB', '#EF4444', '#F59E0B', '#8B5CF6', '#06B6D4', '#334155'];
 
@@ -81,12 +83,30 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+const CHECK_LABELS: Record<SafeguardingCheckStatus, { text: string; color: string; bg: string }> = {
+  valid: { text: 'Check valid', color: 'var(--c-green)', bg: 'rgba(16, 185, 129, 0.15)' },
+  expiring: { text: 'Check expiring', color: 'var(--c-amber, #F59E0B)', bg: 'rgba(245, 158, 11, 0.15)' },
+  expired: { text: 'Check expired', color: 'var(--c-red)', bg: 'rgba(239, 68, 68, 0.15)' },
+  missing: { text: 'No check', color: 'var(--c-red)', bg: 'rgba(239, 68, 68, 0.15)' },
+};
+
+function CheckBadge({ status }: { status: SafeguardingCheckStatus }) {
+  const l = CHECK_LABELS[status];
+  return <span className="badge" style={{ marginLeft: 6, background: l.bg, color: l.color }}>{l.text}</span>;
+}
+
 export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
   const {
-    clubs, selectClubBySlug, members, clubTeams, clubTeamMembers,
+    clubs, selectClubBySlug, members, clubTeams, clubTeamMembers, getActiveSeason, updateClubBranding,
     createClubTeam, updateClubTeam, setDefaultClubTeam, deleteClubTeam, setClubTeamRoster,
   } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
+  const includeU18 = club.junior_includes_u18 !== false;
+  // These are saved on the club itself, which takes Branding access (row-level security on clubs)
+  const { can } = useAuth();
+  const canEditClub = can(club.id, 'branding', 'edit');
+  // Age groups are counted on the season's start date (U10 = under 10 on that day)
+  const cutoff = ageGroupCutoff(getActiveSeason(club.id)?.start_date);
 
   const teams = useMemo(() => clubTeamsOf(clubTeams, club.id, { includeInactive: true }), [clubTeams, club.id]);
   const clubMembers = useMemo(
@@ -123,7 +143,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
       ...f,
       age_group: ageGroup,
       match_format: suggestedFormat(ageGroup),
-      is_junior: age !== null && age <= 18,
+      is_junior: isJuniorAgeGroup(ageGroup, includeU18),
       hide_public_scores: age !== null && age <= 11,
       team_type: age !== null && (f.team_type === 'senior' || f.team_type === 'reserve') ? 'youth' : f.team_type,
     }));
@@ -207,6 +227,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
         .map(r => ({ member_id: r.member_id, team_role: r.team_role }))
     );
     setRosterSearch('');
+    setRosterError(null);
     setNewStaffId('');
     setNewStaffRole('coach');
   };
@@ -234,6 +255,61 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
     setRosterTeam(null);
   };
 
+  // Junior teams: staff need a valid safeguarding check (recorded on their profile in Squad)
+  const [rosterError, setRosterError] = useState<string | null>(null);
+  const checkOf = (memberId: string): SafeguardingCheckStatus => {
+    const m = memberById.get(memberId);
+    return m ? safeguardingCheckStatus(m) : 'missing';
+  };
+  const addStaffChecked = () => {
+    if (!newStaffId || !rosterTeam) return;
+    const status = checkOf(newStaffId);
+    if (rosterTeam.is_junior && (status === 'missing' || status === 'expired')) {
+      const name = memberById.get(newStaffId)?.full_name || 'This member';
+      setRosterError(`${name} has ${status === 'expired' ? 'an expired' : 'no'} safeguarding check, so they can't join a junior team's staff yet. Record a valid check on their profile in Squad & Players first.`);
+      return;
+    }
+    setRosterError(null);
+    addStaff();
+  };
+
+  // ---- Junior settings (club-wide) ----
+  const [juniorOpen, setJuniorOpen] = useState(false);
+  const [welfare, setWelfare] = useState({ name: '', email: '', phone: '' });
+  const openJunior = () => {
+    setWelfare({ name: club.welfare_officer_name || '', email: club.welfare_officer_email || '', phone: club.welfare_officer_phone || '' });
+    setJuniorOpen(true);
+  };
+  const saveWelfare = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = (v: string) => v.replace(/[<>]/g, '').trim();
+    updateClubBranding(club.id, {
+      welfare_officer_name: clean(welfare.name),
+      welfare_officer_email: clean(welfare.email),
+      welfare_officer_phone: clean(welfare.phone),
+    });
+    flash('Saved the welfare officer');
+    setJuniorOpen(false);
+  };
+  // Turning U18 on or off also updates the club's U18 teams, so the setting means what it says
+  const toggleU18 = async () => {
+    const next = !includeU18;
+    const u18Teams = teams.filter(t => t.age_group === 'U18' && t.is_junior !== next);
+    if (u18Teams.length > 0) {
+      const ok = await confirmAction({
+        title: next ? 'Count U18 teams as junior?' : 'Stop counting U18 teams as junior?',
+        message: next
+          ? `${u18Teams.map(t => t.name).join(', ')} will be treated as junior: squads hidden publicly and players shown as first name and initial.`
+          : `${u18Teams.map(t => t.name).join(', ')} will no longer be junior: squads and full player names show on the public site.`,
+        confirmLabel: next ? 'Count as junior' : 'Stop counting',
+      });
+      if (!ok) return;
+    }
+    updateClubBranding(club.id, { junior_includes_u18: next });
+    for (const t of u18Teams) updateClubTeam(t.id, { is_junior: next });
+    flash(next ? 'U18 teams now count as junior' : 'U18 teams no longer count as junior');
+  };
+
   const filteredMembers = clubMembers.filter(m => m.full_name.toLowerCase().includes(rosterSearch.trim().toLowerCase()));
   const isPlayerLike = (m: ClubMember) => /player/i.test(m.role || '') || (m.roles || []).some(r => /player/i.test(r));
 
@@ -246,10 +322,16 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
             Your first team, reserves, academy and youth age groups. Each team has its own squad, staff and fixtures.
           </p>
         </div>
-        <button onClick={openNew} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Plus size={16} />
-          <span>Add Team</span>
-        </button>
+        <div className="row row-wrap">
+          <button onClick={openJunior} data-view-ok className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={16} />
+            <span>Junior settings</span>
+          </button>
+          <button onClick={openNew} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Plus size={16} />
+            <span>Add Team</span>
+          </button>
+        </div>
       </div>
 
       {feedback && (
@@ -269,6 +351,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
             const players = teamMemberIds(clubTeamMembers, team.id, 'player').filter(id => memberById.has(id));
             const staff = clubTeamMembers.filter(r => r.team_id === team.id && r.team_role !== 'player' && r.is_active !== false && memberById.has(r.member_id));
             const typeLabel = TEAM_TYPES.find(t => t.value === team.team_type)?.label || team.team_type;
+            const uncheckedStaff = team.is_junior ? staff.filter(r => ['missing', 'expired'].includes(checkOf(r.member_id))) : [];
             return (
               <div key={team.id} className="glass-panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: team.is_active ? 1 : 0.65 }}>
                 <div style={{ height: '4px', background: team.color || club.primary_color }} />
@@ -320,6 +403,14 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                       <> · {staff.map(r => `${memberById.get(r.member_id)?.full_name} (${TEAM_ROLE_LABELS[r.team_role]})`).join(', ')}</>
                     )}
                   </div>
+                  {uncheckedStaff.length > 0 && (
+                    <div className="row" role="note" style={{ marginTop: '0.6rem', color: 'var(--c-amber, #F59E0B)', fontSize: '0.8rem', fontWeight: 600, alignItems: 'flex-start' }}>
+                      <ShieldAlert size={14} className="shrink-0" style={{ marginTop: 2 }} />
+                      <span>
+                        No valid safeguarding check: {Array.from(new Set(uncheckedStaff.map(r => memberById.get(r.member_id)?.full_name))).join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="row row-wrap" style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-subtle)', gap: '0.5rem' }}>
                   <button onClick={() => openRoster(team)} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -429,6 +520,50 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
         </Modal>
       )}
 
+      {juniorOpen && (
+        <Modal title="Junior settings" onClose={() => setJuniorOpen(false)}>
+          <div className="stack stack-sm">
+            <label className="row" style={{ alignItems: 'flex-start', cursor: 'pointer' }}>
+              <input type="checkbox" checked={includeU18} onChange={toggleU18} disabled={!canEditClub} style={{ marginTop: 3 }} aria-describedby="u18-note" />
+              <span>
+                <strong className="text-primary" style={{ fontSize: '0.88rem' }}>U18 teams count as junior</strong>
+                <span id="u18-note" className="text-note" style={{ display: 'block' }}>
+                  Junior teams keep their squad off the public site, show players as first name and initial, and need staff with a valid safeguarding check. Up to U17 always counts.
+                </span>
+              </span>
+            </label>
+
+            {!canEditClub && (
+              <p className="text-note" role="note" style={{ margin: 0 }}>These are club settings: someone with Branding access (or a Club Admin) can change them.</p>
+            )}
+            <form onSubmit={saveWelfare} className="stack stack-sm" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+              <div>
+                <strong className="text-primary" style={{ fontSize: '0.9rem' }}>Welfare officer</strong>
+                <p className="text-note" style={{ margin: '0.2rem 0 0 0' }}>Shown on every junior team&apos;s public page, for parents to raise a concern.</p>
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" htmlFor="welfare-name">Name</label>
+                <input id="welfare-name" className="form-input" maxLength={128} value={welfare.name} onChange={e => setWelfare({ ...welfare, name: e.target.value })} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" htmlFor="welfare-email">Email</label>
+                  <input id="welfare-email" type="email" className="form-input" maxLength={255} value={welfare.email} onChange={e => setWelfare({ ...welfare, email: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" htmlFor="welfare-phone">Phone</label>
+                  <input id="welfare-phone" type="tel" className="form-input" maxLength={64} value={welfare.phone} onChange={e => setWelfare({ ...welfare, phone: e.target.value })} />
+                </div>
+              </div>
+              <div className="row" style={{ justifyContent: 'flex-end' }}>
+                <button type="button" data-view-ok onClick={() => setJuniorOpen(false)} className="btn btn-secondary">Close</button>
+                <button type="submit" className="btn btn-primary" disabled={!canEditClub}>Save welfare officer</button>
+              </div>
+            </form>
+          </div>
+        </Modal>
+      )}
+
       {rosterTeam && (
         <Modal title={`${rosterTeam.name}: Squad & Staff`} onClose={() => setRosterTeam(null)}>
           <div className="stack stack-sm">
@@ -451,6 +586,11 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                       {m.full_name}
                       {!isPlayerLike(m) && <span className="text-meta"> · {m.role}</span>}
                     </span>
+                    {rosterTeam.age_group && ageGroupFit(m.date_of_birth, rosterTeam.age_group, cutoff) === 'too_old' && (
+                      <span className="badge" title={`Too old for ${rosterTeam.age_group} on the season's cut-off date`} style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber, #F59E0B)' }}>
+                        Over {rosterTeam.age_group}
+                      </span>
+                    )}
                     {m.player_position && <span className="text-meta">{m.player_position}</span>}
                   </label>
                 ))}
@@ -464,6 +604,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 <div key={`${s.member_id}-${s.team_role}`} className="row" style={{ justifyContent: 'space-between', padding: '0.35rem 0' }}>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                     {memberById.get(s.member_id)?.full_name || 'Former member'} <span className="text-meta">· {TEAM_ROLE_LABELS[s.team_role]}</span>
+                    {rosterTeam.is_junior && <CheckBadge status={checkOf(s.member_id)} />}
                   </span>
                   <button type="button" className="btn btn-secondary btn-sm" aria-label="Remove from staff"
                     onClick={() => setRosterStaff(prev => prev.filter(x => !(x.member_id === s.member_id && x.team_role === s.team_role)))}>
@@ -479,8 +620,12 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 <select aria-label="Staff role" className="form-input" style={{ flex: '1 1 130px' }} value={newStaffRole} onChange={e => setNewStaffRole(e.target.value as ClubTeamRole)}>
                   {STAFF_ROLES.map(r => <option key={r} value={r}>{TEAM_ROLE_LABELS[r]}</option>)}
                 </select>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={addStaff} disabled={!newStaffId}>Add</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={addStaffChecked} disabled={!newStaffId}>Add</button>
               </div>
+              {rosterError && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: '0.5rem 0 0 0' }}>{rosterError}</p>}
+              {rosterTeam.is_junior && !rosterError && (
+                <p className="text-note" style={{ margin: '0.5rem 0 0 0' }}>Junior team: staff need a valid safeguarding check, recorded on their profile in Squad &amp; Players.</p>
+              )}
             </div>
 
             <div className="row" style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}>

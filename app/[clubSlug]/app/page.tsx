@@ -13,6 +13,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
+import { publicScoreHidden } from '@/lib/teams';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -80,7 +81,7 @@ function TileGrid({ tiles }: { tiles: Tile[] }) {
 /** The club app's home: what this person does at the club, by role (visitor, member, player, staff) */
 export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, members } = useClub();
+  const { clubs, selectClubBySlug, matches, events, members, clubTeams } = useClub();
   const { user, isLoading, can, isClubSuperUser, hasClubAdminAccess, getClubAccess, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const base = `/${club.slug}`;
@@ -199,7 +200,11 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       {live && (
         <Link href={`${base}/match/${live.id}`} className="glass-panel app-live">
           <span className="badge badge-live">LIVE</span>
-          <strong>{live.home_team_name} {live.home_score ?? 0} – {live.away_score ?? 0} {live.away_team_name}</strong>
+          <strong>
+            {publicScoreHidden(live, clubTeams)
+              ? `${live.home_team_name} v ${live.away_team_name}`
+              : `${live.home_team_name} ${live.home_score ?? 0} – ${live.away_score ?? 0} ${live.away_team_name}`}
+          </strong>
           <span className="text-meta">Follow the match →</span>
         </Link>
       )}

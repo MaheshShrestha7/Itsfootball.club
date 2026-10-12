@@ -14,6 +14,8 @@ export interface CalendarMatch {
   status: string;
   home_score?: number | null;
   away_score?: number | null;
+  /** Its team hides scores publicly: listed as a fixture, without the score */
+  score_hidden?: boolean;
 }
 
 export interface CalendarEvent {
@@ -88,7 +90,7 @@ export function buildCalendar(p: { clubName: string; baseUrl: string; matches: C
   for (const m of p.matches) {
     const when = matchTimes(m);
     if (!when) continue;
-    const played = m.status === 'completed' && m.home_score != null && m.away_score != null;
+    const played = m.status === 'completed' && !m.score_hidden && m.home_score != null && m.away_score != null;
     const summary = played
       ? `${m.home_team_name} ${m.home_score}–${m.away_score} ${m.away_team_name}`
       : `${m.home_team_name} vs ${m.away_team_name}`;

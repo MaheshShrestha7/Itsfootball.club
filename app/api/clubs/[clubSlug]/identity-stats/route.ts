@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { defaultSeasonLabel } from '@/lib/season';
 import { countsTowardClubRecord } from '@/lib/supabase/types';
+import { hiddenScoreTeams, matchScoreHidden } from '@/lib/supabase/club-lookup';
 
 // Only what the response uses (never owner_id, email_settings and the like)
 const CLUB_COLUMNS = 'id, name, slug, short_name, motto, founded_year, stadium_name, stadium_address, config';
@@ -108,7 +109,7 @@ export async function GET(
     // 3. Query raw Matches table
     const { data: matches, error: matchesError } = await supabase
       .from('matches')
-      .select('id, competition, season, home_score, away_score, is_club_home, status, tournament_id, match_type')
+      .select('id, competition, season, home_score, away_score, is_club_home, status, tournament_id, match_type, team_id')
       .eq('club_id', clubId);
 
     // Filter for the club's own matches that have actually been played (completed, live, or halftime)
@@ -150,7 +151,9 @@ export async function GET(
 
     // Sum goals scored by this club in the current season:
     // If club was home: home_score. If club was away: away_score.
-    const goalsScored = currentSeasonMatches.reduce((sum, m) => {
+    // Teams that hide their scores publicly (junior grassroots rules) don't add to the goal count
+    const hiddenTeams = await hiddenScoreTeams(clubId);
+    const goalsScored = currentSeasonMatches.filter(m => !matchScoreHidden(m, hiddenTeams)).reduce((sum, m) => {
       const scored = m.is_club_home ? (m.home_score ?? 0) : (m.away_score ?? 0);
       return sum + scored;
     }, 0);

@@ -45,7 +45,7 @@ import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
-import { clubTeamsOf, defaultTeamOf, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
+import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, newsPath } from '@/lib/slugs';
 
 interface HomeHeroSlide {
@@ -139,7 +139,10 @@ export default function ClubPublicPage({
   const multiTeam = teams.length > 1;
   const mainTeam = defaultTeamOf(clubTeams, clubId);
   const mainSquadIds = multiTeam && mainTeam ? new Set(teamMemberIds(clubTeamMembers, mainTeam.id)) : null;
-  const squadPlayers = clubMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
+  // Junior players stay out of the public squad, rankings and leaderboards
+  const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers);
+  const publicMembers = clubMembers.filter(m => !juniorIds.has(m.id));
+  const squadPlayers = publicMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
   const liveMatch = clubMatches.find(m => m.status === 'live');
@@ -220,7 +223,7 @@ export default function ClubPublicPage({
 
   // Top leaderboard players
   const leaderboardList = [...playerStats]
-    .filter(s => s.club_id === clubId)
+    .filter(s => s.club_id === clubId && !juniorIds.has(s.member_id))
     .sort((a, b) => {
       if (leaderboardTab === 'goals') return b.goals - a.goals;
       if (leaderboardTab === 'assists') return b.assists - a.assists;
@@ -879,7 +882,7 @@ export default function ClubPublicPage({
                               color: 'var(--text-primary)',
                               lineHeight: 1,
                             }}>
-                              {activeSlideMatch.home_score} : {activeSlideMatch.away_score}
+                              {publicScoreHidden(activeSlideMatch, clubTeams) ? 'VS' : `${activeSlideMatch.home_score} : ${activeSlideMatch.away_score}`}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--c-red)', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
                               {activeSlideMatch.period === 'first_half'
@@ -2108,7 +2111,7 @@ export default function ClubPublicPage({
             <div id="leaderboard">
               <ClubScoreLeaderboard
                 club={club}
-                members={clubMembers}
+                members={publicMembers}
                 profiles={clubScoreProfiles}
               />
             </div>

@@ -66,7 +66,7 @@ function statusLabel(m: Pick<Match, 'status'>): string {
     : 'MATCHDAY';
 }
 
-export async function drawMatchCard(match: Match, club: Club, kind: CardKind, siteHost: string): Promise<Blob> {
+export async function drawMatchCard(match: Match, club: Club, kind: CardKind, siteHost: string, opts: { hideScore?: boolean } = {}): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -142,7 +142,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, si
       ctx.fillText(name, x, 745);
     }
 
-    const scored = ['completed', 'live', 'halftime'].includes(match.status);
+    const scored = !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
     if (scored) {
       ctx.font = `900 150px ${family}`;
       ctx.fillText(`${match.home_score}–${match.away_score}`, W / 2, 900);

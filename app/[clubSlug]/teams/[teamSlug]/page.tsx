@@ -2,11 +2,11 @@
 
 import React, { use, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, Lock } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, Lock, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { Match } from '@/lib/supabase/types';
 import { decodeSlugParam } from '@/lib/slugs';
-import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, teamMemberIds, teamOfMatch } from '@/lib/teams';
+import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, juniorMemberIds, publicMember, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import LocalTime from '@/components/LocalTime';
 
@@ -51,10 +51,12 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
     [clubTeams, club, slug]
   );
 
-  const memberById = useMemo(
-    () => new Map(members.filter(m => m.club_id === club?.id && (m.membership_status || 'approved') === 'approved').map(m => [m.id, m])),
-    [members, club]
-  );
+  // A junior playing up for this team is shown as "Sam T.", without a photo unless a guardian allowed it
+  const memberById = useMemo(() => {
+    const clubMembers = members.filter(m => m.club_id === club?.id && (m.membership_status || 'approved') === 'approved');
+    const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers);
+    return new Map(clubMembers.map(m => [m.id, publicMember(m, juniorIds)]));
+  }, [members, club, clubTeams, clubTeamMembers]);
 
   const players = useMemo(() => {
     if (!team || team.is_junior) return [];
@@ -164,6 +166,22 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
               </div>
             )}
           </section>
+
+          {team.is_junior && (club.welfare_officer_name || club.welfare_officer_email || club.welfare_officer_phone) && (
+            <section aria-labelledby="team-welfare">
+              <h2 id="team-welfare" style={sectionTitle}><ShieldCheck size={20} color="var(--club-primary)" /> Welfare officer</h2>
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <p className="text-body" style={{ margin: 0 }}>
+                  Any concern about a young player&apos;s safety or wellbeing? Contact our welfare officer
+                  {club.welfare_officer_name ? <>, <strong className="text-primary">{club.welfare_officer_name}</strong></> : null}.
+                </p>
+                <div className="row row-wrap" style={{ marginTop: '0.75rem', gap: '0.5rem 1.25rem' }}>
+                  {club.welfare_officer_email && <a href={`mailto:${club.welfare_officer_email}`}>{club.welfare_officer_email}</a>}
+                  {club.welfare_officer_phone && <a href={`tel:${club.welfare_officer_phone.replace(/[^\d+]/g, '')}`}>{club.welfare_officer_phone}</a>}
+                </div>
+              </div>
+            </section>
+          )}
 
           <section aria-labelledby="team-fixtures">
             <h2 id="team-fixtures" style={sectionTitle}><Calendar size={20} color="var(--club-primary)" /> Fixtures</h2>

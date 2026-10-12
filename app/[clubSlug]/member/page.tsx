@@ -146,11 +146,19 @@ export default function MemberPortalPage({
     termsAccepted: false,
     guardianConsent: false,
     teamId: '',
+    guardianName: '',
+    guardianEmail: '',
+    guardianPhone: '',
+    photoConsent: '' as '' | 'yes' | 'no',
   });
   // Clubs with several teams ask players which one they're joining
   const joinableTeams = clubTeamsOf(clubTeams, club.id);
   const applicantAge = signupForm.dateOfBirth ? ageFrom(signupForm.dateOfBirth) : null;
   const isMinor = applicantAge !== null && applicantAge < 18;
+  // Joining a junior team always needs a parent or guardian, whatever the date of birth says
+  const juniorTeamPicked = signupForm.role === 'player' && joinableTeams.length > 1
+    && !!joinableTeams.find(t => t.id === signupForm.teamId)?.is_junior;
+  const needsGuardian = isMinor || juniorTeamPicked;
   const [signupError, setSignupError] = useState<string | null>(null);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
   // Signed in, not a member yet: their own application, and whether they're filling it in again
@@ -311,6 +319,10 @@ export default function MemberPortalPage({
       emergencyContact: application.emergency_contact || '',
       termsAccepted: false,
       guardianConsent: false,
+      guardianName: '',
+      guardianEmail: '',
+      guardianPhone: '',
+      photoConsent: '',
     }));
     setSignupError(null);
     setSubmittedApplication(null);
@@ -384,8 +396,10 @@ export default function MemberPortalPage({
     setSignupError(null);
     if (submitting) return;
     if (!signupForm.termsAccepted) return setSignupError('Please accept the club terms and privacy policy.');
-    if (isMinor && !signupForm.emergencyContact.trim()) return setSignupError('Please add a parent or guardian\'s name and phone number.');
-    if (isMinor && !signupForm.guardianConsent) return setSignupError('A parent or guardian needs to give their consent for applicants under 18.');
+    if (juniorTeamPicked && !signupForm.dateOfBirth) return setSignupError('Please add the player\'s date of birth: junior teams are by age group.');
+    if (needsGuardian && (!signupForm.guardianName.trim() || !signupForm.guardianPhone.trim())) return setSignupError('Please add a parent or guardian\'s name and phone number.');
+    if (needsGuardian && !signupForm.photoConsent) return setSignupError('Please choose whether photos of the player can be shown publicly.');
+    if (needsGuardian && !signupForm.guardianConsent) return setSignupError(juniorTeamPicked && !isMinor ? 'A parent or guardian needs to give their consent for junior team players.' : 'A parent or guardian needs to give their consent for applicants under 18.');
     setSubmitting(true);
     try {
       if (reapplying && myApplication) await handleReapply(myApplication);
@@ -409,10 +423,28 @@ export default function MemberPortalPage({
       p_jersey: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
       p_notes: signupForm.notes.trim(),
       p_date_of_birth: signupForm.dateOfBirth || null,
-      p_emergency_contact: signupForm.emergencyContact.trim(),
+      p_emergency_contact: emergencyContact(),
       p_terms_accepted: signupForm.termsAccepted,
-      p_guardian_consent: isMinor && signupForm.guardianConsent,
+      p_guardian_consent: needsGuardian && signupForm.guardianConsent,
+      ...guardianArgs(),
     });
+    // Before migration 20261102 the function has no guardian / team arguments: send it without them
+    if (error?.code === 'PGRST202') {
+      ({ error } = await client.rpc('reapply_for_membership', {
+        p_club_id: club.id,
+        p_full_name: signupForm.fullName.trim(),
+        p_phone: signupForm.phone.trim(),
+        p_tier: signupForm.tier,
+        p_role: signupForm.role,
+        p_position: signupForm.role === 'player' ? signupForm.position || null : null,
+        p_jersey: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
+        p_notes: signupForm.notes.trim(),
+        p_date_of_birth: signupForm.dateOfBirth || null,
+        p_emergency_contact: emergencyContact(),
+        p_terms_accepted: signupForm.termsAccepted,
+        p_guardian_consent: needsGuardian && signupForm.guardianConsent,
+      }));
+    }
     // Before migration 20261030 only the shorter version of the function exists
     if (error?.code === 'PGRST202') {
       ({ error } = await client.rpc('reapply_for_membership', {
@@ -438,6 +470,22 @@ export default function MemberPortalPage({
     await loadMyApplication();
   };
 
+  // The guardian doubles as the emergency contact unless the applicant gave another one
+  const emergencyContact = () => {
+    const given = signupForm.emergencyContact.trim();
+    if (given || !needsGuardian) return given;
+    return [signupForm.guardianName.trim(), signupForm.guardianPhone.trim()].filter(Boolean).join(', ');
+  };
+  const requestedTeamId = () =>
+    signupForm.role === 'player' && joinableTeams.length > 1 && signupForm.teamId ? signupForm.teamId : undefined;
+  const guardianArgs = () => ({
+    p_guardian_name: needsGuardian ? signupForm.guardianName.trim() : null,
+    p_guardian_email: needsGuardian ? signupForm.guardianEmail.trim() : null,
+    p_guardian_phone: needsGuardian ? signupForm.guardianPhone.trim() : null,
+    p_photo_consent: needsGuardian && signupForm.photoConsent ? signupForm.photoConsent === 'yes' : null,
+    p_requested_team_id: requestedTeamId() || null,
+  });
+
   const submitNewApplication = async () => {
     const res = await applyForMembership(club.id, {
       full_name: signupForm.fullName,
@@ -448,11 +496,17 @@ export default function MemberPortalPage({
       player_position: signupForm.role === 'player' && signupForm.position ? signupForm.position : undefined,
       jersey_number: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : undefined,
       application_notes: signupForm.notes,
-      emergency_contact: signupForm.emergencyContact.trim(),
+      emergency_contact: emergencyContact(),
       date_of_birth: signupForm.dateOfBirth || undefined,
       terms_accepted: signupForm.termsAccepted,
-      guardian_consent: isMinor && signupForm.guardianConsent,
-      requested_team_id: signupForm.role === 'player' && joinableTeams.length > 1 && signupForm.teamId ? signupForm.teamId : undefined,
+      guardian_consent: needsGuardian && signupForm.guardianConsent,
+      requested_team_id: requestedTeamId(),
+      ...(needsGuardian ? {
+        guardian_name: signupForm.guardianName.trim(),
+        guardian_email: signupForm.guardianEmail.trim() || undefined,
+        guardian_phone: signupForm.guardianPhone.trim(),
+        photo_consent: signupForm.photoConsent ? signupForm.photoConsent === 'yes' : undefined,
+      } : {}),
     });
 
     if (res.success && res.member) {
@@ -1188,10 +1242,11 @@ export default function MemberPortalPage({
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-date-of-birth" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                          Date of Birth
+                          Date of Birth{juniorTeamPicked ? ' *' : ''}
                         </label>
                         <input id="member-date-of-birth"
                           type="date"
+                          required={juniorTeamPicked}
                           max={todayIso()}
                           value={signupForm.dateOfBirth}
                           onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
@@ -1200,11 +1255,10 @@ export default function MemberPortalPage({
                       </div>
                       <div>
                         <label htmlFor="member-emergency-contact" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                          {isMinor ? 'Parent / Guardian (name & phone) *' : 'Emergency Contact (name & phone)'}
+                          {needsGuardian ? 'Emergency Contact (if not the guardian)' : 'Emergency Contact (name & phone)'}
                         </label>
                         <input id="member-emergency-contact"
                           type="text"
-                          required={isMinor}
                           maxLength={255}
                           value={signupForm.emergencyContact}
                           onChange={e => setSignupForm({ ...signupForm, emergencyContact: e.target.value })}
@@ -1213,6 +1267,46 @@ export default function MemberPortalPage({
                         />
                       </div>
                     </div>
+
+                    {needsGuardian && (
+                      <fieldset style={{ border: '1px solid rgba(139, 92, 246, 0.35)', background: 'rgba(139, 92, 246, 0.06)', borderRadius: '10px', padding: '1rem', margin: '0 0 1rem 0' }}>
+                        <legend style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', padding: '0 0.35rem' }}>Parent / guardian</legend>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem 0' }}>
+                          {juniorTeamPicked && !isMinor ? 'Junior team players need a parent or guardian on file.' : 'Applicants under 18 need a parent or guardian on file.'}
+                          {' '}The club contacts them, not the player.
+                        </p>
+                        <div className="form-row-2" style={{ gap: '1rem', marginBottom: '0.75rem' }}>
+                          {([
+                            ['guardianName', 'member-guardian-name', 'Name *', 'text', 255],
+                            ['guardianPhone', 'member-guardian-phone', 'Phone *', 'tel', 64],
+                          ] as const).map(([key, id, label, type, max]) => (
+                            <div key={key}>
+                              <label htmlFor={id} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>{label}</label>
+                              <input id={id} type={type} required maxLength={max} value={signupForm[key]}
+                                onChange={e => setSignupForm({ ...signupForm, [key]: e.target.value })}
+                                style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <label htmlFor="member-guardian-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Email</label>
+                          <input id="member-guardian-email" type="email" maxLength={255} value={signupForm.guardianEmail}
+                            onChange={e => setSignupForm({ ...signupForm, guardianEmail: e.target.value })}
+                            style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                        </div>
+                        <div role="radiogroup" aria-labelledby="member-photo-consent-label" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          <span id="member-photo-consent-label" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Can photos of the player appear on the club&apos;s public website? *</span>
+                          <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: 'pointer' }}>
+                            <input type="radio" name="member-photo-consent" value="yes" checked={signupForm.photoConsent === 'yes'} onChange={() => setSignupForm({ ...signupForm, photoConsent: 'yes' })} />
+                            Yes
+                          </label>
+                          <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: 'pointer' }}>
+                            <input type="radio" name="member-photo-consent" value="no" checked={signupForm.photoConsent === 'no'} onChange={() => setSignupForm({ ...signupForm, photoConsent: 'no' })} />
+                            No, keep photos of them off the public site
+                          </label>
+                        </div>
+                      </fieldset>
+                    )}
 
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
@@ -1249,7 +1343,7 @@ export default function MemberPortalPage({
                           {' '}and to {club.name} keeping my details for club membership. *
                         </span>
                       </label>
-                      {isMinor && (
+                      {needsGuardian && (
                         <label style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', cursor: 'pointer' }}>
                           <input type="checkbox" checked={signupForm.guardianConsent}
                             onChange={e => setSignupForm({ ...signupForm, guardianConsent: e.target.checked })} style={{ marginTop: '0.15rem' }} />

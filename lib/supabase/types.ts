@@ -89,6 +89,12 @@ export interface Club {
   fiscal_grace_days?: number;
   /** Home-screen icons drawn from the crest (lib/app-icons.ts) */
   app_icons?: AppIcons | null;
+  /** Whether U18 teams count as junior (default true) */
+  junior_includes_u18?: boolean;
+  /** Welfare / safeguarding officer, shown on junior team pages */
+  welfare_officer_name?: string;
+  welfare_officer_email?: string;
+  welfare_officer_phone?: string;
 }
 
 export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
@@ -131,6 +137,18 @@ export interface ClubMember {
   guardian_consent_at?: string | null;
   /** The team the applicant asked to join (set on applying; read-only, not synced) */
   requested_team_id?: string | null;
+  /** Parent or guardian (juniors); never in a public view */
+  guardian_name?: string;
+  guardian_email?: string;
+  guardian_phone?: string;
+  /** Photo consent given by the guardian: true / false, null or missing = not asked yet */
+  photo_consent?: boolean | null;
+  /** Staff background check (e.g. DBS / Working With Children); expiry drives the admin warnings */
+  safeguarding_check_type?: string;
+  safeguarding_check_date?: string;
+  safeguarding_check_expiry_date?: string;
+  /** Set by the public member view for players of a junior team (read-only, not synced) */
+  is_junior?: boolean;
   is_executive: boolean;
   executive_title?: string;
   executive_bio?: string;
@@ -628,6 +646,11 @@ export interface MemberApplicationInput {
   guardian_consent?: boolean;
   /** Clubs with several teams: the team a player asks to join */
   requested_team_id?: string;
+  /** Juniors: the parent or guardian, and whether they allow photos of the child publicly */
+  guardian_name?: string;
+  guardian_email?: string;
+  guardian_phone?: string;
+  photo_consent?: boolean;
 }
 
 // ==============================================================================
