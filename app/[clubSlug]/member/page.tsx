@@ -13,6 +13,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
+import AuthModal from '@/components/AuthModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import {
   Shield,
@@ -122,6 +123,8 @@ export default function MemberPortalPage({
   const [myApplication, setMyApplication] = useState<MyApplication | null>(null);
   const [reapplying, setReapplying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Club admins and staff who have a password can still use it
+  const [passwordSignInOpen, setPasswordSignInOpen] = useState(false);
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -223,6 +226,11 @@ export default function MemberPortalPage({
     client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
+
+  // Signed in but not a member: apply with the address they signed in with
+  useEffect(() => {
+    if (signedInEmail) setSignupForm(f => (f.email ? f : { ...f, email: signedInEmail }));
+  }, [signedInEmail]);
 
   // Keep activeMember in sync with live members state (e.g. after approval)
   useEffect(() => {
@@ -658,11 +666,23 @@ export default function MemberPortalPage({
                   </button>
                 </form>
 
-                {signedInEmail && !activeMember && (
+                {signedInEmail && !activeMember ? (
                   <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                     Signed in as {signedInEmail}.{' '}
                     <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
                       Use a different email
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Not a member yet?{' '}
+                    <button type="button" onClick={() => setGatewayTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                      Apply for membership
+                    </button>
+                    <br />
+                    Club admin with a password?{' '}
+                    <button type="button" onClick={() => setPasswordSignInOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                      Sign in with password
                     </button>
                   </div>
                 )}
@@ -1616,6 +1636,12 @@ export default function MemberPortalPage({
         onClose={() => setScannerOpen(false)}
         mode="verify_pass"
         clubId={club.id}
+      />
+      <AuthModal
+        isOpen={passwordSignInOpen}
+        onClose={() => setPasswordSignInOpen(false)}
+        allowSignup={false}
+        redirectTo={`/${club.slug}`}
       />
     </div>
   );
