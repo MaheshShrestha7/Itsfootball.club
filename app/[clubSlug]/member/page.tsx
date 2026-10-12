@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { authReturnUrl } from '@/lib/slugs';
+import { SITE_URL, authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
@@ -54,6 +54,10 @@ interface MyApplication {
   full_name: string;
   email: string;
   phone: string | null;
+  /** Only after migration 20261030 */
+  role?: string | null;
+  date_of_birth?: string | null;
+  emergency_contact?: string | null;
   membership_tier: string;
   membership_status: 'pending' | 'rejected';
   rejection_reason: string | null;
@@ -67,6 +71,21 @@ interface MyApplication {
 
 const formatDay = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+/** Whole years from a 'YYYY-MM-DD' birth date to today, or null when there isn't one */
+function ageFrom(dateOfBirth: string): number | null {
+  const [y, m, d] = dateOfBirth.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const now = new Date();
+  return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0);
+}
+
+/** A first guess at "joining as" from the tier name; the applicant can change it */
+const guessRole = (tier: string): 'player' | 'supporter' =>
+  /player|squad|academy|youth|junior|senior|team/i.test(tier) ? 'player' : 'supporter';
+
+/** Short, readable application reference ('3F9A21C0' rather than a full database id) */
+const applicationRef = (id: string) => id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
 export default function MemberPortalPage({
   params,
@@ -116,7 +135,13 @@ export default function MemberPortalPage({
     jerseyNumber: '',
     notes: '',
     emergencyContact: '',
+    role: 'supporter' as 'player' | 'supporter',
+    dateOfBirth: '',
+    termsAccepted: false,
+    guardianConsent: false,
   });
+  const applicantAge = signupForm.dateOfBirth ? ageFrom(signupForm.dateOfBirth) : null;
+  const isMinor = applicantAge !== null && applicantAge < 18;
   const [signupError, setSignupError] = useState<string | null>(null);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
   // Signed in, not a member yet: their own application, and whether they're filling it in again
@@ -221,7 +246,7 @@ export default function MemberPortalPage({
       .then(({ data }) => {
         const list = (data || []) as MembershipPlan[];
         setPlans(list);
-        if (list.length) setSignupForm(f => (list.some(p => p.name === f.tier) ? f : { ...f, tier: list[0].name }));
+        if (list.length) setSignupForm(f => (list.some(p => p.name === f.tier) ? f : { ...f, tier: list[0].name, role: guessRole(list[0].name) }));
       });
     client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
       .then(({ data }) => data?.currency && setCurrency(data.currency));
@@ -261,6 +286,11 @@ export default function MemberPortalPage({
       position: (application.player_position || '') as PlayerPosition | '',
       jerseyNumber: application.jersey_number ? String(application.jersey_number) : '',
       notes: application.application_notes || '',
+      role: application.role === 'supporter' ? 'supporter' : application.role ? 'player' : guessRole(application.membership_tier),
+      dateOfBirth: application.date_of_birth || '',
+      emergencyContact: application.emergency_contact || '',
+      termsAccepted: false,
+      guardianConsent: false,
     }));
     setSignupError(null);
     setSubmittedApplication(null);
@@ -298,6 +328,9 @@ export default function MemberPortalPage({
     e.preventDefault();
     setSignupError(null);
     if (submitting) return;
+    if (!signupForm.termsAccepted) return setSignupError('Please accept the club terms and privacy policy.');
+    if (isMinor && !signupForm.emergencyContact.trim()) return setSignupError('Please add a parent or guardian\'s name and phone number.');
+    if (isMinor && !signupForm.guardianConsent) return setSignupError('A parent or guardian needs to give their consent for applicants under 18.');
     setSubmitting(true);
     try {
       if (reapplying && myApplication) await handleReapply(myApplication);
@@ -311,15 +344,32 @@ export default function MemberPortalPage({
   const handleReapply = async (application: MyApplication) => {
     const client = getSupabaseClient();
     if (!client) return;
-    const { error } = await client.rpc('reapply_for_membership', {
+    let { error } = await client.rpc('reapply_for_membership', {
       p_club_id: club.id,
       p_full_name: signupForm.fullName.trim(),
       p_phone: signupForm.phone.trim(),
       p_tier: signupForm.tier,
-      p_position: signupForm.position || null,
-      p_jersey: signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
+      p_role: signupForm.role,
+      p_position: signupForm.role === 'player' ? signupForm.position || null : null,
+      p_jersey: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
       p_notes: signupForm.notes.trim(),
+      p_date_of_birth: signupForm.dateOfBirth || null,
+      p_emergency_contact: signupForm.emergencyContact.trim(),
+      p_terms_accepted: signupForm.termsAccepted,
+      p_guardian_consent: isMinor && signupForm.guardianConsent,
     });
+    // Before migration 20261030 only the shorter version of the function exists
+    if (error?.code === 'PGRST202') {
+      ({ error } = await client.rpc('reapply_for_membership', {
+        p_club_id: club.id,
+        p_full_name: signupForm.fullName.trim(),
+        p_phone: signupForm.phone.trim(),
+        p_tier: signupForm.tier,
+        p_position: signupForm.role === 'player' ? signupForm.position || null : null,
+        p_jersey: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : null,
+        p_notes: signupForm.notes.trim(),
+      }));
+    }
     if (error) {
       setSignupError('Your application could not be sent. Please try again in a moment.');
       return;
@@ -339,10 +389,14 @@ export default function MemberPortalPage({
       email: signupForm.email,
       phone: signupForm.phone,
       membership_tier: signupForm.tier,
-      player_position: signupForm.position ? signupForm.position : undefined,
-      jersey_number: signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : undefined,
+      role: signupForm.role,
+      player_position: signupForm.role === 'player' && signupForm.position ? signupForm.position : undefined,
+      jersey_number: signupForm.role === 'player' && signupForm.jerseyNumber ? parseInt(signupForm.jerseyNumber) : undefined,
       application_notes: signupForm.notes,
-      emergency_contact: signupForm.emergencyContact,
+      emergency_contact: signupForm.emergencyContact.trim(),
+      date_of_birth: signupForm.dateOfBirth || undefined,
+      terms_accepted: signupForm.termsAccepted,
+      guardian_consent: isMinor && signupForm.guardianConsent,
     });
 
     if (res.success && res.member) {
@@ -737,7 +791,7 @@ export default function MemberPortalPage({
                       <div>Applicant: <strong className="text-primary">{submittedApplication.full_name}</strong></div>
                       <div>Email: <strong className="text-primary">{submittedApplication.email}</strong></div>
                       <div>Membership Tier: <strong style={{ color: 'var(--c-green)' }}>{submittedApplication.membership_tier}</strong></div>
-                      <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{submittedApplication.id}</code></div>
+                      <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{applicationRef(submittedApplication.id)}</code></div>
                     </div>
 
                     {(() => {
@@ -866,7 +920,7 @@ export default function MemberPortalPage({
                         </label>
                         <select id="member-membership-tier"
                           value={signupForm.tier}
-                          onChange={e => setSignupForm({ ...signupForm, tier: e.target.value })}
+                          onChange={e => setSignupForm({ ...signupForm, tier: e.target.value, role: guessRole(e.target.value) })}
                           style={{
                             width: '100%',
                             padding: '0.65rem 0.75rem',
@@ -894,8 +948,29 @@ export default function MemberPortalPage({
                       </div>
                     </div>
 
-                    {/* Conditional Player fields if applying as player */}
-                    {signupForm.tier.includes('Player') && (
+                    {/* Joining as: decides the squad role, so it's asked, not guessed from the tier name */}
+                    <fieldset style={{ border: 'none', padding: 0, margin: '0 0 1rem 0' }}>
+                      <legend style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Joining as *</legend>
+                      <div className="form-row-2" style={{ gap: '0.75rem' }}>
+                        {([['player', 'Player', 'I want to play for the club'], ['supporter', 'Supporter / non-playing', 'Fan, volunteer, family or social member']] as const).map(([value, title, hint]) => (
+                          <label key={value} style={{
+                            display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer', padding: '0.7rem 0.85rem', borderRadius: '8px',
+                            border: `1px solid ${signupForm.role === value ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
+                            background: signupForm.role === value ? 'rgba(16, 185, 129, 0.08)' : 'rgba(var(--shade-rgb), 0.4)',
+                          }}>
+                            <input type="radio" name="member-joining-as" value={value} checked={signupForm.role === value}
+                              onChange={() => setSignupForm({ ...signupForm, role: value })} style={{ marginTop: '0.2rem' }} />
+                            <span>
+                              <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</span>
+                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{hint}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    {/* Player fields */}
+                    {signupForm.role === 'player' && (
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
@@ -962,6 +1037,35 @@ export default function MemberPortalPage({
                       </div>
                     )}
 
+                    <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label htmlFor="member-date-of-birth" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                          Date of Birth
+                        </label>
+                        <input id="member-date-of-birth"
+                          type="date"
+                          max={todayIso()}
+                          value={signupForm.dateOfBirth}
+                          onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
+                          style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="member-emergency-contact" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                          {isMinor ? 'Parent / Guardian (name & phone) *' : 'Emergency Contact (name & phone)'}
+                        </label>
+                        <input id="member-emergency-contact"
+                          type="text"
+                          required={isMinor}
+                          maxLength={255}
+                          value={signupForm.emergencyContact}
+                          onChange={e => setSignupForm({ ...signupForm, emergencyContact: e.target.value })}
+                          placeholder="e.g. Jo Smith, 0400 000 000"
+                          style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
+
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                         Motivation &amp; Background Notes:
@@ -982,6 +1086,30 @@ export default function MemberPortalPage({
                           resize: 'none',
                         }}
                       />
+                    </div>
+
+                    {/* Consent: everyone accepts the terms; under-18s also need a parent or guardian */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      <label style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={signupForm.termsAccepted}
+                          onChange={e => setSignupForm({ ...signupForm, termsAccepted: e.target.checked })} style={{ marginTop: '0.15rem' }} />
+                        <span>
+                          I agree to the{' '}
+                          <a href={`${SITE_URL}/terms`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-green)', fontWeight: 700 }}>terms</a>
+                          {' '}and{' '}
+                          <a href={`${SITE_URL}/privacy`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-green)', fontWeight: 700 }}>privacy policy</a>,
+                          {' '}and to {club.name} keeping my details for club membership. *
+                        </span>
+                      </label>
+                      {isMinor && (
+                        <label style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={signupForm.guardianConsent}
+                            onChange={e => setSignupForm({ ...signupForm, guardianConsent: e.target.checked })} style={{ marginTop: '0.15rem' }} />
+                          <span>
+                            I am this applicant&apos;s parent or guardian and I consent to them joining {club.name}. *
+                          </span>
+                        </label>
+                      )}
                     </div>
 
                     <button

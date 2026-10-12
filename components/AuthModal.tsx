@@ -18,8 +18,9 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redirectTo = '/my-clubs', allowSignup = true }: AuthModalProps) {
   const router = useRouter();
-  const { login, signup, resendConfirmation } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>(allowSignup ? defaultMode : 'login');
+  const { login, signup, resendConfirmation, sendPasswordReset } = useAuth();
+  // 'reset': forgot password, asks only for the email
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>(allowSignup ? defaultMode : 'login');
 
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -53,7 +54,12 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     setSubmitting(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === 'reset') {
+        const res = await sendPasswordReset(email);
+        if (!res.success) setErrorMsg(res.error || 'Could not send the reset email.');
+        // Same message whether or not there is an account (no account fishing)
+        else setNoticeMsg(`If there's an account for ${email.trim()}, we've emailed it a link to choose a new password. Check your spam folder too.`);
+      } else if (mode === 'login') {
         const res = await login(email, password);
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to sign in. Please verify credentials.');
@@ -157,16 +163,18 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         <BrandWordmark height={48} style={{ margin: '0.25rem auto 1.25rem auto' }} />
 
         <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-          {mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
+          {mode === 'reset' ? 'Reset your password' : mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
         </h3>
         <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
-          {mode === 'login'
+          {mode === 'reset'
+            ? 'Enter your account email and we\'ll send you a link to choose a new password.'
+            : mode === 'login'
             ? 'Access your member digital pass, club management, or match reporting.'
             : 'Join the premier platform for club management and matchday passes.'}
         </p>
 
         {/* Tab switch */}
-        {allowSignup && (
+        {allowSignup && mode !== 'reset' && (
         <div style={{
           display: 'flex',
           background: 'rgba(var(--shade-rgb), 0.3)',
@@ -244,6 +252,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             />
           </div>
 
+          {mode !== 'reset' && (
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label htmlFor="authmodal-password" className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
             <input id="authmodal-password"
@@ -256,7 +265,17 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
+            {mode === 'login' && (
+              <button
+                type="button"
+                onClick={() => { setMode('reset'); setErrorMsg(null); setNoticeMsg(null); setCanResend(false); }}
+                style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.4rem', color: 'var(--c-green)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Forgot password?
+              </button>
+            )}
           </div>
+          )}
 
     {errorMsg && (
       <div
@@ -298,8 +317,18 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             style={{ height: '44px', width: '100%', marginTop: '0.5rem' }}
           >
             <KeyRound size={16} />
-            <span>{submitting ? 'Processing...' : mode === 'login' ? 'Sign In to Account' : 'Complete Registration'}</span>
+            <span>{submitting ? 'Processing...' : mode === 'reset' ? 'Email Me a Reset Link' : mode === 'login' ? 'Sign In to Account' : 'Complete Registration'}</span>
           </button>
+
+          {mode === 'reset' && (
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setErrorMsg(null); setNoticeMsg(null); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Back to sign in
+            </button>
+          )}
         </form>
       </div>
     </div>,

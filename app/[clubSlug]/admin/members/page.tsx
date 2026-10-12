@@ -44,6 +44,14 @@ function formatDate(value: string | null | undefined) {
   return isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Whole years from a 'YYYY-MM-DD' birth date to today */
+function ageOn(dateOfBirth: string): number | null {
+  const [y, m, d] = dateOfBirth.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const now = new Date();
+  return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0);
+}
+
 export default function AdminMembersPage({
   params,
 }: {
@@ -706,6 +714,19 @@ export default function AdminMembersPage({
                           {signupPayments[member.id] === 'paid' && <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>PAID</span>}
                           {signupPayments[member.id] === 'awaiting_review' && <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)' }}>RECEIPT TO CHECK</span>}
                         </div>
+
+                        {/* What the applicant told us: joining as, age, emergency contact, consent */}
+                        {isPending && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                            <span>Joining as: <strong>{String(member.role).toLowerCase() === 'supporter' ? 'Supporter / non-playing' : 'Player'}</strong></span>
+                            {member.date_of_birth && (
+                              <span>Born: <strong>{formatDate(member.date_of_birth)}</strong>{(() => { const a = ageOn(member.date_of_birth); return a !== null ? ` (age ${a}${a < 18 ? ', under 18' : ''})` : ''; })()}</span>
+                            )}
+                            {member.emergency_contact && <span>Emergency contact: <strong>{member.emergency_contact}</strong></span>}
+                            {member.terms_accepted_at && <span style={{ color: 'var(--text-muted)' }}>Accepted terms {formatDate(member.terms_accepted_at)}</span>}
+                            {member.guardian_consent_at && <span style={{ color: 'var(--c-green)' }}>✓ Parent / guardian consent given</span>}
+                          </div>
+                        )}
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
                           <Calendar size={14} color="var(--text-muted)" />
