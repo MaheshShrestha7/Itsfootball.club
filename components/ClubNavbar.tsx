@@ -268,10 +268,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Gallery & Videos
           </Link>
+          {/* Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar */}
+          {!isAuthenticated && (
           <Link href={`/${club.slug}/sponsor`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
             <Handshake size={15} color="var(--club-primary)" />
             <span>Become a Sponsor</span>
           </Link>
+          )}
 
           {/* Admin Portal Gateway */}
           {isAdmin && (
@@ -531,6 +534,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <span>Gallery & Videos</span>
                 </Link>
 
+                {!isAuthenticated && (
                 <Link
                   href={`/${club.slug}/sponsor`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -539,6 +543,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <Handshake size={16} color="var(--club-primary)" />
                   <span>Become a Sponsor</span>
                 </Link>
+                )}
 
                 {isAdmin && (
                   <Link
