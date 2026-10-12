@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
+import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
 import { clubTeamsOf, defaultTeamOf, isTeamFixture, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
@@ -235,6 +236,9 @@ export default function AdminMatchesPage({
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setIsFormModalOpen(true);
   };
+
+  // A fixture opened from the calendar (?open=<id>): shown in the list, and in the form for people who can edit
+  useOpenItem(clubMatches, m => { if (canAddMatch) handleOpenEditModal(m); });
 
   // Quick Preset Handlers for Internal Match Type
   const handleInternalPreset = (presetName: string, shortName: string) => {
@@ -699,6 +703,7 @@ export default function AdminMatchesPage({
             return (
               <div
                 key={m.id}
+                data-item-id={m.id}
                 className="glass-panel admin-match-card-grid"
                 style={{
                   padding: '1.25rem',

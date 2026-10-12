@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
+import { useOpenItem } from '@/lib/use-open-item';
 import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -171,6 +172,9 @@ export default function AdminEventsPage({
     setModalOpen(true);
   };
 
+  // An event opened from the calendar (?open=<id>): shown in the list, and in the form for people who can edit
+  useOpenItem(clubEvents, evt => { if (canAddEvent) handleOpenEdit(evt); });
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
@@ -288,6 +292,7 @@ export default function AdminEventsPage({
           filteredEvents.map(evt => (
             <div
               key={evt.id}
+              data-item-id={evt.id}
               className="glass-panel"
               style={{
                 padding: '1.5rem',

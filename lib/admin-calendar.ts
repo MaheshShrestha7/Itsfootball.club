@@ -352,3 +352,19 @@ export function takeNewItemRequest(): NewItemRequest | null {
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
   return req;
 }
+
+/** Link to one fixture or event on its admin page ('?open=<id>'): the page brings it into view and opens it */
+export function openItemHref(pagePath: string, id: string): string {
+  return `${pagePath}?${new URLSearchParams({ open: id }).toString()}`;
+}
+
+/** The item to open, read from the current URL once and removed from it (like takeNewItemRequest). Client only. */
+export function takeOpenItemRequest(): string | null {
+  const q = new URLSearchParams(window.location.search);
+  const id = q.get('open');
+  if (!id) return null;
+  q.delete('open');
+  const search = q.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
+  return id;
+}
