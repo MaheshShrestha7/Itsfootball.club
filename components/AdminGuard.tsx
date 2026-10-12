@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useAuth } from '@/lib/auth-context';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import {
   ShieldAlert,
   ArrowLeft,
@@ -26,6 +27,8 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   // 1. Loading state
   if (isLoading) {
@@ -72,10 +75,13 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
     const handleFormSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoginError(null);
+      const notReady = captchaError(captchaToken);
+      if (notReady) return setLoginError(notReady);
       setSubmitting(true);
 
-      const res = await login(emailInput, passwordInput);
+      const res = await login(emailInput, passwordInput, captchaToken);
       setSubmitting(false);
+      captcha.current?.reset();
 
       if (!res.success) {
         setLoginError(res.error || 'Invalid credentials. Please check your email and password.');
@@ -188,6 +194,8 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
                 onChange={e => setPasswordInput(e.target.value)}
               />
             </div>
+
+            <Captcha ref={captcha} onToken={setCaptchaToken} />
 
             <button
               type="submit"

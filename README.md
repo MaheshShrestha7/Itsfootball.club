@@ -181,6 +181,7 @@ Open <http://localhost:3000>, create an account and create your first club. Its 
 | `CRON_SECRET` | Daily reminders and unsubscribe links | Long random string; changing it invalidates existing unsubscribe links |
 | `CF_HOSTNAMES_TOKEN`, `CF_ZONE_ID` | Club custom domains | See [docs/custom-domains.md](docs/custom-domains.md) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web push | Generate the pair once (command in `.env.example`); rotating it breaks every existing subscription |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Bot check on sign-in, sign-up, magic links and password resets | Put the matching secret in Supabase (Authentication > Attack Protection > CAPTCHA, provider Turnstile). Switch that on only after a build with the site key is live |
 
 > **Build-time values:** `NEXT_PUBLIC_*` variables, `R2_PUBLIC_DOMAIN` and the Supabase URL are baked
 > into the build (the CSP is computed in `next.config.ts`). Rebuild and redeploy after changing them.

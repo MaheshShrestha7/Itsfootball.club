@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { SITE_URL, authReturnUrl } from '@/lib/slugs';
@@ -14,6 +14,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import AuthModal from '@/components/AuthModal';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import QRScannerModal from '@/components/QRScannerModal';
 import {
   Shield,
@@ -120,6 +121,8 @@ export default function MemberPortalPage({
 
   // Sign-In Form State
   const [loginEmail, setLoginEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [sendingLink, setSendingLink] = useState(false);
@@ -309,14 +312,19 @@ export default function MemberPortalPage({
       setLoginError('Sign-in is unavailable right now.');
       return;
     }
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setLoginError(notReady);
     setSendingLink(true);
     const { error } = await client.auth.signInWithOtp({
       email: loginEmail.trim().toLowerCase(),
-      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member`) },
+      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member`), captchaToken: captchaToken || undefined },
     });
     setSendingLink(false);
+    captcha.current?.reset();
     if (error) {
-      setLoginError(error.message.toLowerCase().includes('rate') ? 'Too many requests. Please wait a minute and try again.' : 'Could not send the sign-in link. Please try again.');
+      const m = error.message.toLowerCase();
+      setLoginError(m.includes('captcha') ? 'The security check failed or expired. Please try again.'
+        : m.includes('rate') ? 'Too many requests. Please wait a minute and try again.' : 'Could not send the sign-in link. Please try again.');
       return;
     }
     // Same message whether or not the email belongs to a member (no account enumeration)
@@ -707,6 +715,10 @@ export default function MemberPortalPage({
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                       We&apos;ll email you a single-use link. Use the same address your membership was registered with.
                     </div>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <Captcha ref={captcha} onToken={setCaptchaToken} />
                   </div>
 
                   <button
