@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { clubTeamsOf, teamLabel } from '@/lib/teams';
 import {
-  addDays, buildCalendarItems, CALENDAR_KINDS, dayKey, filterItems, itemsOnDay, layoutDay, monthGrid, newItemHref, sameDay,
+  addDays, buildCalendarItems, CALENDAR_KINDS, dayKey, filterItems, itemsOnDay, layoutDay, monthGrid, newItemHref, openItemHref, sameDay,
   startOfDay, weekDays, type CalendarItem, type CalendarKind,
 } from '@/lib/admin-calendar';
 
@@ -452,12 +452,12 @@ function ItemPopover({ item, rect, title, teamName, clubSlug, can, onClose }: {
   const links: { href: string; text: string; primary?: boolean }[] = [];
   if (item.source === 'matches') {
     if (can('match-center')) links.push({ href: `${base}/match-center?match=${encodeURIComponent(item.id)}`, text: 'Open Match Centre', primary: true });
-    if (can('matches')) links.push({ href: `${base}/matches`, text: 'Fixtures & Results' });
+    if (can('matches')) links.push({ href: openItemHref(`${base}/matches`, item.id), text: 'Open fixture', primary: !links.length });
   } else if (item.source === 'events') {
-    links.push({ href: `${base}/events`, text: 'Events & Training', primary: true });
+    links.push({ href: openItemHref(`${base}/events`, item.id), text: 'Open event', primary: true });
   } else if (item.source === 'tournaments') {
     links.push({ href: `${base}/tournaments/${encodeURIComponent(item.id)}`, text: 'Open tournament', primary: true });
-    if (item.eventId && can('events')) links.push({ href: `${base}/events`, text: 'Events & Training' });
+    if (item.eventId && can('events')) links.push({ href: openItemHref(`${base}/events`, item.eventId), text: 'Open event' });
   } else if (can('seasons')) {
     links.push({ href: `${base}/seasons`, text: 'Seasons', primary: true });
   }

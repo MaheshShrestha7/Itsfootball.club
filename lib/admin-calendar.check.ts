@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { ClubEvent, ClubSeason, ClubTeam, Match, Tournament } from './supabase/types';
 import {
   buildCalendarItems, dayKey, filterItems, itemsOnDay, layoutDay, matchStart, monthGrid, newItemHref, parseNewItemRequest,
-  startOfWeek, weekDays,
+  openItemHref, startOfWeek, weekDays,
   type CalendarKind,
 } from './admin-calendar';
 
@@ -142,5 +142,9 @@ assert.equal(newItemHref('/rfc/admin/events', new Date(2026, 9, 17), undefined, 
 assert.deepEqual(parseNewItemRequest('?new=2026-10-17&time=25:00'), { date: '2026-10-17', time: undefined, team: undefined });
 assert.equal(parseNewItemRequest('?new=2026-02-30'), null);
 assert.equal(parseNewItemRequest('?tab=results'), null);
+
+// Opening one item from the calendar: the link names it
+assert.equal(openItemHref('/rfc/admin/events', 'a b/c'), '/rfc/admin/events?open=a+b%2Fc');
+assert.equal(new URLSearchParams(openItemHref('/rfc/admin/matches', 'a b/c').split('?')[1]).get('open'), 'a b/c');
 
 console.log('admin-calendar checks passed');

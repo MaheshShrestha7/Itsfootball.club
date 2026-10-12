@@ -2732,3 +2732,13 @@ dialog.confirm-dialog::backdrop {
     max-height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px) - 1.5rem);
   }
 }
+
+/* A fixture or event opened from a link (the admin calendar): its row glows for a moment */
+.admin-open-flash { animation: admin-open-flash 2.6s ease-out; }
+@keyframes admin-open-flash {
+  0%, 45% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-green) 70%, transparent); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-open-flash { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-green) 70%, transparent); }
+}
