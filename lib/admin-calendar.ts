@@ -283,3 +283,44 @@ export function layoutDay(items: CalendarItem[]): { item: CalendarItem; lane: nu
   if (group.length) close();
   return out;
 }
+
+/** What the calendar asks a page to prefill when adding from a day or a time slot */
+export interface NewItemRequest {
+  date: string;
+  time?: string;
+  team?: string;
+}
+
+/** Link to a page's add form, prefilled from a calendar day ('?new=2026-10-17&time=15:00&team=…') */
+export function newItemHref(pagePath: string, day: Date, time?: string, team?: string): string {
+  const q = new URLSearchParams({ new: dayKey(day) });
+  if (time) q.set('time', time);
+  if (team && team !== 'ALL') q.set('team', team);
+  return `${pagePath}?${q.toString()}`;
+}
+
+/** The add request in a query string, or null when there is none or it isn't a real date/time */
+export function parseNewItemRequest(search: string): NewItemRequest | null {
+  const q = new URLSearchParams(search);
+  const date = q.get('new') || '';
+  const day = localDate(date);
+  if (!day || dayKey(day) !== date) return null;
+  const time = q.get('time') || '';
+  const tm = /^(\d{2}):(\d{2})$/.exec(time);
+  const validTime = tm && Number(tm[1]) < 24 && Number(tm[2]) < 60 ? time : undefined;
+  return { date, time: validTime, team: q.get('team') || undefined };
+}
+
+/**
+ * Reads the add request from the current URL once, and removes it so a refresh or the back button
+ * doesn't open the form again. Client only.
+ */
+export function takeNewItemRequest(): NewItemRequest | null {
+  const req = parseNewItemRequest(window.location.search);
+  if (!req) return null;
+  const q = new URLSearchParams(window.location.search);
+  ['new', 'time', 'team'].forEach(k => q.delete(k));
+  const search = q.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
+  return req;
+}

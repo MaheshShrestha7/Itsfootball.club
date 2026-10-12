@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -35,6 +37,7 @@ export default function AdminEventsPage({
 }) {
   const resolvedParams = use(params);
   const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateClubBranding, seasons, getActiveSeason } = useClub();
+  const { can } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubEvents = events.filter(e => e.club_id === club.id);
@@ -120,14 +123,15 @@ export default function AdminEventsPage({
     repeat_weeks: 1,
   });
 
-  const handleOpenAdd = () => {
+  // The calendar can prefill the day and start time (training evenings by default)
+  const handleOpenAdd = (prefill?: NewItemRequest) => {
     setEditingEventId(null);
     setForm({
       title: '',
       description: '',
       category: 'training',
       season: activeSeason?.name || defaultSeasonLabel(),
-      start_time: toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
+      start_time: prefill ? `${prefill.date}T${prefill.time || '19:00'}` : toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
       location: club.stadium_name,
       max_capacity: 150,
       is_public: true,
@@ -137,6 +141,16 @@ export default function AdminEventsPage({
     });
     setModalOpen(true);
   };
+
+  // "Add event" from a calendar day (?new=YYYY-MM-DD): open the form once, for people who can add
+  const canAddEvent = can(club.id, 'events', 'edit');
+  useEffect(() => {
+    if (!canAddEvent) return;
+    const req = takeNewItemRequest();
+    if (req) handleOpenAdd(req);
+    // Only on arrival; the request is removed from the URL once read
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAddEvent]);
 
   const handleOpenEdit = (evt: ClubEvent) => {
     setEditingEventId(evt.id);
@@ -255,7 +269,7 @@ export default function AdminEventsPage({
             ))}
           </div>
 
-          <button onClick={handleOpenAdd} className="btn btn-primary row">
+          <button onClick={() => handleOpenAdd()} className="btn btn-primary row">
             <Plus size={16} />
             <span>Add New Event</span>
           </button>

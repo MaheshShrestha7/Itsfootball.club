@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import type { ClubEvent, ClubSeason, ClubTeam, Match, Tournament } from './supabase/types';
 import {
-  buildCalendarItems, dayKey, filterItems, itemsOnDay, layoutDay, matchStart, monthGrid, startOfWeek, weekDays,
+  buildCalendarItems, dayKey, filterItems, itemsOnDay, layoutDay, matchStart, monthGrid, newItemHref, parseNewItemRequest,
+  startOfWeek, weekDays,
   type CalendarKind,
 } from './admin-calendar';
 
@@ -113,5 +114,14 @@ const lane = (k: string) => laid.find(l => l.item.key === k)!;
 assert.deepEqual([lane('a').lane, lane('a').lanes], [0, 2]);
 assert.deepEqual([lane('b').lane, lane('b').lanes], [1, 2]);
 assert.deepEqual([lane('c').lane, lane('c').lanes], [0, 1]);
+
+// Adding from a calendar day: the link carries the date (and time, team) and the page reads it back
+const href = newItemHref('/rfc/admin/matches', new Date(2026, 9, 17), '15:00', 'u18');
+assert.equal(href, '/rfc/admin/matches?new=2026-10-17&time=15%3A00&team=u18');
+assert.deepEqual(parseNewItemRequest(href.split('?')[1]), { date: '2026-10-17', time: '15:00', team: 'u18' });
+assert.equal(newItemHref('/rfc/admin/events', new Date(2026, 9, 17), undefined, 'ALL'), '/rfc/admin/events?new=2026-10-17');
+assert.deepEqual(parseNewItemRequest('?new=2026-10-17&time=25:00'), { date: '2026-10-17', time: undefined, team: undefined });
+assert.equal(parseNewItemRequest('?new=2026-02-30'), null);
+assert.equal(parseNewItemRequest('?tab=results'), null);
 
 console.log('admin-calendar checks passed');

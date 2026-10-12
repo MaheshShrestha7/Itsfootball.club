@@ -2704,6 +2704,13 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-pop-x { position: absolute; top: 0.6rem; right: 0.6rem; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 4px; }
 .admin-cal-pop-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .admin-cal-pop-links .btn { flex: 1; justify-content: center; }
+.admin-cal-pop-stack { flex-direction: column; }
+.admin-cal-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-cal-day.is-addable { cursor: pointer; }
+  .admin-cal-day.is-addable:hover { background: rgba(var(--tint-rgb), 0.03); }
+  .admin-cal-col.is-addable { cursor: copy; }
+}
 
 @media (max-width: 640px) {
   .admin-cal-title { font-size: 1.05rem; width: 100%; margin: 0.3rem 0 0; order: 5; }
