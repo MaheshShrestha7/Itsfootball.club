@@ -2578,14 +2578,20 @@ export function ClubProvider({
   }, []);
 
   const applyForMembership = useCallback(async (clubId: string, input: MemberApplicationInput): Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }> => {
-    const cleanEmail = input.email.toLowerCase().trim();
+    const guardianEmail = (input.guardian_email || '').toLowerCase().trim();
+    // A child applied for by their parent or guardian needs no email of their own: the club emails
+    // the guardian, and the guardian's sign-in shows every child under that email. A child given the
+    // guardian's own address is stored without one, so brothers and sisters can all apply and the
+    // parent's sign-in never becomes the child's.
+    const ownEmail = input.email.toLowerCase().trim();
+    const cleanEmail = guardianEmail && ownEmail === guardianEmail ? '' : ownEmail;
     const cleanName = sanitizeText(input.full_name.trim());
-    
-    if (!cleanEmail || !cleanName) {
+
+    if (!cleanName || (!cleanEmail && !guardianEmail)) {
       return { success: false, message: 'Please provide full name and valid email address.', error: 'Missing required fields' };
     }
 
-    const existing = members.find(m => m.club_id === clubId && m.email.toLowerCase() === cleanEmail);
+    const existing = cleanEmail ? members.find(m => m.club_id === clubId && (m.email || '').toLowerCase() === cleanEmail) : undefined;
     if (existing) {
       if (existing.membership_status === 'pending') {
         return {
@@ -2635,7 +2641,7 @@ export function ClubProvider({
       guardian_consent_at: input.guardian_consent ? now : null,
       ...(input.requested_team_id && role === 'player' ? { requested_team_id: input.requested_team_id } : {}),
       ...(input.guardian_name ? { guardian_name: sanitizeText(input.guardian_name) } : {}),
-      ...(input.guardian_email ? { guardian_email: input.guardian_email.toLowerCase().trim() } : {}),
+      ...(guardianEmail ? { guardian_email: guardianEmail } : {}),
       ...(input.guardian_phone ? { guardian_phone: sanitizeText(input.guardian_phone) } : {}),
       ...(typeof input.photo_consent === 'boolean' ? { photo_consent: input.photo_consent } : {}),
       created_at: now,
@@ -2651,6 +2657,10 @@ export function ClubProvider({
       const { guardian_name: _gn, guardian_email: _ge, guardian_phone: _gp, photo_consent: _pc, ...withoutGuardian } = newMem;
       void _gn; void _ge; void _gp; void _pc;
       if (error?.code === 'PGRST204' && Object.keys(withoutGuardian).length < Object.keys(newMem).length) {
+        // Without a guardian email column the club would have no way to reach a child with no email
+        if (!cleanEmail) {
+          return { success: false, message: 'Please add an email address for the player.', error: 'No guardian columns yet' };
+        }
         ({ error } = await client.from('club_members').insert(withoutGuardian));
       }
       // Before migration 20261101 there is no requested team column, or the team was deleted

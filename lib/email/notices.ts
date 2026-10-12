@@ -3,7 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { eventNotice, matchNotice, newsNotice, renewalReminder } from './templates';
 import { clubBaseUrl, clubBrand, type ClubBrandRow } from './club-brand';
-import { looksLikeEmail, normalizeEmail, type EmailDraft } from './club-emails';
+import { memberRecipient, MEMBER_RECIPIENT_COLUMNS, normalizeEmail, type EmailDraft } from './club-emails';
 import { formatDay, formatWhen, localDate } from './format';
 import { articleText } from '@/lib/article-text';
 import type { PushMessage } from '@/lib/push';
@@ -30,6 +30,8 @@ interface MemberRow {
   id: string;
   full_name: string;
   email: string | null;
+  guardian_name?: string | null;
+  guardian_email?: string | null;
   role: string | null;
   roles: string[] | null;
   status: string | null;
@@ -37,17 +39,36 @@ interface MemberRow {
   membership_expires_at: string | null;
 }
 
-/** Approved, current members with a usable email, one per address (families often share one) */
-async function members(db: SupabaseClient, clubId: string): Promise<(MemberRow & { email: string })[]> {
+const MEMBER_COLUMNS = `id, ${MEMBER_RECIPIENT_COLUMNS}, role, roles, status, membership_tier, membership_expires_at`;
+
+/**
+ * A member with where their emails go: `to` is their own address, or their parent / guardian's for
+ * juniors (memberRecipient), `name` who the email greets and `childName` the junior it is about.
+ */
+type Addressed = MemberRow & { to: string; name: string; childName?: string };
+
+const addressed = (m: MemberRow): Addressed | null => {
+  const r = memberRecipient(m);
+  return r ? { ...m, to: r.to, name: r.name, childName: r.childName } : null;
+};
+
+/** Approved, current members with somewhere to email them */
+async function members(db: SupabaseClient, clubId: string): Promise<Addressed[]> {
   const { data } = await db.from('club_members')
-    .select('id, full_name, email, role, roles, status, membership_tier, membership_expires_at')
+    .select(MEMBER_COLUMNS)
     .eq('club_id', clubId)
-    .eq('membership_status', 'approved')
-    .not('email', 'is', null);
+    .eq('membership_status', 'approved');
+  return ((data || []) as MemberRow[])
+    .filter(m => m.status !== 'alumni')
+    .map(addressed)
+    .filter((m): m is Addressed => !!m);
+}
+
+/** One per address: families often share one, and a parent of several juniors gets a notice once */
+function onePerAddress(list: Addressed[]): Addressed[] {
   const seen = new Set<string>();
-  return ((data || []) as MemberRow[]).filter((m): m is MemberRow & { email: string } => {
-    if (!looksLikeEmail(m.email) || m.status === 'alumni') return false;
-    const e = normalizeEmail(m.email);
+  return list.filter(m => {
+    const e = normalizeEmail(m.to);
     if (seen.has(e)) return false;
     seen.add(e);
     return true;
@@ -69,35 +90,40 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
   const message = req.message?.trim().slice(0, MAX_MESSAGE_LENGTH) || null;
   const { count: total } = await db.from('club_members').select('id', { count: 'exact', head: true })
     .eq('club_id', club.id).eq('membership_status', 'approved');
-  const everyone = await members(db, club.id);
-  const skippedNoEmail = Math.max(0, (total || 0) - everyone.length);
+  const addressable = await members(db, club.id);
+  const everyone = onePerAddress(addressable);
+  const skippedNoEmail = Math.max(0, (total || 0) - addressable.length);
 
   switch (req.kind) {
     case 'renewal': {
       const today = localDate();
-      let due: (MemberRow & { email: string })[];
+      let due: Addressed[];
       if (req.memberId) {
-        const { data: member } = await db.from('club_members')
-          .select('id, full_name, email, role, roles, status, membership_tier, membership_expires_at')
+        const { data } = await db.from('club_members')
+          .select(MEMBER_COLUMNS)
           .eq('club_id', club.id).eq('id', req.memberId).eq('membership_status', 'approved').maybeSingle();
+        const member = data as MemberRow | null;
         if (!member) return { ok: false, status: 404, error: 'Member not found.' };
-        if (!looksLikeEmail(member.email)) return { ok: false, status: 400, error: `${member.full_name} has no email address.` };
+        const one = addressed(member);
+        if (!one) return { ok: false, status: 400, error: `${member.full_name} has no email address.` };
         if (!member.membership_expires_at) return { ok: false, status: 400, error: `${member.full_name} has no membership expiry date yet.` };
-        due = [member as MemberRow & { email: string }];
+        due = [one];
       } else {
-        // Expiring within 30 days, or lapsed within the last 60
+        // Expiring within 30 days, or lapsed within the last 60. One each (not one per address):
+        // every membership is renewed on its own, so a parent hears about each child.
         const from = localDate(-60), to = localDate(30);
-        due = everyone.filter(m => m.membership_expires_at && m.membership_expires_at >= from && m.membership_expires_at <= to);
+        due = addressable.filter(m => m.membership_expires_at && m.membership_expires_at >= from && m.membership_expires_at <= to);
       }
       return {
         ok: true, label: 'Membership renewal notice', skippedNoEmail,
         drafts: due.map(m => ({
           // Sent by hand to one member: once a day, separate from the once-a-term bulk notice
           key: req.memberId ? `notice_renewal:${m.id}:${m.membership_expires_at}:manual:${today}` : `notice_renewal:${m.id}:${m.membership_expires_at}`,
-          club, kind: 'notice_renewal', refId: `${m.id}:${m.membership_expires_at}`, to: m.email,
+          club, kind: 'notice_renewal', refId: `${m.id}:${m.membership_expires_at}`, to: m.to,
           render: unsubscribeUrl => renewalReminder({
             brand, unsubscribeUrl, message,
-            memberName: m.full_name,
+            memberName: m.name,
+            childName: m.childName,
             tier: m.membership_tier || 'Membership',
             expires: formatDay(m.membership_expires_at!),
             expired: m.membership_expires_at! < today,
@@ -113,17 +139,17 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         .eq('club_id', club.id).eq('id', req.refId || '').maybeSingle();
       if (!match) return { ok: false, status: 404, error: 'Match not found.' };
       if (['completed', 'cancelled'].includes(match.status)) return { ok: false, status: 400, error: 'That match is already over.' };
-      const audience = req.audience === 'players' ? everyone.filter(isPlayer) : everyone;
+      const audience = req.audience === 'players' ? onePerAddress(addressable.filter(isPlayer)) : everyone;
       const fixture = `${match.home_team_name} vs ${match.away_team_name}`;
       return {
         ok: true, label: `Match notice: ${fixture}`, skippedNoEmail,
         push: req.audience === 'players' ? undefined : { title: fixture, body: `${match.title || match.competition || club.name} · ${formatWhen(match.match_date)}`, url: `/${club.slug}/match/${match.id}`, tag: `match:${match.id}` },
         drafts: audience.map(m => ({
-          key: `notice_match:${match.id}:${normalizeEmail(m.email)}`,
-          club, kind: 'notice_match', refId: match.id, to: m.email,
+          key: `notice_match:${match.id}:${normalizeEmail(m.to)}`,
+          club, kind: 'notice_match', refId: match.id, to: m.to,
           render: unsubscribeUrl => matchNotice({
             brand, unsubscribeUrl, message,
-            recipientName: m.full_name,
+            recipientName: m.name,
             fixture,
             competition: match.title || match.competition,
             when: formatWhen(match.match_date),
@@ -144,11 +170,11 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         ok: true, label: `Event notice: ${event.title}`, skippedNoEmail,
         push: { title: event.title, body: `${club.name} · ${formatWhen(event.start_time)}`, url: `/${club.slug}/events/${event.id}`, tag: `event:${event.id}` },
         drafts: everyone.map(m => ({
-          key: `notice_event:${event.id}:${normalizeEmail(m.email)}`,
-          club, kind: 'notice_event', refId: event.id, to: m.email,
+          key: `notice_event:${event.id}:${normalizeEmail(m.to)}`,
+          club, kind: 'notice_event', refId: event.id, to: m.to,
           render: unsubscribeUrl => eventNotice({
             brand, unsubscribeUrl, message,
-            recipientName: m.full_name,
+            recipientName: m.name,
             event: event.title,
             description: event.description,
             when: formatWhen(event.start_time),
@@ -169,11 +195,11 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         ok: true, label: `News: ${article.title}`, skippedNoEmail,
         push: { title: `${club.name}: ${article.title}`, body: summary?.slice(0, 140) || 'New from the club', url: `/${club.slug}#news`, tag: `news:${article.id}` },
         drafts: everyone.map(m => ({
-          key: `notice_news:${article.id}:${normalizeEmail(m.email)}`,
-          club, kind: 'notice_news', refId: article.id, to: m.email,
+          key: `notice_news:${article.id}:${normalizeEmail(m.to)}`,
+          club, kind: 'notice_news', refId: article.id, to: m.to,
           render: unsubscribeUrl => newsNotice({
             brand, unsubscribeUrl, message,
-            recipientName: m.full_name,
+            recipientName: m.name,
             title: article.title,
             summary,
             image: article.cover_image_url,

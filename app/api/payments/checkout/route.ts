@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  // Renewals need the member's own session (see preparePayment)
+  // Renewals need the member's own session, or their guardian's (see preparePayment)
   const payer = await requireUser(req);
-  const prepared = await preparePayment(db, readPaymentInput(k => (body as Record<string, unknown>)[k]), payer.ok ? payer.userId : null);
+  const prepared = await preparePayment(db, readPaymentInput(k => (body as Record<string, unknown>)[k]), payer.ok ? payer.userId : null, payer.ok ? payer.confirmedEmail ?? null : null);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { draft } = prepared;
   if (!draft.stripeAccountId || !draft.stripeChargesEnabled) {

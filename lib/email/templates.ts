@@ -252,6 +252,11 @@ export function authEmail(action: AuthAction, link: string, token: string, brand
 
 const firstName = (full: string) => full.trim().split(/\s+/)[0] || 'there';
 
+/** Emails about a junior go to their parent or guardian (memberRecipient): `childName` is the junior */
+interface ForGuardian {
+  childName?: string;
+}
+
 /** Shared by every club email other than sign-in */
 interface ClubEmailExtras {
   unsubscribeUrl?: string | null;
@@ -259,17 +264,21 @@ interface ClubEmailExtras {
   message?: string | null;
 }
 
-export function availabilityReminder(p: ClubEmailExtras & { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
+export function availabilityReminder(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
   return renderEmail({
     brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
-    subject: `Are you available? ${p.fixture}`,
+    subject: p.childName ? `Is ${firstName(p.childName)} available? ${p.fixture}` : `Are you available? ${p.fixture}`,
     preheader: `${p.brand.name} needs your answer for ${p.when}.`,
-    heading: 'Can you play?',
-    paragraphs: [`Hi ${firstName(p.memberName)}, ${p.brand.name} is picking the squad and hasn't heard from you yet. Let the coaches know if you're in, out or maybe.`],
+    heading: p.childName ? `Can ${firstName(p.childName)} play?` : 'Can you play?',
+    paragraphs: [p.childName
+      ? `Hi ${firstName(p.memberName)}, ${p.brand.name} is picking the squad and hasn't heard back about ${p.childName}. Let the coaches know if they're in, out or maybe.`
+      : `Hi ${firstName(p.memberName)}, ${p.brand.name} is picking the squad and hasn't heard from you yet. Let the coaches know if you're in, out or maybe.`],
     details: [['Match', p.fixture], ...(p.competition ? [['Competition', p.competition] as [string, string]] : []), ['When', p.when], ['Where', p.venue]],
-    cta: { label: 'Reply with my availability', url: p.link },
+    cta: { label: p.childName ? `Reply for ${firstName(p.childName)}` : 'Reply with my availability', url: p.link },
     note: 'It takes one tap. This link is personal to you, so please don\'t forward it.',
-    reason: `You're receiving this because you're in the ${p.brand.name} squad.`,
+    reason: p.childName
+      ? `You're receiving this because you're the parent or guardian of ${p.childName} in the ${p.brand.name} squad.`
+      : `You're receiving this because you're in the ${p.brand.name} squad.`,
   });
 }
 
@@ -303,20 +312,28 @@ export function ticketsEmail(p: { brand: EmailBrand; buyerName: string; event: s
   });
 }
 
-export function renewalReminder(p: ClubEmailExtras & { brand: EmailBrand; memberName: string; tier: string; expires: string; expired: boolean; link: string }): RenderedEmail {
+export function renewalReminder(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; memberName: string; tier: string; expires: string; expired: boolean; link: string }): RenderedEmail {
   return renderEmail({
     brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
-    subject: p.expired ? `Your ${p.brand.name} membership has expired` : `Your ${p.brand.name} membership expires on ${p.expires}`,
-    preheader: p.expired ? 'Renew now to keep your member pass active.' : 'Renew early and keep your remaining days.',
-    heading: p.expired ? 'Your membership has expired' : 'Time to renew your membership',
+    subject: p.childName
+      ? (p.expired ? `${p.childName}'s ${p.brand.name} membership has expired` : `${p.childName}'s ${p.brand.name} membership expires on ${p.expires}`)
+      : (p.expired ? `Your ${p.brand.name} membership has expired` : `Your ${p.brand.name} membership expires on ${p.expires}`),
+    preheader: p.expired ? 'Renew now to keep the member pass active.' : 'Renew early and keep the remaining days.',
+    heading: p.expired ? (p.childName ? 'Membership expired' : 'Your membership has expired') : 'Time to renew your membership',
     paragraphs: [
-      p.expired
-        ? `Hi ${firstName(p.memberName)}, your ${p.brand.name} membership ended on ${p.expires}. Renew now to reactivate your member pass.`
-        : `Hi ${firstName(p.memberName)}, your ${p.brand.name} membership expires on ${p.expires}. Renewing early keeps your remaining days.`,
+      p.childName
+        ? (p.expired
+          ? `Hi ${firstName(p.memberName)}, ${p.childName}'s ${p.brand.name} membership ended on ${p.expires}. Renew now to reactivate their member pass.`
+          : `Hi ${firstName(p.memberName)}, ${p.childName}'s ${p.brand.name} membership expires on ${p.expires}. Renewing early keeps their remaining days.`)
+        : (p.expired
+          ? `Hi ${firstName(p.memberName)}, your ${p.brand.name} membership ended on ${p.expires}. Renew now to reactivate your member pass.`
+          : `Hi ${firstName(p.memberName)}, your ${p.brand.name} membership expires on ${p.expires}. Renewing early keeps your remaining days.`),
     ],
-    details: [['Membership', p.tier], [p.expired ? 'Expired' : 'Expires', p.expires]],
-    cta: { label: 'Renew my membership', url: p.link },
-    reason: `You're receiving this because you're a member of ${p.brand.name}.`,
+    details: [...(p.childName ? [['Member', p.childName] as [string, string]] : []), ['Membership', p.tier], [p.expired ? 'Expired' : 'Expires', p.expires]],
+    cta: { label: p.childName ? `Renew for ${firstName(p.childName)}` : 'Renew my membership', url: p.link },
+    reason: p.childName
+      ? `You're receiving this because you're the parent or guardian of ${p.childName}, a member of ${p.brand.name}.`
+      : `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }
 
@@ -372,41 +389,47 @@ export function newsNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientNa
 // something the applicant did, so no unsubscribe link.
 // ---------------------------------------------------------------------------------------------
 
-export function applicationReceived(p: { brand: EmailBrand; memberName: string; tier: string; link: string; payable: boolean }): RenderedEmail {
+export function applicationReceived(p: ForGuardian & { brand: EmailBrand; memberName: string; tier: string; link: string; payable: boolean }): RenderedEmail {
   return renderEmail({
     brand: p.brand,
     subject: `We've received your ${p.brand.name} membership application`,
     preheader: 'The committee will review it and email you the outcome.',
     heading: 'Application received',
     paragraphs: [
-      `Hi ${firstName(p.memberName)}, thanks for applying to join ${p.brand.name}. The committee will review your application and we'll email you as soon as there's a decision.`,
+      p.childName
+        ? `Hi ${firstName(p.memberName)}, thanks for applying for ${p.childName} to join ${p.brand.name}. The committee will review the application and we'll email you as soon as there's a decision.`
+        : `Hi ${firstName(p.memberName)}, thanks for applying to join ${p.brand.name}. The committee will review your application and we'll email you as soon as there's a decision.`,
       p.payable
-        ? 'If you haven\'t paid the membership fee yet, you can do it any time from the member page: sign in with this email address to see your application.'
-        : 'You can check where it stands any time on the member page: sign in with this email address to see your application.',
+        ? `If you haven't paid the membership fee yet, you can do it any time from the member page: sign in with this email address to see ${p.childName ? 'the' : 'your'} application.`
+        : `You can check where it stands any time on the member page: sign in with this email address to see ${p.childName ? 'the' : 'your'} application.`,
     ],
-    details: [['Membership', p.tier], ['Status', 'Waiting for committee review']],
+    details: [...(p.childName ? [['Member', p.childName] as [string, string]] : []), ['Membership', p.tier], ['Status', 'Waiting for committee review']],
     cta: { label: 'View my application', url: p.link },
-    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+    reason: p.childName ? `You're receiving this because you applied for ${p.childName} to join ${p.brand.name}.` : `You're receiving this because you applied for membership of ${p.brand.name}.`,
   });
 }
 
-export function applicationApproved(p: { brand: EmailBrand; memberName: string; tier: string; link: string }): RenderedEmail {
+export function applicationApproved(p: ForGuardian & { brand: EmailBrand; memberName: string; tier: string; link: string }): RenderedEmail {
   return renderEmail({
     brand: p.brand,
     subject: `Welcome to ${p.brand.name}! Your membership is approved`,
     preheader: 'Your digital member pass is ready.',
     heading: `Welcome to ${p.brand.name}!`,
     paragraphs: [
-      `Hi ${firstName(p.memberName)}, great news: the committee has approved your membership. Your digital member pass is now active.`,
-      'Open the member page and sign in with this email address. We\'ll email you a one-time sign-in link, no password needed.',
+      p.childName
+        ? `Hi ${firstName(p.memberName)}, great news: the committee has approved ${p.childName}'s membership. Their digital member pass is now active.`
+        : `Hi ${firstName(p.memberName)}, great news: the committee has approved your membership. Your digital member pass is now active.`,
+      p.childName
+        ? 'Open the member page and sign in with this email address to see their pass, pay fees and message the club. We\'ll email you a one-time sign-in link, no password needed.'
+        : 'Open the member page and sign in with this email address. We\'ll email you a one-time sign-in link, no password needed.',
     ],
-    details: [['Membership', p.tier], ['Status', 'Approved']],
+    details: [...(p.childName ? [['Member', p.childName] as [string, string]] : []), ['Membership', p.tier], ['Status', 'Approved']],
     cta: { label: 'Open my member pass', url: p.link },
-    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+    reason: p.childName ? `You're receiving this because you applied for ${p.childName} to join ${p.brand.name}.` : `You're receiving this because you applied for membership of ${p.brand.name}.`,
   });
 }
 
-export function applicationRejected(p: { brand: EmailBrand; memberName: string; tier: string; reason?: string | null; link: string }): RenderedEmail {
+export function applicationRejected(p: ForGuardian & { brand: EmailBrand; memberName: string; tier: string; reason?: string | null; link: string }): RenderedEmail {
   return renderEmail({
     brand: p.brand,
     message: p.reason,
@@ -414,11 +437,15 @@ export function applicationRejected(p: { brand: EmailBrand; memberName: string; 
     preheader: 'An update on your membership application.',
     heading: 'About your application',
     paragraphs: [
-      `Hi ${firstName(p.memberName)}, thank you for applying to join ${p.brand.name}. Unfortunately the committee wasn't able to approve your application this time.`,
-      'If your circumstances change, you can apply again from the member page: sign in with this email address.',
+      p.childName
+        ? `Hi ${firstName(p.memberName)}, thank you for applying for ${p.childName} to join ${p.brand.name}. Unfortunately the committee wasn't able to approve the application this time.`
+        : `Hi ${firstName(p.memberName)}, thank you for applying to join ${p.brand.name}. Unfortunately the committee wasn't able to approve your application this time.`,
+      p.childName
+        ? 'Sign in on the member page with this email address to see the application or message the club about it.'
+        : 'If your circumstances change, you can apply again from the member page: sign in with this email address.',
     ],
-    details: [['Membership', p.tier], ['Status', 'Not approved']],
+    details: [...(p.childName ? [['Member', p.childName] as [string, string]] : []), ['Membership', p.tier], ['Status', 'Not approved']],
     cta: { label: 'View my application', url: p.link },
-    reason: `You're receiving this because you applied for membership of ${p.brand.name}.`,
+    reason: p.childName ? `You're receiving this because you applied for ${p.childName} to join ${p.brand.name}.` : `You're receiving this because you applied for membership of ${p.brand.name}.`,
   });
 }

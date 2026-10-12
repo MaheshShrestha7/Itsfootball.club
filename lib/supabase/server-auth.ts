@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { AccessLevel } from '../permissions';
 
 export type AuthCheck =
-  | { ok: true; userId: string; token: string; supabase: SupabaseClient }
+  | { ok: true; userId: string; token: string; supabase: SupabaseClient; confirmedEmail?: string | null }
   | { ok: false; status: 401 | 403 | 500; error: string };
 
 /**
@@ -26,7 +26,9 @@ export async function requireUser(request: Request): Promise<AuthCheck> {
   // getUser() asks Supabase to validate the token (a forged or expired one is rejected)
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) return { ok: false, status: 401, error: 'Your session has expired. Please sign in again.' };
-  return { ok: true, userId: data.user.id, token, supabase };
+  // Only a confirmed address proves who the caller is (a parent paying for their child: preparePayment)
+  const confirmedEmail = data.user.email && data.user.email_confirmed_at ? data.user.email.toLowerCase() : null;
+  return { ok: true, userId: data.user.id, token, supabase, confirmedEmail };
 }
 
 /** requireUser, and the caller is the club's Owner (not just a Club Admin) */
