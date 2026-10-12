@@ -28,6 +28,7 @@ import {
   Layers,
   Sparkles,
   CalendarDays,
+  CalendarRange,
   Menu,
   X,
   Mail,
@@ -46,6 +47,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
 import { areaFromPath, ADMIN_HASH_EVENT } from '@/lib/permissions';
+import { CALENDAR_AREAS } from '@/lib/admin-calendar';
 import { useClubAppIcons } from '@/lib/app-icons';
 import { clubTeamsOf } from '@/lib/teams';
 
@@ -182,6 +184,8 @@ export default function AdminLayout({
     items: NavItem[];
   }
 
+  const canSeeCalendar = CALENDAR_AREAS.some(a => can(club.id, a));
+
   const navSections: NavSection[] = ([
     {
       // Always-visible entry points (this section has no heading)
@@ -215,6 +219,8 @@ export default function AdminLayout({
       // What's on and when
       title: 'Fixtures & Events',
       items: [
+        // Everything dated, by month or week; shown to anyone who sees fixtures, tournaments or events
+        ...(canSeeCalendar ? [{ label: 'Calendar', href: `/${club.slug}/admin/calendar`, icon: CalendarRange }] : []),
         { area: 'matches', label: 'Fixtures & Results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         {
           area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy,
@@ -322,8 +328,10 @@ export default function AdminLayout({
   // The page's area: someone whose roles don't cover it gets a notice instead of the page
   const currentArea = areaFromPath(pathname);
   // Shop orders have their own area, so a role may hand them out without editing the shop
-  const canViewPage = !currentArea || can(club.id, currentArea) || (currentArea === 'shop' && can(club.id, 'shop-orders'));
-  const viewOnly = canViewPage && !!currentArea && !can(club.id, currentArea, 'edit');
+  const canViewPage = !currentArea || can(club.id, currentArea) || (currentArea === 'shop' && can(club.id, 'shop-orders'))
+    // The calendar isn't an area of its own: it shows the fixtures, tournaments and events a role already sees
+    || (currentArea === 'calendar' && canSeeCalendar);
+  const viewOnly = canViewPage && !!currentArea && currentArea !== 'calendar' && !can(club.id, currentArea, 'edit');
   // Edit without Full: delete buttons (marked data-needs-full) are hidden (globals.css)
   const noDelete = !viewOnly && !!currentArea && !can(club.id, currentArea, 'full');
   const roleLabel = userRole === 'owner'
