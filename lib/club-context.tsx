@@ -2568,7 +2568,11 @@ export function ClubProvider({
       }
     }
 
-    const role: ClubRole = input.membership_tier.toLowerCase().includes('supporter') ? 'supporter' : 'player';
+    if (!input.terms_accepted) {
+      return { success: false, message: 'Please accept the club terms and privacy policy.', error: 'Terms not accepted' };
+    }
+    const role: ClubRole = input.role === 'supporter' ? 'supporter' : 'player';
+    const now = new Date().toISOString();
     const newMemberId = newId();
     const pendingToken = secureToken('pass-pending');
 
@@ -2590,14 +2594,23 @@ export function ClubProvider({
       applied_at: new Date().toISOString(),
       application_notes: input.application_notes ? sanitizeText(input.application_notes) : undefined,
       emergency_contact: input.emergency_contact ? sanitizeText(input.emergency_contact) : undefined,
-      created_at: new Date().toISOString(),
+      date_of_birth: input.date_of_birth || undefined,
+      terms_accepted_at: now,
+      guardian_consent_at: input.guardian_consent ? now : null,
+      created_at: now,
     };
 
     // Saved right away rather than by the background sync, so the applicant hears the real outcome:
     // visitors can't read other members' emails, so only the database knows the email is taken.
     const client = getSupabaseClient();
     if (client) {
-      const { error } = await client.from('club_members').insert(newMem);
+      let { error } = await client.from('club_members').insert(newMem);
+      // Before migration 20261030 the consent columns don't exist yet: apply without them
+      if (error?.code === 'PGRST204') {
+        const { terms_accepted_at: _t, guardian_consent_at: _g, ...withoutConsent } = newMem;
+        void _t; void _g;
+        ({ error } = await client.from('club_members').insert(withoutConsent));
+      }
       if (error) {
         const taken = error.code === '23505' && /email/i.test(error.message);
         return {
@@ -2639,6 +2652,10 @@ export function ClubProvider({
         reviewed_at: updated.reviewed_at,
         reviewed_by: updated.reviewed_by,
         qr_code_token: updated.qr_code_token,
+        // Only when approving sets a new term (never clears dates a payment set)
+        ...(updated.membership_status === 'approved' && updated.membership_starts_at
+          ? { membership_starts_at: updated.membership_starts_at, membership_expires_at: updated.membership_expires_at }
+          : {}),
         updated_at: updated.updated_at,
       })
       .eq('id', updated.id)
@@ -2657,8 +2674,22 @@ export function ClubProvider({
 
     const activeToken = secureToken('pass');
 
+    // A membership nobody has paid for yet starts the day it's approved (applying only pre-filled a
+    // placeholder expiry). A paid sign-up already set its own dates when the payment came in.
+    let term: Partial<Pick<ClubMember, 'membership_starts_at' | 'membership_expires_at'>> = {};
+    if (!member.membership_starts_at) {
+      const today = todayIso();
+      const { data: plan } = await getSupabaseClient()?.from('membership_plans').select('duration_months')
+        .eq('club_id', member.club_id).eq('name', member.membership_tier).maybeSingle() ?? { data: null };
+      term = {
+        membership_starts_at: today,
+        membership_expires_at: membershipTermEnd(today, clubsRef.current.find(c => c.id === member.club_id), plan?.duration_months || 12),
+      };
+    }
+
     const updatedMember: ClubMember = {
       ...member,
+      ...term,
       membership_status: 'approved',
       rejection_reason: undefined,
       reviewed_at: new Date().toISOString(),

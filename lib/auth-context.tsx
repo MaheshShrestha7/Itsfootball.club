@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import { ClubRole, toClubRole } from './supabase/types';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { AccessLevel, levelAtLeast } from './permissions';
+import { authReturnUrl } from './slugs';
 
 export interface UserProfile {
   id: string;
@@ -41,6 +42,10 @@ interface AuthContextType {
   signup: (email: string, fullName: string, password: string) => Promise<AuthResult>;
   /** Sends the sign-up confirmation email again */
   resendConfirmation: (email: string) => Promise<AuthResult>;
+  /** Emails a link to /auth/reset, where a new password is chosen */
+  sendPasswordReset: (email: string) => Promise<AuthResult>;
+  /** Sets a new password for the signed-in user (after following the reset link) */
+  updatePassword: (password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   getUserRoleForClub: (clubId: string) => ClubRole | null;
   /** Can open the admin area at all: Owner, Club Admin, or any access role */
@@ -242,6 +247,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
   }, []);
 
+  const sendPasswordReset = useCallback(async (email: string): Promise<AuthResult> => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail) return { success: false, error: 'Enter your email address first.' };
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'The authentication service is not configured.' };
+    const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: authReturnUrl(window.location.origin, '/auth/reset'),
+    });
+    return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
+  }, []);
+
+  const updatePassword = useCallback(async (password: string): Promise<AuthResult> => {
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return { success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+    }
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'The authentication service is not configured.' };
+    const { error } = await client.auth.updateUser({ password });
+    return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
+  }, []);
+
   const logout = useCallback(async () => {
     const client = getSupabaseClient();
     try {
@@ -308,6 +334,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         resendConfirmation,
+        sendPasswordReset,
+        updatePassword,
         logout,
         getUserRoleForClub,
         hasClubAdminAccess,

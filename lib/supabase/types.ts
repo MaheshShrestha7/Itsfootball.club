@@ -126,6 +126,9 @@ export interface ClubMember {
   membership_expires_at: string;
   /** Start of the current membership term (set by payments; read-only, not synced) */
   membership_starts_at?: string | null;
+  /** When the applicant accepted the terms / a guardian consented (set on applying; read-only, not synced) */
+  terms_accepted_at?: string | null;
+  guardian_consent_at?: string | null;
   is_executive: boolean;
   executive_title?: string;
   executive_bio?: string;
@@ -614,6 +617,11 @@ export interface MemberApplicationInput {
   jersey_number?: number;
   application_notes?: string;
   emergency_contact?: string;
+  /** Chosen on the form; only these two are allowed for a public application */
+  role?: 'player' | 'supporter';
+  date_of_birth?: string;
+  terms_accepted?: boolean;
+  guardian_consent?: boolean;
 }
 
 // ==============================================================================
