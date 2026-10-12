@@ -3,6 +3,7 @@
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { Wallet, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
+import { useUrlTab } from '@/lib/use-url-tab';
 import { clubTeamsOf } from '@/lib/teams';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
@@ -16,6 +17,7 @@ import type {
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'settings';
+const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'settings'];
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'income', label: 'Income' },
@@ -44,7 +46,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const db = getSupabaseClient();
 
-  const [tab, setTabState] = useState<Tab>('overview');
+  // ?tab= in the URL, so the admin menu's Finance sub-items open a tab
+  const [tab, setTab] = useUrlTab(TAB_IDS);
   const [settings, setSettings] = useState<ClubPaymentSettings | null>(null);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [packages, setPackages] = useState<SponsorshipPackage[]>([]);
@@ -60,14 +63,6 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
-    if (t && TABS.some(x => x.id === t)) setTabState(t);
-  }, []);
-  const setTab = (t: Tab) => {
-    setTabState(t);
-    window.history.replaceState(null, '', `?tab=${t}`);
-  };
 
   // ponytail: loads the club's whole ledger; page it by season if a club passes a few thousand rows
   const load = useCallback(async () => {

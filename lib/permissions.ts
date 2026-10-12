@@ -44,7 +44,7 @@ export const ACCESS_AREAS: AccessArea[] = [
   { key: 'hero-slider', label: 'Homepage Slider', group: 'Club Content' },
   { key: 'emails', label: 'Email Notifications', group: 'Fans & Engagement' },
   { key: 'gamification', label: 'ClubScore', group: 'Fans & Engagement' },
-  { key: 'analytics', label: 'Audience Analytics', group: 'Fans & Engagement' },
+  { key: 'analytics', label: 'Website Analytics (incl. Sponsor Report)', group: 'Fans & Engagement' },
   { key: 'branding', label: 'Club Profile & Branding', group: 'Club Settings' },
   { key: 'seasons', label: 'Seasons', group: 'Club Settings' },
 ];

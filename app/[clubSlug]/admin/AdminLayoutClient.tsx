@@ -4,7 +4,7 @@ import React, { use, useState, useEffect, useRef } from 'react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import AdminGuard from '@/components/AdminGuard';
@@ -35,7 +35,7 @@ import {
   Flag,
   Flame,
   Images,
-  Swords, Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
+  ShieldCheck, Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
   ChevronDown,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -47,6 +47,7 @@ import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
 import { areaFromPath, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { useClubAppIcons } from '@/lib/app-icons';
+import { clubTeamsOf } from '@/lib/teams';
 
 // Menu layout preferences, remembered per browser
 const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
@@ -69,7 +70,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members, syncStatus, retrySync, inquiries, memberMessages, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, syncStatus, retrySync, inquiries, memberMessages, updateClubBranding } = useClub();
   const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -137,6 +138,7 @@ export default function AdminLayout({
     inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length +
     memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
+  const hasJuniorTeam = clubTeamsOf(clubTeams, club.id).some(t => t.is_junior);
 
   interface NavItem {
     label: string;
@@ -147,6 +149,16 @@ export default function AdminLayout({
     /** Plain information (e.g. the current season): grey pill, no dot */
     note?: string;
     /** Access area (lib/permissions.ts); the item only shows to people who can view it */
+    area?: string;
+    /** Sub-items: a tab (?tab=) or section (#id) of the page, shown under the item while you're on it */
+    children?: NavChild[];
+  }
+
+  interface NavChild {
+    label: string;
+    href: string;
+    badge?: string;
+    /** Defaults to the parent's area; set when the sub-item opens another page (Sponsor Report) */
     area?: string;
   }
 
@@ -185,9 +197,11 @@ export default function AdminLayout({
       title: 'Fixtures & Events',
       items: [
         { area: 'matches', label: 'Fixtures & Results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
-        { area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
-        // The tournament tab of the Teams page: tournament sides are kept apart from club teams
-        { area: 'teams', label: 'Tournament Sides', href: `/${club.slug}/admin/teams#tournament-sides`, icon: Swords },
+        {
+          area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy,
+          // The tournament tab of the Teams page: tournament sides are kept apart from club teams
+          children: [{ area: 'teams', label: 'Tournament Sides', href: `/${club.slug}/admin/teams#tournament-sides` }],
+        },
         // The club calendar: training sessions, socials and match-day events, with tickets and check-in
         { area: 'events', label: 'Events & Training', href: `/${club.slug}/admin/events`, icon: Calendar },
       ],
@@ -203,7 +217,12 @@ export default function AdminLayout({
           area: 'members',
           href: `/${club.slug}/admin/members`,
           icon: UserCheck,
-          badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
+          badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined,
+          children: [
+            { label: 'Applications', href: `/${club.slug}/admin/members` },
+            { label: 'Active', href: `/${club.slug}/admin/members?tab=active` },
+            { label: 'Rejected', href: `/${club.slug}/admin/members?tab=rejected` },
+          ],
         },
         { area: 'committee', label: 'Committee', href: `/${club.slug}/admin/committee`, icon: Award },
       ],
@@ -217,10 +236,30 @@ export default function AdminLayout({
           area: 'finance',
           href: `/${club.slug}/admin/finance`,
           icon: Wallet,
-          badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
+          badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined,
+          children: [
+            { label: 'Overview', href: `/${club.slug}/admin/finance` },
+            { label: 'Income', href: `/${club.slug}/admin/finance?tab=income` },
+            { label: 'Expenses', href: `/${club.slug}/admin/finance?tab=expenses` },
+            { label: 'Payment Settings', href: `/${club.slug}/admin/finance?tab=settings` },
+          ],
         },
-        { area: 'shop', label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag, badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined },
-        { area: 'sponsors', label: 'Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
+        {
+          area: 'shop', label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag,
+          badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined,
+          children: [
+            { label: 'Orders', href: `/${club.slug}/admin/shop#orders`, badge: ordersToHandOut > 0 ? `${ordersToHandOut}` : undefined },
+            { label: 'Products', href: `/${club.slug}/admin/shop#products` },
+          ],
+        },
+        {
+          area: 'sponsors', label: 'Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign,
+          children: [
+            { label: 'Sponsor List', href: `/${club.slug}/admin/sponsors` },
+            // The sponsor exposure report lives on the Analytics page and keeps its access area
+            { area: 'analytics', label: 'Sponsor Report', href: `/${club.slug}/admin/analytics?tab=sponsors` },
+          ],
+        },
       ],
     },
     {
@@ -238,7 +277,7 @@ export default function AdminLayout({
       items: [
         { area: 'emails', label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
         { area: 'gamification', label: 'ClubScore', href: `/${club.slug}/admin/gamification`, icon: Flame },
-        { area: 'analytics', label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
+        { area: 'analytics', label: 'Website Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
       ],
     },
     {
@@ -247,11 +286,18 @@ export default function AdminLayout({
       items: [
         { area: 'branding', label: 'Club Profile & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
         { area: 'seasons', label: 'Seasons', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
+        // Opens the junior settings (U18 rule, welfare officer) on Club Teams; only once the club has a junior team
+        ...(hasJuniorTeam ? [{ area: 'teams', label: 'Junior & Safeguarding', href: `/${club.slug}/admin/teams#junior-settings`, icon: ShieldCheck }] : []),
         { area: 'roles', label: 'Roles & Permissions', href: `/${club.slug}/admin/roles`, icon: KeyRound },
       ],
     },
   ] as NavSection[])
-    .map(section => ({ ...section, items: section.items.filter(i => !i.area || can(club.id, i.area)) }))
+    .map(section => ({
+      ...section,
+      items: section.items
+        .filter(i => !i.area || can(club.id, i.area))
+        .map(i => ({ ...i, children: i.children?.filter(c => can(club.id, c.area || i.area || '')) })),
+    }))
     .filter(section => section.items.length > 0);
 
   // The page's area: someone whose roles don't cover it gets a notice instead of the page
@@ -288,9 +334,9 @@ export default function AdminLayout({
 
   const allNavItems = navSections.flatMap(s => s.items);
 
-  // The URL hash picks a tab on some pages (Teams: #tournament-sides), and a menu item may point at it.
-  // Next's links don't fire hashchange, so a menu click announces its hash to the open page itself
-  // (ADMIN_HASH_EVENT); the page's own tab switches update the URL and fire hashchange.
+  // The URL hash picks a tab or section on some pages (Teams: #tournament-sides), and a menu item may
+  // point at it. Next's links don't fire hashchange, so a menu click announces its hash to the open page
+  // itself (ADMIN_HASH_EVENT); the page's own tab switches update the URL and fire hashchange.
   const [locationHash, setLocationHash] = useState('');
   useEffect(() => {
     const read = () => setLocationHash(window.location.hash);
@@ -303,19 +349,39 @@ export default function AdminLayout({
     setLocationHash(hash);
     window.dispatchEvent(new CustomEvent(ADMIN_HASH_EVENT, { detail: hash }));
   };
+  // The page's tab (?tab=income), kept in the URL by lib/use-url-tab
+  const currentTab = useSearchParams().get('tab');
 
-  // Highlighted item: an exact match, a matching hash tab, or a page inside it (a single tournament)
+  // How well a menu link matches the current page: 3 its tab or section is showing, 2 its page,
+  // 1 a page inside it (a single tournament), 0 not at all
   const dashboardHref = `/${club.slug}/admin`;
-  const isItemActive = (item: NavItem) => {
-    const [path, hash] = item.href.split('#');
+  const matchScore = (href: string, isChild: boolean) => {
+    const [pathAndQuery, hash] = href.split('#');
+    const [path, query] = pathAndQuery.split('?');
+    const tab = query ? new URLSearchParams(query).get('tab') : null;
     if (pathname === path) {
-      if (hash) return locationHash === `#${hash}`;
-      // The plain item stays lit unless a sibling item owns the current hash
-      return !allNavItems.some(other => other !== item && other.href === `${path}${locationHash}`);
+      if (tab || hash) return (!tab || tab === currentTab) && (!hash || `#${hash}` === locationHash) ? 3 : 0;
+      // A plain sub-item is the page's default tab, so it only matches while no other tab is open
+      return isChild && currentTab ? 0 : 2;
     }
-    return path !== dashboardHref && pathname.startsWith(`${path}/`);
+    return path !== dashboardHref && pathname.startsWith(`${path}/`) ? 1 : 0;
   };
-  const currentNavItem = allNavItems.find(isItemActive);
+  // The one highlighted link: the best match, a sub-item winning a tie with its parent
+  const activeLink = (() => {
+    let best: { item: NavItem; child?: NavChild; score: number } | null = null;
+    for (const item of allNavItems) {
+      for (const child of item.children || []) {
+        const score = matchScore(child.href, true);
+        if (score > 0 && (!best || score > best.score)) best = { item, child, score };
+      }
+      const score = matchScore(item.href, false);
+      if (score > 0 && (!best || score > best.score)) best = { item, score };
+    }
+    return best;
+  })();
+  const isItemActive = (item: NavItem) => activeLink?.item === item;
+  const currentNavItem = activeLink?.item;
+  const currentChild = activeLink?.child;
   // Overview has no heading, so it is never folded away
   const collapsibleTitles = navSections.filter(s => s.title !== 'Overview').map(s => s.title);
   const allSectionsClosed = collapsibleTitles.every(t => closedSections.includes(t));
@@ -422,9 +488,12 @@ export default function AdminLayout({
                   const isActive = isItemActive(item);
                   const Icon = item.icon;
 
+                  // Sub-items open under the page you're on (not on the icon rail)
+                  const showChildren = !rail && isActive && !!item.children?.length;
+
                   return (
+                    <React.Fragment key={item.href}>
                     <Link
-                      key={item.href}
                       href={item.href}
                       onClick={() => { onItemClick?.(); announceHash(item.href); }}
                       title={rail ? (item.badge || item.note ? `${item.label} (${item.badge || item.note})` : item.label) : undefined}
@@ -482,6 +551,28 @@ export default function AdminLayout({
                         </>
                       )}
                     </Link>
+                    {showChildren && (
+                      <div className="admin-nav-children">
+                        {item.children!.map(child => {
+                          const childActive = currentChild === child;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => { onItemClick?.(); announceHash(child.href); }}
+                              aria-current={childActive ? 'page' : undefined}
+                              className={childActive ? 'admin-nav-child is-active' : 'admin-nav-child'}
+                            >
+                              <span>{child.label}</span>
+                              {child.badge && (
+                                <span className="badge badge-live" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>{child.badge}</span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </div>
@@ -595,7 +686,7 @@ export default function AdminLayout({
             <span className="admin-subbar-menu-label">Admin Menu</span>
           </button>
           <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {currentNavItem?.label || 'Control Room'}
+            {currentNavItem ? (currentChild ? `${currentNavItem.label}: ${currentChild.label}` : currentNavItem.label) : 'Control Room'}
           </div>
           <Link
             href={`/${club.slug}`}

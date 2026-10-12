@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import type { ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamRole, ClubTeamType } from '@/lib/supabase/types';
@@ -10,6 +10,7 @@ import {
   teamMemberIds, uniqueTeamSlug, type SafeguardingCheckStatus,
 } from '@/lib/teams';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
+import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff, ShieldAlert, ShieldCheck } from 'lucide-react';
@@ -280,6 +281,26 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
     setWelfare({ name: club.welfare_officer_name || '', email: club.welfare_officer_email || '', phone: club.welfare_officer_phone || '' });
     setJuniorOpen(true);
   };
+  // The admin menu's Junior & Safeguarding item links here with #junior-settings
+  useEffect(() => {
+    const check = (hash: string) => { if (hash === '#junior-settings') openJunior(); };
+    const fromMenu = (e: Event) => check((e as CustomEvent<string>).detail);
+    check(window.location.hash);
+    window.addEventListener(ADMIN_HASH_EVENT, fromMenu);
+    return () => window.removeEventListener(ADMIN_HASH_EVENT, fromMenu);
+    // openJunior only reads the club's saved welfare officer, which is current when the link is followed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Closing the panel drops the hash, so the menu goes back to highlighting Club Teams
+  const juniorWasOpen = useRef(false);
+  useEffect(() => {
+    const closed = juniorWasOpen.current && !juniorOpen;
+    juniorWasOpen.current = juniorOpen;
+    if (!closed || window.location.hash !== '#junior-settings') return;
+    const { pathname, search } = window.location;
+    window.history.replaceState(window.history.state, '', `${pathname}${search}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }, [juniorOpen]);
   const saveWelfare = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = (v: string) => v.replace(/[<>]/g, '').trim();

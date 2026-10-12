@@ -90,8 +90,8 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
         </div>
       )}
 
-      {/* Orders */}
-      <div className="glass-panel" style={{ padding: '1.25rem' }}>
+      {/* Orders (the admin menu's Club Shop sub-items jump here) */}
+      <div id="orders" className="glass-panel" style={{ padding: '1.25rem', scrollMarginTop: '5rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
             Orders {open.length > 0 && <span className="badge" style={{ marginLeft: '0.4rem', background: '#F59E0B', color: '#000' }}>{open.length} open</span>}
@@ -141,8 +141,8 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
         </div>
       </div>
 
-      {/* Products */}
-      <div className="glass-panel" style={{ padding: '1.25rem' }}>
+      {/* Products (the admin menu's Club Shop sub-items jump here) */}
+      <div id="products" className="glass-panel" style={{ padding: '1.25rem', scrollMarginTop: '5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Products</h2>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addProduct}><Plus size={14} /> Add product</button>
