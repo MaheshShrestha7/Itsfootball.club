@@ -47,7 +47,7 @@ const items = buildCalendarItems({
     match('other-club', { club_id: 'c2' }),
   ],
   events: [event('training'), event('u18-training', { team_id: 'u18' }), event('agm', { category: 'agm', end_time: '2026-10-14T17:00:00Z', start_time: '2026-10-14T18:00:00Z' })],
-  tournaments: [{ id: 't1', club_id: 'c1', name: 'Autumn Cup', start_date: '2026-10-24T00:00:00Z', end_date: '2026-10-25T00:00:00Z' } as Tournament],
+  tournaments: [{ id: 't1', club_id: 'c1', name: 'Autumn Cup', start_date: new Date(2026, 9, 24, 10).toISOString(), end_date: new Date(2026, 9, 25, 16).toISOString() } as Tournament],
   seasons: [{ id: 's1', club_id: 'c1', name: '2026/27', start_date: '2026-08-01', end_date: '2027-05-31', is_current: true, status: 'active' } as ClubSeason],
 });
 const byKey = new Map(items.map(i => [i.key, i]));
@@ -85,6 +85,25 @@ assert.equal(itemsOnDay([cup], new Date(2026, 9, 25)).length, 1);
 assert.equal(itemsOnDay([cup], new Date(2026, 9, 26)).length, 0);
 assert.equal(byKey.get('season-start:s1')!.title, 'Season 2026/27 starts');
 assert.equal(dayKey(byKey.get('season-end:s1')!.start), '2027-05-31');
+
+// A tournament also listed under Events & Training shows once, as the tournament (with a link to the event)
+const cupItems = buildCalendarItems({
+  clubId: 'c1', clubTeams: teams, matches: [], seasons: [],
+  tournaments: [{ id: 'd1', club_id: 'c1', name: 'ANCC Dashain Cup 2026', start_date: new Date(2026, 9, 17, 9).toISOString(), end_date: new Date(2026, 9, 18, 17).toISOString() } as Tournament],
+  events: [
+    event('cup-event', { title: 'ANCC Dashain Cup 2026', category: 'tournament', start_time: new Date(2026, 9, 17, 9).toISOString() }),
+    event('short', { title: 'Dashain Cup', category: 'tournament', start_time: new Date(2026, 9, 18, 10).toISOString() }),
+    event('other-week', { title: 'ANCC Dashain Cup 2026', category: 'tournament', start_time: new Date(2026, 10, 1, 9).toISOString() }),
+    event('social', { title: 'Cup', category: 'social', start_time: new Date(2026, 9, 17, 20).toISOString() }),
+  ],
+});
+const cupKeys = cupItems.map(i => i.key).sort();
+assert.deepEqual(cupKeys, ['event:other-week', 'event:social', 'tournament:d1']);
+const dashain = cupItems.find(i => i.key === 'tournament:d1')!;
+assert.ok(dashain.eventId === 'cup-event' || dashain.eventId === 'short');
+// Its days come from the saved instant in local time (the form saves a local date-time as UTC)
+assert.equal(dayKey(dashain.start), '2026-10-17');
+assert.equal(dayKey(dashain.end), '2026-10-19');
 
 // Filters: whole-club events show for any team; other teams' rows and internal matches don't
 const all = new Set<CalendarKind>(['match', 'training', 'social', 'trial', 'tournament', 'season']);
