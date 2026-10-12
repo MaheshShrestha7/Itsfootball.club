@@ -24,29 +24,29 @@ export interface AccessArea {
 // Same order and grouping as the admin menu
 export const ACCESS_AREAS: AccessArea[] = [
   { key: 'inquiries', label: 'Inbox', group: 'Overview' },
-  { key: 'match-center', label: 'Match Command Center', group: 'Matchday' },
   { key: 'availability', label: 'Player Availability', group: 'Matchday' },
   { key: 'lineup', label: 'Lineup Workbench', group: 'Matchday' },
-  { key: 'scanner', label: 'Turnstile QR Scanner', group: 'Matchday' },
-  { key: 'matches', label: 'Schedule & Matches', group: 'Fixtures & Competitions' },
-  { key: 'tournaments', label: 'Tournaments & Cups', group: 'Fixtures & Competitions' },
-  { key: 'events', label: 'Events Management', group: 'Fixtures & Competitions' },
-  { key: 'seasons', label: 'Season Management', group: 'Fixtures & Competitions' },
-  { key: 'squad', label: 'Squad & Players (incl. contact details)', group: 'People & Membership' },
-  { key: 'teams', label: 'Teams (club teams and tournament sides)', group: 'People & Membership' },
-  { key: 'members', label: 'Member Approvals', group: 'People & Membership' },
-  { key: 'committee', label: 'Executive Committee', group: 'People & Membership' },
-  { key: 'emails', label: 'Email Notifications', group: 'People & Membership' },
-  { key: 'gamification', label: 'ClubScore Gamification', group: 'People & Membership' },
-  { key: 'finance', label: 'Finance', group: 'Finance & Sponsors' },
-  { key: 'shop', label: 'Club Shop (products; edit also hands out orders)', group: 'Finance & Sponsors' },
-  { key: 'shop-orders', label: 'Club Shop: see and hand out orders only', group: 'Finance & Sponsors' },
-  { key: 'sponsors', label: 'Commercial Sponsors', group: 'Finance & Sponsors' },
-  { key: 'branding', label: 'Club Configuration & Branding', group: 'Website & Marketing' },
-  { key: 'hero-slider', label: 'Hero Slider Spotlight', group: 'Website & Marketing' },
-  { key: 'content', label: 'Content & News CMS', group: 'Website & Marketing' },
-  { key: 'gallery', label: 'Photo Gallery', group: 'Website & Marketing' },
-  { key: 'analytics', label: 'Audience Analytics', group: 'Website & Marketing' },
+  { key: 'match-center', label: 'Match Centre', group: 'Matchday' },
+  { key: 'scanner', label: 'Gate Scanner', group: 'Matchday' },
+  { key: 'matches', label: 'Fixtures & Results', group: 'Fixtures & Events' },
+  { key: 'tournaments', label: 'Tournaments & Cups', group: 'Fixtures & Events' },
+  { key: 'events', label: 'Events & Training', group: 'Fixtures & Events' },
+  { key: 'squad', label: 'Squad & Players (incl. contact details)', group: 'Players & Teams' },
+  { key: 'teams', label: 'Club Teams and Tournament Sides', group: 'Players & Teams' },
+  { key: 'members', label: 'Members', group: 'Players & Teams' },
+  { key: 'committee', label: 'Committee', group: 'Players & Teams' },
+  { key: 'finance', label: 'Finance', group: 'Money' },
+  { key: 'shop', label: 'Club Shop (products; edit also hands out orders)', group: 'Money' },
+  { key: 'shop-orders', label: 'Club Shop: see and hand out orders only', group: 'Money' },
+  { key: 'sponsors', label: 'Sponsors', group: 'Money' },
+  { key: 'content', label: 'News', group: 'Club Content' },
+  { key: 'gallery', label: 'Photo Gallery', group: 'Club Content' },
+  { key: 'hero-slider', label: 'Homepage Slider', group: 'Club Content' },
+  { key: 'emails', label: 'Email Notifications', group: 'Fans & Engagement' },
+  { key: 'gamification', label: 'ClubScore', group: 'Fans & Engagement' },
+  { key: 'analytics', label: 'Website Analytics (incl. Sponsor Report)', group: 'Fans & Engagement' },
+  { key: 'branding', label: 'Club Profile & Branding', group: 'Club Settings' },
+  { key: 'seasons', label: 'Seasons', group: 'Club Settings' },
 ];
 
 /** Admin pages only super users (Owner, Club Admin) open; never granted by a role */
@@ -63,6 +63,9 @@ export function levelAtLeast(have: string | null | undefined, need: AccessLevel 
 export function areaFromPath(pathname: string): string | null {
   return pathname.match(/\/admin\/([^/?#]+)/)?.[1] ?? null;
 }
+
+/** Sent with the target hash ('#tournament-sides' or '') when an admin menu item is clicked; pages with hash tabs listen */
+export const ADMIN_HASH_EVENT = 'admin-menu-hash';
 
 /** A member's squad labels ('Player, Treasurer' and/or ['Player', 'Treasurer']) */
 export function memberLabels(role?: string | null, roles?: string[] | null): string[] {

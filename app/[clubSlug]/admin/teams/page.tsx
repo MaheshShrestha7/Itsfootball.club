@@ -3,16 +3,33 @@
 import { use, useEffect, useState } from 'react';
 import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
 import ClubTeamsManager from '@/components/teams/ClubTeamsManager';
+import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 
 // Club teams (first team, reserves, academy, youth) and the sides used for tournaments and
 // internal matches, which are kept separate
 export default function AdminTeamsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
   const [tab, setTab] = useState<'club' | 'tournament'>('club');
-  // The tournaments screen links straight to the tournament sides (#tournament-sides)
+  // The admin menu and the tournaments screen link straight to the tournament sides (#tournament-sides)
   useEffect(() => {
-    if (window.location.hash === '#tournament-sides') setTab('tournament');
+    const show = (hash: string) => setTab(hash === '#tournament-sides' ? 'tournament' : 'club');
+    const read = () => show(window.location.hash);
+    const fromMenu = (e: Event) => show((e as CustomEvent<string>).detail);
+    read();
+    window.addEventListener('hashchange', read);
+    window.addEventListener(ADMIN_HASH_EVENT, fromMenu);
+    return () => {
+      window.removeEventListener('hashchange', read);
+      window.removeEventListener(ADMIN_HASH_EVENT, fromMenu);
+    };
   }, []);
+  // Switching tab updates the hash, so the admin menu highlights the matching item
+  const selectTab = (key: 'club' | 'tournament') => {
+    setTab(key);
+    const { pathname, search } = window.location;
+    window.history.replaceState(window.history.state, '', `${pathname}${search}${key === 'tournament' ? '#tournament-sides' : ''}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  };
   const tabs = [
     { key: 'club' as const, label: 'Club Teams' },
     { key: 'tournament' as const, label: 'Tournament Sides' },
@@ -25,7 +42,7 @@ export default function AdminTeamsPage({ params }: { params: Promise<{ clubSlug:
             key={t.key}
             role="tab"
             aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => selectTab(t.key)}
             style={{
               background: 'transparent',
               border: 'none',

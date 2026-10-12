@@ -1790,6 +1790,42 @@ textarea {
   flex-shrink: 0;
 }
 
+/* Sub-items (a page's tabs or sections) under the menu item you're on */
+.admin-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0.1rem 0 0.35rem 1.45rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.admin-nav-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.admin-nav-child:hover,
+.admin-nav-child:focus-visible {
+  color: var(--text-primary);
+  background: rgba(var(--tint-rgb), 0.04);
+}
+
+.admin-nav-child.is-active {
+  color: var(--club-primary);
+  font-weight: 700;
+  background: rgba(var(--tint-rgb), 0.04);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-desktop-sidebar,
   .admin-nav-chevron {

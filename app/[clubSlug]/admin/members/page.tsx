@@ -1,7 +1,7 @@
 'use client';
 
 import React, { use, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useUrlTab } from '@/lib/use-url-tab';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
@@ -53,6 +53,8 @@ function ageOn(dateOfBirth: string): number | null {
   return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0);
 }
 
+const MEMBER_TABS = ['pending', 'active', 'rejected', 'messages'] as const;
+
 export default function AdminMembersPage({
   params,
 }: {
@@ -77,11 +79,8 @@ export default function AdminMembersPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMembers = members.filter(m => m.club_id === club.id);
 
-  // The Inbox links here with ?tab=messages
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'rejected' | 'messages'>(
-    searchParams.get('tab') === 'messages' ? 'messages' : 'pending'
-  );
+  // ?tab= in the URL: the admin menu's Members sub-items and the Inbox (?tab=messages) open a tab
+  const [activeTab, setActiveTab] = useUrlTab(MEMBER_TABS);
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);

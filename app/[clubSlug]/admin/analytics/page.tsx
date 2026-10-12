@@ -1,9 +1,12 @@
 'use client';
 
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useEffect } from 'react';
 import { useClub } from '@/lib/club-context';
+import { useUrlTab } from '@/lib/use-url-tab';
 import { BarChart3, TrendingUp, Users, QrCode, Radio, Eye, Megaphone } from 'lucide-react';
 import SponsorHubDashboard from '@/components/SponsorHubDashboard';
+
+const ANALYTICS_VIEWS = ['overview', 'sponsors'] as const;
 
 export default function AdminAnalyticsPage({
   params,
@@ -13,7 +16,8 @@ export default function AdminAnalyticsPage({
   const resolvedParams = use(params);
   const { clubs, selectClubBySlug, getClubAnalytics, loadClubAnalytics, sponsors } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-  const [view, setView] = useState<'overview' | 'sponsors'>('overview');
+  // ?tab=sponsors opens the sponsor report (linked from Sponsors in the admin menu)
+  const [view, setView] = useUrlTab(ANALYTICS_VIEWS);
 
   useEffect(() => {
     loadClubAnalytics(club.id);
