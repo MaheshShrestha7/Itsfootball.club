@@ -13,7 +13,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
-import AuthModal from '@/components/AuthModal';
+import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import QRScannerModal from '@/components/QRScannerModal';
 import {
@@ -35,6 +35,7 @@ import {
   History,
   Mail,
   Lock,
+  KeyRound,
   User,
   Phone,
   Send,
@@ -152,7 +153,10 @@ export default function MemberPortalPage({
   const [reapplying, setReapplying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Club admins and staff who have a password can still use it
-  const [passwordSignInOpen, setPasswordSignInOpen] = useState(false);
+  // Member sign-in: an emailed link, or a password for people who set one
+  const [signInMethod, setSignInMethod] = useState<'link' | 'password'>('link');
+  const [loginPassword, setLoginPassword] = useState('');
+  const { login, sendPasswordReset } = useAuth();
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -329,6 +333,36 @@ export default function MemberPortalPage({
     }
     // Same message whether or not the email belongs to a member (no account enumeration)
     setLoginNotice('If this email has a membership or an application with us, a sign-in link is on its way. Check your inbox.');
+  };
+
+  // Password sign-in. The page follows the auth state, so it switches to the member's pass by itself.
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginNotice(null);
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setLoginError(notReady);
+    setSendingLink(true);
+    const res = await login(loginEmail, loginPassword, captchaToken);
+    setSendingLink(false);
+    captcha.current?.reset();
+    if (!res.success) return setLoginError(res.error || 'Could not sign in. Check your email and password.');
+    setLoginPassword('');
+  };
+
+  const handleForgotPassword = async () => {
+    setLoginError(null);
+    setLoginNotice(null);
+    if (!loginEmail.trim()) return setLoginError('Enter your email address first, then choose "Forgot password?" again.');
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setLoginError(notReady);
+    setSendingLink(true);
+    const res = await sendPasswordReset(loginEmail, captchaToken);
+    setSendingLink(false);
+    captcha.current?.reset();
+    if (!res.success) return setLoginError(res.error || 'Could not send the reset email.');
+    // Same message whether or not there is an account (no account fishing)
+    setLoginNotice(`If there's an account for ${loginEmail.trim()}, we've emailed it a link to choose a new password.`);
   };
 
   // Handle Membership Application Submit
@@ -688,7 +722,39 @@ export default function MemberPortalPage({
             {/* TAB 1: MEMBER SIGN IN */}
             {gatewayTab === 'signin' && (
               <div className="glass-panel" style={{ padding: '2rem' }}>
-                <form onSubmit={handleRequestMagicLink}>
+                <div role="tablist" aria-label="How to sign in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', padding: '0.3rem', marginBottom: '1.5rem', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
+                  {([['link', 'Magic Link', Sparkles], ['password', 'Password', KeyRound]] as const).map(([method, label, Icon]) => (
+                    <button
+                      key={method}
+                      type="button"
+                      role="tab"
+                      id={`signin-tab-${method}`}
+                      aria-selected={signInMethod === method}
+                      aria-controls="signin-tabpanel"
+                      onClick={() => { setSignInMethod(method); setLoginError(null); setLoginNotice(null); }}
+                      style={{
+                        padding: '0.55rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: signInMethod === method ? 'var(--bg-surface-elevated)' : 'transparent',
+                        boxShadow: signInMethod === method ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                        color: signInMethod === method ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <Icon size={15} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <form id="signin-tabpanel" role="tabpanel" aria-labelledby={`signin-tab-${signInMethod}`} onSubmit={signInMethod === 'link' ? handleRequestMagicLink : handlePasswordSignIn}>
                   <div style={{ marginBottom: '1.25rem' }}>
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                       Member Email Address:
@@ -712,10 +778,43 @@ export default function MemberPortalPage({
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                      We&apos;ll email you a single-use link. Use the same address your membership was registered with.
-                    </div>
+                    {signInMethod === 'link' && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                        We&apos;ll email you a single-use link. Use the same address your membership was registered with.
+                      </div>
+                    )}
                   </div>
+
+                  {signInMethod === 'password' && (
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label htmlFor="member-signin-password" style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                        Password:
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <Lock size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input id="member-signin-password"
+                          type="password"
+                          required
+                          autoComplete="current-password"
+                          value={loginPassword}
+                          onChange={e => setLoginPassword(e.target.value)}
+                          placeholder="Your password"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                            borderRadius: '8px',
+                            background: 'rgba(var(--shade-rgb), 0.4)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.9rem',
+                          }}
+                        />
+                      </div>
+                      <button type="button" onClick={handleForgotPassword} disabled={sendingLink} style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.45rem', color: 'var(--c-green)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
 
                   <div style={{ marginBottom: '1rem' }}>
                     <Captcha ref={captcha} onToken={setCaptchaToken} />
@@ -727,8 +826,10 @@ export default function MemberPortalPage({
                     className="btn btn-primary"
                     style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                   >
-                    <Sparkles size={18} />
-                    <span>{sendingLink ? 'Sending...' : 'Email Me a Sign-In Link'}</span>
+                    {signInMethod === 'link' ? <Sparkles size={18} /> : <KeyRound size={18} />}
+                    <span>{signInMethod === 'link'
+                      ? (sendingLink ? 'Sending...' : 'Email Me a Sign-In Link')
+                      : (sendingLink ? 'Signing in...' : 'Sign In')}</span>
                   </button>
                 </form>
 
@@ -744,11 +845,6 @@ export default function MemberPortalPage({
                     Not a member yet?{' '}
                     <button type="button" onClick={() => setGatewayTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
                       Apply for membership
-                    </button>
-                    <br />
-                    Club admin with a password?{' '}
-                    <button type="button" onClick={() => setPasswordSignInOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
-                      Sign in with password
                     </button>
                   </div>
                 )}
@@ -1776,12 +1872,6 @@ export default function MemberPortalPage({
         onClose={() => setScannerOpen(false)}
         mode="verify_pass"
         clubId={club.id}
-      />
-      <AuthModal
-        isOpen={passwordSignInOpen}
-        onClose={() => setPasswordSignInOpen(false)}
-        allowSignup={false}
-        redirectTo={`/${club.slug}`}
       />
     </div>
   );
