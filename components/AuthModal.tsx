@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { BrandWordmark } from '@/components/BrandLogo';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -30,6 +31,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
   const [submitting, setSubmitting] = useState(false);
   // Offer to resend the confirmation email when the account isn't confirmed yet
   const [canResend, setCanResend] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -51,16 +54,18 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     setErrorMsg(null);
     setNoticeMsg(null);
     setCanResend(false);
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setErrorMsg(notReady);
     setSubmitting(true);
 
     try {
       if (mode === 'reset') {
-        const res = await sendPasswordReset(email);
+        const res = await sendPasswordReset(email, captchaToken);
         if (!res.success) setErrorMsg(res.error || 'Could not send the reset email.');
         // Same message whether or not there is an account (no account fishing)
         else setNoticeMsg(`If there's an account for ${email.trim()}, we've emailed it a link to choose a new password. Check your spam folder too.`);
       } else if (mode === 'login') {
-        const res = await login(email, password);
+        const res = await login(email, password, captchaToken);
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to sign in. Please verify credentials.');
           setCanResend(/confirm your email/i.test(res.error || ''));
@@ -71,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           }
         }
       } else {
-        const res = await signup(email, fullName, password);
+        const res = await signup(email, fullName, password, captchaToken);
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to register account.');
         } else if (res.needsEmailConfirmation) {
@@ -90,14 +95,18 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
       setErrorMsg(err.message || 'An unexpected authentication error occurred.');
     } finally {
       setSubmitting(false);
+      captcha.current?.reset();
     }
   };
 
   const handleResend = async () => {
     setErrorMsg(null);
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setErrorMsg(notReady);
     setSubmitting(true);
-    const res = await resendConfirmation(email);
+    const res = await resendConfirmation(email, captchaToken);
     setSubmitting(false);
+    captcha.current?.reset();
     if (res.success) setNoticeMsg(`Confirmation email sent again to ${email.trim()}.`);
     else setErrorMsg(res.error || 'Could not resend the confirmation email.');
   };
@@ -276,6 +285,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
             )}
           </div>
           )}
+
+          <Captcha ref={captcha} onToken={setCaptchaToken} />
 
     {errorMsg && (
       <div

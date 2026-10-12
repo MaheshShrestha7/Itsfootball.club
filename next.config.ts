@@ -37,7 +37,9 @@ const IS_DEV = process.env.NODE_ENV === 'development';
 // script runs unless Next itself rendered it. 'strict-dynamic' lets those scripts load their chunks.
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'nonce-__NONCE__' 'strict-dynamic'" + (IS_DEV ? " 'unsafe-eval'" : ''),
+  // challenges.cloudflare.com: the Turnstile bot check on sign-in forms (components/Captcha.tsx). With
+  // 'strict-dynamic' modern browsers allow it because our own script adds it; the host is for older ones.
+  "script-src 'self' 'nonce-__NONCE__' 'strict-dynamic' https://challenges.cloudflare.com" + (IS_DEV ? " 'unsafe-eval'" : ''),
   "style-src 'self' 'unsafe-inline'",
   // *.r2.dev: public R2 bucket URLs (club crests, photos), allowed even if R2_PUBLIC_DOMAIN is missing at build time
   "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://*.cloudflare.com" +
@@ -53,7 +55,7 @@ const CSP_DIRECTIVES = [
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST} wss://${SUPABASE_HOST}` : ' https://*.supabase.co wss://*.supabase.co') +
     " https://*.r2.cloudflarestorage.com",
   // www.google.com: the stadium map embed on club home pages (www.google.com/maps -> /maps/embed)
-  "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com",
+  "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://challenges.cloudflare.com",
   // The service worker (public/sw.js). Without this, workers fall back to script-src, where
   // 'strict-dynamic' ignores 'self' and registration is refused.
   "worker-src 'self'",

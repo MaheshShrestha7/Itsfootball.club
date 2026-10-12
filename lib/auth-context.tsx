@@ -38,12 +38,13 @@ interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<AuthResult>;
-  signup: (email: string, fullName: string, password: string) => Promise<AuthResult>;
+  // captchaToken: from components/Captcha.tsx, needed once CAPTCHA is on in Supabase
+  login: (email: string, password: string, captchaToken?: string | null) => Promise<AuthResult>;
+  signup: (email: string, fullName: string, password: string, captchaToken?: string | null) => Promise<AuthResult>;
   /** Sends the sign-up confirmation email again */
-  resendConfirmation: (email: string) => Promise<AuthResult>;
+  resendConfirmation: (email: string, captchaToken?: string | null) => Promise<AuthResult>;
   /** Emails a link to /auth/reset, where a new password is chosen */
-  sendPasswordReset: (email: string) => Promise<AuthResult>;
+  sendPasswordReset: (email: string, captchaToken?: string | null) => Promise<AuthResult>;
   /** Sets a new password for the signed-in user (after following the reset link) */
   updatePassword: (password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
@@ -89,6 +90,7 @@ const confirmRedirect = () => `${window.location.origin}/my-clubs`;
 
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
+  if (m.includes('captcha')) return 'The security check failed or expired. Please try again.';
   if (m.includes('invalid login credentials')) return 'Incorrect email or password.';
   if (m.includes('email not confirmed')) return 'Please confirm your email address first. Check your inbox for the link.';
   if (m.includes('already registered') || m.includes('already been registered')) {
@@ -201,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [loadRoles]);
 
-  const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+  const login = useCallback(async (email: string, password: string, captchaToken?: string | null): Promise<AuthResult> => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return { success: false, error: 'Please enter a valid email address.' };
     if (!password) return { success: false, error: 'Please enter your password.' };
@@ -209,12 +211,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const client = getSupabaseClient();
     if (!client) return { success: false, error: 'Sign-in is unavailable: the authentication service is not configured.' };
 
-    const { error } = await client.auth.signInWithPassword({ email: cleanEmail, password });
+    const { error } = await client.auth.signInWithPassword({ email: cleanEmail, password, options: { captchaToken: captchaToken || undefined } });
     if (error) return { success: false, error: friendlyAuthError(error.message) };
     return { success: true };
   }, []);
 
-  const signup = useCallback(async (email: string, fullName: string, password: string): Promise<AuthResult> => {
+  const signup = useCallback(async (email: string, fullName: string, password: string, captchaToken?: string | null): Promise<AuthResult> => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail || !fullName.trim()) {
       return { success: false, error: 'Please provide your full name and email.' };
@@ -230,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: cleanEmail,
       password,
       // No roles here: user metadata can be edited by the user, so it must never grant access
-      options: { data: { full_name: fullName.trim() }, emailRedirectTo: confirmRedirect() },
+      options: { data: { full_name: fullName.trim() }, emailRedirectTo: confirmRedirect(), captchaToken: captchaToken || undefined },
     });
     if (error) return { success: false, error: friendlyAuthError(error.message) };
     // With email confirmation switched on there is no session until the link is clicked
@@ -238,22 +240,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   }, []);
 
-  const resendConfirmation = useCallback(async (email: string): Promise<AuthResult> => {
+  const resendConfirmation = useCallback(async (email: string, captchaToken?: string | null): Promise<AuthResult> => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return { success: false, error: 'Enter your email address first.' };
     const client = getSupabaseClient();
     if (!client) return { success: false, error: 'The authentication service is not configured.' };
-    const { error } = await client.auth.resend({ type: 'signup', email: cleanEmail, options: { emailRedirectTo: confirmRedirect() } });
+    const { error } = await client.auth.resend({ type: 'signup', email: cleanEmail, options: { emailRedirectTo: confirmRedirect(), captchaToken: captchaToken || undefined } });
     return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
   }, []);
 
-  const sendPasswordReset = useCallback(async (email: string): Promise<AuthResult> => {
+  const sendPasswordReset = useCallback(async (email: string, captchaToken?: string | null): Promise<AuthResult> => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return { success: false, error: 'Enter your email address first.' };
     const client = getSupabaseClient();
     if (!client) return { success: false, error: 'The authentication service is not configured.' };
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: authReturnUrl(window.location.origin, '/auth/reset'),
+      captchaToken: captchaToken || undefined,
     });
     return error ? { success: false, error: friendlyAuthError(error.message) } : { success: true };
   }, []);
