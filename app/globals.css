@@ -1791,6 +1791,33 @@ textarea {
 }
 
 /* Sub-items (a page's tabs or sections) under the menu item you're on */
+.admin-nav-parent {
+  display: flex;
+  align-items: stretch;
+  gap: 0.2rem;
+}
+
+.admin-nav-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.admin-nav-expand:hover,
+.admin-nav-expand:focus-visible {
+  color: var(--text-primary);
+  background: rgba(var(--tint-rgb), 0.04);
+}
+
 .admin-nav-children {
   display: flex;
   flex-direction: column;

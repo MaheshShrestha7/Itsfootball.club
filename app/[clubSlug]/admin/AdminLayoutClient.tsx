@@ -52,6 +52,7 @@ import { clubTeamsOf } from '@/lib/teams';
 // Menu layout preferences, remembered per browser
 const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
 const CLOSED_SECTIONS_KEY = 'itsfootball_admin_closed_sections';
+const OPEN_ITEMS_KEY = 'itsfootball_admin_open_items';
 
 function savePref(key: string, value: unknown) {
   try {
@@ -85,6 +86,8 @@ export default function AdminLayout({
   // Desktop sidebar shrunk to an icon rail, and the menu groups the admin has folded away
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [closedSections, setClosedSections] = useState<string[]>([]);
+  // Items whose sub-items the admin opened or closed by hand (by label); the rest open on their own page
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setIsMounted(true);
@@ -92,6 +95,10 @@ export default function AdminLayout({
       setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true');
       const closed = JSON.parse(localStorage.getItem(CLOSED_SECTIONS_KEY) || '[]');
       if (Array.isArray(closed)) setClosedSections(closed.filter((t): t is string => typeof t === 'string'));
+      const opened = JSON.parse(localStorage.getItem(OPEN_ITEMS_KEY) || '{}');
+      if (opened && typeof opened === 'object' && !Array.isArray(opened)) {
+        setOpenItems(Object.fromEntries(Object.entries(opened).filter((e): e is [string, boolean] => typeof e[1] === 'boolean')));
+      }
     } catch {
       // storage unavailable or unreadable: start with everything open
     }
@@ -111,6 +118,14 @@ export default function AdminLayout({
 
   const toggleSection = (title: string) => {
     updateClosedSections(closedSections.includes(title) ? closedSections.filter(t => t !== title) : [...closedSections, title]);
+  };
+
+  const toggleItem = (label: string, open: boolean) => {
+    setOpenItems(prev => {
+      const next = { ...prev, [label]: !open };
+      savePref(OPEN_ITEMS_KEY, next);
+      return next;
+    });
   };
 
   // Close drawer on navigation
@@ -492,11 +507,13 @@ export default function AdminLayout({
                   const isActive = isItemActive(item);
                   const Icon = item.icon;
 
-                  // Sub-items open under the page you're on (not on the icon rail)
-                  const showChildren = !rail && isActive && !!item.children?.length;
+                  // Sub-items open under the page you're on, or wherever the admin opened them with the arrow
+                  // (not on the icon rail)
+                  const hasChildren = !rail && !!item.children?.length;
+                  const showChildren = hasChildren && (openItems[item.label] ?? isActive);
+                  const childrenId = `${groupId}-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
-                  return (
-                    <React.Fragment key={item.href}>
+                  const link = (
                     <Link
                       href={item.href}
                       onClick={() => { onItemClick?.(); announceHash(item.href); }}
@@ -517,6 +534,8 @@ export default function AdminLayout({
                         fontSize: '0.85rem',
                         transition: 'all 0.15s ease',
                         minHeight: '42px',
+                        flex: hasChildren ? 1 : undefined,
+                        minWidth: 0,
                       }}
                       onMouseEnter={e => {
                         if (!isActive) {
@@ -555,8 +574,28 @@ export default function AdminLayout({
                         </>
                       )}
                     </Link>
+                  );
+
+                  return (
+                    <React.Fragment key={item.href}>
+                    {hasChildren ? (
+                      <div className="admin-nav-parent">
+                        {link}
+                        <button
+                          type="button"
+                          className="admin-nav-expand"
+                          onClick={() => toggleItem(item.label, showChildren)}
+                          aria-expanded={showChildren}
+                          aria-controls={childrenId}
+                          aria-label={`${showChildren ? 'Hide' : 'Show'} ${item.label} sub-menu`}
+                          title={`${showChildren ? 'Hide' : 'Show'} ${item.children!.map(c => c.label).join(', ')}`}
+                        >
+                          <ChevronDown size={14} className={showChildren ? 'admin-nav-chevron' : 'admin-nav-chevron is-closed'} />
+                        </button>
+                      </div>
+                    ) : link}
                     {showChildren && (
-                      <div className="admin-nav-children">
+                      <div id={childrenId} className="admin-nav-children">
                         {item.children!.map(child => {
                           const childActive = currentChild === child;
                           return (
