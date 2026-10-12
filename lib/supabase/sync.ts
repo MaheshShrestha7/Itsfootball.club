@@ -185,6 +185,9 @@ function memberFromRow(r: Row): Row {
     qr_code_token: r.qr_code_token ?? '',
     role: r.role ?? 'member',
     membership_status: r.membership_status ?? 'approved',
+    // Juniors arrive shortened from the public view: explicit undefined so the full details a
+    // visitor's browser cached before (rows are merged over the stored copy) don't stay on show
+    ...(r.is_junior ? { nationality: r.nationality, date_of_birth: undefined, height_cm: undefined, weight_kg: undefined } : {}),
   };
 }
 

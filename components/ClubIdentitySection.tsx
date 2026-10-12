@@ -12,6 +12,7 @@ import {
   Award
 } from 'lucide-react';
 import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
+import { publicScoreHidden } from '@/lib/teams';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -96,7 +97,7 @@ export default function ClubIdentitySection({
   events,
   sponsors,
 }: ClubIdentitySectionProps) {
-  const { getActiveSeason } = useClub();
+  const { getActiveSeason, clubTeams } = useClub();
   const sectionRef = useRef<HTMLElement>(null);
   const [isInView, setIsInView] = useState(false);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
@@ -119,7 +120,8 @@ export default function ClubIdentitySection({
   const rawSeasonMatches = rawPlayedMatches.filter(
     m => !m.season || m.season === rawCurrentSeason
   );
-  const rawGoalsScored = rawSeasonMatches.reduce((acc, m) => {
+  // Teams that hide their scores publicly (junior grassroots rules) don't add to the goal count
+  const rawGoalsScored = rawSeasonMatches.filter(m => !publicScoreHidden(m, clubTeams)).reduce((acc, m) => {
     const scored = m.is_club_home ? (m.home_score ?? 0) : (m.away_score ?? 0);
     return acc + scored;
   }, 0);

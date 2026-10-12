@@ -26,7 +26,8 @@ export async function generateMetadata({
     const fixture = `${match.home_team_name} vs ${match.away_team_name}`;
     const played = ['completed', 'full_time', 'live', 'halftime'].includes(match.status);
     const isLive = match.status === 'live' || match.status === 'halftime';
-    const score = `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}`;
+    // A team that hides its scores publicly: the description names the fixture, never the score
+    const score = match.score_hidden ? fixture : `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}`;
     const date = match.match_date
       ? new Date(match.match_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
       : null;

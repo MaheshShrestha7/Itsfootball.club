@@ -5,6 +5,8 @@ import type { ClubTeam, ClubTeamMember } from './supabase/types';
 import {
   AGE_GROUPS, ageGroupAge, clubTeamsOf, defaultTeamOf, hasMultipleTeams, isTeamFixture, suggestedFormat,
   squadForMatch, teamMemberIds, teamOfMatch, teamSlug, teamsOfMember, uniqueTeamSlug,
+  ageGroupCutoff, ageGroupFit, ageOnDate, isJuniorAgeGroup, isJuniorFixture, isJuniorMember, juniorMemberIds,
+  juniorPublicName, publicMember, safeguardingCheckStatus,
 } from './teams';
 
 const team = (id: string, extra: Partial<ClubTeam> = {}): ClubTeam => ({
@@ -79,5 +81,56 @@ assert.equal(squadForMatch(players, { club_id: 'c1', team_id: 'u10' }, teams, ro
 assert.equal(squadForMatch(players, { club_id: 'c1', match_type: 'internal' }, teams, rows).length, 3);
 assert.equal(squadForMatch(players, { club_id: 'c2', match_type: 'friendly' }, teams, rows).length, 3); // single-team club
 assert.equal(squadForMatch(players, null, teams, rows).length, 3);
+
+// Junior rules
+assert.equal(isJuniorAgeGroup('U10'), true);
+assert.equal(isJuniorAgeGroup('U18'), true);
+assert.equal(isJuniorAgeGroup('U18', false), false);
+assert.equal(isJuniorAgeGroup('U17', false), true);
+assert.equal(isJuniorAgeGroup('U21'), false);
+assert.equal(isJuniorAgeGroup(''), false);
+assert.equal(juniorPublicName('Sam Taylor'), 'Sam T.');
+assert.equal(juniorPublicName('  Jo  Van Dyke '), 'Jo D.');
+assert.equal(juniorPublicName('Sam'), 'Sam');
+assert.equal(juniorPublicName(''), '');
+assert.equal(isJuniorFixture({ club_id: 'c1', team_id: 'u10' }, teams), true);
+assert.equal(isJuniorFixture({ club_id: 'c1', match_type: 'friendly' }, teams), false);
+const kidRows: ClubTeamMember[] = [
+  ...rows,
+  { id: '5', club_id: 'c1', team_id: 'u10', member_id: 'k1', team_role: 'player' },
+  { id: '6', club_id: 'c1', team_id: 'old', member_id: 'k2', team_role: 'player' }, // inactive team
+];
+assert.equal(isJuniorMember({ id: 'k1' }, teams, kidRows), true);
+assert.equal(isJuniorMember({ id: 'm2' }, teams, kidRows), false); // coach of a junior team
+assert.equal(isJuniorMember({ id: 'k2' }, teams, kidRows), false);
+assert.equal(isJuniorMember({ id: 'v1', is_junior: true }, teams, []), true); // flag from the public view
+assert.deepEqual([...juniorMemberIds([{ id: 'v1', is_junior: true }, { id: 'm1' }], teams, kidRows)].sort(), ['k1', 'v1']);
+const kid = { id: 'k1', full_name: 'Sam Taylor', photo_url: 'p.jpg', nationality: 'NZ' };
+assert.deepEqual(publicMember(kid, new Set(['k1'])), { ...kid, full_name: 'Sam T.', photo_url: undefined, nationality: undefined });
+assert.equal(publicMember({ ...kid, photo_consent: true }, new Set(['k1'])).photo_url, 'p.jpg');
+assert.equal(publicMember(kid, new Set()), kid);
+assert.equal(publicMember({ ...kid, full_name: 'Sam T.', is_junior: true }, new Set(['k1'])).photo_url, 'p.jpg'); // view row kept as sent
+
+// Age groups on the season's cut-off date
+const cutoff = ageGroupCutoff('2026-07-01');
+assert.equal(cutoff.toISOString().slice(0, 10), '2026-07-01');
+assert.equal(ageGroupCutoff(null, new Date('2026-10-12T00:00:00Z')).toISOString().slice(0, 10), '2026-09-01');
+assert.equal(ageGroupCutoff(null, new Date('2027-03-01T00:00:00Z')).toISOString().slice(0, 10), '2026-09-01');
+assert.equal(ageOnDate('2016-07-01', cutoff), 10);
+assert.equal(ageOnDate('2016-07-02', cutoff), 9);
+assert.equal(ageOnDate('bad', cutoff), null);
+assert.equal(ageGroupFit('2016-07-02', 'U10', cutoff), 'ok');
+assert.equal(ageGroupFit('2016-07-01', 'U10', cutoff), 'too_old');
+assert.equal(ageGroupFit('2019-01-01', 'U10', cutoff), 'ok'); // playing up
+assert.equal(ageGroupFit(undefined, 'U10', cutoff), null);
+assert.equal(ageGroupFit('2016-01-01', null, cutoff), null);
+
+// Staff background checks
+const today = new Date('2026-10-12T00:00:00Z');
+assert.equal(safeguardingCheckStatus({}, today), 'missing');
+assert.equal(safeguardingCheckStatus({ safeguarding_check_date: '2025-01-01' }, today), 'valid');
+assert.equal(safeguardingCheckStatus({ safeguarding_check_date: '2023-01-01', safeguarding_check_expiry_date: '2026-10-11' }, today), 'expired');
+assert.equal(safeguardingCheckStatus({ safeguarding_check_expiry_date: '2026-11-30' }, today), 'expiring');
+assert.equal(safeguardingCheckStatus({ safeguarding_check_expiry_date: '2027-06-30' }, today), 'valid');
 
 console.log('teams.check: ok');

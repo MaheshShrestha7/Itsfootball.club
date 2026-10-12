@@ -60,6 +60,7 @@ import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } f
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso } from './finance';
+import { publicScoreHidden } from './teams';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -2633,6 +2634,10 @@ export function ClubProvider({
       terms_accepted_at: now,
       guardian_consent_at: input.guardian_consent ? now : null,
       ...(input.requested_team_id && role === 'player' ? { requested_team_id: input.requested_team_id } : {}),
+      ...(input.guardian_name ? { guardian_name: sanitizeText(input.guardian_name) } : {}),
+      ...(input.guardian_email ? { guardian_email: input.guardian_email.toLowerCase().trim() } : {}),
+      ...(input.guardian_phone ? { guardian_phone: sanitizeText(input.guardian_phone) } : {}),
+      ...(typeof input.photo_consent === 'boolean' ? { photo_consent: input.photo_consent } : {}),
       created_at: now,
     };
 
@@ -2641,16 +2646,23 @@ export function ClubProvider({
     const client = getSupabaseClient();
     if (client) {
       let { error } = await client.from('club_members').insert(newMem);
+      // Before migration 20261102 there are no guardian / photo consent columns: apply without them
+      // (the guardian still goes in as the emergency contact)
+      const { guardian_name: _gn, guardian_email: _ge, guardian_phone: _gp, photo_consent: _pc, ...withoutGuardian } = newMem;
+      void _gn; void _ge; void _gp; void _pc;
+      if (error?.code === 'PGRST204' && Object.keys(withoutGuardian).length < Object.keys(newMem).length) {
+        ({ error } = await client.from('club_members').insert(withoutGuardian));
+      }
       // Before migration 20261101 there is no requested team column, or the team was deleted
       // while the form was open: apply without it (the club places the player)
       if ((error?.code === 'PGRST204' || error?.code === '23503') && newMem.requested_team_id) {
-        const { requested_team_id: _r, ...withoutTeam } = newMem;
+        const { requested_team_id: _r, ...withoutTeam } = withoutGuardian;
         void _r;
         ({ error } = await client.from('club_members').insert(withoutTeam));
       }
       // Before migration 20261030 the consent columns don't exist yet: apply without them
       if (error?.code === 'PGRST204') {
-        const { terms_accepted_at: _t, guardian_consent_at: _g, requested_team_id: _r, ...withoutConsent } = newMem;
+        const { terms_accepted_at: _t, guardian_consent_at: _g, requested_team_id: _r, ...withoutConsent } = withoutGuardian;
         void _t; void _g; void _r;
         ({ error } = await client.from('club_members').insert(withoutConsent));
       }
@@ -2875,7 +2887,8 @@ export function ClubProvider({
   }, [memberMessages]);
 
   const getClubSeasonStats = useCallback((clubId: string): ClubSeasonStatsSummary => {
-    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed' && countsTowardClubRecord(m));
+    // Teams that hide their scores publicly (junior grassroots rules) stay out of the record
+    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed' && countsTowardClubRecord(m) && !publicScoreHidden(m, clubTeams));
     let wins = 0;
     let draws = 0;
     let losses = 0;
@@ -2927,7 +2940,7 @@ export function ClubProvider({
       form: form.slice(-5),
       topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : undefined
     };
-  }, [matches, playerStats, members]);
+  }, [matches, playerStats, members, clubTeams]);
 
   // ==============================================================================
   // CLUB TEAMS (first team, reserves, academy, youth)

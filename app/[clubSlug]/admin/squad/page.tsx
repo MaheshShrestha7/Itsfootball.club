@@ -5,7 +5,7 @@ import React, { useState, use, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
-import { clubTeamsOf } from '@/lib/teams';
+import { clubTeamsOf, isJuniorMember } from '@/lib/teams';
 import { useAuth } from '@/lib/auth-context';
 import { useAccessRoles } from '@/lib/access-roles';
 import { membershipTermEnd, todayIso } from '@/lib/finance';
@@ -63,6 +63,41 @@ const FALLBACK_ACCESS_ROLES = [
   { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Head Coach & Technical Staff', access: true },
   { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Platform Administrator', access: true },
 ];
+
+const EMPTY_SAFEGUARDING = {
+  date_of_birth: '',
+  guardian_name: '',
+  guardian_email: '',
+  guardian_phone: '',
+  photo_consent: '' as '' | 'yes' | 'no',
+  safeguarding_check_type: '',
+  safeguarding_check_date: '',
+  safeguarding_check_expiry_date: '',
+};
+
+/**
+ * Junior & safeguarding fields to save (never shown publicly). A field goes in when it has a value,
+ * or when it is being emptied (emptied dates save as NULL), so untouched blanks are left out.
+ * Photo consent goes in only once chosen: "not asked yet" stays as it is.
+ */
+function safeguardingFields(form: typeof EMPTY_SAFEGUARDING, editing: ClubMember | null): Partial<ClubMember> {
+  const out: Partial<ClubMember> = {};
+  const text = (v: string) => v.replace(/[<>]/g, '').trim();
+  const values = {
+    date_of_birth: form.date_of_birth,
+    guardian_name: text(form.guardian_name),
+    guardian_email: text(form.guardian_email).toLowerCase(),
+    guardian_phone: text(form.guardian_phone),
+    safeguarding_check_type: text(form.safeguarding_check_type),
+    safeguarding_check_date: form.safeguarding_check_date,
+    safeguarding_check_expiry_date: form.safeguarding_check_expiry_date,
+  };
+  for (const key of Object.keys(values) as (keyof typeof values)[]) {
+    if (values[key] || editing?.[key]) out[key] = values[key];
+  }
+  if (form.photo_consent) out.photo_consent = form.photo_consent === 'yes';
+  return out;
+}
 
 export default function AdminSquadPage({
   params,
@@ -125,6 +160,7 @@ export default function AdminSquadPage({
     nationality: '',
     is_executive: false,
     executive_title: '',
+    ...EMPTY_SAFEGUARDING,
   });
 
   // Photo Upload State
@@ -162,6 +198,7 @@ export default function AdminSquadPage({
       nationality: '',
       is_executive: false,
       executive_title: '',
+      ...EMPTY_SAFEGUARDING,
     });
     setUploadError(null);
     setFormError(null);
@@ -223,6 +260,14 @@ export default function AdminSquadPage({
       nationality: m.nationality || '',
       is_executive: normalizedRoles.includes('Executive Committee') || Boolean(m.is_executive),
       executive_title: m.executive_title || '',
+      date_of_birth: m.date_of_birth || '',
+      guardian_name: m.guardian_name || '',
+      guardian_email: m.guardian_email || '',
+      guardian_phone: m.guardian_phone || '',
+      photo_consent: m.photo_consent === true ? 'yes' : m.photo_consent === false ? 'no' : '',
+      safeguarding_check_type: m.safeguarding_check_type || '',
+      safeguarding_check_date: m.safeguarding_check_date || '',
+      safeguarding_check_expiry_date: m.safeguarding_check_expiry_date || '',
     });
     setUploadError(null);
     setFormError(null);
@@ -389,6 +434,7 @@ export default function AdminSquadPage({
       membership_tier: isPlayer ? 'Senior Player' : isExec ? 'Executive Board' : 'Club Staff',
       is_executive: isExec,
       executive_title: isExec ? form.executive_title || 'Committee Member' : undefined,
+      ...safeguardingFields(form, editingMember),
     };
 
     if (editingMember) {
@@ -1134,6 +1180,57 @@ export default function AdminSquadPage({
                   />
                 </div>
               )}
+
+              {/* JUNIOR & SAFEGUARDING: guardian and photo consent for juniors, background check for staff */}
+              <details className="form-group" style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}
+                open={editingMember ? isJuniorMember(editingMember, clubTeams, clubTeamMembers) || !!form.safeguarding_check_type : false}>
+                <summary data-view-ok style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                  Junior &amp; safeguarding
+                  {editingMember && isJuniorMember(editingMember, clubTeams, clubTeamMembers) && <span className="badge" style={{ marginLeft: 8, background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6' }}>Junior</span>}
+                </summary>
+                <p className="text-note" style={{ margin: '0.5rem 0 0.85rem 0' }}>Private to the club&apos;s admins. Juniors are shown publicly as first name and initial, with no photo unless a guardian allows it.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-dob" className="form-label">Date of birth</label>
+                    <input id="squad-dob" type="date" className="form-input" value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-photo-consent" className="form-label">Photo consent</label>
+                    <select id="squad-photo-consent" className="form-input" value={form.photo_consent} onChange={e => setForm({ ...form, photo_consent: e.target.value as '' | 'yes' | 'no' })}>
+                      {!form.photo_consent && <option value="">Not asked yet</option>}
+                      <option value="yes">Yes, photos can be shown publicly</option>
+                      <option value="no">No public photos</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-name" className="form-label">Parent / guardian</label>
+                    <input id="squad-guardian-name" className="form-input" maxLength={255} value={form.guardian_name} onChange={e => setForm({ ...form, guardian_name: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-email" className="form-label">Guardian email</label>
+                    <input id="squad-guardian-email" type="email" className="form-input" maxLength={255} value={form.guardian_email} onChange={e => setForm({ ...form, guardian_email: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-phone" className="form-label">Guardian phone</label>
+                    <input id="squad-guardian-phone" type="tel" className="form-input" maxLength={64} value={form.guardian_phone} onChange={e => setForm({ ...form, guardian_phone: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '0.75rem', marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-type" className="form-label">Safeguarding check</label>
+                    <input id="squad-check-type" className="form-input" maxLength={64} placeholder="e.g. DBS, WWCC" value={form.safeguarding_check_type} onChange={e => setForm({ ...form, safeguarding_check_type: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-date" className="form-label">Checked on</label>
+                    <input id="squad-check-date" type="date" className="form-input" value={form.safeguarding_check_date} onChange={e => setForm({ ...form, safeguarding_check_date: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-expiry" className="form-label">Expires on</label>
+                    <input id="squad-check-expiry" type="date" className="form-input" value={form.safeguarding_check_expiry_date} onChange={e => setForm({ ...form, safeguarding_check_expiry_date: e.target.value })} />
+                  </div>
+                </div>
+                <p className="text-note" style={{ margin: '0.5rem 0 0 0' }}>Staff of a junior team need a valid check. You&apos;ll see a warning on the Teams page when one lapses.</p>
+              </details>
 
               {/* 7. MEMBER STATUS (ACTIVE / INACTIVE) */}
               <div className="form-group" style={{ marginBottom: '1.75rem' }}>

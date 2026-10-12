@@ -36,6 +36,7 @@ import {
 import BulkMemberModal from '@/components/BulkMemberModal';
 import { newId } from '@/lib/ids';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
@@ -69,6 +70,7 @@ export default function AdminMembersPage({
     markMemberMessageRead,
     bulkAddMembers,
     clubTeams,
+    getActiveSeason,
   } = useClub();
   const { user } = useAuth();
 
@@ -725,8 +727,26 @@ export default function AdminMembersPage({
                             )}
                             {(() => {
                               const team = member.requested_team_id ? clubTeams.find(t => t.id === member.requested_team_id && t.club_id === member.club_id) : undefined;
-                              return team ? <span>Team: <strong>{team.name}</strong> <span style={{ color: 'var(--text-muted)' }}>(joins it when approved)</span></span> : null;
+                              if (!team) return null;
+                              const fit = ageGroupFit(member.date_of_birth, team.age_group, ageGroupCutoff(getActiveSeason(member.club_id)?.start_date));
+                              return (
+                                <>
+                                  <span>Team: <strong>{team.name}</strong> <span style={{ color: 'var(--text-muted)' }}>(joins it when approved)</span></span>
+                                  {fit === 'too_old' && (
+                                    <span style={{ color: 'var(--c-amber)' }}>⚠ Too old for {team.age_group} on the season&apos;s cut-off date: check the team before approving.</span>
+                                  )}
+                                  {team.is_junior && !member.date_of_birth && (
+                                    <span style={{ color: 'var(--c-amber)' }}>⚠ No date of birth given for a junior team.</span>
+                                  )}
+                                </>
+                              );
                             })()}
+                            {(member.guardian_name || member.guardian_email || member.guardian_phone) && (
+                              <span>Parent / guardian: <strong>{[member.guardian_name, member.guardian_phone, member.guardian_email].filter(Boolean).join(' · ')}</strong></span>
+                            )}
+                            {member.photo_consent != null && (
+                              <span>Photo consent: <strong>{member.photo_consent ? 'Yes, photos can be shown publicly' : 'No public photos'}</strong></span>
+                            )}
                             {member.emergency_contact && <span>Emergency contact: <strong>{member.emergency_contact}</strong></span>}
                             {member.terms_accepted_at && <span style={{ color: 'var(--text-muted)' }}>Accepted terms {formatDate(member.terms_accepted_at)}</span>}
                             {member.guardian_consent_at && <span style={{ color: 'var(--c-green)' }}>✓ Parent / guardian consent given</span>}

@@ -8,14 +8,15 @@ import type { Club, Match } from '@/lib/supabase/types';
 
 // "Share" on a match page: previews the matchday graphic, then hands it to the phone's share sheet
 // (Instagram, WhatsApp...) or downloads it where the browser can't share files.
-export default function MatchShareButton({ match, club }: { match: Match; club: Club }) {
+// hideScore: the team hides its scores publicly (junior grassroots rules), so the card never shows one
+export default function MatchShareButton({ match, club, hideScore = false }: { match: Match; club: Club; hideScore?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<CardKind>('score');
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const hasLineup = ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords)?.length;
-  const fileName = `${club.slug}-${kind === 'lineup' ? 'lineup' : match.status === 'completed' ? 'result' : 'fixture'}.png`;
+  const fileName = `${club.slug}-${kind === 'lineup' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}.png`;
 
   // Redrawn when opened, when the card type changes and when the score moves
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function MatchShareButton({ match, club }: { match: Match; club: 
     let stale = false;
     setError(null);
     setImage(null);
-    drawMatchCard(match, club, kind, new URL(SITE_URL).host)
+    drawMatchCard(match, club, kind, new URL(SITE_URL).host, { hideScore })
       .then(blob => {
         if (stale) return;
         url = URL.createObjectURL(blob);
@@ -32,7 +33,7 @@ export default function MatchShareButton({ match, club }: { match: Match; club: 
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, match, club]);
+  }, [open, kind, match, club, hideScore]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -87,7 +88,7 @@ export default function MatchShareButton({ match, club }: { match: Match; club: 
           </button>
         </div>
 
-        {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>{tab('score', match.status === 'completed' ? 'Result' : 'Fixture')}{tab('lineup', 'Starting XI')}</div> : null}
+        {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{tab('lineup', 'Starting XI')}</div> : null}
 
         <div style={{ aspectRatio: '4 / 5', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.4)', display: 'grid', placeItems: 'center' }}>
           {error ? <p role="alert" style={{ padding: '1rem', textAlign: 'center' }}>{error}</p>

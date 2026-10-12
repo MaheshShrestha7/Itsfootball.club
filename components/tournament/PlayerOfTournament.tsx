@@ -5,6 +5,8 @@ import { Award, Pencil, X } from 'lucide-react';
 import { ClubMember, Tournament } from '@/lib/supabase/types';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { useClub } from '@/lib/club-context';
+import { isJuniorMember, juniorPublicName, publicMember } from '@/lib/teams';
 
 interface PlayerOfTournamentProps {
   tournament: Tournament;
@@ -20,6 +22,7 @@ interface PlayerOfTournamentProps {
  * Saved straight to the tournaments row (not through the background sync).
  */
 export default function PlayerOfTournament({ tournament, members, isAdmin = false, onSaved }: PlayerOfTournamentProps) {
+  const { clubTeams, clubTeamMembers } = useClub();
   const [editing, setEditing] = useState(false);
   const [memberId, setMemberId] = useState('');
   const [name, setName] = useState('');
@@ -33,8 +36,13 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
     setNote(tournament.player_of_tournament_note || '');
   }, [tournament.player_of_tournament_member_id, tournament.player_of_tournament_name, tournament.player_of_tournament_note]);
 
-  const winnerName = tournament.player_of_tournament_name;
-  const winner = members.find(m => m.id === tournament.player_of_tournament_member_id);
+  // A junior winner is shown as "Sam T.", without a photo unless a guardian allowed it
+  const storedWinner = members.find(m => m.id === tournament.player_of_tournament_member_id);
+  const juniorWinner = !!storedWinner && isJuniorMember(storedWinner, clubTeams, clubTeamMembers);
+  const winner = storedWinner && publicMember(storedWinner, juniorWinner ? new Set([storedWinner.id]) : new Set<string>());
+  const winnerName = juniorWinner && tournament.player_of_tournament_name
+    ? juniorPublicName(tournament.player_of_tournament_name)
+    : tournament.player_of_tournament_name;
   if (!winnerName && !isAdmin) return null;
 
   const save = async (clear = false) => {

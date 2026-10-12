@@ -186,7 +186,7 @@ export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow) {
     '@id': abs(`/${club.slug}/match/${match.id}#event`),
     url: abs(`/${club.slug}/match/${match.id}`),
     name: `${match.home_team_name} vs ${match.away_team_name}`,
-    description: played
+    description: played && !match.score_hidden
       ? `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}${match.competition ? ` (${match.competition})` : ''}`
       : `${match.home_team_name} vs ${match.away_team_name}${match.competition ? `, ${match.competition}` : ''}`,
     sport: 'Soccer',

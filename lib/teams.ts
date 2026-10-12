@@ -149,3 +149,130 @@ export function publicScoreHidden(
 ): boolean {
   return !!teamOfMatch(m, teams)?.hide_public_scores;
 }
+
+// ------------------------------------------------------------------------------
+// Junior (kids) teams: safeguarding rules (supabase/migrations/20261102_junior_safeguarding.sql)
+// ------------------------------------------------------------------------------
+
+/** Match events that reveal the score (left out where a team hides its scores) */
+export const GOAL_EVENT_TYPES = ['goal', 'penalty', 'own_goal'];
+
+/** Whether an age group counts as junior: up to U17, and U18 too unless the club turned that off */
+export function isJuniorAgeGroup(ageGroup: string | null | undefined, includeU18 = true): boolean {
+  const age = ageGroupAge(ageGroup);
+  return age !== null && age <= (includeU18 ? 18 : 17);
+}
+
+/** "Sam Taylor" -> "Sam T." (how juniors are named on the public site) */
+export function juniorPublicName(name: string | null | undefined): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] || '';
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+}
+
+/** Whether a fixture is played by a junior team (its player names are shortened publicly) */
+export function isJuniorFixture(
+  m: Pick<Match, 'club_id' | 'team_id' | 'match_type' | 'tournament_id'>,
+  teams: ClubTeam[]
+): boolean {
+  return !!teamOfMatch(m, teams)?.is_junior;
+}
+
+/**
+ * Whether a member plays for an active junior team. Visitors can't see junior squads, so for them
+ * the public member view's is_junior flag says it; signed-in admins work it out from the squads.
+ */
+export function isJuniorMember(
+  member: { id: string; is_junior?: boolean | null },
+  teams: ClubTeam[],
+  rows: ClubTeamMember[]
+): boolean {
+  if (member.is_junior) return true;
+  return rows.some(r =>
+    r.member_id === member.id && r.team_role === 'player' && r.is_active !== false
+    && teams.some(t => t.id === r.team_id && t.is_active && t.is_junior)
+  );
+}
+
+/** Ids of the club's junior players (see isJuniorMember) */
+export function juniorMemberIds(
+  members: { id: string; is_junior?: boolean | null }[],
+  teams: ClubTeam[],
+  rows: ClubTeamMember[]
+): Set<string> {
+  const juniorTeams = new Set(teams.filter(t => t.is_active && t.is_junior).map(t => t.id));
+  const ids = new Set(members.filter(m => m.is_junior).map(m => m.id));
+  for (const r of rows) {
+    if (r.team_role === 'player' && r.is_active !== false && juniorTeams.has(r.team_id)) ids.add(r.member_id);
+  }
+  return ids;
+}
+
+/**
+ * The date age groups are counted on: the current season's start (else 1 September of the year
+ * the season started). U10 = under 10 on that date.
+ */
+export function ageGroupCutoff(seasonStart: string | null | undefined, today = new Date()): Date {
+  if (seasonStart && /^\d{4}-\d{2}-\d{2}/.test(seasonStart)) {
+    const [y, m, d] = seasonStart.slice(0, 10).split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+  const year = today.getUTCMonth() >= 8 ? today.getUTCFullYear() : today.getUTCFullYear() - 1;
+  return new Date(Date.UTC(year, 8, 1));
+}
+
+/** Age in whole years on a date, or null for a missing / invalid date of birth */
+export function ageOnDate(dateOfBirth: string | null | undefined, on: Date): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateOfBirth || '');
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  let age = on.getUTCFullYear() - y;
+  if (on.getUTCMonth() + 1 < mo || (on.getUTCMonth() + 1 === mo && on.getUTCDate() < d)) age -= 1;
+  return age >= 0 && age < 120 ? age : null;
+}
+
+/**
+ * Whether a date of birth fits a team's age group on the cut-off date: 'ok', 'too_old' (they
+ * should play in an older group) or null when either is unknown. Playing up is allowed.
+ */
+export function ageGroupFit(dateOfBirth: string | null | undefined, ageGroup: string | null | undefined, cutoff: Date): 'ok' | 'too_old' | null {
+  const limit = ageGroupAge(ageGroup);
+  const age = ageOnDate(dateOfBirth, cutoff);
+  if (limit === null || age === null) return null;
+  return age < limit ? 'ok' : 'too_old';
+}
+
+export type SafeguardingCheckStatus = 'valid' | 'expiring' | 'expired' | 'missing';
+
+/** A staff member's background check: missing, expired, expiring within 60 days, or valid */
+export function safeguardingCheckStatus(
+  m: { safeguarding_check_date?: string | null; safeguarding_check_expiry_date?: string | null },
+  today = new Date()
+): SafeguardingCheckStatus {
+  if (!m.safeguarding_check_date && !m.safeguarding_check_expiry_date) return 'missing';
+  if (!m.safeguarding_check_expiry_date) return 'valid';
+  const day = today.toISOString().slice(0, 10);
+  if (m.safeguarding_check_expiry_date < day) return 'expired';
+  const soon = new Date(today.getTime() + 60 * 86400000).toISOString().slice(0, 10);
+  return m.safeguarding_check_expiry_date <= soon ? 'expiring' : 'valid';
+}
+
+/**
+ * How a member is shown on the public site: juniors get a shortened name, no nationality and no
+ * photo without photo consent. Visitors already receive juniors this way from the public member
+ * view; this keeps public pages the same for signed-in admins, whose copy has the full details.
+ */
+export function publicMember<M extends { id: string; full_name: string; photo_url?: string; nationality?: string; photo_consent?: boolean | null; is_junior?: boolean }>(
+  member: M,
+  juniorIds: Set<string>
+): M {
+  if (!juniorIds.has(member.id)) return member;
+  // A row from the public view (is_junior set) is already shortened and has no photo without consent
+  if (member.is_junior) return member;
+  return {
+    ...member,
+    full_name: juniorPublicName(member.full_name),
+    nationality: undefined,
+    photo_url: member.photo_consent === true ? member.photo_url : undefined,
+  };
+}
