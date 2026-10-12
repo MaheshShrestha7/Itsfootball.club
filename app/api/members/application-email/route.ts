@@ -3,12 +3,13 @@ import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
-import { sendClubEmails, looksLikeEmail } from '@/lib/email/club-emails';
+import { sendClubEmails, memberRecipient, MEMBER_RECIPIENT_COLUMNS } from '@/lib/email/club-emails';
 import { applicationApproved, applicationReceived, applicationRejected } from '@/lib/email/templates';
 import { isUuid } from '@/lib/ids';
 
 // Emails an applicant about their membership application. The email always matches what the
-// database says (the row's status), never what the caller claims, and goes to the row's own email.
+// database says (the row's status), never what the caller claims, and goes to the row's own email,
+// or to the parent / guardian email on the row for juniors (memberRecipient).
 //   POST { clubId, memberId, kind: 'applied' }    anyone, within an hour of applying (the applicant
 //                                                 is signed out; only they know the new row's id)
 //   POST { clubId, memberId, kind: 'approved' | 'rejected' }   club admins with Member Approvals
@@ -40,14 +41,15 @@ export async function POST(req: NextRequest) {
   const [{ data: club }, { data: member }] = await Promise.all([
     db.from('clubs').select(CLUB_BRAND_COLUMNS).eq('id', body.clubId).maybeSingle(),
     db.from('club_members')
-      .select('id, full_name, email, membership_tier, membership_status, rejection_reason, applied_at, reviewed_at')
+      .select(`id, ${MEMBER_RECIPIENT_COLUMNS}, membership_tier, membership_status, rejection_reason, applied_at, reviewed_at`)
       .eq('club_id', body.clubId).eq('id', body.memberId).maybeSingle(),
   ]);
   if (!club || !member) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   if (member.membership_status !== KINDS[kind]) {
     return NextResponse.json({ sent: false, error: 'The application is not in that state.' }, { status: 409 });
   }
-  if (!looksLikeEmail(member.email)) return NextResponse.json({ sent: false, error: 'No email address.' }, { status: 400 });
+  const recipient = memberRecipient(member);
+  if (!recipient) return NextResponse.json({ sent: false, error: 'No email address.' }, { status: 400 });
   if (kind === 'applied' && !(member.applied_at && Date.now() - new Date(member.applied_at).getTime() < APPLY_WINDOW_MS)) {
     return NextResponse.json({ sent: false, error: 'Too late to send.' }, { status: 409 });
   }
@@ -57,14 +59,15 @@ export async function POST(req: NextRequest) {
   const link = `${clubBaseUrl(row)}/member`;
   const tier = member.membership_tier || 'Membership';
   let email;
+  const to = { memberName: recipient.name, childName: recipient.childName };
   if (kind === 'applied') {
     const { data: plan } = await db.from('membership_plans').select('price_cents')
       .eq('club_id', row.id).eq('name', tier).eq('is_active', true).maybeSingle();
-    email = applicationReceived({ brand, memberName: member.full_name, tier, link, payable: (plan?.price_cents || 0) > 0 });
+    email = applicationReceived({ brand, ...to, tier, link, payable: (plan?.price_cents || 0) > 0 });
   } else if (kind === 'approved') {
-    email = applicationApproved({ brand, memberName: member.full_name, tier, link });
+    email = applicationApproved({ brand, ...to, tier, link });
   } else {
-    email = applicationRejected({ brand, memberName: member.full_name, tier, reason: member.rejection_reason, link });
+    email = applicationRejected({ brand, ...to, tier, reason: member.rejection_reason, link });
   }
 
   // Keyed on the application round, so applying again after a rejection gets fresh emails
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
     clubId: row.id,
     kind: `member_${kind}`,
     refId: member.id,
-    to: member.email,
+    to: recipient.to,
     fromName: row.name,
     email,
   }]);

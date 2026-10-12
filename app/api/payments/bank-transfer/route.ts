@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
-  // Renewals need the member's own session (see preparePayment)
+  // Renewals need the member's own session, or their guardian's (see preparePayment)
   const payer = await requireUser(req);
-  const prepared = await preparePayment(db, readPaymentInput(k => form.get(k)), payer.ok ? payer.userId : null);
+  const prepared = await preparePayment(db, readPaymentInput(k => form.get(k)), payer.ok ? payer.userId : null, payer.ok ? payer.confirmedEmail ?? null : null);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { row } = prepared.draft;
 

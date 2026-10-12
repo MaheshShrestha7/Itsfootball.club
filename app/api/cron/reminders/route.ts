@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceClient } from '@/lib/supabase/service';
 import { availabilityReminder, eventReminder, renewalReminder } from '@/lib/email/templates';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
-import { filterDrafts, looksLikeEmail, materialize, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
+import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
 import { formatWhen, formatDay, localDate } from '@/lib/email/format';
 
@@ -12,6 +12,7 @@ import { formatWhen, formatDay, localDate } from '@/lib/email/format';
 //   - match availability: squad members who haven't answered, for matches in the next 48 hours
 //   - events: registered attendees, for events starting in the next 30 hours
 //   - membership: 14 days before expiry, and once in the week after it lapses (clubs with paid plans)
+// Juniors' reminders go to their parent or guardian (memberRecipient).
 // Each club switches these on in Admin -> Email Notifications (clubs.email_settings); all start off.
 // Unsubscribed addresses are skipped, and each reminder goes out at most once (email_log).
 
@@ -39,24 +40,26 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   if (!due.length) return [];
 
   const { data: rows } = await db.from('player_availabilities')
-    .select('id, match_id, response_token, member:club_members(full_name, email, status)')
+    .select(`id, match_id, response_token, member:club_members(${MEMBER_RECIPIENT_COLUMNS}, status)`)
     .in('match_id', due.map(m => m.id))
     .eq('status', 'pending');
   const byId = new Map(due.map(m => [m.id, m]));
 
   // ponytail: one email per match; group per player per day if tournament days start sending several
   return (rows || []).flatMap(r => {
-    const member = (Array.isArray(r.member) ? r.member[0] : r.member) as { full_name: string; email: string | null; status: string } | null;
+    const member = (Array.isArray(r.member) ? r.member[0] : r.member) as { full_name: string; email: string | null; guardian_name: string | null; guardian_email: string | null; status: string } | null;
     const match = byId.get(r.match_id);
     const club = match && clubs.get(match.club_id);
-    if (!looksLikeEmail(member?.email) || member.status === 'alumni' || !match || !club || !r.response_token) return [];
+    const recipient = member && memberRecipient(member);
+    if (!recipient || member.status === 'alumni' || !match || !club || !r.response_token) return [];
     return [{
       key: `availability:${r.id}`,
-      club, kind: 'availability' as const, refId: match.id, to: member.email,
+      club, kind: 'availability' as const, refId: match.id, to: recipient.to,
       render: (unsubscribeUrl: string | null) => availabilityReminder({
         brand: clubBrand(club),
         unsubscribeUrl,
-        memberName: member.full_name,
+        memberName: recipient.name,
+        childName: recipient.childName,
         fixture: `${match.home_team_name} vs ${match.away_team_name}`,
         competition: match.title || match.competition, // tournament games carry their stage here, e.g. "Group A • Round 4"
         when: formatWhen(match.match_date),
@@ -112,25 +115,26 @@ async function renewalDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
 
   const today = localDate();
   const { data: members } = await db.from('club_members')
-    .select('id, club_id, full_name, email, membership_tier, membership_expires_at, status')
+    .select(`id, club_id, ${MEMBER_RECIPIENT_COLUMNS}, membership_tier, membership_expires_at, status`)
     .in('club_id', [...clubs.keys()])
     .eq('membership_status', 'approved')
-    .not('email', 'is', null)
     .gte('membership_expires_at', localDate(-7))
     .lte('membership_expires_at', localDate(14));
 
   return (members || []).flatMap(m => {
     const club = clubs.get(m.club_id);
-    if (!club || !looksLikeEmail(m.email) || m.status === 'alumni' || !m.membership_expires_at) return [];
+    const recipient = memberRecipient(m);
+    if (!club || !recipient || m.status === 'alumni' || !m.membership_expires_at) return [];
     const expired = m.membership_expires_at < today;
     return [{
       // One "expiring soon" and one "expired" email per membership term (the expiry date names the term)
       key: `renewal-${expired ? 'expired' : 'soon'}:${m.id}:${m.membership_expires_at}`,
-      club, kind: 'renewal' as const, refId: `${m.id}:${m.membership_expires_at}`, to: m.email,
+      club, kind: 'renewal' as const, refId: `${m.id}:${m.membership_expires_at}`, to: recipient.to,
       render: (unsubscribeUrl: string | null) => renewalReminder({
         brand: clubBrand(club),
         unsubscribeUrl,
-        memberName: m.full_name,
+        memberName: recipient.name,
+        childName: recipient.childName,
         tier: m.membership_tier || 'Membership',
         expires: formatDay(m.membership_expires_at),
         expired,

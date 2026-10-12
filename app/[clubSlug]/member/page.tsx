@@ -14,6 +14,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
+import GuardianPortal from '@/components/GuardianPortal';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import QRScannerModal from '@/components/QRScannerModal';
@@ -118,6 +119,11 @@ export default function MemberPortalPage({
   // Authentication State
   const [activeMember, setActiveMember] = useState<ClubMember | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  // Children this signed-in user is the parent / guardian of (my_children, migration 20261103)
+  const [childMembers, setChildMembers] = useState<ClubMember[]>([]);
+  const [childSignupPaid, setChildSignupPaid] = useState<Set<string>>(new Set());
+  // A guardian adding another child through the application form
+  const [addingChild, setAddingChild] = useState(false);
 
   // Gateway View Tabs & Sub-Modes
   const [gatewayTab, setGatewayTab] = useState<'signin' | 'signup'>('signin');
@@ -158,7 +164,7 @@ export default function MemberPortalPage({
   // Joining a junior team always needs a parent or guardian, whatever the date of birth says
   const juniorTeamPicked = signupForm.role === 'player' && joinableTeams.length > 1
     && !!joinableTeams.find(t => t.id === signupForm.teamId)?.is_junior;
-  const needsGuardian = isMinor || juniorTeamPicked;
+  const needsGuardian = isMinor || juniorTeamPicked || addingChild;
   const [signupError, setSignupError] = useState<string | null>(null);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
   // Signed in, not a member yet: their own application, and whether they're filling it in again
@@ -208,6 +214,25 @@ export default function MemberPortalPage({
     return application;
   };
 
+  /** Children the signed-in user looks after here, and which of their sign-up fees are paid */
+  const loadChildren = async (): Promise<ClubMember[]> => {
+    const client = getSupabaseClient();
+    if (!client) return [];
+    // Before migration 20261103 there is no my_children: nobody has a family view yet
+    const { data, error } = await client.rpc('my_children', { p_club_id: club.id });
+    const list = !error && Array.isArray(data) ? (data as ClubMember[]) : [];
+    setChildMembers(list);
+    const pendingIds = list.filter(c => c.membership_status === 'pending').map(c => c.id);
+    if (pendingIds.length) {
+      const { data: paid } = await client.from('payments').select('member_id')
+        .in('member_id', pendingIds).eq('kind', 'membership_signup').in('status', ['paid', 'awaiting_review']);
+      setChildSignupPaid(new Set((paid || []).map(p => p.member_id as string)));
+    } else {
+      setChildSignupPaid(new Set());
+    }
+    return list;
+  };
+
   // 1. Follow the Supabase session; once signed in, link it to this club's member record
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -225,12 +250,19 @@ export default function MemberPortalPage({
         setSignedInEmail(null);
         setMyApplication(null);
         setReapplying(false);
+        setChildMembers([]);
+        setAddingChild(false);
         setAuthChecked(true);
         return;
       }
       setSignedInEmail(email);
-      const { data, error } = await client.rpc('claim_member_profile', { p_club_id: club.id });
+      const [{ data, error }, children] = await Promise.all([
+        client.rpc('claim_member_profile', { p_club_id: club.id }),
+        loadChildren(),
+      ]);
       if (cancelled) return;
+      // Children's messages and payments come with the next load (guardians can read them)
+      if (children.length) reloadFromServer();
       const row = Array.isArray(data) ? (data[0] as ClubMember | undefined) : undefined;
       if (error || !row) {
         setActiveMember(null);
@@ -239,7 +271,7 @@ export default function MemberPortalPage({
           const application = await loadMyApplication();
           if (cancelled) return;
           setLoginNotice(null);
-          setLoginError(application ? null : `No membership or application was found for ${email || 'this email'} at ${club.name}. You can apply below.`);
+          setLoginError(application || children.length ? null : `No membership or application was found for ${email || 'this email'} at ${club.name}. You can apply below.`);
         }
       } else {
         setActiveMember(row);
@@ -295,9 +327,62 @@ export default function MemberPortalPage({
     }
   }, [clubMembers, activeMember?.id]);
 
+  // Children too: the club's decisions and payments show up without signing in again
+  useEffect(() => {
+    if (!childMembers.length) return;
+    let changed = false;
+    const next = childMembers.map(c => {
+      const fresh = clubMembers.find(m => m.id === c.id);
+      if (fresh && fresh !== c) changed = true;
+      return fresh || c;
+    });
+    if (changed) setChildMembers(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clubMembers]);
+
+  // "Add another child": the application form, with the guardian's details from their other children
+  const startAddChild = () => {
+    // Newest details first: any child that has them
+    const known = (key: 'guardian_name' | 'guardian_email' | 'guardian_phone') =>
+      [...childMembers].reverse().map(c => c[key]?.trim()).find(Boolean);
+    setSignupForm(f => ({
+      ...f,
+      fullName: '',
+      email: '',
+      phone: '',
+      position: '',
+      jerseyNumber: '',
+      notes: '',
+      emergencyContact: '',
+      role: 'player',
+      dateOfBirth: '',
+      termsAccepted: false,
+      guardianConsent: false,
+      teamId: '',
+      guardianName: known('guardian_name') || f.guardianName,
+      guardianEmail: signedInEmail || known('guardian_email') || f.guardianEmail,
+      guardianPhone: known('guardian_phone') || f.guardianPhone,
+      photoConsent: '',
+    }));
+    setSignupError(null);
+    setSubmittedApplication(null);
+    setReapplying(false);
+    setGatewayTab('signup');
+    setAddingChild(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const finishAddChild = () => {
+    setAddingChild(false);
+    setSubmittedApplication(null);
+    setGatewayTab('signin');
+    void loadChildren();
+  };
+
   // Handle Logout
   const handleLogout = async () => {
     setActiveMember(null);
+    setChildMembers([]);
+    setAddingChild(false);
     setMyApplication(null);
     setReapplying(false);
     await getSupabaseClient()?.auth.signOut();
@@ -396,6 +481,8 @@ export default function MemberPortalPage({
     setSignupError(null);
     if (submitting) return;
     if (!signupForm.termsAccepted) return setSignupError('Please accept the club terms and privacy policy.');
+    if (needsGuardian && !signupForm.guardianEmail.trim()) return setSignupError('Please add the parent or guardian\'s email: the club emails them about the player, and they sign in with it.');
+    if (!needsGuardian && !signupForm.email.trim()) return setSignupError('Please add your email address.');
     if (juniorTeamPicked && !signupForm.dateOfBirth) return setSignupError('Please add the player\'s date of birth: junior teams are by age group.');
     if (needsGuardian && (!signupForm.guardianName.trim() || !signupForm.guardianPhone.trim())) return setSignupError('Please add a parent or guardian\'s name and phone number.');
     if (needsGuardian && !signupForm.photoConsent) return setSignupError('Please choose whether photos of the player can be shown publicly.');
@@ -583,7 +670,7 @@ export default function MemberPortalPage({
         {/* ==================================================================== */}
         {/* UN-AUTHENTICATED: GATEWAY & APPLICATION PORTAL */}
         {/* ==================================================================== */}
-        {!activeMember ? (
+        {!activeMember || addingChild ? (
           <div style={{ maxWidth: '640px', margin: '0 auto' }}>
             {/* Club Brand Card */}
             <div className="glass-panel" style={{
@@ -630,8 +717,28 @@ export default function MemberPortalPage({
               </p>
             </div>
 
+            {/* A parent or guardian (not a member themselves): their children, instead of the tabs */}
+            {!activeMember && childMembers.length > 0 && !addingChild && signedInEmail && (
+              <>
+                <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} />
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>
+                  Signed in as {signedInEmail}.{' '}
+                  <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                    Sign out
+                  </button>
+                </div>
+              </>
+            )}
+
+            {addingChild && !submittedApplication && (
+              <div className="glass-panel" style={{ padding: '0.9rem 1.25rem', marginBottom: '1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 700 }}>Adding a child to your family</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={finishAddChild}>Back to my family</button>
+              </div>
+            )}
+
             {/* Signed in with an application that isn't approved: where it stands, instead of the tabs */}
-            {myApplication && !reapplying && (() => {
+            {myApplication && !reapplying && !addingChild && (() => {
               const pending = myApplication.membership_status === 'pending';
               const plan = plans.find(p => p.name === myApplication.membership_tier);
               const unpaid = pending && !myApplication.signup_paid && !!plan && plan.price_cents > 0;
@@ -692,8 +799,8 @@ export default function MemberPortalPage({
             })()}
 
             {/* Gateway Switcher Tabs */}
-            {!(myApplication && !reapplying) && (<>
-            <div style={{
+            {(addingChild || reapplying || (!myApplication && !(childMembers.length > 0 && signedInEmail))) && (<>
+            {!addingChild && (<div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: '0.5rem',
@@ -748,7 +855,7 @@ export default function MemberPortalPage({
                 <Zap size={16} />
                 <span>Apply for Membership</span>
               </button>
-            </div>
+            </div>)}
 
             {/* Error or Notice Alert */}
             {loginNotice && (
@@ -965,7 +1072,7 @@ export default function MemberPortalPage({
                       border: '1px solid var(--border-subtle)',
                     }}>
                       <div>Applicant: <strong className="text-primary">{submittedApplication.full_name}</strong></div>
-                      <div>Email: <strong className="text-primary">{submittedApplication.email}</strong></div>
+                      <div>Email: <strong className="text-primary">{submittedApplication.guardian_email || submittedApplication.email}</strong></div>
                       <div>Membership Tier: <strong style={{ color: 'var(--c-green)' }}>{submittedApplication.membership_tier}</strong></div>
                       <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{applicationRef(submittedApplication.id)}</code></div>
                     </div>
@@ -986,24 +1093,32 @@ export default function MemberPortalPage({
                       ) : null;
                     })()}
 
-                    <button
-                      type="button"
-                      onClick={() => { setGatewayTab('signin'); setSubmittedApplication(null); }}
-                      className="btn btn-primary"
-                      style={{ padding: '0.75rem 1.5rem' }}
-                    >
-                      Return to Member Sign-In
-                    </button>
+                    {addingChild || (signedInEmail && submittedApplication.guardian_email === signedInEmail.toLowerCase()) ? (
+                      <button type="button" onClick={finishAddChild} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
+                        Back to my family
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setGatewayTab('signin'); setSubmittedApplication(null); }}
+                        className="btn btn-primary"
+                        style={{ padding: '0.75rem 1.5rem' }}
+                      >
+                        Return to Member Sign-In
+                      </button>
+                    )}
                   </div>
                 ) : (
                   /* Application Registration Form */
                   <form onSubmit={handleSignupSubmit}>
                     <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)', paddingBottom: '0.75rem' }}>
                       <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                        Club Membership Application
+                        {addingChild ? 'Apply for your child' : 'Club Membership Application'}
                       </h2>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        Join the {club.name} community. Applications are reviewed by club administration.
+                        {addingChild
+                          ? `Their details, then yours as their parent or guardian. ${club.name} will review the application and email you.`
+                          : `Join the ${club.name} community. Applications are reviewed by club administration.`}
                       </p>
                     </div>
 
@@ -1046,11 +1161,11 @@ export default function MemberPortalPage({
 
                       <div>
                         <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                          Email Address *
+                          {needsGuardian ? 'Player\'s Own Email (optional)' : 'Email Address *'}
                         </label>
                         <input id="member-email-address"
                           type="email"
-                          required
+                          required={!needsGuardian}
                           value={signupForm.email}
                           readOnly={reapplying}
                           onChange={e => setSignupForm({ ...signupForm, email: e.target.value })}
@@ -1273,7 +1388,7 @@ export default function MemberPortalPage({
                         <legend style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', padding: '0 0.35rem' }}>Parent / guardian</legend>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem 0' }}>
                           {juniorTeamPicked && !isMinor ? 'Junior team players need a parent or guardian on file.' : 'Applicants under 18 need a parent or guardian on file.'}
-                          {' '}The club contacts them, not the player.
+                          {' '}The club emails them, not the player, and they sign in with that email to see the player&apos;s membership, pay fees and message the club. One sign-in covers all their children.
                         </p>
                         <div className="form-row-2" style={{ gap: '1rem', marginBottom: '0.75rem' }}>
                           {([
@@ -1289,8 +1404,8 @@ export default function MemberPortalPage({
                           ))}
                         </div>
                         <div style={{ marginBottom: '0.75rem' }}>
-                          <label htmlFor="member-guardian-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Email</label>
-                          <input id="member-guardian-email" type="email" maxLength={255} value={signupForm.guardianEmail}
+                          <label htmlFor="member-guardian-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Email *</label>
+                          <input id="member-guardian-email" type="email" required maxLength={255} value={signupForm.guardianEmail}
                             onChange={e => setSignupForm({ ...signupForm, guardianEmail: e.target.value })}
                             style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
                         </div>
@@ -1480,6 +1595,10 @@ export default function MemberPortalPage({
                 </div>
               );
             })()}
+
+            {childMembers.length > 0 && signedInEmail && (
+              <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} />
+            )}
 
             {/* Clubhouse Sub-Tabs */}
             <div style={{
@@ -1972,7 +2091,10 @@ export default function MemberPortalPage({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.35rem' }}>
                               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAdmin ? 'var(--c-sky)' : 'var(--c-green)' }}>
-                                {isAdmin ? `🏛️ ${msg.sender_name}` : `👤 You (${activeMember.full_name})`}
+                                {isAdmin ? `🏛️ ${msg.sender_name}`
+                                  // A parent or guardian can write about this member too
+                                  : msg.sender_email && activeMember.email && msg.sender_email.toLowerCase() !== activeMember.email.toLowerCase() ? `👤 ${msg.sender_name}`
+                                  : `👤 You (${activeMember.full_name})`}
                               </span>
                               <span className="text-meta">
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

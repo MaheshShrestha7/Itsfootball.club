@@ -61,7 +61,8 @@ export function readPaymentInput(get: (key: string) => unknown) {
 /**
  * Who may pay for what (these routes are public, and ids alone must not be enough):
  *   membership_signup   a pending application; its id is only known to the applicant (club_members is not public)
- *   membership_renewal  only the signed-in member themselves (`payerUserId` from their session)
+ *   membership_renewal  only the signed-in member themselves (`payerUserId` from their session), or their
+ *                       parent / guardian (`payerEmail`, the session's confirmed email, is the member's guardian_email)
  *   sponsorship         a sponsor still at 'prospect', i.e. one that just applied; active sponsors' ids are public
  *   shop_order          anyone: it pays for new goods, never for someone else's record
  *   event_ticket        anyone: new tickets for a public event, priced from the event row
@@ -69,7 +70,8 @@ export function readPaymentInput(get: (key: string) => unknown) {
 export async function preparePayment(
   db: SupabaseClient,
   input: ReturnType<typeof readPaymentInput>,
-  payerUserId: string | null = null
+  payerUserId: string | null = null,
+  payerEmail: string | null = null
 ): Promise<Result> {
   const bad = (error: string, status = 400): Result => ({ ok: false, status, error });
   if (!input.clubId || !input.kind) return bad('Invalid payment request.');
@@ -170,7 +172,7 @@ export async function preparePayment(
 
   if (!input.memberId || !input.planId) return bad('Choose a membership plan.');
   const [{ data: member }, { data: plan }] = await Promise.all([
-    db.from('club_members').select('id, user_id, full_name, email, membership_status').eq('id', input.memberId).eq('club_id', club.id).maybeSingle(),
+    db.from('club_members').select('id, user_id, full_name, email, guardian_name, guardian_email, membership_status').eq('id', input.memberId).eq('club_id', club.id).maybeSingle(),
     db.from('membership_plans').select('id, name, price_cents').eq('id', input.planId).eq('club_id', club.id).eq('is_active', true).maybeSingle(),
   ]);
   if (!member || !plan) return bad('Membership not found.', 404);
@@ -178,8 +180,10 @@ export async function preparePayment(
   if (input.kind === 'membership_signup' && member.membership_status !== 'pending') {
     return bad('This membership is already active. Use renewal instead.', 409);
   }
-  if (input.kind === 'membership_renewal' && (!payerUserId || member.user_id !== payerUserId)) {
-    return bad('Sign in as this member to renew.', 403);
+  const guardianEmail = (member.guardian_email || '').trim().toLowerCase();
+  const isGuardian = !!guardianEmail && !!payerEmail && payerEmail.trim().toLowerCase() === guardianEmail;
+  if (input.kind === 'membership_renewal' && !isGuardian && (!payerUserId || member.user_id !== payerUserId)) {
+    return bad('Sign in as this member, or as their parent or guardian, to renew.', 403);
   }
   if (plan.price_cents <= 0) return bad('This plan has nothing to pay.');
   const label = `${club.name}: ${plan.name}${input.kind === 'membership_renewal' ? ' (renewal)' : ''}`;
@@ -193,7 +197,10 @@ export async function preparePayment(
         member_id: member.id, sponsor_id: null, plan_id: plan.id, package_id: null,
         description: `${plan.name} (${member.full_name})`,
         amount_cents: plan.price_cents, currency,
-        payer_name: member.full_name, payer_email: member.email,
+        // Juniors' fees are paid by their parent or guardian, who gets the receipt
+        ...(guardianEmail
+          ? { payer_name: member.guardian_name || member.full_name, payer_email: guardianEmail }
+          : { payer_name: member.full_name, payer_email: member.email }),
       },
     },
   };

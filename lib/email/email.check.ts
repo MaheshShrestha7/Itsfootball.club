@@ -4,6 +4,7 @@ import { verifyWebhook } from './webhook';
 import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
+import { memberRecipient } from './club-emails';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -97,6 +98,26 @@ async function main() {
   const rejected = applicationRejected({ brand: evil, memberName: 'Jo', tier: 'Senior', reason: 'Squad <full>', link: 'https://x/member' });
   assert.ok(rejected.html.includes('Squad &lt;full&gt;') && rejected.text.includes('Squad <full>'), 'rejected: reason escaped and in text');
   assert.ok(!applicationRejected({ brand: evil, memberName: 'Jo', tier: 'Senior', reason: null, link: 'https://x' }).html.includes('Message from'), 'rejected: no reason block when empty');
+
+  // --- juniors: emails go to the parent or guardian ---
+  assert.deepEqual(memberRecipient({ full_name: 'Jo Bloggs', email: 'jo@x.com' }), { to: 'jo@x.com', name: 'Jo Bloggs' }, 'adult: own address');
+  assert.deepEqual(memberRecipient({ full_name: 'Kid One', email: '', guardian_name: 'Pat Parent', guardian_email: ' pat@x.com ' }),
+    { to: 'pat@x.com', name: 'Pat Parent', childName: 'Kid One' }, 'junior with no email: guardian');
+  assert.equal(memberRecipient({ full_name: 'Teen', email: 'teen@x.com', guardian_name: null, guardian_email: 'pat@x.com' })?.to, 'pat@x.com', 'junior with own email: still the guardian');
+  assert.equal(memberRecipient({ full_name: 'Teen', email: 'teen@x.com', guardian_email: 'not-an-email' })?.to, 'teen@x.com', 'bad guardian email: own address');
+  assert.equal(memberRecipient({ full_name: 'Nobody', email: '', guardian_email: null }), null, 'no address at all');
+  assert.equal(memberRecipient({ full_name: 'Kid', email: null, guardian_name: '', guardian_email: 'pat@x.com' })?.name, '', 'no guardian name: greeting falls back');
+
+  const kidRenew = renewalReminder({ brand: evil, memberName: 'Pat Parent', childName: 'Kid One', tier: 'U10', expires: '1 November 2026', expired: false, link: 'https://x' });
+  assert.ok(kidRenew.subject.startsWith("Kid One's") && kidRenew.text.includes('Hi Pat,') && kidRenew.text.includes("Kid One's") && kidRenew.text.includes('Renew for Kid'), 'renewal to a guardian names the child');
+  const kidAvail = availabilityReminder({ brand: evil, memberName: '', childName: 'Kid One', fixture: 'A vs B', when: 'Sat', venue: 'Park', link: 'https://x' });
+  assert.ok(kidAvail.subject.includes('Is Kid available?') && kidAvail.text.includes('Hi there,') && kidAvail.text.includes('about Kid One'), 'availability to a guardian');
+  const kidApproved = applicationApproved({ brand: evil, memberName: 'Pat', childName: 'Kid One', tier: 'U10', link: 'https://x/member' });
+  assert.ok(kidApproved.text.includes("approved Kid One's membership") && kidApproved.text.includes('parent or guardian') === false, 'approved to a guardian');
+  assert.ok(applicationReceived({ brand: evil, memberName: 'Pat', childName: 'Kid One', tier: 'U10', link: 'https://x', payable: false }).text.includes('applying for Kid One'), 'received to a guardian');
+  assert.ok(applicationRejected({ brand: evil, memberName: 'Pat', childName: 'Kid One', tier: 'U10', reason: null, link: 'https://x' }).text.includes('applied for Kid One'), 'rejected to a guardian');
+  // Members without a guardian get exactly the wording they had before
+  assert.ok(renew.text.includes('your ') && !renew.text.includes('parent or guardian'), 'adult renewal unchanged');
 
   console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }
