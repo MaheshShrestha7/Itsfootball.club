@@ -38,6 +38,7 @@ import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { squadForMatch } from '@/lib/teams';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -65,6 +66,8 @@ export default function AdminMatchCenterControllerPage({
     getMatchAvailabilities,
     internalTeams,
     tournamentParticipants,
+    clubTeams,
+    clubTeamMembers,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -83,7 +86,8 @@ export default function AdminMatchCenterControllerPage({
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
-  const squadPlayers = members.filter(m => m.club_id === club.id && isPlayerMember(m));
+  // The fixture's team squad once the club has several teams (everyone otherwise)
+  const squadPlayers = squadForMatch(members.filter(m => m.club_id === club.id && isPlayerMember(m)), match, clubTeams, clubTeamMembers);
 
   // Each side's own club players (null = outside team); tournament sides come from their participants
   const homePlayers = match ? clubSidePlayers(match, 'home', squadPlayers, tournamentParticipants, internalTeams) : null;

@@ -3,6 +3,7 @@
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { Wallet, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
+import { clubTeamsOf } from '@/lib/teams';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
@@ -695,6 +696,9 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
 function SettingsTab({ club, db, load, flash, settings, plans, packages }: Shared & {
   settings: ClubPaymentSettings | null; plans: MembershipPlan[]; packages: SponsorshipPackage[];
 }) {
+  // Clubs with several teams can tie a plan to one team (e.g. junior fees)
+  const { clubTeams } = useClub();
+  const teams = clubTeamsOf(clubTeams, club.id);
   const [currency, setCurrency] = useState(settings?.currency || 'AUD');
   const [bank, setBank] = useState(settings?.bank_details || '');
   const [connecting, setConnecting] = useState(false);
@@ -788,8 +792,17 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
         title="Membership plans" table="membership_plans" rows={plans} db={db} clubId={club.id} flash={flash} load={load}
         blank={{ name: 'New plan', price_cents: 0, duration_months: 12 }}
         extra={(row, set) => (
-          <input className="form-input" type="number" min={1} max={60} style={{ width: 80 }} aria-label="Months"
-            value={row.duration_months} onChange={e => set({ duration_months: Number(e.target.value) })} />
+          <span style={{ display: 'inline-flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <input className="form-input" type="number" min={1} max={60} style={{ width: 80 }} aria-label="Months"
+              value={row.duration_months} onChange={e => set({ duration_months: Number(e.target.value) })} />
+            {teams.length > 1 && (
+              <select className="form-select" style={{ width: 150 }} aria-label="Team" title="Team"
+                value={row.team_id || ''} onChange={e => set({ team_id: e.target.value || null })}>
+                <option value="">All teams</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+          </span>
         )}
         extraLabel="Months"
       />

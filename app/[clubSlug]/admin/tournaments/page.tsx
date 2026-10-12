@@ -150,10 +150,10 @@ export default function AdminTournamentsPage({
           <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>{activeTournaments} Currently Active</span>
         </div>
 
-        {/* Teams are set up under People & Membership -> Internal Teams */}
-        <Link href={`/${club.slug}/admin/teams`} style={{ display: 'block', color: 'inherit', textDecoration: 'none', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
+        {/* Tournament sides are set up under People & Membership -> Teams */}
+        <Link href={`/${club.slug}/admin/teams#tournament-sides`} style={{ display: 'block', color: 'inherit', textDecoration: 'none', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Internal Teams</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Tournament Sides</span>
             <Shield size={18} color="var(--c-blue)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>

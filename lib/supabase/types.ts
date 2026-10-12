@@ -129,6 +129,8 @@ export interface ClubMember {
   /** When the applicant accepted the terms / a guardian consented (set on applying; read-only, not synced) */
   terms_accepted_at?: string | null;
   guardian_consent_at?: string | null;
+  /** The team the applicant asked to join (set on applying; read-only, not synced) */
+  requested_team_id?: string | null;
   is_executive: boolean;
   executive_title?: string;
   executive_bio?: string;
@@ -244,6 +246,8 @@ export interface Match {
   winner_side?: 'home' | 'away';
   next_match_id?: string;
   next_match_slot?: 'home' | 'away';
+  /** The club team playing this fixture (club_teams); none for internal and tournament matches */
+  team_id?: string | null;
   created_at?: string;
 }
 
@@ -622,6 +626,52 @@ export interface MemberApplicationInput {
   date_of_birth?: string;
   terms_accepted?: boolean;
   guardian_consent?: boolean;
+  /** Clubs with several teams: the team a player asks to join */
+  requested_team_id?: string;
+}
+
+// ==============================================================================
+// 22b. CLUB TEAMS (first team, reserves, academy, youth age groups)
+// Not the same as internal teams below, which are sides for tournaments and internal matches.
+// ==============================================================================
+export type ClubTeamType = 'senior' | 'reserve' | 'academy' | 'youth' | 'women' | 'veterans' | 'other';
+export type ClubTeamGender = 'mixed' | 'boys' | 'girls' | 'men' | 'women';
+export type ClubTeamFormat = '5v5' | '7v7' | '9v9' | '11v11';
+export type ClubTeamRole = 'player' | 'coach' | 'assistant' | 'manager' | 'physio' | 'other';
+
+export interface ClubTeam {
+  id: string;
+  club_id: string;
+  name: string;
+  short_name?: string;
+  slug: string;
+  team_type: ClubTeamType;
+  /** U5 ... U23; none = open age */
+  age_group?: string;
+  gender: ClubTeamGender;
+  is_junior: boolean;
+  hide_public_scores: boolean;
+  match_format: ClubTeamFormat;
+  color?: string;
+  logo_url?: string;
+  description?: string;
+  sort_order: number;
+  /** The club's main team: fixtures with no team belong here */
+  is_default: boolean;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ClubTeamMember {
+  id: string;
+  club_id: string;
+  team_id: string;
+  member_id: string;
+  team_role: ClubTeamRole;
+  jersey_number?: number;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 // ==============================================================================
@@ -721,6 +771,8 @@ export interface ClubPaymentSettings {
 export interface MembershipPlan {
   id: string;
   club_id: string;
+  /** Plan for one team only (e.g. junior fees); none = every team */
+  team_id?: string | null;
   name: string;
   description?: string | null;
   price_cents: number;

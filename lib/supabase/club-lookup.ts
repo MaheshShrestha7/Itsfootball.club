@@ -196,6 +196,36 @@ export async function findNewsBySlug(clubId: string, slug: string): Promise<News
   }
 }
 
+export interface TeamMetadataRow {
+  id: string;
+  club_id: string;
+  name: string;
+  slug: string;
+  age_group: string | null;
+  description: string | null;
+  logo_url: string | null;
+}
+
+/** One active club team by its slug, for the team page's metadata */
+export async function findTeamBySlug(clubId: string, slug: string): Promise<TeamMetadataRow | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId) || !slug) return null;
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/club_teams?select=id,club_id,name,slug,age_group,description,logo_url&club_id=eq.${clubId}&slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    );
+    if (!res.ok) return null;
+    const rows: TeamMetadataRow[] = await res.json();
+    return rows[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Up to 5,000 rows of a REST query, a page at a time (Supabase returns at most 1,000 per request) */
 async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ClipboardList,
 } from 'lucide-react';
+import { squadForMatch } from '@/lib/teams';
 import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function DraftLineupPage() {
@@ -33,6 +34,8 @@ export default function DraftLineupPage() {
     draftLineups,
     saveDraftLineup,
     publishDraftLineup,
+    clubTeams,
+    clubTeamMembers,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -59,12 +62,18 @@ export default function DraftLineupPage() {
     return availabilities.filter(a => a.match_id === activeMatch.id);
   }, [availabilities, activeMatch]);
 
+  // The fixture's team squad once the club has several teams (everyone otherwise)
+  const teamSquad = useMemo(
+    () => squadForMatch(allSquadPlayers, activeMatch, clubTeams, clubTeamMembers),
+    [allSquadPlayers, activeMatch, clubTeams, clubTeamMembers]
+  );
+
   // Only players marked "available" for this fixture can be picked. If attendance was never tracked, use the full squad.
   const squadPlayers = useMemo(() => {
-    if (matchAvailabilities.length === 0) return allSquadPlayers;
+    if (matchAvailabilities.length === 0) return teamSquad;
     const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
-    return allSquadPlayers.filter(p => attendingIds.has(p.id));
-  }, [allSquadPlayers, matchAvailabilities]);
+    return teamSquad.filter(p => attendingIds.has(p.id));
+  }, [teamSquad, matchAvailabilities]);
 
   const currentDraft = draftLineups.find(d => d.match_id === activeMatch?.id);
 

@@ -17,6 +17,8 @@ export type EntityKey =
   | 'clubs'
   | 'members'
   | 'seasons'
+  | 'clubTeams'
+  | 'clubTeamMembers'
   | 'internalTeams'
   | 'tournaments'
   | 'tournamentParticipants'
@@ -63,6 +65,9 @@ const ENTITIES: EntityConfig[] = [
   { key: 'clubs', table: 'clubs', scope: 'all', fromRow: clubFromRow, prepare: clubPrepare },
   { key: 'members', table: 'club_members', extraReadSources: ['club_members_public'], fromRow: memberFromRow },
   { key: 'seasons', table: 'club_seasons' },
+  { key: 'clubTeams', table: 'club_teams', clearable: ['age_group', 'short_name', 'color', 'logo_url', 'description'] },
+  // Visitors read the public view (non-junior squads only); staff get the full table
+  { key: 'clubTeamMembers', table: 'club_team_members', extraReadSources: ['club_team_members_public'], clearable: ['jersey_number'] },
   { key: 'internalTeams', table: 'internal_teams' },
   { key: 'tournaments', table: 'tournaments', clearable: ['end_date', 'group_count', 'teams_advancing_per_group'] },
   { key: 'tournamentParticipants', table: 'tournament_participants', scope: 'tournament', clearable: ['seed', 'group'] },
