@@ -134,9 +134,9 @@ export default function AdminLayout({
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
   // The Inbox covers both the public contact form and signed-in members' messages
-  const unreadInquiries =
-    inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length +
-    memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length;
+  const unreadEnquiries = inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length;
+  const unreadMemberMessages = memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length;
+  const unreadInquiries = unreadEnquiries + unreadMemberMessages;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
   const hasJuniorTeam = clubTeamsOf(clubTeams, club.id).some(t => t.is_junior);
 
@@ -178,7 +178,11 @@ export default function AdminLayout({
           area: 'inquiries',
           href: `/${club.slug}/admin/inquiries`,
           icon: Mail,
-          badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined
+          badge: unreadInquiries > 0 ? `${unreadInquiries} NEW` : undefined,
+          children: [
+            { label: 'Member Messages', href: `/${club.slug}/admin/inquiries`, badge: unreadMemberMessages > 0 ? `${unreadMemberMessages}` : undefined },
+            { label: 'Contact Form', href: `/${club.slug}/admin/inquiries?tab=contact`, badge: unreadEnquiries > 0 ? `${unreadEnquiries}` : undefined },
+          ],
         },
       ],
     },

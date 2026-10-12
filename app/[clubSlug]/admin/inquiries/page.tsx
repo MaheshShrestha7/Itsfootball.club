@@ -2,11 +2,16 @@
 
 import React, { use, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
 import { ContactInquiry } from '@/lib/supabase/types';
-import Link from 'next/link';
-import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, ArrowRight } from 'lucide-react';
+import { useUrlTab } from '@/lib/use-url-tab';
+import { useSearchParams } from 'next/navigation';
+import MemberMessagesPanel from '@/components/MemberMessagesPanel';
+import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox } from 'lucide-react';
 
 type Filter = 'all' | ContactInquiry['status'];
+
+const INBOX_TABS = ['members', 'contact'] as const;
 
 export default function AdminInquiriesPage({
   params,
@@ -17,8 +22,13 @@ export default function AdminInquiriesPage({
   const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, memberMessages } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const [filter, setFilter] = useState<Filter>('all');
-  const memberThreads = memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member');
-  const unreadMemberMessages = memberThreads.filter(m => !m.is_read).length;
+  const { user } = useAuth();
+  // ?tab= in the URL (the admin menu's Inbox sub-items); ?member= opens that member's conversation
+  // (the Message button on Members)
+  const [tab, setTab] = useUrlTab(INBOX_TABS);
+  const startMemberId = useSearchParams().get('member');
+  const unreadMemberMessages = memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length;
+  const unreadEnquiries = inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length;
 
   const clubInquiries = useMemo(
     () =>
@@ -41,27 +51,42 @@ export default function AdminInquiriesPage({
         </p>
       </div>
 
-      {/* Member messages live on the Member Approvals page, where admins can reply in the thread */}
-      <Link
-        href={`/${club.slug}/admin/members?tab=messages`}
-        className="glass-panel glass-panel-interactive"
-        style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '1rem 1.25rem', marginBottom: '2rem', textDecoration: 'none', borderLeft: unreadMemberMessages ? '3px solid #3B82F6' : '3px solid transparent' }}
-      >
-        <MessageSquare size={22} color="var(--c-blue)" className="shrink-0" />
-        <div className="min-w-0" style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Member messages</div>
-          <div className="text-note">
-            {memberThreads.length === 0
-              ? 'No messages from members yet.'
-              : `${memberThreads.length} message${memberThreads.length === 1 ? '' : 's'} from members${unreadMemberMessages ? `, ${unreadMemberMessages} new` : ''}.`}
-          </div>
-        </div>
-        {unreadMemberMessages > 0 && <span className="badge badge-live">{unreadMemberMessages} NEW</span>}
-        <ArrowRight size={18} className="shrink-0 text-muted" />
-      </Link>
+      <div data-view-ok role="tablist" className="row" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
+        {([
+          { key: 'members' as const, label: 'Member messages', icon: MessageSquare, unread: unreadMemberMessages },
+          { key: 'contact' as const, label: 'Contact form', icon: Inbox, unread: unreadEnquiries },
+        ]).map(t => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: tab === t.key ? '2px solid var(--club-primary)' : '2px solid transparent',
+              color: tab === t.key ? 'var(--text-primary)' : 'var(--text-secondary)',
+              padding: '0.6rem 0.9rem',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+            }}
+          >
+            <t.icon size={15} />
+            <span>{t.label}</span>
+            {t.unread > 0 && <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{t.unread} NEW</span>}
+          </button>
+        ))}
+      </div>
 
-      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Contact form enquiries</h2>
-
+      {tab === 'members' ? (
+        <MemberMessagesPanel club={club} adminName={user?.full_name || `${club.name} Committee`} startMemberId={startMemberId} />
+      ) : (
+      <>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {filters.map(f => (
           <button data-view-ok
@@ -131,6 +156,8 @@ export default function AdminInquiriesPage({
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );
