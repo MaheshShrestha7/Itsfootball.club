@@ -22,8 +22,6 @@ import {
   ExternalLink,
   Shield,
   ArrowLeft,
-  Database,
-  Cloud,
   LogOut,
   UserCheck,
   Trophy,
@@ -37,18 +35,17 @@ import {
   Flag,
   Flame,
   Images,
-  Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
+  Swords, Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
   ChevronDown,
   ChevronsDownUp,
   ChevronsUpDown,
   PanelLeftClose,
   PanelLeftOpen } from 'lucide-react';
-import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { isR2Configured } from '@/lib/storage/r2';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
-import { areaFromPath } from '@/lib/permissions';
+import { areaFromPath, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { useClubAppIcons } from '@/lib/app-icons';
 
 // Menu layout preferences, remembered per browser
@@ -174,47 +171,45 @@ export default function AdminLayout({
       ],
     },
     {
-      // The day itself: picking the team, running the game, the gate
+      // The day itself, in the order it happens: who's free, pick the team, run the game, the gate
       title: 'Matchday',
       items: [
-        { area: 'match-center', label: 'Match Command Center', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
         { area: 'availability', label: 'Player Availability', href: `/${club.slug}/admin/availability`, icon: ClipboardCheck },
         { area: 'lineup', label: 'Lineup Workbench', href: `/${club.slug}/admin/lineup/draft`, icon: Layers },
-        { area: 'scanner', label: 'Turnstile QR Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
+        { area: 'match-center', label: 'Match Centre', href: `/${club.slug}/admin/match-center`, icon: Radio, badge: liveMatch ? 'LIVE' : undefined },
+        { area: 'scanner', label: 'Gate Scanner', href: `/${club.slug}/admin/scanner`, icon: QrCode },
       ],
     },
     {
-      // Planning the season: what's on and when
+      // What's on and when
       title: 'Fixtures & Competitions',
       items: [
-        { area: 'matches', label: 'Schedule & Matches', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
+        { area: 'matches', label: 'Fixtures & Results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         { area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
-        { area: 'events', label: 'Events Management', href: `/${club.slug}/admin/events`, icon: Calendar },
-        { area: 'seasons', label: 'Season Management', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
+        // The tournament tab of the Teams page: tournament sides are kept apart from club teams
+        { area: 'teams', label: 'Tournament Sides', href: `/${club.slug}/admin/teams#tournament-sides`, icon: Swords },
+        { area: 'events', label: 'Events', href: `/${club.slug}/admin/events`, icon: Calendar },
       ],
     },
     {
-      // Squad, members and the committee
-      title: 'People & Membership',
+      // The squad, the club's teams, its members and the committee
+      title: 'Players & Teams',
       items: [
         { area: 'squad', label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
-        { area: 'teams', label: 'Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
+        { area: 'teams', label: 'Club Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
         {
-          label: 'Member Approvals',
+          label: 'Members',
           area: 'members',
           href: `/${club.slug}/admin/members`,
           icon: UserCheck,
           badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined
         },
-        { area: 'committee', label: 'Executive Committee', href: `/${club.slug}/admin/committee`, icon: Award },
-        { area: 'emails', label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
-        { area: 'gamification', label: 'ClubScore Gamification', href: `/${club.slug}/admin/gamification`, icon: Flame },
-        { area: 'roles', label: 'Roles & Permissions', href: `/${club.slug}/admin/roles`, icon: KeyRound },
+        { area: 'committee', label: 'Committee', href: `/${club.slug}/admin/committee`, icon: Award },
       ],
     },
     {
       // Money in and out
-      title: 'Finance & Sponsors',
+      title: 'Money',
       items: [
         {
           label: 'Finance',
@@ -224,18 +219,28 @@ export default function AdminLayout({
           badge: receiptsToReview > 0 ? `${receiptsToReview} TO CHECK` : undefined
         },
         { area: 'shop', label: 'Club Shop', href: `/${club.slug}/admin/shop`, icon: ShoppingBag, badge: ordersToHandOut > 0 ? `${ordersToHandOut} TO HAND OUT` : undefined },
-        { area: 'sponsors', label: 'Commercial Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
+        { area: 'sponsors', label: 'Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign },
       ],
     },
     {
-      // The public-facing site: look, content, and its numbers
-      title: 'Website & Marketing',
+      // The public site and keeping members and fans engaged
+      title: 'Website & Fans',
       items: [
-        { area: 'branding', label: 'Club Configuration & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
-        { area: 'hero-slider', label: 'Hero Slider Spotlight', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
-        { area: 'content', label: 'Content & News CMS', href: `/${club.slug}/admin/content`, icon: FileText },
+        { area: 'content', label: 'News', href: `/${club.slug}/admin/content`, icon: FileText },
+        { area: 'hero-slider', label: 'Homepage Slider', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
         { area: 'gallery', label: 'Photo Gallery', href: `/${club.slug}/admin/gallery`, icon: Images },
+        { area: 'emails', label: 'Email Notifications', href: `/${club.slug}/admin/emails`, icon: BellRing },
+        { area: 'gamification', label: 'ClubScore', href: `/${club.slug}/admin/gamification`, icon: Flame },
         { area: 'analytics', label: 'Audience Analytics', href: `/${club.slug}/admin/analytics`, icon: BarChart3 },
+      ],
+    },
+    {
+      // Set up once, changed rarely
+      title: 'Club Settings',
+      items: [
+        { area: 'branding', label: 'Club Profile & Branding', href: `/${club.slug}/admin/branding`, icon: Palette },
+        { area: 'seasons', label: 'Seasons', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
+        { area: 'roles', label: 'Roles & Permissions', href: `/${club.slug}/admin/roles`, icon: KeyRound },
       ],
     },
   ] as NavSection[])
@@ -275,13 +280,41 @@ export default function AdminLayout({
   }, [viewOnly]);
 
   const allNavItems = navSections.flatMap(s => s.items);
-  const currentNavItem = allNavItems.find(item => item.href === pathname);
+
+  // The URL hash picks a tab on some pages (Teams: #tournament-sides), and a menu item may point at it.
+  // Next's links don't fire hashchange, so a menu click announces its hash to the open page itself
+  // (ADMIN_HASH_EVENT); the page's own tab switches update the URL and fire hashchange.
+  const [locationHash, setLocationHash] = useState('');
+  useEffect(() => {
+    const read = () => setLocationHash(window.location.hash);
+    read();
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, [pathname]);
+  const announceHash = (href: string) => {
+    const hash = href.includes('#') ? `#${href.split('#')[1]}` : '';
+    setLocationHash(hash);
+    window.dispatchEvent(new CustomEvent(ADMIN_HASH_EVENT, { detail: hash }));
+  };
+
+  // Highlighted item: an exact match, a matching hash tab, or a page inside it (a single tournament)
+  const dashboardHref = `/${club.slug}/admin`;
+  const isItemActive = (item: NavItem) => {
+    const [path, hash] = item.href.split('#');
+    if (pathname === path) {
+      if (hash) return locationHash === `#${hash}`;
+      // The plain item stays lit unless a sibling item owns the current hash
+      return !allNavItems.some(other => other !== item && other.href === `${path}${locationHash}`);
+    }
+    return path !== dashboardHref && pathname.startsWith(`${path}/`);
+  };
+  const currentNavItem = allNavItems.find(isItemActive);
   // Overview has no heading, so it is never folded away
   const collapsibleTitles = navSections.filter(s => s.title !== 'Overview').map(s => s.title);
   const allSectionsClosed = collapsibleTitles.every(t => closedSections.includes(t));
 
   // Landing on a page whose group is folded away opens that group, so the current page is always visible
-  const activeSectionTitle = navSections.find(s => s.items.some(i => i.href === pathname))?.title;
+  const activeSectionTitle = navSections.find(s => s.items.some(isItemActive))?.title;
   useEffect(() => {
     if (activeSectionTitle) setClosedSections(prev => prev.includes(activeSectionTitle) ? prev.filter(t => t !== activeSectionTitle) : prev);
   }, [activeSectionTitle]);
@@ -379,14 +412,14 @@ export default function AdminLayout({
               {open && (
               <div id={groupId} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {section.items.map(item => {
-                  const isActive = pathname === item.href;
+                  const isActive = isItemActive(item);
                   const Icon = item.icon;
 
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={onItemClick}
+                      onClick={() => { onItemClick?.(); announceHash(item.href); }}
                       title={rail ? (item.badge || item.note ? `${item.label} (${item.badge || item.note})` : item.label) : undefined}
                       aria-label={rail ? item.label : undefined}
                       style={{
@@ -511,17 +544,6 @@ export default function AdminLayout({
             </button>
           </div>
         )}
-
-        {!rail && <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isSupabaseConfigured ? 'var(--c-green)' : 'var(--c-amber)' }}>
-            <Database size={12} />
-            <span>Security: RBAC Strict Session Active</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isR2Configured ? 'var(--c-green)' : 'var(--text-muted)' }}>
-            <Cloud size={12} />
-            <span>Storage: {isR2Configured ? 'Cloudflare R2 Encrypted' : 'Local Storage Engine'}</span>
-          </div>
-        </div>}
 
         <button
           type="button"
