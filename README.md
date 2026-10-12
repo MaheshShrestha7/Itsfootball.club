@@ -27,61 +27,110 @@ Built with **Next.js 15 (App Router) + React 19**, **Supabase** (Postgres, Auth,
 
 ## Features
 
-### Club public website (`/{club}`)
-- Hero slider showing pinned matches, events, news and gallery items
-- Fixtures and results, a squad roster with player stats and a leaderboard, and the executive committee
-- News articles with a rich-text editor, images and video embeds, plus a media gallery
-- Home ground details with an embedded map, and a contact form that lands in the admin inbox
-- Sponsor showcase with tracked impressions and clicks per placement
-- Per-club branding: colours, crest, short name and motto, applied as CSS variables with a WCAG contrast check
+Grassroots clubs usually run on a patchwork of WhatsApp groups, spreadsheets, paper sign-up forms,
+bank transfers and a website nobody updates. itsfootball.club replaces that patchwork with one
+place. Each feature below is listed with the problem it solves.
+
+### Launch and branding
+
+| Feature | Problem it solves |
+| --- | --- |
+| **Create a club in minutes** (`/create-club`): guided setup for name, motto, contact details, home ground and colours | Volunteers have no time or budget to build and host a website. Here anyone can launch one for free, without a developer |
+| **Per-club branding**: colours, crest, short name and motto applied as CSS variables, with a WCAG contrast check and a kit designer preview | Template sites all look the same, and home-made ones are often unreadable. Every club looks like itself, and text stays legible |
+| **Own address and custom domains**: `itsfootball.club/{club}`, or the club's own domain via Cloudflare for SaaS with automatic certificates | Clubs want a professional address but can't manage DNS and SSL. A domain is connected in a few steps and certificates renew on their own |
+| **Club directory and "My Clubs"** | People who help at several clubs need one account for all of them, and new players need a way to find a club |
+
+### Public club website (`/{club}`)
+
+| Feature | Problem it solves |
+| --- | --- |
+| **Hero slider** of pinned matches, events, news and gallery items | The homepage goes stale. The slider puts what is happening now at the top without a redesign |
+| **Fixtures, results and a club calendar**, filterable by season | Fans and parents ask "when and where is the next game?" in group chats again and again. The answer is now one link |
+| **Squad roster, player stats and a leaderboard** | Player stats live in one coach's notebook. They are now public, always current, and a reason for players to share the site |
+| **News, video and a photo gallery**, with a rich-text editor | Club news gets lost in social feeds. It now has a permanent, searchable home |
+| **Events and training pages** with RSVP, capacity limits and QR self check-in | Organisers don't know who is coming to training, trials, socials or AGMs, or who actually turned up |
+| **Executive committee page** | New members don't know who runs the club or whom to ask |
+| **Home ground with a map**, surface, parking and transit notes | Away teams and new parents get lost on matchday |
+| **Club Teams** (`/{club}/teams`): first team, reserves, youth and other sides, each with its own page | A club is rarely one team. Each side gets its own squad and fixtures instead of one mixed list |
+| **Contact form** that lands in the admin Inbox | Enquiries sent to a personal phone or email go unanswered when that person steps down |
+| **Search engine and link-preview ready**: per-page metadata, JSON-LD, sitemap, robots and `llms.txt` | Small clubs are invisible on Google and their shared links look broken. Here they show up properly out of the box |
 
 ### Live match center (`/{club}/match/{id}`)
-- Live scoreboard with a running clock derived from the referee's own clock state, so every viewer shows the same minute
-- Goal celebrations (banner, confetti, optional sound), an event timeline, match statistics, and Player of the Match
-- Read-only tactical pitch showing each club side's lineup
-- Updates pushed in real time through Supabase Realtime
-- Shareable matchday graphics (result or starting XI) for Instagram and WhatsApp
-- Door QR check-in for spectators
 
-### Tournaments
-- Formats: **knockout**, **league** (round robin) and **group + knockout**, including a "Top 3" step-ladder playoff where 1st gets a bye to the final
-- Seeding, byes, third-place match, penalties, automatic standings and bracket progression (`lib/tournament-engine.ts`)
-- Internal teams (the club's own sides, each with a roster) and external teams
-- Player of the Tournament award
+| Feature | Problem it solves |
+| --- | --- |
+| **Live scoreboard and clock** derived from the referee's clock state, pushed through Supabase Realtime | Fans who can't attend rely on someone texting the score. Now everyone sees the same live score and minute |
+| **Goal celebrations, event timeline, match stats and Player of the Match** | A result alone is dull. The story of the match keeps fans engaged |
+| **Read-only tactical pitch** with each side's lineup | "Who's playing today?" no longer needs a photo of a whiteboard |
+| **Shareable matchday graphics** (result or starting XI) for Instagram and WhatsApp | Making a matchday graphic in a design app takes time every week. It is now one tap |
+| **Door QR check-in** for spectators | Clubs have no idea how many people actually come to games |
 
-### Members
-- Self-service membership applications, approval workflow and membership tiers
-- Virtual member pass with a unique QR code; admins verify members by scanning it
-- One-time email sign-in for members, and a "claim my memberships" flow for existing records
-- Availability RSVPs for matches through personal links or, signed in, from the club app, and a public matchday squad
-- Membership renewal per club (Finance → Settings): year to year from the join date, or fiscal year to fiscal year from a chosen month
-- Club app (`/{club}/app`, installable per club): what's coming up, your availability, your pass, and the admin tools your roles allow, with a phone tab bar across the club site
-- ClubScore gamification: points for attendance, goals, assists, clean sheets and MOTM awards, with streaks, tiers and badges
+### Tournaments and cups
+
+| Feature | Problem it solves |
+| --- | --- |
+| **Knockout, league and group + knockout formats**, including a "Top 3" step-ladder playoff | Running a cup by hand in a spreadsheet is error-prone and hard to share |
+| **Seeding, byes, third-place match, penalties, and automatic standings and bracket progression** (`lib/tournament-engine.ts`) | Working out who plays whom next, and who goes through, causes disputes. The engine applies the rules the same way every time |
+| **Internal sides and external teams**, plus Player of the Tournament | Clubs run internal cups as well as invitational ones, and want to reward a standout player |
+
+### Members, players and parents
+
+| Feature | Problem it solves |
+| --- | --- |
+| **Online membership applications** with an approval workflow, tiers and a requested team | Paper forms get lost and details are retyped by hand. Applications now arrive complete and wait for approval |
+| **Virtual member pass** with a unique QR code, verified by scanning | Membership cards cost money and get lost. Anyone at the gate can check a member in seconds |
+| **Member sign-in** by one-time email link or password, protected by a Turnstile bot check, plus a "claim my memberships" flow | Members forget passwords, and bots abuse sign-up forms. Existing records can be linked to a new account |
+| **Matchday availability** (Available, Doubtful, Not Available) by personal link or in the club app, and a public matchday squad | Coaches chase players one by one to find out who can play |
+| **Club app** (`/{club}/app`, installable per club): what's coming up, your availability, your pass, and the admin tools your roles allow | Members want one thing on their phone, not a website bookmark plus several chat groups |
+| **Guardian accounts**: one parent sign-in for several children, with messages, payments and emails going through the guardian | Parents of junior players had to juggle a separate login per child, and clubs had to email children directly |
+| **Junior safeguarding**: junior names masked on public pages, junior scores hidden by default for young age groups, a welfare officer shown on junior team pages, guardian and photo consent on the form | Clubs must protect children's identities and follow youth football guidance without each volunteer remembering the rules |
+| **Message the club**: per-member conversations with club administration | Questions sent to a coach's personal number are lost and can't be followed up by someone else |
+| **Membership renewal**: year to year from the join date, or by fiscal year from a chosen month, with a grace period | Treasurers lose track of who has paid for this season |
+| **ClubScore gamification**: points for attendance, goals, assists, clean sheets and MOTM, with streaks, tiers and badges | Attendance at training drops off during the season. Points and streaks give players a reason to keep turning up |
 
 ### Admin portal (`/{club}/admin`)
-- Dashboard, analytics (page views, gate scans, sponsor performance) and an inbox for messages and enquiries
-- Match management and a live match-center controller (score, clock, events, MOTM)
-- Lineup workbench (draft and publish lineups), availability tracking and training attendance
-- Members, squad, executive committee, seasons, internal teams and tournaments
-- Events with QR check-in, a camera QR scanner, and sponsors with a sponsor hub
-- Content (news and gallery), hero slider and branding (including custom domain setup)
-- Finance: income and expense ledger with receipts; merch shop; email notifications
+
+The admin menu has eight groups, each with sub-menus that link straight to page tabs.
+
+| Group | What it holds | Problem it solves |
+| --- | --- | --- |
+| **Overview** | Dashboard with search across the club, and the **Inbox** (member messages and contact-form enquiries, with unread counts) | Admins have to check several places to see what needs attention |
+| **Matchday** | Player Availability, Lineup Workbench (draft and publish lineups on a tactical pitch), Match Centre controller (score, clock, cards, subs, VAR, penalties, MOTM) and the camera Gate Scanner | Running a match means a clipboard, a WhatsApp poll and someone texting scores. It is now one phone on the touchline |
+| **Fixtures & Events** | Fixtures & Results, Tournaments & Cups (with tournament sides), Events & Training (with attendance) | Fixtures, cups and training live in different spreadsheets |
+| **Players & Teams** | Squad & Players (CSV import and export), Club Teams, Members (Applications, Active, Rejected) and Committee | The player list, team sheets and membership register drift out of sync |
+| **Money** | Finance (income and expense ledger with receipts, payment settings), Club Shop (orders and products) and Sponsors (list and sponsor report) | The treasurer reconciles bank statements, receipts and merch orders by hand |
+| **Club Content** | News, Photo Gallery and Homepage Slider | Updating the website needs "the one person who knows how" |
+| **Fans & Engagement** | Email Notifications, ClubScore and Website Analytics (page views, gate scans, sponsor performance) | The club can't tell whether anyone reads its site, and sponsors ask for proof their money is seen |
+| **Club Settings** | Club Profile & Branding (including custom domain), Seasons, Junior & Safeguarding, and Roles & Permissions | Settings are scattered, and everyone ends up with full admin access because nothing finer exists |
+
+**Roles and permissions.** Default access roles (Treasurer, Manager, Youth Coach, Secretary, Welfare
+Officer, Media Officer, Commercial Officer, Volunteer) give each person only the admin areas they need,
+at view, edit or full level. Clubs can add their own roles. This solves the problem of handing every
+volunteer the keys to everything, including finances and children's data. See [Roles](#roles).
 
 ### Payments and commerce
-- Stripe Connect: each club connects its own Stripe account, and an optional platform booking fee is configurable
-- Paid memberships, event tickets and merch shop orders; bank-transfer payments with receipt upload
-- Ticket pages per order (`/{club}/tickets/{orderId}`)
+
+| Feature | Problem it solves |
+| --- | --- |
+| **Stripe Connect**: each club connects its own Stripe account, with an optional platform booking fee | Collecting fees in cash or by chasing bank transfers is slow, and money must go straight to the club, not through a third party |
+| **Paid memberships, event tickets and shop orders**, with ticket pages per order (`/{club}/tickets/{orderId}`) | Selling tickets or kit means a separate shop tool and manual lists of who has paid |
+| **Bank transfer with receipt upload** | Many members still prefer bank transfer. The receipt is attached to the payment so the treasurer can check it |
 
 ### Communications
-- Branded club emails through Resend: sign-in links, match/event/renewal reminders (daily cron) and admin-sent notices, with one-click unsubscribe
-- Web push notifications to followers (PWA with a service worker and an offline page)
-- Calendar feed of fixtures and events (`/{club}/calendar.ics`, subscribable via `webcal://`)
 
-### Platform
-- Club directory, club creation and "my clubs"
-- Custom domains per club via Cloudflare for SaaS, with automatic certificates
-- SEO: per-page metadata, JSON-LD structured data, sitemap, robots and `llms.txt`
-- Light and dark themes, mobile-first layouts and reduced-motion support
+| Feature | Problem it solves |
+| --- | --- |
+| **Branded club emails** through Resend: sign-in links, daily match, event and renewal reminders, and admin notices, with one-click unsubscribe | Reminders are sent by hand, or not at all, and generic emails look like spam |
+| **Web push notifications** to followers when the club sends a notice (installable PWA with an offline page) | Important notices get buried in busy group chats. Push puts them on followers' phones directly |
+| **Calendar feed** (`/{club}/calendar.ics`, subscribable via `webcal://`) | Families have to copy fixtures into their own calendars by hand, and miss changes |
+
+### Platform qualities
+
+| Quality | Problem it solves |
+| --- | --- |
+| **Mobile-first**, with light and dark themes and reduced-motion support | Most people use the site on a phone at the side of a pitch |
+| **Real-time and always from the database**: data comes from Supabase and live changes are pushed to every open page | Different people see different, outdated versions of the same information |
+| **Security by default**: Row Level Security on every table, public-safe views, a strict CSP and verified webhooks | Clubs hold personal data about adults and children but have no security staff. See [Security model](#security-model) |
 
 ---
 
@@ -189,6 +238,88 @@ Open <http://localhost:3000>, create an account and create your first club. Its 
 ---
 
 ## Architecture
+
+### High-level overview
+
+```mermaid
+flowchart TB
+    subgraph Users["People"]
+        V["Fans and visitors"]
+        MB["Members, players and parents"]
+        AD["Club admins and coaches"]
+    end
+
+    subgraph Edge["Cloudflare"]
+        DNS["itsfootball.club or the club's own domain<br/>Cloudflare for SaaS"]
+        subgraph Worker["Cloudflare Worker: Next.js 15 via OpenNext"]
+            MW["middleware.ts<br/>CSP nonce, domain to club rewrite"]
+            PAGES["Pages: React server + client<br/>public site, club app, admin portal"]
+            API["API routes /api/*<br/>privileged work"]
+            CRON["Daily cron<br/>reminders"]
+        end
+        R2[("R2 storage<br/>images, video, receipts")]
+    end
+
+    subgraph Supabase["Supabase"]
+        AUTH["Auth<br/>email link, password, Turnstile"]
+        DB[("Postgres<br/>Row Level Security,<br/>public-safe views")]
+        RT["Realtime<br/>live changes"]
+        STO[("Storage<br/>fallback for uploads")]
+    end
+
+    subgraph External["External services"]
+        STRIPE["Stripe Connect<br/>club payments"]
+        RESEND["Resend<br/>club emails"]
+        PUSH["Browser push services<br/>Web Push"]
+    end
+
+    V --> DNS
+    MB --> DNS
+    AD --> DNS
+    DNS --> MW
+    MW --> PAGES
+    MW --> API
+    PAGES -- "publishable key, RLS" --> DB
+    PAGES -- "sign-in" --> AUTH
+    RT -- "live updates" --> PAGES
+    DB --> RT
+    API -- "secret key, after role check" --> DB
+    API --> R2
+    API --> STO
+    API --> STRIPE
+    STRIPE -- "signed webhooks" --> API
+    API --> RESEND
+    AUTH -- "send-email hook" --> API
+    API --> PUSH
+    CRON --> API
+```
+
+**How the pieces fit together**
+
+1. **People.** Three kinds of user reach the same app: visitors read the public club site, members
+   and parents use their pass, availability and the club app, and admins run the club from the admin
+   portal. What each one sees is decided by their sign-in and their club role.
+2. **Cloudflare edge.** Every request goes to one Cloudflare Worker running the Next.js app (built
+   with OpenNext). A club can use its own domain through Cloudflare for SaaS; `middleware.ts` maps
+   that domain to the club's slug, so `yourclub.com/member` serves `/{slug}/member`. The middleware
+   also sets a per-request CSP nonce.
+3. **Pages.** The root layout loads the club's public data on the server, so the first HTML already
+   contains real content for search engines and fast loading. In the browser, `ClubProvider` keeps the
+   club's data in memory, reads and writes Supabase directly with the browser-safe publishable key, and
+   subscribes to Supabase Realtime, so a goal logged in the Match Centre appears on every open page
+   within moments.
+4. **Supabase is the source of truth.** Postgres holds every club's data, keyed by `club_id`. Row
+   Level Security decides what each user may read or write, so a bug in the UI cannot leak another
+   club's data or a member's private details. Visitors read sensitive tables only through public-safe
+   views. Supabase Auth handles sign-in (email link or password), protected by a Turnstile bot check.
+5. **API routes for privileged work.** Anything needing a secret runs in `app/api/*` on the Worker,
+   after checking the caller's session and role: card payments and Stripe webhooks, file uploads to R2
+   (falling back to Supabase Storage), branded emails through Resend (including Supabase's sign-in
+   emails via the send-email hook), web push, custom domain setup and the account and contact endpoints.
+6. **Scheduled jobs.** A Cloudflare cron trigger fires once a day and calls the reminders route,
+   which sends availability, event and renewal reminders, each at most once.
+
+The diagram below zooms in on a single request.
 
 ### Request flow
 
