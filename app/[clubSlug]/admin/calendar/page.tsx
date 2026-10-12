@@ -457,6 +457,7 @@ function ItemPopover({ item, rect, title, teamName, clubSlug, can, onClose }: {
     links.push({ href: `${base}/events`, text: 'Events & Training', primary: true });
   } else if (item.source === 'tournaments') {
     links.push({ href: `${base}/tournaments/${encodeURIComponent(item.id)}`, text: 'Open tournament', primary: true });
+    if (item.eventId && can('events')) links.push({ href: `${base}/events`, text: 'Events & Training' });
   } else if (can('seasons')) {
     links.push({ href: `${base}/seasons`, text: 'Seasons', primary: true });
   }

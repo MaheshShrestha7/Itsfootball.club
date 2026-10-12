@@ -6,6 +6,7 @@
 // ==============================================================================
 import type { ClubEvent, ClubSeason, ClubTeam, Match, Tournament } from './supabase/types';
 import { teamOfMatch } from './teams';
+import { parseTournamentDate } from './tournament-engine';
 
 export type CalendarKind = 'match' | 'training' | 'social' | 'trial' | 'tournament' | 'season';
 
@@ -49,6 +50,8 @@ export interface CalendarItem {
   /** Completed fixtures: the club's score first ("3-1"), and W/D/L when the club played */
   score?: string;
   result?: 'W' | 'D' | 'L';
+  /** A tournament's bar also stands for this event (same name, within its dates) */
+  eventId?: string;
 }
 
 const DAY = 24 * 3600 * 1000;
@@ -106,6 +109,19 @@ function matchScore(m: Match): Pick<CalendarItem, 'score' | 'result'> {
   return { score: `${us}-${them}`, result: us > them ? 'W' : us < them ? 'L' : 'D' };
 }
 
+/**
+ * Names that refer to the same thing, case, spacing and punctuation aside. With `loose`, one may
+ * also contain the other ("Dashain Cup" and "ANCC Dashain Cup 2026"), if it isn't just a word or two.
+ */
+function sameName(a: string, b: string, loose = false): boolean {
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const x = norm(a);
+  const y = norm(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  return loose && Math.min(x.length, y.length) >= 8 && (x.includes(y) || y.includes(x));
+}
+
 const EVENT_KIND: Record<string, CalendarKind> = {
   match: 'match',
   training: 'training',
@@ -150,10 +166,44 @@ export function buildCalendarItems(p: {
     });
   }
 
+  // Tournaments first: an event that only announces one of them is folded into its bar below
+  const cups: CalendarItem[] = [];
+  for (const t of p.tournaments) {
+    if (t.club_id !== p.clubId) continue;
+    // Saved as instants from a local date-time (TournamentFormModal), so read them in local time
+    const startAt = parseTournamentDate(t.start_date);
+    if (!startAt) continue;
+    const first = startOfDay(startAt);
+    const endAt = parseTournamentDate(t.end_date);
+    const last = endAt && endAt > first ? startOfDay(endAt) : first;
+    cups.push({
+      key: `tournament:${t.id}`,
+      id: t.id,
+      source: 'tournaments',
+      kind: 'tournament',
+      title: t.name,
+      place: t.venue || undefined,
+      start: first,
+      end: addDays(last, 1),
+      allDay: true,
+      teamId: null,
+      wholeClub: true,
+      status: t.status,
+      off: false,
+    });
+  }
+  items.push(...cups);
+
   for (const e of p.events) {
     if (e.club_id !== p.clubId) continue;
     const start = new Date(e.start_time);
     if (isNaN(start.getTime())) continue;
+    // The same tournament also listed under Events & Training (e.g. for tickets): one bar, not two
+    const cup = cups.find(c => sameName(c.title, e.title, e.category === 'tournament') && start >= c.start && start < c.end);
+    if (cup) {
+      cup.eventId = e.id;
+      continue;
+    }
     const endRaw = e.end_time ? new Date(e.end_time) : null;
     const end = endRaw && !isNaN(endRaw.getTime()) && endRaw > start ? endRaw : new Date(start.getTime() + EVENT_LENGTH);
     items.push({
@@ -168,28 +218,6 @@ export function buildCalendarItems(p: {
       allDay: false,
       teamId: e.team_id ?? null,
       wholeClub: !e.team_id,
-      off: false,
-    });
-  }
-
-  for (const t of p.tournaments) {
-    if (t.club_id !== p.clubId) continue;
-    const first = localDate(t.start_date);
-    if (!first) continue;
-    const last = (t.end_date && localDate(t.end_date)) || first;
-    items.push({
-      key: `tournament:${t.id}`,
-      id: t.id,
-      source: 'tournaments',
-      kind: 'tournament',
-      title: t.name,
-      place: t.venue || undefined,
-      start: first,
-      end: addDays(last < first ? first : last, 1),
-      allDay: true,
-      teamId: null,
-      wholeClub: true,
-      status: t.status,
       off: false,
     });
   }
