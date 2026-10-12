@@ -3,7 +3,8 @@
 import React, { useState, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { Match, MatchType, MatchStatus } from '@/lib/supabase/types';
+import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
+import { clubTeamsOf, defaultTeamOf, isTeamFixture, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import { QRCodeSVG } from 'qrcode.react';
@@ -73,18 +74,24 @@ export default function AdminMatchesPage({
     updateMatch,
     deleteMatch,
     seasons,
-    getActiveSeason
+    getActiveSeason,
+    clubTeams,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = useMemo(() => matches.filter(m => m.club_id === club.id), [matches, club.id]);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
   const clubSeasons = seasons.filter(s => s.club_id === club.id);
+  // Team picker / filter / labels only once the club has more than one team
+  const teams = useMemo(() => clubTeamsOf(clubTeams, club.id), [clubTeams, club.id]);
+  const mainTeamId = defaultTeamOf(clubTeams, club.id)?.id || '';
+  const multiTeam = teams.length > 1;
 
   // Filters state
   const [statusTab, setStatusTab] = useState<'all' | 'upcoming' | 'completed' | 'live'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
+  const [teamFilter, setTeamFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -117,6 +124,7 @@ export default function AdminMatchesPage({
     door_qr_checkin_enabled: boolean;
     home_score: number;
     away_score: number;
+    team_id: string;
   }>({
     title: '',
     match_type: 'friendly',
@@ -136,6 +144,7 @@ export default function AdminMatchesPage({
     door_qr_checkin_enabled: true,
     home_score: 0,
     away_score: 0,
+    team_id: '',
   });
 
   const showToast = (msg: string) => {
@@ -165,6 +174,7 @@ export default function AdminMatchesPage({
       door_qr_checkin_enabled: true,
       home_score: 0,
       away_score: 0,
+      team_id: teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId,
     });
     setIsFormModalOpen(true);
   };
@@ -205,6 +215,7 @@ export default function AdminMatchesPage({
       door_qr_checkin_enabled: m.door_qr_checkin_enabled ?? true,
       home_score: m.home_score ?? 0,
       away_score: m.away_score ?? 0,
+      team_id: m.team_id || mainTeamId,
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setIsFormModalOpen(true);
@@ -222,6 +233,11 @@ export default function AdminMatchesPage({
       is_club_home: true,
       venue: club.stadium_name || 'Training Ground'
     }));
+  };
+
+  const newMatchFormat = (teamId: string | null): MatchFormat | undefined => {
+    const format = teams.find(t => t.id === teamId)?.match_format;
+    return format === '7v7' || format === '9v9' ? format : undefined;
   };
 
   // Submit Match Form (Create or Update)
@@ -259,12 +275,15 @@ export default function AdminMatchesPage({
     }
 
     const resolvedStatus: MatchStatus = form.status;
+    // Internal matches are between the club's own sides, not one team
+    const teamId = isTeamFixture({ match_type: form.match_type }) ? (form.team_id || mainTeamId || null) : null;
     const homeScore = Number(form.home_score) || 0;
     const awayScore = Number(form.away_score) || 0;
 
     if (editingMatchId) {
       // Update existing fixture - PRESERVE status & scores
       const opened = editOpenedWithRef.current || { status: resolvedStatus, home_score: homeScore, away_score: awayScore };
+      const editingMatch = clubMatches.find(x => x.id === editingMatchId);
       updateMatch(editingMatchId, {
         title: cleanTitle || `${homeTeam} vs ${awayTeam}`,
         match_type: form.match_type,
@@ -284,6 +303,7 @@ export default function AdminMatchesPage({
         description: cleanDescription,
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
+        ...(teamId !== (editingMatch?.team_id ?? null) ? { team_id: teamId } : {}),
         // Only what the admin actually changed: the live match center may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -320,6 +340,9 @@ export default function AdminMatchesPage({
         current_minute: 0,
         added_time: 0,
         period: resolvedStatus === 'completed' ? 'full_time' : 'pre_match',
+        team_id: teamId,
+        // Youth teams play small-sided: start their fixtures in the team's format
+        ...(newMatchFormat(teamId) ? { match_format: newMatchFormat(teamId) } : {}),
       });
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
     }
@@ -378,6 +401,9 @@ export default function AdminMatchesPage({
         if (m.season !== seasonFilter) return false;
       }
 
+      // Team filter
+      if (multiTeam && teamFilter !== 'ALL' && teamOfMatch(m, clubTeams)?.id !== teamFilter) return false;
+
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -390,7 +416,7 @@ export default function AdminMatchesPage({
 
       return true;
     }).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
-  }, [clubMatches, statusTab, typeFilter, seasonFilter, searchQuery]);
+  }, [clubMatches, statusTab, typeFilter, seasonFilter, searchQuery, multiTeam, teamFilter, clubTeams]);
 
   // Counts for KPI Cards
   const totalCount = clubMatches.length;
@@ -588,6 +614,21 @@ export default function AdminMatchesPage({
             <option value="tournament">Tournament / Cup</option>
           </select>
 
+          {/* Team Dropdown */}
+          {multiTeam && (
+            <select data-view-ok aria-label="Team"
+              value={teamFilter}
+              onChange={e => setTeamFilter(e.target.value)}
+              className="form-input"
+              style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+            >
+              <option value="ALL">All Teams</option>
+              {teams.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
+
           {/* Season Dropdown */}
           <select data-view-ok aria-label="Season"
             value={seasonFilter}
@@ -709,6 +750,14 @@ export default function AdminMatchesPage({
                     <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {m.competition}
                     </span>
+                    {multiTeam && (() => {
+                      const team = teamOfMatch(m, clubTeams);
+                      return team ? (
+                        <span className="badge" style={{ fontSize: '0.7rem', background: `${team.color || club.primary_color}22`, color: 'var(--text-primary)', border: `1px solid ${team.color || club.primary_color}66` }}>
+                          {teamLabel(team)}
+                        </span>
+                      ) : null;
+                    })()}
                     {m.season && (
                       <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
                         {m.season}
@@ -1139,6 +1188,25 @@ export default function AdminMatchesPage({
                   </select>
                 </div>
               </div>
+
+              {/* Which club team plays (internal matches are between the club's own sides) */}
+              {multiTeam && form.match_type !== 'internal' && (
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label" htmlFor="form-team">
+                    Team *
+                  </label>
+                  <select
+                    id="form-team"
+                    value={form.team_id || mainTeamId}
+                    onChange={e => setForm({ ...form, team_id: e.target.value })}
+                    className="form-input"
+                  >
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}{t.is_default ? ' (main team)' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Opponent Details & Home/Away */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>

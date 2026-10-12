@@ -37,6 +37,8 @@ import {
   ClubSeasonStatsSummary,
   HeroSliderPinnedItem,
   InternalTeam,
+  ClubTeam,
+  ClubTeamMember,
   Tournament,
   TournamentParticipant,
   TournamentStanding,
@@ -229,6 +231,17 @@ interface ClubContextType {
   getClubMemberMessages: (clubId: string) => MemberMessage[];
   getClubSeasonStats: (clubId: string) => ClubSeasonStatsSummary;
 
+  // Club teams (first team, reserves, academy, youth)
+  clubTeams: ClubTeam[];
+  clubTeamMembers: ClubTeamMember[];
+  createClubTeam: (teamData: Omit<ClubTeam, 'id' | 'created_at' | 'updated_at'>) => ClubTeam;
+  updateClubTeam: (teamId: string, updates: Partial<ClubTeam>) => void;
+  /** Makes this team the club's main team (the one fixtures without a team belong to) */
+  setDefaultClubTeam: (teamId: string) => void;
+  deleteClubTeam: (teamId: string) => void;
+  /** Replaces who holds `role` in a team (players, coaches, ...) with exactly these members */
+  setClubTeamRoster: (teamId: string, role: ClubTeamMember['team_role'], memberIds: string[]) => void;
+
   // Tournaments & Internal Teams Engine (Challonge for Football)
   internalTeams: InternalTeam[];
   tournaments: Tournament[];
@@ -373,6 +386,8 @@ export function ClubProvider({
   const [inquiries, setInquiries] = useState<ContactInquiry[]>(() => initialData?.inquiries ?? []);
   const [memberMessages, setMemberMessages] = useState<MemberMessage[]>(() => initialData?.memberMessages ?? []);
   const [internalTeams, setInternalTeams] = useState<InternalTeam[]>(() => initialData?.internalTeams ?? []);
+  const [clubTeams, setClubTeams] = useState<ClubTeam[]>(() => initialData?.clubTeams ?? []);
+  const [clubTeamMembers, setClubTeamMembers] = useState<ClubTeamMember[]>(() => initialData?.clubTeamMembers ?? []);
   const [tournaments, setTournaments] = useState<Tournament[]>(() => initialData?.tournaments ?? []);
   const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>(() => initialData?.tournamentParticipants ?? []);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -433,6 +448,8 @@ export function ClubProvider({
           if (Array.isArray(parsed.internalTeams)) {
             setInternalTeams(prev => withCached(prev, parsed.internalTeams));
           }
+          if (Array.isArray(parsed.clubTeams)) setClubTeams(prev => withCached(prev, parsed.clubTeams));
+          if (Array.isArray(parsed.clubTeamMembers)) setClubTeamMembers(prev => withCached(prev, parsed.clubTeamMembers));
           if (Array.isArray(parsed.tournaments)) {
             setTournaments(prev => withCached(prev, parsed.tournaments));
           }
@@ -482,6 +499,8 @@ export function ClubProvider({
     clubs,
     members,
     seasons,
+    clubTeams,
+    clubTeamMembers,
     internalTeams,
     tournaments,
     tournamentParticipants,
@@ -602,6 +621,8 @@ export function ClubProvider({
         }
         if (data.members) mergedState.members = dropSharedPhotos(mergeById('members', local.members, data.members));
         if (data.seasons) mergedState.seasons = mergeById('seasons', local.seasons, data.seasons);
+        if (data.clubTeams) mergedState.clubTeams = mergeById('clubTeams', local.clubTeams, data.clubTeams);
+        if (data.clubTeamMembers) mergedState.clubTeamMembers = mergeById('clubTeamMembers', local.clubTeamMembers, data.clubTeamMembers);
         if (data.internalTeams) mergedState.internalTeams = mergeById('internalTeams', local.internalTeams, data.internalTeams);
         if (data.tournaments) mergedState.tournaments = mergeById('tournaments', local.tournaments, data.tournaments);
         if (data.tournamentParticipants) mergedState.tournamentParticipants = mergeById('tournamentParticipants', local.tournamentParticipants, data.tournamentParticipants);
@@ -631,6 +652,8 @@ export function ClubProvider({
 
         if (mergedState.members) setMembers(mergedState.members);
         if (mergedState.seasons) setSeasons(mergedState.seasons);
+        if (mergedState.clubTeams) setClubTeams(mergedState.clubTeams);
+        if (mergedState.clubTeamMembers) setClubTeamMembers(mergedState.clubTeamMembers);
         if (mergedState.internalTeams) setInternalTeams(mergedState.internalTeams);
         if (mergedState.tournaments) setTournaments(mergedState.tournaments);
         if (mergedState.tournamentParticipants) setTournamentParticipants(mergedState.tournamentParticipants);
@@ -723,6 +746,12 @@ export function ClubProvider({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'club_seasons', filter: filterOn('club_id') }, payload =>
         apply<ClubSeason>('seasons', setSeasons, payload)
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_teams', filter: filterOn('club_id') }, payload =>
+        apply<ClubTeam>('clubTeams', setClubTeams, payload)
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_team_members', filter: filterOn('club_id') }, payload =>
+        apply<ClubTeamMember>('clubTeamMembers', setClubTeamMembers, payload)
+      )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: filterOn('club_id') }, payload =>
         apply<ClubEvent>('events', setEvents, payload)
       )
@@ -795,7 +824,7 @@ export function ClubProvider({
     return () => clearTimeout(timer);
   }, [
     syncReady, runFlush,
-    clubs, members, seasons, internalTeams, tournaments, tournamentParticipants, playerStats,
+    clubs, members, seasons, clubTeams, clubTeamMembers, internalTeams, tournaments, tournamentParticipants, playerStats,
     matches, matchEvents, events, sponsors, news, gallery, clubScoreRules, clubScoreProfiles,
     activityLogs, availabilities, draftLineups, memberMessages, gateScans, inquiries,
   ]);
@@ -903,6 +932,8 @@ export function ClubProvider({
           if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
           if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
           if (Array.isArray(parsed.internalTeams)) setInternalTeams(parsed.internalTeams);
+          if (Array.isArray(parsed.clubTeams)) setClubTeams(parsed.clubTeams);
+          if (Array.isArray(parsed.clubTeamMembers)) setClubTeamMembers(parsed.clubTeamMembers);
           if (Array.isArray(parsed.tournaments)) setTournaments(parsed.tournaments);
           if (Array.isArray(parsed.tournamentParticipants)) setTournamentParticipants(parsed.tournamentParticipants);
         } catch (err) {
@@ -940,6 +971,8 @@ export function ClubProvider({
           gateScans,
           memberMessages,
           internalTeams,
+          clubTeams,
+          clubTeamMembers,
           tournaments,
           tournamentParticipants,
         };
@@ -969,6 +1002,8 @@ export function ClubProvider({
     gateScans,
     memberMessages,
     internalTeams,
+    clubTeams,
+    clubTeamMembers,
     tournaments,
     tournamentParticipants,
   ]);
@@ -2597,6 +2632,7 @@ export function ClubProvider({
       date_of_birth: input.date_of_birth || undefined,
       terms_accepted_at: now,
       guardian_consent_at: input.guardian_consent ? now : null,
+      ...(input.requested_team_id && role === 'player' ? { requested_team_id: input.requested_team_id } : {}),
       created_at: now,
     };
 
@@ -2605,10 +2641,17 @@ export function ClubProvider({
     const client = getSupabaseClient();
     if (client) {
       let { error } = await client.from('club_members').insert(newMem);
+      // Before migration 20261101 there is no requested team column, or the team was deleted
+      // while the form was open: apply without it (the club places the player)
+      if ((error?.code === 'PGRST204' || error?.code === '23503') && newMem.requested_team_id) {
+        const { requested_team_id: _r, ...withoutTeam } = newMem;
+        void _r;
+        ({ error } = await client.from('club_members').insert(withoutTeam));
+      }
       // Before migration 20261030 the consent columns don't exist yet: apply without them
       if (error?.code === 'PGRST204') {
-        const { terms_accepted_at: _t, guardian_consent_at: _g, ...withoutConsent } = newMem;
-        void _t; void _g;
+        const { terms_accepted_at: _t, guardian_consent_at: _g, requested_team_id: _r, ...withoutConsent } = newMem;
+        void _t; void _g; void _r;
         ({ error } = await client.from('club_members').insert(withoutConsent));
       }
       if (error) {
@@ -2701,6 +2744,10 @@ export function ClubProvider({
     const saveError = await saveApplicationDecision(updatedMember);
     if (saveError) return { success: false, message: `Could not approve ${member.full_name}: ${saveError}` };
 
+    // Approving puts a player in a team (database trigger, 20261031/20261101): bring that row in
+    void getSupabaseClient()?.from('club_team_members').select('*').eq('member_id', memberId)
+      .then(({ data }) => (data || []).forEach(row => applyServerRow('clubTeamMembers', setClubTeamMembers, row)));
+
     // Stats start with the approved membership (a signed-out applicant can't save them)
     setPlayerStats(prev => prev.some(st => st.member_id === memberId) ? prev : [...prev, {
       id: stableId(`stat-${memberId}-${new Date().getFullYear()}`),
@@ -2743,7 +2790,7 @@ export function ClubProvider({
       emailed,
       message: `Approved ${member.full_name}'s membership application!`
     };
-  }, [members, awardClubScorePoints, seasonLabelFor, saveApplicationDecision, sendApplicationEmail]);
+  }, [members, awardClubScorePoints, seasonLabelFor, saveApplicationDecision, sendApplicationEmail, applyServerRow]);
 
   const rejectMemberApplication = useCallback(async (memberId: string, reason: string, adminName: string = 'Club Committee'): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
     const member = members.find(m => m.id === memberId);
@@ -2881,6 +2928,74 @@ export function ClubProvider({
       topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : undefined
     };
   }, [matches, playerStats, members]);
+
+  // ==============================================================================
+  // CLUB TEAMS (first team, reserves, academy, youth)
+  // ==============================================================================
+  const createClubTeam = useCallback((teamData: Omit<ClubTeam, 'id' | 'created_at' | 'updated_at'>) => {
+    const now = new Date().toISOString();
+    const newTeam: ClubTeam = { ...teamData, is_default: false, id: newId(), created_at: now, updated_at: now };
+    setClubTeams(prev => [...prev, newTeam]);
+    return newTeam;
+  }, []);
+
+  const updateClubTeam = useCallback((teamId: string, updates: Partial<ClubTeam>) => {
+    // The main team is changed with setDefaultClubTeam only, so a club always has exactly one
+    const rest = { ...updates };
+    delete rest.is_default;
+    setClubTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...rest, updated_at: new Date().toISOString() } : t));
+  }, []);
+
+  const setDefaultClubTeam = useCallback((teamId: string) => {
+    setClubTeams(prev => {
+      const target = prev.find(t => t.id === teamId);
+      if (!target) return prev;
+      const now = new Date().toISOString();
+      const isOldDefault = (t: ClubTeam) => t.club_id === target.club_id && t.is_default && t.id !== teamId;
+      // Order matters: the database allows one main team per club, and the sync saves rows in
+      // array order, so the old main team is unset before the new one is set
+      return [
+        ...prev.filter(t => t.id !== teamId && !isOldDefault(t)),
+        ...prev.filter(isOldDefault).map(t => ({ ...t, is_default: false, updated_at: now })),
+        { ...target, is_default: true, is_active: true, updated_at: now },
+      ];
+    });
+  }, []);
+
+  const deleteClubTeam = useCallback((teamId: string) => {
+    const team = clubTeams.find(t => t.id === teamId);
+    if (!team || team.is_default) return;
+    const rosterIds = clubTeamMembers.filter(r => r.team_id === teamId).map(r => r.id);
+    if (rosterIds.length) queueDelete('clubTeamMembers', rosterIds);
+    queueDelete('clubTeams', [teamId]);
+    setClubTeamMembers(prev => prev.filter(r => r.team_id !== teamId));
+    setClubTeams(prev => prev.filter(t => t.id !== teamId));
+    // The database clears team_id on the team's rows (ON DELETE SET NULL); mirror it locally
+    setMatches(prev => prev.map(m => m.team_id === teamId ? { ...m, team_id: undefined } : m));
+  }, [clubTeams, clubTeamMembers, queueDelete]);
+
+  const setClubTeamRoster = useCallback((teamId: string, role: ClubTeamMember['team_role'], memberIds: string[]) => {
+    const team = clubTeams.find(t => t.id === teamId);
+    if (!team) return;
+    const wanted = new Set(memberIds);
+    const current = clubTeamMembers.filter(r => r.team_id === teamId && r.team_role === role);
+    const removed = current.filter(r => !wanted.has(r.member_id)).map(r => r.id);
+    const have = new Set(current.map(r => r.member_id));
+    const now = new Date().toISOString();
+    const added: ClubTeamMember[] = memberIds.filter(id => !have.has(id)).map(memberId => ({
+      id: newId(),
+      club_id: team.club_id,
+      team_id: teamId,
+      member_id: memberId,
+      team_role: role,
+      jersey_number: role === 'player' ? members.find(m => m.id === memberId)?.jersey_number : undefined,
+      is_active: true,
+      created_at: now,
+    }));
+    if (removed.length) queueDelete('clubTeamMembers', removed);
+    const removedSet = new Set(removed);
+    setClubTeamMembers(prev => [...prev.filter(r => !removedSet.has(r.id)), ...added]);
+  }, [clubTeams, clubTeamMembers, members, queueDelete]);
 
   // ==============================================================================
   // TOURNAMENTS & INTERNAL TEAMS ENGINE (Challonge for Football)
@@ -3223,6 +3338,13 @@ export function ClubProvider({
         getMemberMessages,
         getClubMemberMessages,
         getClubSeasonStats,
+        clubTeams,
+        clubTeamMembers,
+        createClubTeam,
+        updateClubTeam,
+        setDefaultClubTeam,
+        deleteClubTeam,
+        setClubTeamRoster,
         // Tournaments & Internal Teams
         internalTeams,
         tournaments,

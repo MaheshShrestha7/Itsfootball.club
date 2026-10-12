@@ -33,7 +33,7 @@ export const ACCESS_AREAS: AccessArea[] = [
   { key: 'events', label: 'Events Management', group: 'Fixtures & Competitions' },
   { key: 'seasons', label: 'Season Management', group: 'Fixtures & Competitions' },
   { key: 'squad', label: 'Squad & Players (incl. contact details)', group: 'People & Membership' },
-  { key: 'teams', label: 'Internal Teams', group: 'People & Membership' },
+  { key: 'teams', label: 'Teams (club teams and tournament sides)', group: 'People & Membership' },
   { key: 'members', label: 'Member Approvals', group: 'People & Membership' },
   { key: 'committee', label: 'Executive Committee', group: 'People & Membership' },
   { key: 'emails', label: 'Email Notifications', group: 'People & Membership' },

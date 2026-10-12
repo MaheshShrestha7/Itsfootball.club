@@ -5,6 +5,7 @@ import React, { useState, use, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { secureToken } from '@/lib/ids';
 import { useClub } from '@/lib/club-context';
+import { clubTeamsOf } from '@/lib/teams';
 import { useAuth } from '@/lib/auth-context';
 import { useAccessRoles } from '@/lib/access-roles';
 import { membershipTermEnd, todayIso } from '@/lib/finance';
@@ -69,7 +70,7 @@ export default function AdminSquadPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, addMember, bulkAddMembers, updateMember, deleteMember, playerStats, updatePlayerStats } = useClub();
+  const { clubs, selectClubBySlug, members, addMember, bulkAddMembers, updateMember, deleteMember, playerStats, updatePlayerStats, clubTeams, clubTeamMembers } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   // Access roles (Roles & Permissions page) are labels too; only the Owner / a Club Admin hands them out
@@ -105,6 +106,8 @@ export default function AdminSquadPage({
   const [roleFilter, setRoleFilter] = useState('all');
   const [positionFilter, setPositionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  // Team filter: only shown once the club has more than one team
+  const [teamFilter, setTeamFilter] = useState('all');
 
   // Form State with Multi-Role support
   const [form, setForm] = useState({
@@ -433,6 +436,8 @@ export default function AdminSquadPage({
     return ['Player'];
   };
 
+  const teams = clubTeamsOf(clubTeams, club.id);
+
   // Apply Role / Position / Status filters plus free-text search on top of the club's roster
   const filteredMembers = clubMembers.filter(member => {
     if (roleFilter !== 'all') {
@@ -441,6 +446,11 @@ export default function AdminSquadPage({
     }
 
     if (positionFilter !== 'all' && member.player_position !== positionFilter) return false;
+
+    if (teams.length > 1 && teamFilter !== 'all') {
+      const inTeams = clubTeamMembers.filter(r => r.member_id === member.id && r.is_active !== false).map(r => r.team_id);
+      if (teamFilter === 'none' ? inTeams.length > 0 : !inTeams.includes(teamFilter)) return false;
+    }
 
     if (statusFilter !== 'all') {
       const isActive = member.status === 'active' || (member as any).is_active !== false;
@@ -466,9 +476,10 @@ export default function AdminSquadPage({
     return true;
   });
 
-  const filtersActive = searchQuery.trim() !== '' || roleFilter !== 'all' || positionFilter !== 'all' || statusFilter !== 'all';
+  const filtersActive = searchQuery.trim() !== '' || roleFilter !== 'all' || positionFilter !== 'all' || statusFilter !== 'all' || teamFilter !== 'all';
   const clearFilters = () => {
     setSearchQuery('');
+    setTeamFilter('all');
     setRoleFilter('all');
     setPositionFilter('all');
     setStatusFilter('all');
@@ -581,6 +592,21 @@ export default function AdminSquadPage({
             <option key={pos.value} value={pos.value}>{pos.value} — {pos.desc}</option>
           ))}
         </select>
+
+        {teams.length > 1 && (
+          <select data-view-ok aria-label="Filter by team"
+            className="form-select"
+            value={teamFilter}
+            onChange={e => setTeamFilter(e.target.value)}
+            style={{ flex: '1 1 150px', minWidth: 'min(150px, 100%)' }}
+          >
+            <option value="all">All Teams</option>
+            {teams.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+            <option value="none">Not in a team</option>
+          </select>
+        )}
 
         <select data-view-ok
           className="form-select"

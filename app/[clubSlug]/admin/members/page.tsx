@@ -67,7 +67,8 @@ export default function AdminMembersPage({
     getClubMemberMessages,
     replyToMemberMessage,
     markMemberMessageRead,
-    bulkAddMembers
+    bulkAddMembers,
+    clubTeams,
   } = useClub();
   const { user } = useAuth();
 
@@ -722,6 +723,10 @@ export default function AdminMembersPage({
                             {member.date_of_birth && (
                               <span>Born: <strong>{formatDate(member.date_of_birth)}</strong>{(() => { const a = ageOn(member.date_of_birth); return a !== null ? ` (age ${a}${a < 18 ? ', under 18' : ''})` : ''; })()}</span>
                             )}
+                            {(() => {
+                              const team = member.requested_team_id ? clubTeams.find(t => t.id === member.requested_team_id && t.club_id === member.club_id) : undefined;
+                              return team ? <span>Team: <strong>{team.name}</strong> <span style={{ color: 'var(--text-muted)' }}>(joins it when approved)</span></span> : null;
+                            })()}
                             {member.emergency_contact && <span>Emergency contact: <strong>{member.emergency_contact}</strong></span>}
                             {member.terms_accepted_at && <span style={{ color: 'var(--text-muted)' }}>Accepted terms {formatDate(member.terms_accepted_at)}</span>}
                             {member.guardian_consent_at && <span style={{ color: 'var(--c-green)' }}>✓ Parent / guardian consent given</span>}

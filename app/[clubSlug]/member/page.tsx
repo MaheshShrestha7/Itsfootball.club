@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { clubTeamsOf } from '@/lib/teams';
 import { SITE_URL, authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
@@ -107,7 +108,8 @@ export default function MemberPortalPage({
     sendMemberMessage,
     getMemberMessages,
     getClubSeasonStats,
-    getActiveSeason
+    getActiveSeason,
+    clubTeams,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -143,7 +145,10 @@ export default function MemberPortalPage({
     dateOfBirth: '',
     termsAccepted: false,
     guardianConsent: false,
+    teamId: '',
   });
+  // Clubs with several teams ask players which one they're joining
+  const joinableTeams = clubTeamsOf(clubTeams, club.id);
   const applicantAge = signupForm.dateOfBirth ? ageFrom(signupForm.dateOfBirth) : null;
   const isMinor = applicantAge !== null && applicantAge < 18;
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -160,6 +165,14 @@ export default function MemberPortalPage({
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  // Plans for every team, plus those of the team the player picked (all of them until one is picked)
+  const formPlans = plans.filter(p => !p.team_id || !signupForm.teamId || p.team_id === signupForm.teamId);
+  useEffect(() => {
+    if (formPlans.length && !formPlans.some(p => p.name === signupForm.tier)) {
+      setSignupForm(f => ({ ...f, tier: formPlans[0].name }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signupForm.teamId, plans]);
   const [currency, setCurrency] = useState('AUD');
   const [paymentNotice, setPaymentNotice] = useState<'success' | 'cancelled' | null>(null);
   const [renewPlanId, setRenewPlanId] = useState('');
@@ -439,6 +452,7 @@ export default function MemberPortalPage({
       date_of_birth: signupForm.dateOfBirth || undefined,
       terms_accepted: signupForm.termsAccepted,
       guardian_consent: isMinor && signupForm.guardianConsent,
+      requested_team_id: signupForm.role === 'player' && joinableTeams.length > 1 && signupForm.teamId ? signupForm.teamId : undefined,
     });
 
     if (res.success && res.member) {
@@ -1039,7 +1053,7 @@ export default function MemberPortalPage({
                             fontSize: '0.85rem',
                           }}
                         >
-                          {plans.length ? plans.map(p => (
+                          {formPlans.length ? formPlans.map(p => (
                             <option key={p.id} value={p.name}>
                               {p.name}: {p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Free'}
                             </option>
@@ -1142,6 +1156,32 @@ export default function MemberPortalPage({
                             }}
                           />
                         </div>
+
+                        {joinableTeams.length > 1 && (
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label htmlFor="member-team" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
+                              Team you&apos;re joining
+                            </label>
+                            <select id="member-team"
+                              value={signupForm.teamId}
+                              onChange={e => setSignupForm({ ...signupForm, teamId: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: '6px',
+                                background: 'rgb(var(--dk-4-6-9))',
+                                border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              <option value="">Not sure, the club will place me</option>
+                              {joinableTeams.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}{t.age_group && !t.name.includes(t.age_group) ? ` (${t.age_group})` : ''}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     )}
 

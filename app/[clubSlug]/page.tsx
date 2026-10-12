@@ -45,6 +45,7 @@ import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
+import { clubTeamsOf, defaultTeamOf, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, newsPath } from '@/lib/slugs';
 
 interface HomeHeroSlide {
@@ -81,7 +82,9 @@ export default function ClubPublicPage({
     gallery,
     clubScoreProfiles,
     seasons,
-    getActiveSeason
+    getActiveSeason,
+    clubTeams,
+    clubTeamMembers,
   } = useClub();
 
   const matchedClub = selectClubBySlug(resolvedParams.clubSlug);
@@ -110,6 +113,8 @@ export default function ClubPublicPage({
   useEscapeToClose(rosterOpen, setRosterOpen);
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
+  // Clubs with several teams: '' = the main team, 'ALL' = every team, else a team id
+  const [fixturesTeamFilter, setFixturesTeamFilter] = useState<string>('');
   const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
   const [leaderboardMode, setLeaderboardMode] = useState<'clubscore' | 'traditional'>('clubscore');
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -129,7 +134,12 @@ export default function ClubPublicPage({
   const clubSeasons = seasons.filter(s => s.club_id === clubId);
   const activeSeason = getActiveSeason ? getActiveSeason(clubId) : null;
   const clubMembers = members.filter(m => m.club_id === clubId);
-  const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
+  // Clubs with several teams: the home page shows the main team's squad (everyone if it has no list yet)
+  const teams = clubTeamsOf(clubTeams, clubId);
+  const multiTeam = teams.length > 1;
+  const mainTeam = defaultTeamOf(clubTeams, clubId);
+  const mainSquadIds = multiTeam && mainTeam ? new Set(teamMemberIds(clubTeamMembers, mainTeam.id)) : null;
+  const squadPlayers = clubMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
   const liveMatch = clubMatches.find(m => m.status === 'live');
@@ -145,6 +155,13 @@ export default function ClubPublicPage({
 
   const upcomingMatches = filteredClubMatches.filter(m => m.status === 'upcoming');
   const pastMatches = filteredClubMatches.filter(m => m.status === 'completed');
+  // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
+  const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
+  const inFixturesTeam = (m: typeof clubMatches[number]) => {
+    if (!multiTeam || fixturesTeamId === 'ALL') return true;
+    const team = teamOfMatch(m, clubTeams);
+    return !team || team.id === fixturesTeamId;
+  };
   const clubEvents = events.filter(e => e.club_id === clubId);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
@@ -1470,8 +1487,33 @@ export default function ClubPublicPage({
               </div>
             </div>
 
-            {/* Filter controls: Season dropdown & Tab switcher */}
+            {/* Filter controls: Team & Season dropdowns & Tab switcher */}
             <div className="row row-loose row-wrap">
+              {multiTeam && (
+                <div className="row">
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>TEAM:</span>
+                  <select aria-label="Team"
+                    value={fixturesTeamId}
+                    onChange={(e) => setFixturesTeamFilter(e.target.value)}
+                    style={{
+                      padding: '0.45rem 0.85rem',
+                      background: 'rgba(var(--tint-rgb), 0.07)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id} style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>{t.name}</option>
+                    ))}
+                    <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All Teams</option>
+                  </select>
+                </div>
+              )}
               <div className="row">
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</span>
                 <select aria-label="Season"
@@ -1544,7 +1586,10 @@ export default function ClubPublicPage({
           </div>
 
           <div className="stack">
-            {(fixturesTab === 'upcoming' ? upcomingMatches : pastMatches).map(match => (
+            {(fixturesTab === 'upcoming' ? upcomingMatches : pastMatches).filter(inFixturesTeam).map(match => {
+              const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
+              const hideScore = publicScoreHidden(match, clubTeams);
+              return (
               <div
                 key={match.id}
                 className="glass-panel glass-panel-interactive fixture-card"
@@ -1563,6 +1608,11 @@ export default function ClubPublicPage({
                     {match.season && (
                       <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)' }}>
                         {match.season}
+                      </span>
+                    )}
+                    {matchTeam && (
+                      <span className="badge" style={{ fontSize: '0.7rem', background: `${matchTeam.color || club.primary_color}22`, color: 'var(--text-primary)', border: `1px solid ${matchTeam.color || club.primary_color}66` }}>
+                        {teamLabel(matchTeam)}
                       </span>
                     )}
                   </div>
@@ -1599,9 +1649,9 @@ export default function ClubPublicPage({
                     flexShrink: 0,
                   }}>
                     {match.status === 'live' ? (
-                      <span style={{ color: 'var(--c-red)' }}>{match.home_score} - {match.away_score}</span>
+                      <span style={{ color: 'var(--c-red)' }}>{hideScore ? 'LIVE' : `${match.home_score} - ${match.away_score}`}</span>
                     ) : match.status === 'completed' ? (
-                      `${match.home_score} - ${match.away_score}`
+                      hideScore ? 'FT' : `${match.home_score} - ${match.away_score}`
                     ) : (
                       'VS'
                     )}
@@ -1665,7 +1715,8 @@ export default function ClubPublicPage({
                   </Link>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

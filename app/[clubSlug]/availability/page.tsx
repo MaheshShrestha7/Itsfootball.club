@@ -28,6 +28,7 @@ import {
   ExternalLink,
   ArrowRight
 } from 'lucide-react';
+import { squadForMatch } from '@/lib/teams';
 
 function AvailabilityHub() {
   const params = useParams();
@@ -45,6 +46,8 @@ function AvailabilityHub() {
     getAvailabilityByToken,
     ensureAvailability,
     syncStatus,
+    clubTeams,
+    clubTeamMembers,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -79,6 +82,13 @@ function AvailabilityHub() {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  // The fixture's team squad once the club has several teams (everyone otherwise)
+  const matchSquad = useMemo(
+    () => squadForMatch(squadPlayers, targetMatch, clubTeams, clubTeamMembers),
+    [squadPlayers, targetMatch, clubTeams, clubTeamMembers]
+  );
+
   // Handle Token resolution if accessed via magic link
   useEffect(() => {
     if (token) {
@@ -91,12 +101,10 @@ function AvailabilityHub() {
         setRsvpStatus(resolved.availability.status);
         setRsvpNote(resolved.availability.note || '');
       }
-    } else if (squadPlayers.length > 0 && !activePlayerId) {
-      setActivePlayerId(squadPlayers[0].id);
+    } else if (matchSquad.length > 0 && (!activePlayerId || !matchSquad.some(p => p.id === activePlayerId))) {
+      setActivePlayerId(matchSquad[0].id);
     }
-  }, [token, getAvailabilityByToken, squadPlayers, activePlayerId]);
-
-  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  }, [token, getAvailabilityByToken, matchSquad, activePlayerId]);
 
   // Give every squad player a personal, unguessable RSVP link for this match. Only once the
   // admin's own data has loaded: until then only the public view is here (available players,
@@ -104,9 +112,9 @@ function AvailabilityHub() {
   const dataLoaded = ['off', 'idle', 'saving', 'readonly'].includes(syncStatus.phase);
   useEffect(() => {
     if (!targetMatch || !dataLoaded) return;
-    squadPlayers.forEach(p => ensureAvailability(targetMatch.id, p.id));
+    matchSquad.forEach(p => ensureAvailability(targetMatch.id, p.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetMatch?.id, squadPlayers.length, dataLoaded]);
+  }, [targetMatch?.id, matchSquad.length, dataLoaded]);
 
   // Match Availabilities
   const matchAvailabilities = useMemo(() => {
@@ -116,7 +124,7 @@ function AvailabilityHub() {
 
   // Map squad players with their availability status
   const playerRosterWithStatus = useMemo(() => {
-    return squadPlayers.map(player => {
+    return matchSquad.map(player => {
       const record = matchAvailabilities.find(a => a.member_id === player.id);
       return {
         player,
@@ -130,7 +138,7 @@ function AvailabilityHub() {
         },
       };
     });
-  }, [squadPlayers, matchAvailabilities, club, targetMatch]);
+  }, [matchSquad, matchAvailabilities, club, targetMatch]);
 
   // Counts breakdown
   const confirmedCount = playerRosterWithStatus.filter(p => p.availability.status === 'available').length;
@@ -384,7 +392,7 @@ function AvailabilityHub() {
                   onChange={e => setActivePlayerId(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
                 >
-                  {squadPlayers.map(p => (
+                  {matchSquad.map(p => (
                     <option key={p.id} value={p.id}>
                       #{p.jersey_number || '-'} {p.full_name} ({p.player_position || 'Squad'})
                     </option>

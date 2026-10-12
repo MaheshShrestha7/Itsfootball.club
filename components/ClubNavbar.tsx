@@ -11,6 +11,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { hasMultipleTeams } from '@/lib/teams';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake } from 'lucide-react';
 
 interface ClubNavbarProps {
@@ -18,7 +19,9 @@ interface ClubNavbarProps {
 }
 
 export default function ClubNavbar({ club }: ClubNavbarProps) {
-  const { matches } = useClub();
+  const { matches, clubTeams } = useClub();
+  // A club with several teams gets a Teams page in place of the single-squad link
+  const multiTeam = hasMultipleTeams(clubTeams, club.id);
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
@@ -256,9 +259,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               <span>Shop</span>
             </Link>
           )}
-          <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            Squad
-          </Link>
+          {multiTeam ? (
+            <Link href={`/${club.slug}/teams`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+              Teams
+            </Link>
+          ) : (
+            <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+              Squad
+            </Link>
+          )}
           <Link href={`/${club.slug}#events`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Events
           </Link>
@@ -506,6 +515,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   <Users size={16} />
                   <span>First Team Squad & Stats</span>
                 </Link>
+
+                {multiTeam && (
+                  <Link
+                    href={`/${club.slug}/teams`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                  >
+                    <Shield size={16} />
+                    <span>Our Teams</span>
+                  </Link>
+                )}
 
                 <Link
                   href={`/${club.slug}#events`}
