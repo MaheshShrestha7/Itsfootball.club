@@ -20,7 +20,11 @@ export default function VerifyPassPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const [inputToken, setInputToken] = useState(token);
-  const [result, setResult] = useState<any>(null);
+  const [rawResult, setResult] = useState<any>(null);
+  // Checked at render so it also holds once the club finishes loading: a pass from another club is not valid here
+  const result = rawResult?.member && club && rawResult.member.club_id !== club.id
+    ? { valid: false, message: `This pass belongs to a different club, not ${club.name}.` }
+    : rawResult;
 
   const [checking, setChecking] = useState(false);
 

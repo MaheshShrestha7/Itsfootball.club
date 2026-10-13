@@ -5,6 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
 import CameraQRScanner from '@/components/CameraQRScanner';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import {
   QrCode,
   Camera,
@@ -35,7 +36,7 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, verifyMemberPass, verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, events, matches, gateScans, verifyMemberPass, verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   // View level: verify passes only (check-ins and the scan log are changes)
   const { can } = useAuth();
@@ -108,17 +109,31 @@ export default function AdminScannerPage({
         const remote = await verifyMemberPassPublic(token);
         if (remote.member?.club_id === club.id) res = remote;
       }
+
+      // A pass already let through today may be a shared screenshot: still valid, but the steward should check the photo
+      const today = new Date().toDateString();
+      const earlier = res.valid && res.member
+        ? gateScans.find(s => s.club_id === club.id && s.scan_type === 'pass_verification' && s.valid
+            && s.member_id === res.member!.id && new Date(s.scanned_at).toDateString() === today)
+        : undefined;
+      const repeatAt = earlier
+        ? new Date(earlier.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : undefined;
+      const result = repeatAt
+        ? { ...res, repeatAt, message: `Already scanned today at ${repeatAt}. Check the photo matches the person before letting them in.` }
+        : res;
+
       const newLog: ScanLogEntry = {
         id: `log-${Date.now()}`,
         timestamp: timeStr,
         token,
-        status: res.valid ? 'valid' : res.member ? 'warning' : 'invalid',
+        status: res.valid && !repeatAt ? 'valid' : res.member ? 'warning' : 'invalid',
         memberName: res.member?.full_name,
         tier: res.member?.membership_tier,
-        detail: res.message,
+        detail: result.message,
       };
 
-      setCurrentResult(res);
+      setCurrentResult(result);
       setScanLogs(prev => [newLog, ...prev]);
 
       // Record to live club analytics engine
@@ -319,32 +334,49 @@ export default function AdminScannerPage({
           {currentResult && (
             <div style={{
               marginTop: '1.5rem',
-              background: currentResult.valid
+              background: currentResult.valid && !currentResult.repeatAt
                 ? 'rgba(16, 185, 129, 0.15)'
                 : currentResult.member
                 ? 'rgba(245, 158, 11, 0.15)'
                 : 'rgba(239, 68, 68, 0.15)',
-              border: `2px solid ${currentResult.valid ? '#10B981' : currentResult.member ? '#F59E0B' : '#EF4444'}`,
+              border: `2px solid ${currentResult.valid && !currentResult.repeatAt ? '#10B981' : currentResult.member ? '#F59E0B' : '#EF4444'}`,
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem',
               animation: 'fadeIn 0.3s ease',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                {currentResult.valid ? <CheckCircle2 size={24} color="var(--c-green)" /> : <AlertTriangle size={24} color="var(--c-amber)" />}
+                {currentResult.valid && !currentResult.repeatAt ? <CheckCircle2 size={24} color="var(--c-green)" /> : <AlertTriangle size={24} color="var(--c-amber)" />}
                 <div>
                   <div style={{
                     fontWeight: 800,
                     fontSize: '1rem',
-                    color: currentResult.valid ? 'var(--c-green)' : 'var(--c-amber)',
+                    color: currentResult.valid && !currentResult.repeatAt ? 'var(--c-green)' : 'var(--c-amber)',
                     marginBottom: '0.2rem',
                   }}>
-                    {currentResult.valid ? 'VALIDATION APPROVED' : 'ACCESS WARNING'}
+                    {currentResult.repeatAt ? 'ALREADY SCANNED TODAY' : currentResult.valid ? 'VALIDATION APPROVED' : 'ACCESS WARNING'}
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                     {currentResult.message}
                   </div>
                 </div>
               </div>
+
+              {/* Photo so the steward can check the pass belongs to the person holding it */}
+              {currentResult.member && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                  <PlayerAvatar photoUrl={currentResult.member.photo_url} name={currentResult.member.full_name} size={96} eager style={{ borderRadius: '14px' }} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{currentResult.member.full_name}</div>
+                    <div className="text-meta">
+                      {currentResult.member.is_executive ? currentResult.member.executive_title : currentResult.member.membership_tier}
+                      {currentResult.member.jersey_number ? ` • Jersey No. ${currentResult.member.jersey_number}` : ''}
+                    </div>
+                    {!currentResult.member.photo_url && (
+                      <div className="text-meta">No photo on file: ask for ID if unsure.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
