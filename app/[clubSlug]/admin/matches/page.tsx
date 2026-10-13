@@ -525,11 +525,11 @@ export default function AdminMatchesPage({
         </div>
       </div>
 
-      {/* KPI Metric Cards */}
+      {/* KPI Metric Cards: two to a row on a phone, so the fixtures aren't six cards down the page */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
           gap: '1rem',
           marginBottom: '2rem'
         }}
@@ -626,7 +626,7 @@ export default function AdminMatchesPage({
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
             <option value="ALL">All Match Types</option>
             <option value="internal">Internal / Intra-Squad</option>
@@ -640,7 +640,7 @@ export default function AdminMatchesPage({
               value={teamFilter}
               onChange={e => setTeamFilter(e.target.value)}
               className="form-input"
-              style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+              style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
             >
               <option value="ALL">All Teams</option>
               {teams.map(t => (
@@ -654,7 +654,7 @@ export default function AdminMatchesPage({
             value={seasonFilter}
             onChange={e => setSeasonFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
             <option value="ALL">All Seasons</option>
             {clubSeasons.map(s => (
@@ -663,11 +663,12 @@ export default function AdminMatchesPage({
           </select>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)' }}>
+          {/* Filters share the row evenly (same widths) and wrap together on a phone */}
+          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)', flex: '2 1 220px' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input data-view-ok aria-label="Search fixtures"
               type="text"
-              placeholder="Search opponent, title, venue..."
+              placeholder="Search fixtures..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="form-input"

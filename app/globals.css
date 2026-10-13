@@ -1682,6 +1682,13 @@ textarea {
   }
 }
 
+/* Member inbox: stacked on a phone, the reply pane waits until a conversation is picked */
+@media (max-width: 640px) {
+  .member-thread-pane[data-empty] {
+    display: none !important;
+  }
+}
+
 /* Admin Layout Mobile Adaptations */
 .admin-layout-container {
   display: flex;

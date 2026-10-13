@@ -2027,9 +2027,9 @@ export default function ClubPublicPage({
                       color: 'var(--text-primary)',
                       textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                     }}>
-                      {/* Labelled as the shirt number so it doesn't read as a rank next to the "2nd" badge */}
+                      {/* Labelled as the jersey number so it doesn't read as a rank next to the "2nd" badge */}
                       {player.jersey_number ? (
-                        <><span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.85, marginRight: '0.2rem' }} aria-label="Shirt number">No.</span>{player.jersey_number}</>
+                        <><span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.85, marginRight: '0.25rem' }}>Jersey No.</span>{player.jersey_number}</>
                       ) : ''}
                     </div>
                     <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>

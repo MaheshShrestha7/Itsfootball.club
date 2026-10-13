@@ -274,9 +274,10 @@ export default function AdminTournamentDetailPage({
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flex: '1 1 320px', minWidth: 0 }}>
           <div
             style={{
+              flexShrink: 0,
               width: '60px',
               height: '60px',
               borderRadius: '14px',
@@ -291,9 +292,10 @@ export default function AdminTournamentDetailPage({
           >
             <Trophy size={30} />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.25rem' }}>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+          <div style={{ minWidth: 0 }}>
+            {/* The status badge wraps under a long cup name instead of squeezing it into a narrow column */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem 0.65rem', marginBottom: '0.25rem' }}>
+              <h1 style={{ fontSize: 'clamp(1.2rem, 4.5vw, 1.6rem)', lineHeight: 1.2, fontWeight: 900, color: 'var(--text-primary)', margin: 0, overflowWrap: 'anywhere' }}>
                 {tournament.name}
               </h1>
               <span
@@ -311,22 +313,20 @@ export default function AdminTournamentDetailPage({
                 {tournament.status}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.82rem', flexWrap: 'wrap' }}>
+            {/* Spacing, not "•" separators: when the details wrap, a dot would be left dangling at a line end */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem 1.1rem', color: 'var(--text-secondary)', fontSize: '0.82rem', flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
                 <Layers size={14} />
                 <span>{formatLabel}</span>
               </span>
-              <span>•</span>
               <span className="row row-tight">
                 <Calendar size={14} />
                 <span>Season {tournament.season}</span>
               </span>
-              <span>•</span>
               <span className="row row-tight">
                 <Clock size={14} />
                 <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
               </span>
-              <span>•</span>
               <span className="row row-tight">
                 <Users size={14} />
                 <span>{participants.length} Teams Enrolled</span>

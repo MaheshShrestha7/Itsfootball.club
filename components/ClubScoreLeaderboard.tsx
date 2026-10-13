@@ -138,13 +138,18 @@ export default function ClubScoreLeaderboard({
           </select>
         )}
 
-        {/* Metric Selector Buttons */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', background: 'rgba(var(--shade-rgb), 0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        {/* Metric Selector Buttons: one row; when space runs out (phones) each label wraps inside its own
+            button instead of one button dropping alone onto a second row */}
+        <div style={{ display: 'flex', flex: '0 1 auto', maxWidth: '100%', background: 'rgba(var(--shade-rgb), 0.4)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
           <button
             id="tab-clubscore-season"
             onClick={() => setFilter('season')}
             style={{
-              padding: '0.45rem 0.9rem',
+              flex: '1 1 auto',
+              justifyContent: 'center',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              padding: '0.45rem 0.7rem',
               borderRadius: '6px',
               border: 'none',
               background: filter === 'season' ? 'var(--club-primary)' : 'transparent',
@@ -156,7 +161,7 @@ export default function ClubScoreLeaderboard({
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              whiteSpace: 'nowrap',
+              whiteSpace: 'normal',
             }}
           >
             <Trophy size={13} />
@@ -167,7 +172,11 @@ export default function ClubScoreLeaderboard({
             id="tab-clubscore-weekly"
             onClick={() => setFilter('weekly')}
             style={{
-              padding: '0.45rem 0.9rem',
+              flex: '1 1 auto',
+              justifyContent: 'center',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              padding: '0.45rem 0.7rem',
               borderRadius: '6px',
               border: 'none',
               background: filter === 'weekly' ? 'var(--club-primary)' : 'transparent',
@@ -179,7 +188,7 @@ export default function ClubScoreLeaderboard({
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              whiteSpace: 'nowrap',
+              whiteSpace: 'normal',
             }}
           >
             <TrendingUp size={13} />
@@ -190,7 +199,11 @@ export default function ClubScoreLeaderboard({
             id="tab-clubscore-streak"
             onClick={() => setFilter('streak')}
             style={{
-              padding: '0.45rem 0.9rem',
+              flex: '1 1 auto',
+              justifyContent: 'center',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              padding: '0.45rem 0.7rem',
               borderRadius: '6px',
               border: 'none',
               background: filter === 'streak' ? 'var(--club-primary)' : 'transparent',
@@ -202,7 +215,7 @@ export default function ClubScoreLeaderboard({
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              whiteSpace: 'nowrap',
+              whiteSpace: 'normal',
             }}
           >
             <Flame size={13} color={filter === 'streak' ? '#FFFFFF' : '#EF4444'} />
