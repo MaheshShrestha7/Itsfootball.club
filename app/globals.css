@@ -1641,9 +1641,15 @@ textarea {
 .fixture-card {
   padding: 1.25rem 1.75rem;
   display: grid;
-  grid-template-columns: 240px 1fr auto;
+  /* Fixed side columns so the VS/score block lines up from card to card,
+     however many buttons a card has (extra buttons wrap onto a second row) */
+  grid-template-columns: 240px minmax(0, 1fr) 270px;
   align-items: center;
   gap: 1.5rem;
+}
+
+.fixture-card .fixture-actions {
+  justify-content: flex-end;
 }
 
 @media (max-width: 860px) {

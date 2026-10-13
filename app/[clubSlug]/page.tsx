@@ -1428,7 +1428,8 @@ export default function ClubPublicPage({
                           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
                         }}
                       />
-                      <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 120px' }}>
+                      {/* Below ~180px beside the logo, the name moves under it rather than squeezing into a thin column */}
+                      <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 180px' }}>
                         <div style={{
                           fontWeight: 900,
                           fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
@@ -1598,6 +1599,9 @@ export default function ClubPublicPage({
             {(fixturesTab === 'upcoming' ? upcomingMatches : pastMatches).filter(inFixturesTeam).map(match => {
               const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
               const hideScore = publicScoreHidden(match, clubTeams);
+              const competitionLabel = match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition;
+              // The match type badge, unless the competition label already says it ("Friendly" + "FRIENDLY")
+              const showTypeBadge = !!match.match_type && !(competitionLabel || '').toLowerCase().includes(match.match_type.toLowerCase());
               return (
               <div
                 key={match.id}
@@ -1607,9 +1611,9 @@ export default function ClubPublicPage({
                 <div className="fixture-meta">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'inherit' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
-                      {match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition}
+                      {competitionLabel}
                     </span>
-                    {match.match_type && (
+                    {showTypeBadge && (
                       <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
                         {match.match_type}
                       </span>
@@ -1641,7 +1645,7 @@ export default function ClubPublicPage({
 
                 {/* Scoreline / Teams */}
                 <div className="fixture-teams" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'right', flex: 1, fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  <div style={{ textAlign: 'right', flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                     {match.home_team_name}
                   </div>
 
@@ -1666,7 +1670,7 @@ export default function ClubPublicPage({
                     )}
                   </div>
 
-                  <div style={{ textAlign: 'left', flex: 1, fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  <div style={{ textAlign: 'left', flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                     {match.away_team_name}
                   </div>
                 </div>

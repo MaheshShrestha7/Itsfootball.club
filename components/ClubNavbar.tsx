@@ -50,30 +50,69 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
 
-  // The full link bar only when it fits beside the crest and club name; otherwise the menu button.
+  // The link bar shows as many links as fit beside the crest and club name. Links marked
+  // data-nav-drop give way first (1 first); whatever is left out is still in the menu, so the
+  // menu button shows whenever any link is hidden. Below that, it's the menu button alone.
   // Measured, not a fixed breakpoint: what fits depends on the club's name, who is signed in
   // (admins get extra controls) and whether a match is live.
   const rowRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const sideRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [navFits, setNavFits] = useState(true);
+  const [dropCount, setDropCount] = useState(0);
   useEffect(() => {
     const row = rowRef.current, nav = navRef.current, side = sideRef.current, name = nameRef.current;
     if (!row || !nav || !side || !name) return;
     const ctx = document.createElement('canvas').getContext('2d');
+    // Last seen width of each link, so a hidden one can still be counted
+    const widths = new WeakMap<Element, number>();
     const check = () => {
-      // Room the club name needs on two lines (it wraps rather than cutting off): crest and gap,
-      // a bit over half its one-line width, and the short-name badge beside it
+      // Room the club name needs on two lines (it wraps rather than cutting off): the widest line
+      // of its best two-line split, plus the crest and the short-name badge beside it
       const style = getComputedStyle(name);
-      let oneLine = name.scrollWidth;
+      let nameMin = Math.ceil(name.scrollWidth * 0.6);
       if (ctx) {
         ctx.font = style.font;
-        oneLine = ctx.measureText(club.name).width + (parseFloat(style.letterSpacing) || 0) * club.name.length;
+        const spacing = parseFloat(style.letterSpacing) || 0;
+        const measure = (t: string) => ctx.measureText(t).width + spacing * t.length;
+        const words = club.name.trim().split(/\s+/);
+        nameMin = Math.ceil(words.length < 2 ? measure(club.name)
+          : Math.min(...words.slice(1).map((_, i) =>
+              Math.max(measure(words.slice(0, i + 1).join(' ')), measure(words.slice(i + 1).join(' '))))));
       }
       const badge = name.nextElementSibling as HTMLElement | null;
-      const brandMin = 56 + Math.ceil(oneLine * 0.6) + (badge ? badge.offsetWidth + 6 : 0);
-      setNavFits(brandMin + nav.scrollWidth + side.offsetWidth + 32 <= row.clientWidth);
+      // 10% spare: canvas text runs a little narrower than the rendered heading font
+      const brandMin = 56 + Math.ceil(nameMin * 1.1) + 4 + (badge ? badge.offsetWidth + 7 : 0);
+      // The theme/notification controls, without the menu button (shown or not, it's added below)
+      const trigger = triggerRef.current;
+      const sideW = side.offsetWidth - (trigger && trigger.offsetWidth ? trigger.offsetWidth + 8 : 0);
+      const gap = parseFloat(getComputedStyle(nav).columnGap) || 16;
+
+      const links = [...nav.children] as HTMLElement[];
+      links.forEach(el => { if (el.offsetWidth) widths.set(el, el.offsetWidth + (parseFloat(getComputedStyle(el).marginLeft) || 0)); });
+      const widthOf = (els: HTMLElement[]) =>
+        els.reduce((sum, el) => sum + (widths.get(el) ?? 0), 0) + gap * Math.max(0, els.length - 1);
+      const droppable = links
+        .filter(el => el.dataset.navDrop)
+        .sort((a, b) => Number(a.dataset.navDrop) - Number(b.dataset.navDrop));
+      // clientWidth includes the container's side padding, which the links can't use
+      const rowStyle = getComputedStyle(row);
+      const rowWidth = row.clientWidth - (parseFloat(rowStyle.paddingLeft) || 0) - (parseFloat(rowStyle.paddingRight) || 0);
+      const room = rowWidth - brandMin - sideW - 32;
+      const menuButton = 48;
+
+      let drop = 0;
+      if (widthOf(links) > room) {
+        drop = 1;
+        while (drop <= droppable.length && widthOf(links.filter(el => !droppable.slice(0, drop).includes(el))) > room - menuButton) drop++;
+      }
+      setNavFits(drop <= droppable.length);
+      // As a drop level: the data-nav-drop of the last link to give way (links not shown to this
+      // visitor, like Become a Sponsor when signed in, leave gaps in the numbering)
+      const last = droppable[Math.min(drop, droppable.length) - 1];
+      setDropCount(last ? Number(last.dataset.navDrop) : 0);
     };
     check();
     // The heading webfont swaps in after first paint and changes the name's width
@@ -84,9 +123,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     observer.observe(name);
     return () => observer.disconnect();
   }, [club.name, club.short_name]);
+  const dropped = (n: number) => navFits && dropCount >= n;
 
   return (
-    <header data-nav-fits={navFits ? undefined : 'false'} style={{
+    <header data-nav-fits={navFits ? undefined : 'false'} data-nav-drop={navFits && dropCount ? dropCount : undefined} style={{
       position: 'sticky',
       top: 0,
       zIndex: 50,
@@ -254,32 +294,32 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             <span>Tournaments</span>
           </Link>
           {hasShop && (
-            <Link href={`/${club.slug}/shop`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+            <Link href={`/${club.slug}/shop`} data-nav-drop="6" hidden={dropped(6)} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
               <ShoppingBag size={15} color="var(--club-primary)" />
               <span>Shop</span>
             </Link>
           )}
           {multiTeam ? (
-            <Link href={`/${club.slug}/teams`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+            <Link href={`/${club.slug}/teams`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
               Teams
             </Link>
           ) : (
-            <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+            <Link href={`/${club.slug}#squad`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
               Squad
             </Link>
           )}
-          <Link href={`/${club.slug}#events`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}#events`} data-nav-drop="4" hidden={dropped(4)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Events
           </Link>
-          <Link href={`/${club.slug}#news`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}#news`} data-nav-drop="3" hidden={dropped(3)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             News
           </Link>
-          <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}/gallery`} data-nav-drop="2" hidden={dropped(2)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Gallery & Videos
           </Link>
           {/* Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar */}
           {!isAuthenticated && (
-          <Link href={`/${club.slug}/sponsor`} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}/sponsor`} data-nav-drop="1" hidden={dropped(1)} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
             <Handshake size={15} color="var(--club-primary)" />
             <span>Become a Sponsor</span>
           </Link>
@@ -386,6 +426,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             borderRadius: '8px',
           }}
           aria-label="Toggle Menu"
+          ref={triggerRef}
           className="mobile-trigger touch-target"
         >
           <Menu size={24} />
@@ -658,6 +699,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           }
           header[data-nav-fits='false'] .mobile-trigger {
             display: flex !important;
+          }
+          /* Some links gave way for room: they're in the menu, so show its button too */
+          header[data-nav-drop] .mobile-trigger {
+            display: flex !important;
+          }
+          .desktop-nav > :global([hidden]) {
+            display: none !important;
           }
         }
         /* Phones and tablets: the crest already carries the club, so the short-name badge gives its room to the name */
