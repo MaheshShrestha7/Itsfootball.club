@@ -625,7 +625,6 @@ export interface ClubSeasonStatsSummary {
   goalsFor: number;
   goalsAgainst: number;
   goalDifference: number;
-  points: number;
   winRate: number;
   cleanSheets: number;
   form: ('W' | 'D' | 'L')[];
