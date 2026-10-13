@@ -3,6 +3,7 @@
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { Award, Plus, CheckCircle2, CalendarDays, X } from 'lucide-react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { defaultSeasonLabel } from '@/lib/season';
@@ -148,18 +149,15 @@ export default function AdminCommitteePage({
         <form onSubmit={handleAppoint} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
-              <label htmlFor="committee-select-member" className="form-label">Select Member</label>
-              <select id="committee-select-member"
-                className="form-select"
+              <label className="form-label">Select Member</label>
+              <PlayerSearchSelect
+                id="committee-select-member"
+                players={clubMembers}
                 value={selectedMemberId}
-                onChange={e => setSelectedMemberId(e.target.value)}
-              >
-                {clubMembers.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name} ({m.is_executive ? m.executive_title : m.player_position || 'Staff'})
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedMemberId}
+                placeholder="Search members by name..."
+                optionLabel={m => `${m.full_name} (${m.is_executive ? m.executive_title : m.player_position || 'Staff'})`}
+              />
             </div>
 
             <div className="form-group">

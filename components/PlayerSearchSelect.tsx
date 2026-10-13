@@ -20,6 +20,8 @@ interface PlayerSearchSelectProps {
   /** Non-player choices shown alongside the squad, e.g. "-- Custom Name --" or "-- None --" */
   extraOptions?: { value: string; label: string }[];
   placeholder?: string;
+  /** How each person is shown in the list; defaults to "#number Name (position)" */
+  optionLabel?: (p: ClubMember) => string;
 }
 
 function playerLabel(p: ClubMember): string {
@@ -35,18 +37,21 @@ export default function PlayerSearchSelect({
   onChange,
   extraOptions = [],
   placeholder = 'Search by name or squad number...',
+  optionLabel = playerLabel,
 }: PlayerSearchSelectProps) {
   const options: Option[] = [
     ...extraOptions.map(o => ({ ...o, isPlayer: false })),
-    ...players.map(p => ({ value: p.id, label: playerLabel(p), photoUrl: p.photo_url, isPlayer: true })),
+    ...players.map(p => ({ value: p.id, label: optionLabel(p), photoUrl: p.photo_url, isPlayer: true })),
   ];
-  const [query, setQuery] = useState(() => options.find(o => o.value === value)?.label || '');
+  const selectedLabel = options.find(o => o.value === value)?.label || '';
+  const [query, setQuery] = useState(selectedLabel);
   const [open, setOpen] = useState(false);
 
+  // Only resync when the selection itself changes: the default `extraOptions = []` is a new array
+  // on every render, so depending on it reset the search text after each keystroke
   useEffect(() => {
-    setQuery(options.find(o => o.value === value)?.label || '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, players, extraOptions]);
+    setQuery(selectedLabel);
+  }, [value, selectedLabel]);
 
   const filtered = query.trim()
     ? options.filter(o => o.label.toLowerCase().includes(query.trim().toLowerCase()))
