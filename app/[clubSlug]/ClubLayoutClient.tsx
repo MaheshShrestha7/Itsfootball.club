@@ -81,7 +81,8 @@ export default function ClubLayoutClient({
       <div style={{ flex: 1 }}>
         {children}
       </div>
-      <Footer club={club} sponsors={clubSponsors} />
+      {/* Admin pages get a slim footer: the public sponsors block and site links only made them longer */}
+      <Footer club={club} sponsors={clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
       <ClubTabBar club={club} />
     </div>
   );

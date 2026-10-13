@@ -3,6 +3,7 @@
 import React from 'react';
 import { Sponsor } from '@/lib/supabase/types';
 import SponsorTrackedLink from './SponsorTrackedLink';
+import SponsorLogo from './SponsorLogo';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 
 interface SponsorMarqueeProps {
@@ -31,7 +32,7 @@ export default function SponsorMarquee({ sponsors, placement, title = 'Matchday 
           href={s.website_url || '#'}
           className="sponsor-marquee-item"
         >
-          <img loading="lazy" decoding="async" src={s.logo_url} alt={`${s.name} logo`} draggable={false} />
+          <SponsorLogo src={s.logo_url} name={s.name} height={60} />
           <span>{s.name}</span>
         </SponsorTrackedLink>
       ))}

@@ -736,8 +736,16 @@ export default function AdminLayout({
             <Menu size={18} />
             <span className="admin-subbar-menu-label">Admin Menu</span>
           </button>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {currentNavItem ? (currentChild ? `${currentNavItem.label}: ${currentChild.label}` : currentNavItem.label) : 'Control Room'}
+          {/* A sub-page shows its section on a small line above, so neither name gets cut off */}
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center', lineHeight: 1.2 }}>
+            {currentNavItem && currentChild && (
+              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentNavItem.label}
+              </div>
+            )}
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {currentNavItem ? (currentChild ? currentChild.label : currentNavItem.label) : 'Control Room'}
+            </div>
           </div>
           <Link
             href={`/${club.slug}`}

@@ -79,7 +79,7 @@ export default function AdminTournamentsPage({
                 textTransform: 'uppercase',
               }}
             >
-              Challonge Engine for Football
+              Cups &amp; Leagues
             </span>
             {activeSeason && (
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -91,7 +91,7 @@ export default function AdminTournamentsPage({
             Tournaments & Cups
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.25rem 0 0 0' }}>
-            Design knockout brackets, round-robin leagues, and group-stage cups with live auto-updating points tables.
+            Run knockout cups, round-robin leagues and group-stage tournaments, with points tables that update as results come in.
           </p>
         </div>
 
@@ -157,7 +157,8 @@ export default function AdminTournamentsPage({
             <Shield size={18} color="var(--c-blue)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Manage teams →</span>
+          {/* Says what's counted: the club's own sides, not the teams entered in a cup ("8 Teams Enrolled") */}
+          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Picked from your members · Manage →</span>
         </Link>
 
         <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>

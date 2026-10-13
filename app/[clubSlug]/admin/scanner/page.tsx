@@ -146,14 +146,14 @@ export default function AdminScannerPage({
           QR Scanner Reticle & Gate Check-In
         </h1>
         <p className="text-body">
-          Scan digital QR passes for member verification and turnstile event check-in operations.
+          Scan members&apos; digital passes to check they&apos;re valid and check people in to events.
         </p>
       </div>
 
       {/* Mode Selector: Member Verification vs Event Check-In */}
       <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <button data-view-ok
               onClick={() => { setMode('verify'); setCurrentResult(null); }}
               className="btn btn-sm"

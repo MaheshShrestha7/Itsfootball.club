@@ -8,6 +8,7 @@ import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types
 import { FORMAT_PRESETS, buildLineupForPreset, defaultPresetFor, normalizeLineup } from '@/components/TacticalPitch';
 import LineupWorkbench from '@/components/LineupWorkbench';
 import { clubLineupSide } from '@/lib/tournament-engine';
+import { fixtureLabel } from '@/lib/fixture-label';
 import AdminGuard from '@/components/AdminGuard';
 import {
   Layers,
@@ -285,7 +286,7 @@ export default function DraftLineupPage() {
             >
               {clubMatches.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.home_team_name} vs {m.away_team_name} ({m.competition})
+                  {fixtureLabel(m, club?.name || '')} ({m.competition})
                 </option>
               ))}
             </select>

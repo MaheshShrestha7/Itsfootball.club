@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
 import { sponsorHref } from '@/lib/sponsors';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import SponsorLogo from '@/components/SponsorLogo';
 import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { formatMoney } from '@/lib/finance';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   prospect: 'Prospect (In Talks)',
@@ -50,6 +53,12 @@ export default function AdminSponsorsPage({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showLivePreview, setShowLivePreview] = useState(true);
+  // Package values in the club's own currency, the same as Finance shows them (AUD until set)
+  const [currency, setCurrency] = useState('AUD');
+  useEffect(() => {
+    getSupabaseClient()?.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => data?.currency && setCurrency(data.currency));
+  }, [club.id]);
 
   const blankForm = {
     scope: 'club' as 'club' | 'event',
@@ -138,7 +147,7 @@ export default function AdminSponsorsPage({
             Club Sponsors & Commercial Partners
           </h1>
           <p className="text-body">
-            Manage commercial kit partners, home ground naming rights, and grassroots sponsors.
+            Manage your kit sponsors, ground naming rights and community sponsors.
           </p>
         </div>
 
@@ -151,22 +160,23 @@ export default function AdminSponsorsPage({
       {/* Top Banner & Live Preview Toggle */}
       <div style={{
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: '0.75rem 1rem',
         padding: '0.85rem 1.25rem',
         background: 'rgba(var(--tint-rgb), 0.03)',
         border: '1px solid var(--border-subtle)',
         borderRadius: '12px',
         marginBottom: '1.5rem',
       }}>
-        <div className="row">
-          <Sparkles size={16} color="var(--c-amber)" />
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Sponsor Space Scaling Active:
-          </span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        {/* One paragraph that wraps as a whole, not three side-by-side columns on a phone */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 260px', minWidth: 0 }}>
+          <Sparkles size={16} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Sponsor Space Scaling Active: </strong>
             Platinum sponsors receive premier width &amp; larger logos, cascading down to Gold, Silver, and Grassroots.
-          </span>
+          </p>
         </div>
         <button data-view-ok
           type="button"
@@ -227,14 +237,11 @@ export default function AdminSponsorsPage({
                     boxShadow: isXL ? '0 6px 24px rgba(245, 158, 11, 0.12)' : 'none',
                   }}
                 >
-                  <img loading="lazy" decoding="async"
+                  <SponsorLogo
                     src={sponsor.logo_url}
-                    alt={`${sponsor.name} logo`}
-                    style={{
-                      height: isXL ? '48px' : isLG ? '36px' : isMD ? '28px' : '22px',
-                      maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px',
-                      objectFit: 'contain',
-                    }}
+                    name={sponsor.name}
+                    height={isXL ? 48 : isLG ? 36 : isMD ? 28 : 22}
+                    style={{ maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px' }}
                   />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
@@ -280,20 +287,20 @@ export default function AdminSponsorsPage({
                 borderLeft: scale === 'xl' ? '4px solid #F59E0B' : scale === 'lg' ? '4px solid #EAB308' : undefined,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                <img loading="lazy" decoding="async"
+              {/* On a phone the details move under the logo instead of squeezing into a narrow column */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem 1.25rem', flex: '1 1 auto', minWidth: 0 }}>
+                <SponsorLogo
                   src={sponsor.logo_url}
-                  alt={`${sponsor.name} logo`}
+                  name={sponsor.name}
+                  height={scale === 'xl' ? 46 : 38}
                   style={{
                     width: scale === 'xl' ? '70px' : '55px',
-                    height: scale === 'xl' ? '46px' : '38px',
-                    objectFit: 'contain',
                     background: 'rgba(var(--tint-rgb), 0.05)',
                     padding: '4px',
                     borderRadius: '6px',
                   }}
                 />
-                <div>
+                <div style={{ flex: '1 1 240px', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{sponsor.name}</span>
                     <span className="badge" style={{
@@ -338,8 +345,7 @@ export default function AdminSponsorsPage({
                     )}
                     {sponsor.package_value != null && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <DollarSign size={11} />
-                        {sponsor.package_value.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                        {formatMoney(Math.round(sponsor.package_value * 100), currency)}
                         {sponsor.season ? ` • ${sponsor.season}` : ''}
                       </span>
                     )}

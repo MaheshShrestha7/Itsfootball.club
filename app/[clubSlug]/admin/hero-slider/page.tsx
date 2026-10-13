@@ -267,11 +267,11 @@ export default function AdminHeroSliderPage({
             Hero Slider & Pinned Content Manager
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px' }}>
-            Pin multiple events, live or upcoming fixtures, news articles, and promotional image banners to rotate on your club&apos;s public home page hero carousel.
+            Choose the events, fixtures, news and image banners that rotate at the top of your club&apos;s home page.
           </p>
         </div>
 
-        <div className="row row-loose">
+        <div className="row row-loose row-wrap">
           <Link
             href={`/${club.slug}`}
             target="_blank"
@@ -373,6 +373,7 @@ export default function AdminHeroSliderPage({
               onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : Math.max(0, activePinned.length - 1)))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
+              aria-label="Previous slide"
               style={{ width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ChevronLeft size={16} />
@@ -381,6 +382,7 @@ export default function AdminHeroSliderPage({
               onClick={() => setPreviewIndex(prev => (prev + 1) % Math.max(1, activePinned.length))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
+              aria-label="Next slide"
               style={{ width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ChevronRight size={16} />
@@ -448,11 +450,11 @@ export default function AdminHeroSliderPage({
                   {currentPreview.subtitle}
                 </p>
 
-                <div className="row row-loose">
+                <div className="row row-loose row-wrap">
                   <div className="btn btn-primary btn-sm" style={{ pointerEvents: 'none', fontWeight: 700 }}>
                     {currentPreview.cta_label || 'Explore Action'}
                   </div>
-                  <span className="text-note">
+                  <span className="text-note" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                     Links to: {currentPreview.cta_link || `/${club.slug}`}
                   </span>
                 </div>
@@ -504,8 +506,8 @@ export default function AdminHeroSliderPage({
       <div className="split-2">
         {/* Left Column: Currently Pinned Items (Order & Settings) */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
               <span>Pinned Slides Order</span>
               <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
                 {pinnedItems.length} Total
@@ -622,6 +624,7 @@ export default function AdminHeroSliderPage({
                         <button
                           onClick={() => handleMoveUp(index)}
                           disabled={isFirst}
+                          aria-label="Move slide up"
                           className="btn btn-secondary btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0, opacity: isFirst ? 0.3 : 1 }}
                         >
@@ -631,6 +634,7 @@ export default function AdminHeroSliderPage({
                         <button
                           onClick={() => handleMoveDown(index)}
                           disabled={isLast}
+                          aria-label="Move slide down"
                           className="btn btn-secondary btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0, opacity: isLast ? 0.3 : 1 }}
                         >
@@ -642,6 +646,7 @@ export default function AdminHeroSliderPage({
                           className="btn btn-danger btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0 }}
                           title="Unpin this slide"
+                          aria-label="Unpin this slide"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -730,6 +735,7 @@ export default function AdminHeroSliderPage({
           {/* Category Tabs */}
           <div style={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '0.35rem',
             background: 'var(--bg-surface)',
             padding: '0.35rem',
@@ -750,7 +756,7 @@ export default function AdminHeroSliderPage({
                   key={tab.type}
                   onClick={() => setPickerTab(tab.type)}
                   style={{
-                    flex: 1,
+                    flex: '1 1 auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

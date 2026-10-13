@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { Club, ClubMember, MemberMessage } from '@/lib/supabase/types';
@@ -22,6 +22,7 @@ interface Conversation {
 export default function MemberMessagesPanel({ club, adminName, startMemberId }: { club: Club; adminName: string; startMemberId?: string | null }) {
   const { members, memberMessages, sendMemberMessage, replyToMemberMessage, markMemberMessageRead } = useClub();
   const [selectedId, setSelectedId] = useState<string | null>(startMemberId || null);
+  const threadRef = useRef<HTMLDivElement>(null);
   const [replyText, setReplyText] = useState('');
   const [sent, setSent] = useState(false);
 
@@ -102,7 +103,16 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
               data-view-ok
               key={c.memberId}
               type="button"
-              onClick={() => setSelectedId(c.memberId)}
+              onClick={() => {
+                setSelectedId(c.memberId);
+                // Stacked on a phone, the thread opens below the list: bring it into view
+                const pane = threadRef.current;
+                const list = pane?.previousElementSibling as HTMLElement | null;
+                if (pane && list && pane.offsetTop > list.offsetTop) {
+                  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                  requestAnimationFrame(() => pane.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }));
+                }
+              }}
               style={{
                 textAlign: 'left',
                 padding: '0.85rem',
@@ -131,8 +141,9 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
         </div>
       </div>
 
-      {/* Thread and reply */}
-      <div className="glass-panel" style={{ padding: '1.5rem', height: '620px', display: 'flex', flexDirection: 'column' }}>
+      {/* Thread and reply. On a phone (stacked under the list) it's hidden until a conversation is picked,
+          rather than a screen of empty box below the list */}
+      <div ref={threadRef} className="glass-panel member-thread-pane" data-empty={selected ? undefined : ''} style={{ padding: '1.5rem', height: '620px', display: 'flex', flexDirection: 'column', scrollMarginTop: '6rem' }}>
         {selected ? (
           <>
             <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>

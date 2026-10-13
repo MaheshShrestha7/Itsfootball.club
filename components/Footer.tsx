@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
+import SponsorLogo from './SponsorLogo';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorTierLabel } from '@/lib/sponsors';
 import { SOCIAL_PROFILES } from '@/lib/seo';
@@ -14,6 +15,8 @@ import { SOCIAL_PROFILES } from '@/lib/seo';
 interface FooterProps {
   club?: Club | null;
   sponsors?: Sponsor[];
+  /** Admin pages: just the copyright and legal links, without the public sponsors block and site links */
+  compact?: boolean;
 }
 
 // Official logos from Simple Icons (CC0), keyed by SOCIAL_PROFILES name. TikTok's brand colour is black/white,
@@ -35,7 +38,7 @@ const sentence = (text: string | null | undefined) => {
   return t && !/[.!?…]$/.test(t) ? `${t}.` : t;
 };
 
-export default function Footer({ club, sponsors }: FooterProps) {
+export default function Footer({ club, sponsors, compact = false }: FooterProps) {
   const { clubs } = useClub();
   const [crestFailed, setCrestFailed] = useState(false);
   useEffect(() => setCrestFailed(false), [club?.logo_url]);
@@ -47,12 +50,12 @@ export default function Footer({ club, sponsors }: FooterProps) {
     <footer style={{
       background: 'rgba(var(--dk-4-6-9), 0.95)',
       borderTop: '1px solid var(--border-subtle)',
-      marginTop: '5rem',
+      marginTop: compact ? '3rem' : '5rem',
       position: 'relative',
       zIndex: 10,
     }}>
       {/* Optional Sponsor Marquee Bar if Club sponsors exist */}
-      {sponsors && sponsors.length > 0 && (
+      {!compact && sponsors && sponsors.length > 0 && (
         <div style={{
           borderBottom: '1px solid var(--border-subtle)',
           padding: '1.5rem 0',
@@ -110,14 +113,12 @@ export default function Footer({ club, sponsors }: FooterProps) {
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    <img loading="lazy" decoding="async"
+                    <SponsorLogo
                       src={sponsor.logo_url}
-                      alt={`${sponsor.name} logo`}
-                      draggable={false}
+                      name={sponsor.name}
+                      height={isPlatinum ? 68 : isGold ? 54 : 42}
                       style={{
-                        height: isPlatinum ? '68px' : isGold ? '54px' : '42px',
                         maxWidth: isPlatinum ? 'min(240px, 70vw)' : isGold ? 'min(190px, 60vw)' : 'min(150px, 50vw)',
-                        objectFit: 'contain',
                         borderRadius: '4px',
                       }}
                     />
@@ -144,8 +145,8 @@ export default function Footer({ club, sponsors }: FooterProps) {
       )}
 
       {/* Main Footer Content */}
-      <div className="container" style={{ padding: '3.5rem 1.5rem 2.5rem 1.5rem' }}>
-        <div style={{
+      <div className="container" style={{ padding: compact ? '0 1.5rem 1.5rem' : '3.5rem 1.5rem 2.5rem 1.5rem' }}>
+        {!compact && <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
           gap: '2.5rem',
@@ -286,11 +287,11 @@ export default function Footer({ club, sponsors }: FooterProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Bottom copyright */}
         <div style={{
-          borderTop: '1px solid var(--border-subtle)',
+          borderTop: compact ? 'none' : '1px solid var(--border-subtle)',
           paddingTop: '1.5rem',
           display: 'flex',
           flexWrap: 'wrap',

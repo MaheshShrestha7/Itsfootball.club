@@ -500,7 +500,7 @@ export default function AdminMatchesPage({
             Match Fixtures & Scheduling Hub
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px', marginTop: '0.35rem' }}>
-            Schedule fixtures, assign match types, customize promotional flyers, spotlight matches on the homepage hero carousel, and configure door QR self-check-in stations.
+            Add fixtures, set the match type, design match flyers, feature a match at the top of your home page, and set up QR check-in at the gate.
           </p>
         </div>
 
@@ -525,11 +525,11 @@ export default function AdminMatchesPage({
         </div>
       </div>
 
-      {/* KPI Metric Cards */}
+      {/* KPI Metric Cards: two to a row on a phone, so the fixtures aren't six cards down the page */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
           gap: '1rem',
           marginBottom: '2rem'
         }}
@@ -595,7 +595,7 @@ export default function AdminMatchesPage({
         }}
       >
         {/* Status Tabs */}
-        <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
           {(['all', 'upcoming', 'completed', 'live'] as const).map(tab => (
             <button data-view-ok
               key={tab}
@@ -610,6 +610,7 @@ export default function AdminMatchesPage({
                 fontWeight: 700,
                 cursor: 'pointer',
                 textTransform: 'capitalize',
+                whiteSpace: 'nowrap',
                 transition: 'background 0.2s'
               }}
             >
@@ -625,7 +626,7 @@ export default function AdminMatchesPage({
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
             <option value="ALL">All Match Types</option>
             <option value="internal">Internal / Intra-Squad</option>
@@ -639,7 +640,7 @@ export default function AdminMatchesPage({
               value={teamFilter}
               onChange={e => setTeamFilter(e.target.value)}
               className="form-input"
-              style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+              style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
             >
               <option value="ALL">All Teams</option>
               {teams.map(t => (
@@ -653,7 +654,7 @@ export default function AdminMatchesPage({
             value={seasonFilter}
             onChange={e => setSeasonFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
             <option value="ALL">All Seasons</option>
             {clubSeasons.map(s => (
@@ -662,11 +663,12 @@ export default function AdminMatchesPage({
           </select>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)' }}>
+          {/* Filters share the row evenly (same widths) and wrap together on a phone */}
+          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)', flex: '2 1 220px' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input data-view-ok aria-label="Search fixtures"
               type="text"
-              placeholder="Search opponent, title, venue..."
+              placeholder="Search fixtures..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="form-input"

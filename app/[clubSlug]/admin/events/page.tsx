@@ -231,7 +231,7 @@ export default function AdminEventsPage({
             Club Events & Trainings Management
           </h1>
           <p className="text-body">
-            Schedule fixtures, training sessions, AGM meetings, trials, and operate QR check-in gates.
+            Schedule fixtures, training sessions, AGMs and trials, and check people in with QR codes.
           </p>
         </div>
 
@@ -344,7 +344,7 @@ export default function AdminEventsPage({
             </div>
 
             {/* Action Buttons */}
-            <div className="row">
+            <div className="row row-wrap">
               {(() => {
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
                 return (

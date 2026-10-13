@@ -24,6 +24,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+/** "2026-07-01" -> "1 Jul 2026" (read as a calendar date, so no time-zone shift); anything else shown as stored */
+const seasonDay = (date: string | null | undefined) => {
+  const d = new Date(`${(date || '').slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(d.getTime())
+    ? date || ''
+    : new Intl.DateTimeFormat('en-AU', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+};
+
 export default function AdminSeasonsPage({
   params,
 }: {
@@ -210,7 +218,7 @@ export default function AdminSeasonsPage({
             Season Management
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
-            Define club seasons (e.g. 2026/27), set active campaign periods, and seamlessly link matches, executive committee appointments, and club events.
+            Set up club seasons (e.g. 2026/27) and choose the current one. Matches, committee posts and events are grouped by season.
           </p>
         </div>
 
@@ -301,8 +309,8 @@ export default function AdminSeasonsPage({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span>📅 From: <strong className="text-primary">{activeSeason.start_date}</strong></span>
-                <span>🏁 Until: <strong className="text-primary">{activeSeason.end_date}</strong></span>
+                <span>📅 From: <strong className="text-primary">{seasonDay(activeSeason.start_date)}</strong></span>
+                <span>🏁 Until: <strong className="text-primary">{seasonDay(activeSeason.end_date)}</strong></span>
               </div>
             </div>
 
@@ -430,27 +438,27 @@ export default function AdminSeasonsPage({
                       </div>
 
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        {season.start_date} → {season.end_date}
+                        {seasonDay(season.start_date)} to {seasonDay(season.end_date)}
                         {season.notes && <span style={{ marginLeft: '0.6rem', color: 'var(--text-secondary)' }}>• {season.notes}</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* Middle Linked Counters */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 1.5rem', fontSize: '0.82rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.matchesCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Radio size={14} color="var(--club-primary)" />
-                      <span><strong>{stats.matchesCount}</strong> matches</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.matchesCount}</strong> matches</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.eventsCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Calendar size={14} color="var(--c-amber)" />
-                      <span><strong>{stats.eventsCount}</strong> events</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.eventsCount}</strong> events</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.committeeCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Award size={14} color="var(--c-blue)" />
-                      <span><strong>{stats.committeeCount}</strong> committee</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.committeeCount}</strong> committee</span>
                     </div>
                   </div>
 

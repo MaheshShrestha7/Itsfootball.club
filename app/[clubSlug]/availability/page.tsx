@@ -29,6 +29,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
+import { defaultFixture } from '@/lib/fixtures';
 
 function AvailabilityHub() {
   const params = useParams();
@@ -48,6 +49,7 @@ function AvailabilityHub() {
     syncStatus,
     clubTeams,
     clubTeamMembers,
+    tournamentParticipants,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -66,10 +68,14 @@ function AvailabilityHub() {
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [club, matches]);
 
-  const upcomingMatches = useMemo(() => clubMatches.filter(m => m.status === 'upcoming'), [clubMatches]);
+  // Opens on the club's next fixture (not another club's game in a cup it hosts); recomputed as data arrives
+  const defaultMatch = useMemo(
+    () => (club ? defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true }) : undefined),
+    [club, clubMatches, tournamentParticipants]
+  );
 
   const [selectedMatchId, setSelectedMatchId] = useState<string>(() => {
-    return upcomingMatches[0]?.id || clubMatches[0]?.id || '';
+    return defaultMatch?.id || '';
   });
 
   // Selected player state
@@ -82,7 +88,7 @@ function AvailabilityHub() {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || defaultMatch;
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const matchSquad = useMemo(
     () => squadForMatch(squadPlayers, targetMatch, clubTeams, clubTeamMembers),
@@ -234,10 +240,11 @@ function AvailabilityHub() {
       <main style={{ padding: '2rem 1rem 4rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         {/* Header Breadcrumbs & Title */}
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-            <Link href={`/${club.slug}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>{club.name}</Link>
+          {/* Short labels kept on one line each, so the trail reads as one line on a phone */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+            <Link href={`/${club.slug}`} title={club.name} style={{ color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{club.short_name || club.name}</Link>
             <ChevronRight size={14} />
-            <span className="text-primary">Matchday Availability & RSVP</span>
+            <span className="text-primary" style={{ whiteSpace: 'nowrap' }}>Availability &amp; RSVP</span>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -313,7 +320,7 @@ function AvailabilityHub() {
                 </label>
                 <select data-view-ok id="availability-availability-for"
                   className="form-select"
-                  value={selectedMatchId}
+                  value={targetMatch?.id || selectedMatchId}
                   onChange={e => setSelectedMatchId(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
                 >
@@ -338,15 +345,16 @@ function AvailabilityHub() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <div className="row row-loose">
-                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{targetMatch.home_team_name}</span>
+                {/* Each side gets an equal share and wraps its name, so long names never crowd the VS */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 0', minWidth: 0 }}>
+                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'anywhere', minWidth: 0 }}>{targetMatch.home_team_name}</span>
                   </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-muted)' }}>VS</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: 'row-reverse' }}>
-                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.away_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.away_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{targetMatch.away_team_name}</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-muted)', flexShrink: 0, padding: '0 0.25rem' }}>VS</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexDirection: 'row-reverse', flex: '1 1 0', minWidth: 0 }}>
+                    <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.away_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.away_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'anywhere', minWidth: 0, textAlign: 'right' }}>{targetMatch.away_team_name}</span>
                   </div>
                 </div>
 

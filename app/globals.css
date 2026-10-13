@@ -383,7 +383,8 @@ textarea {
 
 .badge-live {
   background: rgba(239, 68, 68, 0.2);
-  color: #EF4444;
+  /* Plain red on its own red tint is under 4.5:1; a touch of the text colour lifts it in both themes */
+  color: color-mix(in srgb, var(--c-red), var(--text-primary) 20%);
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
@@ -1508,7 +1509,11 @@ textarea {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 4px 2px;
+  /* The right edge fades out so a pill cut off there reads as "swipe for more"; the extra
+     padding lets the last pill scroll clear of the fade */
+  padding: 4px 28px 4px 2px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 
 .scroll-pill-strip::-webkit-scrollbar {
@@ -1637,9 +1642,15 @@ textarea {
 .fixture-card {
   padding: 1.25rem 1.75rem;
   display: grid;
-  grid-template-columns: 240px 1fr auto;
+  /* Fixed side columns so the VS/score block lines up from card to card,
+     however many buttons a card has (extra buttons wrap onto a second row) */
+  grid-template-columns: 240px minmax(0, 1fr) 270px;
   align-items: center;
   gap: 1.5rem;
+}
+
+.fixture-card .fixture-actions {
+  justify-content: flex-end;
 }
 
 @media (max-width: 860px) {
@@ -1669,6 +1680,13 @@ textarea {
   .fixture-actions .btn {
     flex: 1;
     min-height: 44px;
+  }
+}
+
+/* Member inbox: stacked on a phone, the reply pane waits until a conversation is picked */
+@media (max-width: 640px) {
+  .member-thread-pane[data-empty] {
+    display: none !important;
   }
 }
 
@@ -2364,9 +2382,9 @@ dialog.confirm-dialog::backdrop {
 .m-0 { margin: 0; }
 
 /* Two side-by-side panels (e.g. editor + library) that stack on tablets and phones */
-.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+.split-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem; }
 @media (max-width: 900px) {
-  .split-2 { grid-template-columns: 1fr; }
+  .split-2 { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Photo gallery (components/PhotoGallery.tsx, admin/gallery and the public gallery page) */

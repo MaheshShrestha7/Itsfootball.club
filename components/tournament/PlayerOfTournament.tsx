@@ -109,7 +109,8 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
           ) : (
             <Award size={40} color="var(--c-amber)" />
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          {/* At least ~170px for the text; below that the button moves to its own line */}
+          <div style={{ flex: '1 1 170px', minWidth: 0 }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--c-amber)', textTransform: 'uppercase' }}>
               Player of the Tournament
             </div>
