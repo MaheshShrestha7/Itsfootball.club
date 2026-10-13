@@ -45,6 +45,7 @@ import {
   countsTowardClubRecord,
 } from './supabase/types';
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
+import { addSeasonStats, type StatsDelta } from './player-stats';
 import {
   buildTiesheet,
   clubLineupSide,
@@ -1394,7 +1395,7 @@ export function ClubProvider({
   // Awards go out one at a time so the last profile applied here is also the newest one.
   const awardQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const awardClubScorePoints = useCallback(
-    (memberId: string, basePoints: number, eventType: GamificationActivityLog['event_type'], description: string, referenceId?: string) => {
+    (memberId: string, basePoints: number, eventType: GamificationActivityLog['event_type'], description: string, referenceId?: string, season?: string) => {
       const client = getSupabaseClient();
       const member = members.find(m => m.id === memberId);
       if (!client || !member) return;
@@ -1405,7 +1406,7 @@ export function ClubProvider({
           p_points: basePoints,
           p_description: description,
           p_reference_id: referenceId && isUuid(referenceId) ? referenceId : null,
-          p_season: seasonLabelFor(member.club_id),
+          p_season: season || seasonLabelFor(member.club_id),
         })
         .then(({ data, error }) => {
           if (error || !data) {
@@ -2014,6 +2015,10 @@ export function ClubProvider({
 
     let totalXP = 0;
     const rules = clubScoreRules[targetMatch.club_id] || getDefaultClubScoreRules(targetMatch.club_id);
+    // Stats and points go to the match's season (a fixture without one counts toward the current season)
+    const season = targetMatch.season || seasonLabelFor(targetMatch.club_id);
+    const addStats = (memberId: string, delta: StatsDelta) =>
+      setPlayerStats(prev => addSeasonStats(prev, { clubId: targetMatch.club_id, memberId, season }, delta));
 
     // 1. Process and award Clean Sheet points to GK & Defenders
     payload.clean_sheet_member_ids.forEach((memId: string) => {
@@ -2023,13 +2028,12 @@ export function ClubProvider({
         pts,
         'match_clean_sheet',
         `Clean Sheet verified vs ${targetMatch.away_team_name}`,
-        matchId
+        matchId,
+        season
       );
       totalXP += pts;
 
-      setPlayerStats(prev =>
-        prev.map(s => (s.member_id === memId ? { ...s, clean_sheets: s.clean_sheets + 1 } : s))
-      );
+      addStats(memId, { clean_sheets: 1 });
     });
 
     // 2. Process and award Man of the Match (MOTM)
@@ -2040,13 +2044,12 @@ export function ClubProvider({
         pts,
         'match_motm',
         `Official Man of the Match vs ${targetMatch.away_team_name}`,
-        matchId
+        matchId,
+        season
       );
       totalXP += pts;
 
-      setPlayerStats(prev =>
-        prev.map(s => (s.member_id === payload.motm_member_id ? { ...s, motm_awards: s.motm_awards + 1 } : s))
-      );
+      addStats(payload.motm_member_id, { motm_awards: 1 });
     }
 
     // 3. Process audited match events (goals, assists, cards)
@@ -2055,35 +2058,27 @@ export function ClubProvider({
         if (evt.event_type === 'goal' || evt.event_type === 'penalty') {
           const scorer = members.find(m => m.id === evt.player_id);
           const pts = getGoalPointsForPosition(rules, scorer?.player_position);
-          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Match Goal (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId);
+          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Match Goal (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId, season);
           totalXP += pts;
-          setPlayerStats(prev =>
-            prev.map(s => (s.member_id === evt.player_id ? { ...s, goals: s.goals + 1 } : s))
-          );
+          addStats(evt.player_id, { goals: 1 });
         } else if (evt.event_type === 'yellow_card') {
           const pts = rules.points_yellow_card_penalty ?? -3;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow Card (${evt.minute}') audited`, matchId);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow Card (${evt.minute}') audited`, matchId, season);
           totalXP += pts;
-          setPlayerStats(prev =>
-            prev.map(s => (s.member_id === evt.player_id ? { ...s, yellow_cards: s.yellow_cards + 1 } : s))
-          );
+          addStats(evt.player_id, { yellow_cards: 1 });
         } else if (evt.event_type === 'red_card') {
           const pts = rules.points_red_card_penalty ?? -10;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red Card (${evt.minute}') audited`, matchId);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red Card (${evt.minute}') audited`, matchId, season);
           totalXP += pts;
-          setPlayerStats(prev =>
-            prev.map(s => (s.member_id === evt.player_id ? { ...s, red_cards: s.red_cards + 1 } : s))
-          );
+          addStats(evt.player_id, { red_cards: 1 });
         }
       }
 
       if (evt.assist_player_id) {
         const pts = rules.points_assist ?? 7;
-        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Match Assist (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId);
+        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Match Assist (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId, season);
         totalXP += pts;
-        setPlayerStats(prev =>
-          prev.map(s => (s.member_id === evt.assist_player_id ? { ...s, assists: s.assists + 1 } : s))
-        );
+        addStats(evt.assist_player_id, { assists: 1 });
       }
     });
 
@@ -2095,12 +2090,10 @@ export function ClubProvider({
       );
       if (!alreadyAwarded) {
         const pts = rules.points_match_appearance ?? 5;
-        awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId);
+        awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId, season);
         totalXP += pts;
       }
-      setPlayerStats(prev =>
-        prev.map(s => (s.member_id === memId ? { ...s, appearances: s.appearances + 1, minutes_played: s.minutes_played + 90 } : s))
-      );
+      addStats(memId, { appearances: 1, minutes_played: 90 });
     });
 
     // 5. Mark match fixture as audited
@@ -2121,7 +2114,7 @@ export function ClubProvider({
       totalPointsAwarded: totalXP,
       message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad (before streak bonuses).`,
     };
-  }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints]);
+  }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints, seasonLabelFor]);
 
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
