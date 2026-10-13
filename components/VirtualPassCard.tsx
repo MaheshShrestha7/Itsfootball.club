@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import confetti from 'canvas-confetti';
-import { Club, ClubMember } from '@/lib/supabase/types';
+import { Club, ClubMember, ClubTeam, Match } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import { renderPassImage, savePassImage } from '@/lib/pass-image';
 import {
@@ -18,9 +18,38 @@ import {
 interface VirtualPassCardProps {
   club: Club;
   member: ClubMember;
+  /** The member's teams, shown on the back */
+  teams?: ClubTeam[];
+  /** The member's next fixture, shown on the back */
+  nextMatch?: Match;
+  /** Opens the renewal form; the back offers it from 30 days before expiry */
+  onRenew?: () => void;
 }
 
-export default function VirtualPassCard({ club, member }: VirtualPassCardProps) {
+const ROLE_LABELS: Record<string, string> = { player: 'Player', supporter: 'Supporter', staff: 'Staff', manager: 'Manager' };
+
+/** "30 Jun 2027", or "Sat 18 Oct" with the weekday; '' when the date can't be read */
+function formatDay(value: string | undefined | null, withWeekday = false): string {
+  if (!value) return '';
+  const d = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, withWeekday
+    ? { weekday: 'short', day: 'numeric', month: 'short' }
+    : { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function BackRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{children}</div>
+    </div>
+  );
+}
+
+export default function VirtualPassCard({ club, member, teams = [], nextMatch, onRenew }: VirtualPassCardProps) {
+  // Hidden by default so a screenshot of the pass doesn't carry it
+  const [showEmergency, setShowEmergency] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,6 +76,20 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
   const isExpired = new Date(member.membership_expires_at) < new Date();
   const isSuspended = member.status === 'suspended';
+  // Whole days from today to the expiry date: 0 on the last day, negative once expired
+  const daysLeft = (() => {
+    const expiry = member.membership_expires_at ? new Date(`${member.membership_expires_at.slice(0, 10)}T00:00:00`) : null;
+    if (!expiry || Number.isNaN(expiry.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((expiry.getTime() - today.getTime()) / 86400000);
+  })();
+  const roleLabel = member.is_executive ? '' : ROLE_LABELS[(member.role || '').toLowerCase()] || '';
+  const directionsUrl = club.stadium_lat != null && club.stadium_lng != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${club.stadium_lat},${club.stadium_lng}`
+    : club.stadium_address
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(club.stadium_address)}`
+    : '';
 
   // Handle cursor / touch pointer move for 3D tilt and specular glare
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -443,13 +486,15 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
               transformStyle: 'preserve-3d',
-              padding: '1.75rem',
+              padding: '1.4rem 1.5rem',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               zIndex: isFlipped ? 2 : 0,
               pointerEvents: isFlipped ? 'auto' : 'none',
-              overflow: 'hidden',
+              // Fits a 375px phone; on narrower screens the back scrolls rather than cutting text off
+              overflowX: 'hidden',
+              overflowY: 'auto',
             }}
           >
             {/* Specular Light Glare for Back */}
@@ -464,49 +509,105 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
               }}
             />
 
-            <div style={{ position: 'relative', zIndex: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                <Sparkles size={18} color={club.accent_color} />
+            <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', gap: '0.7rem', fontSize: '0.8rem' }}>
+              <div className="row" style={{ justifyContent: 'space-between', gap: '0.5rem' }}>
                 <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                  Ground Regulations & Access
+                  Member Details
                 </span>
+                <Sparkles size={16} color={club.accent_color || undefined} aria-hidden="true" />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Home Ground Gate</div>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_name} — Members Turnstile 3</div>
+              <BackRow label="Membership">
+                <div style={{ fontWeight: 700 }}>{member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}</div>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  {[...teams.map(t => t.name), roleLabel].filter(Boolean).join(' · ')}
                 </div>
+              </BackRow>
 
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Member Email & Phone</div>
-                  <div className="text-primary">{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
-                </div>
-
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Nationality & DOB</div>
-                  <div className="text-primary">{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
-                </div>
-
-                <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '0.65rem 0.8rem', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  This pass grants turnstile admission to official club fixtures and club house events. Tamper-evident credentials verified at each gate.
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <BackRow label="Member since">{formatDay(member.membership_starts_at || member.created_at) || '—'}</BackRow>
+                <BackRow label="Valid until">
+                  {formatDay(member.membership_expires_at) || '—'}
+                  {daysLeft !== null && (
+                    <div style={{ color: daysLeft < 0 ? 'var(--c-red)' : daysLeft <= 30 ? 'var(--c-amber)' : 'var(--text-secondary)', fontWeight: 600 }}>
+                      {daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Last day' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+                    </div>
+                  )}
+                  {onRenew && daysLeft !== null && daysLeft <= 30 && (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); onRenew(); }}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--club-ink)', fontWeight: 800, textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8rem' }}
+                    >
+                      Renew now
+                    </button>
+                  )}
+                </BackRow>
               </div>
+              <BackRow label="Next fixture">
+                {nextMatch ? (
+                  <>
+                    <div style={{ fontWeight: 700 }}>
+                      {nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)' }}>
+                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${nextMatch.match_time.slice(0, 5)}` : ''}
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)' }}>No fixture scheduled yet</span>
+                )}
+              </BackRow>
+
+              {(club.stadium_name || club.stadium_address) && (
+                <BackRow label="Home ground">
+                  <div style={{ fontWeight: 700 }}>{club.stadium_name || club.stadium_address}</div>
+                  {club.stadium_name && club.stadium_address && (
+                    <div style={{ color: 'var(--text-secondary)' }}>{club.stadium_address}</div>
+                  )}
+                  {club.stadium_parking_info && (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Parking: {club.stadium_parking_info}</div>
+                  )}
+                  {directionsUrl && (
+                    <a
+                      href={directionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{ color: 'var(--club-ink)', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      Directions
+                    </a>
+                  )}
+                </BackRow>
+              )}
+
+              {member.emergency_contact && (
+                <BackRow label="Emergency contact">
+                  <div className="row" style={{ gap: '0.5rem', justifyContent: 'space-between' }}>
+                    <span>{showEmergency ? member.emergency_contact : '••••••••'}</span>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setShowEmergency(v => !v); }}
+                      aria-pressed={showEmergency}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                    >
+                      {showEmergency ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </BackRow>
+              )}
             </div>
 
-            {/* Barcode representation */}
-            <div style={{ textAlign: 'center', position: 'relative', zIndex: 3 }}>
-              <div
-                style={{
-                  height: '42px',
-                  background: 'repeating-linear-gradient(90deg, #FFFFFF, #FFFFFF 2px, transparent 2px, transparent 5px, #FFFFFF 5px, #FFFFFF 8px, transparent 8px, transparent 10px)',
-                  borderRadius: '4px',
-                  marginBottom: '0.35rem',
-                  opacity: 0.85,
-                }}
-              />
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.2em' }}>
-                {member.id.toUpperCase()}
+            <div style={{ textAlign: 'center', position: 'relative', zIndex: 3, borderTop: '1px solid rgba(var(--tint-rgb), 0.12)', paddingTop: '0.75rem' }}>
+              {(club.motto || club.founded_year) && (
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontStyle: club.motto ? 'italic' : 'normal' }}>
+                  {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(' · ')}
+                </div>
+              )}
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                Scan the front at the gate · Not transferable
               </div>
             </div>
           </div>

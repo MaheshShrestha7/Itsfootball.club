@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { clubTeamsOf } from '@/lib/teams';
+import { clubTeamsOf, teamsOfMember, teamOfMatch } from '@/lib/teams';
+import { clubPlaysIn, kickoff, soonestFirst } from '@/lib/fixtures';
 import { SITE_URL, authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
@@ -111,6 +112,8 @@ export default function MemberPortalPage({
     getClubSeasonStats,
     getActiveSeason,
     clubTeams,
+    clubTeamMembers,
+    tournamentParticipants,
     seasons,
     matches,
     events,
@@ -645,6 +648,29 @@ export default function MemberPortalPage({
   const currentStats = memberStatsRows.find(s => s.season === selectedSeason) || null;
   const currentClubScore = memberClubScoreRows.find(p => p.season === selectedSeason) || null;
   const memberActivityLogs = activeMember ? getMemberActivityLogs(activeMember.id) : [];
+
+  // Back of the member pass: their teams, their next fixture, and renewal when it's offered
+  const passTeams = activeMember ? teamsOfMember(clubTeamMembers, clubTeamsOf(clubTeams, club.id), activeMember.id) : [];
+  const passNextMatch = (() => {
+    if (!activeMember) return undefined;
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
+    const teamIds = new Set(passTeams.map(t => t.id));
+    return matches
+      .filter(m => m.club_id === club.id && m.status === 'upcoming' && kickoff(m) >= startOfToday)
+      .filter(m => clubPlaysIn(m, tournamentParticipants, club.name))
+      // With teams known, only their own teams' games (internal and tournament games count for everyone)
+      .filter(m => {
+        if (!teamIds.size) return true;
+        const team = teamOfMatch(m, clubTeams);
+        return !team || teamIds.has(team.id);
+      })
+      .sort(soonestFirst)[0];
+  })();
+  const canRenew = !!activeMember?.membership_expires_at && plans.some(p => p.price_cents > 0);
+  const openRenewal = () => {
+    setRenewOpen(true);
+    requestAnimationFrame(() => document.getElementById('renew-membership')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  };
   const clubScoreBreakdown = pointsBreakdown(memberActivityLogs, {
     season: selectedSeason,
     activeName: activeSeasonName,
@@ -1584,7 +1610,7 @@ export default function MemberPortalPage({
                 || paidPlans.find(p => p.name === activeMember.membership_tier)
                 || paidPlans[0];
               return (
-                <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem', borderLeft: `4px solid ${daysLeft < 0 ? '#EF4444' : '#F59E0B'}` }}>
+                <div id="renew-membership" className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem', borderLeft: `4px solid ${daysLeft < 0 ? '#EF4444' : '#F59E0B'}` }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                     <div>
                       <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -1737,7 +1763,13 @@ export default function MemberPortalPage({
             {activeClubhouseTab === 'pass' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ width: '100%', maxWidth: '400px' }}>
-                  <VirtualPassCard club={club} member={activeMember} />
+                  <VirtualPassCard
+                    club={club}
+                    member={activeMember}
+                    teams={passTeams}
+                    nextMatch={passNextMatch}
+                    onRenew={canRenew ? openRenewal : undefined}
+                  />
                 </div>
               </div>
             )}
