@@ -3,7 +3,8 @@
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { Award, Plus, Trash2, Edit2, Shield, CheckCircle2, CalendarDays, Filter } from 'lucide-react';
+import { Award, Plus, CheckCircle2, CalendarDays, X } from 'lucide-react';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { defaultSeasonLabel } from '@/lib/season';
 
 export default function AdminCommitteePage({
@@ -27,6 +28,15 @@ export default function AdminCommitteePage({
   const [selectedSeason, setSelectedSeason] = useState(activeSeason?.name || defaultSeasonLabel());
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
   const [feedback, setFeedback] = useState('');
+  const [showAppointForm, setShowAppointForm] = useState(false);
+  useEscapeToClose(showAppointForm, setShowAppointForm);
+
+  // Members load from Supabase after first render, so pick defaults from current data on open
+  const openAppointForm = () => {
+    if (!clubMembers.some(m => m.id === selectedMemberId)) setSelectedMemberId(clubMembers[0]?.id || '');
+    setOrder(executiveMembers.length + 1);
+    setShowAppointForm(true);
+  };
 
   const filteredExecutiveMembers = executiveMembers.filter(m => {
     if (seasonFilter === 'ALL') return true;
@@ -41,6 +51,7 @@ export default function AdminCommitteePage({
     setFeedback(`Successfully appointed to executive committee for ${selectedSeason} season!`);
     setTimeout(() => setFeedback(''), 3000);
     setBio('');
+    setShowAppointForm(false);
   };
 
   const handleRevoke = (memberId: string) => {
@@ -53,14 +64,20 @@ export default function AdminCommitteePage({
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
-        <h1 className="stat-value">
-          Executive Committee Appointments
-        </h1>
-        <p className="text-body">
-          Appoint club members and players to leadership posts (President, Secretary, Head Coach, Treasurer).
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
+        <div style={{ minWidth: 0 }}>
+          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
+          <h1 className="stat-value">
+            Executive Committee Appointments
+          </h1>
+          <p className="text-body">
+            Appoint club members and players to leadership posts (President, Secretary, Head Coach, Treasurer).
+          </p>
+        </div>
+        <button type="button" className="btn btn-primary row" onClick={openAppointForm}>
+          <Plus size={16} />
+          <span>Appoint Member</span>
+        </button>
       </div>
 
       {feedback && (
@@ -81,13 +98,54 @@ export default function AdminCommitteePage({
         </div>
       )}
 
-      {/* Appointment Form Card */}
-      <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Award size={18} color="var(--c-amber)" /> Appoint Member to Committee
-        </h3>
+      {/* Appointment Form Popup */}
+      {showAppointForm && (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(var(--dk-4-6-9), 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem',
+        }}
+        onClick={() => setShowAppointForm(false)}
+      >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="committee-appoint-title"
+        style={{
+          background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
+          border: '1px solid rgba(var(--tint-rgb), 0.12)',
+          borderRadius: '16px',
+          width: '100%',
+          maxWidth: '680px',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)',
+          color: 'var(--text-primary)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <h3 id="committee-appoint-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={18} color="var(--c-amber)" /> Appoint Member to Committee
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowAppointForm(false)}
+            aria-label="Close"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-        <form onSubmit={handleAppoint}>
+        <form onSubmit={handleAppoint} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
               <label htmlFor="committee-select-member" className="form-label">Select Member</label>
@@ -156,14 +214,19 @@ export default function AdminCommitteePage({
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary row">
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowAppointForm(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary row" disabled={!selectedMemberId}>
               <Award size={16} />
               <span>Confirm Appointment</span>
             </button>
           </div>
         </form>
       </div>
+      </div>
+      )}
 
       {/* Current Appointed Executive Board */}
       <div className="glass-panel" style={{ padding: '2rem' }}>
