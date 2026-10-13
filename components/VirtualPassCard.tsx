@@ -290,16 +290,18 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '0.5rem',
                 position: 'relative',
                 zIndex: 3,
                 transform: 'translateZ(20px)',
               }}
             >
-              <div className="row row-loose">
+              <div className="row row-loose" style={{ minWidth: 0 }}>
                 <div
                   data-theme="dark" style={{
                     width: '44px',
                     height: '44px',
+                    flexShrink: 0, // a wrapping club line must not squeeze the crest narrow
                     borderRadius: '12px',
                     border: `2px solid ${club.primary_color}`,
                     overflow: 'hidden',
@@ -311,7 +313,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                   }}
                 >
                   {club.logo_url ? (
-                    <img loading="eager" decoding="async" src={club.logo_url} alt={`${club.name} crest`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img loading="eager" decoding="async" src={club.logo_url} alt={`${club.name} crest`} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
                   ) : (
                     <Shield size={24} color={club.primary_color} />
                   )}
@@ -320,9 +322,9 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                   <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                     {club.name}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span>Official Matchday Pass</span>
-                    {club.founded_year && <span>• Est. {club.founded_year}</span>}
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '0.35rem' }}>
+                    {/* "Est." year lives on the back, so the crest line stays on one row */}
+                    <span style={{ whiteSpace: 'nowrap' }}>Member Pass</span>
                   </div>
                 </div>
               </div>
@@ -331,6 +333,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
               <div
                 className="badge"
                 style={{
+                  flexShrink: 0,
                   backgroundColor: isSuspended ? 'rgba(239, 68, 68, 0.2)' : isExpired ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
                   color: isSuspended ? 'var(--c-red)' : isExpired ? 'var(--c-amber)' : 'var(--c-green)',
                   border: `1px solid ${isSuspended ? '#EF4444' : isExpired ? '#F59E0B' : '#10B981'}`,
@@ -581,7 +584,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                   }}
                 >
                   {club.logo_url ? (
-                    <img loading="eager" decoding="async" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img loading="eager" decoding="async" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
                   ) : (
                     <Shield size={20} color={club.primary_color} />
                   )}
