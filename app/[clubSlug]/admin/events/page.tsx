@@ -231,7 +231,7 @@ export default function AdminEventsPage({
             Club Events & Trainings Management
           </h1>
           <p className="text-body">
-            Schedule fixtures, training sessions, AGM meetings, trials, and operate QR check-in gates.
+            Schedule fixtures, training sessions, AGMs and trials, and check people in with QR codes.
           </p>
         </div>
 

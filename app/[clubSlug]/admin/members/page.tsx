@@ -250,7 +250,7 @@ export default function AdminMembersPage({
             Member Approvals &amp; Passes
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-            Review membership applications, issue verified virtual passes, and converse with approved members.
+            Review membership applications, issue member passes, and message approved members.
           </p>
         </div>
 

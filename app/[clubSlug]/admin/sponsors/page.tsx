@@ -147,7 +147,7 @@ export default function AdminSponsorsPage({
             Club Sponsors & Commercial Partners
           </h1>
           <p className="text-body">
-            Manage commercial kit partners, home ground naming rights, and grassroots sponsors.
+            Manage your kit sponsors, ground naming rights and community sponsors.
           </p>
         </div>
 

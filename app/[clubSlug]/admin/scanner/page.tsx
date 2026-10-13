@@ -146,7 +146,7 @@ export default function AdminScannerPage({
           QR Scanner Reticle & Gate Check-In
         </h1>
         <p className="text-body">
-          Scan digital QR passes for member verification and turnstile event check-in operations.
+          Scan members&apos; digital passes to check they&apos;re valid and check people in to events.
         </p>
       </div>
 

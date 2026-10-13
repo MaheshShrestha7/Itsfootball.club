@@ -399,7 +399,7 @@ export default function AdminMatchCenterControllerPage({
             Live Match-Day Reporting & Tactical Hub
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
-            Broadcast real-time score updates, stoppage time, substitutions, and custom tactical formations.
+            Update the live score, added time, substitutions and team formation while a match is on.
           </p>
         </div>
 

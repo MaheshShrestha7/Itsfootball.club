@@ -327,13 +327,13 @@ export default function AdminSquadPage({
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to upload photo to Cloudflare R2');
+        throw new Error(json.error || 'The photo could not be uploaded. Please try again.');
       }
 
       setForm(prev => ({ ...prev, photo_url: json.url }));
     } catch (err: any) {
       console.error('[Squad Admin] Photo upload error:', err);
-      setUploadError(err.message || 'Error uploading photo to Cloudflare R2');
+      setUploadError(err.message || 'The photo could not be uploaded. Please try again.');
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -556,7 +556,7 @@ export default function AdminSquadPage({
             Squad & Members Administration
           </h1>
           <p className="text-body">
-            Manage first team roster, multi-role leadership (Player, Executive Committee, Manager, Club Admin), Cloudflare R2 photos, and player stats.
+            Add and edit your players and members, their roles (Player, Committee, Manager, Club Admin), photos and stats.
           </p>
         </div>
 
@@ -765,7 +765,7 @@ export default function AdminSquadPage({
                   {editingMember ? 'Edit Club Member' : 'Register New Club Member'}
                 </h3>
                 <span className="text-note">
-                  Multi-Role Governance • Cloudflare R2 Media • Squad Hierarchy
+                  Details, roles and photo
                 </span>
               </div>
               <button
@@ -801,7 +801,7 @@ export default function AdminSquadPage({
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Member Photo</span>
                   <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <Cloud size={12} /> Stored on Cloudflare R2
+                    <Cloud size={12} /> Stored securely
                   </span>
                 </label>
 
@@ -900,7 +900,7 @@ export default function AdminSquadPage({
                     </div>
 
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-                      JPEG, PNG, WebP or GIF up to 5 MB. Automatically optimized and secured on Cloudflare R2.
+                      JPEG, PNG, WebP or GIF up to 5 MB. Resized automatically and stored securely.
                     </div>
 
                     {uploadError && (

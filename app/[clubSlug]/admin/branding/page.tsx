@@ -218,7 +218,7 @@ export default function AdminBrandingPage({
           Club Configuration & Visual Interface
         </h1>
         <p className="text-body">
-          Configure your club identity, establishment year, home ground specs, color tokens, and custom domain. Changes apply live to your public portal and matchday passes.
+          Your club name, founding year, home ground, colors and web address. Changes show straight away on your public site and member passes.
         </p>
       </div>
 
@@ -267,13 +267,14 @@ export default function AdminBrandingPage({
       )}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {/* SECTION 1: DYNAMIC COLORS & WCAG ENGINE */}
+        {/* SECTION 1: CLUB COLORS & READABILITY */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Palette size={20} color={formData.primary_color} /> Dynamic Color Tokens & WCAG 2.2 AA Contrast
+              <Palette size={20} color={formData.primary_color} /> Club Colors
             </h3>
             <span
+              title={`Contrast ${contrastInfo.ratioFormatted} (WCAG 2.2 AA needs 4.5:1 for normal text)`}
               style={{
                 fontSize: '0.72rem',
                 fontWeight: 800,
@@ -284,12 +285,12 @@ export default function AdminBrandingPage({
                 border: `1px solid ${contrastInfo.isWcagAA ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
               }}
             >
-              {contrastInfo.isWcagAA ? `WCAG AA PASS (${contrastInfo.ratioFormatted})` : `LARGE TEXT ONLY (${contrastInfo.ratioFormatted})`}
+              {contrastInfo.isWcagAA ? 'TEXT EASY TO READ' : 'HARD TO READ IN SMALL TEXT'}
             </span>
           </div>
 
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            These colors dynamically theme your public club portal, match scoreboard, virtual member pass cards, and buttons. Text contrast is automatically adjusted to ensure accessible readability.
+            These colors are used across your public site, match scoreboard, member passes and buttons. Text on top of them switches between light and dark so it stays easy to read.
           </p>
 
           {/* Quick Football Color Palettes */}

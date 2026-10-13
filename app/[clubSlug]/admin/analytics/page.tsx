@@ -36,7 +36,7 @@ export default function AdminAnalyticsPage({
           Club Public Page Analytics
         </h1>
         <p className="text-body">
-          Real-time visitor metrics, live match-center attendance, turnstile scans, and audience engagement trends.
+          Who is visiting your site, how many fans follow live matches, gate scans, and how this changes over time.
         </p>
       </div>
 

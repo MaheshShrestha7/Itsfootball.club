@@ -79,7 +79,7 @@ export default function AdminTournamentsPage({
                 textTransform: 'uppercase',
               }}
             >
-              Challonge Engine for Football
+              Cups &amp; Leagues
             </span>
             {activeSeason && (
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -91,7 +91,7 @@ export default function AdminTournamentsPage({
             Tournaments & Cups
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.25rem 0 0 0' }}>
-            Design knockout brackets, round-robin leagues, and group-stage cups with live auto-updating points tables.
+            Run knockout cups, round-robin leagues and group-stage tournaments, with points tables that update as results come in.
           </p>
         </div>
 

@@ -500,7 +500,7 @@ export default function AdminMatchesPage({
             Match Fixtures & Scheduling Hub
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px', marginTop: '0.35rem' }}>
-            Schedule fixtures, assign match types, customize promotional flyers, spotlight matches on the homepage hero carousel, and configure door QR self-check-in stations.
+            Add fixtures, set the match type, design match flyers, feature a match at the top of your home page, and set up QR check-in at the gate.
           </p>
         </div>
 

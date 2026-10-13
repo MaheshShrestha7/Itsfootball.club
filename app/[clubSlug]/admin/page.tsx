@@ -67,7 +67,7 @@ export default function AdminDashboardPage({
             {club.name} Dashboard
           </h1>
           <p className="text-body">
-            Real-time club control room, match operations, squad accreditation, and public portal configurations.
+            Everything for running your club: matches, members, and your public website.
           </p>
         </div>
 
