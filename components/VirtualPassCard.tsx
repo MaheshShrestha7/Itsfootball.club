@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   RotateCw,
   Download,
-  Sparkles
+  CalendarDays,
+  MapPin,
+  HeartPulse
 } from 'lucide-react';
 
 interface VirtualPassCardProps {
@@ -38,11 +40,36 @@ function formatDay(value: string | undefined | null, withWeekday = false): strin
     : { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function BackRow({ label, children }: { label: string; children: React.ReactNode }) {
+function BackRow({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        {icon}
+        {label}
+      </div>
       <div style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{children}</div>
+    </div>
+  );
+}
+
+/** A glass panel like the QR strip on the front, raised off the card by `depth` px */
+function BackPanel({ depth, children }: { depth: number; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        background: 'rgba(5, 8, 14, 0.7)',
+        backdropFilter: 'blur(10px)',
+        padding: '0.65rem 0.85rem',
+        borderRadius: '14px',
+        border: '1px solid rgba(var(--tint-rgb), 0.1)',
+        boxShadow: '0 8px 20px rgba(0,0,0,0.45)',
+        position: 'relative',
+        zIndex: 3,
+        transform: `translateZ(${depth}px)`,
+        fontSize: '0.8rem',
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -475,21 +502,22 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
           </div>
 
           {/* ================= BACK OF CARD ================= */}
+          {/* Same materials as the front (club glow, foil, dot pattern, glass panels), lit from the opposite corner */}
           <div
             data-theme="dark" style={{
               position: 'absolute',
               inset: 0,
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #070a11 0%, rgb(var(--dk-17-24-39)) 100%)',
+              background: `radial-gradient(circle at 85% 85%, rgba(var(--club-primary-rgb), 0.3) 0%, #0E1420 65%, #05080E 100%)`,
               border: `1.5px solid ${tilt.isHovered ? 'rgba(var(--tint-rgb), 0.32)' : 'rgba(var(--tint-rgb), 0.15)'}`,
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
               transformStyle: 'preserve-3d',
-              padding: '1.4rem 1.5rem',
+              padding: '1.2rem 1.25rem 0.9rem',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between',
+              gap: '0.55rem',
               zIndex: isFlipped ? 2 : 0,
               pointerEvents: isFlipped ? 'auto' : 'none',
               // Fits a 375px phone; on narrower screens the back scrolls rather than cutting text off
@@ -497,60 +525,133 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
               overflowY: 'auto',
             }}
           >
-            {/* Specular Light Glare for Back */}
+            {/* Specular glare */}
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
                 pointerEvents: 'none',
-                background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255, 255, 255, ${tilt.isHovered ? 0.25 : 0.05}) 0%, transparent 60%)`,
+                background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255, 255, 255, ${tilt.isHovered ? 0.28 : 0.05}) 0%, rgba(var(--club-primary-rgb), ${tilt.isHovered ? 0.14 : 0}) 40%, transparent 70%)`,
                 mixBlendMode: 'screen',
                 zIndex: 10,
+                transition: tilt.isHovered ? 'none' : 'background 0.6s ease',
+              }}
+            />
+            {/* Foil sheen */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                background: `linear-gradient(${245 - tilt.rotY * 2}deg, transparent 20%, rgba(255, 255, 255, 0.05) 35%, rgba(16, 185, 129, 0.16) 48%, rgba(245, 158, 11, 0.16) 54%, rgba(59, 130, 246, 0.16) 60%, transparent 80%)`,
+                opacity: tilt.isHovered ? 0.9 : 0.4,
+                mixBlendMode: 'color-dodge',
+                zIndex: 9,
+                transition: 'opacity 0.3s ease',
+              }}
+            />
+            {/* Dot pattern */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(var(--tint-rgb), 0.035) 1px, transparent 1px)',
+                backgroundSize: '16px 16px',
+                pointerEvents: 'none',
+                zIndex: 1,
               }}
             />
 
-            <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', gap: '0.7rem', fontSize: '0.8rem' }}>
-              <div className="row" style={{ justifyContent: 'space-between', gap: '0.5rem' }}>
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                  Member Details
-                </span>
-                <Sparkles size={16} color={club.accent_color || undefined} aria-hidden="true" />
+            {/* Header: crest, club, status (as on the front) */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', position: 'relative', zIndex: 3, transform: 'translateZ(20px)' }}>
+              <div className="row" style={{ gap: '0.6rem', minWidth: 0 }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    flexShrink: 0,
+                    borderRadius: '10px',
+                    border: `2px solid ${club.primary_color}`,
+                    overflow: 'hidden',
+                    background: 'rgba(0,0,0,0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.5), 0 0 12px rgba(var(--club-primary-rgb), 0.4)',
+                  }}
+                >
+                  {club.logo_url ? (
+                    <img loading="eager" decoding="async" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Shield size={20} color={club.primary_color} />
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {club.name}
+                  </div>
+                  <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Member Details
+                  </div>
+                </div>
               </div>
+              <div
+                className="badge"
+                style={{
+                  flexShrink: 0,
+                  backgroundColor: isSuspended ? 'rgba(239, 68, 68, 0.2)' : isExpired ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  color: isSuspended ? 'var(--c-red)' : isExpired ? 'var(--c-amber)' : 'var(--c-green)',
+                  border: `1px solid ${isSuspended ? '#EF4444' : isExpired ? '#F59E0B' : '#10B981'}`,
+                }}
+              >
+                {isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE'}
+              </div>
+            </div>
 
-              <BackRow label="Membership">
-                <div style={{ fontWeight: 700 }}>{member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>
+            {/* Membership */}
+            <BackPanel depth={30}>
+              <div style={{ display: 'inline-block', background: 'rgba(var(--tint-rgb), 0.1)', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', border: '1px solid rgba(var(--tint-rgb), 0.1)' }}>
+                {member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}
+              </div>
+              {(teams.length > 0 || roleLabel) && (
+                <div style={{ color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
                   {[...teams.map(t => t.name), roleLabel].filter(Boolean).join(' · ')}
                 </div>
-              </BackRow>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <BackRow label="Member since">{formatDay(member.membership_starts_at || member.created_at) || '—'}</BackRow>
                 <BackRow label="Valid until">
                   {formatDay(member.membership_expires_at) || '—'}
                   {daysLeft !== null && (
                     <div style={{ color: daysLeft < 0 ? 'var(--c-red)' : daysLeft <= 30 ? 'var(--c-amber)' : 'var(--text-secondary)', fontWeight: 600 }}>
                       {daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Last day' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+                      {onRenew && daysLeft <= 30 && (
+                        <>
+                          {' · '}
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); onRenew(); }}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--club-ink)', fontWeight: 800, textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}
+                          >
+                            Renew
+                          </button>
+                        </>
+                      )}
                     </div>
-                  )}
-                  {onRenew && daysLeft !== null && daysLeft <= 30 && (
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); onRenew(); }}
-                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--club-ink)', fontWeight: 800, textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8rem' }}
-                    >
-                      Renew now
-                    </button>
                   )}
                 </BackRow>
               </div>
-              <BackRow label="Next fixture">
+            </BackPanel>
+
+            {/* Matchday */}
+            <BackPanel depth={25}>
+              <BackRow label="Next fixture" icon={<CalendarDays size={12} aria-hidden="true" />}>
                 {nextMatch ? (
                   <>
-                    <div style={{ fontWeight: 700 }}>
+                    <span style={{ fontWeight: 700 }}>
                       {nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
-                    </div>
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)' }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
                     <div style={{ color: 'var(--text-secondary)' }}>
                       {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${nextMatch.match_time.slice(0, 5)}` : ''}
                     </div>
@@ -559,32 +660,35 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                   <span style={{ color: 'var(--text-secondary)' }}>No fixture scheduled yet</span>
                 )}
               </BackRow>
-
               {(club.stadium_name || club.stadium_address) && (
-                <BackRow label="Home ground">
-                  <div style={{ fontWeight: 700 }}>{club.stadium_name || club.stadium_address}</div>
-                  {club.stadium_name && club.stadium_address && (
-                    <div style={{ color: 'var(--text-secondary)' }}>{club.stadium_address}</div>
-                  )}
-                  {club.stadium_parking_info && (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Parking: {club.stadium_parking_info}</div>
-                  )}
-                  {directionsUrl && (
-                    <a
-                      href={directionsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      style={{ color: 'var(--club-ink)', fontWeight: 700, textDecoration: 'underline' }}
-                    >
-                      Directions
-                    </a>
-                  )}
-                </BackRow>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <BackRow label="Home ground" icon={<MapPin size={12} aria-hidden="true" />}>
+                    <div style={{ fontWeight: 700 }}>{club.stadium_name || club.stadium_address}</div>
+                    {club.stadium_name && club.stadium_address && (
+                      <div style={{ color: 'var(--text-secondary)' }}>{club.stadium_address}</div>
+                    )}
+                    {club.stadium_parking_info && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Parking: {club.stadium_parking_info}</div>
+                    )}
+                    {directionsUrl && (
+                      <a
+                        href={directionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{ color: 'var(--club-ink)', fontWeight: 700, textDecoration: 'underline' }}
+                      >
+                        Directions
+                      </a>
+                    )}
+                  </BackRow>
+                </div>
               )}
+            </BackPanel>
 
-              {member.emergency_contact && (
-                <BackRow label="Emergency contact">
+            {member.emergency_contact && (
+              <BackPanel depth={20}>
+                <BackRow label="Emergency contact" icon={<HeartPulse size={12} aria-hidden="true" />}>
                   <div className="row" style={{ gap: '0.5rem', justifyContent: 'space-between' }}>
                     <span>{showEmergency ? member.emergency_contact : '••••••••'}</span>
                     <button
@@ -597,16 +701,16 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                     </button>
                   </div>
                 </BackRow>
-              )}
-            </div>
+              </BackPanel>
+            )}
 
-            <div style={{ textAlign: 'center', position: 'relative', zIndex: 3, borderTop: '1px solid rgba(var(--tint-rgb), 0.12)', paddingTop: '0.75rem' }}>
+            <div style={{ marginTop: 'auto', textAlign: 'center', position: 'relative', zIndex: 3 }}>
               {(club.motto || club.founded_year) && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontStyle: club.motto ? 'italic' : 'normal' }}>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-primary)', fontStyle: club.motto ? 'italic' : 'normal' }}>
                   {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(' · ')}
                 </div>
               )}
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                 Scan the front at the gate · Not transferable
               </div>
             </div>
