@@ -55,6 +55,8 @@ interface HomeHeroSlide {
   id: string;
   category: 'club' | 'match' | 'news' | 'event' | 'stadium' | 'image';
   tabLabel: string;
+  // Full pinned title, shown on phones (up to two lines) where the short tabLabel cuts it off
+  tabTitle?: string;
   badge: string;
   bgImage: string;
   title: string;
@@ -267,6 +269,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-fixture-${idx}`,
             category: 'match',
+            tabTitle: item.title || undefined,
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
             badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinute(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
@@ -283,6 +286,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-news-${idx}`,
             category: 'news',
+            tabTitle: item.title || undefined,
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'News',
             badge: item.badge || `BREAKING NEWS • ${article?.tags?.[0] || 'FIRST TEAM'}`,
             bgImage: item.image_url || article?.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
@@ -299,6 +303,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-event-${idx}`,
             category: 'event',
+            tabTitle: item.title || undefined,
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
             badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
@@ -314,7 +319,8 @@ export default function ClubPublicPage({
         return {
           id: item.id || `pin-image-${idx}`,
           category: 'image',
-          tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
+          tabTitle: item.title || undefined,
+            tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
           badge: item.badge || 'SPECIAL FEATURE',
           bgImage: item.image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
           title: item.title || `${club.name} Feature`,
@@ -1207,6 +1213,7 @@ export default function ClubPublicPage({
                     key={slide.id}
                     onClick={() => setActiveSlide(idx)}
                     className="scroll-pill-item"
+                    title={slide.tabTitle}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1238,7 +1245,14 @@ export default function ClubPublicPage({
                     {slide.category === 'event' && <Calendar size={14} color={isActive ? club.primary_color : 'currentColor'} />}
                     {slide.category === 'stadium' && <MapPin size={14} color={isActive ? club.primary_color : 'currentColor'} />}
                     {slide.category === 'image' && <Sparkles size={14} color={isActive ? '#F59E0B' : 'currentColor'} />}
-                    <span>{slide.tabLabel}</span>
+                    {slide.tabTitle ? (
+                      <>
+                        <span className="hero-tab-short">{slide.tabLabel}</span>
+                        <span className="hero-tab-full">{slide.tabTitle}</span>
+                      </>
+                    ) : (
+                      <span>{slide.tabLabel}</span>
+                    )}
 
                     {/* Animated Progress Timer Bar when active and not paused */}
                     {isActive && !isSliderPaused && (

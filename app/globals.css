@@ -1539,6 +1539,30 @@ textarea {
   white-space: nowrap;
 }
 
+/* Home hero slider tabs: desktop keeps the short label; phones show the full story
+   title over up to two lines so each tab can be told apart */
+.hero-tab-full {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hero-tab-short {
+    display: none;
+  }
+
+  .hero-tab-full {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    max-width: 10.5rem;
+    line-height: 1.25;
+    text-align: left;
+  }
+}
+
 /* Horizontally Scrollable Sponsor Strip (home page) */
 .sponsor-scroll-strip {
   display: flex;
