@@ -7,6 +7,7 @@ import { clubTeamsOf } from '@/lib/teams';
 import { SITE_URL, authReturnUrl } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
+import { pointsBreakdown, seasonOptions } from '@/lib/member-season-stats';
 import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
@@ -102,7 +103,6 @@ export default function MemberPortalPage({
     selectClubBySlug,
     members,
     playerStats,
-    getMemberClubScore,
     getMemberActivityLogs,
     applyForMembership,
     reloadFromServer,
@@ -111,6 +111,10 @@ export default function MemberPortalPage({
     getClubSeasonStats,
     getActiveSeason,
     clubTeams,
+    seasons,
+    matches,
+    events,
+    clubScoreProfiles,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -194,6 +198,8 @@ export default function MemberPortalPage({
 
   // Authenticated Member Clubhouse State
   const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages'>('pass');
+  // Season shown on the Season Stats tab ('' = the club's active season)
+  const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -625,12 +631,33 @@ export default function MemberPortalPage({
     setTimeout(() => setMessageSentToast(false), 3500);
   };
 
-  // Compute stats for current active member
-  const currentStats = activeMember ? playerStats.find(s => s.member_id === activeMember.id) : null;
-  const currentClubScore = activeMember ? getMemberClubScore(activeMember.id) : null;
+  // Compute stats for current active member, for the season picked on the Season Stats tab
+  const activeSeasonName = getActiveSeason(club.id)?.name || defaultSeasonLabel();
+  const clubSeasons = seasons.filter(s => s.club_id === club.id);
+  const memberStatsRows = activeMember ? playerStats.filter(s => s.member_id === activeMember.id) : [];
+  const memberClubScoreRows = activeMember ? clubScoreProfiles.filter(p => p.member_id === activeMember.id) : [];
+  const statsSeasonOptions = seasonOptions(clubSeasons, activeSeasonName, [
+    ...memberStatsRows.map(s => s.season),
+    ...memberClubScoreRows.map(p => p.season),
+    ...matches.filter(m => m.club_id === club.id && m.status === 'completed').map(m => m.season),
+  ]);
+  const selectedSeason = statsSeason && statsSeasonOptions.includes(statsSeason) ? statsSeason : activeSeasonName;
+  const currentStats = memberStatsRows.find(s => s.season === selectedSeason) || null;
+  const currentClubScore = memberClubScoreRows.find(p => p.season === selectedSeason) || null;
   const memberActivityLogs = activeMember ? getMemberActivityLogs(activeMember.id) : [];
+  const clubScoreBreakdown = pointsBreakdown(memberActivityLogs, {
+    season: selectedSeason,
+    activeName: activeSeasonName,
+    seasonRecord: clubSeasons.find(s => s.name === selectedSeason),
+    referenceSeason: id => {
+      const ref = matches.find(m => m.id === id) || events.find(e => e.id === id);
+      return ref ? ref.season ?? null : undefined;
+    },
+    total: currentClubScore?.total_points,
+  });
+  const seasonClubScoreTotal = currentClubScore?.total_points ?? clubScoreBreakdown.reduce((sum, r) => sum + r.points, 0);
   const memberMessagesList = activeMember ? getMemberMessages(club.id, activeMember.id) : [];
-  const clubSeasonStats = getClubSeasonStats(club.id);
+  const clubSeasonStats = getClubSeasonStats(club.id, selectedSeason);
 
   return (
     <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
@@ -1718,11 +1745,37 @@ export default function MemberPortalPage({
             {/* SUB-TAB 2: SEASON STATS (CLUB'S & OWN) */}
             {activeClubhouseTab === 'stats' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                {/* Season picker: starts on the club's active season */}
+                <div className="row" style={{ justifyContent: 'flex-end', marginBottom: '-1.25rem' }}>
+                  <label htmlFor="member-stats-season" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</label>
+                  <select
+                    id="member-stats-season"
+                    value={selectedSeason}
+                    onChange={(e) => setStatsSeason(e.target.value)}
+                    style={{
+                      padding: '0.45rem 0.85rem',
+                      background: 'rgba(var(--tint-rgb), 0.07)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {statsSeasonOptions.map(name => (
+                      <option key={name} value={name} style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>
+                        {name}{name === activeSeasonName ? ' (Active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* 1. Club's Season Performance Dashboard */}
                 <div className="glass-panel" style={{ padding: '2rem', borderTop: `4px solid ${club.primary_color}` }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div>
-                      <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>LEAGUE CAMPAIGN {getActiveSeason(club.id)?.name || defaultSeasonLabel()}</span>
+                      <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>SEASON {selectedSeason}</span>
                       <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Trophy size={22} color="var(--c-amber)" />
                         <span>{club.name} — Club Season Statistics</span>
@@ -1781,19 +1834,11 @@ export default function MemberPortalPage({
                     </div>
 
                     <div className="stat-tile">
-                      <div className="eyebrow">Points</div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-amber)' }}>
-                        {clubSeasonStats.points}
-                      </div>
-                      <div className="text-meta">Total League PTS</div>
-                    </div>
-
-                    <div className="stat-tile">
                       <div className="eyebrow">Goals</div>
                       <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                         {clubSeasonStats.goalsFor} : {clubSeasonStats.goalsAgainst}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--c-green)' }}>+{clubSeasonStats.goalDifference} GD</div>
+                      <div style={{ fontSize: '0.7rem', color: clubSeasonStats.goalDifference < 0 ? 'var(--c-red)' : 'var(--c-green)' }}>{clubSeasonStats.goalDifference > 0 ? '+' : ''}{clubSeasonStats.goalDifference} GD</div>
                     </div>
 
                     <div className="stat-tile">
@@ -1879,7 +1924,15 @@ export default function MemberPortalPage({
                 </div>
 
                 {/* 3. ClubScore Gamification Progress */}
-                {currentClubScore && (
+                {!currentClubScore && clubScoreBreakdown.length === 0 && (
+                  <div className="glass-panel" style={{ padding: '1.5rem 2rem' }}>
+                    <span className="badge badge-gold row row-tight" style={{ marginBottom: '0.5rem' }}>
+                      <Zap size={12} fill="#F59E0B" /> CLUBSCORE FANTASY
+                    </span>
+                    <p className="text-note" style={{ margin: 0 }}>No ClubScore points in {selectedSeason} yet.</p>
+                  </div>
+                )}
+                {(currentClubScore || clubScoreBreakdown.length > 0) && (
                   <div className="glass-panel" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div>
@@ -1888,7 +1941,7 @@ export default function MemberPortalPage({
                             <Zap size={12} fill="#F59E0B" /> CLUBSCORE FANTASY
                           </span>
                           <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)' }}>
-                            {currentClubScore.season}
+                            {selectedSeason}
                           </span>
                         </div>
                         <h4 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
@@ -1896,7 +1949,7 @@ export default function MemberPortalPage({
                         </h4>
                       </div>
 
-                      <div style={{
+                      {currentClubScore && <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
@@ -1909,30 +1962,57 @@ export default function MemberPortalPage({
                         <span style={{ fontWeight: 800, color: 'var(--c-amber)', fontSize: '0.85rem' }}>
                           {currentClubScore.tier}
                         </span>
-                      </div>
+                      </div>}
                     </div>
 
                     {/* Level Progress Bar */}
                     <div style={{ marginBottom: '1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Total XP Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{currentClubScore.total_points} PTS</strong>
+                          Total XP Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{seasonClubScoreTotal} PTS</strong>
                         </span>
-                        <span className="text-meta">
-                          Streak: {liveStreak(currentClubScore)}w active
-                        </span>
+                        {currentClubScore && selectedSeason === activeSeasonName && (
+                          <span className="text-meta">
+                            Streak: {liveStreak(currentClubScore)}w active
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ width: '100%', height: '10px', background: 'rgba(var(--shade-rgb), 0.4)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                         <div
                           style={{
                             height: '100%',
-                            width: `${Math.min(100, Math.max(15, (currentClubScore.total_points / 500) * 100))}%`,
+                            width: `${Math.min(100, Math.max(15, (seasonClubScoreTotal / 500) * 100))}%`,
                             background: 'linear-gradient(90deg, var(--club-primary) 0%, #F59E0B 100%)',
                             borderRadius: '6px',
                             transition: 'width 0.5s ease',
                           }}
                         />
+                      </div>
+                    </div>
+
+                    {/* Where the points came from */}
+                    <div>
+                      <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>Points breakdown</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
+                        {clubScoreBreakdown.map(row => (
+                          <div
+                            key={row.source}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.6rem 0.9rem', borderBottom: '1px solid var(--border-subtle)' }}
+                          >
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                              {row.label}
+                              {row.count > 0 && <span className="text-meta" style={{ marginLeft: '0.4rem' }}>× {row.count}</span>}
+                            </span>
+                            <strong style={{ fontSize: '0.9rem', color: row.points < 0 ? 'var(--c-red)' : 'var(--c-green)', whiteSpace: 'nowrap' }}>
+                              {row.points > 0 ? '+' : ''}{row.points} PTS
+                            </strong>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.6rem 0.9rem', background: 'rgba(var(--tint-rgb), 0.05)' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 800 }}>Total</span>
+                          <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{seasonClubScoreTotal} PTS</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
