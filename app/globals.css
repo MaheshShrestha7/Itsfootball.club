@@ -2413,8 +2413,11 @@ dialog.confirm-dialog::backdrop {
 
 /* Two side-by-side panels (e.g. editor + library) that stack on tablets and phones */
 .split-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem; }
+/* A main panel with a narrower side column (e.g. a list + its summaries), stacked the same way */
+.split-main-side { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 @media (max-width: 900px) {
   .split-2 { grid-template-columns: minmax(0, 1fr); }
+  .split-main-side { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Photo gallery (components/PhotoGallery.tsx, admin/gallery and the public gallery page) */
