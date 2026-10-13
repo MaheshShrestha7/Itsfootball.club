@@ -221,10 +221,10 @@ export default function PublicTournamentDetailPage({
         <div
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '0.5rem',
             borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
             marginBottom: '1.75rem',
-            overflowX: 'auto',
           }}
         >
           {tournament.format !== 'league' && (

@@ -297,18 +297,19 @@ export default function AdminDashboardPage({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '0.75rem',
                 marginBottom: '1.25rem',
               }}>
-                <div className="text-center">
+                <div className="text-center" style={{ flex: '1 1 0', minWidth: 0, overflowWrap: 'anywhere' }}>
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.home_team_name}</div>
                   <div className="text-meta">Home</div>
                 </div>
 
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {liveMatch.home_score} : {liveMatch.away_score}
                 </div>
 
-                <div className="text-center">
+                <div className="text-center" style={{ flex: '1 1 0', minWidth: 0, overflowWrap: 'anywhere' }}>
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.away_team_name}</div>
                   <div className="text-meta">Away</div>
                 </div>

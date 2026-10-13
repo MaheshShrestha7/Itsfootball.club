@@ -437,20 +437,20 @@ export default function AdminSeasonsPage({
                   </div>
 
                   {/* Middle Linked Counters */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 1.5rem', fontSize: '0.82rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.matchesCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Radio size={14} color="var(--club-primary)" />
-                      <span><strong>{stats.matchesCount}</strong> matches</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.matchesCount}</strong> matches</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.eventsCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Calendar size={14} color="var(--c-amber)" />
-                      <span><strong>{stats.eventsCount}</strong> events</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.eventsCount}</strong> events</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: stats.committeeCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       <Award size={14} color="var(--c-blue)" />
-                      <span><strong>{stats.committeeCount}</strong> committee</span>
+                      <span style={{ whiteSpace: 'nowrap' }}><strong>{stats.committeeCount}</strong> committee</span>
                     </div>
                   </div>
 

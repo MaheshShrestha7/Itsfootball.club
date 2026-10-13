@@ -1508,7 +1508,11 @@ textarea {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 4px 2px;
+  /* The right edge fades out so a pill cut off there reads as "swipe for more"; the extra
+     padding lets the last pill scroll clear of the fade */
+  padding: 4px 28px 4px 2px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 
 .scroll-pill-strip::-webkit-scrollbar {
@@ -2364,9 +2368,9 @@ dialog.confirm-dialog::backdrop {
 .m-0 { margin: 0; }
 
 /* Two side-by-side panels (e.g. editor + library) that stack on tablets and phones */
-.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+.split-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem; }
 @media (max-width: 900px) {
-  .split-2 { grid-template-columns: 1fr; }
+  .split-2 { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Photo gallery (components/PhotoGallery.tsx, admin/gallery and the public gallery page) */

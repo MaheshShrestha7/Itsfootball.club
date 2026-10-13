@@ -369,10 +369,10 @@ export default function AdminTournamentDetailPage({
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
           gap: '0.5rem',
           borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
           marginBottom: '1.5rem',
-          overflowX: 'auto',
         }}
       >
         {tournament.format !== 'league' && (

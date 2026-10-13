@@ -17,6 +17,17 @@ interface SquadRosterProps {
   onDelete: (id: string, name: string) => void;
 }
 
+// Email and phone on their own lines, so a long email can't push the phone number out of view
+const contactLine: React.CSSProperties = { fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+function contactLines(m: { email?: string; phone?: string }) {
+  return (
+    <>
+      {m.email && <div style={contactLine} title={m.email}>{m.email}</div>}
+      {m.phone && <div style={contactLine}>{m.phone}</div>}
+    </>
+  );
+}
+
 /** Admin roster as responsive list rows (cards on phones) or a card grid. Styles live in globals.css (.squad-*). */
 export default function SquadRoster({ members, totalCount, viewMode, getMemberRoles, onStats, onEdit, onDelete }: SquadRosterProps) {
   const isActive = (m: ClubMember) => m.status === 'active' || (m as any).is_active !== false;
@@ -147,11 +158,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
             </div>
             <div className="min-w-0">
               <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
-              {(m.email || m.phone) && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {m.email || m.phone}
-                </div>
-              )}
+              {contactLines(m)}
             </div>
             <div className="squad-badges">{positionBadges(m)}</div>
             <div className="squad-badges">{roleBadges(m)}</div>
@@ -180,11 +187,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
             <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={42} style={{ borderRadius: '10px', border: '1px solid var(--border-subtle)' }} />
             <div className="min-w-0">
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
-              {(m.email || m.phone) && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {[m.email, m.phone].filter(Boolean).join(' • ')}
-                </div>
-              )}
+              {contactLines(m)}
             </div>
           </div>
           <div className="squad-cell-roles squad-badges">{roleBadges(m)}</div>

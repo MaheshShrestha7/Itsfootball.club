@@ -218,11 +218,20 @@ export default function KitDesignerPreview({
         {/* Stadium Floodlight Gloss Sweep across jersey */}
         <div className="kit-gloss-sweep" />
 
-        {/* Official Matchwear Tag Pill */}
-        <div data-theme="dark" style={{
+        {/* Tag pills: one row across the top that wraps on a narrow card instead of overlapping */}
+        <div style={{
           position: 'absolute',
           top: '14px',
           left: '16px',
+          right: '16px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          gap: '0.4rem',
+          zIndex: 6,
+        }}>
+        {/* Official Matchwear Tag Pill */}
+        <div data-theme="dark" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.4rem',
@@ -236,7 +245,6 @@ export default function KitDesignerPreview({
           color: '#FFFFFF',
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
-          zIndex: 6,
         }}>
           <Shirt size={11} color={kitColors.accent} />
           <span>{kitType} Matchday Edition</span>
@@ -244,9 +252,6 @@ export default function KitDesignerPreview({
 
         {/* Contrast Legibility Indicator */}
         <div data-theme="dark" style={{
-          position: 'absolute',
-          top: '14px',
-          right: '16px',
           display: 'flex',
           alignItems: 'center',
           gap: '0.3rem',
@@ -258,9 +263,9 @@ export default function KitDesignerPreview({
           fontSize: '0.7rem',
           fontWeight: 700,
           color: contrastRatio >= 4.5 ? 'var(--c-green)' : 'var(--c-amber)',
-          zIndex: 6,
         }}>
           <span>{contrastRatio}:1 Contrast</span>
+        </div>
         </div>
 
         {/* 2D Vector Jersey SVG */}
@@ -453,7 +458,7 @@ export default function KitDesignerPreview({
                     letterSpacing="1.5"
                     fontFamily="var(--font-heading)"
                   >
-                    {clubName.toUpperCase().slice(0, 12)}
+                    {(clubName.length > 12 && shortName ? shortName : clubName).toUpperCase().slice(0, 12)}
                   </text>
                 </g>
 

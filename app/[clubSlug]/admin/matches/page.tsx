@@ -595,7 +595,7 @@ export default function AdminMatchesPage({
         }}
       >
         {/* Status Tabs */}
-        <div style={{ display: 'flex', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
           {(['all', 'upcoming', 'completed', 'live'] as const).map(tab => (
             <button data-view-ok
               key={tab}
@@ -610,6 +610,7 @@ export default function AdminMatchesPage({
                 fontWeight: 700,
                 cursor: 'pointer',
                 textTransform: 'capitalize',
+                whiteSpace: 'nowrap',
                 transition: 'background 0.2s'
               }}
             >

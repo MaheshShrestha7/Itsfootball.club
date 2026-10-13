@@ -34,6 +34,7 @@ import {
 import StatsAuditModal from '@/components/StatsAuditModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
+import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
@@ -519,7 +520,7 @@ export default function AdminMatchCenterControllerPage({
               >
                 {filteredMatches.map(m => (
                   <option key={m.id} value={m.id}>
-                    {m.home_team_name} vs {m.away_team_name} ({m.season}) [{m.status.toUpperCase()}]
+                    {fixtureLabel(m, club.name)} ({m.season}) [{m.status.toUpperCase()}]
                   </option>
                 ))}
               </select>
@@ -553,11 +554,11 @@ export default function AdminMatchCenterControllerPage({
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
       <div className="scroll-pill-strip" style={{
         display: 'flex',
+        flexWrap: 'wrap',
         gap: '0.5rem',
         marginBottom: '2rem',
         borderBottom: '1px solid var(--border-subtle)',
         paddingBottom: '0.75rem',
-        overflowX: 'auto',
         maxWidth: '100%',
       }}>
         {[

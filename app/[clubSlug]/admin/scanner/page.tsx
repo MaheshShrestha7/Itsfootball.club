@@ -153,7 +153,7 @@ export default function AdminScannerPage({
       {/* Mode Selector: Member Verification vs Event Check-In */}
       <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <button data-view-ok
               onClick={() => { setMode('verify'); setCurrentResult(null); }}
               className="btn btn-sm"

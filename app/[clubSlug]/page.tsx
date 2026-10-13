@@ -200,7 +200,7 @@ export default function ClubPublicPage({
   const countOf = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
 
   const positionPills = (
-    <div className="scroll-pill-strip" style={{ maxWidth: '100%' }} role="group" aria-label="Filter players by position">
+    <div className="scroll-pill-strip" style={{ maxWidth: '100%', flexWrap: 'wrap' }} role="group" aria-label="Filter players by position">
       {(['ALL', 'GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
         <button
           key={pos}
@@ -1431,11 +1431,15 @@ export default function ClubPublicPage({
                           fontWeight: 900,
                           fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
                           color: 'var(--text-primary)',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
+                          lineHeight: 1.25,
+                          // Up to two lines: long business names stay readable instead of cutting off
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                           overflow: 'hidden',
+                          overflowWrap: 'anywhere',
                           letterSpacing: '-0.01em',
-                        }}>
+                        }} title={sponsor.name}>
                           {sponsor.name}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>

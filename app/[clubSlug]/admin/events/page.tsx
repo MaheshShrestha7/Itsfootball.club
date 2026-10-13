@@ -344,7 +344,7 @@ export default function AdminEventsPage({
             </div>
 
             {/* Action Buttons */}
-            <div className="row">
+            <div className="row row-wrap">
               {(() => {
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
                 return (
