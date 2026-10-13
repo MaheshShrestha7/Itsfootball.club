@@ -46,6 +46,7 @@ import {
 } from './supabase/types';
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import { addSeasonStats, type StatsDelta } from './player-stats';
+import { inSeason } from './member-season-stats';
 import {
   buildTiesheet,
   clubLineupSide,
@@ -231,7 +232,8 @@ interface ClubContextType {
   markMemberMessageRead: (messageId: string) => void;
   getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
   getClubMemberMessages: (clubId: string) => MemberMessage[];
-  getClubSeasonStats: (clubId: string) => ClubSeasonStatsSummary;
+  /** Club record for one season (all seasons when none is given) */
+  getClubSeasonStats: (clubId: string, season?: string) => ClubSeasonStatsSummary;
 
   // Club teams (first team, reserves, academy, youth)
   clubTeams: ClubTeam[];
@@ -2889,9 +2891,12 @@ export function ClubProvider({
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [memberMessages]);
 
-  const getClubSeasonStats = useCallback((clubId: string): ClubSeasonStatsSummary => {
+  const getClubSeasonStats = useCallback((clubId: string, season?: string): ClubSeasonStatsSummary => {
+    // Fixtures without a season count toward the active one
+    const activeName = getActiveSeason(clubId)?.name || defaultSeasonLabel();
     // Teams that hide their scores publicly (junior grassroots rules) stay out of the record
-    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed' && countsTowardClubRecord(m) && !publicScoreHidden(m, clubTeams));
+    const clubMatches = matches.filter(m => m.club_id === clubId && m.status === 'completed' && countsTowardClubRecord(m) && !publicScoreHidden(m, clubTeams)
+      && (!season || inSeason(m.season, season, activeName)));
     let wins = 0;
     let draws = 0;
     let losses = 0;
@@ -2924,7 +2929,7 @@ export function ClubProvider({
       }
     });
 
-    const clubStats = playerStats.filter(s => s.club_id === clubId);
+    const clubStats = playerStats.filter(s => s.club_id === clubId && (!season || s.season === season));
     const sortedStats = [...clubStats].sort((a, b) => b.goals - a.goals);
     const topPlayer = sortedStats[0];
     const topMember = topPlayer && topPlayer.goals > 0 ? members.find(m => m.id === topPlayer.member_id) : undefined;
@@ -2937,13 +2942,12 @@ export function ClubProvider({
       goalsFor,
       goalsAgainst,
       goalDifference: goalsFor - goalsAgainst,
-      points: wins * 3 + draws,
       winRate: clubMatches.length > 0 ? Math.round((wins / clubMatches.length) * 100) : 0,
       cleanSheets,
       form: form.slice(-5),
       topScorer: topMember ? { name: topMember.full_name, goals: topPlayer.goals } : undefined
     };
-  }, [matches, playerStats, members, clubTeams]);
+  }, [matches, playerStats, members, clubTeams, getActiveSeason]);
 
   // ==============================================================================
   // CLUB TEAMS (first team, reserves, academy, youth)
