@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
 import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
+import SponsorLogo from '@/components/SponsorLogo';
 import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 import {
   Shield,
@@ -182,15 +183,11 @@ export default function EventDetailsPage({
                       borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
                     }}
                   >
-                    <img loading="lazy" decoding="async"
+                    <SponsorLogo
                       src={sponsor.logo_url}
-                      alt={`${sponsor.name} logo`}
-                      draggable={false}
-                      style={{
-                        height: isPlatinum ? '96px' : isGold ? '76px' : '60px',
-                        maxWidth: '100%',
-                        objectFit: 'contain',
-                      }}
+                      name={sponsor.name}
+                      height={isPlatinum ? 96 : isGold ? 76 : 60}
+                      style={{ maxWidth: '100%' }}
                     />
                     <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {sponsor.name}

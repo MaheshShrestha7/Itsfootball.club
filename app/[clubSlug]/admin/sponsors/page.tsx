@@ -6,6 +6,7 @@ import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/
 import { defaultSeasonLabel } from '@/lib/season';
 import { sponsorHref } from '@/lib/sponsors';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import SponsorLogo from '@/components/SponsorLogo';
 import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 
@@ -227,14 +228,11 @@ export default function AdminSponsorsPage({
                     boxShadow: isXL ? '0 6px 24px rgba(245, 158, 11, 0.12)' : 'none',
                   }}
                 >
-                  <img loading="lazy" decoding="async"
+                  <SponsorLogo
                     src={sponsor.logo_url}
-                    alt={`${sponsor.name} logo`}
-                    style={{
-                      height: isXL ? '48px' : isLG ? '36px' : isMD ? '28px' : '22px',
-                      maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px',
-                      objectFit: 'contain',
-                    }}
+                    name={sponsor.name}
+                    height={isXL ? 48 : isLG ? 36 : isMD ? 28 : 22}
+                    style={{ maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px' }}
                   />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
@@ -281,13 +279,12 @@ export default function AdminSponsorsPage({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                <img loading="lazy" decoding="async"
+                <SponsorLogo
                   src={sponsor.logo_url}
-                  alt={`${sponsor.name} logo`}
+                  name={sponsor.name}
+                  height={scale === 'xl' ? 46 : 38}
                   style={{
                     width: scale === 'xl' ? '70px' : '55px',
-                    height: scale === 'xl' ? '46px' : '38px',
-                    objectFit: 'contain',
                     background: 'rgba(var(--tint-rgb), 0.05)',
                     padding: '4px',
                     borderRadius: '6px',

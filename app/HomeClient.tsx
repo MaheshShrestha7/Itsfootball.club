@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
+import SponsorLogo from '@/components/SponsorLogo';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -749,8 +750,8 @@ export default function PlatformHomePage() {
                       borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
                     }}
                   >
-                    <img loading="lazy" decoding="async" src={sponsor.logo_url} alt={`${sponsor.name} logo`}
-                      style={{ height: isPlatinum ? '56px' : isGold ? '46px' : '38px', maxWidth: '100%', objectFit: 'contain' }} />
+                    <SponsorLogo src={sponsor.logo_url} name={sponsor.name}
+                      height={isPlatinum ? 56 : isGold ? 46 : 38} style={{ maxWidth: '100%' }} />
                     <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{sponsor.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', width: '100%', justifyContent: 'center' }}>
                       <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt=""

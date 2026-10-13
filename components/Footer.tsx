@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
+import SponsorLogo from './SponsorLogo';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorTierLabel } from '@/lib/sponsors';
 import { SOCIAL_PROFILES } from '@/lib/seo';
@@ -110,14 +111,12 @@ export default function Footer({ club, sponsors }: FooterProps) {
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    <img loading="lazy" decoding="async"
+                    <SponsorLogo
                       src={sponsor.logo_url}
-                      alt={`${sponsor.name} logo`}
-                      draggable={false}
+                      name={sponsor.name}
+                      height={isPlatinum ? 68 : isGold ? 54 : 42}
                       style={{
-                        height: isPlatinum ? '68px' : isGold ? '54px' : '42px',
                         maxWidth: isPlatinum ? 'min(240px, 70vw)' : isGold ? 'min(190px, 60vw)' : 'min(150px, 50vw)',
-                        objectFit: 'contain',
                         borderRadius: '4px',
                       }}
                     />

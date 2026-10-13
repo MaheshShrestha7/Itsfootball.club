@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use, useMemo } from 'react';
-import { BRAND_IMAGE, fallbackToBrandImage } from "@/lib/image-fallback";
+import { fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -9,6 +9,8 @@ import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import SponsorLogo from '@/components/SponsorLogo';
+import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 import LocalTime from '@/components/LocalTime';
@@ -994,10 +996,12 @@ export default function ClubPublicPage({
                         }}
                       >
                         <div style={{ height: '200px', position: 'relative' }}>
-                          <img loading="eager" decoding="async"
-                            src={activeSlideNews.cover_image_url || club.banner_url || BRAND_IMAGE} onError={fallbackToBrandImage}
+                          <CoverImage
+                            loading="eager"
+                            src={activeSlideNews.cover_image_url || club.banner_url}
                             alt={activeSlideNews.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            crestUrl={club.logo_url}
+                            style={{ width: '100%', height: '100%' }}
                           />
                           <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
                             <span className="badge badge-gold">EXCLUSIVE STORY</span>
@@ -1415,14 +1419,12 @@ export default function ClubPublicPage({
                         if (isXL) e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
                       }}
                     >
-                      <img loading="lazy" decoding="async"
+                      <SponsorLogo
                         src={sponsor.logo_url}
-                        alt={`${sponsor.name} logo`}
-                        draggable={false}
+                        name={sponsor.name}
+                        height={isXL ? 100 : isLG ? 76 : isMD ? 58 : 44}
                         style={{
-                          height: isXL ? '100px' : isLG ? '76px' : isMD ? '58px' : '44px',
                           maxWidth: isXL ? 'min(100%, 300px)' : isLG ? 'min(100%, 230px)' : isMD ? 'min(100%, 170px)' : 'min(100%, 130px)',
-                          objectFit: 'contain',
                           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
                         }}
                       />
@@ -1820,10 +1822,11 @@ export default function ClubPublicPage({
                 }}
               >
                 <div style={{ height: '240px', position: 'relative' }}>
-                  <img loading="lazy" decoding="async"
-                    src={featuredArticle.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
+                  <CoverImage
+                    src={featuredArticle.cover_image_url}
                     alt={featuredArticle.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    crestUrl={club.logo_url}
+                    style={{ width: '100%', height: '100%' }}
                   />
                   <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
                     <span className="badge badge-gold">FEATURED STORY</span>
@@ -1864,10 +1867,12 @@ export default function ClubPublicPage({
                     alignItems: 'center',
                   }}
                 >
-                  <img loading="lazy" decoding="async" width={90} height={90}
-                    src={article.cover_image_url || BRAND_IMAGE} onError={fallbackToBrandImage}
+                  <CoverImage
+                    width={90} height={90}
+                    src={article.cover_image_url}
                     alt={article.title}
-                    style={{ width: '90px', height: '90px', borderRadius: '10px', objectFit: 'cover' }}
+                    crestUrl={club.logo_url}
+                    style={{ width: '90px', height: '90px', borderRadius: '10px' }}
                   />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.3rem' }}>
