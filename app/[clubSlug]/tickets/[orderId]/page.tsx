@@ -70,7 +70,7 @@ export default function TicketsPage({ params }: { params: Promise<{ clubSlug: st
     body = panel(
       <p role="status">
         {order.status === 'refunded' ? 'This order was refunded, so its tickets are no longer valid.' : 'This order wasn’t paid, so it has no tickets.'}
-        {order.event && <> <Link href={`/${club.slug}/events/${order.event.id}`} style={{ color: 'var(--club-primary)', fontWeight: 700 }}>Back to the event</Link></>}
+        {order.event && <> <Link href={`/${club.slug}/events/${order.event.id}`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Back to the event</Link></>}
       </p>
     );
   } else {

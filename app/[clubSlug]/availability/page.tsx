@@ -273,7 +273,7 @@ function AvailabilityHub() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#25D366', color: 'var(--text-primary)', border: 'none' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#25D366', color: '#062814', border: 'none' }}
               >
                 <Share2 size={14} />
                 <span>Call-Up via WhatsApp</span>
@@ -520,7 +520,7 @@ function AvailabilityHub() {
                 }}>
                   <div style={{ overflow: 'hidden' }}>
                     <div style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Personal Magic RSVP Link:</div>
-                    <div style={{ color: club.primary_color, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: 'var(--club-ink)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {playerMagicLink}
                     </div>
                   </div>
@@ -634,9 +634,9 @@ function AvailabilityHub() {
               ) : (
                 filteredRoster.map(({ player, availability }) => {
                   const statusColors = {
-                    available: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10B981', border: 'rgba(16, 185, 129, 0.4)', icon: CheckCircle2, label: 'Available' },
-                    maybe: { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B', border: 'rgba(245, 158, 11, 0.4)', icon: AlertCircle, label: 'Doubtful' },
-                    unavailable: { bg: 'rgba(239, 68, 68, 0.15)', text: '#EF4444', border: 'rgba(239, 68, 68, 0.4)', icon: XCircle, label: 'Out' },
+                    available: { bg: 'rgba(16, 185, 129, 0.15)', text: 'var(--c-green)', border: 'rgba(16, 185, 129, 0.4)', icon: CheckCircle2, label: 'Available' },
+                    maybe: { bg: 'rgba(245, 158, 11, 0.15)', text: 'var(--c-amber)', border: 'rgba(245, 158, 11, 0.4)', icon: AlertCircle, label: 'Doubtful' },
+                    unavailable: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--c-red)', border: 'rgba(239, 68, 68, 0.4)', icon: XCircle, label: 'Out' },
                     pending: { bg: 'rgba(var(--tint-rgb), 0.05)', text: 'var(--text-muted)', border: 'var(--border-subtle)', icon: HelpCircle, label: 'Pending' },
                   };
 
@@ -666,7 +666,7 @@ function AvailabilityHub() {
                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                               {player.full_name}
                             </span>
-                            <span className="shrink-0" style={{ fontSize: '0.7rem', color: club.primary_color, fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                            <span className="shrink-0" style={{ fontSize: '0.7rem', color: 'var(--club-ink)', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
                               #{player.jersey_number || '-'}
                             </span>
                             <span className="badge badge-secondary shrink-0" style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem' }}>

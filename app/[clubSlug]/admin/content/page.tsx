@@ -7,7 +7,7 @@ import { NewsArticle } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import RichTextEditor from '@/components/RichTextEditor';
 import ImageUploadZone from '@/components/ImageUploadZone';
-import { notify } from '@/components/ConfirmDialog';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
 import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles } from 'lucide-react';
 
@@ -230,7 +230,11 @@ export default function AdminContentPage({
               <button type="button" onClick={() => handleOpenEdit(article)} className="btn btn-secondary btn-sm" aria-label={`Edit ${article.title}`}>
                 <Edit2 size={14} />
               </button>
-              <button type="button" data-needs-full onClick={() => deleteNewsArticle(article.id)} className="btn btn-danger btn-sm" aria-label={`Delete ${article.title}`}>
+              <button type="button" data-needs-full onClick={async () => {
+                if (await confirmAction({ title: `Delete "${article.title}"?`, message: 'The article will be removed from your club site. This cannot be undone.', confirmLabel: 'Delete article', danger: true })) {
+                  deleteNewsArticle(article.id);
+                }
+              }} className="btn btn-danger btn-sm" aria-label={`Delete ${article.title}`}>
                 <Trash2 size={14} />
               </button>
             </div>

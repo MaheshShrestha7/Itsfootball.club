@@ -20,7 +20,7 @@ export default function LegalPage({ title, summary, sections, other }: {
         <header style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{title}</h1>
           <p className="text-meta" style={{ marginTop: '0.6rem' }}>
-            Last updated {LEGAL_UPDATED} · See also <Link href={other.href} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{other.label}</Link>
+            Last updated {LEGAL_UPDATED} · See also <Link href={other.href} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{other.label}</Link>
           </p>
           <div style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.65, marginTop: '1.25rem' }}>{summary}</div>
         </header>

@@ -132,7 +132,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
           Upload photos into albums for the club website. Public page:{' '}
-          <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--club-primary)' }}>/{club.slug}/gallery</Link>
+          <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--club-ink)' }}>/{club.slug}/gallery</Link>
         </p>
       </div>
 

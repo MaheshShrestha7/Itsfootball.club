@@ -542,7 +542,7 @@ export default function MatchCenterPage({
               </span>
             )}
             {match.match_type && (
-              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--club-primary)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
+              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--club-ink)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
                 {match.match_type} FIXTURE
               </span>
             )}
@@ -903,7 +903,7 @@ export default function MatchCenterPage({
                           <span style={{
                             fontFamily: 'var(--font-heading)',
                             fontWeight: 900,
-                            color: 'var(--club-primary)',
+                            color: 'var(--club-ink)',
                             width: '24px',
                           }}>
                             {p.jersey_number ? `#${p.jersey_number}` : ''}

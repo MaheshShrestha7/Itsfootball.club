@@ -328,7 +328,7 @@ export default function ImageUploadZone({
           borderRadius: 'var(--radius-md)',
           background: isDragging
             ? 'rgba(var(--club-primary-rgb), 0.08)'
-            : 'rgba(0, 0, 0, 0.25)',
+            : 'rgba(var(--shade-rgb), 0.25)', // a dark well on dark, a pale one on light (grey made its text hard to read)
           padding: previewUrl ? '0.75rem' : '1.5rem',
           textAlign: 'center',
           cursor: uploading ? 'wait' : 'pointer',

@@ -387,7 +387,7 @@ export default function TournamentMatchesList({
                       alignItems: 'center',
                       gap: '0.25rem',
                       fontSize: '0.75rem',
-                      color: 'var(--club-primary)',
+                      color: 'var(--club-ink)',
                       textDecoration: 'none',
                       fontWeight: 700,
                     }}

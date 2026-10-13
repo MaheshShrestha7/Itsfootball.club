@@ -7,7 +7,7 @@ import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-conte
 import CustomDomainPanel from './CustomDomainPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
-import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
+import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
 import {
   AlertTriangle,
   Palette,
@@ -97,6 +97,8 @@ export default function AdminBrandingPage({
       const rootDiv = document.querySelector('[style*="--club-primary"]') as HTMLElement | null;
       if (rootDiv) {
         rootDiv.style.setProperty('--club-primary', formData.primary_color);
+        // The readable text shades of the colour being tried, so text in it previews correctly too
+        Object.entries(clubInkVars(formData.primary_color)).forEach(([k, v]) => rootDiv.style.setProperty(k, v));
         rootDiv.style.setProperty('--club-secondary', formData.secondary_color);
         rootDiv.style.setProperty('--club-accent', formData.accent_color);
       }
@@ -438,7 +440,7 @@ export default function AdminBrandingPage({
                   padding: '0.35rem 0.65rem',
                   borderRadius: '6px',
                   background: `${formData.primary_color}25`,
-                  color: formData.primary_color,
+                  color: 'var(--club-ink)',
                   fontSize: '0.75rem',
                   fontWeight: 700,
                   border: `1px solid ${formData.primary_color}50`,

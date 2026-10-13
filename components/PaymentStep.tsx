@@ -109,7 +109,7 @@ export default function PaymentStep(props: PaymentStepProps) {
     <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'left' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', marginBottom: '1rem' }}>
         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{label}</div>
-        <div style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--club-primary)' }}>{formatMoney(amountCents, currency)}</div>
+        <div style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--club-ink)' }}>{formatMoney(amountCents, currency)}</div>
       </div>
 
       {settings === undefined ? (

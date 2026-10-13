@@ -606,7 +606,7 @@ export default function ClubPublicPage({
                           marginBottom: '1rem',
                         }}>
                           <Newspaper size={14} color="var(--club-primary)" />
-                          <span style={{ fontSize: '0.75rem', color: 'var(--club-primary)', fontWeight: 800 }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 800 }}>
                             {currentSlide.badge}
                           </span>
                         </div>
@@ -790,7 +790,7 @@ export default function ClubPublicPage({
                     marginBottom: '1rem',
                   }}>
                     <MapPin size={14} color="var(--club-primary)" />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--club-primary)', fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 800 }}>
                       {currentSlide.badge}
                     </span>
                   </div>
@@ -1023,7 +1023,7 @@ export default function ClubPublicPage({
                         </div>
 
                         <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--club-primary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 700, textTransform: 'uppercase' }}>
                             {activeSlideNews.tags?.join(' • ') || 'First Team'}
                           </div>
                           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
@@ -1031,7 +1031,7 @@ export default function ClubPublicPage({
                           </h3>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
                             <span>By {activeSlideNews.author_name || 'Media Team'}</span>
-                            <span style={{ color: 'var(--club-primary)', fontWeight: 700 }}>Read Article &rarr;</span>
+                            <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read Article &rarr;</span>
                           </div>
                         </div>
                       </Link>
@@ -1500,7 +1500,7 @@ export default function ClubPublicPage({
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '1rem' }}>
                 <a
                   href={`${SITE_URL.replace(/^https?:/, 'webcal:')}/${club.slug}/calendar.ics`}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-primary)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-ink)' }}
                 >
                   <CalendarPlus size={15} aria-hidden="true" /> Subscribe to fixtures &amp; events
                 </a>
@@ -1624,7 +1624,7 @@ export default function ClubPublicPage({
                 {/* Competition & Date */}
                 <div className="fixture-meta">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'inherit' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)', textTransform: 'uppercase' }}>
                       {competitionLabel}
                     </span>
                     {match.status === 'postponed' && (
@@ -1871,7 +1871,7 @@ export default function ClubPublicPage({
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     <span>By {featuredArticle.author_name}</span>
-                    <span style={{ color: 'var(--club-primary)', fontWeight: 700 }}>Read Article &rarr;</span>
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read Article &rarr;</span>
                   </div>
                 </div>
               </Link>
@@ -1956,7 +1956,7 @@ export default function ClubPublicPage({
                 <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                   {exec.full_name}
                 </h4>
-                <div style={{ color: 'var(--club-primary)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>
+                <div style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                   {exec.executive_title}
                 </div>
                 {(exec.executive_season || activeSeason) && (
@@ -2072,7 +2072,7 @@ export default function ClubPublicPage({
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       <span>Nationality: <strong className="text-secondary">{player.nationality || 'Local'}</strong></span>
-                      <Link href={`/${club.slug}/member`} style={{ color: 'var(--club-primary)', fontWeight: 700 }}>
+                      <Link href={`/${club.slug}/member`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>
                         View Pass &rarr;
                       </Link>
                     </div>
@@ -2228,7 +2228,7 @@ export default function ClubPublicPage({
                       </div>
                     </div>
 
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-primary)' }}>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-ink)' }}>
                       {leaderboardTab === 'goals' ? `${item.stat.goals} Goals` : leaderboardTab === 'assists' ? `${item.stat.assists} Assists` : `${item.stat.appearances} Apps`}
                     </div>
                   </div>
@@ -2405,7 +2405,7 @@ export default function ClubPublicPage({
                     <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={38} />
                     <div className="min-w-0">
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {player.jersey_number ? <span style={{ color: 'var(--club-primary)', fontWeight: 900 }}>#{player.jersey_number} </span> : null}
+                        {player.jersey_number ? <span style={{ color: 'var(--club-ink)', fontWeight: 900 }}>#{player.jersey_number} </span> : null}
                         {player.full_name}
                       </div>
                       <div className="text-meta">

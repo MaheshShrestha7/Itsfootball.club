@@ -113,7 +113,7 @@ export default function AdminDashboardPage({
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               First Team Squad
             </span>
-            <div style={{ color: 'var(--club-primary)' }}><Users size={20} /></div>
+            <div style={{ color: 'var(--club-ink)' }}><Users size={20} /></div>
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {squadPlayers.length}

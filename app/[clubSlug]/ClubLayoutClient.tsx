@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
 import ClubTabBar from '@/components/ClubTabBar';
-import { hexToRgb, evaluateColorContrast } from '@/lib/theme-utils';
+import { hexToRgb, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
 import { sortSponsorsByTier } from '@/lib/sponsors';
 
 export default function ClubLayoutClient({
@@ -63,7 +63,9 @@ export default function ClubLayoutClient({
 
   return (
     <div
+      className="club-theme-root"
       style={{
+        ...clubInkVars(club.primary_color),
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',

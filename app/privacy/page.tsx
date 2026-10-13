@@ -13,7 +13,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/privacy',
 });
 
-const mail = <a href={`mailto:${LEGAL.email}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{LEGAL.email}</a>;
+const mail = <a href={`mailto:${LEGAL.email}`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{LEGAL.email}</a>;
 
 const sections: LegalSection[] = [
   {
@@ -88,7 +88,7 @@ const sections: LegalSection[] = [
           <li><strong>Your club&rsquo;s admins</strong>, for the club records described above.</li>
           <li><strong>Supabase</strong>: our database and sign-in provider.</li>
           <li><strong>Cloudflare</strong>: website hosting, security and storage of uploaded files such as photos and receipts.</li>
-          <li><strong>Stripe</strong>: card payments, paid into the club&rsquo;s own Stripe account. Stripe handles your card under its own <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-primary)' }}>privacy policy</a>.</li>
+          <li><strong>Stripe</strong>: card payments, paid into the club&rsquo;s own Stripe account. Stripe handles your card under its own <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-ink)' }}>privacy policy</a>.</li>
           <li><strong>Resend</strong>: delivery of our emails.</li>
           <li><strong>Browser push services</strong> (run by Apple, Google or Mozilla, depending on your browser) to deliver notifications you turned on.</li>
           <li><strong>Google</strong>, when a club page shows its ground on an embedded Google Map, and <strong>YouTube</strong>, when a club article includes a video (we use YouTube&rsquo;s privacy-enhanced mode). These load from Google&rsquo;s servers, which receive your IP address.</li>
@@ -143,7 +143,7 @@ const sections: LegalSection[] = [
       <>
         <p>You can ask to see the personal information held about you, to correct it, or to delete it. You can:</p>
         <ul>
-          <li>Delete your itsfootball.club account at any time from <Link href="/my-clubs" style={{ color: 'var(--club-primary)' }}>My Clubs</Link>.</li>
+          <li>Delete your itsfootball.club account at any time from <Link href="/my-clubs" style={{ color: 'var(--club-ink)' }}>My Clubs</Link>.</li>
           <li>Unsubscribe from club emails using the link in any of them, and turn off notifications in your browser.</li>
           <li>Ask your club to update, correct or remove your member details and the other records it keeps (club admins manage these).</li>
           <li>Email us at {mail} for anything else. We&rsquo;ll reply within 30 days.</li>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { clubInkVars } from '@/lib/theme-utils';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -278,7 +279,7 @@ export default function MyClubsPage() {
                               <span className="text-primary">{club.stadium_name}</span>
                             </div>
                             <div>
-                              Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
+                              Web Portal: <code className="club-theme-root" style={{ ...clubInkVars(club.primary_color), color: 'var(--club-ink)' }}>/{club.slug}</code>
                             </div>
                           </div>
                         </div>
@@ -439,7 +440,7 @@ export default function MyClubsPage() {
                                 <span className="text-primary">{club.stadium_name}</span>
                               </div>
                               <div>
-                                Web Portal: <code style={{ color: club.primary_color }}>/{club.slug}</code>
+                                Web Portal: <code className="club-theme-root" style={{ ...clubInkVars(club.primary_color), color: 'var(--club-ink)' }}>/{club.slug}</code>
                               </div>
                             </div>
                           </div>

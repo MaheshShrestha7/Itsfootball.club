@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'settings', label: 'Settings' },
 ];
 const STATUS_COLOR: Record<string, string> = {
-  paid: '#10B981', awaiting_review: '#F59E0B', pending: '#94A3B8', rejected: '#EF4444', refunded: '#A855F7', failed: '#EF4444',
+  paid: 'var(--c-green)', awaiting_review: 'var(--c-amber)', pending: 'var(--text-secondary)', rejected: 'var(--c-red)', refunded: 'var(--c-purple)', failed: 'var(--c-red)',
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const cell: React.CSSProperties = { padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left', verticalAlign: 'top' };
@@ -209,10 +209,10 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
-        {stat('Income', money(income), '#10B981')}
-        {stat('Expenses', money(spent), '#EF4444')}
-        {stat('Net', money(income - spent), income - spent >= 0 ? '#10B981' : '#EF4444')}
-        {stat('Receipts to check', String(toReview.length), toReview.length ? '#F59E0B' : 'var(--text-secondary)')}
+        {stat('Income', money(income), 'var(--c-green)')}
+        {stat('Expenses', money(spent), 'var(--c-red)')}
+        {stat('Net', money(income - spent), income - spent >= 0 ? 'var(--c-green)' : 'var(--c-red)')}
+        {stat('Receipts to check', String(toReview.length), toReview.length ? 'var(--c-amber)' : 'var(--text-secondary)')}
       </div>
 
       {toReview.length > 0 && (

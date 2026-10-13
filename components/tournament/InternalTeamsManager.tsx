@@ -682,7 +682,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: 'var(--club-primary)',
+                      color: 'var(--club-ink)',
                       fontSize: '0.75rem',
                       fontWeight: 700,
                       cursor: 'pointer',

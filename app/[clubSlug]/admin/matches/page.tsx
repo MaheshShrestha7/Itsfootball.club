@@ -769,7 +769,7 @@ export default function AdminMatchesPage({
                 {/* Match Details */}
                 <div className="min-w-0">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {m.competition}
                     </span>
                     {multiTeam && (() => {
@@ -802,7 +802,7 @@ export default function AdminMatchesPage({
                         COMPLETED
                       </span>
                     ) : m.status === 'postponed' ? (
-                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#EAB308', border: '1px solid #EAB308' }}>
+                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.2)', color: 'var(--c-amber)', border: '1px solid currentColor' }}>
                         POSTPONED
                       </span>
                     ) : m.status === 'cancelled' ? (
@@ -1125,7 +1125,7 @@ export default function AdminMatchesPage({
                 {/* Internal Type Quick Presets */}
                 {form.match_type === 'internal' && (
                   <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)', marginBottom: '0.4rem' }}>
                       Intra-Club Presets:
                     </div>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>

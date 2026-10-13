@@ -37,12 +37,12 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
     getMemberRoles(m).map(r => {
       const lower = r.toLowerCase();
       const tone = lower.includes('executive')
-        ? ['rgba(245, 158, 11, 0.15)', '#F59E0B', 'rgba(245, 158, 11, 0.3)']
+        ? ['rgba(245, 158, 11, 0.15)', 'var(--c-amber)', 'rgba(245, 158, 11, 0.3)']
         : lower.includes('manager') || lower.includes('coach')
-        ? ['rgba(168, 85, 247, 0.15)', '#C084FC', 'rgba(168, 85, 247, 0.3)']
+        ? ['rgba(168, 85, 247, 0.15)', 'var(--c-purple)', 'rgba(168, 85, 247, 0.3)']
         : lower.includes('admin') || lower.includes('owner')
-        ? ['rgba(239, 68, 68, 0.15)', '#F87171', 'rgba(239, 68, 68, 0.3)']
-        : ['rgba(59, 130, 246, 0.15)', '#60A5FA', 'rgba(59, 130, 246, 0.3)'];
+        ? ['rgba(239, 68, 68, 0.15)', 'var(--c-red)', 'rgba(239, 68, 68, 0.3)']
+        : ['rgba(59, 130, 246, 0.15)', 'var(--c-sky)', 'rgba(59, 130, 246, 0.3)'];
       return (
         <span
           key={r}
@@ -94,15 +94,15 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
   const fmtDate = (d?: string | null) =>
     d ? new Date(d.slice(0, 10)).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
   const membershipState = (m: ClubMember): [string, string] => {
-    if (m.membership_status === 'pending') return ['PENDING', '#F59E0B'];
-    if (m.membership_status === 'rejected') return ['REJECTED', '#EF4444'];
-    if (m.membership_status === 'suspended') return ['SUSPENDED', '#EF4444'];
+    if (m.membership_status === 'pending') return ['PENDING', 'var(--c-amber)'];
+    if (m.membership_status === 'rejected') return ['REJECTED', 'var(--c-red)'];
+    if (m.membership_status === 'suspended') return ['SUSPENDED', 'var(--c-red)'];
     const expires = m.membership_expires_at?.slice(0, 10);
     if (!expires) return ['NO EXPIRY', 'var(--text-muted)'];
-    if (expires < today) return ['EXPIRED', '#EF4444'];
+    if (expires < today) return ['EXPIRED', 'var(--c-red)'];
     const days = (Date.parse(expires) - Date.parse(today)) / 86400000;
     // "VALID", not "ACTIVE": the member status badge beside it already says ACTIVE/INACTIVE
-    return days <= 30 ? ['EXPIRES SOON', '#F59E0B'] : ['VALID', '#10B981'];
+    return days <= 30 ? ['EXPIRES SOON', 'var(--c-amber)'] : ['VALID', 'var(--c-green)'];
   };
   const membership = (m: ClubMember) => {
     const [label, color] = membershipState(m);
@@ -153,7 +153,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
               <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={68} style={{ borderRadius: '16px', border: '1px solid var(--border-subtle)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.35rem', color: 'var(--club-primary)', lineHeight: 1 }}>{jersey(m)}</span>
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.35rem', color: 'var(--club-ink)', lineHeight: 1 }}>{jersey(m)}</span>
                 {statusBadge(m)}
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
           </div>
           <div className="squad-cell-roles squad-badges">{roleBadges(m)}</div>
           <div className="squad-cell-position squad-badges">{positionBadges(m)}</div>
-          <div className="squad-cell-jersey" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--club-primary)' }}>{jersey(m)}</div>
+          <div className="squad-cell-jersey" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--club-ink)' }}>{jersey(m)}</div>
           <div className="squad-cell-status">{statusBadge(m)}</div>
           <div className="squad-cell-membership">{membership(m)}</div>
           <div className="squad-cell-actions">{actions(m)}</div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { clubInkVars } from '@/lib/theme-utils';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
@@ -132,7 +133,7 @@ export default function ClubsDirectoryPage() {
                         <span>{club.stadium_name}</span>
                       </div>
                       <div>
-                        Web: <code style={{ color: club.primary_color }}>/{club.slug}</code>
+                        Web: <code className="club-theme-root" style={{ ...clubInkVars(club.primary_color), color: 'var(--club-ink)' }}>/{club.slug}</code>
                       </div>
                     </div>
                   </div>

@@ -1519,7 +1519,7 @@ export default function MemberPortalPage({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    {activeMember.membership_tier} • {club.name} • Pass Token: <code style={{ color: 'var(--club-primary)' }}>{activeMember.qr_code_token}</code>
+                    {activeMember.membership_tier} • {club.name} • Pass Token: <code style={{ color: 'var(--club-ink)' }}>{activeMember.qr_code_token}</code>
                   </div>
                 </div>
               </div>

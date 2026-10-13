@@ -94,7 +94,6 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                       display: 'flex',
                       alignItems: 'center',
                       gap: isPlatinum ? '0.9rem' : '0.65rem',
-                      opacity: isPlatinum ? 0.95 : 0.75,
                       padding: isPlatinum ? '0.6rem 1rem' : '0.4rem 0.6rem',
                       background: isPlatinum ? 'rgba(245, 158, 11, 0.08)' : 'transparent',
                       border: isPlatinum ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid transparent',
@@ -102,16 +101,10 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                       maxWidth: '100%',
                       flexWrap: 'wrap',
                       justifyContent: 'center',
-                      transition: 'opacity 0.2s, transform 0.2s, border-color 0.2s',
+                      transition: 'transform 0.2s, border-color 0.2s',
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.opacity = '1';
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.opacity = isPlatinum ? '0.95' : '0.75';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                   >
                     <SponsorLogo
                       src={sponsor.logo_url}

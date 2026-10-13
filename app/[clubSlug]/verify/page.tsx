@@ -149,7 +149,7 @@ export default function VerifyPassPage({
                     <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {result.member.full_name}
                     </h4>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--club-primary)', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--club-ink)', fontWeight: 700 }}>
                       {result.member.is_executive ? result.member.executive_title : result.member.membership_tier}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
