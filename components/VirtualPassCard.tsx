@@ -4,23 +4,92 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import confetti from 'canvas-confetti';
-import { Club, ClubMember } from '@/lib/supabase/types';
+import { Club, ClubMember, ClubTeam, Match } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import { renderPassImage, savePassImage } from '@/lib/pass-image';
+import { hexToRgb, getRelativeLuminance } from '@/lib/theme-utils';
 import {
   Shield,
   CheckCircle2,
   RotateCw,
-  Download,
-  Sparkles
+  Download
 } from 'lucide-react';
 
 interface VirtualPassCardProps {
   club: Club;
   member: ClubMember;
+  /** The member's teams, shown on the back */
+  teams?: ClubTeam[];
+  /** The member's next fixture, shown on the back */
+  nextMatch?: Match;
+  /** Opens the renewal form; the back offers it from 30 days before expiry */
+  onRenew?: () => void;
 }
 
-export default function VirtualPassCard({ club, member }: VirtualPassCardProps) {
+const ROLE_LABELS: Record<string, string> = { player: 'Player', supporter: 'Supporter', staff: 'Staff', manager: 'Manager' };
+
+/** "30 Jun 2027", or "Sat 18 Oct" with the weekday; '' when the date can't be read */
+function formatDay(value: string | undefined | null, withWeekday = false): string {
+  if (!value) return '';
+  const d = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, withWeekday
+    ? { weekday: 'short', day: 'numeric', month: 'short' }
+    : { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Glass styling: the faces are always dark tinted glass, whatever the site theme
+const GLASS_TEXT = '#FFFFFF';
+const GLASS_MUTED = 'rgba(255, 255, 255, 0.72)';
+const glassPanel: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.1)',
+  border: '1px solid rgba(255, 255, 255, 0.26)',
+  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 20px rgba(0, 0, 0, 0.18)',
+  borderRadius: '18px',
+};
+const glassChip: React.CSSProperties = {
+  display: 'inline-block',
+  background: 'rgba(255, 255, 255, 0.14)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  padding: '0.2rem 0.6rem',
+  borderRadius: '8px',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  color: GLASS_TEXT,
+};
+const linkButton: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  color: GLASS_TEXT,
+  fontWeight: 800,
+  fontSize: 'inherit',
+  textDecoration: 'underline',
+  textDecorationColor: 'rgba(255, 255, 255, 0.5)',
+  cursor: 'pointer',
+};
+
+function BackRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ color: GLASS_MUTED, fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ color: GLASS_TEXT, overflowWrap: 'anywhere' }}>{children}</div>
+    </div>
+  );
+}
+
+/** A glass panel inside the card, raised off it by `depth` px */
+function BackPanel({ depth, style, children }: { depth: number; style?: React.CSSProperties; children: React.ReactNode }) {
+  return (
+    <div style={{ ...glassPanel, padding: '0.65rem 0.9rem', position: 'relative', zIndex: 3, transform: `translateZ(${depth}px)`, fontSize: '0.8rem', ...style }}>
+      {children}
+    </div>
+  );
+}
+
+export default function VirtualPassCard({ club, member, teams = [], nextMatch, onRenew }: VirtualPassCardProps) {
+  // Hidden by default so a screenshot of the pass doesn't carry it
+  const [showEmergency, setShowEmergency] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,6 +116,20 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
   const isExpired = new Date(member.membership_expires_at) < new Date();
   const isSuspended = member.status === 'suspended';
+  // Whole days from today to the expiry date: 0 on the last day, negative once expired
+  const daysLeft = (() => {
+    const expiry = member.membership_expires_at ? new Date(`${member.membership_expires_at.slice(0, 10)}T00:00:00`) : null;
+    if (!expiry || Number.isNaN(expiry.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((expiry.getTime() - today.getTime()) / 86400000);
+  })();
+  const roleLabel = member.is_executive ? '' : ROLE_LABELS[(member.role || '').toLowerCase()] || '';
+  const directionsUrl = club.stadium_lat != null && club.stadium_lng != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${club.stadium_lat},${club.stadium_lng}`
+    : club.stadium_address
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(club.stadium_address)}`
+    : '';
 
   // Handle cursor / touch pointer move for 3D tilt and specular glare
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -124,6 +207,141 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
     }
   };
 
+  // Glass tint from the club's colours. Light colours are toned down so white text stays readable.
+  const primary = hexToRgb(club.primary_color || '#10B981');
+  const accent = hexToRgb(club.accent_color || '#F59E0B');
+  const tintAlpha = (c: { r: number; g: number; b: number }) => (getRelativeLuminance(c.r, c.g, c.b) > 0.35 ? 0.4 : 0.9);
+  const jerseyInk = getRelativeLuminance(primary.r, primary.g, primary.b) > 0.45 ? '#0E1420' : '#FFFFFF';
+
+  const faceStyle = (back: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    inset: 0,
+    borderRadius: '20px',
+    background: '#0B1120',
+    border: `1px solid rgba(255, 255, 255, ${tilt.isHovered ? 0.45 : 0.32})`,
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(255, 255, 255, 0.08)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    transform: back ? 'rotateY(180deg)' : 'rotateY(0deg)',
+    transformStyle: 'preserve-3d',
+    padding: back ? '1.2rem 1.25rem 0.9rem' : '1.4rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: back ? '0.55rem' : '0.75rem',
+    zIndex: isFlipped === back ? 2 : 0,
+    pointerEvents: isFlipped === back ? 'auto' : 'none',
+    color: GLASS_TEXT,
+    // Fits a 375px phone; on narrower screens the back scrolls rather than cutting text off
+    overflowX: 'hidden',
+    overflowY: back ? 'auto' : 'hidden',
+  });
+
+  // Colour blobs under frosted glass. Drawn inside the card (not with backdrop-filter, which
+  // 3D-flipped faces don't render reliably), so the glass looks the same on any page.
+  const glassLayers = (mirrored = false) => (
+    <>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 0,
+          background: [
+            `radial-gradient(circle at ${mirrored ? '85% 12%' : '10% 8%'}, rgba(${primary.rgbString}, ${tintAlpha(primary)}) 0%, rgba(${primary.rgbString}, ${tintAlpha(primary) * 0.35}) 45%, transparent 75%)`,
+            `radial-gradient(circle at ${mirrored ? '15% 95%' : '92% 96%'}, rgba(${accent.rgbString}, ${tintAlpha(accent) * 0.75}) 0%, transparent 55%)`,
+            `radial-gradient(circle at ${mirrored ? '70% 60%' : '35% 62%'}, rgba(16, 185, 129, 0.22) 0%, transparent 45%)`,
+            `radial-gradient(circle at ${mirrored ? '20% 35%' : '80% 30%'}, rgba(124, 58, 237, 0.22) 0%, transparent 45%)`,
+          ].join(', '),
+        }}
+      />
+      {/* Frosted sheet with a diagonal sheen */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 1,
+          background: `linear-gradient(${mirrored ? 220 : 140}deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
+            linear-gradient(${115 + tilt.rotY * 2}deg, transparent 30%, rgba(255, 255, 255, ${tilt.isHovered ? 0.22 : 0.14}) 45%, transparent 60%)`,
+        }}
+      />
+      {/* Light that follows the pointer */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 10,
+          background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255, 255, 255, ${tilt.isHovered ? 0.22 : 0}) 0%, transparent 60%)`,
+          mixBlendMode: 'screen',
+          transition: tilt.isHovered ? 'none' : 'background 0.6s ease',
+        }}
+      />
+    </>
+  );
+
+  const statusLabel = isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE';
+  const statusColor = isSuspended ? { bg: 'rgba(239, 68, 68, 0.25)', border: 'rgba(252, 165, 165, 0.65)', text: '#FECACA', dot: '#F87171' }
+    : isExpired ? { bg: 'rgba(245, 158, 11, 0.25)', border: 'rgba(252, 211, 77, 0.65)', text: '#FDE68A', dot: '#FBBF24' }
+    : { bg: 'rgba(16, 185, 129, 0.22)', border: 'rgba(110, 231, 183, 0.6)', text: '#A7F3D0', dot: '#34D399' };
+
+  const passHeader = (subtitle: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', position: 'relative', zIndex: 3, transform: 'translateZ(20px)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
+        <div
+          style={{
+            width: '44px',
+            height: '44px',
+            flexShrink: 0, // a long club name must not squeeze the crest narrow
+            borderRadius: '13px',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(255, 255, 255, 0.16)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+          }}
+        >
+          {club.logo_url ? (
+            // Crests are rarely square: show the whole badge rather than cropping it
+            <img loading="eager" decoding="async" src={club.logo_url} alt={`${club.name} crest`} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+          ) : (
+            <Shield size={22} color={GLASS_TEXT} />
+          )}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.01em', color: GLASS_TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {club.name}
+          </div>
+          <div style={{ fontSize: '0.64rem', color: GLASS_MUTED, textTransform: 'uppercase', letterSpacing: '0.14em' }}>{subtitle}</div>
+        </div>
+      </div>
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          padding: '0.3rem 0.7rem',
+          borderRadius: '999px',
+          background: statusColor.bg,
+          border: `1px solid ${statusColor.border}`,
+          color: statusColor.text,
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+        }}
+      >
+        <span aria-hidden="true" style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor.dot, boxShadow: `0 0 8px ${statusColor.dot}` }} />
+        {statusLabel}
+      </div>
+    </div>
+  );
+
   // Base card 3D transform combining tilt, scale and 180deg flip
   const cardTransform = isFlipped
     ? `perspective(1200px) rotateY(180deg) rotateX(${tilt.rotX}deg) rotateY(${-tilt.rotY}deg) ${tilt.isHovered ? 'scale3d(1.025, 1.025, 1.025)' : 'scale3d(1, 1, 1)'}`
@@ -131,8 +349,8 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
   // Dynamic realistic drop shadow that shifts opposite to the tilt direction
   const dynamicShadow = tilt.isHovered
-    ? `${-tilt.rotY * 2.2}px ${tilt.rotX * 2.2 + 22}px 45px rgba(0, 0, 0, 0.8), 0 0 35px rgba(var(--club-primary-rgb), 0.35)`
-    : '0 20px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(var(--club-primary-rgb), 0.2)';
+    ? `${-tilt.rotY * 2.2}px ${tilt.rotX * 2.2 + 26}px 50px rgba(0, 0, 0, 0.45), 0 0 40px rgba(${primary.rgbString}, 0.35)`
+    : `0 24px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(${primary.rgbString}, 0.22)`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%' }}>
@@ -155,358 +373,194 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
           }}
         >
           {/* ================= FRONT OF CARD ================= */}
-          <div
-            data-theme="dark" style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '20px',
-              background: `radial-gradient(circle at 15% 15%, rgba(var(--club-primary-rgb), 0.3) 0%, #0E1420 65%, #05080E 100%)`,
-              border: `1.5px solid ${tilt.isHovered ? 'rgba(var(--tint-rgb), 0.32)' : 'rgba(var(--tint-rgb), 0.15)'}`,
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(0deg)',
-              transformStyle: 'preserve-3d',
-              padding: '1.75rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              zIndex: isFlipped ? 0 : 2,
-              pointerEvents: isFlipped ? 'none' : 'auto',
-              overflow: 'hidden',
-            }}
-          >
-            {/* 1. Specular Light Glare Hotspot */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255, 255, 255, ${tilt.isHovered ? 0.32 : 0.06}) 0%, rgba(var(--club-primary-rgb), ${tilt.isHovered ? 0.16 : 0}) 40%, transparent 70%)`,
-                mixBlendMode: 'screen',
-                zIndex: 10,
-                transition: tilt.isHovered ? 'none' : 'background 0.6s ease',
-              }}
-            />
+          <div style={faceStyle(false)}>
+            {glassLayers()}
 
-            {/* 2. Iridescent Rainbow Foil Sheen */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                background: `linear-gradient(${115 + tilt.rotY * 2}deg, transparent 20%, rgba(255, 255, 255, 0.05) 35%, rgba(16, 185, 129, 0.18) 48%, rgba(245, 158, 11, 0.18) 54%, rgba(59, 130, 246, 0.18) 60%, transparent 80%)`,
-                opacity: tilt.isHovered ? 0.95 : 0.45,
-                mixBlendMode: 'color-dodge',
-                zIndex: 9,
-                transition: 'opacity 0.3s ease',
-              }}
-            />
+            {/* Header: crest, club, status */}
+            {passHeader('Member Pass')}
 
-            {/* 3. Subtle Stadium Watermark Pattern */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(var(--tint-rgb), 0.035) 1px, transparent 1px)',
-                backgroundSize: '16px 16px',
-                pointerEvents: 'none',
-                zIndex: 1,
-              }}
-            />
-
-            {/* Header: Club Crest & Name */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                position: 'relative',
-                zIndex: 3,
-                transform: 'translateZ(20px)',
-              }}
-            >
-              <div className="row row-loose">
-                <div
-                  data-theme="dark" style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    border: `2px solid ${club.primary_color}`,
-                    overflow: 'hidden',
-                    background: 'rgba(0,0,0,0.6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: `0 4px 14px rgba(0,0,0,0.5), 0 0 12px rgba(var(--club-primary-rgb), 0.4)`,
-                  }}
-                >
-                  {club.logo_url ? (
-                    <img loading="eager" decoding="async" src={club.logo_url} alt={`${club.name} crest`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Shield size={24} color={club.primary_color} />
-                  )}
-                </div>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                    {club.name}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span>Official Matchday Pass</span>
-                    {club.founded_year && <span>• Est. {club.founded_year}</span>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Pill */}
-              <div
-                className="badge"
-                style={{
-                  backgroundColor: isSuspended ? 'rgba(239, 68, 68, 0.2)' : isExpired ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                  color: isSuspended ? 'var(--c-red)' : isExpired ? 'var(--c-amber)' : 'var(--c-green)',
-                  border: `1px solid ${isSuspended ? '#EF4444' : isExpired ? '#F59E0B' : '#10B981'}`,
-                }}
-              >
-                <CheckCircle2 size={12} />
-                {isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE'}
-              </div>
-            </div>
-
-            {/* Middle: Member Avatar, Name & Role */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1.25rem',
-                margin: '1.25rem 0',
-                position: 'relative',
-                zIndex: 3,
-                transform: 'translateZ(30px)',
-              }}
-            >
-              <div style={{ position: 'relative' }}>
+            {/* Middle: photo, name, tier */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1.1rem', position: 'relative', zIndex: 3, transform: 'translateZ(30px)' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
                 <PlayerAvatar
                   photoUrl={member.photo_url}
                   name={member.full_name}
-                  size={86}
+                  size={92}
+                  eager
                   style={{
-                    borderRadius: '16px',
-                    border: `2.5px solid rgba(var(--tint-rgb), 0.35)`,
-                    boxShadow: '0 12px 24px rgba(0,0,0,0.6)',
-                    fontSize: 30,
-                    color: 'var(--text-primary)',
-                    background: 'rgba(var(--tint-rgb), 0.12)',
+                    borderRadius: '22px',
+                    border: '1px solid rgba(255, 255, 255, 0.45)',
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 12px 24px rgba(0, 0, 0, 0.25)',
+                    background: 'rgba(255, 255, 255, 0.14)',
+                    color: GLASS_TEXT,
+                    fontSize: 32,
                   }}
                 />
                 {member.jersey_number && (
                   <div
+                    aria-label={`Jersey No. ${member.jersey_number}`}
                     style={{
                       position: 'absolute',
-                      bottom: '-6px',
-                      right: '-6px',
-                      width: '30px',
-                      height: '30px',
+                      bottom: '-8px',
+                      right: '-8px',
+                      width: '32px',
+                      height: '32px',
                       borderRadius: '50%',
                       background: club.primary_color,
-                      color: '#FFFFFF',
+                      color: jerseyInk,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontFamily: 'var(--font-heading)',
                       fontWeight: 900,
                       fontSize: '0.9rem',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.7)',
                       border: '2px solid #FFFFFF',
+                      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.4)',
                     }}
                   >
                     {member.jersey_number}
                   </div>
                 )}
               </div>
-
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.02em', color: GLASS_TEXT, marginBottom: '0.5rem', overflowWrap: 'anywhere' }}>
                   {member.full_name}
                 </h3>
-                <div
-                  style={{
-                    display: 'inline-block',
-                    background: 'rgba(var(--tint-rgb), 0.1)',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    marginBottom: '0.4rem',
-                    border: '1px solid rgba(var(--tint-rgb), 0.1)',
-                  }}
-                >
-                  {member.is_executive ? member.executive_title : member.membership_tier}
+                <div style={{ ...glassChip, marginBottom: '0.4rem' }}>
+                  {member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}
                 </div>
-                <div className="text-meta">
-                  Position: <strong className="text-primary">{member.player_position || 'Squad Member'}</strong>
+                <div style={{ fontSize: '0.8rem', color: GLASS_MUTED }}>
+                  Position: <strong style={{ color: GLASS_TEXT }}>{member.player_position || 'Squad Member'}</strong>
                 </div>
               </div>
             </div>
 
-            {/* Bottom: Turnstile QR Code & Validity */}
-            <div
-              data-theme="dark" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'rgba(5, 8, 14, 0.75)',
-                backdropFilter: 'blur(10px)',
-                padding: '0.9rem 1rem',
-                borderRadius: '14px',
-                border: '1px solid rgba(var(--tint-rgb), 0.1)',
-                position: 'relative',
-                zIndex: 3,
-                transform: 'translateZ(25px)',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
-              }}
-            >
+            {/* Bottom: validity and the gate QR (tap for full screen) */}
+            <div style={{ ...glassPanel, padding: '0.8rem 0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', position: 'relative', zIndex: 3, transform: 'translateZ(25px)' }}>
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Turnstile QR Token
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem', color: 'var(--text-primary)', fontWeight: 700, marginTop: '0.1rem' }}>
-                  {member.qr_code_token.substring(0, 16)}...
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Valid Thru: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{member.membership_expires_at}</span>
-                </div>
+                <div style={{ fontSize: '0.64rem', color: GLASS_MUTED, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Valid until</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: GLASS_TEXT, marginTop: '0.1rem' }}>{formatDay(member.membership_expires_at) || '—'}</div>
+                <div style={{ fontSize: '0.72rem', color: GLASS_MUTED, marginTop: '0.4rem', lineHeight: 1.35 }}>Tap the code to enlarge it at the gate</div>
               </div>
-
-              {/* Scannable High-Contrast QR (tap for full screen) */}
               <button
                 type="button"
                 aria-label="Show QR code full screen"
                 onClick={e => { e.stopPropagation(); setShowQr(true); }}
                 style={{
+                  flexShrink: 0,
                   border: 'none',
                   cursor: 'zoom-in',
                   background: '#FFFFFF',
                   padding: '7px',
-                  borderRadius: '10px',
+                  borderRadius: '14px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.6)',
+                  boxShadow: '0 10px 24px rgba(0, 0, 0, 0.35)',
                 }}
               >
-                <QRCodeSVG
-                  value={member.qr_code_token}
-                  size={64}
-                  level="H"
-                  includeMargin={false}
-                />
+                <QRCodeSVG value={member.qr_code_token} size={84} level="H" marginSize={0} />
               </button>
-            </div>
-
-            {/* Interactive Flip Hint */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '0.55rem',
-                right: '1.25rem',
-                opacity: tilt.isHovered ? 0.9 : 0,
-                transition: 'opacity 0.25s ease',
-                pointerEvents: 'none',
-                zIndex: 5,
-              }}
-            >
-              <span
-                data-theme="dark" style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  color: 'var(--text-muted)',
-                  background: 'rgba(0,0,0,0.6)',
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                Click to Flip ↷
-              </span>
             </div>
           </div>
 
           {/* ================= BACK OF CARD ================= */}
-          <div
-            data-theme="dark" style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #070a11 0%, rgb(var(--dk-17-24-39)) 100%)',
-              border: `1.5px solid ${tilt.isHovered ? 'rgba(var(--tint-rgb), 0.32)' : 'rgba(var(--tint-rgb), 0.15)'}`,
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-              transformStyle: 'preserve-3d',
-              padding: '1.75rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              zIndex: isFlipped ? 2 : 0,
-              pointerEvents: isFlipped ? 'auto' : 'none',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Specular Light Glare for Back */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255, 255, 255, ${tilt.isHovered ? 0.25 : 0.05}) 0%, transparent 60%)`,
-                mixBlendMode: 'screen',
-                zIndex: 10,
-              }}
-            />
+          <div style={faceStyle(true)}>
+            {glassLayers(true)}
 
-            <div style={{ position: 'relative', zIndex: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                <Sparkles size={18} color={club.accent_color} />
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                  Ground Regulations & Access
-                </span>
+            {passHeader('Member Details')}
+
+            {/* Membership */}
+            <BackPanel depth={30}>
+              <div style={glassChip}>
+                {member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Home Ground Gate</div>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_name} — Members Turnstile 3</div>
+              {(teams.length > 0 || roleLabel) && (
+                <div style={{ color: GLASS_MUTED, marginTop: '0.35rem' }}>
+                  {[...teams.map(t => t.name), roleLabel].filter(Boolean).join(' · ')}
                 </div>
-
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Member Email & Phone</div>
-                  <div className="text-primary">{member.email} {member.phone ? `• ${member.phone}` : ''}</div>
-                </div>
-
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Nationality & DOB</div>
-                  <div className="text-primary">{member.nationality || 'Official Member'} • {member.date_of_birth || 'Registered'}</div>
-                </div>
-
-                <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '0.65rem 0.8rem', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  This pass grants turnstile admission to official club fixtures and club house events. Tamper-evident credentials verified at each gate.
-                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <BackRow label="Member since">{formatDay(member.membership_starts_at || member.created_at) || '—'}</BackRow>
+                <BackRow label="Valid until">
+                  {formatDay(member.membership_expires_at) || '—'}
+                  {daysLeft !== null && (
+                    <div style={{ color: GLASS_MUTED }}>
+                      <span style={{ color: daysLeft < 0 ? '#FCA5A5' : daysLeft <= 30 ? '#FCD34D' : GLASS_MUTED, fontWeight: daysLeft <= 30 ? 700 : 500 }}>
+                        {daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Last day' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+                      </span>
+                      {onRenew && daysLeft <= 30 && (
+                        <>
+                          {' · '}
+                          <button type="button" onClick={e => { e.stopPropagation(); onRenew(); }} style={linkButton}>Renew</button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </BackRow>
               </div>
-            </div>
+            </BackPanel>
 
-            {/* Barcode representation */}
-            <div style={{ textAlign: 'center', position: 'relative', zIndex: 3 }}>
-              <div
-                style={{
-                  height: '42px',
-                  background: 'repeating-linear-gradient(90deg, #FFFFFF, #FFFFFF 2px, transparent 2px, transparent 5px, #FFFFFF 5px, #FFFFFF 8px, transparent 8px, transparent 10px)',
-                  borderRadius: '4px',
-                  marginBottom: '0.35rem',
-                  opacity: 0.85,
-                }}
-              />
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.2em' }}>
-                {member.id.toUpperCase()}
+            {/* Matchday */}
+            <BackPanel depth={25}>
+              <BackRow label="Next fixture">
+                {nextMatch ? (
+                  <>
+                    <strong>{nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>
+                    <span style={{ color: GLASS_MUTED }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
+                    <div style={{ color: GLASS_MUTED }}>
+                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${nextMatch.match_time.slice(0, 5)}` : ''}
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ color: GLASS_MUTED }}>No fixture scheduled yet</span>
+                )}
+              </BackRow>
+              {(club.stadium_name || club.stadium_address) && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <BackRow label="Home ground">
+                    <strong>{club.stadium_name || club.stadium_address}</strong>
+                    {club.stadium_name && club.stadium_address && (
+                      <div style={{ color: GLASS_MUTED }}>{club.stadium_address}</div>
+                    )}
+                    {(directionsUrl || club.stadium_parking_info) && (
+                      <div style={{ color: GLASS_MUTED }}>
+                        {directionsUrl && (
+                          <a href={directionsUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={linkButton}>
+                            Directions
+                          </a>
+                        )}
+                        {directionsUrl && club.stadium_parking_info ? ' · ' : ''}
+                        {club.stadium_parking_info}
+                      </div>
+                    )}
+                  </BackRow>
+                </div>
+              )}
+            </BackPanel>
+
+            {member.emergency_contact && (
+              <BackPanel depth={20} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                <BackRow label="Emergency contact">
+                  {showEmergency ? member.emergency_contact : '••••••••'}
+                </BackRow>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setShowEmergency(v => !v); }}
+                  aria-pressed={showEmergency}
+                  style={{ ...linkButton, flexShrink: 0, fontSize: '0.75rem' }}
+                >
+                  {showEmergency ? 'Hide' : 'Show'}
+                </button>
+              </BackPanel>
+            )}
+
+            <div style={{ marginTop: 'auto', textAlign: 'center', position: 'relative', zIndex: 3 }}>
+              {(club.motto || club.founded_year) && (
+                <div style={{ fontSize: '0.78rem', color: GLASS_TEXT, fontStyle: club.motto ? 'italic' : 'normal' }}>
+                  {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(' · ')}
+                </div>
+              )}
+              <div style={{ fontSize: '0.68rem', color: GLASS_MUTED, marginTop: '0.15rem' }}>
+                Scan the front at the gate · Not transferable
               </div>
             </div>
           </div>
@@ -604,9 +658,6 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
         <QRCodeCanvas ref={qrCanvasRef} value={member.qr_code_token} size={640} level="H" marginSize={0} style={{ display: 'none' }} aria-hidden="true" />
       )}
 
-      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-        Verified Pass Token: <code style={{ fontFamily: 'var(--font-mono)', color: club.primary_color }}>{member.qr_code_token}</code>
-      </div>
     </div>
   );
 }
