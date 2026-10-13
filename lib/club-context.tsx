@@ -113,7 +113,8 @@ interface ClubContextType {
   /** Re-read everything from Supabase (e.g. after a member profile was linked) */
   reloadFromServer: () => void;
   /** Saves pending changes now and resolves once they've reached Supabase (e.g. before navigating) */
-  saveNow: () => Promise<void>;
+  /** Saves now; true once everything is in the database (false on an error, or while changes wait for a sign-in) */
+  saveNow: () => Promise<boolean>;
 
   // Selection
   selectClubBySlug: (slug: string) => Club | null;
@@ -787,13 +788,15 @@ export function ClubProvider({
     };
   }, [syncReady, clubIdsKey]);
 
-  const runFlush = useCallback(async () => {
+  // true = everything saved, false = an error or changes waiting for a sign-in, null = deferred behind a running flush
+  const runFlush = useCallback(async (): Promise<boolean | null> => {
     const engine = syncRef.current;
-    if (!engine) return;
+    if (!engine) return true;
     if (flushingRef.current) {
       dirtyRef.current = true;
-      return;
+      return null;
     }
+    let saved = false;
     flushingRef.current = true;
     try {
       const result = await engine.flush(syncStateRef.current, pendingDeletesRef.current);
@@ -809,6 +812,7 @@ export function ClubProvider({
         });
       } else {
         setSyncStatus({ phase: 'idle' });
+        saved = true;
       }
     } catch (err: any) {
       setSyncStatus({ phase: 'error', message: `Sync failed: ${err?.message || err}` });
@@ -819,6 +823,7 @@ export function ClubProvider({
         runFlush();
       }
     }
+    return saved;
   }, []);
 
   // Push local changes shortly after the last edit
@@ -853,8 +858,11 @@ export function ClubProvider({
   const saveNow = useCallback(async () => {
     // A flush already running may have started before the latest edit: wait for it, then flush again
     // ponytail: 100ms polling; a promise queue if this ever needs to be tighter
-    while (flushingRef.current) await new Promise(resolve => setTimeout(resolve, 100));
-    await runFlush();
+    for (;;) {
+      while (flushingRef.current) await new Promise(resolve => setTimeout(resolve, 100));
+      const saved = await runFlush();
+      if (saved !== null) return saved;
+    }
   }, [runFlush]);
 
   const retrySync = useCallback(() => {
