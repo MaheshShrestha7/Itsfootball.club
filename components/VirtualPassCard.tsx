@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { Club, ClubMember } from '@/lib/supabase/types';
@@ -25,6 +26,15 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  // The QR on the card is small for a gate camera: tapping it shows it full screen
+  const [showQr, setShowQr] = useState(false);
+
+  useEffect(() => {
+    if (!showQr) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowQr(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showQr]);
   const [tilt, setTilt] = useState({
     rotX: 0,
     rotY: 0,
@@ -367,9 +377,14 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                 </div>
               </div>
 
-              {/* Scannable High-Contrast QR */}
-              <div
+              {/* Scannable High-Contrast QR (tap for full screen) */}
+              <button
+                type="button"
+                aria-label="Show QR code full screen"
+                onClick={e => { e.stopPropagation(); setShowQr(true); }}
                 style={{
+                  border: 'none',
+                  cursor: 'zoom-in',
                   background: '#FFFFFF',
                   padding: '7px',
                   borderRadius: '10px',
@@ -385,7 +400,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
                   level="H"
                   includeMargin={false}
                 />
-              </div>
+              </button>
             </div>
 
             {/* Interactive Flip Hint */}
@@ -536,6 +551,52 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
         <div role="alert" style={{ fontSize: '0.8rem', color: 'var(--c-red)', textAlign: 'center' }}>
           {saveError}
         </div>
+      )}
+
+      {/* Portalled so a transformed ancestor can't stop it covering the screen */}
+      {showQr && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Member pass QR code"
+          onClick={() => setShowQr(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: '#FFFFFF',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1.25rem',
+            padding: '1.5rem',
+            color: '#0E1420',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{club.name}</div>
+          <QRCodeSVG
+            value={member.qr_code_token}
+            size={320}
+            level="H"
+            marginSize={2}
+            style={{ width: 'min(80vw, 60vh)', height: 'min(80vw, 60vh)' }}
+          />
+          <div style={{ fontWeight: 900, fontSize: '1.4rem' }}>{member.full_name}</div>
+          <div style={{ fontSize: '0.9rem', color: '#475569' }}>
+            {isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE'} • Turn your screen brightness up for the gate scanner
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQr(false)}
+            autoFocus
+            style={{ background: '#0E1420', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '0.6rem 1.5rem', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Close
+          </button>
+        </div>,
+        document.body
       )}
 
       {/* Full-size copy of the QR used to draw the saved image (never shown) */}
