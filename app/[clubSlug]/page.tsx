@@ -9,6 +9,7 @@ import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { clubPlaysIn, latestFirst, soonestFirst } from '@/lib/fixtures';
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
@@ -87,6 +88,7 @@ export default function ClubPublicPage({
     getActiveSeason,
     clubTeams,
     clubTeamMembers,
+    tournamentParticipants,
   } = useClub();
 
   const matchedClub = selectClubBySlug(resolvedParams.clubSlug);
@@ -145,7 +147,8 @@ export default function ClubPublicPage({
   const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers);
   const publicMembers = clubMembers.filter(m => !juniorIds.has(m.id));
   const squadPlayers = publicMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
-  const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
+  // 99 is "no order set"; 0 is a real position (e.g. the President first)
+  const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
   const liveMatch = clubMatches.find(m => m.status === 'live');
 
@@ -158,8 +161,12 @@ export default function ClubPublicPage({
     return m.season === resolvedSeasonName;
   });
 
-  const upcomingMatches = filteredClubMatches.filter(m => m.status === 'upcoming');
-  const pastMatches = filteredClubMatches.filter(m => m.status === 'completed');
+  // Only games the club's own players are in: a hosted cup between other clubs stays on its tournament page
+  const ourMatches = filteredClubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || ''));
+  const upcomingMatches = ourMatches.filter(m => m.status === 'upcoming').sort(soonestFirst);
+  // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
+  const upcomingFixtures = ourMatches.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
+  const pastMatches = ourMatches.filter(m => m.status === 'completed').sort(latestFirst);
   // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
   const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
   const inFixturesTeam = (m: typeof clubMatches[number]) => {
@@ -168,6 +175,12 @@ export default function ClubPublicPage({
     return !team || team.id === fixturesTeamId;
   };
   const clubEvents = events.filter(e => e.club_id === clubId);
+  // Soonest first, and only events that haven't finished yet
+  const nowMs = Date.now();
+  const upcomingEvents = clubEvents
+    .filter(e => { const end = Date.parse(e.end_time || e.start_time); return Number.isNaN(end) || end >= nowMs; })
+    .sort((a, b) => (Date.parse(a.start_time) || 0) - (Date.parse(b.start_time) || 0));
+  const nextEvent = upcomingEvents[0] || clubEvents[0];
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
   const clubNews = news.filter(n => n.club_id === clubId);
@@ -282,7 +295,7 @@ export default function ClubPublicPage({
         }
 
         if (item.type === 'event') {
-          const evt = events.find(e => e.id === item.target_id) || clubEvents[0];
+          const evt = events.find(e => e.id === item.target_id) || nextEvent;
           return {
             id: item.id || `pin-event-${idx}`,
             category: 'event',
@@ -352,11 +365,11 @@ export default function ClubPublicPage({
         id: 'club-events',
         category: 'event',
         tabLabel: 'Events & Trials',
-        badge: `UPCOMING EVENT • ${clubEvents[0]?.category?.toUpperCase() || 'CALENDAR'}`,
+        badge: `UPCOMING EVENT • ${nextEvent?.category?.toUpperCase() || 'CALENDAR'}`,
         bgImage: club.banner_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
-        title: clubEvents[0]?.title || `${club.name} Open Training Session`,
-        subtitle: clubEvents[0]?.description || 'Fan sessions, community training camps, and player trial opportunities.',
-        targetEvent: clubEvents[0],
+        title: nextEvent?.title || `${club.name} Open Training Session`,
+        subtitle: nextEvent?.description || 'Fan sessions, community training camps, and player trial opportunities.',
+        targetEvent: nextEvent,
       },
       {
         id: 'stadium-atmosphere',
@@ -368,7 +381,7 @@ export default function ClubPublicPage({
         subtitle: club.stadium_pitch_type,
       }
     ];
-  }, [club, club?.hero_pinned_items, matches, liveMatch, upcomingMatches, news, featuredArticle, events, clubEvents, gallery]);
+  }, [club, club?.hero_pinned_items, matches, liveMatch, upcomingMatches, news, featuredArticle, events, nextEvent, gallery]);
 
   // Autoplay ticker with pause-on-hover
   useEffect(() => {
@@ -502,7 +515,7 @@ export default function ClubPublicPage({
               {(() => {
                 const activeSlideMatch = currentSlide.targetMatch || liveMatch || upcomingMatches[0];
                 const activeSlideNews = currentSlide.targetNews || featuredArticle;
-                const activeSlideEvent = currentSlide.targetEvent || clubEvents[0];
+                const activeSlideEvent = currentSlide.targetEvent || nextEvent;
 
                 return (
                   <>
@@ -1030,7 +1043,7 @@ export default function ClubPublicPage({
               {currentSlide.category === 'event' && (
                 <div>
                   {(() => {
-                    const activeSlideEvent = currentSlide.targetEvent || clubEvents[0];
+                    const activeSlideEvent = currentSlide.targetEvent || nextEvent;
                     if (!activeSlideEvent) return null;
                     return (
                       <div className="glass-panel" style={{
@@ -1596,7 +1609,7 @@ export default function ClubPublicPage({
           </div>
 
           <div className="stack">
-            {(fixturesTab === 'upcoming' ? upcomingMatches : pastMatches).filter(inFixturesTeam).map(match => {
+            {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).map(match => {
               const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
               const hideScore = publicScoreHidden(match, clubTeams);
               const competitionLabel = match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition;
@@ -1613,6 +1626,11 @@ export default function ClubPublicPage({
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)', textTransform: 'uppercase' }}>
                       {competitionLabel}
                     </span>
+                    {match.status === 'postponed' && (
+                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(245, 158, 11, 0.18)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.45)' }}>
+                        POSTPONED
+                      </span>
+                    )}
                     {showTypeBadge && (
                       <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
                         {match.match_type}
@@ -1749,7 +1767,10 @@ export default function ClubPublicPage({
           </div>
 
           <div className="grid-responsive-3">
-            {clubEvents.map(evt => (
+            {upcomingEvents.length === 0 && (
+              <p className="text-meta">No upcoming events right now. Check back soon.</p>
+            )}
+            {upcomingEvents.map(evt => (
               <div key={evt.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -2006,7 +2027,10 @@ export default function ClubPublicPage({
                       color: 'var(--text-primary)',
                       textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                     }}>
-                      {player.jersey_number ? `#${player.jersey_number}` : ''}
+                      {/* Labelled as the shirt number so it doesn't read as a rank next to the "2nd" badge */}
+                      {player.jersey_number ? (
+                        <><span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.85, marginRight: '0.2rem' }} aria-label="Shirt number">No.</span>{player.jersey_number}</>
+                      ) : ''}
                     </div>
                     <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
                       <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>

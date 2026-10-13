@@ -14,6 +14,7 @@ import { isPlayerMember } from '@/lib/supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
 import { publicScoreHidden } from '@/lib/teams';
+import { clubPlaysIn } from '@/lib/fixtures';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -81,7 +82,7 @@ function TileGrid({ tiles }: { tiles: Tile[] }) {
 /** The club app's home: what this person does at the club, by role (visitor, member, player, staff) */
 export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, members, clubTeams } = useClub();
+  const { clubs, selectClubBySlug, matches, events, members, clubTeams, tournamentParticipants } = useClub();
   const { user, isLoading, can, isClubSuperUser, hasClubAdminAccess, getClubAccess, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const base = `/${club.slug}`;
@@ -104,7 +105,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const upcoming = (() => {
     const ms = matches
-      .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000)
+      // Not other clubs' games in a cup the club hosts: members aren't asked In/Out for those
+      .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000 && clubPlaysIn(m, tournamentParticipants, club.name))
       .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue }));
     const es = events
       .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now)

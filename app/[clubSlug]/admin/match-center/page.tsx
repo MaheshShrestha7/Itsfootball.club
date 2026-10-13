@@ -40,6 +40,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { squadForMatch } from '@/lib/teams';
+import { defaultFixture } from '@/lib/fixtures';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -83,9 +84,11 @@ export default function AdminMatchCenterControllerPage({
     return m.season === seasonFilter;
   });
 
-  const [selectedMatchId, setSelectedMatchId] = useState<string>(requestedMatchId || clubMatches[0]?.id || '');
+  // Opens on the live match, else the club's next fixture, else its latest result (not whatever the database lists first)
+  const defaultMatch = defaultFixture(filteredMatches, tournamentParticipants, club.name) || defaultFixture(clubMatches, tournamentParticipants, club.name);
+  const [selectedMatchId, setSelectedMatchId] = useState<string>(requestedMatchId || defaultMatch?.id || '');
 
-  const match = filteredMatches.find(m => m.id === selectedMatchId) || filteredMatches[0] || clubMatches[0];
+  const match = filteredMatches.find(m => m.id === selectedMatchId) || defaultMatch;
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const squadPlayers = squadForMatch(members.filter(m => m.club_id === club.id && isPlayerMember(m)), match, clubTeams, clubTeamMembers);

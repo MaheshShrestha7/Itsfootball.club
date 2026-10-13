@@ -1649,7 +1649,7 @@ export function ClubProvider({
               is_executive: true,
               executive_title: title,
               executive_bio: bio || m.executive_bio,
-              executive_order: order ?? (m.executive_order || 99),
+              executive_order: order ?? (m.executive_order ?? 99),
               executive_season: season || m.executive_season,
             }
           : m

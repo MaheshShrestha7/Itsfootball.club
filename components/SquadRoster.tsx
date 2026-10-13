@@ -101,7 +101,8 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
     if (!expires) return ['NO EXPIRY', 'var(--text-muted)'];
     if (expires < today) return ['EXPIRED', '#EF4444'];
     const days = (Date.parse(expires) - Date.parse(today)) / 86400000;
-    return days <= 30 ? ['EXPIRES SOON', '#F59E0B'] : ['ACTIVE', '#10B981'];
+    // "VALID", not "ACTIVE": the member status badge beside it already says ACTIVE/INACTIVE
+    return days <= 30 ? ['EXPIRES SOON', '#F59E0B'] : ['VALID', '#10B981'];
   };
   const membership = (m: ClubMember) => {
     const [label, color] = membershipState(m);

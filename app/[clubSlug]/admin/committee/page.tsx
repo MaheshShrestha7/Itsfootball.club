@@ -18,7 +18,7 @@ export default function AdminCommitteePage({
   const clubMembers = members.filter(m => m.club_id === club.id);
   const clubSeasons = seasons.filter(s => s.club_id === club.id);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
-  const executiveMembers = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order || 99) - (b.executive_order || 99));
+  const executiveMembers = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
 
   const [selectedMemberId, setSelectedMemberId] = useState(clubMembers[0]?.id || '');
   const [title, setTitle] = useState('Vice-President');

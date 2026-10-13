@@ -43,12 +43,16 @@ export default function PublicTournamentDetailPage({
 
   const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>('bracket');
 
-  // Set initial default tab: if league, default to standings; otherwise bracket
+  // Open on the standings for a league, and for a group stage whose knockout rounds aren't drawn
+  // yet (an empty bracket isn't much to land on); otherwise the bracket
+  const hasKnockout = matches.some(m => m.tournament_id === tournament?.id && !!m.tournament_stage && m.tournament_stage !== 'group');
+  const tournamentId = tournament?.id;
+  const tournamentFormat = tournament?.format;
   useEffect(() => {
-    if (tournament && tournament.format === 'league') {
+    if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && !hasKnockout)) {
       setActiveTab('standings');
     }
-  }, [tournament]);
+  }, [tournamentId, tournamentFormat, hasKnockout]);
 
   if (!tournament) {
     return (

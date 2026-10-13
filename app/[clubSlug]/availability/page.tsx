@@ -29,6 +29,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
+import { defaultFixture } from '@/lib/fixtures';
 
 function AvailabilityHub() {
   const params = useParams();
@@ -48,6 +49,7 @@ function AvailabilityHub() {
     syncStatus,
     clubTeams,
     clubTeamMembers,
+    tournamentParticipants,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -66,10 +68,14 @@ function AvailabilityHub() {
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [club, matches]);
 
-  const upcomingMatches = useMemo(() => clubMatches.filter(m => m.status === 'upcoming'), [clubMatches]);
+  // Opens on the club's next fixture (not another club's game in a cup it hosts); recomputed as data arrives
+  const defaultMatch = useMemo(
+    () => (club ? defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true }) : undefined),
+    [club, clubMatches, tournamentParticipants]
+  );
 
   const [selectedMatchId, setSelectedMatchId] = useState<string>(() => {
-    return upcomingMatches[0]?.id || clubMatches[0]?.id || '';
+    return defaultMatch?.id || '';
   });
 
   // Selected player state
@@ -82,7 +88,7 @@ function AvailabilityHub() {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+  const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || defaultMatch;
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const matchSquad = useMemo(
     () => squadForMatch(squadPlayers, targetMatch, clubTeams, clubTeamMembers),
@@ -313,7 +319,7 @@ function AvailabilityHub() {
                 </label>
                 <select data-view-ok id="availability-availability-for"
                   className="form-select"
-                  value={selectedMatchId}
+                  value={targetMatch?.id || selectedMatchId}
                   onChange={e => setSelectedMatchId(e.target.value)}
                   style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
                 >

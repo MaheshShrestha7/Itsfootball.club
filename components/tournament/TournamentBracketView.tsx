@@ -39,10 +39,12 @@ export default function TournamentBracketView({
       >
         <Trophy size={36} style={{ opacity: 0.3, margin: '0 auto 1rem auto' }} />
         <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
-          No Knockout Tiesheet Generated Yet
+          {isAdmin ? 'No Knockout Tiesheet Generated Yet' : 'Knockout bracket coming soon'}
         </h3>
         <p style={{ margin: 0, fontSize: '0.85rem' }}>
-          Generate the tournament tiesheet or complete group stage fixtures to unlock the knockout bracket.
+          {isAdmin
+            ? 'Generate the tournament tiesheet or complete group stage fixtures to unlock the knockout bracket.'
+            : 'The knockout rounds will appear here once the group stage is finished.'}
         </p>
       </div>
     );

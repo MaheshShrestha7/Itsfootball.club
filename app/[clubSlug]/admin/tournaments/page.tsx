@@ -157,7 +157,8 @@ export default function AdminTournamentsPage({
             <Shield size={18} color="var(--c-blue)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Manage teams →</span>
+          {/* Says what's counted: the club's own sides, not the teams entered in a cup ("8 Teams Enrolled") */}
+          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Picked from your members · Manage →</span>
         </Link>
 
         <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
