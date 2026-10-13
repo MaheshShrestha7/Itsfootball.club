@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { Club, ClubMember } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
+import { renderPassImage, savePassImage } from '@/lib/pass-image';
 import {
   Shield,
   CheckCircle2,
@@ -21,6 +22,9 @@ interface VirtualPassCardProps {
 export default function VirtualPassCard({ club, member }: VirtualPassCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [tilt, setTilt] = useState({
     rotX: 0,
     rotY: 0,
@@ -78,22 +82,36 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
     setIsFlipped(prev => !prev);
   };
 
-  const handleSavePass = (e: React.MouseEvent) => {
+  const handleSavePass = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDownloadSuccess(true);
+    if (saving || !qrCanvasRef.current) return;
+    setSaving(true);
+    setSaveError('');
 
     try {
-      confetti({
-        particleCount: 55,
-        spread: 65,
-        origin: { y: 0.6 },
-        colors: [club.primary_color || '#10B981', '#F59E0B', '#FFFFFF'],
-      });
-    } catch {
-      // Fallback if confetti fails
-    }
+      const status = isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE';
+      const blob = await renderPassImage(club, member, qrCanvasRef.current, status);
+      const namePart = member.full_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'member';
+      const saved = await savePassImage(blob, `${club.slug}-pass-${namePart}.png`);
+      if (!saved) return; // share sheet cancelled
 
-    setTimeout(() => setDownloadSuccess(false), 2600);
+      setDownloadSuccess(true);
+      try {
+        confetti({
+          particleCount: 55,
+          spread: 65,
+          origin: { y: 0.6 },
+          colors: [club.primary_color || '#10B981', '#F59E0B', '#FFFFFF'],
+        });
+      } catch {
+        // Fallback if confetti fails
+      }
+      setTimeout(() => setDownloadSuccess(false), 2600);
+    } catch {
+      setSaveError('Could not save the pass on this device. Take a screenshot of the card instead.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Base card 3D transform combining tilt, scale and 180deg flip
@@ -499,6 +517,7 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
 
         <button
           onClick={handleSavePass}
+          disabled={saving || !member.qr_code_token}
           className="btn btn-primary btn-sm"
           style={{
             display: 'flex',
@@ -509,9 +528,20 @@ export default function VirtualPassCard({ club, member }: VirtualPassCardProps) 
           }}
         >
           {downloadSuccess ? <CheckCircle2 size={14} color="var(--text-primary)" /> : <Download size={14} />}
-          <span>{downloadSuccess ? 'Pass Saved!' : 'Save Digital Pass'}</span>
+          <span>{downloadSuccess ? 'Pass Saved!' : saving ? 'Saving…' : 'Save Digital Pass'}</span>
         </button>
       </div>
+
+      {saveError && (
+        <div role="alert" style={{ fontSize: '0.8rem', color: 'var(--c-red)', textAlign: 'center' }}>
+          {saveError}
+        </div>
+      )}
+
+      {/* Full-size copy of the QR used to draw the saved image (never shown) */}
+      {member.qr_code_token && (
+        <QRCodeCanvas ref={qrCanvasRef} value={member.qr_code_token} size={640} level="H" marginSize={0} style={{ display: 'none' }} aria-hidden="true" />
+      )}
 
       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
         Verified Pass Token: <code style={{ fontFamily: 'var(--font-mono)', color: club.primary_color }}>{member.qr_code_token}</code>
