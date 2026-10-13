@@ -987,7 +987,7 @@ export default function AdminSquadPage({
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Member Roles * (A member can have multiple roles)</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-primary)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)' }}>
                     {form.roles.length} {form.roles.length === 1 ? 'role' : 'roles'} selected
                   </span>
                 </label>
@@ -1067,7 +1067,7 @@ export default function AdminSquadPage({
                   borderRadius: 'var(--radius-lg)',
                   marginBottom: '1.25rem',
                 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Shield size={14} /> Player Positioning & Kit Specifications
                   </div>
 
@@ -1337,7 +1337,7 @@ export default function AdminSquadPage({
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   Update Player Stats
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--club-primary)' }}>{editingMember.full_name}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--club-ink)' }}>{editingMember.full_name}</span>
               </div>
               <button onClick={() => setStatsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />

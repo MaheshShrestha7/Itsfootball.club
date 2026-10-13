@@ -204,7 +204,7 @@ export default function AdminAnalyticsPage({
               <div key={dev.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{dev.name}</span>
-                  <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{dev.percentage}</span>
                 </div>
                 <div style={{ height: '8px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ width: dev.percentage, height: '100%', background: dev.color, transition: 'width 0.5s ease' }} />

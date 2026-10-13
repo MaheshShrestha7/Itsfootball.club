@@ -213,7 +213,7 @@ export default function MatchDoorCheckinPage({
                 {club.short_name || 'AFC'}
               </div>
               <div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {match.competition} {match.match_type ? `• ${match.match_type.toUpperCase()}` : ''}
                 </span>
                 <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>

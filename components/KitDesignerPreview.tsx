@@ -179,7 +179,7 @@ export default function KitDesignerPreview({
                   borderRadius: '8px',
                   border: 'none',
                   background: isSelected ? 'var(--club-primary, #10B981)' : 'transparent',
-                  color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  color: isSelected ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: isSelected ? 800 : 600,
                   fontSize: '0.8rem',
                   fontFamily: 'var(--font-heading)',

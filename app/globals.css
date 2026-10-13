@@ -39,7 +39,7 @@
   /* Typography Colors */
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  --text-muted: #8190A5; /* at least 4.5:1 (WCAG AA) on every background and card colour here */
+  --text-muted: #8B99AD; /* at least 4.5:1 (WCAG AA) on every background, card and badge tint here */
   --text-on-primary: var(--club-primary-contrast, #FFFFFF);
 
   /* Borders & Dividers */
@@ -60,13 +60,15 @@
   /* Accent text colours (a darker shade in light mode keeps them readable on white) */
   --c-green: #10B981;
   --c-amber: #F59E0B;
-  --c-red: #EF4444;
-  --c-blue: #3B82F6;
+  --c-red: #F46666;
+  --c-blue: #5B95F8;
   --c-sky: #60A5FA;
-  --c-purple: #A855F7;
+  --c-purple: #B57BF9;
   --c-gold: #C9A467;
   /* How far accent-coloured text is pulled toward --text-primary: none on dark, enough to read on white */
   --accent-ink: 0%;
+  /* The club colour as text: replaced per club with a shade that reads at 4.5:1 (see .club-theme-root) */
+  --club-ink: var(--club-primary);
   /* Near-black surface shades used inline, one per original value so dark mode is unchanged */
   --dk-4-6-9: 4, 6, 9;
   --dk-7-10-15: 7, 10, 15;
@@ -97,7 +99,7 @@
 
   --text-primary: #0F172A;
   --text-secondary: #475569;
-  --text-muted: #5B6B80; /* 4.5:1+ on the light backgrounds */
+  --text-muted: #4E5D71; /* 4.5:1+ on the light backgrounds and badge tints */
 
   --border-subtle: rgba(15, 23, 42, 0.1);
   --border-medium: rgba(15, 23, 42, 0.2);
@@ -108,14 +110,16 @@
 
   --tint-rgb: 15, 23, 42;
   --shade-rgb: 226, 232, 240;
-  --c-green: #047857;
-  --c-amber: #B45309;
-  --c-red: #DC2626;
+  --c-green: #036B4E;
+  --c-amber: #92400E;
+  --c-red: #B91C1C;
   --c-blue: #1D4ED8;
-  --c-sky: #2563EB;
+  --c-sky: #1D4ED8;
   --c-purple: #7E22CE;
   --c-gold: #8A6A2F;
   --accent-ink: 45%;
+  /* Outside a club page the default green as text, darkened to read on light backgrounds */
+  --club-ink: color-mix(in srgb, var(--club-primary), #000 40%);
 
   /* Page-level darks -> page grey, panel darks -> white */
   --dk-4-6-9: 243, 245, 249;
@@ -306,7 +310,8 @@ textarea {
 
 .btn-primary {
   background-color: var(--club-primary);
-  color: var(--club-primary-contrast, #FFFFFF);
+  /* Outside a club the default green needs dark ink (white is 2.5:1); clubs set their own contrast colour */
+  color: var(--club-primary-contrast, #090D16);
   box-shadow: 0 4px 14px rgba(var(--club-primary-rgb), 0.35);
 }
 
@@ -345,7 +350,7 @@ textarea {
 .btn-outline {
   background: transparent;
   /* Same ink as .badge-primary: pure club colour on dark, darkened on light so pale club colours stay readable */
-  color: color-mix(in srgb, var(--club-primary), var(--text-primary) var(--accent-ink));
+  color: var(--club-ink);
   border: 1px solid var(--club-primary);
 }
 
@@ -381,6 +386,15 @@ textarea {
   border-radius: var(--radius-full);
 }
 
+.club-theme-root,
+.club-theme-root [data-theme='dark'] {
+  --club-ink: var(--club-ink-dark, var(--club-primary));
+}
+[data-theme='light'] .club-theme-root,
+.club-theme-root [data-theme='light'] {
+  --club-ink: var(--club-ink-light, var(--club-primary));
+}
+
 .badge-live {
   background: rgba(239, 68, 68, 0.2);
   /* Plain red on its own red tint is under 4.5:1; a touch of the text colour lifts it in both themes */
@@ -390,7 +404,7 @@ textarea {
 
 .badge-primary {
   background: rgba(var(--club-primary-rgb), 0.15);
-  color: color-mix(in srgb, var(--club-primary), var(--text-primary) var(--accent-ink));
+  color: var(--club-ink);
   border: 1px solid rgba(var(--club-primary-rgb), 0.3);
 }
 
@@ -1866,7 +1880,7 @@ textarea {
 }
 
 .admin-nav-child.is-active {
-  color: var(--club-primary);
+  color: var(--club-ink);
   font-weight: 700;
   background: rgba(var(--tint-rgb), 0.04);
 }
@@ -2341,7 +2355,7 @@ dialog.confirm-dialog::backdrop {
   height: 38px;
   border-radius: var(--radius-md);
   background: rgba(var(--club-primary-rgb), 0.15);
-  color: var(--club-primary);
+  color: var(--club-ink);
 }
 .confirm-dialog-icon.is-danger { background: rgba(239, 68, 68, 0.15); color: var(--c-red); }
 .confirm-dialog-title { font-size: 1.1rem; font-weight: 800; line-height: 1.35; margin: 0.35rem 0 0; }
@@ -2417,7 +2431,7 @@ dialog.confirm-dialog::backdrop {
 .article-body h3 { font-size: 1.12rem; color: var(--text-primary); line-height: 1.35; }
 .article-body ul, .article-body ol { padding-left: 1.4rem; }
 .article-body blockquote { border-left: 3px solid var(--club-primary); padding: 0.25rem 0 0.25rem 1rem; font-style: italic; color: var(--text-primary); }
-.article-body a { color: var(--club-primary); text-decoration: underline; }
+.article-body a { color: var(--club-ink); text-decoration: underline; }
 .article-body img { display: block; max-width: 100%; height: auto; border-radius: 12px; }
 .article-body iframe, .article-body video { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 12px; background: #000; }
 
@@ -2520,7 +2534,7 @@ dialog.confirm-dialog::backdrop {
 }
 
 .club-tabbar a[aria-current='page'] {
-  color: var(--club-primary);
+  color: var(--club-ink);
 }
 
 .club-tabbar a[aria-current='page'] svg {
@@ -2661,7 +2675,7 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-chip.cont-before { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -7px; width: calc(100% + 7px); }
 .admin-cal-chip.cont-after { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -7px; width: calc(100% + 7px); }
 .admin-cal-chip.cont-before.cont-after { width: calc(100% + 14px); }
-.admin-cal .is-past { opacity: 0.6; }
+.admin-cal .is-past { filter: grayscale(0.7); } /* greyed rather than faded, so its text still reads */
 .admin-cal .is-off .admin-cal-chip-text, .admin-cal .is-off strong { text-decoration: line-through; }
 .admin-cal-res { flex-shrink: 0; font-family: var(--font-heading); font-weight: 800; font-size: 0.72rem; color: var(--text-secondary); }
 .admin-cal-res.res-W { color: var(--c-green); }
@@ -2674,8 +2688,8 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-day { min-height: 112px; padding: 6px 7px; border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); min-width: 0; overflow: hidden; }
 .admin-cal-day:nth-child(7n) { border-right: 0; }
 .admin-cal-day.is-out { background: rgba(var(--shade-rgb), 0.18); }
-.admin-cal-day.is-out .admin-cal-daynum { color: var(--text-muted); opacity: 0.6; }
-.admin-cal-day.is-past { opacity: 1; }
+.admin-cal-day.is-out .admin-cal-daynum { color: var(--text-muted); font-weight: 500; }
+.admin-cal-day.is-past { filter: none; }
 .admin-cal-day.is-today { background: rgba(var(--club-primary-rgb), 0.06); }
 .admin-cal-daynum { display: inline-grid; place-items: center; min-width: 24px; height: 24px; margin-bottom: 4px; padding: 0 4px; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
 .admin-cal-day.is-today .admin-cal-daynum { background: var(--club-primary); color: var(--text-on-primary); }
@@ -2688,7 +2702,7 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-wh small { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .admin-cal-wh span { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
 .admin-cal-wh.is-today { background: rgba(var(--club-primary-rgb), 0.06); }
-.admin-cal-wh.is-today span { color: var(--club-primary); }
+.admin-cal-wh.is-today span { color: var(--club-ink); }
 .admin-cal-allday-label { font-size: 0.65rem; color: var(--text-muted); text-align: right; padding: 6px 6px 0 0; border-bottom: 1px solid var(--border-subtle); }
 .admin-cal-allday { min-height: 30px; padding: 4px 4px 1px; border-left: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); min-width: 0; }
 .admin-cal-hours { padding-top: 6px; }
@@ -2705,7 +2719,7 @@ dialog.confirm-dialog::backdrop {
 .admin-cal-list { display: flex; flex-direction: column; gap: 1rem; }
 .admin-cal-listday { scroll-margin-top: 80px; }
 .admin-cal-listday h3 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.45rem; }
-.admin-cal-listday h3.is-today { color: var(--club-primary); }
+.admin-cal-listday h3.is-today { color: var(--club-ink); }
 .admin-cal-card { display: flex; align-items: center; gap: 0.8rem; width: 100%; margin-bottom: 0.4rem; padding: 0.7rem 0.8rem; border: 1px solid var(--border-subtle); border-left: 4px solid var(--k); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-primary); text-align: left; cursor: pointer; }
 .admin-cal-card-time { width: 52px; flex-shrink: 0; font-family: var(--font-heading); font-weight: 700; font-size: 0.82rem; color: var(--text-secondary); }
 .admin-cal-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }

@@ -73,6 +73,16 @@ export default function ClubScoreLeaderboard({
       default: return '#94A3B8'; // Slate
     }
   };
+  // The same tiers as text: theme colours that read at 4.5:1 on the tier's own tint in both themes
+  const getTierInk = (tier: string) => {
+    switch (tier) {
+      case 'Club Legend': return 'var(--c-amber)';
+      case 'All-Star': return 'var(--c-purple)';
+      case 'First Team': return 'var(--c-blue)';
+      case 'Prospect': return 'var(--c-green)';
+      default: return 'var(--text-secondary)';
+    }
+  };
 
   const getBadgeIcon = (iconName: string) => {
     switch (iconName) {
@@ -306,7 +316,7 @@ export default function ClubScoreLeaderboard({
                       className="badge"
                       style={{
                         background: `${tierColor}18`,
-                        color: `color-mix(in srgb, ${tierColor}, var(--text-primary) var(--accent-ink))`,
+                        color: getTierInk(profile.tier),
                         border: `1px solid ${tierColor}40`,
                         fontSize: '0.7rem',
                         padding: '0.15rem 0.4rem',
@@ -340,7 +350,7 @@ export default function ClubScoreLeaderboard({
                     fontFamily: 'var(--font-heading)',
                     fontWeight: 900,
                     whiteSpace: 'nowrap',
-                    color: filter === 'streak' ? 'var(--c-red)' : filter === 'weekly' ? 'var(--c-green)' : 'var(--club-primary)'
+                    color: filter === 'streak' ? 'var(--c-red)' : filter === 'weekly' ? 'var(--c-green)' : 'var(--club-ink)'
                   }}>
                     {filter === 'season' && `${profile.total_points} PTS`}
                     {filter === 'weekly' && `+${liveWeeklyPoints(profile)} PTS`}
@@ -462,7 +472,7 @@ export default function ClubScoreLeaderboard({
                     className="badge"
                     style={{
                       background: `${getTierColor(selectedPlayerModal.profile.tier)}18`,
-                      color: getTierColor(selectedPlayerModal.profile.tier),
+                      color: getTierInk(selectedPlayerModal.profile.tier),
                       border: `1px solid ${getTierColor(selectedPlayerModal.profile.tier)}40`,
                       fontSize: '0.7rem'
                     }}
@@ -485,7 +495,7 @@ export default function ClubScoreLeaderboard({
             }}>
               <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                 <div className="text-meta">SEASON PTS</div>
-                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--club-primary)' }}>
+                <div style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--club-ink)' }}>
                   {selectedPlayerModal.profile.total_points}
                 </div>
               </div>

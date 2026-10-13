@@ -256,7 +256,7 @@ export default function AdminCommitteePage({
                         {exec.executive_season || activeSeason?.name || defaultSeasonLabel()} Tenure
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--club-primary)', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--club-ink)', fontWeight: 700 }}>
                       {exec.executive_title}
                     </div>
                     {exec.executive_bio && (

@@ -300,7 +300,7 @@ export default function CreateClubPage() {
           marginBottom: '1.25rem',
           border: '1px solid var(--border-subtle)',
         }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--club-primary)', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--club-ink)', letterSpacing: '0.05em' }}>
             STEP {step} OF 4
           </span>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -838,8 +838,8 @@ export default function CreateClubPage() {
                 </div>
 
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1.25rem' }}>
-                  By launching your club you agree to the <Link href="/terms" target="_blank" style={{ color: 'var(--club-primary)' }}>Terms of Service</Link> and
-                  confirm your club will handle its members&apos; information as described in the <Link href="/privacy" target="_blank" style={{ color: 'var(--club-primary)' }}>Privacy Policy</Link>.
+                  By launching your club you agree to the <Link href="/terms" target="_blank" style={{ color: 'var(--club-ink)' }}>Terms of Service</Link> and
+                  confirm your club will handle its members&apos; information as described in the <Link href="/privacy" target="_blank" style={{ color: 'var(--club-ink)' }}>Privacy Policy</Link>.
                 </p>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.25rem' }}>

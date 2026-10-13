@@ -429,8 +429,8 @@ export default function AdminHeroSliderPage({
                                 currentPreview.type === 'event' ? 'rgba(16, 185, 129, 0.2)' :
                                 currentPreview.type === 'news' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)',
                     color: currentPreview.type === 'fixture' ? 'var(--c-red)' :
-                           currentPreview.type === 'event' ? '#10B981' :
-                           currentPreview.type === 'news' ? '#60A5FA' : '#F59E0B',
+                           currentPreview.type === 'event' ? 'var(--c-green)' :
+                           currentPreview.type === 'news' ? 'var(--c-sky)' : 'var(--c-amber)',
                     border: '1px solid currentColor',
                     fontSize: '0.75rem',
                     fontWeight: 800,
@@ -588,8 +588,8 @@ export default function AdminHeroSliderPage({
                                       item.type === 'event' ? 'rgba(16, 185, 129, 0.15)' :
                                       item.type === 'news' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)',
                           color: item.type === 'fixture' ? 'var(--c-red)' :
-                                 item.type === 'event' ? '#10B981' :
-                                 item.type === 'news' ? '#60A5FA' : '#F59E0B',
+                                 item.type === 'event' ? 'var(--c-green)' :
+                                 item.type === 'news' ? 'var(--c-sky)' : 'var(--c-amber)',
                           fontSize: '0.7rem',
                           fontWeight: 800,
                         }}>

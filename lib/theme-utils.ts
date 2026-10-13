@@ -70,6 +70,39 @@ export function evaluateColorContrast(bgHex: string): ContrastResult {
   };
 }
 
+/** Mixes a colour toward another by `amount` (0 to 1), as #rrggbb */
+function mixHex(hex: string, toward: { r: number; g: number; b: number }, amount: number): string {
+  const c = hexToRgb(hex);
+  const ch = (a: number, b: number) => Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  return `#${ch(c.r, toward.r)}${ch(c.g, toward.g)}${ch(c.b, toward.b)}`;
+}
+
+/**
+ * A club colour used as text: the colour itself where it already reads at 4.5:1, otherwise moved
+ * toward white (dark theme) or black (light theme) just far enough. Measured against the club colour's
+ * own light tint over a card, the background of badges and highlighted rows, which is the hardest case.
+ */
+export function readableClubInk(hex: string, theme: 'dark' | 'light'): string {
+  const target = theme === 'dark' ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
+  const surface = theme === 'dark' ? { r: 30, g: 37, b: 48 } : { r: 243, g: 245, b: 249 };
+  const bg = mixHex(`#${[surface.r, surface.g, surface.b].map(v => v.toString(16).padStart(2, '0')).join('')}`, hexToRgb(hex), 0.18);
+  const bgRgb = hexToRgb(bg);
+  const bgLum = getRelativeLuminance(bgRgb.r, bgRgb.g, bgRgb.b);
+  for (let step = 0; step <= 20; step++) {
+    const ink = mixHex(hex, target, step / 20);
+    const c = hexToRgb(ink);
+    if (getContrastRatio(getRelativeLuminance(c.r, c.g, c.b), bgLum) >= 4.6) return ink;
+  }
+  return theme === 'dark' ? '#FFFFFF' : '#000000';
+}
+
+/** CSS variables for an element showing a club colour as text in either theme: give the element (or a
+ *  parent) the class `club-theme-root` and use `color: var(--club-ink)` */
+export function clubInkVars(hex: string | null | undefined): Record<string, string> {
+  const base = hex || '#10B981';
+  return { '--club-ink-dark': readableClubInk(base, 'dark'), '--club-ink-light': readableClubInk(base, 'light') };
+}
+
 // Curated professional football club color presets
 export const FOOTBALL_COLOR_PALETTES = [
   {

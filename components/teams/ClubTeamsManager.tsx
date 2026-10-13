@@ -406,7 +406,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                       </span>
                     )}
                     {team.is_junior && (
-                      <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6' }}>
+                      <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--c-purple)' }}>
                         <Baby size={11} style={{ marginRight: 3 }} />Junior
                       </span>
                     )}

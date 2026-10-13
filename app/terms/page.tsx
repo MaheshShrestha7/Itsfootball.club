@@ -14,8 +14,8 @@ export const metadata: Metadata = pageMetadata({
   path: '/terms',
 });
 
-const mail = <a href={`mailto:${LEGAL.email}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{LEGAL.email}</a>;
-const privacy = <Link href="/privacy" style={{ color: 'var(--club-primary)' }}>Privacy Policy</Link>;
+const mail = <a href={`mailto:${LEGAL.email}`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{LEGAL.email}</a>;
+const privacy = <Link href="/privacy" style={{ color: 'var(--club-ink)' }}>Privacy Policy</Link>;
 
 const sections: LegalSection[] = [
   {
@@ -36,7 +36,7 @@ const sections: LegalSection[] = [
         <li>Give accurate details and keep them up to date.</li>
         <li>Your account is for you alone. Keep access to your email secure, since sign-in links are sent there, and tell us if you think someone else has used your account.</li>
         <li>Children under 13 shouldn&rsquo;t create their own account; a parent, guardian or the club should manage their details.</li>
-        <li>You can delete your account at any time from <Link href="/my-clubs" style={{ color: 'var(--club-primary)' }}>My Clubs</Link>.</li>
+        <li>You can delete your account at any time from <Link href="/my-clubs" style={{ color: 'var(--club-ink)' }}>My Clubs</Link>.</li>
       </ul>
     ),
   },

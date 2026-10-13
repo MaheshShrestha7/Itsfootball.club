@@ -105,7 +105,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                   style={{ padding: '1.25rem', textAlign: 'left', cursor: 'pointer', border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
                   <span className="badge badge-gold" style={{ textTransform: 'capitalize' }}>{p.tier}</span>
                   <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0.5rem 0 0.25rem' }}>{p.name}</div>
-                  <div style={{ fontWeight: 800, color: 'var(--club-primary)', marginBottom: '0.5rem' }}>{formatMoney(p.price_cents, currency)}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--club-ink)', marginBottom: '0.5rem' }}>{formatMoney(p.price_cents, currency)}</div>
                   {p.benefits && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.benefits}</div>}
                 </button>
               ))}

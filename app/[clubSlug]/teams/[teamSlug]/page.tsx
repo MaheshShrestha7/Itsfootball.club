@@ -156,7 +156,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
                     <PlayerAvatar name={p.full_name} photoUrl={p.photo_url} size={40} />
                     <div className="min-w-0">
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                        {p.jersey_number != null && <span style={{ color: 'var(--club-primary)', marginRight: 6 }}>#{p.jersey_number}</span>}
+                        {p.jersey_number != null && <span style={{ color: 'var(--club-ink)', marginRight: 6 }}>#{p.jersey_number}</span>}
                         {p.full_name}
                       </div>
                       {p.player_position && <div className="text-meta">{p.player_position}</div>}

@@ -671,28 +671,28 @@ export default function AdminMatchCenterControllerPage({
                 <button
                   onClick={() => handlePeriodTransition('first_half', 'live', 1)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'first_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                  style={{ background: match.period === 'first_half' ? '#047857' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'first_half' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
                   1st Half
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'halftime' ? '#F59E0B' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                  style={{ background: match.period === 'halftime' ? '#B45309' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'halftime' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
                   HT (45&apos;)
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('second_half', 'live', 46)}
                   className="btn btn-sm"
-                  style={{ background: match.period === 'second_half' ? '#10B981' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                  style={{ background: match.period === 'second_half' ? '#047857' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'second_half' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
                   2nd Half
                 </button>
                 <button
                   onClick={() => handlePeriodTransition('full_time', 'completed', 90)}
                   className="btn btn-sm"
-                  style={{ background: match.status === 'completed' ? '#3B82F6' : 'rgba(255,255,255,0.06)', color: '#FFF', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                  style={{ background: match.status === 'completed' ? '#1D4ED8' : 'rgba(var(--tint-rgb), 0.06)', color: match.status === 'completed' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
                   FT (90&apos;)
                 </button>
@@ -867,7 +867,7 @@ export default function AdminMatchCenterControllerPage({
                               borderRadius: 'var(--radius-md)',
                               border: `1.5px solid ${isActive ? a.accent : 'var(--border-subtle)'}`,
                               background: isActive ? `${a.accent}22` : 'rgba(255, 255, 255, 0.03)',
-                              color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                               fontSize: '0.78rem',
                               fontWeight: 800,
                               cursor: 'pointer',
@@ -1080,8 +1080,9 @@ export default function AdminMatchCenterControllerPage({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
                       <span className="badge" style={{
-                        backgroundColor: evt.event_type === 'goal' ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'rgba(255,255,255,0.1)',
-                        color: evt.event_type === 'yellow_card' ? '#000000' : '#FFFFFF',
+                        // Deep enough shades for white text to read at 4.5:1; other events use the theme's own tint and text
+                        backgroundColor: evt.event_type === 'goal' ? '#047857' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#B91C1C' : 'rgba(var(--tint-rgb), 0.1)',
+                        color: evt.event_type === 'yellow_card' ? '#000000' : ['goal', 'red_card'].includes(evt.event_type) ? '#FFFFFF' : 'var(--text-primary)',
                         fontWeight: 900,
                         minWidth: '38px',
                         justifyContent: 'center',

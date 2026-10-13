@@ -207,7 +207,7 @@ function ProductCard({ product: p, currency, onAdd }: { product: ShopProduct; cu
       )}
       <div>
         <div style={{ fontWeight: 900, color: 'var(--text-primary)' }}>{p.name}</div>
-        <div style={{ fontWeight: 800, color: 'var(--club-primary)' }}>{formatMoney(p.price_cents, currency)}</div>
+        <div style={{ fontWeight: 800, color: 'var(--club-ink)' }}>{formatMoney(p.price_cents, currency)}</div>
       </div>
       {p.description && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.description}</div>}
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>

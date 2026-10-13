@@ -7,7 +7,7 @@ import JsonLd from '@/components/JsonLd';
 import { CONTACT_EMAIL, FAQ } from '@/lib/faq';
 
 const withEmailLink = (text: string) => text.split(CONTACT_EMAIL).flatMap((part, i) =>
-  i === 0 ? [part] : [<a key={i} href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>, part]);
+  i === 0 ? [part] : [<a key={i} href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>, part]);
 
 const FREE_POINTS = ['Free to sign up', 'Every feature included', 'No card needed', 'No subscription, ever'];
 
@@ -105,7 +105,7 @@ export default function FaqPage() {
           <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0.6rem auto 0', lineHeight: 1.6 }}>
             Sign up in minutes, no card needed, and unlock every feature from day one.
             Still have a question? Ask your club through its page, or email us at{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-primary)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>.
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>

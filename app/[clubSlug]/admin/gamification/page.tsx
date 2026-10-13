@@ -165,7 +165,7 @@ export default function AdminGamificationPage({
         </div>
         <div className="stat-tile">
           <div className="eyebrow">Season points awarded</div>
-          <div className="stat-value" style={{ color: 'var(--club-primary)' }}>{totalClubPoints}</div>
+          <div className="stat-value" style={{ color: 'var(--club-ink)' }}>{totalClubPoints}</div>
         </div>
         <div className="stat-tile">
           <div className="eyebrow">Players tracked</div>

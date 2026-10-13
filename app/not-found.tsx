@@ -25,7 +25,7 @@ export default function NotFound() {
           height: '64px',
           borderRadius: '50%',
           background: 'rgba(16, 185, 129, 0.12)',
-          color: 'var(--club-primary)',
+          color: 'var(--club-ink)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

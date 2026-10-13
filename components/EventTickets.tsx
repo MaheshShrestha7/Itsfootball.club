@@ -44,7 +44,7 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
         <h2 id="tickets-heading" style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
           <Ticket size={18} aria-hidden="true" /> Tickets
         </h2>
-        <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--club-primary)' }}>
+        <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--club-ink)' }}>
           {formatMoney(price, currency)} <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>each</span>
         </span>
       </div>

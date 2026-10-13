@@ -446,7 +446,7 @@ export default function AdminLayout({
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                 {club.name}
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--club-primary)', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--club-ink)', fontWeight: 700 }}>
                 Management Control Room
               </div>
             </div>
