@@ -12,7 +12,7 @@ import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen } from 'lucide-react';
 
 interface ClubNavbarProps {
   club: Club;
@@ -247,6 +247,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
           <Link href={`/${club.slug}`} style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
             Club
+          </Link>
+          <Link href={`/${club.slug}/about`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+            About
           </Link>
 
           {/* Live match: otherwise the match center is just the Fixtures link below, so it isn't listed twice */}
@@ -517,6 +520,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 >
                   <Shield size={16} color={club.primary_color} />
                   <span>Clubhouse Overview</span>
+                </Link>
+
+                <Link
+                  href={`/${club.slug}/about`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  <BookOpen size={16} />
+                  <span>About the Club</span>
                 </Link>
 
                 <Link
