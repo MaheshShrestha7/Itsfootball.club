@@ -109,7 +109,8 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                 const pane = threadRef.current;
                 const list = pane?.previousElementSibling as HTMLElement | null;
                 if (pane && list && pane.offsetTop > list.offsetTop) {
-                  requestAnimationFrame(() => pane.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                  requestAnimationFrame(() => pane.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }));
                 }
               }}
               style={{

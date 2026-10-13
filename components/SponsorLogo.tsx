@@ -48,7 +48,7 @@ export default function SponsorLogo({ src, name, height, style, className, loadi
         borderRadius: Math.max(6, Math.round(height * 0.18)),
         background: 'rgba(var(--tint-rgb), 0.08)',
         border: '1px solid var(--border-subtle)',
-        color: 'var(--text-secondary)',
+        color: 'var(--text-primary)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

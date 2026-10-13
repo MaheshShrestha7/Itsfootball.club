@@ -383,7 +383,8 @@ textarea {
 
 .badge-live {
   background: rgba(239, 68, 68, 0.2);
-  color: #EF4444;
+  /* Plain red on its own red tint is under 4.5:1; a touch of the text colour lifts it in both themes */
+  color: color-mix(in srgb, var(--c-red), var(--text-primary) 20%);
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 

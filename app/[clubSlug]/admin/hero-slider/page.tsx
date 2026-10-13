@@ -373,6 +373,7 @@ export default function AdminHeroSliderPage({
               onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : Math.max(0, activePinned.length - 1)))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
+              aria-label="Previous slide"
               style={{ width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ChevronLeft size={16} />
@@ -381,6 +382,7 @@ export default function AdminHeroSliderPage({
               onClick={() => setPreviewIndex(prev => (prev + 1) % Math.max(1, activePinned.length))}
               className="btn btn-secondary btn-sm"
               disabled={activePinned.length <= 1}
+              aria-label="Next slide"
               style={{ width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ChevronRight size={16} />
@@ -622,6 +624,7 @@ export default function AdminHeroSliderPage({
                         <button
                           onClick={() => handleMoveUp(index)}
                           disabled={isFirst}
+                          aria-label="Move slide up"
                           className="btn btn-secondary btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0, opacity: isFirst ? 0.3 : 1 }}
                         >
@@ -631,6 +634,7 @@ export default function AdminHeroSliderPage({
                         <button
                           onClick={() => handleMoveDown(index)}
                           disabled={isLast}
+                          aria-label="Move slide down"
                           className="btn btn-secondary btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0, opacity: isLast ? 0.3 : 1 }}
                         >
@@ -642,6 +646,7 @@ export default function AdminHeroSliderPage({
                           className="btn btn-danger btn-sm"
                           style={{ width: '28px', height: '28px', padding: 0 }}
                           title="Unpin this slide"
+                          aria-label="Unpin this slide"
                         >
                           <Trash2 size={14} />
                         </button>

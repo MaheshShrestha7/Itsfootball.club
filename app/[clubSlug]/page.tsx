@@ -467,7 +467,8 @@ export default function ClubPublicPage({
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    // The page's main landmark, so screen-reader users can jump past the menu straight to it
+    <main style={{ position: 'relative' }}>
       {/* 4.1 HERO SHOWCASE SECTION (MULTI-SLIDE CAROUSEL & CREST EMBLEM) */}
       <section
         onMouseEnter={() => setIsSliderPaused(true)}
@@ -2420,6 +2421,6 @@ export default function ClubPublicPage({
         </div>
       )}
 
-    </div>
+    </main>
   );
 }

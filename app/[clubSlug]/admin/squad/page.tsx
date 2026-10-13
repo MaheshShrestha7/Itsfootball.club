@@ -656,6 +656,7 @@ export default function AdminSquadPage({
 
         <select data-view-ok
           className="form-select"
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
           style={{ flex: '1 1 130px', minWidth: 'min(130px, 100%)' }}
