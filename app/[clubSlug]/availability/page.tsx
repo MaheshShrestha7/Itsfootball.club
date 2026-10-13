@@ -22,7 +22,6 @@ import {
   Check,
   MessageSquare,
   Users,
-  Shield,
   ChevronRight,
   Sparkles,
   ExternalLink,
@@ -78,12 +77,11 @@ function AvailabilityHub() {
     return defaultMatch?.id || '';
   });
 
-  // Selected player state
-  const [activePlayerId, setActivePlayerId] = useState<string>('');
-  const [rsvpStatus, setRsvpStatus] = useState<AvailabilityStatus>('available');
-  const [rsvpNote, setRsvpNote] = useState<string>('');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [copiedText, setCopiedText] = useState<boolean>(false);
+  // Roster row whose personal RSVP link was just copied, and the row whose note is open for editing
+  const [copiedPlayerId, setCopiedPlayerId] = useState<string | null>(null);
+  const [notePlayerId, setNotePlayerId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<string>('');
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -95,22 +93,12 @@ function AvailabilityHub() {
     [squadPlayers, targetMatch, clubTeams, clubTeamMembers]
   );
 
-  // Handle Token resolution if accessed via magic link
+  // Opened from a player's personal link: show that link's fixture
   useEffect(() => {
-    if (token) {
-      const resolved = getAvailabilityByToken(token);
-      if (resolved) {
-        setActivePlayerId(resolved.member.id);
-        if (resolved.availability.match_id) {
-          setSelectedMatchId(resolved.availability.match_id);
-        }
-        setRsvpStatus(resolved.availability.status);
-        setRsvpNote(resolved.availability.note || '');
-      }
-    } else if (matchSquad.length > 0 && (!activePlayerId || !matchSquad.some(p => p.id === activePlayerId))) {
-      setActivePlayerId(matchSquad[0].id);
-    }
-  }, [token, getAvailabilityByToken, matchSquad, activePlayerId]);
+    if (!token) return;
+    const matchId = getAvailabilityByToken(token)?.availability.match_id;
+    if (matchId) setSelectedMatchId(matchId);
+  }, [token, getAvailabilityByToken]);
 
   // Give every squad player a personal, unguessable RSVP link for this match. Only once the
   // admin's own data has loaded: until then only the public view is here (available players,
@@ -152,21 +140,6 @@ function AvailabilityHub() {
   const unavailableCount = playerRosterWithStatus.filter(p => p.availability.status === 'unavailable').length;
   const pendingCount = playerRosterWithStatus.filter(p => p.availability.status === 'pending').length;
 
-  // Selected player entity
-  const currentPlayer = squadPlayers.find(p => p.id === activePlayerId);
-  const currentRecord = matchAvailabilities.find(a => a.member_id === activePlayerId);
-
-  // Sync current record note/status when active player changes
-  useEffect(() => {
-    if (currentRecord) {
-      setRsvpStatus(currentRecord.status);
-      setRsvpNote(currentRecord.note || '');
-    } else {
-      setRsvpStatus('available');
-      setRsvpNote('');
-    }
-  }, [activePlayerId, currentRecord]);
-
   if (!club) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -175,33 +148,34 @@ function AvailabilityHub() {
     );
   }
 
-  const handleSaveRsvp = (status: AvailabilityStatus) => {
-    if (!activePlayerId || !targetMatch) return;
-    setPlayerAvailability(targetMatch.id, activePlayerId, status, rsvpNote);
-    setRsvpStatus(status);
-    setFeedbackToast(`Availability confirmed: ${status.toUpperCase()}`);
-    setTimeout(() => setFeedbackToast(null), 3500);
-  };
-
-  // Admin-only manual override: mark a player available/unavailable directly from the roster,
+  // Admin-only manual override: set a player's answer directly from the roster,
   // regardless of what (or whether) that player has responded themselves.
   const handleAdminSetStatus = (memberId: string, status: AvailabilityStatus) => {
     if (!targetMatch) return;
     const player = squadPlayers.find(p => p.id === memberId);
     const existingNote = matchAvailabilities.find(a => a.member_id === memberId)?.note;
     setPlayerAvailability(targetMatch.id, memberId, status, existingNote);
-    if (memberId === activePlayerId) setRsvpStatus(status);
     setFeedbackToast(`${player?.full_name || 'Player'} manually marked ${status.toUpperCase()} by admin`);
+    setTimeout(() => setFeedbackToast(null), 3500);
+  };
+
+  const openNote = (memberId: string, note?: string) => {
+    setNotePlayerId(notePlayerId === memberId ? null : memberId);
+    setNoteDraft(note || '');
+  };
+
+  // Saves the note and keeps the player's current answer (a player with no answer yet stays pending)
+  const handleSaveNote = (memberId: string, status: AvailabilityStatus) => {
+    if (!targetMatch) return;
+    setPlayerAvailability(targetMatch.id, memberId, status, noteDraft);
+    setNotePlayerId(null);
+    setFeedbackToast('Note saved');
     setTimeout(() => setFeedbackToast(null), 3500);
   };
 
   const shareableUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/${club.slug}/availability`
     : `https://itsfootball.club/${club.slug}/availability`;
-
-  const playerMagicLink = currentPlayer
-    ? `${shareableUrl}?token=${currentRecord?.response_token || ''}`
-    : shareableUrl;
 
   const whatsappMessage = encodeURIComponent(
     `⚽ *${club.name} Match Call-Up*\n` +
@@ -220,12 +194,30 @@ function AvailabilityHub() {
     }
   };
 
-  const handleCopyMagicLink = () => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(playerMagicLink);
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2000);
-    }
+  // Copies one player's personal link, which opens their own one-tap RSVP page
+  const handleCopyPlayerLink = (memberId: string, responseToken: string) => {
+    if (!responseToken || typeof navigator === 'undefined') return;
+    navigator.clipboard.writeText(`${shareableUrl}?token=${responseToken}`);
+    setCopiedPlayerId(memberId);
+    setTimeout(() => setCopiedPlayerId(null), 2000);
+  };
+
+  // The answers an admin can set from a roster row
+  const overrideOptions: { value: AvailabilityStatus; label: string; title: string; icon: typeof CheckCircle2; color: string; border: string; bg: string }[] = [
+    { value: 'available', label: 'In', title: 'available', icon: CheckCircle2, color: 'var(--c-green)', border: '#10B981', bg: 'rgba(16, 185, 129, 0.2)' },
+    { value: 'maybe', label: 'Maybe', title: 'doubtful', icon: AlertCircle, color: 'var(--c-amber)', border: '#F59E0B', bg: 'rgba(245, 158, 11, 0.2)' },
+    { value: 'unavailable', label: 'Out', title: 'unavailable', icon: XCircle, color: 'var(--c-red)', border: '#EF4444', bg: 'rgba(239, 68, 68, 0.2)' },
+  ];
+  const rowButtonStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    padding: '0.35rem 0.6rem',
+    borderRadius: '8px',
+    fontSize: '0.7rem',
+    fontWeight: 800,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   };
 
   const filteredRoster = playerRosterWithStatus.filter(({ player, availability }) => {
@@ -306,10 +298,10 @@ function AvailabilityHub() {
           </div>
         )}
 
-        {/* Main Grid: Left = Fixture & RSVP Card, Right = Roster Breakdown */}
+        {/* Main Grid: Left = Fixture Card, Right = Roster Breakdown */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '1.75rem', alignItems: 'start' }}>
           
-          {/* LEFT COLUMN: Fixture Details & 1-Tap Response */}
+          {/* LEFT COLUMN: Fixture Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
             {/* Match Selector */}
@@ -374,168 +366,6 @@ function AvailabilityHub() {
                 </div>
               </div>
             )}
-
-            {/* 2. Player 1-Tap Response Form */}
-            <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Shield size={18} color={club.primary_color} /> Confirm Your Status
-                </h3>
-
-                {token && (
-                  <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                    ✨ Magic Link Verified
-                  </span>
-                )}
-              </div>
-
-              {/* Player Selector (if not locked by magic link) */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label htmlFor="availability-responding-player" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                  Responding Player:
-                </label>
-                <select id="availability-responding-player"
-                  className="form-select"
-                  value={activePlayerId}
-                  onChange={e => setActivePlayerId(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
-                >
-                  {matchSquad.map(p => (
-                    <option key={p.id} value={p.id}>
-                      #{p.jersey_number || '-'} {p.full_name} ({p.player_position || 'Squad'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 3 Large Tap Targets: Available, Maybe, Unavailable */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                {/* Available */}
-                <button
-                  type="button"
-                  onClick={() => handleSaveRsvp('available')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '1.1rem 0.5rem',
-                    borderRadius: '12px',
-                    border: rsvpStatus === 'available' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'available' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <CheckCircle2 size={24} color="var(--c-green)" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>I&apos;m In</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700 }}>Available</span>
-                </button>
-
-                {/* Maybe */}
-                <button
-                  type="button"
-                  onClick={() => handleSaveRsvp('maybe')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '1.1rem 0.5rem',
-                    borderRadius: '12px',
-                    border: rsvpStatus === 'maybe' ? '2px solid #F59E0B' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'maybe' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <AlertCircle size={24} color="var(--c-amber)" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>Doubtful</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>Maybe</span>
-                </button>
-
-                {/* Unavailable */}
-                <button
-                  type="button"
-                  onClick={() => handleSaveRsvp('unavailable')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '1.1rem 0.5rem',
-                    borderRadius: '12px',
-                    border: rsvpStatus === 'unavailable' ? '2px solid #EF4444' : '1px solid var(--border-subtle)',
-                    background: rsvpStatus === 'unavailable' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(var(--tint-rgb), 0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <XCircle size={24} color="var(--c-red)" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>Can&apos;t Make It</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--c-red)', fontWeight: 700 }}>Out</span>
-                </button>
-              </div>
-
-              {/* Optional Player Note */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                  Coach Note / Timing details (optional):
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input aria-label="Coach note"
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Can only play 2nd half, slight ankle sprain..."
-                    value={rsvpNote}
-                    onChange={e => setRsvpNote(e.target.value)}
-                    style={{ flex: 1, padding: '0.55rem 0.85rem', fontSize: '0.85rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSaveRsvp(rsvpStatus)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.55rem 0.9rem' }}
-                  >
-                    Update Note
-                  </button>
-                </div>
-              </div>
-
-              {/* Personal Magic Link Box for Player */}
-              {currentPlayer && (
-                <div style={{
-                  background: 'rgba(var(--shade-rgb), 0.3)',
-                  padding: '0.85rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  fontSize: '0.78rem',
-                }}>
-                  <div style={{ overflow: 'hidden' }}>
-                    <div style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Personal Magic RSVP Link:</div>
-                    <div style={{ color: 'var(--club-ink)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {playerMagicLink}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleCopyMagicLink}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.35rem 0.65rem', flexShrink: 0 }}
-                    title="Copy unique one-tap magic link"
-                  >
-                    {copiedText ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Quick Link to Draft Lineup for Coaches */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -700,53 +530,73 @@ function AvailabilityHub() {
                         <span>{cfg.label}</span>
                       </div>
 
-                      {/* Admin Manual Override */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+                      {/* Admin Manual Override: set the answer, add a note, or copy the player's own RSVP link */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', minWidth: 0 }}>
+                        {overrideOptions.map(o => {
+                          const OptionIcon = o.icon;
+                          const active = availability.status === o.value;
+                          return (
+                            <button
+                              key={o.value}
+                              type="button"
+                              onClick={() => handleAdminSetStatus(player.id, o.value)}
+                              title={`Mark ${player.full_name} ${o.title}`}
+                              style={{
+                                ...rowButtonStyle,
+                                border: `1px solid ${active ? o.border : 'var(--border-subtle)'}`,
+                                background: active ? o.bg : 'rgba(var(--tint-rgb), 0.03)',
+                                color: o.color,
+                              }}
+                            >
+                              <OptionIcon size={13} />
+                              <span>{o.label}</span>
+                            </button>
+                          );
+                        })}
                         <button
                           type="button"
-                          onClick={() => handleAdminSetStatus(player.id, 'available')}
-                          title={`Mark ${player.full_name} available`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            padding: '0.35rem 0.6rem',
-                            borderRadius: '8px',
-                            border: `1px solid ${availability.status === 'available' ? '#10B981' : 'var(--border-subtle)'}`,
-                            background: availability.status === 'available' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.03)',
-                            color: 'var(--c-green)',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                          }}
+                          onClick={() => openNote(player.id, availability.note)}
+                          title={`${availability.note ? 'Edit' : 'Add'} a note for ${player.full_name}`}
+                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: notePlayerId === player.id ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)' }}
                         >
-                          <CheckCircle2 size={13} />
-                          <span>Available</span>
+                          <MessageSquare size={13} />
+                          <span>Note</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleAdminSetStatus(player.id, 'unavailable')}
-                          title={`Mark ${player.full_name} unavailable`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            padding: '0.35rem 0.6rem',
-                            borderRadius: '8px',
-                            border: `1px solid ${availability.status === 'unavailable' ? '#EF4444' : 'var(--border-subtle)'}`,
-                            background: availability.status === 'unavailable' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(var(--tint-rgb), 0.03)',
-                            color: 'var(--c-red)',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                          }}
+                          onClick={() => handleCopyPlayerLink(player.id, availability.response_token)}
+                          disabled={!availability.response_token}
+                          title={`Copy ${player.full_name}'s personal RSVP link`}
+                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)', opacity: availability.response_token ? 1 : 0.5, cursor: availability.response_token ? 'pointer' : 'not-allowed' }}
                         >
-                          <XCircle size={13} />
-                          <span>Not Available</span>
+                          {copiedPlayerId === player.id ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
+                          <span>{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
                         </button>
                       </div>
+
+                      {/* Note editor, opened from the row's Note button */}
+                      {notePlayerId === player.id && (
+                        <div style={{ display: 'flex', gap: '0.5rem', flexBasis: '100%' }}>
+                          <input aria-label={`Note for ${player.full_name}`}
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g. Can only play 2nd half, slight ankle sprain..."
+                            value={noteDraft}
+                            onChange={e => setNoteDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveNote(player.id, availability.status); }}
+                            autoFocus
+                            style={{ flex: 1, minWidth: 0, padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveNote(player.id, availability.status)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.45rem 0.8rem' }}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })
