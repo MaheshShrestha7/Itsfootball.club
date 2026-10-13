@@ -43,7 +43,7 @@ import {
   X,
   CalendarPlus
 } from 'lucide-react';
-import { Match, ClubEvent, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
+import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
@@ -51,10 +51,21 @@ import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, newsPath } from '@/lib/slugs';
 
+const EVENT_TAB_LABELS: Record<EventCategory, string> = {
+  match: 'Match',
+  training: 'Training',
+  social: 'Social',
+  agm: 'AGM',
+  trial: 'Trials',
+  tournament: 'Tournament',
+};
+
 interface HomeHeroSlide {
   id: string;
   category: 'club' | 'match' | 'news' | 'event' | 'stadium' | 'image';
   tabLabel: string;
+  // Short category word shown on phones in place of a pinned title, which would be cut off there
+  phoneTabLabel?: string;
   badge: string;
   bgImage: string;
   title: string;
@@ -267,6 +278,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-fixture-${idx}`,
             category: 'match',
+            phoneTabLabel: isLive ? 'Live Match' : 'Fixture',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
             badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinute(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
@@ -283,6 +295,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-news-${idx}`,
             category: 'news',
+            phoneTabLabel: article?.tags?.[0] || 'News',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'News',
             badge: item.badge || `BREAKING NEWS • ${article?.tags?.[0] || 'FIRST TEAM'}`,
             bgImage: item.image_url || article?.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
@@ -299,6 +312,7 @@ export default function ClubPublicPage({
           return {
             id: item.id || `pin-event-${idx}`,
             category: 'event',
+            phoneTabLabel: evt?.category ? EVENT_TAB_LABELS[evt.category] : 'Event',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
             badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
@@ -314,6 +328,7 @@ export default function ClubPublicPage({
         return {
           id: item.id || `pin-image-${idx}`,
           category: 'image',
+          phoneTabLabel: 'Spotlight',
           tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
           badge: item.badge || 'SPECIAL FEATURE',
           bgImage: item.image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
@@ -1207,6 +1222,7 @@ export default function ClubPublicPage({
                     key={slide.id}
                     onClick={() => setActiveSlide(idx)}
                     className="scroll-pill-item"
+                    title={slide.title}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1238,7 +1254,14 @@ export default function ClubPublicPage({
                     {slide.category === 'event' && <Calendar size={14} color={isActive ? club.primary_color : 'currentColor'} />}
                     {slide.category === 'stadium' && <MapPin size={14} color={isActive ? club.primary_color : 'currentColor'} />}
                     {slide.category === 'image' && <Sparkles size={14} color={isActive ? '#F59E0B' : 'currentColor'} />}
-                    <span>{slide.tabLabel}</span>
+                    {slide.phoneTabLabel ? (
+                      <>
+                        <span className="hero-tab-desktop">{slide.tabLabel}</span>
+                        <span className="hero-tab-phone">{slide.phoneTabLabel}</span>
+                      </>
+                    ) : (
+                      <span>{slide.tabLabel}</span>
+                    )}
 
                     {/* Animated Progress Timer Bar when active and not paused */}
                     {isActive && !isSliderPaused && (

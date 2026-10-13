@@ -1539,6 +1539,22 @@ textarea {
   white-space: nowrap;
 }
 
+/* Home hero slider tabs: pinned titles on wider screens, a short category word on phones
+   (the card above the tabs already shows the full title) */
+.hero-tab-phone {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hero-tab-desktop {
+    display: none;
+  }
+
+  .hero-tab-phone {
+    display: inline;
+  }
+}
+
 /* Horizontally Scrollable Sponsor Strip (home page) */
 .sponsor-scroll-strip {
   display: flex;
