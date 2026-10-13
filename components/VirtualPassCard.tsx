@@ -255,6 +255,33 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
           ].join(', '),
         }}
       />
+      {/* The club crest, large and faded, behind everything else */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          width: '78%',
+          aspectRatio: '1 / 1',
+          top: mirrored ? '30%' : '24%',
+          [mirrored ? 'left' : 'right']: '-14%',
+          pointerEvents: 'none',
+          zIndex: 1,
+          opacity: club.logo_url ? 0.16 : 0.07,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: `rotate(${mirrored ? 10 : -10}deg)`,
+          // Soft edges, so a logo on a square background never shows a hard box
+          WebkitMaskImage: 'radial-gradient(closest-side, #000 62%, transparent 100%)',
+          maskImage: 'radial-gradient(closest-side, #000 62%, transparent 100%)',
+        }}
+      >
+        {club.logo_url ? (
+          <img src={club.logo_url} alt="" loading="eager" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(1) brightness(1.6)' }} />
+        ) : (
+          <Shield style={{ width: '80%', height: '80%' }} color="#FFFFFF" strokeWidth={1.2} />
+        )}
+      </div>
       {/* Frosted sheet with a diagonal sheen */}
       <div
         aria-hidden="true"
@@ -314,7 +341,22 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
           )}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.01em', color: GLASS_TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {/* Full name, up to two lines; longer names get a smaller size instead of being cut off */}
+          <div
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 800,
+              fontSize: club.name.length > 32 ? '0.88rem' : club.name.length > 20 ? '0.98rem' : '1.1rem',
+              lineHeight: 1.15,
+              letterSpacing: '-0.01em',
+              color: GLASS_TEXT,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              overflowWrap: 'anywhere',
+            }}
+          >
             {club.name}
           </div>
           <div style={{ fontSize: '0.64rem', color: GLASS_MUTED, textTransform: 'uppercase', letterSpacing: '0.14em' }}>{subtitle}</div>
