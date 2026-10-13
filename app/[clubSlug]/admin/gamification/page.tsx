@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useRef, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { isPlayerMember, type ClubScoreRuleConfig } from '@/lib/supabase/types';
 import { getDefaultClubScoreRules, liveStreak } from '@/lib/clubscore-defaults';
@@ -116,6 +116,7 @@ export default function AdminGamificationPage({
     activityLogs,
     updateClubScoreRules,
     awardClubScorePoints,
+    saveNow,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -137,12 +138,32 @@ export default function AdminGamificationPage({
   const [rulesForm, setRulesForm] = useState<ClubScoreRuleConfig>(() => savedRules || getDefaultClubScoreRules(club.id));
   const [showRules, setShowRules] = useState(false);
   const [rulesSaved, setRulesSaved] = useState(false);
-  useEscapeToClose(showRules, setShowRules);
+  const [rulesSaving, setRulesSaving] = useState(false);
+  const [rulesError, setRulesError] = useState(false);
+  // Set on Save: once the new rules are in state, they are written to the database straight away
+  const saveRulesPendingRef = useRef(false);
+  useEscapeToClose(showRules && !rulesSaving, setShowRules);
 
   // Saved rules can arrive after the first render; show them so Save never writes the defaults over them
   useEffect(() => {
     if (savedRules) setRulesForm(savedRules);
   }, [savedRules]);
+
+  // "Saved" only once the database has the new rules; on failure the popup stays open with the edits
+  useEffect(() => {
+    if (!saveRulesPendingRef.current) return;
+    saveRulesPendingRef.current = false;
+    saveNow().then(saved => {
+      setRulesSaving(false);
+      if (!saved) {
+        setRulesError(true);
+        return;
+      }
+      setShowRules(false);
+      setRulesSaved(true);
+      setTimeout(() => setRulesSaved(false), 3000);
+    });
+  }, [savedRules, saveNow]);
 
   const [showAward, setShowAward] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState('');
@@ -156,6 +177,7 @@ export default function AdminGamificationPage({
 
   const openRules = () => {
     setRulesForm(savedRules || getDefaultClubScoreRules(club.id));
+    setRulesError(false);
     setShowRules(true);
   };
 
@@ -166,10 +188,10 @@ export default function AdminGamificationPage({
 
   const handleSaveRules = (e: React.FormEvent) => {
     e.preventDefault();
+    setRulesError(false);
+    setRulesSaving(true);
+    saveRulesPendingRef.current = true;
     updateClubScoreRules(club.id, rulesForm);
-    setShowRules(false);
-    setRulesSaved(true);
-    setTimeout(() => setRulesSaved(false), 3000);
   };
 
   const handleManualAward = (e: React.FormEvent) => {
@@ -257,7 +279,8 @@ export default function AdminGamificationPage({
           <button type="button" className="btn btn-secondary" onClick={openRules}>
             <Settings2 size={16} /> <span>Points rules</span>
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => openAward()}>
+          <button type="button" className="btn btn-primary" onClick={() => openAward()} disabled={!rules.is_active}
+            title={rules.is_active ? undefined : 'ClubScore is off, so no points can be awarded'}>
             <Plus size={16} /> <span>Award bonus</span>
           </button>
         </div>
@@ -357,7 +380,7 @@ export default function AdminGamificationPage({
                     <span className="badge" style={{ color: STATUS[status].color, background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)' }}>
                       {STATUS[status].label}
                     </span>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => openAward(player.id)}
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => openAward(player.id)} disabled={!rules.is_active}
                       aria-label={`Award bonus to ${player.full_name}`}>
                       <Plus size={14} /> <span>Bonus</span>
                     </button>
@@ -423,13 +446,13 @@ export default function AdminGamificationPage({
       </div>
 
       {showRules && (
-        <div style={overlayStyle} onClick={() => setShowRules(false)}>
+        <div style={overlayStyle} onClick={() => { if (!rulesSaving) setShowRules(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="gamification-rules-title" style={{ ...dialogStyle, maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
             <div style={dialogHeaderStyle}>
               <h3 id="gamification-rules-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={18} color="var(--c-amber)" /> Points rules
               </h3>
-              <button type="button" onClick={() => setShowRules(false)} aria-label="Close" style={closeButtonStyle}>
+              <button type="button" onClick={() => setShowRules(false)} aria-label="Close" style={closeButtonStyle} disabled={rulesSaving}>
                 <X size={20} />
               </button>
             </div>
@@ -440,6 +463,11 @@ export default function AdminGamificationPage({
                   onChange={e => setRulesForm({ ...rulesForm, is_active: e.target.checked })} />
                 ClubScore is on for this club
               </label>
+              {!rulesForm.is_active && (
+                <p className="text-note" style={{ marginTop: '-0.5rem' }}>
+                  While it is off, players earn no points from check-ins, matches or coach bonuses. Points already earned stay.
+                </p>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                 {POINT_FIELDS.map(f => ruleInput(f))}
@@ -454,15 +482,21 @@ export default function AdminGamificationPage({
                 </div>
               </div>
 
+              {rulesError && (
+                <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 600 }}>
+                  The rules could not be saved to the database. Your changes are still here, so try again.
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.75rem' }}>
-                <button type="button" className="btn btn-secondary"
+                <button type="button" className="btn btn-secondary" disabled={rulesSaving}
                   onClick={() => setRulesForm({ ...getDefaultClubScoreRules(club.id), id: rulesForm.id, is_active: rulesForm.is_active })}>
                   <RotateCcw size={16} /> <span>Reset to defaults</span>
                 </button>
                 <div className="row row-wrap">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowRules(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">
-                    <Save size={16} /> <span>Save rules</span>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowRules(false)} disabled={rulesSaving}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={rulesSaving}>
+                    <Save size={16} /> <span>{rulesSaving ? 'Saving...' : 'Save rules'}</span>
                   </button>
                 </div>
               </div>
