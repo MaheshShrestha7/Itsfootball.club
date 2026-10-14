@@ -44,7 +44,7 @@ export type SyncState = Record<EntityKey, any>;
 /** Which rows load() reads: every row, rows of the clubs in scope, or rows of the tournaments in scope */
 type Scope = 'all' | 'club' | 'tournament';
 
-interface EntityConfig {
+export interface EntityConfig {
   key: EntityKey;
   table: string;
   /** Defaults to 'club' */
@@ -61,7 +61,7 @@ interface EntityConfig {
 }
 
 // Parents first: this is also the upsert order (deletes run in reverse).
-const ENTITIES: EntityConfig[] = [
+export const ENTITIES: EntityConfig[] = [
   { key: 'clubs', table: 'clubs', scope: 'all', fromRow: clubFromRow, prepare: clubPrepare },
   { key: 'members', table: 'club_members', extraReadSources: ['club_members_public'], fromRow: memberFromRow },
   { key: 'seasons', table: 'club_seasons' },
@@ -239,6 +239,17 @@ function scopeFilter(cfg: EntityConfig, clubIds: string[], tournamentIds: string
   return ids.length ? q => q.in(column, ids) : null;
 }
 
+/** What public_club_data reads for these entities: each table and view, its scope, and the extra filter */
+export function oneCallSources(entities: EntityConfig[]) {
+  return entities.flatMap(cfg => {
+    // alsoLoad is a PostgREST filter; only the "<column>.in.(a,b)" form is used
+    const also = cfg.alsoLoad?.match(/^(\w+)\.in\.\(([^)]*)\)$/);
+    if (cfg.alsoLoad && !also) throw new Error(`public_club_data can't express the filter ${cfg.alsoLoad}`);
+    const orIn = also ? { column: also[1], values: also[2].split(',') } : undefined;
+    return [cfg.table, ...(cfg.extraReadSources || [])].map(name => ({ name, scope: cfg.scope ?? 'club', ...(orIn ? { or_in: orIn } : {}) }));
+  });
+}
+
 /** clubScoreRules is a { [clubId]: config } record in app state but one row per club in the table */
 function rulesToArray(rules: unknown): Row[] {
   if (Array.isArray(rules)) return rules;
@@ -334,10 +345,15 @@ export class SupabaseSync {
       errors.push(base.error);
       return;
     }
+    this.applyRows(cfg, base.rows, extras.map(e => e.rows), data);
+  }
+
+  /** Stores one entity's rows (its table's, plus its read-only sources') in `data` as app objects */
+  private applyRows(cfg: EntityConfig, baseRows: Row[], extraRows: Row[][], data: Partial<SyncState>) {
     // Full rows (visible to admins) win over the public-safe view of the same record
     const byId = new Map<string, Row>();
-    for (const extra of extras) for (const r of extra.rows) byId.set(r.id, r);
-    for (const r of base.rows) byId.set(r.id, r);
+    for (const rows of extraRows) for (const r of rows) byId.set(r.id, r);
+    for (const r of baseRows) byId.set(r.id, r);
     this.loadedIds.set(cfg.table, new Set(byId.keys()));
 
     data[cfg.key] = [...byId.values()].map(r => {
@@ -345,6 +361,31 @@ export class SupabaseSync {
       return cfg.fromRow ? cfg.fromRow(clean) : clean;
     });
     this.loaded.add(cfg.key);
+  }
+
+  /**
+   * The same result as load(), from a single database call (the public_club_data function), so a
+   * page rendered on the server waits for one round trip instead of about 27 requests. Null when
+   * the call itself fails (e.g. the migration isn't applied yet): the caller then uses load().
+   */
+  async loadInOneCall(scope: LoadScope): Promise<LoadResult | null> {
+    const entities = ENTITIES.filter(cfg => !scope.skip?.includes(cfg.key));
+    const { data: result, error } = await this.client.rpc('public_club_data', {
+      p_slug: scope.slug || '',
+      p_club_ids: scope.clubIds.filter(id => isUuid(id)),
+      p_sources: oneCallSources(entities),
+    });
+    if (error || !result?.sources) return null;
+
+    const sources = result.sources as Record<string, Row[]>;
+    const errors: string[] = Array.isArray(result.errors) ? result.errors : [];
+    const data: Partial<SyncState> = {};
+    for (const cfg of entities) {
+      // A table that failed to load is left untouched, as in load()
+      if (!Array.isArray(sources[cfg.table])) continue;
+      this.applyRows(cfg, sources[cfg.table], (cfg.extraReadSources || []).map(name => sources[name] || []), data);
+    }
+    return { data, errors, clubIds: Array.isArray(result.club_ids) ? result.club_ids : [] };
   }
 
   /**

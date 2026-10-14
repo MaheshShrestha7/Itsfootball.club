@@ -43,12 +43,19 @@ const loadForSlug = cache(async (slug: string): Promise<Partial<SyncState> | nul
   const limit = crawler ? CRAWLER_TIMEOUT_MS : TIMEOUT_MS;
   const started = Date.now();
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const load = new SupabaseSync(client)
-    .load({ slug, clubIds: [], skip: NOT_SERVER_RENDERED })
+  const sync = new SupabaseSync(client);
+  const scope = { slug, clubIds: [], skip: NOT_SERVER_RENDERED };
+  // One database call (supabase/migrations/20261108_public_club_data.sql); the table-by-table load
+  // if that call fails, e.g. before the migration is applied
+  let oneCall = true;
+  const load = sync
+    .loadInOneCall(scope)
+    .catch(() => null)
+    .then(result => result ?? ((oneCall = false), sync.load(scope)))
     .then(({ data, errors }) => {
       const ms = Date.now() - started;
       if (ms > SLOW_LOG_MS || errors.length) {
-        console.warn(`server data "${slug || '(platform)'}": ${ms} ms${ms > limit ? ` (over the ${limit} ms limit)` : ''}${errors.length ? `, errors: ${errors.join('; ')}` : ''}`);
+        console.warn(`server data "${slug || '(platform)'}": ${ms} ms${oneCall ? '' : ' (table by table)'}${ms > limit ? ` (over the ${limit} ms limit)` : ''}${errors.length ? `, errors: ${errors.join('; ')}` : ''}`);
       }
       return data;
     })
