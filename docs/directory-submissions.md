@@ -51,6 +51,10 @@ counts or percentages yet.
 > itsfootball.club is a free platform that gives grassroots and community football clubs their own website, live match centre, digital member passes, club shop and sponsor tools.
 
 - Short (60 chars max): `Free websites and matchday tools for grassroots football`
+- **If a site rejects "itsfootball.club" as a product name** (Capterra does: names that look like a
+  domain are refused), use `itsfootball`, the same name the installed app shows on a phone. Keep
+  `https://itsfootball.club` in the website field, and start the description with "itsfootball"
+  instead of "itsfootball.club" if the description is refused too.
 - Website: `https://itsfootball.club` Â· Contact: `contact@itsfootball.club`
 - Facebook: `https://www.facebook.com/ItsFootball.Club` Â· TikTok: `https://www.tiktok.com/@itsfootball.club`
 - Industry / category: Sports software, Sports club management
