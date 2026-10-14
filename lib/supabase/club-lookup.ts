@@ -299,25 +299,27 @@ export interface SitemapData {
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
   news: { club_id: string; slug: string; published_at: string | null; updated_at: string | null }[];
+  teams: { club_id: string; slug: string }[];
   shopClubIds: string[];
   galleryClubIds: string[];
 }
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
-  const [clubs, matches, events, tournaments, news, products, photos] = await Promise.all([
+  const [clubs, matches, events, tournaments, news, teams, products, photos] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
     // Published only: a scheduled article joins the sitemap once its time comes
     fetchRows<SitemapData['news'][number]>(`news_articles?select=club_id,slug,published_at,updated_at&published_at=lte.${new Date().toISOString().slice(0, 13)}:59:59Z&order=id`),
+    fetchRows<SitemapData['teams'][number]>('club_teams?select=club_id,slug&is_active=eq.true&slug=not.is.null&order=id'),
     fetchRows<{ club_id: string }>('shop_products?select=club_id&is_active=eq.true&order=id'),
     // ponytail: reads one row per photo; a distinct-club_id view if galleries grow into the tens of thousands
     fetchRows<{ club_id: string }>('media_gallery?select=club_id&media_type=eq.image&order=id'),
   ]);
   return {
-    clubs, matches, events, tournaments, news,
+    clubs, matches, events, tournaments, news, teams,
     shopClubIds: Array.from(new Set(products.map(p => p.club_id))),
     galleryClubIds: Array.from(new Set(photos.map(p => p.club_id))),
   };

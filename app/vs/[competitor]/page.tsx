@@ -8,19 +8,36 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
 import { COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
+import JsonLd from '@/components/JsonLd';
+import { ORGANIZATION_ID } from '@/lib/schema';
+import { SITE_NAME, SITE_URL, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 
 export const dynamicParams = false;
 export const generateStaticParams = () => COMPETITORS.map(c => ({ competitor: c.slug }));
 
 type Props = { params: Promise<{ competitor: string }> };
 
-const titleFor = (c: Competitor) => (c.closed ? `${c.name} alternative` : `itsfootball.club vs ${c.name}`);
+// Leads with "<name> alternative", the query people switching actually search
+const titleFor = (c: Competitor) =>
+  c.closed ? fitTitle(`${c.name} Alternative After ${c.name} Closed`, SITE_NAME) : fitTitle(`${c.name} Alternative: ${SITE_NAME} vs ${c.name}`);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = competitorBySlug((await params).competitor);
   if (!c) return {};
-  return { title: titleFor(c), description: c.summary, alternates: { canonical: `/vs/${c.slug}` } };
+  return pageMetadata({ title: titleFor(c), description: fitDescription(c.summary), path: `/vs/${c.slug}` });
 }
+
+// Ties the page to the platform entity, the same way the /vs hub does
+const schemaFor = (c: Competitor) => ({
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: titleFor(c),
+  description: c.summary,
+  url: `${SITE_URL}/vs/${c.slug}`,
+  about: { '@id': ORGANIZATION_ID },
+  mentions: { '@type': 'SoftwareApplication', name: c.name },
+  isPartOf: { '@type': 'WebPage', url: `${SITE_URL}/vs` },
+});
 
 const ctaStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.45rem' };
 
@@ -30,6 +47,7 @@ export default async function VsPage({ params }: Props) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <JsonLd data={schemaFor(c)} />
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3.5rem 1rem', flex: 1, maxWidth: '960px' }}>

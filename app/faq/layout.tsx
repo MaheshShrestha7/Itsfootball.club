@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { fitDescription, pageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'FAQ | itsfootball.club',
+  title: 'Football Club Website FAQ: Pricing & Setup | itsfootball.club',
   description: fitDescription(
     'Answers for club representatives, admins, managers, coaches, players, supporters and sponsors. Free to sign up, every feature included.'
   ),
