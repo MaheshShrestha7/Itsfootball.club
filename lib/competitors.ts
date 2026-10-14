@@ -87,6 +87,7 @@ export const COMPETITORS: Competitor[] = [
     summary: 'Spond is free for team admin too. The difference: its club website is a paid subscription after a free trial, and fans follow along in the browser here without an app.',
     rows: [
       { label: 'Price for the club', us: FREE, them: { mark: 'yes', text: 'App free to download and use', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Brand partner ads and sponsored content in the app', source: 4 } },
       { label: 'Club website', us: WEBSITE, them: { mark: 'part', text: 'Paid subscription after a free trial (6 months UK, 12 months AU)', source: 1 } },
       { label: 'Card fees on payments', us: PAYMENTS, them: { mark: 'info', text: 'AUD 2.5% + $0.30, GBP 2.5% + £0.20. Club pays by default', source: 2 } },
       { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'info', text: 'Not listed on Spond\'s club website pages', source: 1 } },
@@ -104,6 +105,7 @@ export const COMPETITORS: Competitor[] = [
       { title: 'Spond help: Set up your club website', url: 'https://help.spond.com/club/en/articles/148773-set-up-your-club-website' },
       { title: 'Spond help: Transaction fees in Spond Club', url: 'https://help.spond.com/club/en/articles/58192-what-is-the-transaction-fee-in-spond-club' },
       { title: 'Spond help: Payment costs in the Spond app', url: 'https://help.spond.com/app/en/articles/118091-payments-costs-in-the-spond-app' },
+      { title: 'Spond: Brand partnerships', url: 'https://www.spond.com/news-and-blog/spond-brand-partnerships/' },
     ],
   },
   {
@@ -127,3 +129,50 @@ export const COMPETITORS: Competitor[] = [
 ];
 
 export const competitorBySlug = (slug: string) => COMPETITORS.find(c => c.slug === slug);
+
+/** The all-in-one table on /vs: same facts as the pages above, one row per question. `source` indexes that competitor's sources. */
+export const COMPARE_ORDER = ['pitchero', 'heja', 'spond', 'teamer'] as const;
+export interface CompareRow { label: string; us: Cell; them: Record<(typeof COMPARE_ORDER)[number], Cell> }
+
+const DASH: Cell = { mark: 'info', text: '—' };
+const NOT_LISTED = (source: number): Cell => ({ mark: 'info', text: 'Not listed', source });
+
+export const COMPARE_ROWS: CompareRow[] = [
+  { label: 'Still running?', us: { mark: 'yes', text: 'Yes' }, them: {
+    pitchero: { mark: 'yes', text: 'Yes' }, heja: { mark: 'yes', text: 'Yes' }, spond: { mark: 'yes', text: 'Yes' },
+    teamer: { mark: 'no', text: 'Closed 5 Oct 2026', source: 0 } } },
+  { label: 'Price for the club', us: FREE, them: {
+    pitchero: { mark: 'part', text: 'Free for 1 team. £38 or £99/month', source: 0 },
+    heja: { mark: 'part', text: 'Free with ads. Pro from $8.33', source: 0 },
+    spond: { mark: 'yes', text: 'Free app', source: 0 },
+    teamer: DASH } },
+  { label: 'Ads', us: NO_ADS, them: {
+    pitchero: { mark: 'part', text: 'On Free and Standard', source: 0 },
+    heja: { mark: 'part', text: 'On Free; Pro Max removes them', source: 1 },
+    spond: { mark: 'part', text: 'Brand partner ads in the app', source: 4 }, teamer: DASH } },
+  { label: 'Public club website', us: WEBSITE, them: {
+    pitchero: { mark: 'yes', text: 'Included', source: 0 },
+    heja: { mark: 'no', text: 'Members-only teams', source: 0 },
+    spond: { mark: 'part', text: 'Paid after free trial', source: 1 },
+    teamer: DASH } },
+  { label: 'Live match centre', us: MATCH_CENTRE, them: {
+    pitchero: { mark: 'yes', text: 'Live scores via their app', source: 1 },
+    heja: NOT_LISTED(1), spond: NOT_LISTED(1), teamer: DASH } },
+  { label: 'Fans need an app?', us: NO_APP, them: {
+    pitchero: { mark: 'yes', text: 'No for scores', source: 1 },
+    heja: { mark: 'no', text: 'Yes, members-only app', source: 1 },
+    spond: { mark: 'part', text: 'Spond app or web', source: 0 },
+    teamer: DASH } },
+  { label: 'Online payments', us: PAYMENTS, them: {
+    pitchero: { mark: 'part', text: 'Paid plans, from 1.67% + 15p', source: 0 },
+    heja: { mark: 'part', text: 'Pro: track fees, payouts in some regions', source: 1 },
+    spond: { mark: 'yes', text: 'AUD 2.5% + $0.30, club pays by default', source: 2 },
+    teamer: DASH } },
+  { label: 'Club shop', us: SHOP, them: {
+    pitchero: { mark: 'info', text: '"Sell all product types"', source: 0 },
+    heja: NOT_LISTED(1),
+    spond: { mark: 'info', text: 'Products in payment requests', source: 3 },
+    teamer: DASH } },
+  { label: 'Member pass and tournaments', us: { mark: 'yes', text: 'QR pass, groups and knockouts' }, them: {
+    pitchero: NOT_LISTED(0), heja: NOT_LISTED(1), spond: NOT_LISTED(1), teamer: DASH } },
+];

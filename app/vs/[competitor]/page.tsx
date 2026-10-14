@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
-import { AlertTriangle, ArrowRight, Check, Minus, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import CellView from '../CellView';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
-import { CHECKED_ON, COMPETITORS, competitorBySlug, type Cell, type Competitor } from '@/lib/competitors';
+import { CHECKED_ON, COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
 
 export const dynamicParams = false;
 export const generateStaticParams = () => COMPETITORS.map(c => ({ competitor: c.slug }));
@@ -19,28 +20,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = competitorBySlug((await params).competitor);
   if (!c) return {};
   return { title: titleFor(c), description: c.summary, alternates: { canonical: `/vs/${c.slug}` } };
-}
-
-const MARK = {
-  yes: { Icon: Check, color: 'var(--c-green)', label: 'Yes' },
-  part: { Icon: Minus, color: 'var(--c-amber)', label: 'Partly' },
-  no: { Icon: X, color: 'var(--c-red)', label: 'No' },
-  info: { Icon: null, color: 'var(--text-muted)', label: '' },
-} as const;
-
-function CellView({ cell, sourceOffset }: { cell: Cell; sourceOffset?: number }) {
-  const { Icon, color, label } = MARK[cell.mark];
-  return (
-    <span className="vs-cell">
-      {Icon && <span className="vs-mark" style={{ color, borderColor: color }} aria-label={label}><Icon size={14} strokeWidth={3} /></span>}
-      <span>
-        {cell.text}
-        {cell.source !== undefined && sourceOffset !== undefined && (
-          <sup><a href={`#source-${cell.source + 1}`} className="vs-ref">[{cell.source + 1}]</a></sup>
-        )}
-      </span>
-    </span>
-  );
 }
 
 const ctaStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.45rem' };
@@ -92,7 +71,7 @@ export default async function VsPage({ params }: Props) {
             <div key={r.label} className="vs-row">
               <span className="vs-label">{r.label}</span>
               <span className="vs-us" data-col="itsfootball.club"><CellView cell={r.us} /></span>
-              <span data-col={c.name}><CellView cell={r.them} sourceOffset={0} /></span>
+              <span data-col={c.name}><CellView cell={r.them} /></span>
             </div>
           ))}
         </section>
