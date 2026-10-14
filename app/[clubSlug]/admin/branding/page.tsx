@@ -822,7 +822,7 @@ export default function AdminBrandingPage({
                 type="tel"
                 name="contact_phone"
                 className="form-input"
-                placeholder="+1 (555) 019-2831"
+                placeholder="e.g. 0400 000 000"
                 value={formData.contact_phone}
                 onChange={handleChange}
               />

@@ -159,11 +159,12 @@ export default function ShopPage({ params }: { params: Promise<{ clubSlug: strin
         )}
       </div>
 
+      {/* Kept above the phone tab bar by --tabbar-clear (globals.css) */}
       {itemCount > 0 && !orderInView && (
         <button type="button" className="btn btn-primary" onClick={showOrder}
           style={{
             position: 'fixed', zIndex: 40, left: '50%', transform: 'translateX(-50%)', width: 'min(480px, calc(100% - 32px))',
-            bottom: 'calc(16px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            bottom: 'calc(16px + var(--tabbar-clear, env(safe-area-inset-bottom, 0px)))', display: 'flex', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
           }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><ShoppingBag size={16} /> View order ({itemCount})</span>
           <span>{formatMoney(total, currency)}</span>

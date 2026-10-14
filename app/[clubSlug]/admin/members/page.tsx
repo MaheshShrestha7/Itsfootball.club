@@ -205,7 +205,7 @@ export default function AdminMembersPage({
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Toast Notification */}
       {toastMessage && (
-        <div style={{
+        <div role="status" className="admin-save-toast" style={{
           position: 'fixed',
           bottom: '2rem',
           right: '2rem',

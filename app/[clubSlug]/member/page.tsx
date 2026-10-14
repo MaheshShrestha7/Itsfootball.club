@@ -791,7 +791,7 @@ export default function MemberPortalPage({
                 <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} />
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>
                   Signed in as {signedInEmail}.{' '}
-                  <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                  <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
                     Sign out
                   </button>
                 </div>
@@ -858,7 +858,7 @@ export default function MemberPortalPage({
 
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Signed in as {signedInEmail}.{' '}
-                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
                       Sign out
                     </button>
                   </div>
@@ -920,8 +920,9 @@ export default function MemberPortalPage({
                   transition: 'all 0.2s ease',
                 }}
               >
-                <Zap size={16} />
-                <span>Apply for Membership</span>
+                <Zap size={16} style={{ flexShrink: 0 }} />
+                {/* Short enough to stay on one line beside "Member Sign In" on a phone */}
+                <span style={{ whiteSpace: 'nowrap' }}>Apply to Join</span>
               </button>
             </div>)}
 
@@ -1004,7 +1005,7 @@ export default function MemberPortalPage({
                     </label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input aria-label="Email"
+                      <input autoComplete="email" aria-label="Email"
                         type="email"
                         required
                         value={loginEmail}
@@ -1079,14 +1080,14 @@ export default function MemberPortalPage({
                 {signedInEmail && !activeMember ? (
                   <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                     Signed in as {signedInEmail}.{' '}
-                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
                       Use a different email
                     </button>
                   </div>
                 ) : (
                   <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                     Not a member yet?{' '}
-                    <button type="button" onClick={() => setGatewayTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--c-green)', cursor: 'pointer', fontWeight: 700 }}>
+                    <button type="button" onClick={() => setGatewayTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
                       Apply for membership
                     </button>
                   </div>
@@ -1209,7 +1210,7 @@ export default function MemberPortalPage({
                         <label htmlFor="member-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Full Name *
                         </label>
-                        <input id="member-full-name"
+                        <input autoComplete="name" id="member-full-name"
                           type="text"
                           required
                           value={signupForm.fullName}
@@ -1231,7 +1232,7 @@ export default function MemberPortalPage({
                         <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           {needsGuardian ? 'Player\'s Own Email (optional)' : 'Email Address *'}
                         </label>
-                        <input id="member-email-address"
+                        <input autoComplete="email" id="member-email-address"
                           type="email"
                           required={!needsGuardian}
                           value={signupForm.email}
@@ -1256,11 +1257,11 @@ export default function MemberPortalPage({
                         <label htmlFor="member-phone-number" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                           Phone Number
                         </label>
-                        <input id="member-phone-number"
+                        <input autoComplete="tel" id="member-phone-number"
                           type="tel"
                           value={signupForm.phone}
                           onChange={e => setSignupForm({ ...signupForm, phone: e.target.value })}
-                          placeholder="+1 (555) 000-0000"
+                          placeholder="e.g. 0400 000 000"
                           style={{
                             width: '100%',
                             padding: '0.65rem 0.75rem',

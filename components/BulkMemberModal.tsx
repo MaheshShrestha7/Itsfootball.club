@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useDialog } from '@/lib/use-escape-to-close';
 import { secureToken } from '@/lib/ids';
 import { membershipTermEnd, todayIso } from '@/lib/finance';
 import { Club, ClubMember, PlayerPosition, PlayerStatus, ClubRole, MembershipStatus } from '@/lib/supabase/types';
@@ -195,6 +196,8 @@ export default function BulkMemberModal({
   const [importing, setImporting] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const dialogRef = useDialog(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -568,7 +571,7 @@ export default function BulkMemberModal({
       justifyContent: 'center',
       padding: '1rem',
     }}>
-      <div className="glass-panel" style={{
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Add members in bulk" className="glass-panel" style={{
         width: '100%',
         maxWidth: '840px',
         maxHeight: '90vh',

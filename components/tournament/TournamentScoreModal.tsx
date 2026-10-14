@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
 import { X, Trophy, Radio, CheckCircle2 } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { useDialog } from '@/lib/use-escape-to-close';
 
 interface TournamentScoreModalProps {
   match: Match;
@@ -49,6 +50,8 @@ export default function TournamentScoreModal({
   const [matchTime, setMatchTime] = useState(match.match_time || '');
   const [venue, setVenue] = useState(match.venue || '');
   const [error, setError] = useState<string | null>(null);
+
+  const dialogRef = useDialog(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -95,7 +98,7 @@ export default function TournamentScoreModal({
       }}
       onClick={onClose}
     >
-      <div
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Match score"
         style={{
           margin: 'auto',
           background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',

@@ -484,7 +484,7 @@ export default function AdminMatchesPage({
     <div style={{ paddingBottom: '4rem' }}>
       {/* Toast Notification */}
       {toastMessage && (
-        <div
+        <div role="status" className="admin-save-toast"
           style={{
             position: 'fixed',
             bottom: '2rem',

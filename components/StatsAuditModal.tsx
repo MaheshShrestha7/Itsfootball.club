@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useDialog } from '@/lib/use-escape-to-close';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
@@ -94,6 +95,8 @@ export default function StatsAuditModal({
   const [auditResult, setAuditResult] = useState<{ totalXP: number; message: string } | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
 
+  const dialogRef = useDialog(isOpen, onClose);
+
   if (!isOpen) return null;
 
   // Toggle clean sheet recipient
@@ -176,7 +179,7 @@ export default function StatsAuditModal({
       padding: '1.25rem',
       overflowY: 'auto',
     }}>
-      <div
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Stats audit"
         className="glass-panel"
         style={{
           maxWidth: '720px',
