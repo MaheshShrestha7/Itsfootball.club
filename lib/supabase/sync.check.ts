@@ -54,6 +54,14 @@ async function main() {
   assert.deepEqual(matchesQuery.filters, [['or', `club_id.in.(${C1}),status.in.(live,halftime)`]]);
   assert.ok(!log.some(o => o.table === 'tournament_participants'), 'no tournaments in scope, so no participants query');
 
+  // Skipped tables are neither requested nor returned, so the caller's copy is left alone
+  const skipLog: Op[] = [];
+  const skipped = await new SupabaseSync(fakeClient({ clubs: [{ id: C1, slug: 'fc' }] }, skipLog))
+    .load({ slug: 'fc', clubIds: [], skip: ['memberMessages', 'gateScans'] });
+  assert.ok(!skipLog.some(o => o.table === 'member_messages' || o.table === 'gate_scans'));
+  assert.ok(!('memberMessages' in skipped.data) && !('gateScans' in skipped.data));
+  assert.ok(skipLog.some(o => o.table === 'matches'), 'other tables still load');
+
   engine.seed({ matches: [match] });
 
   // Only the edited column is sent, so a server-side checkin_count isn't overwritten

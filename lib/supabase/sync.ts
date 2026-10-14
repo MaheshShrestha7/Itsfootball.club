@@ -271,6 +271,8 @@ export interface LoadScope {
   slug?: string;
   /** Clubs the signed-in user owns or belongs to */
   clubIds: string[];
+  /** Tables not to read at all: left out of the result, so they keep whatever the caller already has */
+  skip?: EntityKey[];
 }
 
 export interface LoadResult {
@@ -354,7 +356,7 @@ export class SupabaseSync {
     await this.client.auth.getSession();
     const data: Partial<SyncState> = {};
     const errors: string[] = [];
-    const inScope = (s: Scope) => ENTITIES.filter(cfg => (cfg.scope ?? 'club') === s);
+    const inScope = (s: Scope) => ENTITIES.filter(cfg => (cfg.scope ?? 'club') === s && !scope.skip?.includes(cfg.key));
 
     await Promise.all(inScope('all').map(cfg => this.loadEntity(cfg, q => q, data, errors)));
 
