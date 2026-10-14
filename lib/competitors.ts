@@ -1,6 +1,7 @@
 // Facts for the /vs/{competitor} comparison pages. Every competitor cell cites a source from that
 // competitor's own site, checked on CHECKED_ON; re-check before changing a price or claim.
 
+/** When the competitor facts below were last checked against their sites (not shown on the page) */
 export const CHECKED_ON = '14 October 2026';
 
 /** 'yes' and 'no' draw a mark; 'part' is a qualified yes (paid plan only, limited); 'info' is plain text. */
@@ -30,8 +31,6 @@ const PAYMENTS: Cell = { mark: 'yes', text: 'Included. Card payers add a small b
 const MATCH_CENTRE: Cell = { mark: 'yes', text: 'Live scores, lineups and events, run from any phone browser' };
 const NO_APP: Cell = { mark: 'yes', text: 'No. Everything opens in the browser' };
 const SHOP: Cell = { mark: 'yes', text: 'Included free, fee shown before paying' };
-const PASS: Cell = { mark: 'yes', text: 'Digital member pass with QR check-in' };
-const TOURNAMENTS: Cell = { mark: 'yes', text: 'Group stages and knockouts' };
 
 export const COMPETITORS: Competitor[] = [
   {

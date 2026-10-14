@@ -2842,7 +2842,8 @@ dialog.confirm-dialog::backdrop {
 .vs-row .vs-us { background: rgba(var(--club-primary-rgb), 0.08); margin: -0.95rem 0; padding: 0.95rem 0.75rem; border-left: 2px solid rgba(var(--club-primary-rgb), 0.5); }
 .vs-cell { display: flex; gap: 0.55rem; align-items: flex-start; line-height: 1.5; font-size: 0.95rem; }
 .vs-mark { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--radius-full); border: 1.5px solid; margin-top: 1px; }
-.vs-ref { color: var(--text-muted); text-decoration: none; font-size: 0.75em; margin-left: 2px; }
+.vs-ref { display: inline-flex; vertical-align: super; color: var(--text-muted); margin-left: 4px; opacity: 0.8; }
+.vs-ref:hover { color: var(--club-ink); opacity: 1; }
 .vs-steps { list-style: none; counter-reset: vs; padding: 0; margin: 1.25rem auto 1.5rem; max-width: 460px; text-align: left; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.6rem; }
 .vs-steps li { counter-increment: vs; display: flex; gap: 0.7rem; align-items: baseline; line-height: 1.5; }
 .vs-steps li::before { content: counter(vs); flex-shrink: 0; width: 24px; height: 24px; border-radius: var(--radius-full); background: rgba(var(--club-primary-rgb), 0.15); color: var(--club-ink); font-weight: 800; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; }

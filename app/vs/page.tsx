@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
-import { CHECKED_ON, COMPARE_ORDER, COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
+import { COMPARE_ORDER, COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
 import CellView from './CellView';
 
 export const metadata: Metadata = {
@@ -14,10 +14,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/vs' },
 };
 
-// Every competitor's sources in one numbered list, in column order
+// Columns in table order
 const COLUMNS = COMPARE_ORDER.map(slug => competitorBySlug(slug)!);
-const OFFSETS = COLUMNS.map((_, i) => COLUMNS.slice(0, i).reduce((n, c) => n + c.sources.length, 0));
-const SOURCES = COLUMNS.flatMap(c => c.sources.map(s => ({ ...s, title: `${c.name}: ${s.title.replace(new RegExp(`^${c.name}\\s*`), '')}` })));
 
 const ctaStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.45rem' };
 
@@ -33,7 +31,7 @@ export default function VsIndexPage() {
             How itsfootball.club compares
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0.9rem auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
-            Pitchero, Heja, Spond and Teamer side by side. Every claim about them links to their own website.
+            Pitchero, Heja, Spond and Teamer side by side. Tap the small link icon on any claim to see it on their own website.
           </p>
         </header>
 
@@ -56,8 +54,8 @@ export default function VsIndexPage() {
                 <tr key={r.label}>
                   <th scope="row">{r.label}</th>
                   <td className="vs-us"><CellView cell={r.us} /></td>
-                  {COLUMNS.map((c, i) => (
-                    <td key={c.slug}><CellView cell={r.them[c.slug as (typeof COMPARE_ORDER)[number]]} sourceOffset={OFFSETS[i]} /></td>
+                  {COLUMNS.map(c => (
+                    <td key={c.slug}><CellView cell={r.them[c.slug as (typeof COMPARE_ORDER)[number]]} sources={c.sources} /></td>
                   ))}
                 </tr>
               ))}
@@ -79,15 +77,7 @@ export default function VsIndexPage() {
         </section>
 
         <footer style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-          <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Sources, checked {CHECKED_ON}</p>
-          <ol style={{ paddingLeft: '1.2rem' }}>
-            {SOURCES.map((s, i) => (
-              <li key={s.url} id={`source-${i + 1}`}>
-                <a href={s.url} rel="nofollow noopener" target="_blank" style={{ color: 'var(--club-ink)' }}>{s.title}</a>
-              </li>
-            ))}
-          </ol>
-          <p style={{ marginTop: '0.5rem' }}>
+          <p>
             Prices and features change. Spotted something out of date? Email{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)' }}>{CONTACT_EMAIL}</a> and we&apos;ll fix it.
           </p>

@@ -3,11 +3,11 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
-import CellView from '../CellView';
+import CellView, { SourceLink } from '../CellView';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
-import { CHECKED_ON, COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
+import { COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
 
 export const dynamicParams = false;
 export const generateStaticParams = () => COMPETITORS.map(c => ({ competitor: c.slug }));
@@ -56,7 +56,7 @@ export default async function VsPage({ params }: Props) {
             <AlertTriangle size={20} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: 2 }} />
             <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--text-primary)' }}>{c.name} closed on {c.closed.on}.</strong> {c.closed.note}
-              <sup><a href="#source-1" className="vs-ref">[1]</a></sup>
+              <SourceLink source={c.sources[0]} />
             </p>
           </div>
         )}
@@ -71,7 +71,7 @@ export default async function VsPage({ params }: Props) {
             <div key={r.label} className="vs-row">
               <span className="vs-label">{r.label}</span>
               <span className="vs-us" data-col="itsfootball.club"><CellView cell={r.us} /></span>
-              <span data-col={c.name}><CellView cell={r.them} /></span>
+              <span data-col={c.name}><CellView cell={r.them} sources={c.sources} /></span>
             </div>
           ))}
         </section>
@@ -98,15 +98,7 @@ export default async function VsPage({ params }: Props) {
         </section>
 
         <footer style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-          <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Sources, checked {CHECKED_ON}</p>
-          <ol style={{ paddingLeft: '1.2rem' }}>
-            {c.sources.map((s, i) => (
-              <li key={s.url} id={`source-${i + 1}`}>
-                <a href={s.url} rel="nofollow noopener" target="_blank" style={{ color: 'var(--club-ink)' }}>{s.title}</a>
-              </li>
-            ))}
-          </ol>
-          <p style={{ marginTop: '0.5rem' }}>
+          <p>
             Prices and features change. Spotted something out of date? Email{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)' }}>{CONTACT_EMAIL}</a> and we&apos;ll fix it.
           </p>
