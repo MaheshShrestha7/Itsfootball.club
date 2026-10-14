@@ -1,5 +1,6 @@
 // Dates in emails. Clubs don't store a time zone yet, so one zone serves all (EMAIL_TIMEZONE).
-const TIME_ZONE = process.env.EMAIL_TIMEZONE || 'Australia/Sydney';
+// Also used for match dates in page titles, which have the same problem.
+export const TIME_ZONE = process.env.EMAIL_TIMEZONE || 'Australia/Sydney';
 
 /** "Sun 4 Oct, 10:00 am" */
 export const formatWhen = (iso: string) =>

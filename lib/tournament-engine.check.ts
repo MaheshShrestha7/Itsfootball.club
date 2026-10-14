@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -175,5 +175,13 @@ for (let n = 2; n <= 17; n++) {
   assert.equal(clubLineupSide(m({ match_type: 'tournament', is_club_home: false, tournament_id: 't' })), 'home', 'tournament: home');
   assert.equal(clubLineupSide(m({ match_type: 'internal', is_club_home: false })), 'home', 'internal: home');
 }
+
+// Title labels: the two Dashain Cup meetings of the same teams on the same day must differ
+assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'semi_final', tournament_round: 1 }), 'Semi-Final');
+assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'group', tournament_round: 1 }), 'Round 1');
+assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'final', tournament_round: 2 }), 'Grand Final');
+assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'quarter_final' }), 'Quarter-Final');
+assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: null, tournament_round: null }), null);
+assert.equal(tournamentMatchLabel({ tournament_id: null, tournament_stage: 'final' }), null);
 
 console.log('tournament engine: all formats OK');

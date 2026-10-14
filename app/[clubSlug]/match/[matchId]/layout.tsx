@@ -2,6 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { findMatchById } from '@/lib/supabase/club-lookup';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
+import { tournamentMatchLabel } from '@/lib/tournament-engine';
+import { TIME_ZONE } from '@/lib/email/format';
 
 export async function generateMetadata({
   params,
@@ -29,11 +31,14 @@ export async function generateMetadata({
     // A team that hides its scores publicly: the description names the fixture, never the score
     const score = match.score_hidden ? fixture : `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}`;
     const date = match.match_date
-      ? new Date(match.match_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+      ? new Date(match.match_date).toLocaleDateString('en-AU', { timeZone: TIME_ZONE, day: 'numeric', month: 'short', year: 'numeric' })
       : null;
+    // Same teams can meet twice (home and away, or a group game and a semi-final on one day), so the title
+    // carries the cup stage, or else the date, to keep every match's title unique
+    const which = tournamentMatchLabel(match) || date;
 
     return pageMetadata({
-      title: fitTitle(fixture, isLive ? 'Live Score' : played ? 'Result' : 'Match Preview', clubName(club)),
+      title: fitTitle(fixture, which, isLive ? 'Live Score' : played ? 'Result' : 'Match Preview', clubName(club)),
       description: fitDescription(
         isLive
           ? `Live: ${score}${match.competition ? ` in the ${match.competition}` : ''}.`

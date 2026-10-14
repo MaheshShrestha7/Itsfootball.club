@@ -70,6 +70,8 @@ export interface MatchMetadataRow {
   team_id?: string | null;
   match_type?: string | null;
   tournament_id?: string | null;
+  tournament_stage?: string | null;
+  tournament_round?: number | null;
   /** Its team hides scores publicly (junior grassroots rules): metadata must not give the score away */
   score_hidden?: boolean;
 }
@@ -83,7 +85,7 @@ export async function findMatchById(matchId: string): Promise<MatchMetadataRow |
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id&id=eq.${encodeURIComponent(matchId)}`,
+      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&id=eq.${encodeURIComponent(matchId)}`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },

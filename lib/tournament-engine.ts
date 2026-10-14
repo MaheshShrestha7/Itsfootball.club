@@ -24,7 +24,16 @@ export const STAGE_TITLES: Record<string, string> = {
   third_place: '3rd Place Playoff',
 };
 
-export const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+/** One tournament match's place in the cup ("Semi-Final", "Round 5"), or null outside a tournament.
+ *  Tells apart two meetings of the same teams on the same day, e.g. in page titles. */
+export function tournamentMatchLabel(m: { tournament_id?: string | null; tournament_stage?: string | null; tournament_round?: number | null }): string | null {
+  if (!m.tournament_id) return null;
+  const stage = m.tournament_stage || 'group';
+  if (stage === 'group') return m.tournament_round ? `Round ${m.tournament_round}` : null;
+  return (STAGE_TITLES[stage] || null)?.replace(/-Finals$/, '-Final') ?? null;
+}
+
+export const GROUP_LETTERS =['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final'];
 
