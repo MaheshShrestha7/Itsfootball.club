@@ -48,9 +48,11 @@ export function fitDescription(...sentences: (string | null | undefined | false)
   let out = '';
   for (const s of sentences) {
     if (!s || !s.trim()) continue;
-    const next = out ? `${out} ${s.trim()}` : s.trim();
+    // A summary typed without a full stop would otherwise run straight into the next sentence
+    const sentence = /[.!?…"”'’]$/.test(s.trim()) ? s.trim() : `${s.trim()}.`;
+    const next = out ? `${out} ${sentence}` : sentence;
     if (next.length > DESC_MAX) {
-      if (!out) out = truncateWords(s.trim(), DESC_MAX);
+      if (!out) out = truncateWords(sentence, DESC_MAX);
       continue;
     }
     out = next;

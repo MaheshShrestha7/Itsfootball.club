@@ -8,13 +8,13 @@ import { CONTACT_EMAIL } from '@/lib/faq';
 import { COMPARE_ORDER, COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
 import CellView from './CellView';
 import JsonLd from '@/components/JsonLd';
-import { SITE_URL } from '@/lib/seo';
+import { SITE_URL, pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'itsfootball.club vs Pitchero, Heja, Spond and Teamer',
   description: 'How itsfootball.club compares with Pitchero, Heja, Spond and Teamer on price, ads, club website, live match centre, payments and club shop. Every claim sourced.',
-  alternates: { canonical: '/vs' },
-};
+  path: '/vs',
+});
 
 // Columns in table order
 const COLUMNS = COMPARE_ORDER.map(slug => competitorBySlug(slug)!);
@@ -23,7 +23,7 @@ const COLUMNS = COMPARE_ORDER.map(slug => competitorBySlug(slug)!);
 const schema = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
-  name: metadata.title,
+  name: 'itsfootball.club vs Pitchero, Heja, Spond and Teamer',
   url: `${SITE_URL}/vs`,
   about: { '@id': `${SITE_URL}/#organization` },
   mainEntity: {
