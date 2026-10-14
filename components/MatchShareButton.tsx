@@ -1,31 +1,50 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Share2, Download, X } from 'lucide-react';
-import { drawMatchCard, type CardKind } from '@/lib/share-card';
-import { SITE_URL } from '@/lib/slugs';
-import type { Club, Match } from '@/lib/supabase/types';
+import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
+import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
-// "Share" on a match page: previews the matchday graphic, then hands it to the phone's share sheet
-// (Instagram, WhatsApp...) or downloads it where the browser can't share files.
+// "Share" on a match page (and on each fixture in Admin > Matches): previews the matchday graphic as a
+// story or a post, then hands it to the phone's share sheet (Instagram, Facebook, WhatsApp...) or
+// downloads it where the browser can't share files.
 // hideScore: the team hides its scores publicly (junior grassroots rules), so the card never shows one
-export default function MatchShareButton({ match, club, hideScore = false }: { match: Match; club: Club; hideScore?: boolean }) {
+// events: the match's events with public names (junior players shortened); goals list the scorers
+// photos: player photos by member id for the lineup pitch, as the public site shows them
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, trigger }: {
+  match: Match;
+  club: Club;
+  hideScore?: boolean;
+  events?: CardOptions['events'];
+  photos?: CardOptions['photos'];
+  /** Draws the button that opens the dialog, for places with their own button style */
+  trigger?: (open: () => void) => React.ReactNode;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<CardKind>('score');
+  const [format, setFormat] = useState<CardFormat>('story');
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const hasLineup = ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords)?.length;
-  const fileName = `${club.slug}-${kind === 'lineup' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}.png`;
+  const onPitch = lineupHasPositions(match);
+  const fileName = `${club.slug}-${kind !== 'score' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
 
-  // Redrawn when opened, when the card type changes and when the score moves
+  // Only the goals matter here, and the caller may pass a new array on every render (a live match
+  // ticks), so the graphic redraws when a goal changes, not on every render
+  const goalsKey = JSON.stringify((events || []).filter(e => e.event_type === 'goal' || e.event_type === 'penalty')
+    .map(e => [e.team_side, e.player_name, e.minute, e.added_minute || 0, e.event_type]));
+  const goals = useMemo(() => JSON.parse(goalsKey).map(([team_side, player_name, minute, added_minute, event_type]: [MatchEvent['team_side'], string, number, number, MatchEvent['event_type']]) =>
+    ({ team_side, player_name, minute, added_minute, event_type })) as NonNullable<CardOptions['events']>, [goalsKey]);
+
+  // Redrawn when opened, when the card type or size changes and when the score moves
   useEffect(() => {
     if (!open) return;
     let url = '';
     let stale = false;
     setError(null);
     setImage(null);
-    drawMatchCard(match, club, kind, new URL(SITE_URL).host, { hideScore })
+    drawMatchCard(match, club, kind, shareLink(club), { hideScore, format, events: hideScore ? undefined : goals, photos })
       .then(blob => {
         if (stale) return;
         url = URL.createObjectURL(blob);
@@ -33,7 +52,7 @@ export default function MatchShareButton({ match, club, hideScore = false }: { m
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, match, club, hideScore]);
+  }, [open, kind, format, match, club, hideScore, goals, photos]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -64,14 +83,22 @@ export default function MatchShareButton({ match, club, hideScore = false }: { m
       {label}
     </button>
   );
+  const sizeTab = (value: CardFormat, label: string, hint: string) => (
+    <button type="button" className={`btn btn-sm ${format === value ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={format === value} onClick={() => setFormat(value)} title={hint}>
+      {label}
+    </button>
+  );
+  const size = CARD_SIZES[format];
 
   return (
     <>
-      <button type="button" onClick={show} className="btn btn-secondary btn-sm scroll-pill-item touch-target"
-        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px' }}>
-        <Share2 size={14} aria-hidden="true" />
-        <span>Share</span>
-      </button>
+      {trigger ? trigger(show) : (
+        <button type="button" onClick={show} className="btn btn-secondary btn-sm scroll-pill-item touch-target"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px' }}>
+          <Share2 size={14} aria-hidden="true" />
+          <span>Share</span>
+        </button>
+      )}
 
       <dialog
         ref={ref}
@@ -88,9 +115,15 @@ export default function MatchShareButton({ match, club, hideScore = false }: { m
           </button>
         </div>
 
-        {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{tab('lineup', 'Starting XI')}</div> : null}
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+          {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{onPitch && tab('lineup', 'Starting XI')}{tab('lineup-list', onPitch ? 'Team list' : 'Starting XI')}</div> : <span />}
+          <div role="group" aria-label="Size" style={{ display: 'flex', gap: '0.5rem' }}>
+            {sizeTab('story', 'Story', 'Instagram or Facebook story, WhatsApp status')}
+            {sizeTab('post', 'Post', 'Instagram feed, Facebook group, WhatsApp chat')}
+          </div>
+        </div>
 
-        <div style={{ aspectRatio: '4 / 5', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.4)', display: 'grid', placeItems: 'center' }}>
+        <div style={{ aspectRatio: `${size.w} / ${size.h}`, height: format === 'story' ? 'min(56vh, 600px)' : undefined, maxWidth: '100%', margin: '0 auto', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.4)', display: 'grid', placeItems: 'center' }}>
           {error ? <p role="alert" style={{ padding: '1rem', textAlign: 'center' }}>{error}</p>
             : image ? <img src={image.url} alt={`Matchday graphic: ${match.home_team_name} vs ${match.away_team_name}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             : <p className="text-note" role="status">Drawing your graphic…</p>}

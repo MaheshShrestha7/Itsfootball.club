@@ -60,6 +60,8 @@ export default function MatchCenterPage({
   // Junior players are shown as "Sam T.", without a photo unless a guardian allowed it
   const juniorIds = useMemo(() => juniorMemberIds(allMembers, clubTeams, clubTeamMembers), [allMembers, clubTeams, clubTeamMembers]);
   const members = useMemo(() => allMembers.map(m => publicMember(m, juniorIds)), [allMembers, juniorIds]);
+  // Photos for the share graphic's lineup pitch (juniors without photo consent have none)
+  const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, m.photo_url])), [members]);
 
   // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
   const { user, hasClubAdminAccess } = useAuth();
@@ -422,7 +424,7 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
-            <MatchShareButton match={match} club={club} hideScore={scoreHidden} />
+            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} photos={memberPhotos} />
 
             {isClubAdmin && (
               <Link
