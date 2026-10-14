@@ -422,7 +422,7 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
-            <MatchShareButton match={match} club={club} hideScore={scoreHidden} />
+            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} />
 
             {isClubAdmin && (
               <Link

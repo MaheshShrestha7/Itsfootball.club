@@ -1,19 +1,40 @@
 'use client';
 
-// Matchday graphics (fixture / result / starting XI) drawn on a canvas in the browser, sized for an
-// Instagram or WhatsApp post (1080 x 1350). Nothing runs on the server and nothing new is installed.
+// Matchday graphics (fixture / result / starting XI) drawn on a canvas in the browser, in two sizes:
+// a 9:16 story (Instagram and Facebook stories, WhatsApp status) and a 4:5 post (Instagram feed,
+// Facebook groups, WhatsApp chats). Nothing runs on the server and nothing new is installed.
 import { DEFAULT_CREST } from '@/lib/crest';
 import { corsCopy } from '@/lib/image-color';
-import type { Club, Match } from '@/lib/supabase/types';
+import { SITE_URL } from '@/lib/slugs';
+import { readableClubInk } from '@/lib/theme-utils';
+import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
 export type CardKind = 'score' | 'lineup';
+export type CardFormat = 'story' | 'post';
 
-const W = 1080;
-const H = 1350;
+export const CARD_SIZES: Record<CardFormat, { w: number; h: number }> = {
+  story: { w: 1080, h: 1920 },
+  post: { w: 1080, h: 1350 },
+};
+
+export interface CardOptions {
+  format?: CardFormat;
+  /** The team hides its scores publicly (junior grassroots rules): no score and no scorers */
+  hideScore?: boolean;
+  /** The match's events, already shortened for junior players; goals become the scorer lines */
+  events?: Pick<MatchEvent, 'event_type' | 'team_side' | 'player_name' | 'minute' | 'added_minute'>[];
+}
+
+const BASE = '#070B12';
 const INK = '#F8FAFC';
-const MUTED = 'rgba(248, 250, 252, 0.72)';
+const MUTED = 'rgba(248, 250, 252, 0.68)';
+const FAINT = 'rgba(248, 250, 252, 0.42)';
 
 const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
+const rgba = (c: string, a: number) => {
+  const n = parseInt(c.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {
@@ -34,9 +55,34 @@ async function crest(src: string | undefined) {
 function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxWidth: number, family: string, min = 24) {
   for (; size > min; size -= 2) {
     ctx.font = `${weight} ${size}px ${family}`;
-    if (ctx.measureText(text).width <= maxWidth) return;
+    if (ctx.measureText(text).width <= maxWidth) return size;
   }
   ctx.font = `${weight} ${min}px ${family}`;
+  return min;
+}
+
+/** Up to two centred lines (a long team name wraps instead of shrinking to nothing) */
+function wrapTwo(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxWidth: number, family: string, x: number, y: number) {
+  ctx.font = `${weight} ${size}px ${family}`;
+  if (ctx.measureText(text).width <= maxWidth || !text.includes(' ')) {
+    fit(ctx, text, weight, size, maxWidth, family);
+    ctx.fillText(text, x, y);
+    return;
+  }
+  const words = text.split(' ');
+  let best = 1;
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(' ');
+    const b = words.slice(i).join(' ');
+    const bestA = words.slice(0, best).join(' ');
+    const bestB = words.slice(best).join(' ');
+    if (Math.max(ctx.measureText(a).width, ctx.measureText(b).width) < Math.max(ctx.measureText(bestA).width, ctx.measureText(bestB).width)) best = i;
+  }
+  const lines = [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+  const s = Math.min(...lines.map(l => fit(ctx, l, weight, Math.round(size * 0.86), maxWidth, family)));
+  ctx.font = `${weight} ${s}px ${family}`;
+  ctx.fillText(lines[0], x, y - s * 0.55);
+  ctx.fillText(lines[1], x, y + s * 0.55);
 }
 
 function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null, cx: number, cy: number, box: number) {
@@ -47,62 +93,173 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null
   ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
 }
 
-/** "Sat 4 Oct · 14:30". Date-only fixtures (tournaments) keep their own date and local kick-off time */
-function kickoffText(m: Pick<Match, 'match_date' | 'match_time'>, locale?: string): string {
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+
+/** The site's glass panel: a faint white fill with a hairline border */
+function glass(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 44) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.055)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+/** Letter-spaced text where the browser supports it (small caps labels) */
+function spaced(ctx: CanvasRenderingContext2D, px: number) {
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${px}px`;
+}
+
+/** "Sat 4 Oct" and "14:30". Date-only fixtures (tournaments) keep their own date and local kick-off time */
+function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale?: string): { day: string; time: string } {
   const d = new Date(m.match_date);
-  if (isNaN(d.getTime())) return '';
+  if (isNaN(d.getTime())) return { day: '', time: m.match_time || '' };
   const dateOnly = !!m.match_time && d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
   const day = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', ...(dateOnly ? { timeZone: 'UTC' } : {}) });
   const time = m.match_time || d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-  return `${day} · ${time}`;
+  return { day, time };
 }
 
-function statusLabel(m: Pick<Match, 'status'>): string {
-  return m.status === 'completed' ? 'FULL TIME'
-    : m.status === 'live' ? 'LIVE'
-    : m.status === 'halftime' ? 'HALF TIME'
-    : m.status === 'postponed' ? 'POSTPONED'
-    : m.status === 'cancelled' ? 'CANCELLED'
-    : 'MATCHDAY';
+/** The big two-tone headline: first word white, second in the club colour */
+function headline(m: Pick<Match, 'status'>, scored: boolean): [string, string] {
+  if (m.status === 'completed') return ['FULL', 'TIME'];
+  if (m.status === 'live') return scored ? ['LIVE', 'SCORE'] : ['MATCH', 'DAY'];
+  if (m.status === 'halftime') return ['HALF', 'TIME'];
+  if (m.status === 'postponed') return ['POST', 'PONED'];
+  if (m.status === 'cancelled') return ['CANCEL', 'LED'];
+  return ['MATCH', 'DAY'];
 }
 
-export async function drawMatchCard(match: Match, club: Club, kind: CardKind, siteHost: string, opts: { hideScore?: boolean } = {}): Promise<Blob> {
+/** "Leo Park 23', 67' (P)", one line per scorer, in the order they first scored */
+function scorerLines(events: NonNullable<CardOptions['events']>, side: 'home' | 'away'): string[] {
+  const byName = new Map<string, string[]>();
+  events
+    .filter(e => e.team_side === side && (e.event_type === 'goal' || e.event_type === 'penalty') && e.player_name)
+    .sort((a, b) => a.minute - b.minute || (a.added_minute || 0) - (b.added_minute || 0))
+    .forEach(e => {
+      const minute = `${e.minute}${e.added_minute ? `+${e.added_minute}` : ''}'${e.event_type === 'penalty' ? ' (P)' : ''}`;
+      byName.set(e.player_name, [...(byName.get(e.player_name) || []), minute]);
+    });
+  return [...byName].map(([name, minutes]) => `${name} ${minutes.join(', ')}`);
+}
+
+export async function drawMatchCard(match: Match, club: Club, kind: CardKind, link: string, opts: CardOptions = {}): Promise<Blob> {
+  const format = opts.format || 'post';
+  const { w: W, h: H } = CARD_SIZES[format];
+  const story = format === 'story';
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available in this browser.');
-  await document.fonts?.ready;
-  const family = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
-  const primary = hex(club.primary_color, '#10B981');
 
-  // Background: the club colour fading into near-black, with faint pitch markings
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, primary);
-  bg.addColorStop(0.55, '#0B1119');
-  bg.addColorStop(1, '#05080D');
-  ctx.fillStyle = bg;
+  // The site's own fonts: Outfit for headings, Plus Jakarta Sans for text
+  const rootStyle = getComputedStyle(document.documentElement);
+  const body = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
+  const outfit = rootStyle.getPropertyValue('--font-outfit').trim();
+  const heading = outfit ? `${outfit}, ${body}` : body;
+  await Promise.all([`900 100px ${heading}`, `800 40px ${heading}`, `700 30px ${body}`, `600 30px ${body}`]
+    .map(f => document.fonts?.load(f).catch(() => null)));
+
+  const primary = hex(club.primary_color, '#10B981');
+  const secondary = hex(club.secondary_color, primary);
+  const ink = readableClubInk(primary, 'dark'); // the club colour, lifted until it reads on the dark card
+  const clubCrest = await crest(club.logo_url);
+
+  // Background: near-black with the club colour glowing in from the top, a soft streak across,
+  // the pass card's dot grid and the crest large and faded behind everything
+  ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(W / 2, H / 2, 220, 0, Math.PI * 2);
-  ctx.moveTo(0, H / 2);
-  ctx.lineTo(W, H / 2);
-  ctx.stroke();
+  const glow = ctx.createRadialGradient(W * 0.3, -H * 0.05, 0, W * 0.3, -H * 0.05, H * 0.75);
+  glow.addColorStop(0, rgba(primary, 0.75));
+  glow.addColorStop(0.45, rgba(primary, 0.22));
+  glow.addColorStop(1, rgba(primary, 0));
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  const low = ctx.createRadialGradient(W, H, 0, W, H, H * 0.55);
+  low.addColorStop(0, rgba(secondary === primary ? primary : secondary, 0.22));
+  low.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = low;
+  ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(-0.42);
+  const streak = ctx.createLinearGradient(-90, 0, 90, 0);
+  streak.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  streak.addColorStop(0.5, rgba(primary, 0.16));
+  streak.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = streak;
+  ctx.fillRect(-90, -H, 180, H * 2);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+  for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+  if (clubCrest) {
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.filter = 'grayscale(1) brightness(1.8)';
+    drawContain(ctx, clubCrest, W / 2, H * 0.56, story ? 1100 : 900);
+    ctx.restore();
+  }
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  const M = 72; // side margin
 
-  // Header: club crest and name, then the competition
-  drawContain(ctx, await crest(club.logo_url), W / 2, 110, 110);
+  // Header: crest and club name on the left, the competition on the right
+  // Stories keep clear of the app's own bars (profile at the top, reply box at the bottom)
+  const headY = story ? 270 : 100;
+  drawContain(ctx, clubCrest, M + 50, headY, 100);
+  ctx.textAlign = 'left';
   ctx.fillStyle = INK;
-  fit(ctx, club.name.toUpperCase(), 800, 44, W - 160, family);
-  ctx.fillText(club.name.toUpperCase(), W / 2, 215);
-  ctx.fillStyle = MUTED;
-  const competition = match.title || match.competition || '';
-  fit(ctx, competition, 600, 32, W - 160, family);
-  ctx.fillText(competition, W / 2, 265);
+  fit(ctx, club.name, 800, 40, W - M * 2 - 130 - 300, heading);
+  ctx.fillText(club.name, M + 124, headY - 20);
+  ctx.fillStyle = FAINT;
+  spaced(ctx, 4);
+  ctx.font = `700 24px ${body}`;
+  const eyebrow = kind === 'lineup' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
+  ctx.fillText(eyebrow, M + 124, headY + 26);
+  spaced(ctx, 0);
+  const competition = (match.title || match.competition || '').toUpperCase();
+  if (competition) {
+    spaced(ctx, 2);
+    const size = fit(ctx, competition, 700, 24, 280, body, 18);
+    const pillW = ctx.measureText(competition).width + 44;
+    roundRect(ctx, W - M - pillW, headY - 26, pillW, 52, 26);
+    ctx.fillStyle = rgba(primary, 0.18);
+    ctx.fill();
+    ctx.strokeStyle = rgba(ink, 0.55);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = ink;
+    ctx.font = `700 ${size}px ${body}`;
+    ctx.fillText(competition, W - M - pillW + 22, headY + 1);
+    spaced(ctx, 0);
+  }
+  ctx.textAlign = 'center';
+
+  const scored = kind === 'score' && !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
+  const [first, second] = kind === 'lineup' ? ['STARTING', 'XI'] : headline(match, scored);
+
+  // Headline
+  const hlY = story ? 500 : 290;
+  const hlSize = story ? 170 : 132;
+  ctx.font = `900 ${hlSize}px ${heading}`;
+  const gap = hlSize * 0.12;
+  const wA = ctx.measureText(first).width;
+  const wB = ctx.measureText(second).width;
+  const scale = Math.min(1, (W - M * 2) / (wA + gap + wB));
+  ctx.font = `900 ${Math.floor(hlSize * scale)}px ${heading}`;
+  const startX = W / 2 - (wA + gap + wB) * scale / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = INK;
+  ctx.fillText(first, startX, hlY);
+  ctx.fillStyle = ink;
+  ctx.fillText(second, startX + (wA + gap) * scale, hlY);
+  ctx.textAlign = 'center';
 
   if (kind === 'lineup') {
     const home = match.is_club_home ?? true;
@@ -111,76 +268,153 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, si
       .slice(0, 11);
     const opponent = home ? match.away_team_name : match.home_team_name;
     const formation = home ? match.home_formation : match.away_formation;
+    const { day, time } = kickoff(match);
 
-    ctx.fillStyle = INK;
-    ctx.font = `900 92px ${family}`;
-    ctx.fillText('STARTING XI', W / 2, 390);
     ctx.fillStyle = MUTED;
     const sub = `vs ${opponent}${formation ? ` · ${formation}` : ''}`;
-    fit(ctx, sub, 600, 36, W - 160, family);
-    ctx.fillText(sub, W / 2, 465);
+    fit(ctx, sub, 600, 38, W - M * 2, body);
+    ctx.fillText(sub, W / 2, hlY + 100);
 
+    const rowH = story ? 74 : 64;
+    const top = story ? 670 : 470;
+    glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
     ctx.textAlign = 'left';
     xi.forEach((p, i) => {
-      const y = 560 + i * 58;
-      ctx.fillStyle = primary;
-      ctx.font = `900 40px ${family}`;
-      ctx.fillText(String(p.number ?? ''), 250, y);
+      const y = top + 24 + rowH * i + rowH / 2;
+      if (i > 0) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+        ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
+      }
+      ctx.fillStyle = ink;
+      ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(p.number ?? ''), M + 90, y);
+      ctx.textAlign = 'left';
       ctx.fillStyle = INK;
       const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
-      fit(ctx, name, 700, 40, 560, family);
-      ctx.fillText(name, 340, y);
+      fit(ctx, name, 700, story ? 42 : 36, W - M * 2 - 220, body);
+      ctx.fillText(name, M + 160, y);
     });
     ctx.textAlign = 'center';
+    if (story && (day || time)) {
+      ctx.fillStyle = MUTED;
+      const when = [day, time, match.venue].filter(Boolean).join(' · ');
+      fit(ctx, when, 600, 34, W - M * 2, body);
+      ctx.fillText(when, W / 2, top + rowH * xi.length + 48 + 64);
+    }
   } else {
     const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
-    drawContain(ctx, homeCrest, 260, 560, 260);
-    drawContain(ctx, awayCrest, W - 260, 560, 260);
+    const panelTop = story ? 640 : 400;
+    const panelH = story ? 540 : 420;
+    glass(ctx, M, panelTop, W - M * 2, panelH);
+    const crestBox = story ? 210 : 170;
+    const colX = [M + 200, W - M - 200];
+    const crestY = panelTop + (story ? 200 : 150);
+    drawContain(ctx, homeCrest, colX[0], crestY, crestBox);
+    drawContain(ctx, awayCrest, colX[1], crestY, crestBox);
     ctx.fillStyle = INK;
-    for (const [name, x] of [[match.home_team_name, 260], [match.away_team_name, W - 260]] as const) {
-      fit(ctx, name, 800, 40, 400, family);
-      ctx.fillText(name, x, 745);
-    }
+    const nameY = panelTop + panelH - (story ? 110 : 82);
+    wrapTwo(ctx, match.home_team_name, 800, story ? 44 : 38, 340, heading, colX[0], nameY);
+    wrapTwo(ctx, match.away_team_name, 800, story ? 44 : 38, 340, heading, colX[1], nameY);
 
-    const scored = !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
     if (scored) {
-      ctx.font = `900 150px ${family}`;
-      ctx.fillText(`${match.home_score}–${match.away_score}`, W / 2, 900);
+      ctx.fillStyle = INK;
+      const score = `${match.home_score ?? 0}–${match.away_score ?? 0}`;
+      fit(ctx, score, 900, story ? 160 : 132, 270, heading, 60);
+      ctx.fillText(score, W / 2, crestY);
       if (match.home_penalty_score != null && match.away_penalty_score != null) {
         ctx.fillStyle = MUTED;
-        ctx.font = `700 34px ${family}`;
-        ctx.fillText(`${match.home_penalty_score}–${match.away_penalty_score} on penalties`, W / 2, 990);
+        ctx.font = `700 28px ${body}`;
+        ctx.fillText(`${match.home_penalty_score}–${match.away_penalty_score} on pens`, W / 2, crestY + (story ? 120 : 96));
       }
     } else {
-      ctx.font = `900 120px ${family}`;
-      ctx.fillText('VS', W / 2, 560);
+      // "VS" in a ring of the club colour
+      ctx.beginPath();
+      ctx.arc(W / 2, crestY, story ? 74 : 60, 0, Math.PI * 2);
+      ctx.fillStyle = rgba(primary, 0.2);
+      ctx.fill();
+      ctx.strokeStyle = rgba(ink, 0.7);
+      ctx.lineWidth = 3;
+      ctx.stroke();
       ctx.fillStyle = INK;
-      const when = kickoffText(match);
-      fit(ctx, when, 800, 56, W - 160, family);
-      ctx.fillText(when, W / 2, 900);
+      ctx.font = `900 ${story ? 60 : 50}px ${heading}`;
+      ctx.fillText('VS', W / 2, crestY + 3);
     }
 
-    // Status pill
-    const label = statusLabel(match);
-    ctx.font = `800 34px ${family}`;
-    const pillW = ctx.measureText(label).width + 64;
-    ctx.fillStyle = primary;
-    ctx.beginPath();
-    ctx.roundRect(W / 2 - pillW / 2, 1040, pillW, 64, 32);
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(label, W / 2, 1073);
+    const below = panelTop + panelH + (story ? 70 : 50);
+    if (scored && opts.events?.length) {
+      // Goalscorers under each team
+      ctx.font = `600 ${story ? 32 : 28}px ${body}`;
+      const lineH = story ? 48 : 40;
+      const max = story ? 6 : 3;
+      (['home', 'away'] as const).forEach((side, i) => {
+        const lines = scorerLines(opts.events!, side);
+        const shown = lines.length > max ? [...lines.slice(0, max - 1), `+${lines.length - max + 1} more`] : lines;
+        shown.forEach((line, j) => {
+          ctx.fillStyle = MUTED;
+          fit(ctx, line, 600, story ? 32 : 28, 400, body, 20);
+          ctx.fillText(line, colX[i], below + j * lineH);
+        });
+      });
+    }
+
+    // Kick-off, date and ground: on a fixture always, on a result as one quiet line
+    const { day, time } = kickoff(match);
+    if (!scored) {
+      const top = below - (story ? 10 : 15);
+      const cardH = story ? 270 : 210;
+      glass(ctx, M, top, W - M * 2, cardH, 36);
+      const cells: [string, string][] = [['DATE', day], ['KICK-OFF', time]];
+      cells.forEach(([label, value], i) => {
+        const cx = M + (W - M * 2) * (i === 0 ? 0.27 : 0.73);
+        ctx.fillStyle = FAINT;
+        spaced(ctx, 3);
+        ctx.font = `700 22px ${body}`;
+        ctx.fillText(label, cx, top + (story ? 56 : 46));
+        spaced(ctx, 0);
+        ctx.fillStyle = INK;
+        fit(ctx, value || 'TBC', 800, story ? 54 : 46, (W - M * 2) / 2 - 60, heading);
+        ctx.fillText(value || 'TBC', cx, top + (story ? 110 : 96));
+      });
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(W / 2 - 1, top + 30, 2, story ? 115 : 100);
+      if (match.venue) {
+        ctx.fillRect(M + 40, top + (story ? 170 : 140), W - M * 2 - 80, 2);
+        ctx.fillStyle = MUTED;
+        fit(ctx, match.venue, 600, story ? 34 : 30, W - M * 2 - 80, body);
+        ctx.fillText(match.venue, W / 2, top + (story ? 222 : 176));
+      }
+    } else {
+      ctx.fillStyle = FAINT;
+      const line = [day, match.venue].filter(Boolean).join(' · ');
+      fit(ctx, line, 600, 28, W - M * 2, body);
+      ctx.fillText(line, W / 2, H - (story ? 310 : 150));
+    }
   }
 
-  // Footer: venue and where to follow along
-  ctx.fillStyle = MUTED;
-  if (match.venue) {
-    fit(ctx, match.venue, 600, 32, W - 160, family);
-    ctx.fillText(match.venue, W / 2, 1180);
-  }
-  ctx.font = `700 30px ${family}`;
-  ctx.fillText(`${siteHost}/${club.slug}`, W / 2, 1262);
+  // Watermark: a quiet link to the club's page, so the graphic leads people back to the site
+  const markY = H - (story ? 240 : 64);
+  ctx.globalAlpha = 0.62;
+  ctx.font = `600 26px ${body}`;
+  spaced(ctx, 1);
+  const linkW = ctx.measureText(link).width;
+  const dot = 16;
+  const totalW = dot + 14 + linkW;
+  ctx.beginPath();
+  ctx.arc(W / 2 - totalW / 2 + dot / 2, markY, dot / 2, 0, Math.PI * 2);
+  ctx.fillStyle = ink;
+  ctx.fill();
+  ctx.fillStyle = INK;
+  ctx.textAlign = 'left';
+  ctx.fillText(link, W / 2 - totalW / 2 + dot + 14, markY + 1);
+  spaced(ctx, 0);
+  ctx.globalAlpha = 1;
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not create the image.'))), 'image/png'));
+}
+
+/** The club's address for the watermark: its own domain when it has one, else itsfootball.club/<slug> */
+export function shareLink(club: Pick<Club, 'slug' | 'custom_domain'>): string {
+  return club.custom_domain || `${new URL(SITE_URL).host}/${club.slug}`;
 }

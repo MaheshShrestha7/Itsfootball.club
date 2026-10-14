@@ -7,9 +7,10 @@ import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
-import { clubTeamsOf, defaultTeamOf, isTeamFixture, teamLabel, teamOfMatch } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorPublicName, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
+import MatchShareButton from '@/components/MatchShareButton';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Calendar,
@@ -36,7 +37,8 @@ import {
   Info,
   CalendarDays,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Share2
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
@@ -79,6 +81,7 @@ export default function AdminMatchesPage({
     seasons,
     getActiveSeason,
     clubTeams,
+    matchEvents,
   } = useClub();
 
   const { can } = useAuth();
@@ -90,6 +93,18 @@ export default function AdminMatchesPage({
   const teams = useMemo(() => clubTeamsOf(clubTeams, club.id), [clubTeams, club.id]);
   const mainTeamId = defaultTeamOf(clubTeams, club.id)?.id || '';
   const multiTeam = teams.length > 1;
+  // Goals for the share graphics, with the same public names as the match page (junior players shortened)
+  const goalsByMatch = useMemo(() => {
+    const byMatch = new Map<string, typeof matchEvents>();
+    for (const e of matchEvents) {
+      if (!GOAL_EVENT_TYPES.includes(e.event_type)) continue;
+      const m = clubMatches.find(x => x.id === e.match_id);
+      if (!m) continue;
+      const ev = isJuniorFixture(m, clubTeams) ? { ...e, player_name: juniorPublicName(e.player_name) } : e;
+      byMatch.set(m.id, [...(byMatch.get(m.id) || []), ev]);
+    }
+    return byMatch;
+  }, [matchEvents, clubMatches, clubTeams]);
 
   // Filters state
   const [statusTab, setStatusTab] = useState<'all' | 'upcoming' | 'completed' | 'live'>('all');
@@ -918,6 +933,38 @@ export default function AdminMatchesPage({
                       <span>QR Gate</span>
                     </button>
                   </div>
+
+                  {/* Matchday / result graphic for Instagram, Facebook and WhatsApp */}
+                  <MatchShareButton
+                    match={m}
+                    club={club}
+                    hideScore={publicScoreHidden(m, clubTeams)}
+                    events={goalsByMatch.get(m.id)}
+                    trigger={open => (
+                      <button
+                        type="button"
+                        onClick={open}
+                        title="Make a story or post graphic for Instagram, Facebook and WhatsApp"
+                        style={{
+                          padding: '0.45rem 0.75rem',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid color-mix(in srgb, var(--club-primary) 55%, transparent)',
+                          background: 'color-mix(in srgb, var(--club-primary) 14%, transparent)',
+                          color: 'var(--club-ink)',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        <Share2 size={13} />
+                        <span>{isCompleted && !publicScoreHidden(m, clubTeams) ? 'Share Result' : 'Share Matchday'}</span>
+                      </button>
+                    )}
+                  />
 
                   {/* Status Toggle (Upcoming <-> Completed) */}
                   <button
