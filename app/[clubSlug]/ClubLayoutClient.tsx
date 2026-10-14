@@ -13,9 +13,12 @@ import { sortSponsorsByTier } from '@/lib/sponsors';
 export default function ClubLayoutClient({
   children,
   params,
+  fallback,
 }: {
   children: React.ReactNode;
   params: Promise<{ clubSlug: string }>;
+  /** The club's name and motto from the server, shown while its data is still loading */
+  fallback?: { name: string; motto: string };
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
@@ -42,6 +45,12 @@ export default function ClubLayoutClient({
             <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>Club not found</h1>
             <p className="text-muted">No club exists at this address yet.</p>
             <Link href="/create-club" className="btn btn-primary">Launch a Club</Link>
+          </>
+        ) : fallback ? (
+          <>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{fallback.name}</h1>
+            {fallback.motto && <p className="text-muted">{fallback.motto}</p>}
+            <div className="text-muted">Loading...</div>
           </>
         ) : (
           <div className="text-muted">Loading...</div>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { clubExists } from '@/lib/supabase/server-data';
 import { SITE_NAME, clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
+import { findClubBySlug } from '@/lib/supabase/club-lookup';
 import ClubLayoutClient from './ClubLayoutClient';
 
 // The club home page. Every child route sets its own metadata, so this only ever applies to /[clubSlug].
@@ -50,10 +51,15 @@ export default async function ClubLayout({
 
   // JSON-LD sits outside ClubLayoutClient: that shows a loading shell during server rendering (club data
   // loads in the browser), which would otherwise keep the structured data out of the HTML crawlers read.
+  // Shown in place of the page if the club's data didn't load on the server in time, so the HTML
+  // still names the club (same lookup as generateMetadata, so no extra request)
+  const lookup = await findClubBySlug(clubSlug);
+  const fallback = lookup ? { name: lookup.name, motto: lookup.motto || '' } : undefined;
+
   return (
     <>
       {schema}
-      <ClubLayoutClient params={params}>{children}</ClubLayoutClient>
+      <ClubLayoutClient params={params} fallback={fallback}>{children}</ClubLayoutClient>
     </>
   );
 }
