@@ -3,6 +3,7 @@
 import React, { useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { defaultFixture } from '@/lib/fixtures';
 import { ClubMember, ClubEvent, Match } from '@/lib/supabase/types';
 import CameraQRScanner from '@/components/CameraQRScanner';
 import PlayerAvatar from '@/components/PlayerAvatar';
@@ -36,7 +37,7 @@ export default function AdminScannerPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, gateScans, verifyMemberPass, verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
+  const { clubs, selectClubBySlug, events, matches, tournamentParticipants, gateScans, verifyMemberPass, verifyMemberPassPublic, publicEventCheckin, publicMatchCheckin, recordGateScan } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   // View level: verify passes only (check-ins and the scan log are changes)
   const { can } = useAuth();
@@ -46,8 +47,18 @@ export default function AdminScannerPage({
   const clubMatches = matches.filter(m => m.club_id === club.id);
 
   const [mode, setMode] = useState<'verify' | 'checkin' | 'match_checkin'>('verify');
-  const [selectedEventId, setSelectedEventId] = useState(clubEvents[0]?.id || '');
-  const [selectedMatchId, setSelectedMatchId] = useState(clubMatches[0]?.id || '');
+  // Until a steward picks one: the live match or the club's next fixture, and the event on now or
+  // next (else the latest). Worked out on each render, so it's right once the club's data has loaded.
+  const defaultMatch = defaultFixture(clubMatches, tournamentParticipants, club.name);
+  const eventEnd = (e: ClubEvent) => Date.parse(e.end_time || e.start_time) || 0;
+  const defaultEvent = clubEvents
+    .filter(e => eventEnd(e) >= Date.now() - 3 * 3600000)
+    .sort((a, b) => Date.parse(a.start_time) - Date.parse(b.start_time))[0]
+    || [...clubEvents].sort((a, b) => Date.parse(b.start_time) - Date.parse(a.start_time))[0];
+  const [pickedEventId, setSelectedEventId] = useState('');
+  const [pickedMatchId, setSelectedMatchId] = useState('');
+  const selectedEventId = clubEvents.some(e => e.id === pickedEventId) ? pickedEventId : defaultEvent?.id || '';
+  const selectedMatchId = clubMatches.some(m => m.id === pickedMatchId) ? pickedMatchId : defaultMatch?.id || '';
   const [manualCode, setManualCode] = useState('');
   const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
   const [scanLogs, setScanLogs] = useState<ScanLogEntry[]>([]);
@@ -59,7 +70,7 @@ export default function AdminScannerPage({
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (mode === 'match_checkin') {
-      const selectedMatch = clubMatches.find(m => m.id === selectedMatchId) || clubMatches[0];
+      const selectedMatch = clubMatches.find(m => m.id === selectedMatchId);
       if (!selectedMatch) return;
       const res = await publicMatchCheckin(selectedMatch.id, { token });
 
@@ -81,7 +92,7 @@ export default function AdminScannerPage({
       setScanLogs(prev => [newLog, ...prev]);
       // publicMatchCheckin already persists the scan server-side; no separate recordGateScan needed.
     } else if (mode === 'checkin') {
-      const selectedEvent = clubEvents.find(e => e.id === selectedEventId) || clubEvents[0];
+      const selectedEvent = clubEvents.find(e => e.id === selectedEventId);
       if (!selectedEvent) return;
       const res = await publicEventCheckin(selectedEvent.id, { token });
 

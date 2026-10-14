@@ -5,6 +5,7 @@ import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsN
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
+import { formatMatchWhen, formatWhen } from './format';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -119,6 +120,12 @@ async function main() {
   // Members without a guardian get exactly the wording they had before
   assert.ok(renew.text.includes('your ') && !renew.text.includes('parent or guardian'), 'adult renewal unchanged');
 
+  // Cup fixtures store a date-only match_date with the kick-off in match_time.
+  assert.equal(formatMatchWhen('2026-10-17', '15:00'), 'Sat, 17 Oct, 3:00 pm');
+  assert.equal(formatMatchWhen('2026-10-17', '09:30:00'), 'Sat, 17 Oct, 9:30 am');
+  assert.equal(formatMatchWhen('2026-10-17'), 'Sat, 17 Oct');
+  assert.equal(formatMatchWhen('not a date'), '');
+  assert.equal(formatMatchWhen('2026-10-17T04:00:00Z', '09:00'), formatWhen('2026-10-17T04:00:00Z'));
   console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }
 

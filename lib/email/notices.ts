@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { eventNotice, matchNotice, newsNotice, renewalReminder } from './templates';
 import { clubBaseUrl, clubBrand, type ClubBrandRow } from './club-brand';
 import { memberRecipient, MEMBER_RECIPIENT_COLUMNS, normalizeEmail, type EmailDraft } from './club-emails';
-import { formatDay, formatWhen, localDate } from './format';
+import { formatDay, formatMatchWhen, formatWhen, localDate } from './format';
 import { articleText } from '@/lib/article-text';
 import type { PushMessage } from '@/lib/push';
 
@@ -135,7 +135,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
 
     case 'match': {
       const { data: match } = await db.from('matches')
-        .select('id, title, competition, home_team_name, away_team_name, match_date, venue, status')
+        .select('id, title, competition, home_team_name, away_team_name, match_date, match_time, venue, status')
         .eq('club_id', club.id).eq('id', req.refId || '').maybeSingle();
       if (!match) return { ok: false, status: 404, error: 'Match not found.' };
       if (['completed', 'cancelled'].includes(match.status)) return { ok: false, status: 400, error: 'That match is already over.' };
@@ -143,7 +143,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
       const fixture = `${match.home_team_name} vs ${match.away_team_name}`;
       return {
         ok: true, label: `Match notice: ${fixture}`, skippedNoEmail,
-        push: req.audience === 'players' ? undefined : { title: fixture, body: `${match.title || match.competition || club.name} · ${formatWhen(match.match_date)}`, url: `/${club.slug}/match/${match.id}`, tag: `match:${match.id}` },
+        push: req.audience === 'players' ? undefined : { title: fixture, body: `${match.title || match.competition || club.name} · ${formatMatchWhen(match.match_date, match.match_time)}`, url: `/${club.slug}/match/${match.id}`, tag: `match:${match.id}` },
         drafts: audience.map(m => ({
           key: `notice_match:${match.id}:${normalizeEmail(m.to)}`,
           club, kind: 'notice_match', refId: match.id, to: m.to,
@@ -152,7 +152,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
             recipientName: m.name,
             fixture,
             competition: match.title || match.competition,
-            when: formatWhen(match.match_date),
+            when: formatMatchWhen(match.match_date, match.match_time),
             venue: match.venue,
             link: `${base}/match/${match.id}`,
           }),

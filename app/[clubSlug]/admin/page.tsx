@@ -41,7 +41,7 @@ export default function AdminDashboardPage({
   const clubMembers = members.filter(m => m.club_id === club.id);
   const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
   const clubMatches = matches.filter(m => m.club_id === club.id);
-  const liveMatch = clubMatches.find(m => m.status === 'live');
+  const liveMatch = clubMatches.find(m => m.status === 'live' || m.status === 'halftime');
   const analytics = getClubAnalytics(club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
   const recentActivity = activityLogs
@@ -139,7 +139,7 @@ export default function AdminDashboardPage({
             {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
           </div>
           <div style={{ fontSize: '0.75rem', color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{liveMatch ? `${getLiveMinute(liveMatch)}' in progress` : 'Manage fixtures & schedules'}</span>
+            <span>{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}' in progress`) : 'Manage fixtures & schedules'}</span>
             <ArrowRight size={12} />
           </div>
         </Link>
@@ -282,7 +282,7 @@ export default function AdminDashboardPage({
               Matchday Command
             </h3>
             {liveMatch ? (
-              <span className="badge badge-live">LIVE • <LiveMinute match={liveMatch} />&apos;</span>
+              <span className="badge badge-live">{liveMatch.status === 'halftime' ? 'LIVE • HT' : <>LIVE • <LiveMinute match={liveMatch} />&apos;</>}</span>
             ) : (
               <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>STANDBY</span>
             )}

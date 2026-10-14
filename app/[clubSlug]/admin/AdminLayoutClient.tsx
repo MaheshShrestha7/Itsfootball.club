@@ -147,7 +147,7 @@ export default function AdminLayout({
       .then(({ count }) => setOrdersToHandOut(count || 0));
   }, [club.id, pathname]);
 
-  const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
+  const liveMatch = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const userRole = user ? getUserRoleForClub(club.id) : null;
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
   // The Inbox covers both the public contact form and signed-in members' messages

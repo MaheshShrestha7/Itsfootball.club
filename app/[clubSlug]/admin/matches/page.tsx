@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
+import { todayIso } from '@/lib/finance';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
@@ -135,7 +136,7 @@ export default function AdminMatchesPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form State
-  const defaultDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const defaultDate = todayIso(new Date(Date.now() + 3 * 86400000));
   const [form, setForm] = useState<{
     title: string;
     match_type: MatchType;
@@ -194,7 +195,7 @@ export default function AdminMatchesPage({
       opponent_name: '',
       opponent_short_name: '',
       is_club_home: true,
-      match_date: prefill?.date || new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+      match_date: prefill?.date || todayIso(new Date(Date.now() + 3 * 86400000)),
       match_time: prefill?.time || '15:00',
       venue: club.stadium_name || 'Home Ground',
       match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
@@ -230,8 +231,11 @@ export default function AdminMatchesPage({
     try {
       const dt = new Date(m.match_date);
       if (!isNaN(dt.getTime())) {
-        parsedDate = dt.toISOString().slice(0, 10);
-        if (!m.match_time) {
+        // The club's own calendar day: a 9am kick-off in Sydney is still the previous day in UTC.
+        // Date-only values (cup fixtures keep the time in match_time) are already that day.
+        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(m.match_date);
+        parsedDate = dateOnly ? m.match_date : todayIso(dt);
+        if (!m.match_time && !dateOnly) {
           parsedTime = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
         }
       }
@@ -265,7 +269,7 @@ export default function AdminMatchesPage({
   };
 
   // A fixture opened from the calendar (?open=<id>): shown in the list, and in the form for people who can edit
-  useOpenItem(clubMatches, m => { if (canAddMatch) handleOpenEditModal(m); });
+  useOpenItem(clubMatches, m => { if (canAddMatch && !m.tournament_id) handleOpenEditModal(m); });
 
   // Quick Preset Handlers for Internal Match Type
   const handleInternalPreset = (presetName: string, shortName: string) => {
@@ -727,6 +731,9 @@ export default function AdminMatchesPage({
           {filteredMatches.map(m => {
             const isCompleted = m.status === 'completed';
             const isLive = m.status === 'live' || m.status === 'halftime';
+            // Cup games are scored and scheduled on their tournament page: editing names, deleting or
+            // completing them here would break the standings and the bracket
+            const cupHref = m.tournament_id ? `/${club.slug}/admin/tournaments/${m.tournament_id}` : null;
             const matchType = m.match_type || 'friendly';
 
             return (
@@ -980,7 +987,7 @@ export default function AdminMatchesPage({
                   />
 
                   {/* Status Toggle (Upcoming <-> Completed) */}
-                  <button
+                  {!cupHref && <button
                     type="button"
                     onClick={() => handleToggleCompleted(m)}
                     style={{
@@ -1000,7 +1007,7 @@ export default function AdminMatchesPage({
                   >
                     <CheckCircle2 size={13} />
                     <span>{isCompleted ? 'Mark as Upcoming' : 'Mark as Completed'}</span>
-                  </button>
+                  </button>}
 
                   {/* Live Controller Quick Shortcut */}
                   {isLive && (
@@ -1038,25 +1045,38 @@ export default function AdminMatchesPage({
                       <ExternalLink size={13} />
                     </Link>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(m)}
-                      className="btn btn-secondary btn-sm"
-                      title="Edit Match Details"
-                      style={{ padding: '0.35rem 0.6rem' }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                    {cupHref ? (
+                      <Link
+                        href={cupHref}
+                        className="btn btn-secondary btn-sm row"
+                        title="Scores and times for cup games are set on the tournament page"
+                        style={{ padding: '0.35rem 0.6rem', gap: '0.35rem' }}
+                      >
+                        <Trophy size={13} /> <span>Manage in tournament</span>
+                      </Link>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(m)}
+                          className="btn btn-secondary btn-sm"
+                          title="Edit Match Details"
+                          style={{ padding: '0.35rem 0.6rem' }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
 
-                    <button data-needs-full
-                      type="button"
-                      onClick={() => handleDeleteMatch(m)}
-                      className="btn btn-secondary btn-sm"
-                      title="Delete Match"
-                      style={{ padding: '0.35rem 0.6rem', color: 'var(--c-red)' }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                        <button data-needs-full
+                          type="button"
+                          onClick={() => handleDeleteMatch(m)}
+                          className="btn btn-secondary btn-sm"
+                          title="Delete Match"
+                          style={{ padding: '0.35rem 0.6rem', color: 'var(--c-red)' }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

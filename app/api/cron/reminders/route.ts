@@ -5,7 +5,7 @@ import { availabilityReminder, eventReminder, renewalReminder } from '@/lib/emai
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
-import { formatWhen, formatDay, localDate } from '@/lib/email/format';
+import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/format';
 
 // Daily reminder emails, triggered by the Cloudflare cron in worker.ts (or by hand:
 // POST with "Authorization: Bearer $CRON_SECRET"; add ?dry=1 to list what would be sent).
@@ -31,7 +31,7 @@ async function clubsWith(db: SupabaseClient, setting: ReminderSetting, ids?: str
 async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   const now = new Date();
   const { data: matches } = await db.from('matches')
-    .select('id, club_id, title, competition, home_team_name, away_team_name, match_date, venue')
+    .select('id, club_id, title, competition, home_team_name, away_team_name, match_date, match_time, venue')
     .eq('status', 'upcoming')
     .gt('match_date', now.toISOString())
     .lte('match_date', new Date(now.getTime() + 48 * 3600000).toISOString());
@@ -62,7 +62,7 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
         childName: recipient.childName,
         fixture: `${match.home_team_name} vs ${match.away_team_name}`,
         competition: match.title || match.competition, // tournament games carry their stage here, e.g. "Group A • Round 4"
-        when: formatWhen(match.match_date),
+        when: formatMatchWhen(match.match_date, match.match_time),
         venue: match.venue,
         link: `${clubBaseUrl(club)}/availability?token=${encodeURIComponent(r.response_token)}`,
       }),
