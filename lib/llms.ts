@@ -38,9 +38,11 @@ Pages are marked up with schema.org JSON-LD (\`SportsTeam\` for clubs, \`SportsE
 ## Platform
 
 - [Home](${SITE_URL}/): what the platform offers football clubs.
+- [About](${SITE_URL}/about): who builds itsfootball.club (Mahesh Shrestha, a community football volunteer in Sydney, NSW, Australia) and why.
 - [FAQ](${SITE_URL}/faq): pricing, how it works for club admins, coaches, players, supporters and sponsors.
 - [Pricing](${SITE_URL}/pricing.md): free for clubs; the booking fee on card payments, in plain text.
 - [Live scores](${SITE_URL}/live-scores): how a club runs a free live match centre that supporters follow in the browser.
+- [Compare alternatives](${SITE_URL}/vs): itsfootball.club side by side with Pitchero, Heja, Spond and Teamer on price, ads, website, match centre, payments and shop, each claim linked to its source. One page per rival at ${SITE_URL}/vs/{name}.
 - [Clubs directory](${SITE_URL}/clubs): every club on the platform, with links to each club site. Supports search: ${SITE_URL}/clubs?q={name}
 - [Create a club](${SITE_URL}/create-club): how a club registers and launches its website.
 

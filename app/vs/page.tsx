@@ -7,6 +7,8 @@ import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
 import { COMPARE_ORDER, COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
 import CellView from './CellView';
+import JsonLd from '@/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'itsfootball.club vs Pitchero, Heja, Spond and Teamer',
@@ -17,11 +19,25 @@ export const metadata: Metadata = {
 // Columns in table order
 const COLUMNS = COMPARE_ORDER.map(slug => competitorBySlug(slug)!);
 
+// Ties the page to the platform entity and lists each head-to-head page, so engines can follow them
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: metadata.title,
+  url: `${SITE_URL}/vs`,
+  about: { '@id': `${SITE_URL}/#organization` },
+  mainEntity: {
+    '@type': 'ItemList',
+    itemListElement: COLUMNS.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: `itsfootball.club vs ${c.name}`, url: `${SITE_URL}/vs/${c.slug}` })),
+  },
+};
+
 const ctaStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.45rem' };
 
 export default function VsIndexPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <JsonLd data={schema} />
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3.5rem 1rem', flex: 1, maxWidth: '1180px' }}>

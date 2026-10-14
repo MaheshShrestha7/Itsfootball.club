@@ -37,8 +37,20 @@ const graph = (...nodes: Json[]) => compact({ '@context': 'https://schema.org', 
 
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
+const BASED_IN = 'Sydney, NSW, Australia';
+/** Who builds the platform: E-E-A-T for search and AI engines, described in full on /about */
+const FOUNDER = { '@type': 'Person', '@id': `${SITE_URL}/about#founder`, name: 'Mahesh Shrestha', jobTitle: 'Founder', url: `${SITE_URL}/about` };
 const clubUrl = (club: ClubMetadataRow) => abs(`/${club.slug}`);
 const clubId = (club: ClubMetadataRow) => `${clubUrl(club)}#club`;
+
+/** /about: who is behind the platform, tied to the homepage's Organization by @id */
+export function aboutSchema() {
+  return graph(
+    { '@type': 'AboutPage', url: `${SITE_URL}/about`, name: `About ${SITE_NAME}`, mainEntity: { '@id': ORGANIZATION_ID } },
+    { '@type': 'Organization', '@id': ORGANIZATION_ID, name: SITE_NAME, url: SITE_URL, email: CONTACT_EMAIL, founder: { '@id': FOUNDER['@id'] } },
+    { ...FOUNDER, worksFor: { '@id': ORGANIZATION_ID }, homeLocation: { '@type': 'Place', name: BASED_IN } },
+  );
+}
 
 /** Platform homepage: the publisher, the product (free for clubs) and the site, with a sitelinks search box backed by /clubs?q= */
 export function homeSchema() {
@@ -53,6 +65,8 @@ export function homeSchema() {
       email: CONTACT_EMAIL,
       areaServed: AREA_SERVED,
       sameAs: SOCIAL_PROFILES.map(p => p.url),
+      founder: FOUNDER,
+      foundingLocation: { '@type': 'Place', name: BASED_IN },
     },
     {
       '@type': 'WebApplication',

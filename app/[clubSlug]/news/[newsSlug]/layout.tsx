@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { findNewsBySlug } from '@/lib/supabase/club-lookup';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { decodeSlugParam, newsPath } from '@/lib/slugs';
+import { articleText } from '@/lib/article-text';
 
 export async function generateMetadata({
   params,
@@ -26,10 +27,9 @@ export async function generateMetadata({
     return pageMetadata({
       title: fitTitle(article.title, clubName(club)),
       description: fitDescription(
-        article.summary,
-        `The latest news from ${club.name}.`,
-        'Read the full story on the club website.',
-        'Read the full story.'
+        // No summary: the start of the article itself, so no two articles share a description
+        article.summary || articleText(article.content),
+        `The latest news from ${club.name}.`
       ),
       path,
       type: 'article',

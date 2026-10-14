@@ -276,6 +276,8 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Clubs Directory</Link>
                   <Link href="/my-clubs" style={{ color: 'var(--text-secondary)' }}>My Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Register New Club</Link>
+                  <Link href="/vs" style={{ color: 'var(--text-secondary)' }}>Compare Alternatives</Link>
+                  <Link href="/about" style={{ color: 'var(--text-secondary)' }}>About Us</Link>
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
                 </>
               )}

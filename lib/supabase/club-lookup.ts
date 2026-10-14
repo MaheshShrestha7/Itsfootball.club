@@ -181,6 +181,8 @@ export async function listClubNews(clubId: string, limit = 20): Promise<NewsMeta
 export interface NewsArticleRow extends NewsMetadataRow {
   club_id: string;
   updated_at: string | null;
+  /** Article body (plain text or HTML), the description's fallback when there's no summary */
+  content: string | null;
 }
 
 /** One article of a club by its slug, for the article page's metadata and JSON-LD */
@@ -192,7 +194,7 @@ export async function findNewsBySlug(clubId: string, slug: string): Promise<News
   if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId) || !slug) return null;
   try {
     const res = await fetch(
-      `${url}/rest/v1/news_articles?select=id,club_id,title,slug,summary,cover_image_url,author_name,tags,published_at,updated_at&club_id=eq.${clubId}&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      `${url}/rest/v1/news_articles?select=id,club_id,title,slug,summary,content,cover_image_url,author_name,tags,published_at,updated_at&club_id=eq.${clubId}&slug=eq.${encodeURIComponent(slug)}&limit=1`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
     );
     if (!res.ok) return null;
