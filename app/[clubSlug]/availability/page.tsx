@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -615,8 +615,17 @@ function AvailabilityHub() {
 // Player view: a personal link (?token=...) lets one player answer for themselves
 // ---------------------------------------------------------------------------
 function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
-  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken } = useClub();
+  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken, members } = useClub();
+  const { user } = useAuth();
+  const router = useRouter();
   const club = selectClubBySlug(slug);
+
+  // The shared team link (no personal code): signed-in members answer in the club app instead
+  const isMember = !!club && !!user && members.some(m => m.club_id === club.id && m.user_id === user.id
+    && (m.membership_status || 'approved') === 'approved');
+  useEffect(() => {
+    if (!token && isMember) router.replace(`/${slug}/app`);
+  }, [token, isMember, slug, router]);
 
   const [state, setState] = useState<'loading' | 'invalid' | 'ready'>('loading');
   const [record, setRecord] = useState<Awaited<ReturnType<typeof resolveAvailabilityToken>>>(null);
@@ -674,7 +683,25 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
       <div className="glass-panel" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
         {state === 'loading' && <p className="text-muted">Checking your link...</p>}
 
-        {state === 'invalid' && (
+        {state === 'invalid' && !token && (
+          <div className="text-center">
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              {isMember ? 'Opening your matches...' : 'Sign in to answer'}
+            </h2>
+            {!isMember && (
+              <>
+                <p className="text-body" style={{ marginBottom: '1.25rem' }}>
+                  Sign in to {club?.name || 'the club'} to say whether you can play. You can also use the personal link in your reminder email.
+                </p>
+                <Link href={`/${slug}/member?next=${encodeURIComponent(`/${slug}/app`)}`} className="btn btn-primary" style={{ justifyContent: 'center' }}>
+                  Sign in
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+
+        {state === 'invalid' && token && (
           <div className="text-center">
             <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Link not recognised</h2>
             <p className="text-body">

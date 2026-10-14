@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { clubTeamsOf, teamsOfMember, teamOfMatch } from '@/lib/teams';
 import { clubPlaysIn, kickoff, soonestFirst } from '@/lib/fixtures';
-import { SITE_URL, authReturnUrl } from '@/lib/slugs';
+import { SITE_URL, authReturnUrl, safeNextPath } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
 import { pointsBreakdown, seasonOptions } from '@/lib/member-season-stats';
@@ -183,6 +184,20 @@ export default function MemberPortalPage({
   const [signInMethod, setSignInMethod] = useState<'link' | 'password'>('link');
   const [loginPassword, setLoginPassword] = useState('');
   const { login, sendPasswordReset } = useAuth();
+
+  // Where to go once signed in, when another page of this club sent them here (?next=/club/app:
+  // the team availability link sends players to answer in the app)
+  const router = useRouter();
+  const nextPath = () => {
+    if (typeof window === 'undefined') return null;
+    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    return next.startsWith(`/${club.slug}/`) ? next : null;
+  };
+  useEffect(() => {
+    const next = activeMember && nextPath();
+    if (next) router.replace(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMember]);
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -440,7 +455,7 @@ export default function MemberPortalPage({
     setSendingLink(true);
     const { error } = await client.auth.signInWithOtp({
       email: loginEmail.trim().toLowerCase(),
-      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member`), captchaToken: captchaToken || undefined },
+      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member${nextPath() ? `?next=${encodeURIComponent(nextPath()!)}` : ''}`), captchaToken: captchaToken || undefined },
     });
     setSendingLink(false);
     captcha.current?.reset();
