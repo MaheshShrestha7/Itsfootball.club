@@ -594,6 +594,7 @@ export default function AdminSeasonsPage({
                   required
                   className="form-input"
                   placeholder="e.g. 2026/27 or 2026/2027"
+                  maxLength={64}
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
                 />
