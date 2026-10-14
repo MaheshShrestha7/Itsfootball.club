@@ -35,7 +35,7 @@ import StatsAuditModal from '@/components/StatsAuditModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { fixtureLabel } from '@/lib/fixture-label';
-import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
+import { getLiveMinute, RUNNING_PERIODS, useNowTick } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -70,6 +70,7 @@ export default function AdminMatchCenterControllerPage({
     tournamentParticipants,
     clubTeams,
     clubTeamMembers,
+    updateTournamentMatchScore,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -130,7 +131,10 @@ export default function AdminMatchCenterControllerPage({
   const [selectedSubOffId, setSelectedSubOffId] = useState<string>('');
   const [selectedAssistId, setSelectedAssistId] = useState<string>('');
   const [assistName, setAssistName] = useState('');
-  const [eventMinute, setEventMinute] = useState(match ? getLiveMinute(match) : 75);
+  // The event minute follows the running clock unless the operator types one (for this match only)
+  const now = useNowTick();
+  const [minuteOverride, setMinuteOverride] = useState<{ matchId: string; minute: number } | null>(null);
+  const eventMinute = match && minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match, now);
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
@@ -265,17 +269,48 @@ export default function AdminMatchCenterControllerPage({
     const updates: any = { period, status };
     if (typeof defaultMin === 'number') {
       updates.current_minute = defaultMin;
-      setEventMinute(defaultMin);
+      setMinuteOverride(null);
     }
     updateMatch(match.id, updates);
     showFeedback(`Match transitioned to ${period.toUpperCase().replace('_', ' ')} (${status.toUpperCase()})`);
+  };
+
+  // Cup games: a shootout has its own score, kept out of the match score and players' goals
+  const isCupGame = !!match.tournament_id;
+  const inShootout = match.period === 'penalties';
+  const handleShootoutAdjust = (side: 'home' | 'away', delta: number) => {
+    const key = side === 'home' ? 'home_penalty_score' : 'away_penalty_score';
+    const next = Math.max(0, (match[key] ?? 0) + delta);
+    updateMatch(match.id, { [key]: next, ...(side === 'home' ? { away_penalty_score: match.away_penalty_score ?? 0 } : { home_penalty_score: match.home_penalty_score ?? 0 }) });
+  };
+
+  // Final whistle. A cup game finishes the way its tournament page does, so the winner moves on
+  // to the next round and the tournament completes once every game has a result.
+  const handleFullTime = () => {
+    if (isCupGame) {
+      const level = match.home_score === match.away_score;
+      const pens = match.home_penalty_score != null && match.away_penalty_score != null
+        && (match.home_penalty_score > 0 || match.away_penalty_score > 0);
+      if (level && match.tournament_stage && match.tournament_stage !== 'group'
+          && (!pens || match.home_penalty_score === match.away_penalty_score)) {
+        showFeedback('This knockout game is level. Start the penalty shootout and enter its score before full time.', 'error');
+        return;
+      }
+      updateTournamentMatchScore(match.id, match.home_score, match.away_score,
+        level && pens ? match.home_penalty_score : undefined,
+        level && pens ? match.away_penalty_score : undefined, 'completed');
+      showFeedback('Full time. The result is saved to the tournament.');
+    } else {
+      handlePeriodTransition('full_time', 'completed', 90);
+    }
+    setIsAuditModalOpen(true);
   };
 
   // Adjust match minute
   const handleMinuteAdjust = (delta: number) => {
     const newMin = Math.max(0, Math.min(120, getLiveMinute(match) + delta));
     updateMatch(match.id, { current_minute: newMin });
-    setEventMinute(newMin);
+    setMinuteOverride(null);
   };
 
   // Pause/resume the live clock in place (injury, VAR check, etc.) without
@@ -299,6 +334,11 @@ export default function AdminMatchCenterControllerPage({
   // Handle Event Logging
   const handleLogEvent = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (inShootout && (eventType === 'goal' || eventType === 'penalty')) {
+      showFeedback('During the shootout, count kicks in the shootout score instead.', 'error');
+      return;
+    }
 
     const sideSquad = (teamSide === 'home' ? homePlayers : awayPlayers) ?? [];
     const isClubSelected = (teamSide === 'home' ? homePlayers : awayPlayers) !== null;
@@ -344,10 +384,12 @@ export default function AdminMatchCenterControllerPage({
       detail = `Substitution: ${resolvedPlayerName} ON, ${offName} OFF. ${detail}`.trim();
     }
 
+    // Read the clock now, not at the last re-render
+    const minute = Number(minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match));
     addMatchEvent({
       match_id: match.id,
       club_id: club.id,
-      minute: Number(eventMinute),
+      minute,
       event_type: eventType,
       team_side: teamSide,
       player_name: resolvedPlayerName,
@@ -355,12 +397,13 @@ export default function AdminMatchCenterControllerPage({
       detail_text: detail || undefined,
     });
 
-    showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${eventMinute}')`);
+    showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${minute}')`);
     setEventDetail('');
     setAssistName('');
     setSelectedAssistId('');
     setSelectedPlayerId('');
     setCustomPlayerName('');
+    setMinuteOverride(null);
   };
 
   // Delete event with automatic score reversal
@@ -832,6 +875,9 @@ export default function AdminMatchCenterControllerPage({
               })));
             }
 
+            // Shootout kicks go in the shootout score below, not the match score or players' goals
+            if (inShootout) quickActions = quickActions.filter(a => a.eventType !== 'goal' && a.eventType !== 'penalty');
+
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
               { key: 'var', label: 'VAR Review', emoji: '🖥️', eventType: 'var' },
               { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },
@@ -840,6 +886,31 @@ export default function AdminMatchCenterControllerPage({
 
             return (
               <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)', marginBottom: '2.5rem' }}>
+                {inShootout && (
+                  <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.04)' }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Penalty shootout</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
+                      Count the scored kicks here. They don&apos;t change the match score or players&apos; goals.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+                      {(['home', 'away'] as const).map(side => (
+                        <div key={side} className="row" style={{ justifyContent: 'space-between', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-secondary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {side === 'home' ? match.home_team_name : match.away_team_name}
+                          </span>
+                          <div className="row" style={{ gap: '0.4rem', flexShrink: 0 }}>
+                            <button type="button" className="btn btn-secondary btn-sm touch-target" aria-label={`Remove a shootout goal for ${side === 'home' ? match.home_team_name : match.away_team_name}`} onClick={() => handleShootoutAdjust(side, -1)}>−</button>
+                            <span style={{ fontSize: '1.3rem', fontWeight: 900, minWidth: '2ch', textAlign: 'center', color: 'var(--text-primary)' }}>
+                              {(side === 'home' ? match.home_penalty_score : match.away_penalty_score) ?? 0}
+                            </span>
+                            <button type="button" className="btn btn-secondary btn-sm touch-target" aria-label={`Add a shootout goal for ${side === 'home' ? match.home_team_name : match.away_team_name}`} onClick={() => handleShootoutAdjust(side, 1)}>+</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Radio size={18} color="var(--c-green)" /> Broadcast Live Match Event
                 </h3>
@@ -934,7 +1005,7 @@ export default function AdminMatchCenterControllerPage({
                         max={120}
                         className="form-input"
                         value={eventMinute}
-                        onChange={e => setEventMinute(Number(e.target.value))}
+                        onChange={e => setMinuteOverride({ matchId: match.id, minute: Number(e.target.value) })}
                       />
                     </div>
                   </div>
@@ -1301,10 +1372,7 @@ export default function AdminMatchCenterControllerPage({
               </button>
 
               <button
-                onClick={() => {
-                  handlePeriodTransition('full_time', 'completed', 90);
-                  setIsAuditModalOpen(true);
-                }}
+                onClick={handleFullTime}
                 className="btn btn-primary"
                 style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: '#3B82F6' }}
               >
