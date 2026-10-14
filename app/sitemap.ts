@@ -24,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/clubs'), changeFrequency: 'daily', priority: 0.8 },
     { url: url('/create-club'), changeFrequency: 'monthly', priority: 0.7 },
     { url: url('/faq'), changeFrequency: 'monthly', priority: 0.5 },
+    { url: url('/live-scores'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },
     { url: url('/terms'), changeFrequency: 'yearly', priority: 0.2 },
   ];
