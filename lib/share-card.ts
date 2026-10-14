@@ -6,7 +6,8 @@
 import { DEFAULT_CREST } from '@/lib/crest';
 import { corsCopy } from '@/lib/image-color';
 import { SITE_URL } from '@/lib/slugs';
-import { evaluateColorContrast, readableClubInk } from '@/lib/theme-utils';
+import { readableClubInk } from '@/lib/theme-utils';
+import { juniorPublicName } from '@/lib/teams';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
 export type CardKind = 'score' | 'lineup';
@@ -23,6 +24,8 @@ export interface CardOptions {
   hideScore?: boolean;
   /** The match's events, already shortened for junior players; goals become the scorer lines */
   events?: Pick<MatchEvent, 'event_type' | 'team_side' | 'player_name' | 'minute' | 'added_minute'>[];
+  /** Player photos by member id, as the public lineup shows them (none for juniors without consent) */
+  photos?: Record<string, string | undefined>;
 }
 
 const BASE = '#070B12';
@@ -162,6 +165,8 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   const body = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
   const outfit = rootStyle.getPropertyValue('--font-outfit').trim();
   const heading = outfit ? `${outfit}, ${body}` : body;
+  const jetbrains = rootStyle.getPropertyValue('--font-jetbrains').trim();
+  const mono = jetbrains ? `${jetbrains}, monospace` : 'monospace';
   await Promise.all([`900 100px ${heading}`, `800 40px ${heading}`, `700 30px ${body}`, `600 30px ${body}`]
     .map(f => document.fonts?.load(f).catch(() => null)));
 
@@ -280,61 +285,162 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const spread = placed.length > 1 && new Set(placed.map(p => `${Math.round(p.x)}:${Math.round(p.y)}`)).size > 1;
     let after: number;
     if (spread) {
-      const top = story ? 650 : 430;
-      const pitchH = story ? 900 : 800;
-      const pitchW = W - M * 2;
-      glass(ctx, M, top, pitchW, pitchH, 36);
-      // Markings: halfway line, centre circle and both penalty boxes, the club's own end at the bottom
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
-      ctx.lineWidth = 3;
+      // The match page's vertical TacticalPitch, redrawn: striped grass, its markings, and each
+      // player as a photo (or initials in club colours) with a shirt-number tag, armband and name tag
+      const pitchH = story ? 920 : 800;
+      const pitchW = Math.round(Math.min(W - M * 2, pitchH * (9 / 13) * 1.05));
+      const top = story ? 625 : 430;
+      const left = (W - pitchW) / 2;
+      const k = pitchW / 400; // the app's pitch is ~400px wide on a phone, where a marker is 44px
+      ctx.save();
+      roundRect(ctx, left, top, pitchW, pitchH, 16 * k);
+      ctx.clip();
+      for (let i = 0; i < 10; i++) {
+        ctx.fillStyle = i % 2 ? '#133823' : '#0f2e1c';
+        ctx.fillRect(left, top + (pitchH / 10) * i, pitchW, pitchH / 10 + 1);
+      }
+      const inner = ctx.createRadialGradient(W / 2, top + pitchH / 2, Math.min(pitchW, pitchH) * 0.35, W / 2, top + pitchH / 2, pitchH * 0.75);
+      inner.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      inner.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+      ctx.fillStyle = inner;
+      ctx.fillRect(left, top, pitchW, pitchH);
+      const line = (a: number) => { ctx.strokeStyle = `rgba(255, 255, 255, ${a})`; ctx.lineWidth = 2 * k * 0.8; };
+      const X = (pct: number) => left + (pitchW * pct) / 100;
+      const Y = (pct: number) => top + (pitchH * pct) / 100;
+      line(0.35);
       ctx.beginPath();
-      ctx.moveTo(M, top + pitchH / 2);
-      ctx.lineTo(M + pitchW, top + pitchH / 2);
-      ctx.moveTo(W / 2 + 90, top + pitchH / 2);
-      ctx.arc(W / 2, top + pitchH / 2, 90, 0, Math.PI * 2);
-      const boxW = pitchW * 0.5;
-      const boxH = pitchH * 0.14;
-      ctx.rect(W / 2 - boxW / 2, top, boxW, boxH);
-      ctx.rect(W / 2 - boxW / 2, top + pitchH - boxH, boxW, boxH);
+      ctx.moveTo(left, Y(50));
+      ctx.lineTo(left + pitchW, Y(50));
+      ctx.moveTo(W / 2 + pitchW * 0.13, Y(50));
+      ctx.arc(W / 2, Y(50), pitchW * 0.13, 0, Math.PI * 2);
+      ctx.strokeRect(X(18), Y(0) - 2, pitchW * 0.64, pitchH * 0.16 + 2);
+      ctx.strokeRect(X(18), Y(84), pitchW * 0.64, pitchH * 0.16 + 2);
+      ctx.stroke();
+      line(0.3);
+      ctx.strokeRect(X(32), Y(0) - 2, pitchW * 0.36, pitchH * 0.06 + 2);
+      ctx.strokeRect(X(32), Y(94), pitchW * 0.36, pitchH * 0.06 + 2);
+      line(0.32);
+      const arcR = pitchW * 0.05;
+      ctx.beginPath();
+      ctx.arc(W / 2, Y(16), arcR, 0, Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(W / 2, Y(84), arcR, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      for (const y of [Y(11), Y(50), Y(89)]) {
+        ctx.beginPath();
+        ctx.arc(W / 2, y, (y === Y(50) ? 4 : 3) * k, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      roundRect(ctx, left, top, pitchW, pitchH, 16 * k);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 3 * k * 0.8;
       ctx.stroke();
 
-      // Same mapping as the vertical TacticalPitch: across = y, up the pitch = x
-      const pad = story ? 80 : 70;
-      const r = story ? 38 : 32;
-      const nameSize = story ? 28 : 24;
-      placed.forEach(p => {
-        const cx = M + pad + (Math.min(100, Math.max(0, p.y)) / 100) * (pitchW - pad * 2);
-        const cy = top + pitchH - pad - (Math.min(100, Math.max(0, p.x)) / 100) * (pitchH - pad * 2 - nameSize);
+      const photos = await Promise.all(placed.map(p => {
+        const url = p.member_id ? opts.photos?.[p.member_id] : undefined;
+        return url ? loadImage(url) : Promise.resolve(null);
+      }));
+      const r = 22 * k;
+      placed.forEach((p, i) => {
+        // TacticalPitch centres the whole marker (circle + name tag) on the spot
+        const cx = X(Math.min(100, Math.max(0, p.y)));
+        const cy = Y(100 - Math.min(100, Math.max(0, p.x))) - 12 * k;
+        const gk = p.position === 'GK';
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 12 * k;
+        ctx.shadowOffsetY = 4 * k;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = primary;
-        ctx.fill();
+        const photo = photos[i];
+        if (photo) {
+          ctx.fillStyle = '#0B0F14';
+          ctx.fill();
+          ctx.shadowColor = 'transparent';
+          ctx.clip();
+          const scale = Math.max((r * 2) / photo.naturalWidth, (r * 2) / photo.naturalHeight);
+          ctx.drawImage(photo, cx - (photo.naturalWidth * scale) / 2, cy - (photo.naturalHeight * scale) / 2, photo.naturalWidth * scale, photo.naturalHeight * scale);
+        } else {
+          // Same fill as the marker: amber for the keeper, else the club colour shading to dark
+          const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+          if (gk) {
+            g.addColorStop(0, '#F59E0B');
+            g.addColorStop(1, '#D97706');
+          } else {
+            g.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            g.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+            ctx.fillStyle = primary;
+            ctx.fill();
+            ctx.shadowColor = 'transparent';
+          }
+          ctx.fillStyle = g;
+          ctx.fill();
+        }
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2 * k;
         ctx.stroke();
-        ctx.fillStyle = evaluateColorContrast(primary).bestTextColor;
-        ctx.font = `900 ${Math.round(r * 0.95)}px ${heading}`;
-        ctx.fillText(String(p.number ?? ''), cx, cy + 2);
+        if (!photo) {
+          const parts = p.name.trim().split(/\s+/);
+          const initials = (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+          ctx.shadowBlur = 3 * k;
+          ctx.font = `900 ${15 * k}px ${heading}`;
+          ctx.fillText(initials, cx, cy + 1);
+          ctx.shadowBlur = 0;
+        }
+
+        // Shirt number tag (bottom-left)
+        if (p.number > 0) {
+          ctx.font = `800 ${11 * k}px ${mono}`;
+          const tw = Math.max(18 * k, ctx.measureText(String(p.number)).width + 8 * k);
+          const tx = cx - r - 6 * k;
+          const ty = cy + r + 4 * k - 16 * k;
+          roundRect(ctx, tx, ty, tw, 16 * k, 5 * k);
+          ctx.fillStyle = 'rgba(8, 12, 18, 0.92)';
+          ctx.fill();
+          ctx.strokeStyle = gk ? '#F59E0B' : primary;
+          ctx.lineWidth = 1 * k;
+          ctx.stroke();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(String(p.number), tx + tw / 2, ty + 8.5 * k);
+        }
+        // Captain's armband (top-left)
         if (p.is_captain) {
-          const bx = cx + r * 0.78;
+          const bx = cx - r * 0.78;
           const by = cy - r * 0.78;
           ctx.beginPath();
-          ctx.arc(bx, by, r * 0.42, 0, Math.PI * 2);
+          ctx.arc(bx, by, 8 * k, 0, Math.PI * 2);
           ctx.fillStyle = '#F59E0B';
           ctx.fill();
-          ctx.fillStyle = '#111827';
-          ctx.font = `900 ${Math.round(r * 0.5)}px ${heading}`;
-          ctx.fillText('C', bx, by + 1);
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 1.5 * k;
+          ctx.stroke();
+          ctx.fillStyle = '#000';
+          ctx.font = `900 ${10 * k}px ${body}`;
+          ctx.fillText('C', bx, by + 0.5 * k);
         }
-        // Surname only, so names don't run into each other ("Sam T." stays whole for juniors)
-        const parts = p.name.trim().split(/\s+/);
-        const label = parts.length > 1 && !/\.$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : p.name.trim();
+        // Name tag: "Mahesh S.", the pitch's default name style
+        const label = juniorPublicName(p.name);
+        const size = fit(ctx, label, 700, 11.5 * k, 100 * k, body, 8 * k);
+        const lw = ctx.measureText(label).width + 14 * k;
+        const lh = size + 8 * k;
+        const ly = cy + r + 6 * k;
+        roundRect(ctx, cx - lw / 2, ly, lw, lh, 5 * k);
+        ctx.fillStyle = 'rgba(8, 12, 18, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1 * k;
+        ctx.stroke();
         ctx.fillStyle = INK;
-        fit(ctx, label, 700, nameSize, 190, body, 18);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = 8;
-        ctx.fillText(label, cx, cy + r + nameSize * 0.85);
-        ctx.shadowBlur = 0;
+        ctx.font = `700 ${size}px ${body}`;
+        ctx.fillText(label, cx, ly + lh / 2 + 1);
       });
       after = top + pitchH;
     } else {

@@ -10,11 +10,13 @@ import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 // downloads it where the browser can't share files.
 // hideScore: the team hides its scores publicly (junior grassroots rules), so the card never shows one
 // events: the match's events with public names (junior players shortened); goals list the scorers
-export default function MatchShareButton({ match, club, hideScore = false, events, trigger }: {
+// photos: player photos by member id for the lineup pitch, as the public site shows them
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, trigger }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
   events?: CardOptions['events'];
+  photos?: CardOptions['photos'];
   /** Draws the button that opens the dialog, for places with their own button style */
   trigger?: (open: () => void) => React.ReactNode;
 }) {
@@ -41,7 +43,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     let stale = false;
     setError(null);
     setImage(null);
-    drawMatchCard(match, club, kind, shareLink(club), { hideScore, format, events: hideScore ? undefined : goals })
+    drawMatchCard(match, club, kind, shareLink(club), { hideScore, format, events: hideScore ? undefined : goals, photos })
       .then(blob => {
         if (stale) return;
         url = URL.createObjectURL(blob);
@@ -49,7 +51,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, format, match, club, hideScore, goals]);
+  }, [open, kind, format, match, club, hideScore, goals, photos]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };

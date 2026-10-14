@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
-import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorPublicName, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import MatchShareButton from '@/components/MatchShareButton';
@@ -82,6 +82,8 @@ export default function AdminMatchesPage({
     getActiveSeason,
     clubTeams,
     matchEvents,
+    members,
+    clubTeamMembers,
   } = useClub();
 
   const { can } = useAuth();
@@ -105,6 +107,16 @@ export default function AdminMatchesPage({
     }
     return byMatch;
   }, [matchEvents, clubMatches, clubTeams]);
+  // The share graphic is public: lineup names and photos follow the match page's junior rules
+  const juniorIds = useMemo(() => juniorMemberIds(members, clubTeams, clubTeamMembers), [members, clubTeams, clubTeamMembers]);
+  const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, publicMember(m, juniorIds).photo_url])), [members, juniorIds]);
+  const publicMatches = useMemo(() => new Map(clubMatches.map(m => {
+    const juniorFixture = isJuniorFixture(m, clubTeams);
+    if (!juniorFixture && juniorIds.size === 0) return [m.id, m];
+    const shorten = (coords: Match['home_lineup_coords']) => coords?.map(p =>
+      juniorFixture || (p.member_id && juniorIds.has(p.member_id)) ? { ...p, name: juniorPublicName(p.name) } : p);
+    return [m.id, { ...m, home_lineup_coords: shorten(m.home_lineup_coords), away_lineup_coords: shorten(m.away_lineup_coords) }];
+  })), [clubMatches, clubTeams, juniorIds]);
 
   // Filters state
   const [statusTab, setStatusTab] = useState<'all' | 'upcoming' | 'completed' | 'live'>('all');
@@ -936,10 +948,11 @@ export default function AdminMatchesPage({
 
                   {/* Matchday / result graphic for Instagram, Facebook and WhatsApp */}
                   <MatchShareButton
-                    match={m}
+                    match={publicMatches.get(m.id) || m}
                     club={club}
                     hideScore={publicScoreHidden(m, clubTeams)}
                     events={goalsByMatch.get(m.id)}
+                    photos={memberPhotos}
                     trigger={open => (
                       <button
                         type="button"
