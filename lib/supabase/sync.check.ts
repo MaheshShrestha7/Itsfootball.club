@@ -2,7 +2,7 @@
 // updates and explicit deletes.
 // Run: npx esbuild lib/supabase/sync.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { SupabaseSync } from './sync';
+import { ENTITIES, SupabaseSync, oneCallSources } from './sync';
 
 type Op = { table: string; kind?: string; filters: unknown[][]; rows?: unknown; options?: unknown; patch?: Record<string, unknown> };
 
@@ -53,6 +53,34 @@ async function main() {
   const matchesQuery = log.find(o => o.table === 'matches')!;
   assert.deepEqual(matchesQuery.filters, [['or', `club_id.in.(${C1}),status.in.(live,halftime)`]]);
   assert.ok(!log.some(o => o.table === 'tournament_participants'), 'no tournaments in scope, so no participants query');
+
+  // One-call load: the function gets every table and view with its scope, and its rows land as load() would
+  const sources = oneCallSources(ENTITIES);
+  assert.deepEqual(sources.find(s => s.name === 'matches'), { name: 'matches', scope: 'club', or_in: { column: 'status', values: ['live', 'halftime'] } });
+  assert.ok(sources.some(s => s.name === 'club_members_public') && sources.some(s => s.name === 'tournament_participants' && s.scope === 'tournament'));
+  let rpcArgs: any;
+  const rpcClient = {
+    rpc: async (_name: string, args: unknown) => (
+      (rpcArgs = args),
+      {
+        data: {
+          sources: { clubs: [{ id: C1, slug: 'fc' }], club_members: [], club_members_public: [{ id: M1, club_id: C1, full_name: 'Ann' }] },
+          errors: ['matches: boom'],
+          club_ids: [C1],
+        },
+        error: null,
+      }
+    ),
+  } as any;
+  const one = (await new SupabaseSync(rpcClient).loadInOneCall({ slug: 'fc', clubIds: ['not-a-uuid'], skip: ['gateScans'] }))!;
+  assert.deepEqual(rpcArgs.p_club_ids, [], 'only uuids are sent');
+  assert.ok(!rpcArgs.p_sources.some((s: any) => s.name === 'gate_scans'), 'skipped tables are not requested');
+  assert.equal((one.data.members as any[])[0].full_name, 'Ann', 'public view rows are merged and mapped');
+  assert.ok(!('matches' in one.data), 'a table that failed is left out');
+  assert.deepEqual(one.errors, ['matches: boom']);
+  assert.deepEqual(one.clubIds, [C1]);
+  const failing = { rpc: async () => ({ data: null, error: { message: 'function public_club_data does not exist' } }) } as any;
+  assert.equal(await new SupabaseSync(failing).loadInOneCall({ slug: 'fc', clubIds: [] }), null, 'a failed call returns null');
 
   // Skipped tables are neither requested nor returned, so the caller's copy is left alone
   const skipLog: Op[] = [];
