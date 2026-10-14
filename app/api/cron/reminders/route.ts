@@ -39,6 +39,11 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   const due = (matches || []).filter(m => clubs.has(m.club_id));
   if (!due.length) return [];
 
+  // Every squad player gets a pending row (and so a personal link), even if no coach opened the
+  // fixture on the Availability page (supabase/migrations/20261107_availability.sql).
+  const { error: ensureError } = await db.rpc('ensure_match_availability', { p_match_ids: due.map(m => m.id) });
+  if (ensureError) console.error('[reminders] could not create availability rows', ensureError.message);
+
   const { data: rows } = await db.from('player_availabilities')
     .select(`id, match_id, response_token, member:club_members(${MEMBER_RECIPIENT_COLUMNS}, status)`)
     .in('match_id', due.map(m => m.id))

@@ -130,6 +130,22 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   }, [club.id, approved]);
   useEffect(() => { loadAnswers(); }, [loadAnswers]);
 
+  // The fixtures this player is asked about: their own team's, not every team's (a U12 player isn't
+  // asked about First XI games). 'all' when the server can't say (e.g. before its migration runs).
+  const [squadMatchIds, setSquadMatchIds] = useState<Set<string> | 'all' | null>(null);
+  const upcomingMatchKey = upcoming.filter(u => u.kind === 'match').map(u => u.id).join(',');
+  useEffect(() => {
+    const db = getSupabaseClient();
+    if (!db || !player) return;
+    let cancelled = false;
+    db.rpc('my_squad_matches', { p_club_id: club.id }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !Array.isArray(data)) return setSquadMatchIds('all');
+      setSquadMatchIds(new Set((data as (string | { my_squad_matches: string })[]).map(r => (typeof r === 'string' ? r : r.my_squad_matches))));
+    });
+    return () => { cancelled = true; };
+  }, [club.id, player, upcomingMatchKey]);
+
   const answer = async (item: { kind: 'match' | 'event'; id: string }, value: Answer) => {
     const db = getSupabaseClient();
     if (!db) return;
@@ -182,7 +198,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ];
 
-  const canAnswer = (kind: 'match' | 'event') => (kind === 'match' ? player : approved);
+  const canAnswer = (item: { kind: 'match' | 'event'; id: string }) =>
+    item.kind === 'match' ? player && (squadMatchIds === 'all' || !!squadMatchIds?.has(item.id)) : approved;
 
   return (
     <div className="container app-home" style={{ padding: '1.25rem 1rem 2rem', maxWidth: '760px', margin: '0 auto' }}>
@@ -224,7 +241,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.title}</div>
                 <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? ` · ${item.where}` : ''}</div>
               </Link>
-              {canAnswer(item.kind) && (
+              {canAnswer(item) && (
                 <div role="group" aria-label={`Are you available for ${item.title}?`} className="app-answers">
                   {ANSWERS.map(a => {
                     const A = a.icon;
