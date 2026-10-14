@@ -10,17 +10,19 @@ const TIMEOUT_MS = 3000;
 // page is worth waiting for: a timeout would hand them a "Loading..." screen instead of the club's
 // content. The content is the same a visitor gets once the page has loaded.
 const CRAWLER_TIMEOUT_MS = 10000;
-// Named crawlers only: a bare "bot" would also match phone models such as "CUBOT" in Android browsers
+// Named crawlers only: a bare "bot" would also match phone models such as "CUBOT" in Android browsers.
+// Link-preview fetchers (WhatsApp, Facebook, Slack...) are left out on purpose: they only read the
+// meta tags, which don't depend on this data, and some give up on a slow response.
 const CRAWLER_UA = new RegExp(
   [
-    'googlebot', 'google-inspectiontool', 'storebot-google', 'bingbot', 'duckduckbot', 'yandexbot', 'baiduspider',
-    'applebot', 'gptbot', 'oai-searchbot', 'chatgpt-user', 'claudebot', 'claude-user', 'claude-searchbot',
-    'perplexitybot', 'perplexity-user', 'ccbot', 'amazonbot', 'meta-externalagent', 'facebookexternalhit',
-    'twitterbot', 'linkedinbot', 'slackbot', 'discordbot', 'whatsapp', 'telegrambot', 'petalbot', 'bytespider',
-    'ahrefsbot', 'semrushbot',
+    'googlebot', 'google-inspectiontool', 'bingbot', 'duckduckbot', 'yandexbot', 'baiduspider', 'applebot',
+    'gptbot', 'oai-searchbot', 'chatgpt-user', 'claudebot', 'claude-user', 'claude-searchbot',
+    'perplexitybot', 'perplexity-user', 'ccbot', 'amazonbot', 'meta-externalagent', 'petalbot', 'bytespider',
   ].join('|'),
   'i'
 );
+// Loads slower than this are logged (Cloudflare Workers logs), as are timeouts
+const SLOW_LOG_MS = 1500;
 
 // Tables no public page shows (member inbox, gate scans, contact messages, draft lineups): the
 // server render is always signed out, so reading them only adds requests and delays the page.
@@ -38,12 +40,31 @@ const loadForSlug = cache(async (slug: string): Promise<Partial<SyncState> | nul
   if (!url || !key) return null;
 
   const crawler = isCrawler((await headers()).get('user-agent'));
+  const limit = crawler ? CRAWLER_TIMEOUT_MS : TIMEOUT_MS;
+  const started = Date.now();
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const load = new SupabaseSync(client)
     .load({ slug, clubIds: [], skip: NOT_SERVER_RENDERED })
-    .then(({ data }) => data)
-    .catch(() => null);
-  const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), crawler ? CRAWLER_TIMEOUT_MS : TIMEOUT_MS));
+    .then(({ data, errors }) => {
+      const ms = Date.now() - started;
+      if (ms > SLOW_LOG_MS || errors.length) {
+        console.warn(`server data "${slug || '(platform)'}": ${ms} ms${ms > limit ? ` (over the ${limit} ms limit)` : ''}${errors.length ? `, errors: ${errors.join('; ')}` : ''}`);
+      }
+      return data;
+    })
+    .catch(err => {
+      console.warn(`server data "${slug || '(platform)'}" failed after ${Date.now() - started} ms`, err);
+      return null;
+    });
+  let done = false;
+  load.finally(() => (done = true));
+  const timeout = new Promise<null>(resolve =>
+    setTimeout(() => {
+      // The finishing time above may never be logged: the worker can stop once the page is sent
+      if (!done) console.warn(`server data "${slug || '(platform)'}": timed out at ${limit} ms${crawler ? ' (crawler)' : ''}`);
+      resolve(null);
+    }, limit)
+  );
   return Promise.race([load, timeout]);
 });
 
