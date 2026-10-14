@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { getLiveMinute } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminHeroSliderPage({
   params,
@@ -489,7 +490,7 @@ export default function AdminHeroSliderPage({
                   fontSize: '0.75rem',
                   fontWeight: 700,
                   background: previewIndex === idx ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                  color: previewIndex === idx ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: previewIndex === idx ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   border: previewIndex === idx ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
                   cursor: 'pointer',
                   transition: 'all 0.15s'
@@ -766,7 +767,7 @@ export default function AdminHeroSliderPage({
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     background: isActive ? 'var(--club-primary)' : 'transparent',
-                    color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                    color: isActive ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                     border: 'none',
                     cursor: 'pointer',
                     transition: 'all 0.15s'
@@ -818,7 +819,7 @@ export default function AdminHeroSliderPage({
                             {evt.category}
                           </span>
                           <span className="text-meta">
-                            {new Date(evt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {new Date(evt.start_time).toLocaleDateString(DATE_LOCALE, { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
                         <h4 style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
@@ -889,7 +890,7 @@ export default function AdminHeroSliderPage({
                           {m.home_team_name} vs {m.away_team_name}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          {m.venue} • {new Date(m.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {m.venue} • {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { month: 'short', day: 'numeric' })}
                         </p>
                       </div>
 

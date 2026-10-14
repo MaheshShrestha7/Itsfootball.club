@@ -22,6 +22,7 @@ import {
   Camera,
   LogIn
 } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function EventDoorCheckinPage({
   params,
@@ -136,7 +137,7 @@ export default function EventDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({ success: false, message: res.message });
@@ -216,7 +217,7 @@ export default function EventDoorCheckinPage({
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 900,
-                color: '#FFFFFF',
+                color: 'var(--club-primary-contrast, #090D16)',
                 fontSize: '0.85rem'
               }}
             >
@@ -445,7 +446,7 @@ export default function EventDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'camera' ? club.primary_color : 'transparent',
-                  color: mode === 'camera' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'camera' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -467,7 +468,7 @@ export default function EventDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'member' ? club.primary_color : 'transparent',
-                  color: mode === 'member' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'member' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -489,7 +490,7 @@ export default function EventDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'guest' ? club.primary_color : 'transparent',
-                  color: mode === 'guest' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'guest' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',

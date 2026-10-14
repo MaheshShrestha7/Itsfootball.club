@@ -15,6 +15,7 @@ import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import { DATE_LOCALE } from '@/lib/dates';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'settings';
 const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'settings'];
@@ -609,7 +610,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
 }
 
 // ------------------------------------------------------------------------------------------------
-const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
 
 // How memberships renew. Saved through set_membership_renewal(), so Finance roles don't need the
 // branding page's rights over the rest of the club record.

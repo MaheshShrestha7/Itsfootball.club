@@ -1,4 +1,5 @@
 import type { Match } from './supabase/types';
+import { DATE_LOCALE } from '@/lib/dates';
 
 /**
  * Short name for a fixture in a drop-down: the opponent comes first ("vs Granville Rage · 17 Oct",
@@ -15,5 +16,5 @@ export function fixtureLabel(match: Pick<Match, 'home_team_name' | 'away_team_na
   const date = new Date(match.match_date);
   return Number.isNaN(date.getTime())
     ? teams
-    : `${teams} · ${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })}`;
+    : `${teams} · ${date.toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })}`;
 }

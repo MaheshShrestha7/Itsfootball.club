@@ -359,7 +359,7 @@ export default function TournamentFormModal({
             {clubInternalTeams.length === 0 ? (
               <div style={{ padding: '0.75rem', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 No internal teams yet. Create them in{' '}
-                <Link href={`/${club.slug}/admin/teams#tournament-sides`} style={{ color: 'var(--c-green)', fontWeight: 700 }}>People &amp; Membership → Teams → Tournament Sides</Link>, or add guest teams below.
+                <Link href={`/${club.slug}/admin/teams#tournament-sides`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>People &amp; Membership → Teams → Tournament Sides</Link>, or add guest teams below.
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 180px), 1fr))', gap: '0.5rem' }}>

@@ -333,7 +333,6 @@ export default function ImageUploadZone({
           textAlign: 'center',
           cursor: uploading ? 'wait' : 'pointer',
           transition: 'all 0.2s ease',
-          outline: 'none',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -398,7 +397,7 @@ export default function ImageUploadZone({
                 height: '44px',
                 borderRadius: '50%',
                 background: isDragging ? 'var(--club-primary)' : 'rgba(255, 255, 255, 0.05)',
-                color: isDragging ? '#FFFFFF' : 'var(--club-primary)',
+                color: isDragging ? 'var(--club-primary-contrast, #090D16)' : 'var(--club-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

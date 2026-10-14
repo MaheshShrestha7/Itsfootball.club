@@ -24,6 +24,7 @@ import {
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminDashboardPage({
   params,
@@ -355,7 +356,7 @@ export default function AdminDashboardPage({
                 }}
               >
                 <div className="text-primary">{act.description}</div>
-                <div className="text-meta">{new Date(act.created_at).toLocaleString()}</div>
+                <div className="text-meta">{new Date(act.created_at).toLocaleString(DATE_LOCALE)}</div>
               </div>
             ))}
           </div>

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
 import { defaultFixture } from '@/lib/fixtures';
+import { DATE_LOCALE } from '@/lib/dates';
 
 function AvailabilityHub() {
   const params = useParams();
@@ -181,7 +182,7 @@ function AvailabilityHub() {
     `⚽ *${club.name} Match Call-Up*\n` +
     `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n` +
     `📍 ${targetMatch?.venue}\n` +
-    `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}\n\n` +
+    `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}\n\n` +
     `Squad members, please confirm your availability in 5 seconds (no WhatsApp clutter!):\n` +
     `${shareableUrl}`
   );
@@ -318,7 +319,7 @@ function AvailabilityHub() {
                 >
                   {clubMatches.map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.home_team_name} vs {m.away_team_name} — {new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} ({m.status})
+                      {m.home_team_name} vs {m.away_team_name} — {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })} ({m.status})
                     </option>
                   ))}
                 </select>
@@ -353,11 +354,11 @@ function AvailabilityHub() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   <div className="row">
                     <Calendar size={15} color={club.primary_color} />
-                    <span>{new Date(targetMatch.match_date).toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                   <div className="row">
                     <Clock size={15} color={club.primary_color} />
-                    <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <div className="row">
                     <MapPin size={15} color={club.primary_color} />
@@ -444,7 +445,7 @@ function AvailabilityHub() {
                       borderRadius: '5px',
                       border: 'none',
                       background: statusFilter === st ? club.primary_color : 'transparent',
-                      color: statusFilter === st ? '#FFFFFF' : 'var(--text-muted)',
+                      color: statusFilter === st ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       textTransform: 'capitalize',
                     }}
@@ -719,7 +720,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
                 {match.home_team_name} vs {match.away_team_name}
                 <br />
-                {new Date(match.match_date).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · {match.venue}
+                {new Date(match.match_date).toLocaleString(DATE_LOCALE, { dateStyle: 'full', timeStyle: 'short' })} · {match.venue}
               </p>
             )}
 
@@ -748,7 +749,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
             />
 
             {message && (
-              <div role="status" style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: message.ok ? '#6EE7B7' : 'var(--c-red)' }}>
+              <div role="status" style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: message.ok ? 'var(--c-green)' : 'var(--c-red)' }}>
                 {message.text}
               </div>
             )}

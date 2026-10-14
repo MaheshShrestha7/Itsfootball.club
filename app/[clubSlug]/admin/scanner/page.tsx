@@ -20,6 +20,7 @@ import {
   Shield,
   Ticket
 } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface ScanLogEntry {
   id: string;
@@ -67,7 +68,7 @@ export default function AdminScannerPage({
   const processToken = async (token: string) => {
     if (!token.trim()) return;
 
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (mode === 'match_checkin') {
       const selectedMatch = clubMatches.find(m => m.id === selectedMatchId);
@@ -128,7 +129,7 @@ export default function AdminScannerPage({
             && s.member_id === res.member!.id && new Date(s.scanned_at).toDateString() === today)
         : undefined;
       const repeatAt = earlier
-        ? new Date(earlier.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        ? new Date(earlier.scanned_at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })
         : undefined;
       const result = repeatAt
         ? { ...res, repeatAt, message: `Already scanned today at ${repeatAt}. Check the photo matches the person before letting them in.` }
@@ -185,7 +186,7 @@ export default function AdminScannerPage({
               className="btn btn-sm"
               style={{
                 background: mode === 'verify' ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                color: mode === 'verify' ? '#FFFFFF' : 'var(--text-secondary)',
+                color: mode === 'verify' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
               }}
             >
               <span>Member Pass Verification</span>
@@ -277,7 +278,7 @@ export default function AdminScannerPage({
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 background: activeTab === 'camera' ? 'var(--club-primary)' : 'transparent',
-                color: activeTab === 'camera' ? '#FFFFFF' : 'var(--text-muted)',
+                color: activeTab === 'camera' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: '0.85rem',
                 cursor: 'pointer',
@@ -298,7 +299,7 @@ export default function AdminScannerPage({
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 background: activeTab === 'manual' ? 'var(--club-primary)' : 'transparent',
-                color: activeTab === 'manual' ? '#FFFFFF' : 'var(--text-muted)',
+                color: activeTab === 'manual' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: '0.85rem',
                 cursor: 'pointer',

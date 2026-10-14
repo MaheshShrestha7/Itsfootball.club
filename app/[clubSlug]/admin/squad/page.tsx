@@ -695,7 +695,7 @@ export default function AdminSquadPage({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minWidth: '40px', minHeight: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer',
                   background: viewMode === mode ? 'var(--club-primary)' : 'transparent',
-                  color: viewMode === mode ? '#FFFFFF' : 'var(--text-muted)',
+                  color: viewMode === mode ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                 }}
               >
                 <Icon size={16} />
@@ -1035,7 +1035,7 @@ export default function AdminSquadPage({
                             height: '16px',
                             borderRadius: '50%',
                             background: 'var(--club-primary)',
-                            color: '#FFFFFF',
+                            color: 'var(--club-primary-contrast, #090D16)',
                             fontSize: '0.7rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -1142,7 +1142,7 @@ export default function AdminSquadPage({
                               borderRadius: 'var(--radius-sm)',
                               border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
                               background: isSelected ? 'var(--club-primary)' : isMaxReached ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
-                              color: isSelected ? '#FFFFFF' : isMaxReached ? 'var(--text-muted)' : 'var(--text-secondary)',
+                              color: isSelected ? 'var(--club-primary-contrast, #090D16)' : isMaxReached ? 'var(--text-muted)' : 'var(--text-secondary)',
                               fontWeight: isSelected ? 800 : 500,
                               fontSize: '0.75rem',
                               cursor: isMaxReached ? 'not-allowed' : 'pointer',

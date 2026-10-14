@@ -98,7 +98,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <Mail size={18} color="#FFFFFF" />
+              <Mail size={18} color="var(--club-primary-contrast, #FFFFFF)" />
             </div>
             <div>
               <h3 id="contact-modal-title" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>

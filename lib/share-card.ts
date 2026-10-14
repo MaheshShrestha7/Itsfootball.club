@@ -9,6 +9,7 @@ import { SITE_URL } from '@/lib/slugs';
 import { readableClubInk } from '@/lib/theme-utils';
 import { juniorPublicName } from '@/lib/teams';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
+import { DATE_LOCALE } from '@/lib/dates';
 
 /** score: fixture or result; lineup: the XI on the pitch; lineup-list: the XI as a numbered list */
 export type CardKind = 'score' | 'lineup' | 'lineup-list';
@@ -127,7 +128,7 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
 }
 
 /** "Sat 4 Oct" and "14:30". Date-only fixtures (tournaments) keep their own date and local kick-off time */
-function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale?: string): { day: string; time: string } {
+function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale: string = DATE_LOCALE): { day: string; time: string } {
   const d = new Date(m.match_date);
   if (isNaN(d.getTime())) return { day: '', time: m.match_time || '' };
   const dateOnly = !!m.match_time && d.getUTCHours() === 0 && d.getUTCMinutes() === 0;

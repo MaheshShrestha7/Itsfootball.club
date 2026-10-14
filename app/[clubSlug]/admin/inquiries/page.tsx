@@ -8,6 +8,7 @@ import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import MemberMessagesPanel from '@/components/MemberMessagesPanel';
 import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 type Filter = 'all' | ContactInquiry['status'];
 
@@ -117,7 +118,7 @@ export default function AdminInquiriesPage({
                 <div>
                   <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.sender_name}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {item.inquiry_type} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                    {item.inquiry_type} · {item.created_at ? new Date(item.created_at).toLocaleString(DATE_LOCALE) : ''}
                   </div>
                 </div>
                 <span className="badge" style={{ textTransform: 'uppercase', alignSelf: 'flex-start' }}>{item.status}</span>

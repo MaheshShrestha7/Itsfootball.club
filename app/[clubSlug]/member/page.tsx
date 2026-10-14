@@ -54,6 +54,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { DATE_LOCALE } from '@/lib/dates';
 
 /** The signed-in user's own pending or rejected application (my_membership_application RPC) */
 interface MyApplication {
@@ -77,7 +78,7 @@ interface MyApplication {
 }
 
 const formatDay = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  iso ? new Date(iso).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
 /** Whole years from a 'YYYY-MM-DD' birth date to today, or null when there isn't one */
 function ageFrom(dateOfBirth: string): number | null {
@@ -886,7 +887,7 @@ export default function MemberPortalPage({
                   borderRadius: '9px',
                   border: 'none',
                   background: gatewayTab === 'signin' ? 'var(--club-primary)' : 'transparent',
-                  color: gatewayTab === 'signin' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: gatewayTab === 'signin' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 800,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
@@ -909,7 +910,7 @@ export default function MemberPortalPage({
                   borderRadius: '9px',
                   border: 'none',
                   background: gatewayTab === 'signup' ? 'var(--club-primary)' : 'transparent',
-                  color: gatewayTab === 'signup' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: gatewayTab === 'signup' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 800,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
@@ -1011,15 +1012,7 @@ export default function MemberPortalPage({
                         value={loginEmail}
                         onChange={e => setLoginEmail(e.target.value)}
                         placeholder="e.g. member@email.com"
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                          borderRadius: '8px',
-                          background: 'rgba(var(--shade-rgb), 0.4)',
-                          border: '1px solid var(--border-subtle)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.9rem',
-                        }}
+                        className="form-input" style={{ paddingLeft: '2.5rem' }}
                       />
                     </div>
                     {signInMethod === 'link' && (
@@ -1031,7 +1024,7 @@ export default function MemberPortalPage({
 
                   {signInMethod === 'password' && (
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <label htmlFor="member-signin-password" style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                      <label htmlFor="member-signin-password" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                         Password:
                       </label>
                       <div style={{ position: 'relative' }}>
@@ -1043,18 +1036,10 @@ export default function MemberPortalPage({
                           value={loginPassword}
                           onChange={e => setLoginPassword(e.target.value)}
                           placeholder="Your password"
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                            borderRadius: '8px',
-                            background: 'rgba(var(--shade-rgb), 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.9rem',
-                          }}
+                          className="form-input" style={{ paddingLeft: '2.5rem' }}
                         />
                       </div>
-                      <button type="button" onClick={handleForgotPassword} disabled={sendingLink} style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.45rem', color: 'var(--c-green)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                      <button type="button" onClick={handleForgotPassword} disabled={sendingLink} style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.45rem', color: 'var(--club-ink)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
                         Forgot password?
                       </button>
                     </div>
@@ -1207,7 +1192,7 @@ export default function MemberPortalPage({
 
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="member-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-full-name" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           Full Name *
                         </label>
                         <input autoComplete="name" id="member-full-name"
@@ -1216,20 +1201,12 @@ export default function MemberPortalPage({
                           value={signupForm.fullName}
                           onChange={e => setSignupForm({ ...signupForm, fullName: e.target.value })}
                           placeholder="e.g. Liam O'Connor"
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgba(var(--shade-rgb), 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                          }}
+                          className="form-input"
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="member-email-address" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-email-address" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           {needsGuardian ? 'Player\'s Own Email (optional)' : 'Email Address *'}
                         </label>
                         <input autoComplete="email" id="member-email-address"
@@ -1239,22 +1216,14 @@ export default function MemberPortalPage({
                           readOnly={reapplying}
                           onChange={e => setSignupForm({ ...signupForm, email: e.target.value })}
                           placeholder="e.g. liam@email.com"
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgba(var(--shade-rgb), 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                          }}
+                          className="form-input"
                         />
                       </div>
                     </div>
 
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="member-phone-number" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-phone-number" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           Phone Number
                         </label>
                         <input autoComplete="tel" id="member-phone-number"
@@ -1262,34 +1231,18 @@ export default function MemberPortalPage({
                           value={signupForm.phone}
                           onChange={e => setSignupForm({ ...signupForm, phone: e.target.value })}
                           placeholder="e.g. 0400 000 000"
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgba(var(--shade-rgb), 0.4)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                          }}
+                          className="form-input"
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="member-membership-tier" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-membership-tier" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           Membership Tier *
                         </label>
                         <select id="member-membership-tier"
                           value={signupForm.tier}
                           onChange={e => setSignupForm({ ...signupForm, tier: e.target.value, role: guessRole(e.target.value) })}
-                          style={{
-                            width: '100%',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '8px',
-                            background: 'rgb(var(--dk-4-6-9))',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                          }}
+                          className="form-select"
                         >
                           {formPlans.length ? formPlans.map(p => (
                             <option key={p.id} value={p.name}>
@@ -1342,21 +1295,13 @@ export default function MemberPortalPage({
                         borderRadius: '8px',
                       }}>
                         <div>
-                          <label htmlFor="member-preferred-position" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-position" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                             Preferred Position
                           </label>
                           <select id="member-preferred-position"
                             value={signupForm.position}
                             onChange={e => setSignupForm({ ...signupForm, position: e.target.value as PlayerPosition })}
-                            style={{
-                              width: '100%',
-                              padding: '0.55rem 0.75rem',
-                              borderRadius: '6px',
-                              background: 'rgb(var(--dk-4-6-9))',
-                              border: '1px solid var(--border-subtle)',
-                              color: 'var(--text-primary)',
-                              fontSize: '0.8rem',
-                            }}
+                            className="form-select"
                           >
                             <option value="">Select Position...</option>
                             <option value="GK">Goalkeeper (GK)</option>
@@ -1373,7 +1318,7 @@ export default function MemberPortalPage({
                         </div>
 
                         <div>
-                          <label htmlFor="member-preferred-kit" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
+                          <label htmlFor="member-preferred-kit" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                             Preferred Kit #
                           </label>
                           <input id="member-preferred-kit"
@@ -1383,35 +1328,19 @@ export default function MemberPortalPage({
                             value={signupForm.jerseyNumber}
                             onChange={e => setSignupForm({ ...signupForm, jerseyNumber: e.target.value })}
                             placeholder="e.g. 10"
-                            style={{
-                              width: '100%',
-                              padding: '0.55rem 0.75rem',
-                              borderRadius: '6px',
-                              background: 'rgba(var(--shade-rgb), 0.4)',
-                              border: '1px solid var(--border-subtle)',
-                              color: 'var(--text-primary)',
-                              fontSize: '0.8rem',
-                            }}
+                            className="form-input"
                           />
                         </div>
 
                         {joinableTeams.length > 1 && (
                           <div style={{ gridColumn: '1 / -1' }}>
-                            <label htmlFor="member-team" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', marginBottom: '0.35rem' }}>
+                            <label htmlFor="member-team" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                               Team you&apos;re joining
                             </label>
                             <select id="member-team"
                               value={signupForm.teamId}
                               onChange={e => setSignupForm({ ...signupForm, teamId: e.target.value })}
-                              style={{
-                                width: '100%',
-                                padding: '0.55rem 0.75rem',
-                                borderRadius: '6px',
-                                background: 'rgb(var(--dk-4-6-9))',
-                                border: '1px solid var(--border-subtle)',
-                                color: 'var(--text-primary)',
-                                fontSize: '0.8rem',
-                              }}
+                              className="form-select"
                             >
                               <option value="">Not sure, the club will place me</option>
                               {joinableTeams.map(t => (
@@ -1425,7 +1354,7 @@ export default function MemberPortalPage({
 
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="member-date-of-birth" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-date-of-birth" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           Date of Birth{juniorTeamPicked ? ' *' : ''}
                         </label>
                         <input id="member-date-of-birth"
@@ -1434,11 +1363,11 @@ export default function MemberPortalPage({
                           max={todayIso()}
                           value={signupForm.dateOfBirth}
                           onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
-                          style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                          className="form-input"
                         />
                       </div>
                       <div>
-                        <label htmlFor="member-emergency-contact" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                        <label htmlFor="member-emergency-contact" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                           {needsGuardian ? 'Emergency Contact (if not the guardian)' : 'Emergency Contact (name & phone)'}
                         </label>
                         <input id="member-emergency-contact"
@@ -1447,7 +1376,7 @@ export default function MemberPortalPage({
                           value={signupForm.emergencyContact}
                           onChange={e => setSignupForm({ ...signupForm, emergencyContact: e.target.value })}
                           placeholder="e.g. Jo Smith, 0400 000 000"
-                          style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                          className="form-input"
                         />
                       </div>
                     </div>
@@ -1468,15 +1397,15 @@ export default function MemberPortalPage({
                               <label htmlFor={id} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>{label}</label>
                               <input id={id} type={type} required maxLength={max} value={signupForm[key]}
                                 onChange={e => setSignupForm({ ...signupForm, [key]: e.target.value })}
-                                style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                                className="form-input" />
                             </div>
                           ))}
                         </div>
                         <div style={{ marginBottom: '0.75rem' }}>
-                          <label htmlFor="member-guardian-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Email *</label>
+                          <label htmlFor="member-guardian-email" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>Email *</label>
                           <input id="member-guardian-email" type="email" required maxLength={255} value={signupForm.guardianEmail}
                             onChange={e => setSignupForm({ ...signupForm, guardianEmail: e.target.value })}
-                            style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '8px', background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            className="form-input" />
                         </div>
                         <div role="radiogroup" aria-labelledby="member-photo-consent-label" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                           <span id="member-photo-consent-label" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Can photos of the player appear on the club&apos;s public website? *</span>
@@ -1493,7 +1422,7 @@ export default function MemberPortalPage({
                     )}
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="member-motivation-amp-background-notes" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-motivation-amp-background-notes" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                         Motivation &amp; Background Notes:
                       </label>
                       <textarea id="member-motivation-amp-background-notes"
@@ -1501,16 +1430,7 @@ export default function MemberPortalPage({
                         value={signupForm.notes}
                         onChange={e => setSignupForm({ ...signupForm, notes: e.target.value })}
                         placeholder="Tell the club committee why you would like to join..."
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem 0.75rem',
-                          borderRadius: '8px',
-                          background: 'rgba(var(--shade-rgb), 0.4)',
-                          border: '1px solid var(--border-subtle)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
-                          resize: 'none',
-                        }}
+                        className="form-textarea" style={{ resize: 'none' }}
                       />
                     </div>
 
@@ -1521,9 +1441,9 @@ export default function MemberPortalPage({
                           onChange={e => setSignupForm({ ...signupForm, termsAccepted: e.target.checked })} style={{ marginTop: '0.15rem' }} />
                         <span>
                           I agree to the{' '}
-                          <a href={`${SITE_URL}/terms`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-green)', fontWeight: 700 }}>terms</a>
+                          <a href={`${SITE_URL}/terms`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-ink)', fontWeight: 700 }}>terms</a>
                           {' '}and{' '}
-                          <a href={`${SITE_URL}/privacy`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-green)', fontWeight: 700 }}>privacy policy</a>,
+                          <a href={`${SITE_URL}/privacy`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-ink)', fontWeight: 700 }}>privacy policy</a>,
                           {' '}and to {club.name} keeping my details for club membership. *
                         </span>
                       </label>
@@ -2101,21 +2021,13 @@ export default function MemberPortalPage({
 
                   <form onSubmit={handleSendMessage}>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="member-inquiry-category" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-inquiry-category" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                         Inquiry Category:
                       </label>
                       <select id="member-inquiry-category"
                         value={messageCategory}
                         onChange={e => setMessageCategory(e.target.value as MemberMessageCategory)}
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem 0.75rem',
-                          borderRadius: '8px',
-                          background: 'rgb(var(--dk-4-6-9))',
-                          border: '1px solid var(--border-subtle)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
-                        }}
+                        className="form-select"
                       >
                         <option value="General">General Inquiry</option>
                         <option value="Ticket / Pass">Virtual Pass &amp; Turnstile Issue</option>
@@ -2127,7 +2039,7 @@ export default function MemberPortalPage({
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="member-subject" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-subject" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                         Subject:
                       </label>
                       <input id="member-subject"
@@ -2136,20 +2048,12 @@ export default function MemberPortalPage({
                         value={messageSubject}
                         onChange={e => setMessageSubject(e.target.value)}
                         placeholder="e.g. Training session attendance question"
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem 0.75rem',
-                          borderRadius: '8px',
-                          background: 'rgba(var(--shade-rgb), 0.4)',
-                          border: '1px solid var(--border-subtle)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
-                        }}
+                        className="form-input"
                       />
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label htmlFor="member-message" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      <label htmlFor="member-message" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
                         Message:
                       </label>
                       <textarea id="member-message"
@@ -2158,16 +2062,7 @@ export default function MemberPortalPage({
                         value={messageContent}
                         onChange={e => setMessageContent(e.target.value)}
                         placeholder="Type your message to the club administration..."
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '8px',
-                          background: 'rgba(var(--shade-rgb), 0.4)',
-                          border: '1px solid var(--border-subtle)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
-                          resize: 'none',
-                        }}
+                        className="form-textarea" style={{ resize: 'none' }}
                       />
                     </div>
 
@@ -2225,7 +2120,7 @@ export default function MemberPortalPage({
                                   : `👤 You (${activeMember.full_name})`}
                               </span>
                               <span className="text-meta">
-                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(msg.created_at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
 

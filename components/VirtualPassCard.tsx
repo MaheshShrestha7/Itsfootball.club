@@ -14,6 +14,7 @@ import {
   RotateCw,
   Download
 } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface VirtualPassCardProps {
   club: Club;
@@ -33,7 +34,7 @@ function formatDay(value: string | undefined | null, withWeekday = false): strin
   if (!value) return '';
   const d = new Date(value.length === 10 ? `${value}T00:00:00` : value);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, withWeekday
+  return d.toLocaleDateString(DATE_LOCALE, withWeekday
     ? { weekday: 'short', day: 'numeric', month: 'short' }
     : { day: 'numeric', month: 'short', year: 'numeric' });
 }

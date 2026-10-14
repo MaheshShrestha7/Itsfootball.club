@@ -8,6 +8,7 @@ import VirtualPassCard from '@/components/VirtualPassCard';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
 import type { Club, ClubMember, MembershipPlan } from '@/lib/supabase/types';
+import { DATE_LOCALE } from '@/lib/dates';
 
 // A parent or guardian's view of the children they look after at this club (my_children RPC,
 // matched on their confirmed sign-in email = club_members.guardian_email): each child's application
@@ -183,7 +184,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                         }}>
                           <div style={{ fontSize: '0.72rem', fontWeight: 800, color: fromClub ? 'var(--c-sky)' : 'var(--c-green)', marginBottom: '0.2rem' }}>
                             {fromClub ? msg.sender_name : msg.sender_email?.toLowerCase() === guardianEmail.toLowerCase() ? 'You' : msg.sender_name}
-                            <span className="text-meta" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>{new Date(msg.created_at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-meta" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>{new Date(msg.created_at).toLocaleString(DATE_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                           {msg.subject && <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.subject}</div>}
                           <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45 }}>{msg.content}</p>

@@ -10,6 +10,7 @@ import {
   addDays, buildCalendarItems, CALENDAR_KINDS, dayKey, filterItems, itemsOnDay, layoutDay, monthGrid, newItemHref, openItemHref, sameDay,
   startOfDay, weekDays, type CalendarItem, type CalendarKind,
 } from '@/lib/admin-calendar';
+import { DATE_LOCALE } from '@/lib/dates';
 
 type View = 'month' | 'week' | 'list';
 
@@ -24,9 +25,9 @@ const KIND_LABEL: Record<CalendarKind, string> = {
   match: 'Match', training: 'Training', social: 'Social / AGM', trial: 'Trial', tournament: 'Tournament', season: 'Season',
 };
 
-const fmtTime = (d: Date) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-const fmtDay = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-const fmtMonth = (d: Date) => d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+const fmtTime = (d: Date) => d.toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', hour12: false });
+const fmtDay = (d: Date) => d.toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtMonth = (d: Date) => d.toLocaleDateString(DATE_LOCALE, { month: 'long', year: 'numeric' });
 
 function readStored<T>(key: string, fallback: T): T {
   try {
@@ -159,7 +160,7 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
 
   const week = weekDays(anchor);
   const heading = view === 'week'
-    ? `${week[0].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${week[6].toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
+    ? `${week[0].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })} – ${week[6].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}`
     : fmtMonth(anchor);
 
   return (
