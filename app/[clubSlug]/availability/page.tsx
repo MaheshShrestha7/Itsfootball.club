@@ -276,7 +276,7 @@ function AvailabilityHub() {
 
         {/* Feedback Toast */}
         {feedbackToast && (
-          <div style={{
+          <div role="status" className="admin-save-toast" style={{
             position: 'fixed',
             bottom: '24px',
             right: '24px',

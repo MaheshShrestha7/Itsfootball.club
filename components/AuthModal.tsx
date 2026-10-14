@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { BrandWordmark } from '@/components/BrandLogo';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
+import { useDialog } from '@/lib/use-escape-to-close';
 import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -46,6 +47,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
       document.body.style.overflow = prev;
     };
   }, [isOpen]);
+
+  const dialogRef = useDialog(isOpen && mounted, onClose);
 
   if (!isOpen || !mounted) return null;
 
@@ -131,6 +134,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
         className="glass-panel"
         style={{
           maxWidth: '480px',
@@ -150,13 +157,13 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '1.25rem',
-            right: '1.25rem',
+            top: '0.75rem',
+            right: '0.75rem',
             background: 'rgba(var(--tint-rgb), 0.05)',
             border: 'none',
             color: 'var(--text-secondary)',
-            width: '32px',
-            height: '32px',
+            width: '44px',
+            height: '44px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
@@ -171,7 +178,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         {/* Header Logo */}
         <BrandWordmark height={48} style={{ margin: '0.25rem auto 1.25rem auto' }} />
 
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+        <h3 id="auth-modal-title" style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
           {mode === 'reset' ? 'Reset your password' : mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
         </h3>
         <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -238,7 +245,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
           {mode === 'signup' && (
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="authmodal-full-name" className="form-label" style={{ fontSize: '0.78rem' }}>Full Name *</label>
-              <input id="authmodal-full-name"
+              <input autoComplete="name" id="authmodal-full-name"
                 type="text"
                 required
                 className="form-input"
@@ -251,7 +258,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
 
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label htmlFor="authmodal-email-address" className="form-label" style={{ fontSize: '0.78rem' }}>Email Address *</label>
-            <input id="authmodal-email-address"
+            <input autoComplete="email" id="authmodal-email-address"
               type="email"
               required
               className="form-input"

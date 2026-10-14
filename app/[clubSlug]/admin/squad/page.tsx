@@ -976,7 +976,7 @@ export default function AdminSquadPage({
                   <input id="squad-phone-number"
                     type="tel"
                     className="form-input"
-                    placeholder="+1 (555) 019-2834"
+                    placeholder="e.g. 0400 000 000"
                     value={form.phone}
                     onChange={e => setForm({ ...form, phone: e.target.value })}
                   />

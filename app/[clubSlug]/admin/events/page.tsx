@@ -627,7 +627,7 @@ export default function AdminEventsPage({
 
       {/* Floating Live Toast Notification */}
       {toastMessage && (
-        <div style={{
+        <div role="status" className="admin-save-toast" style={{
           position: 'fixed',
           bottom: '24px',
           right: '24px',

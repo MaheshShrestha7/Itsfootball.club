@@ -18,6 +18,7 @@ import {
   Ticket
 } from 'lucide-react';
 import PlayerAvatar from './PlayerAvatar';
+import { useDialog } from '@/lib/use-escape-to-close';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -105,6 +106,8 @@ export default function QRScannerModal({
       // Graceful silence
     }
   }, [audioEnabled]);
+
+  const dialogRef = useDialog(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -209,7 +212,7 @@ export default function QRScannerModal({
       justifyContent: 'center',
       padding: '1rem',
     }}>
-      <div className="glass-panel" style={{
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Pass scanner" className="glass-panel" style={{
         width: '100%',
         maxWidth: '540px',
         maxHeight: '92vh',

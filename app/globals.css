@@ -920,14 +920,18 @@ textarea {
   }
 }
 
-/* Save confirmation toast (admin forms): full-width along the bottom on phones */
+/* Save confirmation toasts (admin forms, Availability): full-width along the bottom on phones */
 @media (max-width: 640px) {
   .admin-save-toast {
     left: 1rem !important;
     right: 1rem !important;
-    /* Clear of the club tab bar (58px + the home indicator) */
-    bottom: calc(1rem + 58px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: none !important;
+  }
+}
+/* Clear of the club tab bar (58px + the home indicator) wherever the bar shows */
+@media (max-width: 768px), (display-mode: standalone) {
+  .admin-save-toast {
+    bottom: calc(1rem + var(--tabbar-clear, 0px)) !important;
   }
 }
 
@@ -2519,6 +2523,11 @@ dialog.confirm-dialog::backdrop {
       backdrop-filter: blur(18px) saturate(1.6);
       -webkit-backdrop-filter: blur(18px) saturate(1.6);
     }
+  }
+
+  /* Height to keep fixed bottom buttons and toasts above the bar (club pages only have it) */
+  .club-theme-root {
+    --tabbar-clear: calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Keeps the footer clear of the fixed bar */

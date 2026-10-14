@@ -659,7 +659,7 @@ export default function AdminSponsorsPage({
                     <input id="sponsors-contact-phone"
                       type="tel"
                       className="form-input"
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="e.g. 0400 000 000"
                       value={form.contact_phone}
                       onChange={e => setForm({ ...form, contact_phone: e.target.value })}
                     />

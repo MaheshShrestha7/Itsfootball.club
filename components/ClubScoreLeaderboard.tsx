@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useDialog } from '@/lib/use-escape-to-close';
 import Link from 'next/link';
 import { Club, ClubMember, ClubScoreProfile, GamificationActivityLog } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -50,6 +51,7 @@ export default function ClubScoreLeaderboard({
   const seasons = Array.from(new Set(clubProfiles.map(p => p.season).filter(Boolean))).sort().reverse();
   const activeSeasonName = getActiveSeason(club.id)?.name;
   const defaultSeason = activeSeasonName && seasons.includes(activeSeasonName) ? activeSeasonName : seasons[0] || '';
+  const playerDialogRef = useDialog(!!selectedPlayerModal, () => setSelectedPlayerModal(null));
   const [seasonChoice, setSeasonChoice] = useState<string | null>(null);
   const season = seasonChoice !== null && seasons.includes(seasonChoice) ? seasonChoice : defaultSeason;
   const [showAll, setShowAll] = useState(false);
@@ -427,6 +429,10 @@ export default function ClubScoreLeaderboard({
           onClick={() => setSelectedPlayerModal(null)}
         >
           <div
+            ref={playerDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${selectedPlayerModal.member.full_name}: ClubScore breakdown`}
             className="glass-panel"
             style={{
               maxWidth: '520px',

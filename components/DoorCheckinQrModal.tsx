@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Copy, Check, ExternalLink } from 'lucide-react';
+import { useDialog } from '@/lib/use-escape-to-close';
 
 interface DoorCheckinQrModalProps {
   title: string;
@@ -26,6 +27,7 @@ export default function DoorCheckinQrModal({
   extraActions,
 }: DoorCheckinQrModalProps) {
   const [copiedLink, setCopiedLink] = useState(false);
+  const dialogRef = useDialog(true, onClose);
 
   const copyLink = () => {
     if (!checkinUrl) return;
@@ -54,6 +56,10 @@ export default function DoorCheckinQrModal({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="glass-panel"
         style={{
           margin: 'auto',
@@ -70,6 +76,8 @@ export default function DoorCheckinQrModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
+            className="touch-target"
             style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
           >
             <X size={20} />

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { Mail, CheckCircle2, Send, X } from 'lucide-react';
+import { useDialog } from '@/lib/use-escape-to-close';
 
 interface ContactModalProps {
   club: Club;
@@ -25,6 +26,18 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
   // Honeypot: hidden from real visitors via CSS + aria-hidden; bots that fill
   // every field they find trip it, and the submission is silently dropped.
   const [website, setWebsite] = useState('');
+
+  const handleResetAndClose = () => {
+    setIsSubmitted(false);
+    setSenderName('');
+    setSenderEmail('');
+    setSenderPhone('');
+    setMessage('');
+    setWebsite('');
+    onClose();
+  };
+
+  const dialogRef = useDialog(isOpen, handleResetAndClose);
 
   if (!isOpen) return null;
 
@@ -51,16 +64,6 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
     setIsSubmitted(true);
   };
 
-  const handleResetAndClose = () => {
-    setIsSubmitted(false);
-    setSenderName('');
-    setSenderEmail('');
-    setSenderPhone('');
-    setMessage('');
-    setWebsite('');
-    onClose();
-  };
-
   return (
     <div style={{
       position: 'fixed',
@@ -73,7 +76,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       overflowY: 'auto',
       padding: '1rem',
     }}>
-      <div className="glass-panel" style={{
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="contact-modal-title" className="glass-panel" style={{
         margin: 'auto',
         width: '100%',
         maxWidth: '540px',
@@ -98,7 +101,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               <Mail size={18} color="#FFFFFF" />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <h3 id="contact-modal-title" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 Contact {club.name}
               </h3>
               <p className="text-meta">
@@ -107,13 +110,16 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             </div>
           </div>
           <button
+            type="button"
             onClick={handleResetAndClose}
+            aria-label="Close"
             style={{
               background: 'rgba(var(--tint-rgb), 0.08)',
               border: 'none',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '44px',
+              height: '44px',
+              flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -169,7 +175,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             <div className="form-row-2" style={{ gap: '1rem' }}>
               <div className="form-group">
                 <label htmlFor="contactmodal-your-full-name" className="form-label">Your Full Name *</label>
-                <input id="contactmodal-your-full-name"
+                <input autoComplete="name" id="contactmodal-your-full-name"
                   type="text"
                   required
                   className="form-input"
@@ -181,7 +187,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
 
               <div className="form-group">
                 <label htmlFor="contactmodal-email-address" className="form-label">Email Address *</label>
-                <input id="contactmodal-email-address"
+                <input autoComplete="email" id="contactmodal-email-address"
                   type="email"
                   required
                   className="form-input"
@@ -195,10 +201,10 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             <div className="form-row-2" style={{ gap: '1rem' }}>
               <div className="form-group">
                 <label htmlFor="contactmodal-phone-number-optional" className="form-label">Phone Number (Optional)</label>
-                <input id="contactmodal-phone-number-optional"
+                <input autoComplete="tel" id="contactmodal-phone-number-optional"
                   type="tel"
                   className="form-input"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="e.g. 0400 000 000"
                   value={senderPhone}
                   onChange={e => setSenderPhone(e.target.value)}
                 />

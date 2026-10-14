@@ -32,13 +32,8 @@ export default function CreateClubPage() {
   const { user, isAuthenticated, isLoading: authLoading, assignClubRole } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Require sign-in/sign-up before the wizard is usable at all, rather than only
-  // catching it at the final "Finish" step after the user has filled everything in.
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setAuthModalOpen(true);
-    }
-  }, [authLoading, isAuthenticated]);
+  // Signed-out visitors see a "Sign in to launch your club" page first (below) and open the
+  // sign-in popup from its button, rather than having it cover the page on arrival.
 
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -806,7 +801,7 @@ export default function CreateClubPage() {
                 <div className="form-row-2">
                   <div className="form-group">
                     <label htmlFor="create-club-club-secretariat-email" className="form-label">Club Secretariat Email *</label>
-                    <input id="create-club-club-secretariat-email"
+                    <input autoComplete="email" id="create-club-club-secretariat-email"
                       type="email"
                       name="contact_email"
                       required
@@ -818,7 +813,7 @@ export default function CreateClubPage() {
 
                   <div className="form-group">
                     <label htmlFor="create-club-club-contact-phone" className="form-label">Club Contact Phone</label>
-                    <input id="create-club-club-contact-phone"
+                    <input autoComplete="tel" id="create-club-club-contact-phone"
                       type="tel"
                       name="contact_phone"
                       className="form-input"

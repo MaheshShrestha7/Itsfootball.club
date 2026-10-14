@@ -505,7 +505,7 @@ export default function MatchDoorCheckinPage({
                     <label className="form-label" htmlFor="guest-name-input">
                       Supporter Full Name *
                     </label>
-                    <input
+                    <input autoComplete="name"
                       id="guest-name-input"
                       type="text"
                       className="form-input"
@@ -520,7 +520,7 @@ export default function MatchDoorCheckinPage({
                     <label className="form-label" htmlFor="guest-email-input">
                       Email Address (Optional for confirmation receipt)
                     </label>
-                    <input
+                    <input autoComplete="email"
                       id="guest-email-input"
                       type="email"
                       className="form-input"
