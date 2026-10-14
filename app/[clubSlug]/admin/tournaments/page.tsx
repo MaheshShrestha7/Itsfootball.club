@@ -8,6 +8,7 @@ import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import { Trophy, Swords, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminTournamentsPage({
   params,
@@ -332,7 +333,7 @@ export default function AdminTournamentsPage({
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         <Calendar size={13} />
-                        <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
+                        <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                       </div>
 
                       <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>

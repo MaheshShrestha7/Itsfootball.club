@@ -4,6 +4,7 @@ import React from 'react';
 import { ClubMember } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import { Activity, Edit2, Trash2 } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface SquadRosterProps {
   /** Members to show (already filtered) */
@@ -57,7 +58,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
   const positionBadges = (m: ClubMember) =>
     isPlayerOf(m) ? (
       <>
-        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', fontWeight: 800, padding: '0.15rem 0.45rem' }}>
+        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', fontWeight: 800, padding: '0.15rem 0.45rem' }}>
           {m.player_position || 'ST'} (Primary)
         </span>
         {m.secondary_positions?.map(secPos => (
@@ -92,7 +93,7 @@ export default function SquadRoster({ members, totalCount, viewMode, getMemberRo
   // Membership term: status from membership_status + expiry, dates as "valid from - to"
   const today = new Date().toISOString().slice(0, 10);
   const fmtDate = (d?: string | null) =>
-    d ? new Date(d.slice(0, 10)).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+    d ? new Date(d.slice(0, 10)).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
   const membershipState = (m: ClubMember): [string, string] => {
     if (m.membership_status === 'pending') return ['PENDING', 'var(--c-amber)'];
     if (m.membership_status === 'rejected') return ['REJECTED', 'var(--c-red)'];

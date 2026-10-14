@@ -73,7 +73,7 @@ export default function VerifyPassPage({
             justifyContent: 'center',
             margin: '0 auto 1.25rem auto',
           }}>
-            <Shield size={28} color="#FFFFFF" />
+            <Shield size={28} color="var(--club-primary-contrast, #FFFFFF)" />
           </div>
 
           <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>

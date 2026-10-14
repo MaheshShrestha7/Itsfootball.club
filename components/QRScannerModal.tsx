@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import PlayerAvatar from './PlayerAvatar';
 import { useDialog } from '@/lib/use-escape-to-close';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export default function QRScannerModal({
     setIsProcessing(true);
     setScanResult({ status: 'idle', message: '' });
 
-    const currentTimeStr = new Date().toLocaleTimeString('en-GB', {
+    const currentTimeStr = new Date().toLocaleTimeString(DATE_LOCALE, {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',

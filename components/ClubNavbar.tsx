@@ -337,9 +337,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--c-green)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
+                backgroundColor: 'rgba(var(--club-primary-rgb), 0.12)',
+                color: 'var(--club-ink)',
+                border: '1px solid rgba(var(--club-primary-rgb), 0.4)',
                 fontWeight: 700,
               }}
             >
@@ -372,7 +372,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
                   />
                 ) : (
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--club-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
                     {user.full_name.substring(0, 1)}
                   </div>
                 )}
@@ -628,9 +628,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                       gap: '0.75rem',
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
-                      color: 'var(--c-green)',
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: 'var(--club-ink)',
+                      background: 'rgba(var(--club-primary-rgb), 0.1)',
+                      border: '1px solid rgba(var(--club-primary-rgb), 0.3)',
                       fontWeight: 700,
                       marginTop: '0.5rem',
                     }}
@@ -650,7 +650,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     {user.avatar_url ? (
                       <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
                         {user.full_name.substring(0, 1)}
                       </div>
                     )}

@@ -63,6 +63,7 @@ import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso } from './finance';
 import { publicScoreHidden } from './teams';
+import { DATE_LOCALE } from '@/lib/dates';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -2493,7 +2494,7 @@ export function ClubProvider({
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayLabel = d.toLocaleDateString(DATE_LOCALE, { weekday: 'short' });
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
       const dayEnd = dayStart + 24 * 3600 * 1000;
       byDay.push({

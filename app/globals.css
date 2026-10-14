@@ -308,6 +308,14 @@ textarea {
   cursor: not-allowed;
 }
 
+/* Keyboard focus: a ring in the club colour on anything you can tab to (buttons, links, the tab bar,
+   form fields). :focus-visible keeps it off mouse clicks and taps. Low specificity (:where), so a
+   component's own focus style still wins. */
+:where(a, button, summary, select, input, textarea, [role='button'], [role='tab'], [tabindex]):focus-visible {
+  outline: 2px solid var(--club-ink, var(--club-primary));
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background-color: var(--club-primary);
   /* Outside a club the default green needs dark ink (white is 2.5:1); clubs set their own contrast colour */
@@ -384,6 +392,12 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-radius: var(--radius-full);
+}
+
+/* Text on a club-coloured fill. Set here as well as in :root, because :root resolves it before the
+   club's own contrast colour (inline on .club-theme-root) exists, and it would always be white. */
+.club-theme-root {
+  --text-on-primary: var(--club-primary-contrast, #FFFFFF);
 }
 
 .club-theme-root,
@@ -479,6 +493,14 @@ textarea {
 .form-textarea:focus {
   border-color: var(--club-primary);
   box-shadow: 0 0 0 3px rgba(var(--club-primary-rgb), 0.2);
+}
+
+/* The fields turn the browser outline off; keyboard users get the club ring on top of the glow */
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible {
+  outline: 2px solid var(--club-ink, var(--club-primary));
+  outline-offset: 1px;
 }
 
 /* Holographic Member Pass 3D Effect */
@@ -2535,6 +2557,11 @@ dialog.confirm-dialog::backdrop {
     display: block;
     height: calc(58px + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* Inside the bar's edge, so the ring isn't cut off at the bottom of the screen */
+.club-tabbar a:focus-visible {
+  outline-offset: -3px;
 }
 
 .club-tabbar a {

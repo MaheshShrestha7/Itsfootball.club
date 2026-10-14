@@ -208,7 +208,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
               borderRadius: '8px',
               border: 'none',
               background: mode === 'login' ? 'var(--club-primary)' : 'transparent',
-              color: mode === 'login' ? '#FFFFFF' : 'var(--text-secondary)',
+              color: mode === 'login' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -226,7 +226,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
               borderRadius: '8px',
               border: 'none',
               background: mode === 'signup' ? 'var(--club-primary)' : 'transparent',
-              color: mode === 'signup' ? '#FFFFFF' : 'var(--text-secondary)',
+              color: mode === 'signup' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -285,7 +285,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
               <button
                 type="button"
                 onClick={() => { setMode('reset'); setErrorMsg(null); setNoticeMsg(null); setCanResend(false); }}
-                style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.4rem', color: 'var(--c-green)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.4rem', color: 'var(--club-ink)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 Forgot password?
               </button>
@@ -317,7 +317,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
     )}
 
           {noticeMsg && (
-            <div role="status" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10B981', color: '#6EE7B7', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.8rem' }}>
+            <div role="status" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10B981', color: 'var(--c-green)', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.8rem' }}>
               {noticeMsg}
             </div>
           )}

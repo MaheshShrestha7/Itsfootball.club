@@ -1,13 +1,14 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 const subscribeNothing = () => () => {};
 
 /**
- * A date or time in the visitor's own locale and time zone. The server can't know those, so the
- * server render and the hydrating render both use UTC (and en-US unless a locale is given), which
- * keeps them identical; React re-renders with the visitor's settings right after hydration.
+ * A date or time in the site's Australian style (lib/dates.ts) and the visitor's own time zone. The
+ * server can't know the time zone, so the server render and the hydrating render both use UTC,
+ * which keeps them identical; React re-renders in the visitor's zone right after hydration.
  */
 export default function LocalTime({
   value,
@@ -24,7 +25,7 @@ export default function LocalTime({
   const hydrated = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  const loc = locale ?? (hydrated ? undefined : 'en-US');
+  const loc = locale ?? DATE_LOCALE;
   const opts = hydrated ? options : { ...options, timeZone: 'UTC' };
   const text =
     format === 'time' ? date.toLocaleTimeString(loc, opts)

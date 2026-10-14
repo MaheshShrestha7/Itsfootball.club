@@ -236,7 +236,7 @@ export default function ClubPublicPage({
           className="btn btn-sm scroll-pill-item touch-target"
           style={{
             background: squadFilter === pos ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-            color: squadFilter === pos ? '#FFFFFF' : 'var(--text-secondary)',
+            color: squadFilter === pos ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
             border: '1px solid var(--border-subtle)',
             minHeight: '38px',
           }}
@@ -1550,7 +1550,6 @@ export default function ClubPublicPage({
                       color: 'var(--text-primary)',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      outline: 'none',
                       cursor: 'pointer'
                     }}
                   >
@@ -1574,7 +1573,6 @@ export default function ClubPublicPage({
                     color: 'var(--text-primary)',
                     fontSize: '0.82rem',
                     fontWeight: 700,
-                    outline: 'none',
                     cursor: 'pointer'
                   }}
                 >
@@ -1600,7 +1598,7 @@ export default function ClubPublicPage({
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
                     background: fixturesTab === 'upcoming' ? 'var(--club-primary)' : 'transparent',
-                    color: fixturesTab === 'upcoming' ? '#FFFFFF' : 'var(--text-muted)',
+                    color: fixturesTab === 'upcoming' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1618,7 +1616,7 @@ export default function ClubPublicPage({
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
                     background: fixturesTab === 'results' ? 'var(--club-primary)' : 'transparent',
-                    color: fixturesTab === 'results' ? '#FFFFFF' : 'var(--text-muted)',
+                    color: fixturesTab === 'results' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1728,9 +1726,9 @@ export default function ClubPublicPage({
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.3rem',
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        border: '1px solid #10B981',
-                        color: 'var(--c-green)',
+                        background: 'rgba(var(--club-primary-rgb), 0.12)',
+                        border: '1px solid var(--club-primary)',
+                        color: 'var(--club-ink)',
                         fontSize: '0.78rem',
                         padding: '0.4rem 0.75rem',
                       }}
@@ -2062,7 +2060,7 @@ export default function ClubPublicPage({
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
                       {player.player_position && (
-                        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: '#FFFFFF', marginBottom: '4px' }}>
+                        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', marginBottom: '4px' }}>
                           {player.player_position}
                         </span>
                       )}
@@ -2131,7 +2129,7 @@ export default function ClubPublicPage({
                   borderRadius: '8px',
                   border: 'none',
                   background: leaderboardMode === 'clubscore' ? 'var(--club-primary)' : 'transparent',
-                  color: leaderboardMode === 'clubscore' ? '#FFFFFF' : 'var(--text-muted)',
+                  color: leaderboardMode === 'clubscore' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                   fontWeight: 800,
                   fontSize: '0.85rem',
                   cursor: 'pointer',
@@ -2152,7 +2150,7 @@ export default function ClubPublicPage({
                   borderRadius: '8px',
                   border: 'none',
                   background: leaderboardMode === 'traditional' ? 'var(--club-primary)' : 'transparent',
-                  color: leaderboardMode === 'traditional' ? '#FFFFFF' : 'var(--text-muted)',
+                  color: leaderboardMode === 'traditional' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                   fontWeight: 800,
                   fontSize: '0.85rem',
                   cursor: 'pointer',
@@ -2198,7 +2196,7 @@ export default function ClubPublicPage({
                         borderRadius: '6px',
                         border: 'none',
                         background: leaderboardTab === tab ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                        color: leaderboardTab === tab ? '#FFFFFF' : 'var(--text-muted)',
+                        color: leaderboardTab === tab ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
                         fontWeight: 700,
                         fontSize: '0.75rem',
                         textTransform: 'uppercase',

@@ -14,6 +14,7 @@ import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, E
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminTournamentDetailPage({
   params,
@@ -325,7 +326,7 @@ export default function AdminTournamentDetailPage({
               </span>
               <span className="row row-tight">
                 <Clock size={14} />
-                <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
+                <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
               </span>
               <span className="row row-tight">
                 <Users size={14} />

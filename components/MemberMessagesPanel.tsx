@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { Club, ClubMember, MemberMessage } from '@/lib/supabase/types';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface Conversation {
   memberId: string;
@@ -128,7 +129,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                 <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{c.name}</span>
                 {c.unread > 0
                   ? <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{c.unread} NEW</span>
-                  : <span className="text-meta">{c.latest ? new Date(c.latest.created_at).toLocaleDateString() : 'New'}</span>}
+                  : <span className="text-meta">{c.latest ? new Date(c.latest.created_at).toLocaleDateString(DATE_LOCALE) : 'New'}</span>}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--c-sky)', fontWeight: 600, marginBottom: '0.2rem' }}>
                 {c.latest?.subject || 'New message'}
@@ -174,7 +175,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                     }}
                   >
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                      {m.sender_name} · {new Date(m.created_at).toLocaleString()}
+                      {m.sender_name} · {new Date(m.created_at).toLocaleString(DATE_LOCALE)}
                       {m.subject ? ` · ${m.subject}` : ''}
                     </div>
                     <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>

@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Camera
 } from 'lucide-react';
+import { DATE_LOCALE } from '@/lib/dates';
 
 export default function MatchDoorCheckinPage({
   params,
@@ -91,7 +92,7 @@ export default function MatchDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({
@@ -130,7 +131,7 @@ export default function MatchDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({
@@ -206,7 +207,7 @@ export default function MatchDoorCheckinPage({
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 900,
-                  color: '#FFFFFF',
+                  color: 'var(--club-primary-contrast, #090D16)',
                   fontSize: '0.85rem'
                 }}
               >
@@ -384,7 +385,7 @@ export default function MatchDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'camera' ? club.primary_color : 'transparent',
-                  color: mode === 'camera' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'camera' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -407,7 +408,7 @@ export default function MatchDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'member' ? club.primary_color : 'transparent',
-                  color: mode === 'member' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'member' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -430,7 +431,7 @@ export default function MatchDoorCheckinPage({
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: mode === 'guest' ? club.primary_color : 'transparent',
-                  color: mode === 'guest' ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: mode === 'guest' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
                   fontWeight: 700,
                   fontSize: '0.82rem',
                   cursor: 'pointer',

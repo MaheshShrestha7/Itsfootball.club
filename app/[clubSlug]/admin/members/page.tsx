@@ -37,12 +37,13 @@ import {
 import BulkMemberModal from '@/components/BulkMemberModal';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
+import { DATE_LOCALE } from '@/lib/dates';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
-  return isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** Whole years from a 'YYYY-MM-DD' birth date to today */

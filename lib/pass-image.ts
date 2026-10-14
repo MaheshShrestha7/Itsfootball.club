@@ -1,5 +1,6 @@
 import { Club, ClubMember } from '@/lib/supabase/types';
 import { evaluateColorContrast } from '@/lib/theme-utils';
+import { DATE_LOCALE } from '@/lib/dates';
 
 /**
  * Draws the member pass as a phone-sized PNG (1080x1350) so it can be kept in the photo
@@ -68,7 +69,7 @@ export async function renderPassImage(
   ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
   const expires = member.membership_expires_at
-    ? new Date(`${member.membership_expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(`${member.membership_expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
   fitText(`${statusLabel}${expires ? ` • Valid until ${expires}` : ''}`, 700, 36, W - 120, 1222, statusLabel === 'ACTIVE' ? '#34D399' : '#FBBF24');
   fitText('Show this QR code at the gate', 500, 30, W - 120, 1285, '#94A3B8');

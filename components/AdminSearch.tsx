@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, X, Users, CalendarDays, Radio } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { isPlayerMember } from '@/lib/supabase/types';
+import { DATE_LOCALE } from '@/lib/dates';
 
 interface SearchResult {
   id: string;
@@ -46,7 +47,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
       .map(m => ({
         id: m.id,
         label: m.title || `vs ${m.opponent_name || m.away_team_name}`,
-        sublabel: `Match • ${new Date(m.match_date).toLocaleDateString()}`,
+        sublabel: `Match • ${new Date(m.match_date).toLocaleDateString(DATE_LOCALE)}`,
         href: m.status === 'live' ? `/${clubSlug}/admin/match-center` : `/${clubSlug}/admin/matches`,
         icon: Radio,
       }));
@@ -57,7 +58,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
       .map(e => ({
         id: e.id,
         label: e.title,
-        sublabel: `Event • ${new Date(e.start_time).toLocaleDateString()}`,
+        sublabel: `Event • ${new Date(e.start_time).toLocaleDateString(DATE_LOCALE)}`,
         href: `/${clubSlug}/admin/events`,
         icon: CalendarDays,
       }));
