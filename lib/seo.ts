@@ -41,15 +41,12 @@ export function fitTitle(...parts: TitlePart[]): string {
   return truncateWords(short[0] || SITE_NAME, TITLE_MAX);
 }
 
-// Last-resort calls to action (longest first) for when a page's own sentences land short of 140 chars,
-// e.g. for a club with a very short name
-const TOP_UP_CTAS = ['Visit the club website today.', 'Find out more today.', 'Find out more.', 'Visit today.', 'Learn more.', 'Join us.'];
-
-/** Builds a 140-155 char description from sentences in priority order: a sentence that would overflow is
- *  skipped in favour of a later (shorter) one, and it stops as soon as the minimum length is reached. */
+/** Builds a description of up to 155 chars from sentences in priority order: a sentence that would overflow is
+ *  skipped in favour of a later (shorter) one, and it stops once 140 chars is reached. It is never padded
+ *  with stock calls to action: a shorter real description beats one ending "Find out more today." */
 export function fitDescription(...sentences: (string | null | undefined | false)[]): string {
   let out = '';
-  for (const s of [...sentences, ...TOP_UP_CTAS]) {
+  for (const s of sentences) {
     if (!s || !s.trim()) continue;
     const next = out ? `${out} ${s.trim()}` : s.trim();
     if (next.length > DESC_MAX) {
