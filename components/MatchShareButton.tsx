@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Share2, Download, X } from 'lucide-react';
-import { CARD_SIZES, drawMatchCard, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
+import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
 // "Share" on a match page (and on each fixture in Admin > Matches): previews the matchday graphic as a
@@ -27,7 +27,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const hasLineup = ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords)?.length;
-  const fileName = `${club.slug}-${kind === 'lineup' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
+  const onPitch = lineupHasPositions(match);
+  const fileName = `${club.slug}-${kind !== 'score' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
 
   // Only the goals matter here, and the caller may pass a new array on every render (a live match
   // ticks), so the graphic redraws when a goal changes, not on every render
@@ -115,7 +116,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-          {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{tab('lineup', 'Starting XI')}</div> : <span />}
+          {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{onPitch && tab('lineup', 'Starting XI')}{tab('lineup-list', onPitch ? 'Team list' : 'Starting XI')}</div> : <span />}
           <div role="group" aria-label="Size" style={{ display: 'flex', gap: '0.5rem' }}>
             {sizeTab('story', 'Story', 'Instagram or Facebook story, WhatsApp status')}
             {sizeTab('post', 'Post', 'Instagram feed, Facebook group, WhatsApp chat')}

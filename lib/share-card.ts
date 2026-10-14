@@ -10,7 +10,8 @@ import { readableClubInk } from '@/lib/theme-utils';
 import { juniorPublicName } from '@/lib/teams';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
-export type CardKind = 'score' | 'lineup';
+/** score: fixture or result; lineup: the XI on the pitch; lineup-list: the XI as a numbered list */
+export type CardKind = 'score' | 'lineup' | 'lineup-list';
 export type CardFormat = 'story' | 'post';
 
 export const CARD_SIZES: Record<CardFormat, { w: number; h: number }> = {
@@ -225,7 +226,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.fillStyle = FAINT;
   spaced(ctx, 4);
   ctx.font = `700 24px ${body}`;
-  const eyebrow = kind === 'lineup' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
+  const eyebrow = kind !== 'score' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
   ctx.fillText(eyebrow, M + 124, headY + 26);
   spaced(ctx, 0);
   const competition = (match.title || match.competition || '').toUpperCase();
@@ -247,7 +248,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.textAlign = 'center';
 
   const scored = kind === 'score' && !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
-  const [first, second] = kind === 'lineup' ? ['STARTING', 'XI'] : headline(match, scored);
+  const [first, second] = kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored);
 
   // Headline
   const hlY = story ? 500 : 290;
@@ -266,7 +267,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.fillText(second, startX + (wA + gap) * scale, hlY);
   ctx.textAlign = 'center';
 
-  if (kind === 'lineup') {
+  if (kind !== 'score') {
     const home = match.is_club_home ?? true;
     const xi = [...((home ? match.home_lineup_coords : match.away_lineup_coords) || [])]
       .sort((a, b) => a.x - b.x || a.y - b.y) // the pitch runs left to right: goalkeeper first, then back to front
@@ -280,11 +281,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     fit(ctx, sub, 600, 38, W - M * 2, body);
     ctx.fillText(sub, W / 2, hlY + 100);
 
-    // Players placed on the lineup pitch: drawn where the coach put them, else as a numbered list
+    // Players placed on the lineup pitch: drawn where the coach put them, else (or when asked) as a numbered list
     const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
-    const spread = placed.length > 1 && new Set(placed.map(p => `${Math.round(p.x)}:${Math.round(p.y)}`)).size > 1;
     let after: number;
-    if (spread) {
+    if (kind === 'lineup' && lineupHasPositions(match)) {
       // The match page's vertical TacticalPitch, redrawn: striped grass, its markings, and each
       // player as a photo (or initials in club colours) with a shirt-number tag, armband and name tag
       const pitchH = story ? 920 : 800;
@@ -588,4 +588,15 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 /** The club's address for the watermark: its own domain when it has one, else itsfootball.club/<slug> */
 export function shareLink(club: Pick<Club, 'slug' | 'custom_domain'>): string {
   return club.custom_domain || `${new URL(SITE_URL).host}/${club.slug}`;
+}
+
+/** The club's side of the saved lineup */
+function clubLineup(match: Match) {
+  return ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords) || [];
+}
+
+/** Whether the saved lineup has players placed on the pitch (not all on one spot), so it can be drawn there */
+export function lineupHasPositions(match: Match): boolean {
+  const placed = clubLineup(match).filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
+  return placed.length > 1 && new Set(placed.map(p => `${Math.round(p.x)}:${Math.round(p.y)}`)).size > 1;
 }
