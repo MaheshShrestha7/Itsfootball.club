@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
@@ -181,11 +182,28 @@ export default function CreateClubPage() {
 
   // 1. Still resolving the current session: avoid flashing the sign-in checkpoint
   // before we actually know whether the visitor is authenticated.
+  // What the server renders (auth is still loading then), so search engines see what the page is for
+  const intro = (
+    <header style={{ maxWidth: '560px', width: '100%', textAlign: 'center', marginBottom: '2rem' }}>
+      <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.4rem)', fontWeight: 900, marginBottom: '0.6rem' }}>
+        Create your football club website, free
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+        Your club gets its own website with fixtures, results, a live match centre, squad, news and member passes. Every
+        feature is free for the club, and it goes live as soon as you finish.
+      </p>
+      <ol className="vs-steps" style={{ textAlign: 'left' }}>
+        {CREATE_CLUB_STEPS.map(s => <li key={s.name}><span><strong>{s.name}.</strong> {s.text}</span></li>)}
+      </ol>
+    </header>
+  );
+
   if (authLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <PlatformNavbar />
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+          {intro}
           <div style={{
             width: '48px',
             height: '48px',
@@ -207,7 +225,8 @@ export default function CreateClubPage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <PlatformNavbar />
 
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+          {intro}
           <div
             className="glass-panel"
             style={{
@@ -239,9 +258,9 @@ export default function CreateClubPage() {
               ACCOUNT REQUIRED
             </span>
 
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               Sign In to Launch Your Club
-            </h1>
+            </h2>
 
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.5 }}>
               A club belongs to your account, so we need you signed in first. Create an account or sign in, then you&apos;ll land right back here to configure your club.

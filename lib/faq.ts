@@ -9,6 +9,13 @@ import { bookingFeeCents, bookingFeeText } from './finance';
 // Platform help (not club matters). Written as plain text in answers so the FAQ schema keeps it; linked when shown.
 export const CONTACT_EMAIL = 'contact@itsfootball.club';
 
+// How a club goes live: shown on the homepage and /create-club, and their HowTo schema
+export const CREATE_CLUB_STEPS = [
+  { name: 'Claim your club', text: 'Pick your name and web address, upload your crest and choose your colours. The kit preview updates as you go.' },
+  { name: 'Bring in the squad', text: 'Import members in bulk, add fixtures for the season and appoint your committee.' },
+  { name: 'Share the link', text: 'Post your club address in the group chat. From then on, matchday runs from your phone.' },
+];
+
 // The real number when the fee is configured, so AI answers and buyers quote it exactly
 export const FEE_PHRASE = bookingFeeCents(10000) > 0 ? `a booking fee of ${bookingFeeText()}` : 'a small booking fee';
 

@@ -8,13 +8,15 @@ import type {
   MatchMetadataRow,
   NewsArticleRow,
   NewsMetadataRow,
+  ShopProductRow,
   TournamentMetadataRow,
 } from './supabase/club-lookup';
 
 type Json = { [key: string]: unknown };
 
 const abs = (path: string) => `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
-const absUrl = (url?: string | null) => (!url ? undefined : /^https?:\/\//.test(url) ? url : abs(url));
+// An inline data: image (e.g. a default crest) has no URL to give, so it's left out
+const absUrl = (url?: string | null) => (!url || url.startsWith('data:') ? undefined : /^https?:\/\//.test(url) ? url : abs(url));
 
 /** Drops null/undefined/empty values (recursively) so optional fields never emit `"x": null` */
 function compact<T>(value: T): T {
@@ -157,26 +159,85 @@ export function newsArticleSchema(club: ClubMetadataRow, article: NewsArticleRow
 }
 
 /** Club homepage: the club itself plus a BlogPosting for each news article shown in its News section */
-export function clubSchema(club: ClubMetadataRow, news: NewsMetadataRow[]) {
+function clubNode(club: ClubMetadataRow) {
   const logo = absUrl(club.logo_url);
+  return {
+    '@type': 'SportsTeam',
+    '@id': clubId(club),
+    name: club.name,
+    alternateName: club.short_name !== club.name ? club.short_name : undefined,
+    url: clubUrl(club),
+    sport: 'Soccer',
+    logo,
+    image: absUrl(club.banner_url) || logo,
+    description: club.motto,
+    foundingDate: club.founded_year ? String(club.founded_year) : undefined,
+    location: club.stadium_name
+      ? { '@type': 'Place', name: club.stadium_name, address: club.stadium_address || club.stadium_name }
+      : undefined,
+  };
+}
+
+export function clubSchema(club: ClubMetadataRow, news: NewsMetadataRow[]) {
+  return graph(clubNode(club), ...news.map(article => articleNode(club, article)));
+}
+
+/** A club's /about page: about the club itself */
+export function clubAboutSchema(club: ClubMetadataRow) {
   return graph(
-    {
-      '@type': 'SportsTeam',
-      '@id': clubId(club),
-      name: club.name,
-      alternateName: club.short_name !== club.name ? club.short_name : undefined,
-      url: clubUrl(club),
-      sport: 'Soccer',
-      logo,
-      image: absUrl(club.banner_url) || logo,
-      description: club.motto,
-      foundingDate: club.founded_year ? String(club.founded_year) : undefined,
-      location: club.stadium_name
-        ? { '@type': 'Place', name: club.stadium_name, address: club.stadium_address || club.stadium_name }
-        : undefined,
-    },
-    ...news.map(article => articleNode(club, article))
+    { '@type': 'AboutPage', url: `${clubUrl(club)}/about`, name: `About ${club.name}`, mainEntity: { '@id': clubId(club) } },
+    clubNode(club),
   );
+}
+
+/** A club's /shop: one Product per item on sale, sold (and collected) from the club */
+export function clubShopSchema(club: ClubMetadataRow, products: ShopProductRow[], currency: string) {
+  if (!products.length) return null;
+  const url = `${clubUrl(club)}/shop`;
+  return graph(
+    clubNode(club),
+    ...products.map(p => ({
+      '@type': 'Product',
+      name: p.name,
+      description: p.description || undefined,
+      image: p.photos.map(absUrl).filter(Boolean),
+      url,
+      brand: { '@type': 'Brand', name: club.name },
+      offers: {
+        '@type': 'Offer',
+        price: (p.price_cents / 100).toFixed(2),
+        priceCurrency: currency,
+        availability: 'https://schema.org/InStock',
+        url,
+        seller: { '@id': clubId(club) },
+      },
+    })),
+  );
+}
+
+/** /clubs: the directory as a list of club sites */
+export function clubsDirectorySchema(clubs: ClubMetadataRow[]) {
+  return graph({
+    '@type': 'CollectionPage',
+    url: abs('/clubs'),
+    name: 'Football Clubs Directory',
+    isPartOf: { '@id': WEBSITE_ID },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: clubs.length,
+      itemListElement: clubs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, url: clubUrl(c) })),
+    },
+  });
+}
+
+/** Step-by-step instructions shown on a page (each step's name and text as displayed there) */
+export function howToSchema(name: string, path: string, steps: { name: string; text: string }[]) {
+  return graph({
+    '@type': 'HowTo',
+    name,
+    url: abs(path),
+    step: steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s.name, text: s.text })),
+  });
 }
 
 const MATCH_STATUS: Record<string, string> = {

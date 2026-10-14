@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth-context';
 import { sponsorHref } from '@/lib/sponsors';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
+import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import './home.css';
 import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
@@ -668,21 +669,13 @@ export default function PlatformHomePage() {
             <h2 className="lp-h2">Live before your next training session.</h2>
           </div>
           <div className="lp-steps">
-            <div className="lp-step lp-reveal">
-              <div className="lp-step-n">01</div>
-              <h3>Claim your club</h3>
-              <p>Pick your name and web address, upload your crest and choose your colours. The kit preview updates as you go.</p>
-            </div>
-            <div className="lp-step lp-reveal">
-              <div className="lp-step-n">02</div>
-              <h3>Bring in the squad</h3>
-              <p>Import members in bulk, add fixtures for the season and appoint your committee.</p>
-            </div>
-            <div className="lp-step lp-reveal">
-              <div className="lp-step-n">03</div>
-              <h3>Share the link</h3>
-              <p>Post your club address in the group chat. From then on, matchday runs from your phone.</p>
-            </div>
+            {CREATE_CLUB_STEPS.map((s, i) => (
+              <div key={s.name} className="lp-step lp-reveal">
+                <div className="lp-step-n">0{i + 1}</div>
+                <h3>{s.name}</h3>
+                <p>{s.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/JsonLd';
 import { fitDescription, pageMetadata } from '@/lib/seo';
+import { clubsDirectorySchema } from '@/lib/schema';
+import { listActiveClubs } from '@/lib/supabase/club-lookup';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Football Clubs Directory | itsfootball.club',
@@ -10,6 +13,11 @@ export const metadata: Metadata = pageMetadata({
   path: '/clubs',
 });
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd data={clubsDirectorySchema(await listActiveClubs())} />
+      {children}
+    </>
+  );
 }

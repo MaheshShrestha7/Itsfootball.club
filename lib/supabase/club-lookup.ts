@@ -235,6 +235,41 @@ export async function findTeamBySlug(clubId: string, slug: string): Promise<Team
   }
 }
 
+/** Every active club, for the /clubs directory's schema */
+export async function listActiveClubs(): Promise<ClubMetadataRow[]> {
+  return (await fetchActiveClubs()) || [];
+}
+
+export interface ShopProductRow {
+  name: string;
+  description: string | null;
+  photos: string[];
+  price_cents: number;
+}
+
+/** A club's products on sale and the currency it charges in, for the shop's schema. Fresh within a minute,
+ *  since Google expects schema prices to match the page. */
+export async function listClubShop(clubId: string): Promise<{ products: ShopProductRow[]; currency: string }> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const empty = { products: [], currency: 'AUD' };
+  if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId)) return empty;
+  const get = async <T,>(query: string): Promise<T[]> => {
+    const res = await fetch(`${url}/rest/v1/${query}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } });
+    return res.ok ? res.json() : [];
+  };
+  try {
+    const [products, settings] = await Promise.all([
+      get<ShopProductRow>(`shop_products?select=name,description,photos,price_cents&club_id=eq.${clubId}&is_active=eq.true&order=sort_order`),
+      get<{ currency: string | null }>(`club_payment_settings?select=currency&club_id=eq.${clubId}`),
+    ]);
+    // Same default as the shop page shows
+    return { products, currency: settings[0]?.currency || 'AUD' };
+  } catch {
+    return empty;
+  }
+}
+
 /** Up to 5,000 rows of a REST query, a page at a time (Supabase returns at most 1,000 per request) */
 async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

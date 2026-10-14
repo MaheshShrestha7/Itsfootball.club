@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/JsonLd';
 import { fitDescription, pageMetadata } from '@/lib/seo';
+import { howToSchema } from '@/lib/schema';
+import { CREATE_CLUB_STEPS } from '@/lib/faq';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Create a Football Club Website | itsfootball.club',
@@ -11,5 +14,10 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={howToSchema('How to create a football club website', '/create-club', CREATE_CLUB_STEPS)} />
+      {children}
+    </>
+  );
 }

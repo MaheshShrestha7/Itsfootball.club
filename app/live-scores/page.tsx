@@ -5,6 +5,7 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { pageMetadata } from '@/lib/seo';
+import { howToSchema } from '@/lib/schema';
 
 export const metadata = pageMetadata({
   title: 'Free Live Scores for Community Soccer Clubs | itsfootball.club',
@@ -26,6 +27,16 @@ const faqSchema = {
   '@type': 'FAQPage',
   mainEntity: QUESTIONS.map(i => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
 };
+
+// "How it works on match day": the list on the page and its HowTo schema
+const MATCHDAY_STEPS = [
+  { name: 'Pick your squad', text: 'Players mark themselves available, and you choose the team under Lineup.' },
+  { name: 'Open Match Center at the ground', text: "It's in your club admin and runs on any phone." },
+  { name: 'Tap in what happens', text: 'Goals, penalties, own goals, cards, subs and the whistle, each with the minute.' },
+  { name: 'Supporters watch it live', text: 'The match page updates by itself. No refreshing, no app.' },
+  { name: 'Full time does the rest', text: 'The result, scorers and player stats flow into your fixtures and leaderboard.' },
+];
+const howTo = howToSchema('How to run live scores for a community football match', '/live-scores', MATCHDAY_STEPS);
 
 const ctaStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.45rem' };
 const h2Style: CSSProperties = { fontSize: 'clamp(1.4rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.75rem' };
@@ -66,6 +77,7 @@ export default function LiveScoresPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <JsonLd data={faqSchema} />
+      <JsonLd data={howTo} />
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3.5rem 1rem', flex: 1, maxWidth: '960px' }}>
@@ -112,11 +124,7 @@ export default function LiveScoresPage() {
         <section className="glass-panel" style={{ padding: '2rem 1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
           <h2 style={h2Style}>How it works on match day</h2>
           <ol className="vs-steps" style={{ maxWidth: '560px' }}>
-            <li><span><strong>Pick your squad.</strong> Players mark themselves available, and you choose the team under Lineup.</span></li>
-            <li><span><strong>Open Match Center at the ground.</strong> It&apos;s in your club admin and runs on any phone.</span></li>
-            <li><span><strong>Tap in what happens.</strong> Goals, penalties, own goals, cards, subs and the whistle, each with the minute.</span></li>
-            <li><span><strong>Supporters watch it live.</strong> The match page updates by itself. No refreshing, no app.</span></li>
-            <li><span><strong>Full time does the rest.</strong> The result, scorers and player stats flow into your fixtures and leaderboard.</span></li>
+            {MATCHDAY_STEPS.map(s => <li key={s.name}><span><strong>{s.name}.</strong> {s.text}</span></li>)}
           </ol>
         </section>
 
