@@ -270,6 +270,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Member Portal</Link>
                   <Link href={`/${club.slug}/verify`} style={{ color: 'var(--text-secondary)' }}>Pass Verification Portal</Link>
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
+                  <Link href="/vs" style={{ color: 'var(--text-secondary)' }}>Compare</Link>
                 </>
               ) : (
                 <>
@@ -277,6 +278,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/my-clubs" style={{ color: 'var(--text-secondary)' }}>My Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Register New Club</Link>
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
+                  <Link href="/vs" style={{ color: 'var(--text-secondary)' }}>Compare</Link>
                 </>
               )}
             </div>

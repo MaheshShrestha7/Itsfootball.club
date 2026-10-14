@@ -93,6 +93,11 @@ export default function FaqPage() {
                 <details key={i.q} open={id === 'pricing' && n === 0} className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: `3px solid ${color}` }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-primary)' }}>{i.q}</summary>
                   <p style={{ color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.65 }}>{withEmailLink(i.a)}</p>
+                  {i.link && (
+                    <Link href={i.link.href} style={{ ...ctaStyle, gap: '0.3rem', marginTop: '0.6rem', color: 'var(--club-ink)', fontWeight: 600, fontSize: '0.92rem' }}>
+                      {i.link.label} <ArrowRight size={14} />
+                    </Link>
+                  )}
                 </details>
               ))}
             </div>
