@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { newsPath } from '@/lib/slugs';
+import { COMPETITORS } from '@/lib/competitors';
 
 // Generated per request from live data. Not ISR: open-next.config.ts has no incremental cache store,
 // so on Cloudflare a revalidated sitemap would never be saved and the build-time copy would be served forever.
@@ -24,6 +25,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/clubs'), changeFrequency: 'daily', priority: 0.8 },
     { url: url('/create-club'), changeFrequency: 'monthly', priority: 0.7 },
     { url: url('/faq'), changeFrequency: 'monthly', priority: 0.5 },
+    { url: url('/vs'), changeFrequency: 'monthly', priority: 0.5 },
+    ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.4 })),
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },
     { url: url('/terms'), changeFrequency: 'yearly', priority: 0.2 },
   ];
