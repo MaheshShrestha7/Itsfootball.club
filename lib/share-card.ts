@@ -65,6 +65,14 @@ function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: 
   return min;
 }
 
+/** `text` cut with "…" to fit `maxWidth` at the current font */
+function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
 /** Up to two centred lines (a long team name wraps instead of shrinking to nothing) */
 function wrapTwo(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxWidth: number, family: string, x: number, y: number) {
   ctx.font = `${weight} ${size}px ${family}`;
@@ -215,34 +223,43 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.textBaseline = 'middle';
   const M = 72; // side margin
 
-  // Header: crest and club name on the left, the competition on the right
+  // Header: crest and club name on the left, the competition on the right, or on a row of its own
+  // underneath when a long club name leaves no room for it
   // Stories keep clear of the app's own bars (profile at the top, reply box at the bottom)
   const headY = story ? 270 : 100;
+  const textX = M + 124;
   drawContain(ctx, clubCrest, M + 50, headY, 100);
   ctx.textAlign = 'left';
   ctx.fillStyle = INK;
-  fit(ctx, club.name, 800, 40, W - M * 2 - 130 - 300, heading);
-  ctx.fillText(club.name, M + 124, headY - 20);
+  fit(ctx, club.name, 800, 40, W - M - textX, heading, 26);
+  const clubName = ellipsize(ctx, club.name, W - M - textX);
+  ctx.fillText(clubName, textX, headY - 20);
+  const nameW = ctx.measureText(clubName).width;
   ctx.fillStyle = FAINT;
   spaced(ctx, 4);
   ctx.font = `700 24px ${body}`;
   const eyebrow = kind !== 'score' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
-  ctx.fillText(eyebrow, M + 124, headY + 26);
+  ctx.fillText(eyebrow, textX, headY + 26);
   spaced(ctx, 0);
-  const competition = (match.title || match.competition || '').toUpperCase();
+  // The competition only: a custom title ("X vs Y") repeats what the card already shows
+  const competition = (match.competition || '').trim().toUpperCase();
   if (competition) {
     spaced(ctx, 2);
-    const size = fit(ctx, competition, 700, 24, 280, body, 18);
-    const pillW = ctx.measureText(competition).width + 44;
-    roundRect(ctx, W - M - pillW, headY - 26, pillW, 52, 26);
+    ctx.font = `700 22px ${body}`;
+    const room = W - M - (textX + Math.max(nameW, ctx.measureText(eyebrow).width + 60)) - 32;
+    const sameRow = ctx.measureText(competition).width + 44 <= room;
+    const label = sameRow ? competition : ellipsize(ctx, competition, W - M * 2 - 44);
+    const pillW = ctx.measureText(label).width + 44;
+    const pillX = sameRow ? W - M - pillW : M;
+    const pillY = sameRow ? headY : headY + (story ? 96 : 72);
+    roundRect(ctx, pillX, pillY - 25, pillW, 50, 25);
     ctx.fillStyle = rgba(primary, 0.18);
     ctx.fill();
     ctx.strokeStyle = rgba(ink, 0.55);
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = ink;
-    ctx.font = `700 ${size}px ${body}`;
-    ctx.fillText(competition, W - M - pillW + 22, headY + 1);
+    ctx.fillText(label, pillX + 22, pillY + 1);
     spaced(ctx, 0);
   }
   ctx.textAlign = 'center';
@@ -277,7 +294,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const { day, time } = kickoff(match);
 
     ctx.fillStyle = MUTED;
-    const sub = `vs ${opponent}${formation ? ` · ${formation}` : ''}`;
+    const sub = `vs ${opponent}${formation && formation.toLowerCase() !== 'custom' ? ` · ${formation}` : ''}`;
     fit(ctx, sub, 600, 38, W - M * 2, body);
     ctx.fillText(sub, W / 2, hlY + 100);
 
@@ -457,7 +474,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         ctx.fillStyle = ink;
         ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
         ctx.textAlign = 'center';
-        ctx.fillText(String(p.number ?? ''), M + 90, y);
+        if (p.number > 0) ctx.fillText(String(p.number), M + 90, y); // no shirt number: no "0"
         ctx.textAlign = 'left';
         ctx.fillStyle = INK;
         const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
