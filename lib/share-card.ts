@@ -6,7 +6,7 @@
 import { DEFAULT_CREST } from '@/lib/crest';
 import { corsCopy } from '@/lib/image-color';
 import { SITE_URL } from '@/lib/slugs';
-import { readableClubInk } from '@/lib/theme-utils';
+import { evaluateColorContrast, readableClubInk } from '@/lib/theme-utils';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 
 export type CardKind = 'score' | 'lineup';
@@ -275,32 +275,97 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     fit(ctx, sub, 600, 38, W - M * 2, body);
     ctx.fillText(sub, W / 2, hlY + 100);
 
-    const rowH = story ? 74 : 64;
-    const top = story ? 670 : 470;
-    glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
-    ctx.textAlign = 'left';
-    xi.forEach((p, i) => {
-      const y = top + 24 + rowH * i + rowH / 2;
-      if (i > 0) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-        ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
-      }
-      ctx.fillStyle = ink;
-      ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
-      ctx.textAlign = 'center';
-      ctx.fillText(String(p.number ?? ''), M + 90, y);
+    // Players placed on the lineup pitch: drawn where the coach put them, else as a numbered list
+    const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
+    const spread = placed.length > 1 && new Set(placed.map(p => `${Math.round(p.x)}:${Math.round(p.y)}`)).size > 1;
+    let after: number;
+    if (spread) {
+      const top = story ? 650 : 430;
+      const pitchH = story ? 900 : 800;
+      const pitchW = W - M * 2;
+      glass(ctx, M, top, pitchW, pitchH, 36);
+      // Markings: halfway line, centre circle and both penalty boxes, the club's own end at the bottom
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(M, top + pitchH / 2);
+      ctx.lineTo(M + pitchW, top + pitchH / 2);
+      ctx.moveTo(W / 2 + 90, top + pitchH / 2);
+      ctx.arc(W / 2, top + pitchH / 2, 90, 0, Math.PI * 2);
+      const boxW = pitchW * 0.5;
+      const boxH = pitchH * 0.14;
+      ctx.rect(W / 2 - boxW / 2, top, boxW, boxH);
+      ctx.rect(W / 2 - boxW / 2, top + pitchH - boxH, boxW, boxH);
+      ctx.stroke();
+
+      // Same mapping as the vertical TacticalPitch: across = y, up the pitch = x
+      const pad = story ? 80 : 70;
+      const r = story ? 38 : 32;
+      const nameSize = story ? 28 : 24;
+      placed.forEach(p => {
+        const cx = M + pad + (Math.min(100, Math.max(0, p.y)) / 100) * (pitchW - pad * 2);
+        const cy = top + pitchH - pad - (Math.min(100, Math.max(0, p.x)) / 100) * (pitchH - pad * 2 - nameSize);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = primary;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = evaluateColorContrast(primary).bestTextColor;
+        ctx.font = `900 ${Math.round(r * 0.95)}px ${heading}`;
+        ctx.fillText(String(p.number ?? ''), cx, cy + 2);
+        if (p.is_captain) {
+          const bx = cx + r * 0.78;
+          const by = cy - r * 0.78;
+          ctx.beginPath();
+          ctx.arc(bx, by, r * 0.42, 0, Math.PI * 2);
+          ctx.fillStyle = '#F59E0B';
+          ctx.fill();
+          ctx.fillStyle = '#111827';
+          ctx.font = `900 ${Math.round(r * 0.5)}px ${heading}`;
+          ctx.fillText('C', bx, by + 1);
+        }
+        // Surname only, so names don't run into each other ("Sam T." stays whole for juniors)
+        const parts = p.name.trim().split(/\s+/);
+        const label = parts.length > 1 && !/\.$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : p.name.trim();
+        ctx.fillStyle = INK;
+        fit(ctx, label, 700, nameSize, 190, body, 18);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 8;
+        ctx.fillText(label, cx, cy + r + nameSize * 0.85);
+        ctx.shadowBlur = 0;
+      });
+      after = top + pitchH;
+    } else {
+      const rowH = story ? 74 : 64;
+      const top = story ? 670 : 470;
+      glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
       ctx.textAlign = 'left';
-      ctx.fillStyle = INK;
-      const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
-      fit(ctx, name, 700, story ? 42 : 36, W - M * 2 - 220, body);
-      ctx.fillText(name, M + 160, y);
-    });
-    ctx.textAlign = 'center';
+      xi.forEach((p, i) => {
+        const y = top + 24 + rowH * i + rowH / 2;
+        if (i > 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+          ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
+        }
+        ctx.fillStyle = ink;
+        ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(String(p.number ?? ''), M + 90, y);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = INK;
+        const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
+        fit(ctx, name, 700, story ? 42 : 36, W - M * 2 - 220, body);
+        ctx.fillText(name, M + 160, y);
+      });
+      ctx.textAlign = 'center';
+      after = top + rowH * xi.length + 48;
+    }
     if (story && (day || time)) {
       ctx.fillStyle = MUTED;
       const when = [day, time, match.venue].filter(Boolean).join(' · ');
       fit(ctx, when, 600, 34, W - M * 2, body);
-      ctx.fillText(when, W / 2, top + rowH * xi.length + 48 + 64);
+      ctx.fillText(when, W / 2, after + 64);
     }
   } else {
     const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
