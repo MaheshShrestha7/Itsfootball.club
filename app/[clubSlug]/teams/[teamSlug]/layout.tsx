@@ -24,7 +24,7 @@ export async function generateMetadata({
       title: fitTitle(team.name, clubName(club), SITE_NAME),
       description: fitDescription(
         team.description || `${club.name} ${team.name}: squad, coaches, fixtures and results.`,
-        'Follow every game live on the club match center.'
+        'Follow every game live on the club match centre.'
       ),
       path,
       ...(team.logo_url ? { image: team.logo_url, imageIsSquare: true } : clubImage(club)),

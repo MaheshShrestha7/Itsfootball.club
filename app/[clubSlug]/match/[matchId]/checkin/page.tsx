@@ -160,7 +160,7 @@ export default function MatchDoorCheckinPage({
             }}
           >
             <ArrowLeft size={16} />
-            <span>Back to Match Center</span>
+            <span>Back to Match Centre</span>
           </Link>
 
           <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid #10B981' }}>
@@ -259,7 +259,7 @@ export default function MatchDoorCheckinPage({
               Door QR code self-check-in has not been activated by match stewards for this fixture. Please present your pass or ticket directly at the turnstiles.
             </p>
             <Link href={`/${club.slug}/match/${match.id}`} className="btn btn-secondary">
-              Go to Match Center
+              Go to Match Centre
             </Link>
           </div>
         ) : result?.success ? (
@@ -340,7 +340,7 @@ export default function MatchDoorCheckinPage({
                 Check In Another Attendee
               </button>
               <Link href={`/${club.slug}/match/${match.id}`} className="btn btn-primary btn-sm">
-                Enter Match Center
+                Enter Match Centre
               </Link>
             </div>
           </div>

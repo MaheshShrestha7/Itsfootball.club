@@ -202,7 +202,7 @@ export default function DraftLineupPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
               <Link href={`/${club.slug}/admin`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Admin</Link>
               <ChevronRight size={14} />
-              <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Match Center</Link>
+              <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Match Centre</Link>
               <ChevronRight size={14} />
               <span className="text-primary">Draft Lineup Workbench</span>
             </div>
@@ -241,7 +241,7 @@ export default function DraftLineupPage() {
               }}
             >
               <Send size={15} />
-              <span>Publish to Match Center</span>
+              <span>Publish to Match Centre</span>
             </button>
           </div>
         </div>
@@ -375,9 +375,9 @@ export default function DraftLineupPage() {
                   <Send size={22} color="var(--c-green)" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)' }}>Publish Lineup to Match Center?</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)' }}>Publish Lineup to Match Centre?</h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                    This saves the lineup shown on the board and immediately updates the live public match center.
+                    This saves the lineup shown on the board and immediately updates the live public match centre.
                   </p>
                 </div>
               </div>

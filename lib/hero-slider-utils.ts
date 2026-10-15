@@ -35,7 +35,7 @@ export function getDefaultHeroPinnedItems(
       subtitle: `${compLabel} • ${liveOrUpcoming.venue}`,
       badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(liveOrUpcoming)}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
       image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
-      cta_label: isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups',
+      cta_label: isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${liveOrUpcoming.id}`,
       is_active: true,
       order: 1,

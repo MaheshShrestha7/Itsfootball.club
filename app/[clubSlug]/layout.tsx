@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
     ...pageMetadata({
       title: fitTitle(clubName(club), 'Fixtures, Squad & Live Scores', SITE_NAME),
       description: fitDescription(
-        `Official website of ${club.name}: live match center, fixtures, results, squad, club news and sponsors.`,
+        `Official website of ${club.name}: live match centre, fixtures, results, squad, club news and sponsors.`,
         club.motto && `${club.motto.replace(/[.!\s]+$/, '')}.`,
         'Follow the club and join as a member today.',
         'Join the club today.',

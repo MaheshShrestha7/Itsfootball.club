@@ -324,7 +324,7 @@ export default function AdminDashboardPage({
             <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
               <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No fixture currently marked as LIVE.</p>
               <Link href={`/${club.slug}/admin/match-center`} className="btn btn-secondary btn-sm">
-                Initialize Match Center
+                Initialize Match Centre
               </Link>
             </div>
           )}

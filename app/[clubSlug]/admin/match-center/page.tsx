@@ -50,7 +50,7 @@ export default function AdminMatchCenterControllerPage({
   searchParams: Promise<{ match?: string }>;
 }) {
   const resolvedParams = use(params);
-  // ?match=<id> opens that fixture (e.g. the "Match Center" button on a tournament fixture)
+  // ?match=<id> opens that fixture (e.g. the "Match Centre" button on a tournament fixture)
   const { match: requestedMatchId } = use(searchParams);
   const {
     clubs,
@@ -420,7 +420,7 @@ export default function AdminMatchCenterControllerPage({
       // The format picked on the pitch (11v11 / 9v9 / 7v7), else the one already published
       match_format: pitchFormat?.matchId === match.id ? pitchFormat.format : match.match_format,
     });
-    showFeedback(`Tactical lineup & ${formationName} formation published live to Match Center!`);
+    showFeedback(`Tactical lineup & ${formationName} formation published live to Match Centre!`);
   };
 
   return (
@@ -504,7 +504,7 @@ export default function AdminMatchCenterControllerPage({
             className="btn btn-secondary btn-sm touch-target"
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(var(--tint-rgb), 0.15)' }}
           >
-            <span>Public Match Center</span>
+            <span>Public Match Centre</span>
             <ExternalLink size={14} />
           </Link>
         </div>
@@ -1216,7 +1216,7 @@ export default function AdminMatchCenterControllerPage({
                   <Move size={20} color="var(--c-amber)" /> Tactical Pitch & Free-Form Manager
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
-                  Coaches can choose a tactical preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or freely drag and drop any player node into custom shapes. Click &quot;Save Shape&quot; to publish directly to the live match center.
+                  Coaches can choose a tactical preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or freely drag and drop any player node into custom shapes. Click &quot;Save Shape&quot; to publish directly to the live match centre.
                 </p>
               </div>
             </div>

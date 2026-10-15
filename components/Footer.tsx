@@ -184,7 +184,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
               {club
                 ? `${sentence(club.motto) || 'Dedicated to the beautiful game.'} Home matches played at ${club.stadium_name}.`
-                : 'The free platform for grassroots football clubs: club websites, live match centres, digital member passes and club shops.'}
+                : 'The free platform for grassroots football and soccer clubs: club websites, live match centres, digital member passes and club shops.'}
             </p>
             {!club && (
               <div className="row" style={{ gap: '0.6rem' }}>
@@ -234,7 +234,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
               {club ? (
                 <>
                   <Link href={`/${club.slug}/about`} style={{ color: 'var(--text-secondary)' }}>About the Club</Link>
-                  <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
+                  <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Centre</Link>
                   <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Fixtures &amp; Results</Link>
                   <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)' }}>First Team Squad</Link>
                   <Link href={`/${club.slug}#leaderboard`} style={{ color: 'var(--text-secondary)' }}>Player Leaderboards</Link>
@@ -244,7 +244,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                 <>
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Explore Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Launch a New Club</Link>
-                  <Link href="/live-scores" style={{ color: 'var(--text-secondary)' }}>Live Match Center</Link>
+                  <Link href="/live-scores" style={{ color: 'var(--text-secondary)' }}>Live Match Centre</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}

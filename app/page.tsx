@@ -5,9 +5,9 @@ import JsonLd from '@/components/JsonLd';
 import HomeClient from './HomeClient';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'Football Club Website & Live Match Center | itsfootball.club',
+  title: 'Free Football & Soccer Club Websites | itsfootball.club',
   description: fitDescription(
-    'Launch your football club website with live match centers, digital member passes, squad lineups, a club shop and sponsor showcases.',
+    'Free websites for football and soccer clubs, with a live match centre, digital member passes, squad lineups, a club shop and sponsor showcases.',
     'Create your club free today.'
   ),
   path: '/',

@@ -14,7 +14,7 @@ export const metadata = pageMetadata({
 });
 
 const QUESTIONS = [
-  { q: 'How do community soccer clubs post live scores?', a: "Open Match Center in your itsfootball.club admin on a phone at the ground and record goals, cards and substitutions as they happen. Supporters follow the club's match page live, with nothing to install." },
+  { q: 'How do community soccer clubs post live scores?', a: "Open Match Centre in your itsfootball.club admin on a phone at the ground and record goals, cards and substitutions as they happen. Supporters follow the club's match page live, with nothing to install." },
   { q: 'Is there a free live score app for grassroots football?', a: "Yes. itsfootball.club's live match centre is free for every club, with no paid plan. Supporters don't need an app at all; they follow the match on the club's website." },
   { q: 'Can parents follow the game without downloading anything?', a: "Yes. Share the match link and anyone can open it in their phone's browser and watch the score update live." },
   { q: 'Can we hide scores for junior teams?', a: 'Yes. Each team has a hide scores setting that keeps goals and the score off the public match page and share graphics, while the lineup and other events still show.' },
@@ -31,7 +31,7 @@ const faqSchema = {
 // "How it works on match day": the list on the page and its HowTo schema
 const MATCHDAY_STEPS = [
   { name: 'Pick your squad', text: 'Players mark themselves available, and you choose the team under Lineup.' },
-  { name: 'Open Match Center at the ground', text: "It's in your club admin and runs on any phone." },
+  { name: 'Open Match Centre at the ground', text: "It's in your club admin and runs on any phone." },
   { name: 'Tap in what happens', text: 'Goals, penalties, own goals, cards, subs and the whistle, each with the minute.' },
   { name: 'Supporters watch it live', text: 'The match page updates by itself. No refreshing, no app.' },
   { name: 'Full time does the rest', text: 'The result, scorers and player stats flow into your fixtures and leaderboard.' },

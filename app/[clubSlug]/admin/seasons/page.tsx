@@ -506,7 +506,7 @@ export default function AdminSeasonsPage({
         <Link href={`/${club.slug}/admin/match-center`} className="glass-panel glass-panel-interactive" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)', textTransform: 'uppercase' }}>MATCHES & FIXTURES</div>
-            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginTop: '2px' }}>Manage Match Center</div>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginTop: '2px' }}>Manage Match Centre</div>
           </div>
           <ArrowRight size={18} color="var(--text-muted)" />
         </Link>

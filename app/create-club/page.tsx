@@ -847,7 +847,7 @@ export default function CreateClubPage() {
                     <CheckCircle2 size={18} /> Ready to Initialize Tenant
                   </div>
                   <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-                    Your dedicated club portal, match center, virtual passes, and admin portal will be immediately activated at <strong>/{formData.slug}</strong>.
+                    Your dedicated club portal, match centre, virtual passes, and admin portal will be immediately activated at <strong>/{formData.slug}</strong>.
                   </p>
                 </div>
 

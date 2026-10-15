@@ -316,7 +316,7 @@ export default function MyClubsPage() {
                               href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}/admin/match-center`}
                               className="btn btn-secondary touch-target"
                               style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
-                              title="Live Match Center"
+                              title="Live Match Centre"
                             >
                               <Radio size={13} color="var(--c-red)" />
                               <span>Match</span>
@@ -475,7 +475,7 @@ export default function MyClubsPage() {
                                 href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
                                 className="btn btn-secondary touch-target"
                                 style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
-                                title="Live Match Center"
+                                title="Live Match Centre"
                               >
                                 <Radio size={13} color="var(--c-red)" />
                                 <span>Match</span>
@@ -524,7 +524,7 @@ export default function MyClubsPage() {
                       Launch a new club
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px' }}>
-                      Set up a club website with its own crest, kit colours, squad roster and match center.
+                      Set up a club website with its own crest, kit colours, squad roster and match centre.
                     </p>
                   </div>
                 </div>
