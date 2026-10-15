@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { ToolUpdated, h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
+import { GUIDES, GUIDES_HUB } from '@/lib/guides';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOOL_GROUPS, TOOLS_HUB, TOURNAMENT_TOOL, TOOLS_UPDATED, type ToolPageLink, toolOgImage } from '@/lib/tool-pages';
 
@@ -135,6 +136,23 @@ export default function ToolsHubPage() {
               <li key={n.need}>
                 <strong>{n.need}</strong>{' '}
                 <span>Use the <Link href={n.tool.path} style={linkStyle}>{n.tool.label.toLowerCase()}</Link>: {n.answer}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section style={{ marginTop: '2.5rem' }} aria-labelledby="guides">
+          <h2 id="guides" style={h2Style}>Guides</h2>
+          <p style={{ ...bodyStyle, marginTop: 0 }}>
+            Short, sourced answers to the rules and numbers behind the tools. <Link href={GUIDES_HUB.path} style={linkStyle}>All guides</Link>.
+          </p>
+          <ul className="tool-links">
+            {GUIDES.map(g => (
+              <li key={g.path}>
+                <Link href={g.path} className="glass-panel tool-link">
+                  <strong>{g.label}</strong>
+                  <span>{g.blurb}</span>
+                </Link>
               </li>
             ))}
           </ul>

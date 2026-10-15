@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { FORMAT_PAGES } from '@/lib/tool-pages';
+import { GUIDES } from '@/lib/guides';
 import { newsPath } from '@/lib/slugs';
 import { COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
@@ -41,6 +42,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/tools/equal-playing-time-calculator'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/season-fee-calculator'), changeFrequency: 'monthly', priority: 0.6 },
     ...FORMAT_PAGES.map(t => ({ url: url(t.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/guides'), changeFrequency: 'monthly', priority: 0.6 },
+    ...GUIDES.map(g => ({ url: url(g.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/vs'), changeFrequency: 'monthly', priority: 0.6 },
     ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },

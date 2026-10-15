@@ -3134,6 +3134,25 @@ dialog.confirm-dialog::backdrop {
 .tool-example { margin: 0; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
 .tool-example img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border-subtle); }
 .tool-example figcaption { font-size: 0.88rem; color: var(--text-secondary); text-align: center; }
+/* Guides (/guides/*): the short answer, the link into the tool and the sources */
+.guide-answer { padding: 1.4rem 1.6rem; border-left: 3px solid var(--club-primary); }
+.guide-answer h2 { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--club-ink); margin: 0 0 0.5rem; }
+.guide-answer p { font-size: 1.05rem; line-height: 1.65; color: var(--text-primary); margin: 0; }
+.guide-answer p + p { margin-top: 0.7rem; font-size: 0.95rem; color: var(--text-secondary); }
+.guide-body p { color: var(--text-secondary); line-height: 1.7; margin: 0 0 0.8rem; }
+.guide-body ul { color: var(--text-secondary); line-height: 1.7; padding-left: 1.2rem; margin: 0 0 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.guide-body strong { color: var(--text-primary); }
+.guide-body blockquote { margin: 0 0 0.8rem; padding: 0.6rem 1rem; border-left: 3px solid rgba(var(--club-primary-rgb), 0.5); color: var(--text-primary); font-style: italic; background: rgba(var(--club-primary-rgb), 0.06); border-radius: 0 10px 10px 0; }
+.guide-body blockquote cite { display: block; margin-top: 0.3rem; font-style: normal; font-size: 0.8rem; color: var(--text-muted); }
+.guide-body .glass-panel + p { margin-top: 0.9rem; }
+.guide-cta { margin-top: 2.5rem; padding: 1.5rem 1.6rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; background: linear-gradient(135deg, rgba(var(--club-primary-rgb), 0.16), rgba(var(--club-primary-rgb), 0.04)); }
+.guide-cta > div { flex: 1 1 320px; }
+.guide-cta h2 { font-size: 1.2rem; font-weight: 900; margin: 0 0 0.3rem; }
+.guide-cta p { color: var(--text-secondary); line-height: 1.6; margin: 0; }
+.guide-cta .btn { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.guide-cta .guide-cta-more { flex-basis: 100%; font-size: 0.88rem; }
+.guide-sources { margin: 0 0 0.8rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; line-height: 1.5; }
+.guide-sources span { display: block; font-size: 0.84rem; color: var(--text-muted); }
 /* Free equal playing time calculator (/tools/equal-playing-time-calculator): the lineup builder's glass
    layout, with the match and squad on the left and the plan (rotation chart and schedule) on the right */
 .pt-tool { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }

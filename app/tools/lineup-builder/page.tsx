@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { ToolBreadcrumb, ToolExampleFigure, ToolLinks, ToolUpdated, toolBreadcrumbSchema, toolSchemaExtras } from '@/components/ToolLandingPage';
+import { GuideLinks, ToolBreadcrumb, ToolExampleFigure, ToolLinks, ToolUpdated, toolBreadcrumbSchema, toolSchemaExtras } from '@/components/ToolLandingPage';
 import { LINEUP_FORMAT_PAGES, toolOgImage } from '@/lib/tool-pages';
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
@@ -168,6 +168,7 @@ export default function LineupBuilderPage() {
           </p>
         </section>
 
+        <GuideLinks path={PATH} />
         <ToolLinks path={PATH} heading="Builders for each format" />
       </main>
 
