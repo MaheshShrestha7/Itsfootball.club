@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
+import { ToolLinks } from '@/components/ToolLandingPage';
+import { LINEUP_FORMAT_PAGES } from '@/lib/tool-pages';
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
@@ -89,6 +91,9 @@ const schema = {
 
 const howTo = howToSchema('How to make a football lineup graphic', PATH, STEPS);
 
+/** The format's own landing page, if it has one */
+const page = (format: string) => LINEUP_FORMAT_PAGES.find(p => p.path.includes(`/${format}-`));
+
 const h2Style: CSSProperties = { fontSize: 'clamp(1.3rem, 3.2vw, 1.6rem)', fontWeight: 900, marginBottom: '0.75rem' };
 const bodyStyle: CSSProperties = { color: 'var(--text-secondary)', lineHeight: 1.7 };
 const linkStyle: CSSProperties = { color: 'var(--club-ink)', fontWeight: 600 };
@@ -131,6 +136,7 @@ export default function LineupBuilderPage() {
             {FORMATIONS.map(f => (
               <div key={f.format} className="glass-panel" style={{ padding: '1.1rem 1.25rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{f.format}</h3>
+                {page(f.format) && <Link href={page(f.format)!.path} style={{ ...linkStyle, fontSize: '0.82rem' }}>Open the {page(f.format)!.label}</Link>}
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.15rem 0 0.6rem' }}>{f.note}</p>
                 <ul className="lineup-formation-list">
                   {f.shapes.map(s => <li key={s}>{s}</li>)}
@@ -162,6 +168,8 @@ export default function LineupBuilderPage() {
             or <Link href="/create-club" style={linkStyle}>launch your free club site</Link>.
           </p>
         </section>
+
+        <ToolLinks path={PATH} heading="Builders for each format" />
       </main>
 
       <Footer />
