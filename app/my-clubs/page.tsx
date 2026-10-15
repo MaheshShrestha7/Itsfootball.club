@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { isEventClub, tournamentManagePath, tournamentPagePath } from '@/lib/public-tournaments';
 import { clubInkVars } from '@/lib/theme-utils';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
@@ -52,6 +53,7 @@ export default function MyClubsPage() {
   const ownedClubs = useMemo(() => {
     if (!user) return [];
     return clubs.filter(c => {
+      if (isEventClub(c)) return false; // listed under "Your tournaments" instead
       // 1. Direct owner_id assignment
       if (c.owner_id && c.owner_id === user.id) return true;
       // 2. Explicit role in user's club_roles
@@ -66,9 +68,14 @@ export default function MyClubsPage() {
     if (!user) return [];
     return clubs.filter(c => {
       const role = user.club_roles?.[c.id];
-      return !!role && role !== 'owner' && !ownedClubs.some(oc => oc.id === c.id);
+      return !!role && role !== 'owner' && !isEventClub(c) && !ownedClubs.some(oc => oc.id === c.id);
     });
   }, [clubs, user, ownedClubs]);
+  // Public tournament pages this user runs (each lives in a tournament-only club)
+  const ownTournaments = useMemo(() => {
+    if (!user) return [];
+    return clubs.filter(c => isEventClub(c) && (c.owner_id === user.id || !!user.club_roles?.[c.id]));
+  }, [clubs, user]);
   const hasClubs = ownedClubs.length > 0 || memberClubs.length > 0;
 
   return (
@@ -176,6 +183,28 @@ export default function MyClubsPage() {
                 </div>
               )}
             </div>
+
+            {ownTournaments.length > 0 && (
+              <section style={{ marginBottom: '2.5rem' }} aria-labelledby="your-tournaments">
+                <h2 id="your-tournaments" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Trophy size={18} color="var(--c-amber)" /> Your Tournaments
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {ownTournaments.map(t => (
+                    <div key={t.id} className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <div className="min-w-0">
+                        <div style={{ fontWeight: 800 }}>{t.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>itsfootball.club{tournamentPagePath(t.slug)}</div>
+                      </div>
+                      <div className="row row-wrap">
+                        <Link href={tournamentPagePath(t.slug)} className="btn btn-secondary btn-sm">View page</Link>
+                        <Link href={tournamentManagePath(t.slug)} className="btn btn-primary btn-sm">Enter scores</Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Tiled Grid of Owned Clubs */}
             {hasClubs ? (

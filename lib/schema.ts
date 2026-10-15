@@ -317,3 +317,35 @@ export function tournamentSchema(club: ClubMetadataRow, tournament: TournamentMe
     image: absUrl(tournament.banner_url) || absUrl(club.banner_url) || absUrl(club.logo_url),
   });
 }
+
+/** A public tournament page (/tournaments/{slug}): the event, its organiser, and a breadcrumb */
+export function publicTournamentSchema(club: ClubMetadataRow, tournament: TournamentMetadataRow) {
+  const url = abs(`/tournaments/${club.slug}`);
+  const organiser = club.config?.organiser;
+  return graph(
+    {
+      '@type': 'SportsEvent',
+      '@id': `${url}#event`,
+      url,
+      name: tournament.name,
+      description: tournament.description,
+      sport: 'Soccer',
+      startDate: tournament.start_date,
+      endDate: tournament.end_date,
+      eventStatus: 'https://schema.org/EventScheduled',
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      isAccessibleForFree: true,
+      location: tournament.venue ? { '@type': 'Place', name: tournament.venue, address: tournament.venue } : undefined,
+      organizer: organiser ? { '@type': 'Organization', name: organiser } : undefined,
+      image: absUrl(tournament.banner_url),
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: SITE_NAME, item: SITE_URL },
+        { '@type': 'ListItem', position: 2, name: 'Tournament maker', item: abs('/tools/tournament-maker') },
+        { '@type': 'ListItem', position: 3, name: tournament.name, item: url },
+      ],
+    }
+  );
+}

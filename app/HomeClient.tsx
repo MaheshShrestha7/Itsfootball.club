@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
+import { isListedClub } from '@/lib/public-tournaments';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
@@ -86,7 +87,9 @@ function initials(name: string) {
 
 export default function PlatformHomePage() {
   const router = useRouter();
-  const { clubs, sponsors } = useClub();
+  const { clubs: allClubs, sponsors } = useClub();
+  // Tournament-only clubs (public tournament pages) aren't clubs to show off
+  const clubs = useMemo(() => allClubs.filter(isListedClub), [allClubs]);
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -97,7 +100,7 @@ export default function PlatformHomePage() {
   const palette = FOOTBALL_COLOR_PALETTES[paletteIdx];
   const onPrimary = evaluateColorContrast(palette.primary).bestTextColor;
   const displayName = clubName.trim() || 'Your Club FC';
-  const slugCheck = useMemo(() => validateClubSlug(clubName, clubs), [clubName, clubs]);
+  const slugCheck = useMemo(() => validateClubSlug(clubName, allClubs), [clubName, allClubs]);
   const previewSlug = slugCheck.cleanSlug || 'yourclub';
 
   // One scripted goal so the mock reads as live: the clock ticks on and the home side scores at 71'

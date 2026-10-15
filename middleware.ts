@@ -4,6 +4,9 @@ import { SITE_URL, isPlatformHost } from './lib/slugs';
 // Pages that only exist on itsfootball.club itself: on a club's own domain they send you back there
 const PLATFORM_PAGES = ['about', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'pricing.md', 'privacy', 'terms', 'vs', 'tools'];
 
+// The framable public tournament embed (see next.config.ts headers)
+const EMBED_PATH = /^\/tournaments\/[^/]+\/embed\/?$/;
+
 // Club domain -> slug (null = no club has it). Per isolate; a changed domain shows up within a minute.
 const HOST_TTL_MS = 60_000;
 const hostCache = new Map<string, { slug: string | null; at: number }>();
@@ -35,8 +38,10 @@ async function slugForHost(host: string): Promise<string | null | undefined> {
 // (see `dynamic` in app/layout.tsx): a cached page would carry a stale nonce.
 export async function middleware(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
-  const csp = (process.env.CSP_TEMPLATE || '').replaceAll('__NONCE__', nonce);
   const { pathname, search } = request.nextUrl;
+  let csp = (process.env.CSP_TEMPLATE || '').replaceAll('__NONCE__', nonce);
+  // A public tournament's embed (read-only) can be framed by any site: club websites, news pages
+  if (EMBED_PATH.test(pathname)) csp = csp.replace("frame-ancestors 'self'", 'frame-ancestors *');
 
   // A club's own domain serves that club's pages at the root: yourclub.com/member is /{slug}/member.
   // Links inside the app still carry the slug (yourclub.com/{slug}/member), and those pass straight through.

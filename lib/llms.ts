@@ -43,6 +43,7 @@ Pages are marked up with schema.org JSON-LD (\`SportsTeam\` for clubs, \`SportsE
 - [Pricing](${SITE_URL}/pricing.md): free for clubs; the booking fee on card payments, in plain text.
 - [Live scores](${SITE_URL}/live-scores): how a club runs a free live match centre that supporters follow in the browser.
 - [Free lineup builder](${SITE_URL}/tools/lineup-builder): a free soccer lineup and team sheet maker: 5, 7, 9 or 11-a-side, 28 formations plus free form, jersey or circle player icons, pitch or list layout, downloaded as a post or story image. No sign-up.
+- [Free tournament maker](${SITE_URL}/tools/tournament-maker): a free soccer tournament and cup bracket maker for organisers without a club site: knockout, league, or groups + knockout, up to 32 teams. Publishes a live page at ${SITE_URL}/tournaments/{name} with fixtures, tables and a bracket that update as scores are entered, plus an embed code for other websites.
 - [Compare alternatives](${SITE_URL}/vs): itsfootball.club side by side with Pitchero, Heja, Spond and Teamer on price, ads, website, match centre, payments and shop, each claim linked to its source. One page per rival at ${SITE_URL}/vs/{name}.
 - [Clubs directory](${SITE_URL}/clubs): every club on the platform, with links to each club site. Supports search: ${SITE_URL}/clubs?q={name}
 - [Create a club](${SITE_URL}/create-club): how a club registers and launches its website.

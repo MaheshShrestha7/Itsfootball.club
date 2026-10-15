@@ -1119,6 +1119,7 @@ export function ClubProvider({
       contact_phone: sanitizeText(clubData.contact_phone),
       custom_domain: normalizeDomain(clubData.custom_domain) || undefined,
       hero_pinned_items: clubData.hero_pinned_items || [],
+      ...(clubData.config ? { config: clubData.config } : {}),
       is_active: true,
       created_at: new Date().toISOString(),
     };

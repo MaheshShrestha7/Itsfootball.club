@@ -59,16 +59,24 @@ export function normalizeDomain(input: string | null | undefined): string {
 export const RESERVED_SLUGS = [
   'api', 'admin', 'about', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'privacy', 'terms', 'vs', 'live-scores', 'tools', 'verify', 'match', 'member',
   'squad', 'events', 'news', 'sponsors', 'branding', 'analytics', 'scanner',
-  'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets'
+  'login', 'register', 'auth', 'settings', 'dashboard', 'static', 'assets', 'tournaments', 'cups'
 ];
 
-/** The club a path belongs to ('/ancc/match/123' -> 'ancc'), or '' for platform pages */
+/**
+ * The club a path belongs to ('/ancc/match/123' -> 'ancc'), or '' for platform pages. A public
+ * tournament page belongs to its tournament-only club ('/tournaments/dashain-cup' -> 'dashain-cup',
+ * see lib/public-tournaments.ts), so its data loads the same way a club page's does.
+ */
 export function clubSlugFromPath(pathname: string | null | undefined): string {
   let first = '';
+  let second = '';
   try {
-    first = decodeURIComponent(pathname?.split('/')[1] || '').toLowerCase();
+    const parts = pathname?.split('/') || [];
+    first = decodeURIComponent(parts[1] || '').toLowerCase();
+    second = decodeURIComponent(parts[2] || '').toLowerCase();
   } catch {
     return ''; // malformed escape in the URL
   }
+  if (first === 'tournaments') return second && !RESERVED_SLUGS.includes(second) ? second : '';
   return first && !RESERVED_SLUGS.includes(first) ? first : '';
 }

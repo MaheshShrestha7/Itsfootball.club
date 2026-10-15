@@ -87,8 +87,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
+        // Every page except a public tournament's embed, which other sites may frame
+        source: '/:path((?!tournaments/[^/]+/embed/?$).*)',
         headers: SECURITY_HEADERS,
+      },
+      {
+        source: '/tournaments/:slug/embed',
+        headers: SECURITY_HEADERS.filter(h => h.key !== 'X-Frame-Options'),
       },
     ];
   },

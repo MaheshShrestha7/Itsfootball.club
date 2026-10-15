@@ -1,9 +1,10 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { clubExists } from '@/lib/supabase/server-data';
 import { SITE_NAME, clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { findClubBySlug } from '@/lib/supabase/club-lookup';
+import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import ClubLayoutClient from './ClubLayoutClient';
 
 // The club home page. Every child route sets its own metadata, so this only ever applies to /[clubSlug].
@@ -54,6 +55,8 @@ export default async function ClubLayout({
   // Shown in place of the page if the club's data didn't load on the server in time, so the HTML
   // still names the club (same lookup as generateMetadata, so no extra request)
   const lookup = await findClubBySlug(clubSlug);
+  // A tournament-only club has no club site: everything under it goes to its tournament page
+  if (isEventClub(lookup)) redirect(tournamentPagePath(lookup!.slug));
   const fallback = lookup ? { name: lookup.name, motto: lookup.motto || '' } : undefined;
 
   return (
