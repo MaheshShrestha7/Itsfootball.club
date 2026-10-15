@@ -425,21 +425,16 @@ export default function LineupBuilderTool() {
         <p className="lineup-tool-hint">Tap a player to name them. Drag to move them anywhere.</p>
       </div>
 
-      {/* Controls */}
+      {/* Controls, in three short sections so they read well on a phone */}
       <div className="lineup-tool-controls lineup-tool-glass">
-        <div className="form-group">
-          <span className="form-label">Format</span>
-          <div className="lineup-tool-pills" role="radiogroup" aria-label="Format">
-            {FORMATS.map(f => (
-              <button key={f.key} type="button" role="radio" aria-checked={state.format === f.key}
-                className={`lineup-tool-pill ${state.format === f.key ? 'is-active' : ''}`} onClick={() => setFormat(f.key)}>
-                {f.label}
-              </button>
-            ))}
+        <h2 className="lineup-tool-section">Team</h2>
+        <div className="lineup-tool-row">
+          <div className="form-group">
+            <label className="form-label" htmlFor="lb-format">Format</label>
+            <select id="lb-format" className="form-select" value={state.format} onChange={e => setFormat(e.target.value as Format)}>
+              {FORMATS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+            </select>
           </div>
-        </div>
-
-        <div className="form-row-2">
           <div className="form-group">
             <label className="form-label" htmlFor="lb-shape">Formation</label>
             <select id="lb-shape" className="form-select" value={state.shape} onChange={e => setShape(e.target.value)}>
@@ -447,30 +442,31 @@ export default function LineupBuilderTool() {
               <option value={FREE}>Free form (drag anywhere)</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="lb-team">Team name</label>
-            <input id="lb-team" className="form-input" value={state.team} maxLength={40} placeholder="My Team FC" onChange={e => update({ team: e.target.value })} />
-          </div>
         </div>
-        <div className="form-row-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="lb-team">Team name</label>
+          <input id="lb-team" className="form-input" value={state.team} maxLength={40} placeholder="My Team FC" autoComplete="off" onChange={e => update({ team: e.target.value })} />
+        </div>
+        <div className="lineup-tool-row">
           <div className="form-group">
             <label className="form-label" htmlFor="lb-opp">Opponent <span className="lineup-tool-optional">(optional)</span></label>
-            <input id="lb-opp" className="form-input" value={state.opponent} maxLength={40} placeholder="Rivals United" onChange={e => update({ opponent: e.target.value })} />
+            <input id="lb-opp" className="form-input" value={state.opponent} maxLength={40} placeholder="Rivals United" autoComplete="off" onChange={e => update({ opponent: e.target.value })} />
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="lb-comp">Competition <span className="lineup-tool-optional">(optional)</span></label>
-            <input id="lb-comp" className="form-input" value={state.competition} maxLength={40} placeholder="Sunday League" onChange={e => update({ competition: e.target.value })} />
+            <input id="lb-comp" className="form-input" value={state.competition} maxLength={40} placeholder="Sunday League" autoComplete="off" onChange={e => update({ competition: e.target.value })} />
           </div>
         </div>
 
+        <h2 className="lineup-tool-section">Look</h2>
         <div className="form-group">
-          <span className="form-label">Player icons</span>
-          <div className="lineup-tool-pills" role="radiogroup" aria-label="Player icons">
+          <span className="form-label" id="lb-icons">Player icons</span>
+          <div className="lineup-tool-icons" role="radiogroup" aria-labelledby="lb-icons">
             {MARKERS.map(m => (
-              <button key={m.key} type="button" role="radio" aria-checked={state.marker === m.key}
-                className={`lineup-tool-pill lineup-tool-pill-icon ${state.marker === m.key ? 'is-active' : ''}`} onClick={() => update({ marker: m.key })}>
-                <MarkerIcon shape={m.key} fill={state.colour} style={{ width: 18, height: 18 }} />
-                {m.label}
+              <button key={m.key} type="button" role="radio" aria-checked={state.marker === m.key} title={m.label}
+                className={`lineup-tool-icon ${state.marker === m.key ? 'is-active' : ''}`} onClick={() => update({ marker: m.key })}>
+                <MarkerIcon shape={m.key} fill={state.colour} style={{ width: 22, height: 22 }} />
+                <span>{m.label}</span>
               </button>
             ))}
           </div>
@@ -501,60 +497,61 @@ export default function LineupBuilderTool() {
           </div>
         </div>
 
-        <div className="form-group">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="form-label">Players</span>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => update({ shape: state.base, coords: fresh(state.format, state.base).coords })}>
-              <RotateCcw size={14} /> Reset positions
-            </button>
+        <div className="lineup-tool-row">
+          <div className="form-group">
+            <span className="form-label" id="lb-style">Image style</span>
+            <div className="lineup-tool-segment" role="radiogroup" aria-labelledby="lb-style">
+              {([['pitch', 'Pitch'], ['list', 'List']] as const).map(([key, label]) => (
+                <button key={key} type="button" role="radio" aria-checked={state.layout === key}
+                  className={state.layout === key ? 'is-active' : ''} onClick={() => update({ layout: key })}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <ol className="lineup-tool-players">
-            {state.coords.map((c, i) => (
-              <li key={i}>
-                <span className={`lineup-tool-pos ${c.position === 'GK' ? 'is-gk' : ''}`}>{c.position}</span>
-                <input className="form-input lineup-tool-num" inputMode="numeric" maxLength={2} aria-label={`${c.position} shirt number`}
-                  value={state.players[i].number} onChange={e => setPlayer(i, { number: e.target.value.replace(/\D/g, '') })} />
-                <input ref={el => { nameRefs.current[i] = el; }} className="form-input" maxLength={28} placeholder="Player name" aria-label={`${c.position} name`}
-                  value={state.players[i].name} onChange={e => setPlayer(i, { name: e.target.value })} />
-                <button type="button" className={`lineup-tool-captain ${state.captain === i ? 'is-active' : ''}`}
-                  aria-pressed={state.captain === i} aria-label={`Make ${state.players[i].name || c.position} captain`} title="Captain"
-                  onClick={() => update({ captain: state.captain === i ? -1 : i })}>C</button>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="form-group">
-          <span className="form-label">Image style</span>
-          <div className="lineup-tool-pills" role="radiogroup" aria-label="Image style">
-            {([['pitch', 'Pitch'], ['list', 'List']] as const).map(([key, label]) => (
-              <button key={key} type="button" role="radio" aria-checked={state.layout === key}
-                className={`lineup-tool-pill ${state.layout === key ? 'is-active' : ''}`} onClick={() => update({ layout: key })}>
-                {label}
-              </button>
-            ))}
+          <div className="form-group">
+            <span className="form-label" id="lb-size">Image size</span>
+            <div className="lineup-tool-segment" role="radiogroup" aria-labelledby="lb-size">
+              {([['post', 'Post 4:5'], ['story', 'Story 9:16']] as const).map(([key, label]) => (
+                <button key={key} type="button" role="radio" aria-checked={state.size === key}
+                  className={state.size === key ? 'is-active' : ''} onClick={() => update({ size: key })}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="form-group">
-          <span className="form-label">Image size</span>
-          <div className="lineup-tool-pills" role="radiogroup" aria-label="Image size">
-            {([['post', 'Post 4:5'], ['story', 'Story 9:16']] as const).map(([key, label]) => (
-              <button key={key} type="button" role="radio" aria-checked={state.size === key}
-                className={`lineup-tool-pill ${state.size === key ? 'is-active' : ''}`} onClick={() => update({ size: key })}>
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="lineup-tool-players-head">
+          <h2 className="lineup-tool-section" style={{ margin: 0 }}>Players</h2>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => update({ shape: state.base, coords: fresh(state.format, state.base).coords })}>
+            <RotateCcw size={14} /> Reset positions
+          </button>
         </div>
+        <ol className="lineup-tool-players">
+          {state.coords.map((c, i) => (
+            <li key={i}>
+              <span className={`lineup-tool-pos ${c.position === 'GK' ? 'is-gk' : ''}`}>{c.position}</span>
+              <input className="form-input lineup-tool-num" inputMode="numeric" maxLength={2} aria-label={`${c.position} shirt number`}
+                value={state.players[i].number} onChange={e => setPlayer(i, { number: e.target.value.replace(/\D/g, '') })} />
+              <input ref={el => { nameRefs.current[i] = el; }} className="form-input" maxLength={28} placeholder="Player name" aria-label={`${c.position} name`}
+                autoComplete="off" enterKeyHint="next" value={state.players[i].name} onChange={e => setPlayer(i, { name: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); nameRefs.current[i + 1]?.focus(); } }} />
+              <button type="button" className={`lineup-tool-captain ${state.captain === i ? 'is-active' : ''}`}
+                aria-pressed={state.captain === i} aria-label={`Make ${state.players[i].name || c.position} captain`} title="Captain"
+                onClick={() => update({ captain: state.captain === i ? -1 : i })}>C</button>
+            </li>
+          ))}
+        </ol>
 
+        {/* Stays in reach at the bottom of the screen while scrolling through the players on a phone */}
         <div className="lineup-tool-actions">
           <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => run(false)}>
             <Download size={18} /> {busy ? 'Drawing…' : 'Download image'}
           </button>
           {canShare && (
-            <button type="button" className="btn btn-secondary btn-lg" disabled={busy} onClick={() => run(true)}>
-              <Share2 size={18} /> Share
+            <button type="button" className="btn btn-secondary btn-lg" disabled={busy} onClick={() => run(true)} aria-label="Share image">
+              <Share2 size={18} /> <span className="lineup-tool-share-label">Share</span>
             </button>
           )}
         </div>
