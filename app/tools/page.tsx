@@ -6,17 +6,17 @@ import { ArrowRight, ClipboardList, Timer, Trophy, Wallet, type LucideIcon } fro
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
+import { ToolUpdated, h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
-import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOOL_GROUPS, TOOLS_HUB, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
+import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOOL_GROUPS, TOOLS_HUB, TOURNAMENT_TOOL, TOOLS_UPDATED, type ToolPageLink, toolOgImage } from '@/lib/tool-pages';
 
 const TITLE = 'Free Football Tools for Coaches and Clubs | No Sign-up';
 const DESCRIPTION =
   'Free soccer tools for grassroots coaches, clubs and organisers: lineup builder, equal playing time calculator, tournament maker, result graphics and a season fee calculator. No sign-up.';
 const H1 = 'Free football tools for coaches, clubs and organisers';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: TOOLS_HUB.path });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: TOOLS_HUB.path, image: toolOgImage(TOOLS_HUB.path) });
 
 const GROUP_ICONS: Record<string, { Icon: LucideIcon; color: string }> = {
   'team-sheets': { Icon: ClipboardList, color: 'var(--c-blue)' },
@@ -46,6 +46,8 @@ const schema = {
       name: H1,
       description: DESCRIPTION,
       inLanguage: 'en-AU',
+      dateModified: TOOLS_UPDATED,
+      image: `${SITE_URL}${toolOgImage(TOOLS_HUB.path)}`,
       isPartOf: { '@id': WEBSITE_ID },
       publisher: { '@id': ORGANIZATION_ID },
       mainEntity: {
@@ -85,6 +87,7 @@ export default function ToolsHubPage() {
             run a tournament with a live bracket and set the season&apos;s fees. They work in the browser on a phone or
             computer, with no sign-up and nothing to install.
           </p>
+          <ToolUpdated />
         </header>
 
         {TOOL_GROUPS.map(g => {

@@ -1,13 +1,13 @@
 import TournamentMakerTool from '@/components/TournamentMakerTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { TOURNAMENT_TOOL } from '@/lib/tool-pages';
+import { TOURNAMENT_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/knockout-cup-bracket-maker';
 const TITLE = 'Free Knockout Cup Bracket Maker | Soccer Cup Draw';
 const DESCRIPTION = 'Make a single-elimination soccer cup bracket for up to 32 teams, with byes worked out for you and winners moving through as you enter scores. Free, live link.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 // The maker's bracket: the next power of two, with byes to the top seeds (byes are not matches)
 const ROWS = [4, 6, 8, 12, 16, 24, 32].map(teams => {

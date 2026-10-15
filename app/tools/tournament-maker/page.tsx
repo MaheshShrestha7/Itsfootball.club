@@ -3,16 +3,17 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { ToolBreadcrumb, ToolLinks, toolBreadcrumbSchema } from '@/components/ToolLandingPage';
+import { ToolBreadcrumb, ToolExampleFigure, ToolLinks, ToolUpdated, toolBreadcrumbSchema, toolSchemaExtras } from '@/components/ToolLandingPage';
 import TournamentMakerTool from '@/components/TournamentMakerTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
 import { MAKER_PATH } from '@/lib/public-tournaments';
+import { toolOgImage } from '@/lib/tool-pages';
 
 const TITLE = 'Free Soccer Tournament Maker | Live Bracket & Fixtures';
 const DESCRIPTION = 'Make a free live bracket for your soccer cup, charity day or 6-a-side gala day. Groups, knockouts or a league, with fixtures and tables that update as you enter scores.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: MAKER_PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: MAKER_PATH, image: toolOgImage(MAKER_PATH) });
 
 const STEPS = [
   { name: 'Name your tournament', text: 'Add the date and kick-off, the venue, the team size and who is organising it.' },
@@ -79,6 +80,7 @@ const schema = {
       featureList: FEATURES,
       publisher: { '@id': ORGANIZATION_ID },
       isPartOf: { '@id': WEBSITE_ID },
+      ...toolSchemaExtras(MAKER_PATH),
     },
     toolBreadcrumbSchema(MAKER_PATH, 'Free soccer tournament maker'),
     {
@@ -113,6 +115,7 @@ export default function TournamentMakerPage() {
             Make a live bracket for your summer cup, charity day or 6-a-side gala day. Paste in the teams, pick a format and
             share one link where players, families and local news can follow fixtures, tables and results as you enter scores.
           </p>
+          <ToolUpdated />
         </header>
 
         <TournamentMakerTool />
@@ -123,6 +126,8 @@ export default function TournamentMakerPage() {
             {STEPS.map(s => <li key={s.name}><span><strong>{s.name}.</strong> {s.text}</span></li>)}
           </ol>
         </section>
+
+        <ToolExampleFigure path={MAKER_PATH} />
 
         <section style={{ marginTop: '2.5rem' }} aria-labelledby="features">
           <h2 id="features" style={h2Style}>What it does</h2>

@@ -1,13 +1,13 @@
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { LINEUP_TOOL } from '@/lib/tool-pages';
+import { LINEUP_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/5-a-side-formation-builder';
 const TITLE = 'Free 5-a-Side Formation Builder | 1-2-1 Diamond & Futsal';
 const DESCRIPTION = 'Set up your 5-a-side or futsal team in the 1-2-1 diamond, 2-1-1, 2-2 or 1-1-2, add names and download the lineup image. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const SHAPES = [
   { shape: '1-2-1', note: 'The diamond: a last defender, two wide players and a pivot up front. The default here.' },

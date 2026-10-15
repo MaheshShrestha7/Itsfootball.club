@@ -1,13 +1,13 @@
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { LINEUP_TOOL } from '@/lib/tool-pages';
+import { LINEUP_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/11-a-side-lineup-builder';
 const TITLE = 'Free 11-a-Side Lineup Builder | 4-3-3 Starting XI Maker';
 const DESCRIPTION = 'Pick your senior or amateur soccer starting XI in a 4-3-3, 4-4-2, 4-2-3-1 or nine other shapes and download a matchday team sheet image. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const SHAPES = [
   { shape: '4-3-3', note: 'A back four, a midfield three and a front three. The default here.' },

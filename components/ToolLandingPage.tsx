@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
-import { MAIN_TOOLS, TOOL_GROUPS, TOOLS_HUB, type ToolPageLink } from '@/lib/tool-pages';
+import { MAIN_TOOLS, TOOL_GROUPS, TOOLS_HUB, TOOLS_UPDATED, formatUpdated, toolExample, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface ToolLandingProps {
   path: string;
@@ -70,6 +70,36 @@ export function ToolBreadcrumb({ name, parent }: { name: string; parent?: ToolPa
   );
 }
 
+/** "Updated" line under a tool page's intro (the same date is the schema's dateModified) */
+export function ToolUpdated() {
+  return <p className="tool-updated">Updated <time dateTime={TOOLS_UPDATED}>{formatUpdated(TOOLS_UPDATED)}</time></p>;
+}
+
+/** The tool's example output, so the page shows (and can rank in image search for) what it makes */
+export function ToolExampleFigure({ path, heading = 'What you get' }: { path: string; heading?: string }) {
+  const e = toolExample(path);
+  if (!e) return null;
+  return (
+    <section style={{ marginTop: '2.5rem' }} aria-labelledby="example">
+      <h2 id="example" style={h2Style}>{heading}</h2>
+      <figure className="glass-panel tool-example">
+        <img src={e.src} width={e.width} height={e.height} alt={e.alt} loading="lazy" decoding="async"
+          style={{ maxWidth: e.height > e.width ? '420px' : '640px' }} />
+        <figcaption>{e.caption}</figcaption>
+      </figure>
+    </section>
+  );
+}
+
+/** schema.org fields for a tool's WebApplication: last change and the example output as its image */
+export function toolSchemaExtras(path: string) {
+  const e = toolExample(path);
+  return {
+    dateModified: TOOLS_UPDATED,
+    ...(e ? { image: `${SITE_URL}${e.src}`, screenshot: { '@type': 'ImageObject', url: `${SITE_URL}${e.src}`, width: e.width, height: e.height, caption: e.caption } } : {}),
+  };
+}
+
 export function ToolLinks({ path, heading = 'More free tools' }: { path: string; heading?: string }) {
   return (
     <section style={{ marginTop: '2.5rem' }} aria-labelledby="more-tools">
@@ -109,6 +139,7 @@ export default function ToolLandingPage(p: ToolLandingProps) {
         featureList: p.features,
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
+        ...toolSchemaExtras(p.path),
       },
       toolBreadcrumbSchema(p.path, p.h1, p.parent),
       {
@@ -130,6 +161,7 @@ export default function ToolLandingPage(p: ToolLandingProps) {
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{p.h1}</h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>{p.intro}</p>
+          <ToolUpdated />
         </header>
 
         {p.tool}
@@ -140,6 +172,8 @@ export default function ToolLandingPage(p: ToolLandingProps) {
             {s.body}
           </section>
         ))}
+
+        <ToolExampleFigure path={p.path} />
 
         <section style={{ marginTop: '2.5rem' }} aria-labelledby="how">
           <h2 id="how" style={h2Style}>{p.howToName}</h2>

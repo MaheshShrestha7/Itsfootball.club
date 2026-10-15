@@ -1,13 +1,13 @@
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { LINEUP_TOOL } from '@/lib/tool-pages';
+import { LINEUP_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/9-a-side-lineup-builder';
 const TITLE = 'Free 9-a-Side Lineup Builder | 3-3-2 Soccer Formation Maker';
 const DESCRIPTION = 'Plan your 9-a-side football team on a pitch: start from 3-3-2, try 3-2-3 or 4-3-1, name your players and download the team sheet image. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const SHAPES = [
   { shape: '3-3-2', note: 'Balanced: three at the back, a midfield three and two strikers. The default here.' },

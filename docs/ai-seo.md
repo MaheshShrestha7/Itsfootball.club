@@ -112,6 +112,15 @@ grassroots football clubs: â€¦" (copy change; reword freely, but keep a plai
 5. Phase 3 needs a content route (`/guides/[slug]`) and real written guides.
 6. Around 2026-10-24: check GSC Pages/Performance and Bing for the `/news/` URLs being indexed.
 
+## IndexNow (added 2026-10-15)
+
+`npm run indexnow` (scripts/indexnow.mjs) sends Bing, and through it ChatGPT search and Copilot, the
+platform pages plus every sitemap URL whose `lastmod` is in the last 48 hours. `--dry-run` prints the
+list; `--hours N` changes the window; URLs given on the command line are sent on their own. The key file
+is `public/d10a466fa4eff6f0f9a410315e166fef.txt` (public by design). Run it after a deploy, or add
+`&& npm run indexnow` to the Cloudflare deploy command so every deploy runs it. Cloud sessions can't
+reach itsfootball.club, so it has to run from Cloudflare's build or the owner's computer.
+
 ## Phase 3: content (TODO)
 
 Write for people first (Google's guidance: no separate "for AI" content). Each page opens with a 40-60

@@ -2,13 +2,13 @@ import PlayingTimeTool from '@/components/PlayingTimeTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { MinutesTable, WorkedExample } from '@/components/PlayingTimeTable';
 import { pageMetadata } from '@/lib/seo';
-import { PLAYING_TIME_TOOL } from '@/lib/tool-pages';
+import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/9-a-side-substitution-planner';
 const TITLE = '9-a-Side Substitution Planner | Equal Minutes Sub Rotation for 9v9';
 const DESCRIPTION = 'Plan fair 9-a-side subs: enter your squad (12, 13 or 14 players) and halves or quarters, and get a 9v9 sub rotation where every player gets equal minutes. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const QUESTIONS = [
   { q: 'How many minutes does each player get in 9-a-side?', a: 'Multiply 9 by the match length and divide by your squad. Over two 30-minute halves (60 minutes): 12 players get 45 minutes each, 13 players get 41.5, and 14 players get 38.6.' },

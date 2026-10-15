@@ -1,13 +1,13 @@
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { LINEUP_TOOL } from '@/lib/tool-pages';
+import { LINEUP_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/7-a-side-lineup-builder';
 const TITLE = 'Free 7-a-Side Lineup Builder | 2-3-1 Formation Tool';
 const DESCRIPTION = 'Make a 7-a-side football or junior soccer lineup in a 2-3-1 or five other shapes, then download it as an image for the team chat. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const SHAPES = [
   { shape: '2-3-1', note: 'Two at the back, a midfield three and a striker. The default here.' },
