@@ -28,6 +28,48 @@ export interface CardOptions {
   events?: Pick<MatchEvent, 'event_type' | 'team_side' | 'player_name' | 'minute' | 'added_minute'>[];
   /** Player photos by member id, as the public lineup shows them (none for juniors without consent) */
   photos?: Record<string, string | undefined>;
+  /** The two-tone headline in place of the default (the free lineup builder's "STARTING FIVE") */
+  headline?: [string, string];
+  /** Keep the lineup in the order given (the free lineup builder's own list order) instead of back to front */
+  keepOrder?: boolean;
+  /** The player marker's shape on the pitch (circle unless chosen in the free lineup builder) */
+  marker?: MarkerShape;
+}
+
+export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
+
+/** Outline points of the non-circle markers in a 100 × 100 box, shared by the builder's pitch (SVG) and the image */
+export const MARKER_POINTS: Record<'jersey' | 'triangle' | 'hexagon', [number, number][]> = {
+  jersey: [[35, 6], [43, 6], [50, 15], [57, 6], [65, 6], [96, 22], [87, 44], [76, 39], [76, 96], [24, 96], [24, 39], [13, 44], [4, 22]],
+  triangle: [[50, 4], [97, 92], [3, 92]],
+  hexagon: [[50, 2], [93, 26], [93, 74], [50, 98], [7, 74], [7, 26]],
+};
+
+/** How far a marker's initials sit below its centre (a triangle's and a shirt's middle is lower), as a share of its radius */
+export const MARKER_TEXT_DROP: Record<MarkerShape, number> = { circle: 0, square: 0, hexagon: 0, jersey: 0.14, triangle: 0.32 };
+/** How big a marker's initials are next to a circle's (a shirt's body and a triangle's middle are narrower) */
+export const MARKER_TEXT_SCALE: Record<MarkerShape, number> = { circle: 1, square: 1, hexagon: 1, jersey: 0.9, triangle: 0.72 };
+
+/** Starts a new path in the marker's shape, centred on (cx, cy) with "radius" r */
+function markerPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, shape: MarkerShape = 'circle') {
+  ctx.beginPath();
+  if (shape === 'circle') {
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    return;
+  }
+  const R = r * 1.1; // the corners of a shape need a little more room than a circle to look the same size
+  if (shape === 'square') {
+    if (typeof ctx.roundRect === 'function') ctx.roundRect(cx - R * 0.9, cy - R * 0.9, R * 1.8, R * 1.8, R * 0.38);
+    else ctx.rect(cx - R * 0.9, cy - R * 0.9, R * 1.8, R * 1.8);
+    return;
+  }
+  MARKER_POINTS[shape].forEach(([x, y], i) => {
+    const px = cx - R + (x / 100) * 2 * R;
+    const py = cy - R + (y / 100) * 2 * R;
+    if (i) ctx.lineTo(px, py);
+    else ctx.moveTo(px, py);
+  });
+  ctx.closePath();
 }
 
 const BASE = '#070B12';
@@ -266,7 +308,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.textAlign = 'center';
 
   const scored = kind === 'score' && !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
-  const [first, second] = kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored);
+  const [first, second] = opts.headline || (kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored));
 
   // Headline
   const hlY = story ? 500 : 290;
@@ -288,16 +330,19 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   if (kind !== 'score') {
     const home = match.is_club_home ?? true;
     const xi = [...((home ? match.home_lineup_coords : match.away_lineup_coords) || [])]
-      .sort((a, b) => a.x - b.x || a.y - b.y) // the pitch runs left to right: goalkeeper first, then back to front
+      .sort((a, b) => (opts.keepOrder ? 0 : a.x - b.x || a.y - b.y)) // the pitch runs left to right: goalkeeper first, then back to front
       .slice(0, 11);
     const opponent = home ? match.away_team_name : match.home_team_name;
     const formation = home ? match.home_formation : match.away_formation;
     const { day, time } = kickoff(match);
 
     ctx.fillStyle = MUTED;
-    const sub = `vs ${opponent}${formation && formation.toLowerCase() !== 'custom' ? ` · ${formation}` : ''}`;
-    fit(ctx, sub, 600, 38, W - M * 2, body);
-    ctx.fillText(sub, W / 2, hlY + 100);
+    const sub = [opponent?.trim() && `vs ${opponent.trim()}`, formation && formation.toLowerCase() !== 'custom' && formation]
+      .filter(Boolean).join(' · ');
+    if (sub) {
+      fit(ctx, sub, 600, 38, W - M * 2, body);
+      ctx.fillText(sub, W / 2, hlY + 100);
+    }
 
     // Players placed on the lineup pitch: drawn where the coach put them, else (or when asked) as a numbered list
     const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -371,8 +416,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         ctx.shadowBlur = 12 * k;
         ctx.shadowOffsetY = 4 * k;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        markerPath(ctx, cx, cy, r, opts.marker);
         const photo = photos[i];
         if (photo) {
           ctx.fillStyle = '#0B0F14';
@@ -398,24 +442,27 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
           ctx.fill();
         }
         ctx.restore();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        markerPath(ctx, cx, cy, r, opts.marker);
+        ctx.lineJoin = 'round';
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.lineWidth = 2 * k;
         ctx.stroke();
-        if (!photo) {
+        const shape = opts.marker || 'circle';
+        // A shirt carries its number, like a real one; other markers show initials
+        const shirtNumber = shape === 'jersey' && p.number > 0;
+        if (!photo && (shirtNumber || p.name !== p.position)) { // an unnamed slot (the free lineup builder names it by its position) stays blank
           const parts = p.name.trim().split(/\s+/);
           const initials = (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
           ctx.fillStyle = '#FFFFFF';
           ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
           ctx.shadowBlur = 3 * k;
-          ctx.font = `900 ${15 * k}px ${heading}`;
-          ctx.fillText(initials, cx, cy + 1);
+          ctx.font = `900 ${15 * k * MARKER_TEXT_SCALE[shape]}px ${heading}`;
+          ctx.fillText(shirtNumber ? String(p.number) : initials, cx, cy + 1 + r * MARKER_TEXT_DROP[shape]);
           ctx.shadowBlur = 0;
         }
 
-        // Shirt number tag (bottom-left)
-        if (p.number > 0) {
+        // Shirt number tag (bottom-left), unless the shirt already carries it
+        if (p.number > 0 && !(shirtNumber && !photo)) {
           ctx.font = `800 ${11 * k}px ${mono}`;
           const tw = Math.max(18 * k, ctx.measureText(String(p.number)).width + 8 * k);
           const tx = cx - r - 6 * k;
