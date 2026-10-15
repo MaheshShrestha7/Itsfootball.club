@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
+import { ToolLinks } from '@/components/ToolLandingPage';
 import TournamentMakerTool from '@/components/TournamentMakerTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
@@ -178,6 +179,8 @@ export default function TournamentMakerPage() {
             Running a club? <Link href="/create-club" style={linkStyle}>Launch your free club site</Link>.
           </p>
         </section>
+
+        <ToolLinks path={MAKER_PATH} heading="Builders for each format" />
       </main>
 
       <Footer />

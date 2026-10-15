@@ -61,21 +61,30 @@ const EMPTY: Draft = {
   format: 'group_knockout', groupCount: 2, advancing: 2, thirdPlace: false, teams: '',
 };
 
-function loadDraft(): Draft {
+function loadDraft(format?: TournamentFormat): Draft {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (raw) return { ...EMPTY, ...JSON.parse(raw) };
+    if (raw) {
+      const saved: Draft = { ...EMPTY, ...JSON.parse(raw) };
+      // A format page opens on its own format, unless a sign-in to publish is under way
+      return format && !saved.pendingPublish ? { ...saved, format } : saved;
+    }
   } catch {
     // no storage: start fresh
   }
-  return { ...EMPTY, start: nextSaturdayMorning() };
+  return { ...EMPTY, format: format || EMPTY.format, start: nextSaturdayMorning() };
 }
 
-export default function TournamentMakerTool() {
+interface Props {
+  /** The format it opens on (the format landing pages, e.g. /tools/round-robin-fixture-generator) */
+  defaultFormat?: TournamentFormat;
+}
+
+export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
   const router = useRouter();
   const { clubs, createClub, createTournament } = useClub();
   const { user, isLoading: authLoading, assignClubRole } = useAuth();
-  const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [draft, setDraft] = useState<Draft>(() => (defaultFormat ? { ...EMPTY, format: defaultFormat } : EMPTY));
   const [loaded, setLoaded] = useState(false);
   const [preview, setPreview] = useState<'table' | 'bracket'>('table');
   const [authOpen, setAuthOpen] = useState(false);
@@ -85,8 +94,10 @@ export default function TournamentMakerTool() {
 
   // The draft lives in this browser until it's published
   useEffect(() => {
-    setDraft(loadDraft());
+    setDraft(loadDraft(defaultFormat));
     setLoaded(true);
+    // Once on mount: the default format is fixed for each page
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!loaded) return;

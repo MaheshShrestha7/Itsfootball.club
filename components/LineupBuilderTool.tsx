@@ -11,7 +11,8 @@ import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
 import { juniorPublicName } from '@/lib/teams';
 
-type Format = '5v5' | '7v7' | '9v9' | '11v11';
+export type LineupFormat = '5v5' | '7v7' | '9v9' | '11v11';
+type Format = LineupFormat;
 type Shape = { position: string; x: number; y: number }[];
 
 // x runs from your own goal (0) to theirs (100), y across the pitch, as in TacticalPitch
@@ -165,8 +166,14 @@ function initials(name: string) {
   return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
 }
 
-export default function LineupBuilderTool() {
-  const [state, setState] = useState<State>(() => fresh('11v11'));
+interface Props {
+  /** The format and formation it opens on (the format landing pages, e.g. /tools/9-a-side-lineup-builder) */
+  defaultFormat?: Format;
+  defaultShape?: string;
+}
+
+export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShape }: Props = {}) {
+  const [state, setState] = useState<State>(() => fresh(defaultFormat, defaultShape));
   const [crest, setCrest] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -183,7 +190,9 @@ export default function LineupBuilderTool() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as State | null;
-      if (saved && SHAPES[saved.format] && (saved.shape === FREE || SHAPES[saved.format][saved.shape]) && saved.coords?.length === saved.players?.length) {
+      // A format page keeps the saved lineup only when it is that format, so it opens on the format it is about
+      const sameFormat = !defaultShape || saved?.format === defaultFormat;
+      if (saved && sameFormat && SHAPES[saved.format] && (saved.shape === FREE || SHAPES[saved.format][saved.shape]) && saved.coords?.length === saved.players?.length) {
         const base = SHAPES[saved.format][saved.base] ? saved.base : fresh(saved.format).base;
         setState({ ...fresh(saved.format), ...saved, base });
       }
@@ -192,6 +201,8 @@ export default function LineupBuilderTool() {
     try {
       setCanShare(typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }));
     } catch { /* no file sharing */ }
+    // Once on mount: the defaults are fixed for each page
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!loaded.current) return;
