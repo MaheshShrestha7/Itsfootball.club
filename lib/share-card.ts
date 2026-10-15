@@ -46,6 +46,8 @@ export interface CardOptions {
     /** Zoom on the photo (1 = fit) and its sideways position (0 to 1, 0.5 = centred; on a cut-out also focusY moves it, 0.3 = resting) */ zoom?: number; focusX?: number };
   /** Scorer lines with a ball beside each, as left-aligned blocks (the free result graphic maker) */
   scorerBalls?: boolean;
+  /** Icons beside the date, the ground and the Player of the Match's stats (the free result graphic maker) */
+  icons?: boolean;
 }
 
 export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
@@ -198,6 +200,67 @@ function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
+}
+
+// Line icons on a 24 × 24 grid (calendar, map pin and shield are Lucide's, ISC licence; the boot is ours)
+type IconName = 'calendar' | 'pin' | 'ball' | 'boot' | 'shield' | 'glove' | 'star';
+const ICON_PATHS: Partial<Record<IconName, string[]>> = {
+  calendar: ['M8 2v4', 'M16 2v4', 'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M3 10h18'],
+  pin: ['M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0', 'M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0'],
+  shield: ['M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'],
+  boot: ['M4 5h6v5l7.5 2.6c2 .7 3.5 2.3 3.5 4.4V18H4z', 'M4 14h17', 'M7 18v2', 'M12 18v2', 'M17 18v2'],
+  glove: ['M7 21h9a3 3 0 0 0 3-3v-7a1.5 1.5 0 0 0-3 0V7a1.5 1.5 0 0 0-3 0V5a1.5 1.5 0 0 0-3 0v1a1.5 1.5 0 0 0-3 0v8l-1.6-1.6a1.5 1.5 0 0 0-2.1 2.1L7 18z'],
+};
+
+/** One icon, centred on (cx, cy) and `size` across, in `colour` */
+function icon(ctx: CanvasRenderingContext2D, name: IconName, cx: number, cy: number, size: number, colour: string) {
+  if (name === 'ball') return ball(ctx, cx, cy, size * 0.42);
+  if (name === 'star') return star(ctx, cx, cy, size * 0.5, colour);
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(size / 24, size / 24);
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const d of ICON_PATHS[name] || []) ctx.stroke(new Path2D(d));
+  ctx.restore();
+}
+
+/** The icon for one part of a Player of the Match line, like "2 goals" or "1 assist" */
+function statIcon(part: string): IconName {
+  const p = part.toLowerCase();
+  if (/goal|hat.?trick|brace|scor/.test(p)) return 'ball';
+  if (/assist/.test(p)) return 'boot';
+  if (/clean sheet|tackle|block|intercept|defen/.test(p)) return 'shield';
+  if (/save|keeper|stop/.test(p)) return 'glove';
+  return 'star';
+}
+
+/** A centred row of icon + text pairs at `y`, shrunk to fit `maxWidth` */
+function iconRow(ctx: CanvasRenderingContext2D, items: { icon: IconName; text: string }[], y: number, size: number, weight: number,
+  family: string, maxWidth: number, textColour: string, iconColour: string) {
+  items = items.filter(i => i.text.trim());
+  if (!items.length) return;
+  const widthAt = (s: number) => {
+    ctx.font = `${weight} ${s}px ${family}`;
+    return items.reduce((w, i) => w + s * 1.05 + s * 0.4 + ctx.measureText(i.text).width, 0) + (items.length - 1) * s * 1.1;
+  };
+  let s = size;
+  while (s > 16 && widthAt(s) > maxWidth) s -= 1;
+  const total = widthAt(s);
+  let cursor = ctx.canvas.width / 2 - total / 2;
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  for (const it of items) {
+    icon(ctx, it.icon, cursor + s * 0.52, y, s * 1.05, iconColour);
+    cursor += s * 1.05 + s * 0.4;
+    ctx.fillStyle = textColour;
+    ctx.fillText(it.text, cursor, y);
+    cursor += ctx.measureText(it.text).width + s * 1.1;
+  }
+  ctx.restore();
 }
 
 function initialsOf(name: string) {
@@ -759,7 +822,11 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       ctx.fillText(name, W / 2, nameY);
       spaced(ctx, 0);
     }
-    if (m?.line) {
+    if (m?.line && opts.icons) {
+      const parts = m.line.split(/\s*[·•,|]\s*/).filter(Boolean);
+      iconRow(ctx, parts.map(t => ({ icon: statIcon(t), text: t })), nameFirst ? hlY + by(66, 54, 48) : nameY + by(62, 50, 50),
+        by(32, 28, 28), 600, body, W - M * 2, MUTED, ink);
+    } else if (m?.line) {
       ctx.fillStyle = MUTED;
       fit(ctx, m.line, 600, by(32, 28, 28), W - M * 2, body);
       ctx.fillText(m.line, W / 2, nameFirst ? hlY + by(66, 54, 48) : nameY + by(62, 50, 50));
@@ -790,7 +857,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillText(score, W / 2, mid + 2);
     const { day } = kickoff(match);
     const when = [day, match.venue].filter(Boolean).join(' · ');
-    if (when && !square) {
+    if (when && !square && opts.icons) {
+      iconRow(ctx, [{ icon: 'calendar', text: day }, { icon: 'pin', text: match.venue || '' }], stripY + stripH + by(60, 48, 48),
+        by(30, 26, 26), 600, body, W - M * 2, MUTED, ink);
+    } else if (when && !square) {
       ctx.fillStyle = FAINT;
       fit(ctx, when, 600, by(30, 26, 26), W - M * 2, body);
       ctx.fillText(when, W / 2, stripY + stripH + by(60, 48, 48));
@@ -936,6 +1006,9 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         fit(ctx, match.venue, 600, by(34, 30, 28), W - M * 2 - 80, body);
         ctx.fillText(match.venue, W / 2, top + by(222, 176, 168));
       }
+    } else if (opts.icons) {
+      iconRow(ctx, [{ icon: 'calendar', text: day }, { icon: 'pin', text: match.venue || '' }], H - by(310, 150, 100),
+        28, 600, body, W - M * 2, MUTED, ink);
     } else {
       ctx.fillStyle = FAINT;
       const line = [day, match.venue].filter(Boolean).join(' · ');

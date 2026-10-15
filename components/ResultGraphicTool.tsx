@@ -249,6 +249,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
       events,
       motm,
       scorerBalls: true,
+      icons: true,
       background: background ? { src: background, dim: state.dim, focusY: focus.bg } : undefined,
     });
   };
