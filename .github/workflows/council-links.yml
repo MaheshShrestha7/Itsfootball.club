@@ -1,0 +1,47 @@
+# Monthly check that the council wet-weather links in lib/councils.ts still work.
+# When one is broken or has changed, it opens (or updates) a GitHub issue with the report.
+# Run it by hand from the Actions tab: "Council wet-weather links" -> Run workflow.
+name: Council wet-weather links
+
+on:
+  schedule:
+    - cron: '0 22 1 * *' # 1st of each month, 22:00 UTC (morning of the 2nd in Sydney)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Check links
+        id: check
+        run: REPORT=report.md npm run council-links
+        continue-on-error: true
+      - name: Open or update the issue
+        if: steps.check.outcome == 'failure' && hashFiles('report.md') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="Council wet-weather links need a look"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          body="$(cat report.md)
+
+          _Opened by the monthly [Council wet-weather links](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) check._"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --assignee "${{ github.repository_owner }}"
+          fi
+      - name: Fail when the script itself crashed
+        if: steps.check.outcome == 'failure' && hashFiles('report.md') == ''
+        run: exit 1
