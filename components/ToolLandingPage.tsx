@@ -3,11 +3,13 @@
 // other tools. Server-rendered, so crawlers get all of the text; only the tool itself is a client component.
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
+import { BookOpen } from 'lucide-react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
+import { guidesForTool } from '@/lib/guides';
 import { MAIN_TOOLS, TOOL_GROUPS, TOOLS_HUB, TOOLS_UPDATED, formatUpdated, toolExample, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface ToolLandingProps {
@@ -98,6 +100,27 @@ export function toolSchemaExtras(path: string) {
     dateModified: TOOLS_UPDATED,
     ...(e ? { image: `${SITE_URL}${e.src}`, screenshot: { '@type': 'ImageObject', url: `${SITE_URL}${e.src}`, width: e.width, height: e.height, caption: e.caption } } : {}),
   };
+}
+
+/** "Read the guide" links on a tool page */
+export function GuideLinks({ path }: { path: string }) {
+  const guides = guidesForTool(path);
+  if (!guides.length) return null;
+  return (
+    <section style={{ marginTop: '2.5rem' }} aria-labelledby="guides">
+      <h2 id="guides" style={h2Style}>Read the guide</h2>
+      <ul className="tool-links">
+        {guides.map(g => (
+          <li key={g.path}>
+            <Link href={g.path} className="glass-panel tool-link">
+              <strong><BookOpen size={14} aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 6 }} />{g.label}</strong>
+              <span>{g.blurb}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 export function ToolLinks({ path, heading = 'More free tools' }: { path: string; heading?: string }) {
@@ -193,6 +216,8 @@ export default function ToolLandingPage(p: ToolLandingProps) {
             ))}
           </div>
         </section>
+
+        <GuideLinks path={p.path} />
 
         <ToolLinks path={p.path} />
 

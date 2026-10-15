@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SITE_URL, isPlatformHost } from './lib/slugs';
 
 // Pages that only exist on itsfootball.club itself: on a club's own domain they send you back there
-const PLATFORM_PAGES = ['about', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'pricing.md', 'privacy', 'terms', 'vs', 'tools'];
+const PLATFORM_PAGES = ['about', 'clubs', 'create-club', 'my-clubs', 'faq', 'unsubscribe', 'pricing.md', 'privacy', 'terms', 'vs', 'tools', 'guides'];
 
 // The framable public tournament embed (see next.config.ts headers)
 const EMBED_PATH = /^\/tournaments\/[^/]+\/embed\/?$/;
