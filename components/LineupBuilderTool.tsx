@@ -115,6 +115,8 @@ interface State {
   competition: string;
   colour: string;
   size: CardFormat;
+  /** The image shows the players on the pitch (default) or as a numbered list */
+  layout: 'pitch' | 'list';
 }
 
 const STORAGE_KEY = 'ifc-lineup-builder';
@@ -134,6 +136,7 @@ function fresh(format: Format, shape?: string, players: Player[] = []): State {
     competition: '',
     colour: COLOURS[0],
     size: 'post',
+    layout: 'pitch',
   };
 }
 
@@ -254,7 +257,7 @@ export default function LineupBuilderTool() {
       competition: state.competition.trim(),
       match_date: '',
     } as unknown as Match;
-    return drawMatchCard(match, club, 'lineup', 'Made at itsfootball.club', { format: state.size, headline: ['STARTING', size.word] });
+    return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', { format: state.size, headline: ['STARTING', size.word], keepOrder: true });
   };
 
   const run = async (share: boolean) => {
@@ -481,6 +484,18 @@ export default function LineupBuilderTool() {
               </li>
             ))}
           </ol>
+        </div>
+
+        <div className="form-group">
+          <span className="form-label">Image style</span>
+          <div className="lineup-tool-pills" role="radiogroup" aria-label="Image style">
+            {([['pitch', 'Pitch'], ['list', 'List']] as const).map(([key, label]) => (
+              <button key={key} type="button" role="radio" aria-checked={state.layout === key}
+                className={`lineup-tool-pill ${state.layout === key ? 'is-active' : ''}`} onClick={() => update({ layout: key })}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="form-group">

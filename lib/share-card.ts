@@ -30,6 +30,8 @@ export interface CardOptions {
   photos?: Record<string, string | undefined>;
   /** The two-tone headline in place of the default (the free lineup builder's "STARTING FIVE") */
   headline?: [string, string];
+  /** Keep the lineup in the order given (the free lineup builder's own list order) instead of back to front */
+  keepOrder?: boolean;
 }
 
 const BASE = '#070B12';
@@ -290,7 +292,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   if (kind !== 'score') {
     const home = match.is_club_home ?? true;
     const xi = [...((home ? match.home_lineup_coords : match.away_lineup_coords) || [])]
-      .sort((a, b) => a.x - b.x || a.y - b.y) // the pitch runs left to right: goalkeeper first, then back to front
+      .sort((a, b) => (opts.keepOrder ? 0 : a.x - b.x || a.y - b.y)) // the pitch runs left to right: goalkeeper first, then back to front
       .slice(0, 11);
     const opponent = home ? match.away_team_name : match.home_team_name;
     const formation = home ? match.home_formation : match.away_formation;
