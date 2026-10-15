@@ -3209,3 +3209,52 @@ dialog.confirm-dialog::backdrop {
 .pt-table td { color: var(--text-secondary); font-family: var(--font-mono); }
 .pt-example td { font-family: inherit; }
 .pt-example tbody th { font-family: var(--font-mono); }
+/* Free season budget & subs fee calculator (/tools/season-fee-calculator): the lineup builder's glass
+   layout, with the season's costs on the left and the fee (card vs cash) on the right */
+.sf-tool { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); }
+.sf-tool .lineup-tool-controls > .lineup-tool-players-head:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.sf-tool .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sf-costs { list-style: none; padding: 0; margin: 0 0 0.6rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.sf-costs li { display: grid; grid-template-columns: minmax(0, 1fr) 100px 134px 36px; gap: 0.4rem; align-items: center; }
+.sf-costs .form-input, .sf-costs .form-select { padding: 0.5rem 0.6rem; min-height: 42px; font-size: 0.88rem; }
+.sf-costs .form-select { padding-right: 1.6rem; background-position: right 0.4rem center; }
+.sf-remove { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sf-remove:hover { color: var(--c-red); border-color: rgba(239, 68, 68, 0.5); }
+.sf-add { margin-bottom: 0.2rem; }
+.sf-money { position: relative; display: block; }
+.sf-money > span { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-weight: 700; color: var(--text-muted); pointer-events: none; }
+.sf-money .form-input { padding-left: 1.45rem; font-family: var(--font-mono); font-weight: 700; }
+.sf-percent > span { left: auto; right: 0.65rem; }
+.sf-percent .form-input { padding-left: 0.65rem; padding-right: 1.6rem; }
+.sf-rate-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 0.35rem; align-items: center; color: var(--text-muted); font-weight: 700; }
+.sf-link { margin-top: 0.35rem; padding: 0; border: 0; background: none; color: var(--club-ink); font-weight: 700; font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
+.sf-big strong { font-size: clamp(1.6rem, 4.4vw, 2.2rem); }
+.sf-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0 0 0.4rem; }
+.sf-price { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'icon label' 'price price' 'note note'; gap: 0.15rem 0.45rem; align-items: center; padding: 0.75rem 0.9rem; border-radius: var(--radius-lg); background: rgba(var(--tint-rgb), 0.05); border: 1px solid rgba(var(--tint-rgb), 0.1); }
+.sf-price-icon { grid-area: icon; display: inline-flex; width: 26px; height: 26px; border-radius: 50%; align-items: center; justify-content: center; background: rgba(var(--lb-rgb), 0.18); color: var(--text-primary); }
+.sf-price-icon.is-cash { background: rgba(245, 158, 11, 0.2); }
+.sf-price-label { grid-area: label; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+.sf-price strong { grid-area: price; font-family: var(--font-mono); font-size: 1.35rem; font-weight: 900; color: var(--text-primary); margin-top: 0.2rem; }
+.sf-price-note { grid-area: note; font-size: 0.76rem; color: var(--text-muted); line-height: 1.35; }
+.sf-compare td { white-space: nowrap; font-family: var(--font-mono); }
+.sf-compare td small { font-family: var(--font-body); color: var(--text-muted); font-size: 0.72rem; }
+.sf-compare .sf-kept th, .sf-compare .sf-kept td { color: var(--text-primary); font-weight: 900; }
+.sf-compare td.sf-over { color: var(--c-green); }
+.sf-compare td.sf-short { color: var(--c-red); }
+.sf-compare th, .sf-compare td { padding: 0.5rem 0.75rem; }
+.sf-source { color: var(--club-ink); }
+@media (max-width: 900px) {
+  .sf-tool { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .sf-costs li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; grid-template-areas: 'label label label' 'amount unit remove'; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(var(--tint-rgb), 0.07); }
+  .sf-costs .sf-cost-label { grid-area: label; }
+  .sf-costs .sf-money { grid-area: amount; }
+  .sf-costs .sf-cost-unit { grid-area: unit; }
+  .sf-costs .sf-remove { grid-area: remove; }
+  .sf-tool .lineup-tool-row { grid-template-columns: 1fr; gap: 0; }
+  .sf-compare th, .sf-compare td { padding: 0.5rem 0.45rem; font-size: 0.8rem; }
+  .sf-compare td small { display: none; }
+  .sf-compare tbody th { white-space: normal; }
+  .sf-result .lineup-tool-actions .btn-secondary { flex: 1 1 auto; padding: 0 0.9rem; }
+}
