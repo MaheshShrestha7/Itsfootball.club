@@ -21,6 +21,8 @@ interface TournamentScoreModalProps {
     status?: 'upcoming' | 'live' | 'completed'
   ) => void;
   onSaveSchedule?: (matchId: string, schedule: Pick<Match, 'match_date' | 'match_time' | 'venue'>) => void;
+  /** False on public tournaments, whose tournament-only club has no match centre */
+  linkToMatch?: boolean;
 }
 
 export default function TournamentScoreModal({
@@ -30,6 +32,7 @@ export default function TournamentScoreModal({
   onClose,
   onSaveScore,
   onSaveSchedule,
+  linkToMatch = true,
 }: TournamentScoreModalProps) {
   const isKnockout = Boolean(match.tournament_stage && match.tournament_stage !== 'group');
 
@@ -395,7 +398,7 @@ export default function TournamentScoreModal({
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-            <Link
+            {linkToMatch && <Link
               href={`/${clubSlug}/admin/match-center?match=${encodeURIComponent(match.id)}`}
               className="btn btn-secondary"
               style={{
@@ -415,7 +418,7 @@ export default function TournamentScoreModal({
             >
               <Radio size={15} color="var(--c-green)" />
               <span>Match Centre</span>
-            </Link>
+            </Link>}
 
             <button
               type="submit"

@@ -3,6 +3,7 @@ import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { newsPath } from '@/lib/slugs';
 import { COMPETITORS } from '@/lib/competitors';
+import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 
 // Generated per request from live data. Not ISR: open-next.config.ts has no incremental cache store,
 // so on Cloudflare a revalidated sitemap would never be saved and the build-time copy would be served forever.
@@ -12,7 +13,12 @@ export const dynamic = 'force-dynamic';
 // are deliberately left out: listing them here would contradict their robots meta tag.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
-  const { clubs, matches, events, tournaments, news, teams, shopClubIds, galleryClubIds } = await listSitemapData();
+  const data = await listSitemapData();
+  const { matches, events, news, teams, shopClubIds, galleryClubIds, teamCounts } = data;
+  // Tournament-only clubs have no club pages, only their public tournament page (added below)
+  const eventSlugById = new Map(data.clubs.filter(isEventClub).map(c => [c.id, c.slug]));
+  const clubs = data.clubs.filter(c => !isEventClub(c));
+  const tournaments = data.tournaments.filter(t => !eventSlugById.has(t.club_id));
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
   const url = (path: string) => `${SITE_URL}${path}`;
   const date = (...values: (string | null | undefined)[]) => {
@@ -28,6 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/faq'), changeFrequency: 'monthly', priority: 0.5 },
     { url: url('/live-scores'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/lineup-builder'), changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/tournament-maker'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/vs'), changeFrequency: 'monthly', priority: 0.6 },
     ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },
@@ -93,6 +100,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const running = !t.status || !['completed', 'archived', 'cancelled'].includes(t.status);
     entries.push({
       url: url(`/${slug}/tournaments/${t.id}`),
+      lastModified: date(t.updated_at),
+      changeFrequency: running ? 'daily' : 'monthly',
+      priority: running ? 0.7 : 0.5,
+    });
+  }
+
+  // Public tournament pages, once they're real tournaments (the page is noindex until then too)
+  for (const t of data.tournaments) {
+    const slug = eventSlugById.get(t.club_id);
+    if (!slug || (teamCounts.get(t.id) || 0) < MIN_INDEXABLE_TEAMS) continue;
+    const running = !t.status || !['completed', 'archived', 'cancelled'].includes(t.status);
+    entries.push({
+      url: url(tournamentPagePath(slug)),
       lastModified: date(t.updated_at),
       changeFrequency: running ? 'daily' : 'monthly',
       priority: running ? 0.7 : 0.5,

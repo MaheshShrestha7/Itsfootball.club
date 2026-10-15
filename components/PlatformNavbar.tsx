@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { isListedClub } from '@/lib/public-tournaments';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
@@ -12,7 +13,7 @@ import { BrandWordmark } from '@/components/BrandLogo';
 import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
 
 export default function PlatformNavbar() {
-  const { clubs } = useClub();
+  const clubs = useClub().clubs.filter(isListedClub);
   const { user, isAuthenticated, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);

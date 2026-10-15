@@ -1,7 +1,16 @@
 // Self-check for club custom domain parsing and platform-host detection.
 // Run: npx esbuild lib/slugs.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { authReturnTarget, authReturnUrl, isPlatformHost, normalizeDomain, safeNextPath } from './slugs';
+import { authReturnTarget, authReturnUrl, clubSlugFromPath, isPlatformHost, normalizeDomain, safeNextPath } from './slugs';
+
+// Club pages, platform pages, and public tournament pages (which load their tournament-only club)
+assert.equal(clubSlugFromPath('/ancc/match/123'), 'ancc');
+assert.equal(clubSlugFromPath('/tools/lineup-builder'), '');
+assert.equal(clubSlugFromPath('/tournaments'), '');
+assert.equal(clubSlugFromPath('/tournaments/Dashain-Cup-2026'), 'dashain-cup-2026');
+assert.equal(clubSlugFromPath('/tournaments/dashain-cup-2026/manage'), 'dashain-cup-2026');
+assert.equal(clubSlugFromPath('/tournaments/admin'), '');
+assert.equal(clubSlugFromPath('/%E0%A4%A'), '');
 
 assert.equal(normalizeDomain('https://WWW.YourClub.com/news?x=1'), 'www.yourclub.com');
 assert.equal(normalizeDomain(' yourclub.co.uk. '), 'yourclub.co.uk');

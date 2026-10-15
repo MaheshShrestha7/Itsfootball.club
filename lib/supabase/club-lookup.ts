@@ -1,5 +1,6 @@
 import type { CalendarEvent, CalendarMatch } from '../calendar';
 import { fetchPaged } from '../paged';
+import type { SummaryMatch } from '../public-tournaments';
 
 // Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
 // Mirrors the slug/previous_slugs matching logic in lib/club-context.tsx's selectClubBySlug.
@@ -16,6 +17,8 @@ export interface ClubMetadataRow {
   stadium_name: string | null;
   stadium_address: string | null;
   founded_year: number | null;
+  /** config.kind 'event': a tournament-only club (lib/public-tournaments.ts) */
+  config: { kind?: string; organiser?: string; team_size?: string } | null;
 }
 
 async function fetchActiveClubs(): Promise<ClubMetadataRow[] | null> {
@@ -28,7 +31,7 @@ async function fetchActiveClubs(): Promise<ClubMetadataRow[] | null> {
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/clubs?select=id,name,short_name,motto,logo_url,banner_url,slug,previous_slugs,stadium_name,stadium_address,founded_year&is_active=eq.true`,
+      `${url}/rest/v1/clubs?select=id,name,short_name,motto,logo_url,banner_url,slug,previous_slugs,stadium_name,stadium_address,founded_year,config&is_active=eq.true`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },
@@ -151,6 +154,51 @@ export interface TournamentMetadataRow {
 export const findTournamentById = (tournamentId: string) =>
   fetchOne<TournamentMetadataRow>('tournaments', 'id,club_id,name,season,format,venue,banner_url,start_date,end_date,description', tournamentId);
 
+export interface EventTournamentRow extends TournamentMetadataRow {
+  slug: string | null;
+  status: string | null;
+  /** Teams entered, for deciding whether the page is worth indexing */
+  team_count: number;
+  team_names: string[];
+  /** Its matches, for the server-rendered summary and structured data */
+  matches: EventMatchRow[];
+}
+
+export interface EventMatchRow extends SummaryMatch {
+  id: string;
+  venue: string | null;
+}
+
+/** The tournament of a tournament-only club (lib/public-tournaments.ts), with its teams and matches */
+export async function findEventTournament(clubId: string): Promise<EventTournamentRow | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId)) return null;
+  const headers = { apikey: key, Authorization: `Bearer ${key}` };
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/tournaments?select=id,club_id,name,slug,status,season,format,venue,banner_url,start_date,end_date,description&club_id=eq.${clubId}&order=created_at&limit=1`,
+      { headers, next: { revalidate: 60 } }
+    );
+    if (!res.ok) return null;
+    const tournament = ((await res.json()) as Omit<EventTournamentRow, 'team_count'>[])[0];
+    if (!tournament) return null;
+    const [teams, matches] = await Promise.all([
+      fetch(`${url}/rest/v1/tournament_participants?select=name&tournament_id=eq.${tournament.id}`, { headers, next: { revalidate: 60 } }),
+      fetch(
+        `${url}/rest/v1/matches?select=id,home_team_name,away_team_name,match_date,venue,status,home_score,away_score,home_penalty_score,away_penalty_score,winner_side,tournament_stage&tournament_id=eq.${tournament.id}&order=match_date`,
+        { headers, next: { revalidate: 60 } }
+      ),
+    ]);
+    const team_names = teams.ok ? ((await teams.json()) as { name: string }[]).map(t => t.name).filter(Boolean) : [];
+    return { ...tournament, team_count: team_names.length, team_names, matches: matches.ok ? ((await matches.json()) as EventMatchRow[]) : [] };
+  } catch {
+    return null;
+  }
+}
+
 export interface NewsMetadataRow {
   id: string;
   title: string;
@@ -238,8 +286,9 @@ export async function findTeamBySlug(clubId: string, slug: string): Promise<Team
 }
 
 /** Every active club, for the /clubs directory's schema */
+/** Clubs for the directory: tournament-only clubs (lib/public-tournaments.ts) left out */
 export async function listActiveClubs(): Promise<ClubMetadataRow[]> {
-  return (await fetchActiveClubs()) || [];
+  return ((await fetchActiveClubs()) || []).filter(c => c.config?.kind !== 'event');
 }
 
 export interface ShopProductRow {
@@ -294,7 +343,7 @@ async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
 }
 
 export interface SitemapData {
-  clubs: { id: string; slug: string; updated_at: string | null }[];
+  clubs: { id: string; slug: string; updated_at: string | null; config: { kind?: string } | null }[];
   matches: { id: string; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
@@ -302,12 +351,14 @@ export interface SitemapData {
   teams: { club_id: string; slug: string }[];
   shopClubIds: string[];
   galleryClubIds: string[];
+  /** Teams entered per tournament */
+  teamCounts: Map<string, number>;
 }
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
-  const [clubs, matches, events, tournaments, news, teams, products, photos] = await Promise.all([
-    fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at&is_active=eq.true&order=id'),
+  const [clubs, matches, events, tournaments, news, teams, products, photos, participants] = await Promise.all([
+    fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
@@ -317,11 +368,15 @@ export async function listSitemapData(): Promise<SitemapData> {
     fetchRows<{ club_id: string }>('shop_products?select=club_id&is_active=eq.true&order=id'),
     // ponytail: reads one row per photo; a distinct-club_id view if galleries grow into the tens of thousands
     fetchRows<{ club_id: string }>('media_gallery?select=club_id&media_type=eq.image&order=id'),
+    fetchRows<{ tournament_id: string }>('tournament_participants?select=tournament_id&order=id'),
   ]);
+  const teamCounts = new Map<string, number>();
+  for (const p of participants) teamCounts.set(p.tournament_id, (teamCounts.get(p.tournament_id) || 0) + 1);
   return {
     clubs, matches, events, tournaments, news, teams,
     shopClubIds: Array.from(new Set(products.map(p => p.club_id))),
     galleryClubIds: Array.from(new Set(photos.map(p => p.club_id))),
+    teamCounts,
   };
 }
 

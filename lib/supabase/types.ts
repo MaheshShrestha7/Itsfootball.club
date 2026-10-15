@@ -97,6 +97,19 @@ export interface Club {
   welfare_officer_phone?: string;
   /** The club's story for the About page: news-editor HTML (sanitised when shown) */
   about_story?: string;
+  /** Free-form JSON; `kind: 'event'` marks a tournament-only club behind a public tournament page (lib/public-tournaments.ts) */
+  config?: ClubConfig;
+}
+
+export interface ClubConfig {
+  kind?: 'event';
+  /** Public tournament pages: who runs it, shown under the title */
+  organiser?: string;
+  /** Public tournament pages: e.g. '6-a-side' */
+  team_size?: string;
+  /** Public tournament pages: shown in a "Thanks to our sponsors" row */
+  sponsors?: { name: string; url?: string }[];
+  [key: string]: unknown;
 }
 
 export type MembershipStatus = 'pending' | 'approved' | 'rejected' | 'suspended';

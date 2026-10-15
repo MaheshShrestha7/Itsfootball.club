@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { isListedClub } from '@/lib/public-tournaments';
 import { clubInkVars } from '@/lib/theme-utils';
 import Link from 'next/link';
 import PlatformNavbar from '@/components/PlatformNavbar';
@@ -10,7 +11,8 @@ import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { Shield, Search, Radio, CreditCard, Settings, PlusCircle, MapPin, Users } from 'lucide-react';
 
 export default function ClubsDirectoryPage() {
-  const { clubs, matches } = useClub();
+  const { clubs: allClubs, matches } = useClub();
+  const clubs = allClubs.filter(isListedClub);
   const [searchTerm, setSearchTerm] = useState('');
 
   // /clubs?q=... is the search URL advertised to search engines (WebSite SearchAction on the homepage)

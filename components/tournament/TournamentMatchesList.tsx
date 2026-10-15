@@ -13,6 +13,8 @@ interface TournamentMatchesListProps {
   clubSlug: string;
   onSelectMatch?: (match: Match) => void;
   isAdmin?: boolean;
+  /** False on public tournament pages, whose tournament-only club has no match pages */
+  linkToMatch?: boolean;
 }
 
 export default function TournamentMatchesList({
@@ -20,6 +22,7 @@ export default function TournamentMatchesList({
   clubSlug,
   onSelectMatch,
   isAdmin = false,
+  linkToMatch = true,
 }: TournamentMatchesListProps) {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -380,7 +383,7 @@ export default function TournamentMatchesList({
                     </button>
                   )}
 
-                  <Link
+                  {linkToMatch && <Link
                     href={`/${clubSlug}/match/${match.id}`}
                     style={{
                       display: 'flex',
@@ -394,7 +397,7 @@ export default function TournamentMatchesList({
                   >
                     <span>Match Centre</span>
                     <ArrowRight size={12} />
-                  </Link>
+                  </Link>}
                 </div>
               </div>
             </div>
