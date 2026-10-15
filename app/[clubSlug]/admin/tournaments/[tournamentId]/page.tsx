@@ -470,7 +470,7 @@ export default function AdminTournamentDetailPage({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Click any match card below to enter full-time score, penalties, or open in Match Center.
+              Click any match card below to enter full-time score, penalties, or open in Match Centre.
             </span>
           </div>
           <TournamentBracketView

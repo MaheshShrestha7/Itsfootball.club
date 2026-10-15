@@ -414,7 +414,7 @@ export default function TournamentScoreModal({
               }}
             >
               <Radio size={15} color="var(--c-green)" />
-              <span>Match Center</span>
+              <span>Match Centre</span>
             </Link>
 
             <button

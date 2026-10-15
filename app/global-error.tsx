@@ -11,7 +11,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="en">
+    <html lang="en-AU">
       <body style={{
         margin: 0,
         minHeight: '100vh',

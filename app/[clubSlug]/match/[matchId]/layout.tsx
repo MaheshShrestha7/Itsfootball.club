@@ -45,8 +45,8 @@ export async function generateMetadata({
           : played
           ? `Full time: ${score}${match.competition ? ` in the ${match.competition}` : ''}.`
           : `${fixture}${match.competition ? `, ${match.competition}` : ''}${date ? ` on ${date}` : ''}.`,
-        `Follow live goals, cards, lineups and the matchday squad on the ${club.name} match center.`,
-        'Get live goals, cards and lineups on the match center.',
+        `Follow live goals, cards, lineups and the matchday squad on the ${club.name} match centre.`,
+        'Get live goals, cards and lineups on the match centre.',
         isLive ? 'Tune in now.' : played ? 'See the full report.' : 'Set a reminder now.'
       ),
       path,

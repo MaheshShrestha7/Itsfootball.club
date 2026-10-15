@@ -355,7 +355,7 @@ export default function AdminMatchesPage({
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
         ...(teamId !== (editingMatch?.team_id ?? null) ? { team_id: teamId } : {}),
-        // Only what the admin actually changed: the live match center may have moved the score or
+        // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
         ...(homeScore !== opened.home_score ? { home_score: homeScore } : {}),
@@ -543,7 +543,7 @@ export default function AdminMatchesPage({
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             <Radio size={16} color="var(--c-red)" />
-            <span>Match Command Center</span>
+            <span>Match Command Centre</span>
           </Link>
 
           <button

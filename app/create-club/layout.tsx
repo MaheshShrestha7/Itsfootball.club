@@ -7,7 +7,7 @@ import { CREATE_CLUB_STEPS } from '@/lib/faq';
 export const metadata: Metadata = pageMetadata({
   title: 'Create a Football Club Website | itsfootball.club',
   description: fitDescription(
-    'Set up your football club website in minutes: club branding, fixtures, live match center, squad and member passes.',
+    'Set up your football club website in minutes: club branding, fixtures, live match centre, squad and member passes.',
     'Register your club today.'
   ),
   path: '/create-club',

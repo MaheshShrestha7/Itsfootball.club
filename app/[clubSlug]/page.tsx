@@ -284,7 +284,7 @@ export default function ClubPublicPage({
             bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
             subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
-            ctaLabel: item.cta_label || (isLive ? 'Enter Match Center Live' : 'Match Preview & Lineups'),
+            ctaLabel: item.cta_label || (isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups'),
             ctaLink: item.cta_link || (matchItem ? `/${club.slug}/match/${matchItem.id}` : `/${club.slug}`),
             targetMatch: matchItem,
           };
@@ -589,7 +589,7 @@ export default function ClubPublicPage({
                             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                           >
                             <Zap size={16} />
-                            <span>{currentSlide.ctaLabel || (activeSlideMatch?.status === 'live' ? 'Enter Match Center Live' : 'Full Fixture Center')}</span>
+                            <span>{currentSlide.ctaLabel || (activeSlideMatch?.status === 'live' ? 'Enter Match Centre Live' : 'Full Fixture Centre')}</span>
                           </Link>
 
                           {isClubAdmin && (
@@ -953,7 +953,7 @@ export default function ClubPublicPage({
                             className="btn btn-primary btn-sm touch-target"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                           >
-                            <span>Full Match Center</span>
+                            <span>Full Match Centre</span>
                             <ChevronRight size={14} />
                           </Link>
                         </div>
@@ -1763,7 +1763,7 @@ export default function ClubPublicPage({
                     className="btn btn-secondary btn-sm touch-target"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
                   >
-                    <span>{match.status === 'completed' ? 'Match Report' : 'Match Center'}</span>
+                    <span>{match.status === 'completed' ? 'Match Report' : 'Match Centre'}</span>
                     <ChevronRight size={14} />
                   </Link>
                 </div>

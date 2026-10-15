@@ -252,9 +252,9 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             About
           </Link>
 
-          {/* Live match: otherwise the match center is just the Fixtures link below, so it isn't listed twice */}
+          {/* Live match: otherwise the match centre is just the Fixtures link below, so it isn't listed twice */}
           {liveMatch && (
-            <Link href={`/${club.slug}/match/${liveMatch.id}`} aria-label="Live match: open the match center" style={{ display: 'flex', alignItems: 'center' }}>
+            <Link href={`/${club.slug}/match/${liveMatch.id}`} aria-label="Live match: open the match centre" style={{ display: 'flex', alignItems: 'center' }}>
               <span className="badge badge-live" style={{ padding: '0.2rem 0.5rem' }}>
                 <span className="pulse-dot" /> LIVE
               </span>
@@ -468,7 +468,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 </button>
               </div>
 
-              {/* Action Buttons: Match Center & Member Pass */}
+              {/* Action Buttons: Match Centre & Member Pass */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 <Link
                   href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
@@ -487,7 +487,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   }}
                 >
                   <Radio size={16} color={liveMatch ? '#EF4444' : 'currentColor'} />
-                  <span>{liveMatch ? 'Watch Match Center (LIVE)' : 'Match-Day Center'}</span>
+                  <span>{liveMatch ? 'Watch Match Centre (LIVE)' : 'Match-Day Centre'}</span>
                 </Link>
 
                 {/* Members: their member pass. Everyone else: join the club */}

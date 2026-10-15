@@ -7,7 +7,7 @@ import { listActiveClubs } from '@/lib/supabase/club-lookup';
 export const metadata: Metadata = pageMetadata({
   title: 'Football Clubs Directory | itsfootball.club',
   description: fitDescription(
-    'Browse football clubs on itsfootball.club and follow their live match centers, fixtures, squads and club news.',
+    'Browse football clubs on itsfootball.club and follow their live match centres, fixtures, squads and club news.',
     'Find your club and join today.'
   ),
   path: '/clubs',

@@ -63,7 +63,7 @@ export function homeSchema() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: { '@type': 'ImageObject', url: abs('/logo.png'), width: 512, height: 512 },
-      description: 'A free platform for grassroots and community football clubs: club websites, live match centres, lineups, digital member passes, club merch shops and sponsor showcases.',
+      description: 'A free platform for grassroots and community football and soccer clubs: club websites, live match centres, lineups, digital member passes, club merch shops and sponsor showcases.',
       email: CONTACT_EMAIL,
       areaServed: AREA_SERVED,
       sameAs: SOCIAL_PROFILES.map(p => p.url),
@@ -77,7 +77,7 @@ export function homeSchema() {
       url: SITE_URL,
       applicationCategory: 'SportsApplication',
       operatingSystem: 'Any (web browser; installable on iPhone and Android)',
-      description: 'Free club website and management platform for grassroots football clubs, run by club volunteers from one dashboard.',
+      description: 'Free club website and management platform for grassroots football and soccer clubs, run by club volunteers from one dashboard.',
       featureList: [
         'Club website with custom colours, logo and domain',
         'Live match centre with goals, cards and substitutions',

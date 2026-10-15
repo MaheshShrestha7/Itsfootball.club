@@ -392,7 +392,7 @@ export default function TournamentMatchesList({
                       fontWeight: 700,
                     }}
                   >
-                    <span>Match Center</span>
+                    <span>Match Centre</span>
                     <ArrowRight size={12} />
                   </Link>
                 </div>

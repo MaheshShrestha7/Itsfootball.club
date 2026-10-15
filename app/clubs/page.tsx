@@ -47,7 +47,7 @@ export default function ClubsDirectoryPage() {
             <div className="badge badge-primary" style={{ marginBottom: '0.5rem' }}>DIRECTORY</div>
             <h1 style={{ fontSize: '2.4rem', fontWeight: 900 }}>Registered Football Clubs</h1>
             <p style={{ color: 'var(--text-secondary)', maxWidth: '500px' }}>
-              Explore official club websites, live match-day centers, and digital passes across the network.
+              Explore official club websites, live match-day centres, and digital passes across the network.
             </p>
           </div>
 
@@ -144,7 +144,7 @@ export default function ClubsDirectoryPage() {
                       Public Page
                     </Link>
                     <Link href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Radio size={14} color="var(--c-red)" /> Match Center
+                      <Radio size={14} color="var(--c-red)" /> Match Centre
                     </Link>
                     <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <CreditCard size={14} color={club.primary_color} /> Member Pass

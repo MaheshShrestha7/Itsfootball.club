@@ -2007,7 +2007,7 @@ export function ClubProvider({
 
     return {
       success: true,
-      message: `Published ${draft.format} ${draft.formation} lineup to live Match Center!`,
+      message: `Published ${draft.format} ${draft.formation} lineup to live Match Centre!`,
     };
   }, [draftLineups]);
 
@@ -2310,7 +2310,7 @@ export function ClubProvider({
     // Gate Scans
     const gateScansCount = clubScans.length;
 
-    // Match Center peak viewers
+    // Match Centre peak viewers
     const liveMatch = matches.find(m => m.club_id === clubId && m.status === 'live');
     const matchViews = clubViews.filter(v => v.page_path?.includes('/match') || v.page_path?.includes('match-center')).length;
     const matchCenterFans = liveMatch ? matchViews : 0;
@@ -2326,7 +2326,7 @@ export function ClubProvider({
 
     // Section breakdown
     const sectionHits: Record<string, number> = {
-      'Live Match-Day Center': clubViews.filter(v => v.page_path?.includes('/match')).length * 5,
+      'Live Match-Day Centre': clubViews.filter(v => v.page_path?.includes('/match')).length * 5,
       'First Team Squad & Stats': clubViews.filter(v => v.page_path?.includes('/squad') || v.page_path?.includes('#squad')).length * 5,
       'Fixtures & Results': clubViews.filter(v => v.page_path?.includes('/events') || v.page_path?.includes('#fixtures')).length * 5,
       'Digital Member Pass Portal': clubViews.filter(v => v.page_path?.includes('/member')).length * 5,
@@ -2335,7 +2335,7 @@ export function ClubProvider({
     const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
 
     const colors: Record<string, string> = {
-      'Live Match-Day Center': '#EF4444',
+      'Live Match-Day Centre': '#EF4444',
       'First Team Squad & Stats': 'var(--club-primary)',
       'Fixtures & Results': '#3B82F6',
       'Digital Member Pass Portal': '#F59E0B',

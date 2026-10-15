@@ -215,7 +215,7 @@ export default function PlatformHomePage() {
           <div>
             <div className="lp-kicker">
               <span className="pulse-dot" aria-hidden="true" />
-              Built for grassroots &amp; community football
+              Built for grassroots football &amp; soccer clubs
             </div>
 
             <h1 className="lp-h1">
@@ -225,7 +225,7 @@ export default function PlatformHomePage() {
             </h1>
 
             <p className="lp-hero-sub">
-              itsfootball.club is the free platform for grassroots football clubs: your official club website, live match centre,
+              itsfootball.club is the free platform for grassroots football and soccer clubs: your official club website, live match centre,
               digital member passes, subs collection, a merch shop and sponsor reporting, run by your committee from one
               dashboard. No developer. No spreadsheets. No 40-message group chats.
             </p>

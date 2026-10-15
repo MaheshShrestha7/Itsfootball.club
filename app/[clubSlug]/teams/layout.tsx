@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
       title: fitTitle('Our Teams', clubName(club), SITE_NAME),
       description: fitDescription(
         `Every ${club.name} team: first team, reserves, academy and youth sides, with squads, coaches and fixtures.`,
-        'Follow every game live on the club match center.'
+        'Follow every game live on the club match centre.'
       ),
       path: `/${club.slug}/teams`,
       ...clubImage(club),
