@@ -2923,3 +2923,90 @@ dialog.confirm-dialog::backdrop {
 .lineup-tool-editor .form-input { padding: 0.5rem 0.7rem; }
 .lineup-tool-editor-row + .lineup-tool-editor-row { margin-top: 0.5rem; }
 .lineup-tool-editor-grid { display: grid; grid-template-columns: 56px 64px 36px minmax(0, 1fr); gap: 0.4rem; align-items: center; }
+
+/* Lineup builder glass: the member pass's look (colour glows under frosted panels with a diagonal sheen
+   and hairline edges), tinted with the team colour picked in the builder (--lb-rgb) */
+.lineup-tool { position: relative; isolation: isolate; --lb-rgb: 16, 185, 129; }
+.lineup-tool::before {
+  content: ''; position: absolute; inset: -48px 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38% 42% at 18% 20%, rgba(var(--lb-rgb), 0.38), transparent 70%),
+    radial-gradient(30% 36% at 85% 12%, rgba(124, 58, 237, 0.22), transparent 70%),
+    radial-gradient(34% 40% at 78% 82%, rgba(var(--lb-rgb), 0.26), transparent 70%),
+    radial-gradient(28% 30% at 25% 90%, rgba(14, 165, 233, 0.16), transparent 70%);
+  transition: background 0.4s ease;
+}
+.lineup-tool-glass {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.04), 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+/* Diagonal sheen across the top of each panel */
+.lineup-tool-glass::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.07) 45%, transparent 60%);
+}
+.lineup-tool-pitch-frame { padding: 0.75rem 0.75rem 0.25rem; }
+.lineup-tool-pitch-col.lineup-tool-glass { position: sticky; }
+@media (max-width: 900px) { .lineup-tool-pitch-col.lineup-tool-glass { position: relative; top: auto; } }
+/* No sheen over the grass */
+.lineup-tool-pitch-frame::after { display: none; }
+.lineup-tool-pitch-frame .tactical-pitch { border-color: rgba(255, 255, 255, 0.22); }
+.lineup-tool-controls .form-input,
+.lineup-tool-controls .form-select {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.lineup-tool-controls .form-input:focus,
+.lineup-tool-controls .form-select:focus { border-color: rgba(var(--lb-rgb), 0.7); box-shadow: 0 0 0 3px rgba(var(--lb-rgb), 0.2); }
+.lineup-tool-pill { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.lineup-tool-pill.is-active {
+  background: linear-gradient(140deg, rgba(var(--lb-rgb), 0.32), rgba(var(--lb-rgb), 0.12));
+  border-color: rgba(var(--lb-rgb), 0.6);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 16px rgba(var(--lb-rgb), 0.25);
+}
+.lineup-tool-captain { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.14); }
+.lineup-tool-prompt {
+  background: linear-gradient(140deg, rgba(var(--lb-rgb), 0.18), rgba(255, 255, 255, 0.03));
+  border-color: rgba(var(--lb-rgb), 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+/* Name tags and the tap-a-player popup: frosted over the grass */
+.lineup-tool-tag {
+  background: rgba(10, 16, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.lineup-tool-editor {
+  background: linear-gradient(140deg, rgba(30, 40, 54, 0.72), rgba(10, 14, 20, 0.78));
+  border-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+.lineup-tool-editor .form-input { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.14); }
+/* Light theme: white frost on the light page (the pitch stays dark) */
+[data-theme='light'] .lineup-tool-glass {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.55) 100%);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 20px 50px rgba(15, 23, 42, 0.1);
+}
+[data-theme='light'] .lineup-tool-glass::after { background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.4) 45%, transparent 60%); }
+[data-theme='light'] .lineup-tool-controls .form-input,
+[data-theme='light'] .lineup-tool-controls .form-select,
+[data-theme='light'] .lineup-tool-pill,
+[data-theme='light'] .lineup-tool-captain { background: rgba(255, 255, 255, 0.6); border-color: rgba(15, 23, 42, 0.1); }
+[data-theme='light'] .lineup-tool::before { opacity: 0.6; }
+@media (prefers-reduced-transparency: reduce) {
+  .lineup-tool-glass, .lineup-tool-tag, .lineup-tool-editor { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+.lineup-tool-pill-icon { display: inline-flex; align-items: center; gap: 0.4rem; }

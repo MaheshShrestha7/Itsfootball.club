@@ -3,11 +3,11 @@
 // The free lineup builder at /tools/lineup-builder: pick a format and shape, type the names, drag
 // players around the pitch and download the graphic. No login and nothing is saved on the server;
 // the image is drawn in the browser by the same code as a club's matchday share cards.
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Download, ImagePlus, RotateCcw, Share2, X } from 'lucide-react';
 import { FORMAT_PRESETS } from '@/components/TacticalPitch';
-import { drawMatchCard, type CardFormat } from '@/lib/share-card';
+import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type MarkerShape } from '@/lib/share-card';
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
 import { juniorPublicName } from '@/lib/teams';
 
@@ -98,6 +98,14 @@ const FORMATS: { key: Format; label: string; size: number; word: string }[] = [
   { key: '11v11', label: '11-a-side', size: 11, word: 'XI' },
 ];
 
+const MARKERS: { key: MarkerShape; label: string }[] = [
+  { key: 'circle', label: 'Circle' },
+  { key: 'jersey', label: 'Jersey' },
+  { key: 'square', label: 'Square' },
+  { key: 'hexagon', label: 'Hexagon' },
+  { key: 'triangle', label: 'Triangle' },
+];
+
 const COLOURS = ['#10B981', '#DC2626', '#2563EB', '#0EA5E9', '#FACC15', '#F97316', '#7C3AED', '#E5E7EB'];
 
 interface Player { name: string; number: string }
@@ -117,6 +125,8 @@ interface State {
   size: CardFormat;
   /** The image shows the players on the pitch (default) or as a numbered list */
   layout: 'pitch' | 'list';
+  /** The player icon on the pitch and the image */
+  marker: MarkerShape;
 }
 
 const STORAGE_KEY = 'ifc-lineup-builder';
@@ -137,8 +147,15 @@ function fresh(format: Format, shape?: string, players: Player[] = []): State {
     colour: COLOURS[0],
     size: 'post',
     layout: 'pitch',
+    marker: 'circle',
   };
 }
+
+/** '#10B981' -> '16, 185, 129', for the glass tints in the team colour */
+const hexRgb = (hex: string) => {
+  const n = parseInt(/^#[0-9a-f]{6}$/i.test(hex) ? hex.slice(1) : '10B981', 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+};
 
 const clamp = (n: number) => Math.min(96, Math.max(4, n));
 
@@ -257,7 +274,7 @@ export default function LineupBuilderTool() {
       competition: state.competition.trim(),
       match_date: '',
     } as unknown as Match;
-    return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', { format: state.size, headline: ['STARTING', size.word], keepOrder: true });
+    return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', { format: state.size, headline: ['STARTING', size.word], keepOrder: true, marker: state.marker });
   };
 
   const run = async (share: boolean) => {
@@ -292,9 +309,9 @@ export default function LineupBuilderTool() {
   };
 
   return (
-    <div className="lineup-tool">
+    <div className="lineup-tool" style={{ '--lb-rgb': hexRgb(state.colour) } as CSSProperties}>
       {/* The pitch */}
-      <div className="lineup-tool-pitch-col">
+      <div className="lineup-tool-pitch-col lineup-tool-glass lineup-tool-pitch-frame">
         <div
           ref={pitchRef}
           className="tactical-pitch tactical-pitch-vertical lineup-tool-pitch"
@@ -344,17 +361,26 @@ export default function LineupBuilderTool() {
                 <div
                   className="player-node-circle"
                   style={{
-                    position: 'relative', width: 44, height: 44, borderRadius: '50%',
-                    background: gk ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : `linear-gradient(135deg, ${state.colour} 0%, rgba(0,0,0,0.3) 100%), ${state.colour}`,
-                    border: p.name.trim() ? '2px solid rgba(255,255,255,0.85)' : '2px dashed rgba(255,255,255,0.65)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    position: 'relative', width: 44, height: 44,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#FFFFFF', fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '0.95rem',
                     textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                    ...(state.marker === 'circle' ? {
+                      borderRadius: '50%',
+                      background: gk ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : `linear-gradient(135deg, ${state.colour} 0%, rgba(0,0,0,0.3) 100%), ${state.colour}`,
+                      border: p.name.trim() ? '2px solid rgba(255,255,255,0.85)' : '2px dashed rgba(255,255,255,0.65)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    } : {}),
                   }}
                 >
-                  {initials(p.name) || '+'}
-                  {p.number && (
+                  {state.marker !== 'circle' && (
+                    <MarkerIcon shape={state.marker} fill={gk ? '#F59E0B' : state.colour} dashed={!p.name.trim()}
+                      style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }} />
+                  )}
+                  <span style={{ position: 'relative', transform: `translateY(${MARKER_TEXT_DROP[state.marker] * 50}%)`, fontSize: `${MARKER_TEXT_SCALE[state.marker]}em` }}>
+                    {(state.marker === 'jersey' && p.number) || initials(p.name) || '+'}
+                  </span>
+                  {p.number && state.marker !== 'jersey' && (
                     <span className="player-node-number" style={{
                       position: 'absolute', bottom: -4, left: -6, minWidth: 18, padding: '1px 4px', borderRadius: 5,
                       background: 'rgba(8, 12, 18, 0.92)', color: '#FFFFFF', fontFamily: 'var(--font-mono)',
@@ -370,9 +396,8 @@ export default function LineupBuilderTool() {
                     }}>C</span>
                   )}
                 </div>
-                <div className="player-node-name" style={{
-                  marginTop: 6, padding: '2px 7px', borderRadius: 5, maxWidth: 96,
-                  background: 'rgba(8, 12, 18, 0.88)', border: '1px solid rgba(255,255,255,0.15)',
+                <div className="player-node-name lineup-tool-tag" style={{
+                  marginTop: 6, padding: '2px 7px', borderRadius: 6, maxWidth: 96,
                   fontSize: '0.7rem', fontWeight: 700, color: p.name.trim() ? '#F8FAFC' : 'rgba(248,250,252,0.6)',
                   textAlign: 'center', lineHeight: 1.15, overflowWrap: 'anywhere',
                 }}>
@@ -401,7 +426,7 @@ export default function LineupBuilderTool() {
       </div>
 
       {/* Controls */}
-      <div className="lineup-tool-controls glass-panel">
+      <div className="lineup-tool-controls lineup-tool-glass">
         <div className="form-group">
           <span className="form-label">Format</span>
           <div className="lineup-tool-pills" role="radiogroup" aria-label="Format">
@@ -435,6 +460,19 @@ export default function LineupBuilderTool() {
           <div className="form-group">
             <label className="form-label" htmlFor="lb-comp">Competition <span className="lineup-tool-optional">(optional)</span></label>
             <input id="lb-comp" className="form-input" value={state.competition} maxLength={40} placeholder="Sunday League" onChange={e => update({ competition: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <span className="form-label">Player icons</span>
+          <div className="lineup-tool-pills" role="radiogroup" aria-label="Player icons">
+            {MARKERS.map(m => (
+              <button key={m.key} type="button" role="radio" aria-checked={state.marker === m.key}
+                className={`lineup-tool-pill lineup-tool-pill-icon ${state.marker === m.key ? 'is-active' : ''}`} onClick={() => update({ marker: m.key })}>
+                <MarkerIcon shape={m.key} fill={state.colour} style={{ width: 18, height: 18 }} />
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -584,5 +622,27 @@ function PlayerEditor({ position, player, captain, above, onName, onNumber, onPo
         </div>
       </form>
     </div>
+  );
+}
+
+/** A player marker's shape as SVG: the club colour shading darker to one corner, with a white outline */
+function MarkerIcon({ shape, fill, dashed, style }: { shape: MarkerShape; fill: string; dashed?: boolean; style?: CSSProperties }) {
+  const id = useId();
+  const outline = { stroke: dashed ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.85)', strokeWidth: 2, strokeDasharray: dashed ? '4 3' : undefined, strokeLinejoin: 'round' as const, vectorEffect: 'non-scaling-stroke' as const };
+  const body = (props: Record<string, unknown>) =>
+    shape === 'circle' ? <circle cx={50} cy={50} r={44} {...props} />
+      : shape === 'square' ? <rect x={5} y={5} width={90} height={90} rx={19} {...props} />
+      : <polygon points={MARKER_POINTS[shape].map(([x, y]) => `${x},${y}`).join(' ')} {...props} />;
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" style={style}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.3" />
+        </linearGradient>
+      </defs>
+      {body({ fill })}
+      {body({ fill: `url(#${id})`, ...outline })}
+    </svg>
   );
 }
