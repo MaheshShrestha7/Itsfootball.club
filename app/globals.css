@@ -3041,7 +3041,7 @@ dialog.confirm-dialog::backdrop {
 .rg-preview { padding: 0.9rem; }
 .rg-preview-wrap { max-width: 400px; margin: 0 auto; }
 .rg-preview-wrap img { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); user-select: none; touch-action: pan-x; }
-.rg-preview-wrap img.is-draggable { cursor: ns-resize; touch-action: none; }
+.rg-preview-wrap img.is-draggable { cursor: grab; touch-action: none; }
 .rg-preview-empty { aspect-ratio: 9 / 16; border-radius: 14px; background: rgba(var(--tint-rgb), 0.05); }
 .rg-preview-wrap.is-post .rg-preview-empty { aspect-ratio: 4 / 5; }
 .rg-preview-wrap.is-square .rg-preview-empty { aspect-ratio: 1; }

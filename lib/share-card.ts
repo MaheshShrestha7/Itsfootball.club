@@ -42,9 +42,12 @@ export interface CardOptions {
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
   /** Player of the Match: a row on the result card, and the subject of the motm card */
-  motm?: { name: string; photo?: string; line?: string; focusY?: number; /** The photo is a cut-out (background removed) */ cutout?: boolean };
+  motm?: { name: string; photo?: string; line?: string; focusY?: number; /** The photo is a cut-out (background removed) */ cutout?: boolean; /** Font family for the name (a brush script on the free tool), so it stands apart from the headline */ nameFont?: string;
+    /** Zoom on the photo (1 = fit) and its sideways position (0 to 1, 0.5 = centred; on a cut-out also focusY moves it, 0.3 = resting) */ zoom?: number; focusX?: number };
   /** Scorer lines with a ball beside each, as left-aligned blocks (the free result graphic maker) */
   scorerBalls?: boolean;
+  /** Icons beside the date, the ground and the Player of the Match's stats (the free result graphic maker) */
+  icons?: boolean;
 }
 
 export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
@@ -160,11 +163,11 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null
 }
 
 /** Fills the box with the image, cropped to fit; `focusY` picks which part of a tall image shows */
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focusY = 0.5) {
-  const scale = Math.max(w / (img.naturalWidth || w), h / (img.naturalHeight || h));
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focusY = 0.5, zoom = 1, focusX = 0.5) {
+  const scale = Math.max(w / (img.naturalWidth || w), h / (img.naturalHeight || h)) * Math.max(1, zoom);
   const iw = (img.naturalWidth || w) * scale;
   const ih = (img.naturalHeight || h) * scale;
-  ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) * Math.min(1, Math.max(0, focusY)), iw, ih);
+  ctx.drawImage(img, x + (w - iw) * Math.min(1, Math.max(0, focusX)), y + (h - ih) * Math.min(1, Math.max(0, focusY)), iw, ih);
 }
 
 /** A football: white with a dark pentagon, for the scorer lines */
@@ -197,6 +200,67 @@ function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
+}
+
+// Line icons on a 24 × 24 grid (calendar, map pin and shield are Lucide's, ISC licence; the boot is ours)
+type IconName = 'calendar' | 'pin' | 'ball' | 'boot' | 'shield' | 'glove' | 'star';
+const ICON_PATHS: Partial<Record<IconName, string[]>> = {
+  calendar: ['M8 2v4', 'M16 2v4', 'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M3 10h18'],
+  pin: ['M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0', 'M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0'],
+  shield: ['M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'],
+  boot: ['M4 5h6v5l7.5 2.6c2 .7 3.5 2.3 3.5 4.4V18H4z', 'M4 14h17', 'M7 18v2', 'M12 18v2', 'M17 18v2'],
+  glove: ['M7 21h9a3 3 0 0 0 3-3v-7a1.5 1.5 0 0 0-3 0V7a1.5 1.5 0 0 0-3 0V5a1.5 1.5 0 0 0-3 0v1a1.5 1.5 0 0 0-3 0v8l-1.6-1.6a1.5 1.5 0 0 0-2.1 2.1L7 18z'],
+};
+
+/** One icon, centred on (cx, cy) and `size` across, in `colour` */
+function icon(ctx: CanvasRenderingContext2D, name: IconName, cx: number, cy: number, size: number, colour: string) {
+  if (name === 'ball') return ball(ctx, cx, cy, size * 0.42);
+  if (name === 'star') return star(ctx, cx, cy, size * 0.5, colour);
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(size / 24, size / 24);
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const d of ICON_PATHS[name] || []) ctx.stroke(new Path2D(d));
+  ctx.restore();
+}
+
+/** The icon for one part of a Player of the Match line, like "2 goals" or "1 assist" */
+function statIcon(part: string): IconName {
+  const p = part.toLowerCase();
+  if (/goal|hat.?trick|brace|scor/.test(p)) return 'ball';
+  if (/assist/.test(p)) return 'boot';
+  if (/clean sheet|tackle|block|intercept|defen/.test(p)) return 'shield';
+  if (/save|keeper|stop/.test(p)) return 'glove';
+  return 'star';
+}
+
+/** A centred row of icon + text pairs at `y`, shrunk to fit `maxWidth` */
+function iconRow(ctx: CanvasRenderingContext2D, items: { icon: IconName; text: string }[], y: number, size: number, weight: number,
+  family: string, maxWidth: number, textColour: string, iconColour: string) {
+  items = items.filter(i => i.text.trim());
+  if (!items.length) return;
+  const widthAt = (s: number) => {
+    ctx.font = `${weight} ${s}px ${family}`;
+    return items.reduce((w, i) => w + s * 1.05 + s * 0.4 + ctx.measureText(i.text).width, 0) + (items.length - 1) * s * 1.1;
+  };
+  let s = size;
+  while (s > 16 && widthAt(s) > maxWidth) s -= 1;
+  const total = widthAt(s);
+  let cursor = ctx.canvas.width / 2 - total / 2;
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  for (const it of items) {
+    icon(ctx, it.icon, cursor + s * 0.52, y, s * 1.05, iconColour);
+    cursor += s * 1.05 + s * 0.4;
+    ctx.fillStyle = textColour;
+    ctx.fillText(it.text, cursor, y);
+    cursor += ctx.measureText(it.text).width + s * 1.1;
+  }
+  ctx.restore();
 }
 
 function initialsOf(name: string) {
@@ -340,7 +404,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillRect(0, 0, W, H);
   }
   if (motmPhoto && !cutout) {
-    drawCover(ctx, motmPhoto, 0, 0, W, motmPhotoH, opts.motm?.focusY ?? 0.3);
+    drawCover(ctx, motmPhoto, 0, 0, W, motmPhotoH, opts.motm?.focusY ?? 0.3, opts.motm?.zoom, opts.motm?.focusX);
     const fade = ctx.createLinearGradient(0, 0, 0, motmPhotoH);
     fade.addColorStop(0, 'rgba(7, 11, 18, 0.75)');
     fade.addColorStop(0.3, 'rgba(7, 11, 18, 0.1)');
@@ -389,7 +453,11 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const top = by(330, 170, 130);
     const bottom = by(1180, 880, 680);
     const boxW = W - 144;
-    const scale = Math.min(boxW / motmPhoto.naturalWidth, (bottom - top) / motmPhoto.naturalHeight);
+    const zoom = Math.max(1, opts.motm?.zoom ?? 1);
+    const scale = Math.min(boxW / motmPhoto.naturalWidth, (bottom - top) / motmPhoto.naturalHeight) * zoom;
+    // Moved by the person: sideways by focusX, and up or down by focusY from its resting 0.3
+    const dx = ((opts.motm?.focusX ?? 0.5) - 0.5) * W;
+    const dy = ((opts.motm?.focusY ?? 0.3) - 0.3) * H;
     const pw = Math.round(motmPhoto.naturalWidth * scale);
     const ph = Math.round(motmPhoto.naturalHeight * scale);
     const player = document.createElement('canvas');
@@ -404,7 +472,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       fadeOut.addColorStop(1, 'rgba(0, 0, 0, 1)');
       pctx.fillStyle = fadeOut;
       pctx.fillRect(0, 0, pw, ph);
-      const halo = ctx.createRadialGradient(W / 2, bottom - ph * 0.55, 0, W / 2, bottom - ph * 0.55, Math.max(pw, ph) * 0.7);
+      const halo = ctx.createRadialGradient(W / 2 + dx, bottom + dy - ph * 0.55, 0, W / 2 + dx, bottom + dy - ph * 0.55, Math.max(pw, ph) * 0.7);
       halo.addColorStop(0, rgba(primary, 0.45));
       halo.addColorStop(1, rgba(primary, 0));
       ctx.fillStyle = halo;
@@ -412,7 +480,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       ctx.save();
       ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
       ctx.shadowBlur = 40;
-      ctx.drawImage(player, (W - pw) / 2, bottom - ph);
+      ctx.drawImage(player, (W - pw) / 2 + dx, bottom + dy - ph);
       ctx.restore();
     }
   }
@@ -474,9 +542,12 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   const [first, second] = opts.headline
     || (kind === 'motm' ? ['PLAYER OF', 'THE MATCH'] : kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored));
 
-  // Headline (on the Player of the Match card it sits under the photo)
-  const hlY = kind === 'motm' ? by(1150, 840, 640) : by(500, 290, 230);
-  const hlSize = kind === 'motm' ? by(128, 108, 92) : by(170, 132, 116);
+  // Headline (on the Player of the Match card it sits under the photo, and under the player's name when
+  // the name is in its own script font, which then takes the headline's place)
+  const nameFirst = kind === 'motm' && !!opts.motm?.name && !!opts.motm.nameFont;
+  const nameTopY = by(1150, 840, 640);
+  const hlY = nameFirst ? nameTopY + by(104, 88, 76) : kind === 'motm' ? nameTopY : by(500, 290, 230);
+  const hlSize = nameFirst ? by(84, 72, 60) : kind === 'motm' ? by(128, 108, 92) : by(170, 132, 116);
   ctx.font = `900 ${hlSize}px ${heading}`;
   const gap = hlSize * 0.12;
   const wA = ctx.measureText(first).width;
@@ -730,7 +801,20 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     }
     const nameSize = by(64, 54, 46);
     const nameY = hlY + hlSize * by(1.05, 1, 1);
-    if (m?.name) {
+    if (m?.name && m.nameFont) {
+      // The name in its own (script) font, large and above the headline
+      const size = by(116, 100, 86);
+      await document.fonts?.load(`400 ${size}px ${m.nameFont}`).catch(() => null);
+      ctx.save();
+      if (overPhoto) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 30;
+      }
+      ctx.fillStyle = INK;
+      fit(ctx, m.name, 400, size, W - M * 2, m.nameFont);
+      ctx.fillText(m.name, W / 2, nameTopY);
+      ctx.restore();
+    } else if (m?.name) {
       const name = m.name.toUpperCase();
       ctx.fillStyle = INK;
       spaced(ctx, 2);
@@ -738,10 +822,14 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       ctx.fillText(name, W / 2, nameY);
       spaced(ctx, 0);
     }
-    if (m?.line) {
+    if (m?.line && opts.icons) {
+      const parts = m.line.split(/\s*[·•,|]\s*/).filter(Boolean);
+      iconRow(ctx, parts.map(t => ({ icon: statIcon(t), text: t })), nameFirst ? hlY + by(66, 54, 48) : nameY + by(62, 50, 50),
+        by(32, 28, 28), 600, body, W - M * 2, MUTED, ink);
+    } else if (m?.line) {
       ctx.fillStyle = MUTED;
       fit(ctx, m.line, 600, by(32, 28, 28), W - M * 2, body);
-      ctx.fillText(m.line, W / 2, nameY + by(62, 50, 50));
+      ctx.fillText(m.line, W / 2, nameFirst ? hlY + by(66, 54, 48) : nameY + by(62, 50, 50));
     }
     // The result: both crests, names and the score in one glass strip
     const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
@@ -769,7 +857,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillText(score, W / 2, mid + 2);
     const { day } = kickoff(match);
     const when = [day, match.venue].filter(Boolean).join(' · ');
-    if (when && !square) {
+    if (when && !square && opts.icons) {
+      iconRow(ctx, [{ icon: 'calendar', text: day }, { icon: 'pin', text: match.venue || '' }], stripY + stripH + by(60, 48, 48),
+        by(30, 26, 26), 600, body, W - M * 2, MUTED, ink);
+    } else if (when && !square) {
       ctx.fillStyle = FAINT;
       fit(ctx, when, 600, by(30, 26, 26), W - M * 2, body);
       ctx.fillText(when, W / 2, stripY + stripH + by(60, 48, 48));
@@ -915,6 +1006,9 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         fit(ctx, match.venue, 600, by(34, 30, 28), W - M * 2 - 80, body);
         ctx.fillText(match.venue, W / 2, top + by(222, 176, 168));
       }
+    } else if (opts.icons) {
+      iconRow(ctx, [{ icon: 'calendar', text: day }, { icon: 'pin', text: match.venue || '' }], H - by(310, 150, 100),
+        28, 600, body, W - M * 2, MUTED, ink);
     } else {
       ctx.fillStyle = FAINT;
       const line = [day, match.venue].filter(Boolean).join(' · ');

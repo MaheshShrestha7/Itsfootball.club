@@ -1,6 +1,6 @@
 // Copies MediaPipe's WebAssembly runtime from node_modules into public/, so the result graphic maker's
 // "Remove background" (lib/remove-background.ts) loads it from our own domain (the CSP allows no CDN).
-// Runs before `next dev` and `next build`. The files are ~22 MB, so they're not committed.
+// Runs before `next dev` and as part of `npm run build`. The files are ~22 MB, so they're not committed.
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 
 const from = 'node_modules/@mediapipe/tasks-vision/wasm';
