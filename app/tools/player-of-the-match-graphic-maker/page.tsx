@@ -2,13 +2,13 @@ import Link from 'next/link';
 import ResultGraphicTool from '@/components/ResultGraphicTool';
 import ToolLandingPage, { bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { RESULT_TOOL } from '@/lib/tool-pages';
+import { RESULT_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/player-of-the-match-graphic-maker';
 const TITLE = 'Free Player of the Match Graphic Maker | MOTM Template for Football';
 const DESCRIPTION = 'Make a Player of the Match (Man of the Match) graphic for your football or soccer club: their photo, name and the score in your team colours. Download for Instagram, Facebook or WhatsApp. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const PHOTO_TIPS = [
   'From the chest up, in their match kit, with the badge showing.',

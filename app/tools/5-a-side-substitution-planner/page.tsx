@@ -2,13 +2,13 @@ import PlayingTimeTool from '@/components/PlayingTimeTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { MinutesTable, WorkedExample } from '@/components/PlayingTimeTable';
 import { pageMetadata } from '@/lib/seo';
-import { PLAYING_TIME_TOOL } from '@/lib/tool-pages';
+import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/5-a-side-substitution-planner';
 const TITLE = '5-a-Side Substitution Planner | Rolling Subs Calculator for 5v5 & Futsal';
 const DESCRIPTION = 'Plan rolling subs for 5-a-side and futsal: enter 6, 7 or 8 players and the match length, and get a rotation where everyone plays equal minutes. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const QUESTIONS = [
   { q: 'How many minutes does each player get in 5-a-side?', a: 'Multiply 5 by the match length and divide by the squad. Over two 20-minute halves (40 minutes): 6 players get 33.3 minutes each, 7 players get 28.6, and 8 players get 25.' },

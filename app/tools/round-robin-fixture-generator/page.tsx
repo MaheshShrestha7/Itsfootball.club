@@ -1,13 +1,13 @@
 import TournamentMakerTool from '@/components/TournamentMakerTool';
 import ToolLandingPage, { bodyStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
-import { TOURNAMENT_TOOL } from '@/lib/tool-pages';
+import { TOURNAMENT_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/round-robin-fixture-generator';
 const TITLE = 'Free Round Robin Fixture Generator | Soccer League Draw';
 const DESCRIPTION = 'Generate a round robin soccer fixture list where every team plays every other team once, with a live league table that updates as you enter scores. Free.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 // Worked out the way the maker draws a league (circle method, one bye a round when the count is odd)
 const ROWS = [4, 5, 6, 8, 10, 12, 16].map(teams => ({

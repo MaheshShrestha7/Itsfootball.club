@@ -3,13 +3,13 @@ import PlayingTimeTool from '@/components/PlayingTimeTool';
 import ToolLandingPage, { bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { MinutesTable, WorkedExample } from '@/components/PlayingTimeTable';
 import { pageMetadata } from '@/lib/seo';
-import { PLAYING_TIME_FORMAT_PAGES } from '@/lib/tool-pages';
+import { PLAYING_TIME_FORMAT_PAGES, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/equal-playing-time-calculator';
 const TITLE = 'Equal Playing Time Calculator | Free Soccer Sub Rotation Planner';
 const DESCRIPTION = 'Give every player equal minutes: pick 5, 7, 9 or 11-a-side, the match length and your squad size, and get a minute-by-minute substitution schedule with each player’s total. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const QUESTIONS = [
   { q: 'How do you calculate equal playing time in football?', a: 'Multiply the number of players on the pitch by the match length, then divide by the squad size. For 9-a-side over 60 minutes with 13 players: 9 × 60 ÷ 13 = 41.5 minutes each. If the keeper stays in goal all game, leave them out: 8 × 60 ÷ 12 = 40 minutes for each outfield player.' },

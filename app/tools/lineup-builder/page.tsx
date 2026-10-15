@@ -3,8 +3,8 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { ToolBreadcrumb, ToolLinks, toolBreadcrumbSchema } from '@/components/ToolLandingPage';
-import { LINEUP_FORMAT_PAGES } from '@/lib/tool-pages';
+import { ToolBreadcrumb, ToolExampleFigure, ToolLinks, ToolUpdated, toolBreadcrumbSchema, toolSchemaExtras } from '@/components/ToolLandingPage';
+import { LINEUP_FORMAT_PAGES, toolOgImage } from '@/lib/tool-pages';
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
@@ -13,7 +13,7 @@ const PATH = '/tools/lineup-builder';
 const TITLE = 'Free Football Lineup Builder | Soccer Team Sheet Maker';
 const DESCRIPTION = 'Build a 5, 7, 9 or 11-a-side football lineup on a pitch and download it as an image for Instagram, Facebook or WhatsApp. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const STEPS = [
   { name: 'Pick the format and formation', text: '5-a-side, 7-a-side, 9-a-side or 11-a-side, then one of 28 formations, or free form.' },
@@ -74,6 +74,7 @@ const schema = {
       featureList: FEATURES,
       publisher: { '@id': ORGANIZATION_ID },
       isPartOf: { '@id': WEBSITE_ID },
+      ...toolSchemaExtras(PATH),
     },
     toolBreadcrumbSchema(PATH, 'Free football lineup builder'),
     {
@@ -111,6 +112,7 @@ export default function LineupBuilderPage() {
             Make your soccer starting lineup for 5, 7, 9 or 11-a-side in a minute: pick a formation, tap players to name
             them, drag them into place and download a team sheet image for Instagram, Facebook or WhatsApp. Free, with no login.
           </p>
+          <ToolUpdated />
         </header>
 
         <LineupBuilderTool />
@@ -121,6 +123,8 @@ export default function LineupBuilderPage() {
             {STEPS.map(s => <li key={s.name}><span><strong>{s.name}.</strong> {s.text}</span></li>)}
           </ol>
         </section>
+
+        <ToolExampleFigure path={PATH} />
 
         <section style={{ marginTop: '2.5rem' }} aria-labelledby="formations">
           <h2 id="formations" style={h2Style}>Formations you can use</h2>

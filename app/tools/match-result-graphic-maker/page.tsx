@@ -2,12 +2,13 @@ import Link from 'next/link';
 import ResultGraphicTool from '@/components/ResultGraphicTool';
 import ToolLandingPage, { bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
+import { toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/match-result-graphic-maker';
 const TITLE = 'Free Football Result Graphic Maker | Soccer Full-Time Score & MOTM';
 const DESCRIPTION = 'Make a full-time score graphic for your football or soccer club: badges, score, goalscorers and Player of the Match on your own photo. Download for Instagram stories, Facebook or WhatsApp. Free, no sign-up.';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 
 const SIZES = [
   { name: 'Story 9:16', pixels: '1080 × 1920', use: 'Instagram and Facebook stories, WhatsApp status. Text stays clear of the app’s own bars at the top and bottom.' },
