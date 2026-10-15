@@ -408,7 +408,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.lineWidth = 2 * k;
         ctx.stroke();
-        if (!photo) {
+        if (!photo && p.name !== p.position) { // an unnamed slot (the free lineup builder names it by its position) stays blank
           const parts = p.name.trim().split(/\s+/);
           const initials = (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
           ctx.fillStyle = '#FFFFFF';
