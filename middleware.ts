@@ -6,6 +6,8 @@ const PLATFORM_PAGES = ['about', 'clubs', 'create-club', 'my-clubs', 'faq', 'uns
 
 // The framable public tournament embed (see next.config.ts headers)
 const EMBED_PATH = /^\/tournaments\/[^/]+\/embed\/?$/;
+// The result graphic maker's "Remove background" runs MediaPipe, which is WebAssembly (lib/remove-background.ts)
+const WASM_PATH = /^\/tools\/(match-result|player-of-the-match)-graphic-maker\/?$/;
 
 // Club domain -> slug (null = no club has it). Per isolate; a changed domain shows up within a minute.
 const HOST_TTL_MS = 60_000;
@@ -42,6 +44,8 @@ export async function middleware(request: NextRequest) {
   let csp = (process.env.CSP_TEMPLATE || '').replaceAll('__NONCE__', nonce);
   // A public tournament's embed (read-only) can be framed by any site: club websites, news pages
   if (EMBED_PATH.test(pathname)) csp = csp.replace("frame-ancestors 'self'", 'frame-ancestors *');
+  // Allows compiling WebAssembly only (not JavaScript eval), on those two pages only
+  if (WASM_PATH.test(pathname)) csp = csp.replace("script-src 'self'", "script-src 'self' 'wasm-unsafe-eval'");
 
   // A club's own domain serves that club's pages at the root: yourclub.com/member is /{slug}/member.
   // Links inside the app still carry the slug (yourclub.com/{slug}/member), and those pass straight through.

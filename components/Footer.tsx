@@ -247,6 +247,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/live-scores" style={{ color: 'var(--text-secondary)' }}>Live Match Centre</Link>
                   <Link href="/tools/lineup-builder" style={{ color: 'var(--text-secondary)' }}>Free Lineup Builder</Link>
                   <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
+                  <Link href="/tools/match-result-graphic-maker" style={{ color: 'var(--text-secondary)' }}>Free Result Graphic Maker</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}

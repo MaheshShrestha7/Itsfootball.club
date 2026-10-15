@@ -8,12 +8,12 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
-import { FORMAT_PAGES, LINEUP_TOOL, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
+import { FORMAT_PAGES, LINEUP_TOOL, RESULT_TOOL, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface ToolLandingProps {
   path: string;
-  /** The parent tool, for the breadcrumb */
-  parent: ToolPageLink;
+  /** The parent tool, for the breadcrumb (none on a main tool's own page) */
+  parent?: ToolPageLink;
   badge: string;
   h1: string;
   /** Answer first: the sentence search and AI engines lift as the summary */
@@ -36,7 +36,7 @@ export const linkStyle: CSSProperties = { color: 'var(--club-ink)', fontWeight: 
 
 /** The tools other than this page, main tools first */
 function otherTools(path: string): ToolPageLink[] {
-  return [LINEUP_TOOL, TOURNAMENT_TOOL, ...FORMAT_PAGES].filter(t => t.path !== path);
+  return [LINEUP_TOOL, TOURNAMENT_TOOL, RESULT_TOOL, ...FORMAT_PAGES].filter(t => t.path !== path);
 }
 
 export function ToolLinks({ path, heading = 'More free tools' }: { path: string; heading?: string }) {
@@ -83,8 +83,8 @@ export default function ToolLandingPage(p: ToolLandingProps) {
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'itsfootball.club', item: SITE_URL },
-          { '@type': 'ListItem', position: 2, name: p.parent.label, item: `${SITE_URL}${p.parent.path}` },
-          { '@type': 'ListItem', position: 3, name: p.h1, item: url },
+          ...(p.parent ? [{ '@type': 'ListItem', position: 2, name: p.parent.label, item: `${SITE_URL}${p.parent.path}` }] : []),
+          { '@type': 'ListItem', position: p.parent ? 3 : 2, name: p.h1, item: url },
         ],
       },
       {
@@ -101,11 +101,13 @@ export default function ToolLandingPage(p: ToolLandingProps) {
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3rem 1rem', flex: 1, maxWidth: p.maxWidth || '1120px' }}>
-        <nav aria-label="Breadcrumb" className="tool-breadcrumb">
-          <Link href={p.parent.path}>{p.parent.label}</Link>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page">{p.h1}</span>
-        </nav>
+        {p.parent && (
+          <nav aria-label="Breadcrumb" className="tool-breadcrumb">
+            <Link href={p.parent.path}>{p.parent.label}</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{p.h1}</span>
+          </nav>
+        )}
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{p.h1}</h1>
