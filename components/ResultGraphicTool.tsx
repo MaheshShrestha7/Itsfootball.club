@@ -6,10 +6,14 @@
 // drawn in the browser by the same code as a club's matchday share cards (lib/share-card.ts).
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
+import { Kaushan_Script } from 'next/font/google';
 import { ArrowRight, Download, ImagePlus, Minus, Plus, Scissors, Share2, Star, Trash2, Undo2, X } from 'lucide-react';
 import { CARD_SIZES, drawMatchCard, type CardFormat, type CardOptions } from '@/lib/share-card';
 import { COVER_PRESETS } from '@/lib/cover-presets';
 import type { Club, Match } from '@/lib/supabase/types';
+
+// The Player of the Match's name is drawn in a brush script, so it stands apart from the bold headline
+const nameFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 'swap' });
 
 type Side = 'home' | 'away';
 type Graphic = 'result' | 'motm';
@@ -236,7 +240,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
       logo_url: us.crest || shield(usName, us.colour),
     } as unknown as Club;
     const motm = state.motmName.trim()
-      ? { name: state.motmName.trim(), line: state.motmLine.trim() || undefined, photo: motmPhoto || undefined, focusY: focus.motm, cutout: !!motmOriginal }
+      ? { name: state.motmName.trim(), line: state.motmLine.trim() || undefined, photo: motmPhoto || undefined, focusY: focus.motm, cutout: !!motmOriginal, nameFont: nameFont.style.fontFamily }
       : undefined;
     return drawMatchCard(match, club, state.graphic === 'motm' ? 'motm' : 'score', 'Made at itsfootball.club', {
       format: state.size,
@@ -331,7 +335,10 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
       setMotmPhoto(cut);
       setDownloaded(false);
     } catch (e) {
-      setCutError(e instanceof Error && e.message.startsWith('Could not') ? e.message : 'Could not remove the background on this device. The photo still works as it is.');
+      console.error('Remove background failed', e);
+      const reason = e instanceof Error ? e.message : String(e);
+      // Our own messages are written for people; anything else is kept short so it can be reported
+      setCutError(reason.startsWith('Could not') ? reason : `Could not remove the background on this device. The photo still works as it is. (Details: ${reason.slice(0, 140)})`);
     } finally {
       setCutting(false);
     }

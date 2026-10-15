@@ -42,7 +42,7 @@ export interface CardOptions {
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
   /** Player of the Match: a row on the result card, and the subject of the motm card */
-  motm?: { name: string; photo?: string; line?: string; focusY?: number; /** The photo is a cut-out (background removed) */ cutout?: boolean };
+  motm?: { name: string; photo?: string; line?: string; focusY?: number; /** The photo is a cut-out (background removed) */ cutout?: boolean; /** Font family for the name (a brush script on the free tool), so it stands apart from the headline */ nameFont?: string };
   /** Scorer lines with a ball beside each, as left-aligned blocks (the free result graphic maker) */
   scorerBalls?: boolean;
 }
@@ -730,7 +730,13 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     }
     const nameSize = by(64, 54, 46);
     const nameY = hlY + hlSize * by(1.05, 1, 1);
-    if (m?.name) {
+    if (m?.name && m.nameFont) {
+      // The name in its own (script) font, a little larger, so it doesn't read as part of the headline
+      await document.fonts?.load(`400 ${nameSize}px ${m.nameFont}`).catch(() => null);
+      ctx.fillStyle = INK;
+      fit(ctx, m.name, 400, Math.round(nameSize * 1.3), W - M * 2, m.nameFont);
+      ctx.fillText(m.name, W / 2, nameY + by(8, 6, 6));
+    } else if (m?.name) {
       const name = m.name.toUpperCase();
       ctx.fillStyle = INK;
       spaced(ctx, 2);
