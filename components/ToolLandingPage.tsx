@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
-import { FORMAT_PAGES, LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
+import { FORMAT_PAGES, LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface ToolLandingProps {
   path: string;
@@ -36,7 +36,7 @@ export const linkStyle: CSSProperties = { color: 'var(--club-ink)', fontWeight: 
 
 /** The tools other than this page, main tools first */
 function otherTools(path: string): ToolPageLink[] {
-  return [LINEUP_TOOL, TOURNAMENT_TOOL, RESULT_TOOL, PLAYING_TIME_TOOL, ...FORMAT_PAGES].filter(t => t.path !== path);
+  return [LINEUP_TOOL, TOURNAMENT_TOOL, RESULT_TOOL, PLAYING_TIME_TOOL, SEASON_FEE_TOOL, ...FORMAT_PAGES].filter(t => t.path !== path);
 }
 
 export function ToolLinks({ path, heading = 'More free tools' }: { path: string; heading?: string }) {

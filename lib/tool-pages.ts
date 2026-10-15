@@ -1,4 +1,4 @@
-// The free tools under /tools: the four main tools and the format landing pages that open them with
+// The free tools under /tools: the main tools and the format landing pages that open them with
 // different defaults. Used for the sitemap, the cross-links between the pages and llms.txt.
 export interface ToolPageLink {
   path: string;
@@ -10,6 +10,7 @@ export const LINEUP_TOOL: ToolPageLink = { path: '/tools/lineup-builder', label:
 export const TOURNAMENT_TOOL: ToolPageLink = { path: '/tools/tournament-maker', label: 'Soccer tournament maker', blurb: 'Groups, knockout or league, live link' };
 export const RESULT_TOOL: ToolPageLink = { path: '/tools/match-result-graphic-maker', label: 'Match result graphic maker', blurb: 'Full-time score for stories and posts' };
 export const PLAYING_TIME_TOOL: ToolPageLink = { path: '/tools/equal-playing-time-calculator', label: 'Equal playing time calculator', blurb: 'Fair minutes and a sub schedule' };
+export const SEASON_FEE_TOOL: ToolPageLink = { path: '/tools/season-fee-calculator', label: 'Season fee calculator', blurb: 'Break-even subs, card vs cash' };
 
 export const LINEUP_FORMAT_PAGES: ToolPageLink[] = [
   { path: '/tools/11-a-side-lineup-builder', label: '11-a-side lineup builder', blurb: 'Opens on 4-3-3' },
