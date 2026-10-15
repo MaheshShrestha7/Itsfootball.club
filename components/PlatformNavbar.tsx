@@ -10,7 +10,7 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Wrench } from 'lucide-react';
 
 export default function PlatformNavbar() {
   const clubs = useClub().clubs.filter(isListedClub);
@@ -54,6 +54,10 @@ export default function PlatformNavbar() {
           <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Trophy size={16} />
             Clubs Directory
+          </Link>
+          <Link href="/tools" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Wrench size={16} />
+            Free Tools
           </Link>
           <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <HelpCircle size={16} />
@@ -313,6 +317,24 @@ export default function PlatformNavbar() {
                   <span>Clubs Directory</span>
                 </Link>
                 <Link
+                  href="/tools"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
+                  }}
+                >
+                  <Wrench size={18} color="var(--c-green)" />
+                  <span>Free Tools</span>
+                </Link>
+                <Link
                   href="/faq"
                   onClick={() => setMobileDrawerOpen(false)}
                   style={{
@@ -415,7 +437,8 @@ export default function PlatformNavbar() {
         .mobile-platform-trigger {
           display: flex;
         }
-        @media (min-width: 860px) {
+        /* 1100px: below that the links (with Free Tools) no longer fit, so the menu button takes over */
+        @media (min-width: 1100px) {
           .desktop-platform-nav {
             display: flex !important;
           }

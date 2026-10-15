@@ -21,8 +21,17 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2,
+  Layers, ClipboardList, Share2, Timer,
 } from 'lucide-react';
+import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
+
+// The free tools teased on the homepage; the rest are on /tools
+const HOME_TOOLS = [
+  { tool: LINEUP_TOOL, Icon: ClipboardList, color: 'var(--c-blue)', text: 'Pick a formation, name your players and download a team sheet for the group chat.' },
+  { tool: PLAYING_TIME_TOOL, Icon: Timer, color: 'var(--c-green)', text: 'Give every player the same minutes, with a sub schedule you can print or send.' },
+  { tool: RESULT_TOOL, Icon: Images, color: 'var(--c-red)', text: 'Turn the full-time score and scorers into a story or post for Instagram.' },
+  { tool: TOURNAMENT_TOOL, Icon: Trophy, color: 'var(--c-amber)', text: 'Draw the fixtures and share a live page with tables and a bracket.' },
+];
 
 // "I'm a..." switcher: each role gets its own pitch and the action that role can actually take.
 // secondary: 'demo' links to a live club site, 'share' sends this page to whoever runs the club.
@@ -678,6 +687,31 @@ export default function PlatformHomePage() {
                 <h3>{s.name}</h3>
                 <p>{s.text}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= FREE TOOLS (no club needed) ================= */}
+      <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-tools-h">
+        <div className="container">
+          <div className="lp-head lp-reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div>
+              <div className="lp-eyebrow">Free tools, no sign-up</div>
+              <h2 id="lp-tools-h" className="lp-h2">Not ready for a club site? Start with a tool.</h2>
+            </div>
+            <Link href={TOOLS_HUB.path} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              All free tools <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="lp-tools">
+            {HOME_TOOLS.map(t => (
+              <Link key={t.tool.path} href={t.tool.path} className="lp-tile lp-tool lp-reveal" style={{ '--tc': t.color } as React.CSSProperties}>
+                <div className="lp-tile-ico"><t.Icon size={20} /></div>
+                <h3>{t.tool.label}</h3>
+                <p>{t.text}</p>
+                <span className="lp-tool-go">Open the tool <ArrowRight size={14} /></span>
+              </Link>
             ))}
           </div>
         </div>
