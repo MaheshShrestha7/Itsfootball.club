@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import CustomDomainPanel from './CustomDomainPanel';
+import HomeGroundPanel from './HomeGroundPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -787,6 +788,9 @@ export default function AdminBrandingPage({
             </div>
           </div>
         </div>
+
+        {/* SECTION 3b: PUBLIC GROUND GUIDE (saved on its own, see HomeGroundPanel) */}
+        {club && <HomeGroundPanel club={club} />}
 
         {/* SECTION 4: SECRETARIAT & OPERATIONS CONTACT DETAILS */}
         <div className="glass-panel" style={{ padding: '2rem' }}>

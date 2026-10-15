@@ -3287,3 +3287,11 @@ dialog.confirm-dialog::backdrop {
   .sf-compare tbody th { white-space: normal; }
   .sf-result .lineup-tool-actions .btn-secondary { flex: 1 1 auto; padding: 0 0.9rem; }
 }
+
+/* Grounds directory (app/grounds) */
+.ground-status { margin-top: 1.25rem; padding: 1.2rem 1.4rem; border-left: 3px solid #F59E0B; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+.ground-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem; }
+@media (max-width: 760px) { .ground-grid { grid-template-columns: 1fr; } }
+.ground-group-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
+.ground-group-head h3 { font-size: 1.05rem; font-weight: 800; margin: 0; }
+@media (max-width: 640px) { .ground-pitch-row { grid-template-columns: 1fr 1fr !important; } .ground-pitch-row > :nth-child(3) { grid-column: 1 / -1; } }
