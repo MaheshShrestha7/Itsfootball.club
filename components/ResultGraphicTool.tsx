@@ -142,13 +142,15 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
   const [cutting, setCutting] = useState(false);
   const [cutError, setCutError] = useState('');
   const [focus, setFocus] = useState({ bg: 0.5, motm: 0.3 });
+  // The player photo's zoom and sideways position (its up-and-down position is focus.motm)
+  const [motmFrame, setMotmFrame] = useState({ x: 0.5, zoom: 1 });
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [downloaded, setDownloaded] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const loaded = useRef(false);
-  const drag = useRef<{ y: number; start: number; key: 'bg' | 'motm' } | null>(null);
+  const drag = useRef<{ x: number; y: number; start: number; startX: number; key: 'bg' | 'motm' } | null>(null);
   const previewRef = useRef<HTMLImageElement>(null);
 
   // Remember the teams and match details in this browser (a convenience only: it works the same without it)
@@ -240,7 +242,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
       logo_url: us.crest || shield(usName, us.colour),
     } as unknown as Club;
     const motm = state.motmName.trim()
-      ? { name: state.motmName.trim(), line: state.motmLine.trim() || undefined, photo: motmPhoto || undefined, focusY: focus.motm, cutout: !!motmOriginal, nameFont: nameFont.style.fontFamily }
+      ? { name: state.motmName.trim(), line: state.motmLine.trim() || undefined, photo: motmPhoto || undefined, focusY: focus.motm, focusX: motmFrame.x, zoom: motmFrame.zoom, cutout: !!motmOriginal, nameFont: nameFont.style.fontFamily }
       : undefined;
     return drawMatchCard(match, club, state.graphic === 'motm' ? 'motm' : 'score', 'Made at itsfootball.club', {
       format: state.size,
@@ -265,21 +267,29 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
     return () => { cancelled = true; clearTimeout(t); };
     // render reads only state, the photos and the focus
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, bgPhoto, motmPhoto, focus]);
+  }, [state, bgPhoto, motmPhoto, focus, motmFrame]);
 
-  // Drag the preview up and down to choose which part of the photo shows
-  const dragKey: 'bg' | 'motm' | null = state.graphic === 'motm' && motmPhoto && !motmOriginal ? 'motm' : background ? 'bg' : null;
+  // Drag the preview to choose which part of a photo shows: the background up and down, the player's
+  // photo any way (a cut-out moves with the finger; a photo that fills the top pans inside its frame)
+  const dragKey: 'bg' | 'motm' | null = state.graphic === 'motm' && motmPhoto ? 'motm' : background ? 'bg' : null;
   const onDown = (e: ReactPointerEvent<HTMLImageElement>) => {
     if (!dragKey) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    drag.current = { y: e.clientY, start: focus[dragKey], key: dragKey };
+    drag.current = { x: e.clientX, y: e.clientY, start: focus[dragKey], startX: motmFrame.x, key: dragKey };
   };
   const onMove = (e: ReactPointerEvent<HTMLImageElement>) => {
     const d = drag.current;
-    const h = previewRef.current?.getBoundingClientRect().height;
-    if (!d || !h) return;
-    const next = Math.min(1, Math.max(0, d.start - ((e.clientY - d.y) / h) * 1.5));
-    setFocus(f => ({ ...f, [d.key]: next }));
+    const rect = previewRef.current?.getBoundingClientRect();
+    if (!d || !rect?.height) return;
+    const fx = (e.clientX - d.x) / rect.width;
+    const fy = (e.clientY - d.y) / rect.height;
+    if (d.key === 'motm' && motmOriginal) {
+      setFocus(f => ({ ...f, motm: Math.min(0.8, Math.max(-0.2, d.start + fy)) }));
+      setMotmFrame(m => ({ ...m, x: Math.min(1, Math.max(0, d.startX + fx)) }));
+      return;
+    }
+    setFocus(f => ({ ...f, [d.key]: Math.min(1, Math.max(0, d.start - fy * 1.5)) }));
+    if (d.key === 'motm') setMotmFrame(m => ({ ...m, x: Math.min(1, Math.max(0, d.startX - fx * 1.5)) }));
   };
   const onUp = () => { drag.current = null; };
 
@@ -324,6 +334,11 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
   };
 
   // Cut the player out of their photo, on the device (lib/remove-background.ts loads only now)
+  const resetFrame = () => {
+    setMotmFrame({ x: 0.5, zoom: 1 });
+    setFocus(f => ({ ...f, motm: 0.3 }));
+  };
+
   const removeBg = async () => {
     if (!motmPhoto) return;
     setCutting(true);
@@ -333,6 +348,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
       const cut = await removeBackground(motmPhoto);
       setMotmOriginal(motmPhoto);
       setMotmPhoto(cut);
+      resetFrame();
       setDownloaded(false);
     } catch (e) {
       console.error('Remove background failed', e);
@@ -392,7 +408,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
               className={dragKey ? 'is-draggable' : ''} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
             : <div className="rg-preview-empty" />}
         </div>
-        <p className="lineup-tool-hint">{dragKey ? 'Live preview. Drag it up or down to move the photo.' : 'Live preview of your graphic.'}</p>
+        <p className="lineup-tool-hint">{dragKey === 'motm' ? 'Live preview. Drag it to move the player’s photo.' : dragKey ? 'Live preview. Drag it up or down to move the photo.' : 'Live preview of your graphic.'}</p>
       </div>
 
       <div className="lineup-tool-controls lineup-tool-glass">
@@ -482,6 +498,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
               if (!f) return;
               setMotmPhoto(await readImage(f, 1600, 'image/jpeg'));
               setMotmOriginal(null);
+              resetFrame();
               setCutError('');
               setDownloaded(false);
             }} />
@@ -496,7 +513,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
         {motmPhoto && (
           <div className="rg-photo-actions">
             {motmOriginal ? (
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setMotmPhoto(motmOriginal); setMotmOriginal(null); setDownloaded(false); }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setMotmPhoto(motmOriginal); setMotmOriginal(null); resetFrame(); setDownloaded(false); }}>
                 <Undo2 size={14} /> Put the background back
               </button>
             ) : (
@@ -506,6 +523,14 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
             )}
             <button type="button" className="rg-link" onClick={() => { setMotmPhoto(null); setMotmOriginal(null); setCutError(''); setDownloaded(false); }}>Remove photo</button>
           </div>
+        )}
+        {motmPhoto && state.graphic === 'motm' && (
+          <label className="rg-range">
+            <span>Zoom</span>
+            <input type="range" min={1} max={2.5} step={0.05} value={motmFrame.zoom} aria-label="Zoom the player photo"
+              onChange={e => setMotmFrame(m => ({ ...m, zoom: parseFloat(e.target.value) }))} />
+            <button type="button" className="rg-link" style={{ marginTop: 0 }} onClick={resetFrame}>Reset</button>
+          </label>
         )}
         {cutting && <p className="rg-note">The first time, this downloads about 12 MB to your phone. The photo itself never leaves it.</p>}
         {cutError && <p role="alert" className="rg-warn">{cutError}</p>}
