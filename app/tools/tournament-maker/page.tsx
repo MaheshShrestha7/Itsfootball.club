@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { ToolLinks } from '@/components/ToolLandingPage';
+import { ToolBreadcrumb, ToolLinks, toolBreadcrumbSchema } from '@/components/ToolLandingPage';
 import TournamentMakerTool from '@/components/TournamentMakerTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
@@ -80,13 +80,7 @@ const schema = {
       publisher: { '@id': ORGANIZATION_ID },
       isPartOf: { '@id': WEBSITE_ID },
     },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'itsfootball.club', item: SITE_URL },
-        { '@type': 'ListItem', position: 2, name: 'Free tournament maker', item: `${SITE_URL}${MAKER_PATH}` },
-      ],
-    },
+    toolBreadcrumbSchema(MAKER_PATH, 'Free soccer tournament maker'),
     {
       '@type': 'FAQPage',
       mainEntity: QUESTIONS.map(i => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
@@ -108,6 +102,7 @@ export default function TournamentMakerPage() {
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3rem 1rem', flex: 1, maxWidth: '1180px' }}>
+        <ToolBreadcrumb name="Free soccer tournament maker" />
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE TOOL · LIVE BRACKET LINK</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>

@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID, howToSchema } from '@/lib/schema';
-import { FORMAT_PAGES, LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOURNAMENT_TOOL, type ToolPageLink } from '@/lib/tool-pages';
+import { MAIN_TOOLS, TOOL_GROUPS, TOOLS_HUB, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface ToolLandingProps {
   path: string;
@@ -34,9 +34,40 @@ export const h2Style: CSSProperties = { fontSize: 'clamp(1.3rem, 3.2vw, 1.6rem)'
 export const bodyStyle: CSSProperties = { color: 'var(--text-secondary)', lineHeight: 1.7 };
 export const linkStyle: CSSProperties = { color: 'var(--club-ink)', fontWeight: 600 };
 
-/** The tools other than this page, main tools first */
+/** The tools other than this page: its own group first, then the other main tools, then the hub */
 function otherTools(path: string): ToolPageLink[] {
-  return [LINEUP_TOOL, TOURNAMENT_TOOL, RESULT_TOOL, PLAYING_TIME_TOOL, SEASON_FEE_TOOL, ...FORMAT_PAGES].filter(t => t.path !== path);
+  const group = TOOL_GROUPS.find(g => [...g.main, ...g.formats].some(t => t.path === path));
+  const own = group ? [...group.main, ...group.formats] : [];
+  const others = MAIN_TOOLS.filter(t => !own.includes(t));
+  return [...own, ...others, TOOLS_HUB].filter(t => t.path !== path);
+}
+
+/** Home > Free football tools > (parent tool) > this page, as schema.org breadcrumbs */
+export function toolBreadcrumbSchema(path: string, name: string, parent?: ToolPageLink) {
+  const trail = [
+    { name: 'itsfootball.club', item: SITE_URL },
+    { name: TOOLS_HUB.label, item: `${SITE_URL}${TOOLS_HUB.path}` },
+    ...(parent ? [{ name: parent.label, item: `${SITE_URL}${parent.path}` }] : []),
+    { name, item: `${SITE_URL}${path}` },
+  ];
+  return { '@type': 'BreadcrumbList', itemListElement: trail.map((t, i) => ({ '@type': 'ListItem', position: i + 1, ...t })) };
+}
+
+/** The visible trail above a tool page's heading */
+export function ToolBreadcrumb({ name, parent }: { name: string; parent?: ToolPageLink }) {
+  return (
+    <nav aria-label="Breadcrumb" className="tool-breadcrumb">
+      <Link href={TOOLS_HUB.path}>Free tools</Link>
+      {parent && (
+        <>
+          <span aria-hidden="true">/</span>
+          <Link href={parent.path}>{parent.label}</Link>
+        </>
+      )}
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{name}</span>
+    </nav>
+  );
 }
 
 export function ToolLinks({ path, heading = 'More free tools' }: { path: string; heading?: string }) {
@@ -79,14 +110,7 @@ export default function ToolLandingPage(p: ToolLandingProps) {
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
       },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'itsfootball.club', item: SITE_URL },
-          ...(p.parent ? [{ '@type': 'ListItem', position: 2, name: p.parent.label, item: `${SITE_URL}${p.parent.path}` }] : []),
-          { '@type': 'ListItem', position: p.parent ? 3 : 2, name: p.h1, item: url },
-        ],
-      },
+      toolBreadcrumbSchema(p.path, p.h1, p.parent),
       {
         '@type': 'FAQPage',
         mainEntity: p.questions.map(i => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
@@ -101,13 +125,7 @@ export default function ToolLandingPage(p: ToolLandingProps) {
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3rem 1rem', flex: 1, maxWidth: p.maxWidth || '1120px' }}>
-        {p.parent && (
-          <nav aria-label="Breadcrumb" className="tool-breadcrumb">
-            <Link href={p.parent.path}>{p.parent.label}</Link>
-            <span aria-hidden="true">/</span>
-            <span aria-current="page">{p.h1}</span>
-          </nav>
-        )}
+        <ToolBreadcrumb name={p.h1} parent={p.parent} />
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{p.h1}</h1>

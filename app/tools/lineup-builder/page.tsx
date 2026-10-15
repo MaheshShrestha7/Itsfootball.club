@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
-import { ToolLinks } from '@/components/ToolLandingPage';
+import { ToolBreadcrumb, ToolLinks, toolBreadcrumbSchema } from '@/components/ToolLandingPage';
 import { LINEUP_FORMAT_PAGES } from '@/lib/tool-pages';
 import LineupBuilderTool from '@/components/LineupBuilderTool';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
@@ -75,13 +75,7 @@ const schema = {
       publisher: { '@id': ORGANIZATION_ID },
       isPartOf: { '@id': WEBSITE_ID },
     },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'itsfootball.club', item: SITE_URL },
-        { '@type': 'ListItem', position: 2, name: 'Free lineup builder', item: `${SITE_URL}${PATH}` },
-      ],
-    },
+    toolBreadcrumbSchema(PATH, 'Free football lineup builder'),
     {
       '@type': 'FAQPage',
       mainEntity: QUESTIONS.map(i => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
@@ -106,6 +100,7 @@ export default function LineupBuilderPage() {
       <PlatformNavbar />
 
       <main className="container" style={{ padding: '3rem 1rem', flex: 1, maxWidth: '1120px' }}>
+        <ToolBreadcrumb name="Free football lineup builder" />
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE TOOL · NO SIGN-UP</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>

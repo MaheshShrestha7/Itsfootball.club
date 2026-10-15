@@ -10,7 +10,7 @@ import SponsorTrackedLink from './SponsorTrackedLink';
 import SponsorLogo from './SponsorLogo';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorTierLabel } from '@/lib/sponsors';
-import { SOCIAL_PROFILES } from '@/lib/seo';
+import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
 
 interface FooterProps {
   club?: Club | null;
@@ -250,6 +250,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/tools/match-result-graphic-maker" style={{ color: 'var(--text-secondary)' }}>Free Result Graphic Maker</Link>
                   <Link href="/tools/equal-playing-time-calculator" style={{ color: 'var(--text-secondary)' }}>Equal Playing Time Calculator</Link>
                   <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
+                  <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}
@@ -306,6 +307,8 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
             <span>&copy; {new Date().getFullYear()} {club ? club.name : 'itsfootball.club'}. All rights reserved.</span>
             <Link href="/privacy" style={{ color: 'var(--text-muted)' }}>Privacy</Link>
             <Link href="/terms" style={{ color: 'var(--text-muted)' }}>Terms</Link>
+            {/* Club sites link the platform's free tools, absolute so it's a real link from a club's own domain too */}
+            {club && <a href={`${SITE_URL}/tools`} style={{ color: 'var(--text-muted)' }}>Free football tools</a>}
           </div>
           <div className="row row-tight">
             <span>Powered by</span>
