@@ -1,8 +1,9 @@
 'use client';
 
-// Matchday graphics (fixture / result / starting XI) drawn on a canvas in the browser, in two sizes:
-// a 9:16 story (Instagram and Facebook stories, WhatsApp status) and a 4:5 post (Instagram feed,
-// Facebook groups, WhatsApp chats). Nothing runs on the server and nothing new is installed.
+// Matchday graphics (fixture / result / starting XI / Player of the Match) drawn on a canvas in the
+// browser: a 9:16 story (Instagram and Facebook stories, WhatsApp status), a 4:5 post (Instagram feed,
+// Facebook groups, WhatsApp chats) and a 1:1 square (the free result graphic maker only, for Facebook
+// posts and websites). Nothing runs on the server and nothing new is installed.
 import { DEFAULT_CREST } from '@/lib/crest';
 import { corsCopy } from '@/lib/image-color';
 import { SITE_URL } from '@/lib/slugs';
@@ -11,13 +12,16 @@ import { juniorPublicName } from '@/lib/teams';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { DATE_LOCALE } from '@/lib/dates';
 
-/** score: fixture or result; lineup: the XI on the pitch; lineup-list: the XI as a numbered list */
-export type CardKind = 'score' | 'lineup' | 'lineup-list';
-export type CardFormat = 'story' | 'post';
+/** score: fixture or result; lineup: the XI on the pitch; lineup-list: the XI as a numbered list;
+ *  motm: Player of the Match (the free result graphic maker) */
+export type CardKind = 'score' | 'lineup' | 'lineup-list' | 'motm';
+/** square is laid out for the score and motm cards only (the lineup cards offer story and post) */
+export type CardFormat = 'story' | 'post' | 'square';
 
 export const CARD_SIZES: Record<CardFormat, { w: number; h: number }> = {
   story: { w: 1080, h: 1920 },
   post: { w: 1080, h: 1350 },
+  square: { w: 1080, h: 1080 },
 };
 
 export interface CardOptions {
@@ -34,6 +38,13 @@ export interface CardOptions {
   keepOrder?: boolean;
   /** The player marker's shape on the pitch (circle unless chosen in the free lineup builder) */
   marker?: MarkerShape;
+  /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
+   *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
+  background?: { src: string; focusY?: number; dim?: number };
+  /** Player of the Match: a row on the result card, and the subject of the motm card */
+  motm?: { name: string; photo?: string; line?: string; focusY?: number; /** The photo is a cut-out (background removed) */ cutout?: boolean };
+  /** Scorer lines with a ball beside each, as left-aligned blocks (the free result graphic maker) */
+  scorerBalls?: boolean;
 }
 
 export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
@@ -148,14 +159,77 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null
   ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
 }
 
+/** Fills the box with the image, cropped to fit; `focusY` picks which part of a tall image shows */
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focusY = 0.5) {
+  const scale = Math.max(w / (img.naturalWidth || w), h / (img.naturalHeight || h));
+  const iw = (img.naturalWidth || w) * scale;
+  const ih = (img.naturalHeight || h) * scale;
+  ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) * Math.min(1, Math.max(0, focusY)), iw, ih);
+}
+
+/** A football: white with a dark pentagon, for the scorer lines */
+function ball(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = INK;
+  ctx.fill();
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const px = cx + Math.cos(a) * r * 0.36;
+    const py = cy + Math.sin(a) * r * 0.36;
+    if (i) ctx.lineTo(px, py);
+    else ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#0B1220';
+  ctx.fill();
+}
+
+/** A five-point star */
+function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, fill: string) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rad = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r);
   else ctx.rect(x, y, w, h);
 }
 
-/** The site's glass panel: a faint white fill with a hairline border */
-function glass(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 44) {
+/** The site's glass panel: a faint white fill with a hairline border. Over a photo (`backdrop`) the
+ *  photo shows through blurred, like frosted glass */
+function glass(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 44, backdrop?: HTMLCanvasElement) {
+  if (backdrop) {
+    // Blur by drawing the backdrop tiny and scaling it back up (no canvas filter needed, so it works in every browser)
+    const small = document.createElement('canvas');
+    small.width = Math.max(1, Math.round(w / 24));
+    small.height = Math.max(1, Math.round(h / 24));
+    small.getContext('2d')?.drawImage(backdrop, x, y, w, h, 0, 0, small.width, small.height);
+    ctx.save();
+    roundRect(ctx, x, y, w, h, r);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(small, x, y, w, h);
+    ctx.fillStyle = 'rgba(8, 12, 18, 0.38)';
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
   roundRect(ctx, x, y, w, h, r);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.055)';
   ctx.fill();
@@ -196,16 +270,27 @@ function scorerLines(events: NonNullable<CardOptions['events']>, side: 'home' | 
     .filter(e => e.team_side === side && (e.event_type === 'goal' || e.event_type === 'penalty') && e.player_name)
     .sort((a, b) => a.minute - b.minute || (a.added_minute || 0) - (b.added_minute || 0))
     .forEach(e => {
-      const minute = `${e.minute}${e.added_minute ? `+${e.added_minute}` : ''}'${e.event_type === 'penalty' ? ' (P)' : ''}`;
+      // A negative minute is a goal with no time given (the free result graphic maker): just "(P)" if a penalty
+      const minute = e.minute < 0
+        ? (e.event_type === 'penalty' ? '(P)' : '')
+        : `${e.minute}${e.added_minute ? `+${e.added_minute}` : ''}'${e.event_type === 'penalty' ? ' (P)' : ''}`;
       byName.set(e.player_name, [...(byName.get(e.player_name) || []), minute]);
     });
-  return [...byName].map(([name, minutes]) => `${name} ${minutes.join(', ')}`);
+  return [...byName].map(([name, minutes]) => {
+    const times = minutes.filter(Boolean);
+    // Two untimed goals: "Leo Park ×2"
+    const untimed = minutes.length - times.length;
+    return [name, times.join(', '), untimed > 1 && !times.length ? `×${untimed}` : ''].filter(Boolean).join(' ');
+  });
 }
 
 export async function drawMatchCard(match: Match, club: Club, kind: CardKind, link: string, opts: CardOptions = {}): Promise<Blob> {
   const format = opts.format || 'post';
   const { w: W, h: H } = CARD_SIZES[format];
   const story = format === 'story';
+  const square = format === 'square';
+  /** The value for this size: story, post or square */
+  const by = <T,>(st: T, po: T, sq: T): T => (story ? st : square ? sq : po);
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -226,14 +311,49 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   const secondary = hex(club.secondary_color, primary);
   const ink = readableClubInk(primary, 'dark'); // the club colour, lifted until it reads on the dark card
   const clubCrest = await crest(club.logo_url);
+  const [backgroundPhoto, motmPhoto] = await Promise.all([
+    opts.background?.src ? loadImage(opts.background.src) : Promise.resolve(null),
+    kind === 'motm' && opts.motm?.photo ? loadImage(opts.motm.photo) : Promise.resolve(null),
+  ]);
+  // On the Player of the Match card the player's own photo takes the place of the background photo,
+  // unless it's a cut-out: then the player stands in front of it (or of the club colours)
+  const cutout = !!motmPhoto && !!opts.motm?.cutout;
+  const photo = motmPhoto && !cutout ? null : backgroundPhoto;
+  // The Player of the Match photo fills the top of its card and fades into the background below
+  const motmPhotoH = by(1300, 960, 760);
+  const overPhoto = !!photo || (!!motmPhoto && !cutout);
 
   // Background: near-black with the club colour glowing in from the top, a soft streak across,
-  // the pass card's dot grid and the crest large and faded behind everything
+  // the pass card's dot grid and the crest large and faded behind everything (over a photo: the
+  // photo, darkened so the text reads, and a softer glow)
   ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, W, H);
+  if (photo) {
+    drawCover(ctx, photo, 0, 0, W, H, opts.background?.focusY ?? 0.5);
+    const dim = Math.min(0.9, Math.max(0.15, opts.background?.dim ?? 0.55));
+    const shade = ctx.createLinearGradient(0, 0, 0, H);
+    shade.addColorStop(0, `rgba(7, 11, 18, ${Math.min(0.95, dim + 0.15)})`);
+    shade.addColorStop(0.35, `rgba(7, 11, 18, ${dim - 0.1})`);
+    shade.addColorStop(0.7, `rgba(7, 11, 18, ${Math.min(0.95, dim + 0.1)})`);
+    shade.addColorStop(1, 'rgba(7, 11, 18, 0.94)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (motmPhoto && !cutout) {
+    drawCover(ctx, motmPhoto, 0, 0, W, motmPhotoH, opts.motm?.focusY ?? 0.3);
+    const fade = ctx.createLinearGradient(0, 0, 0, motmPhotoH);
+    fade.addColorStop(0, 'rgba(7, 11, 18, 0.75)');
+    fade.addColorStop(0.3, 'rgba(7, 11, 18, 0.1)');
+    fade.addColorStop(0.62, 'rgba(7, 11, 18, 0.25)');
+    fade.addColorStop(1, BASE);
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 0, W, motmPhotoH);
+    ctx.fillStyle = BASE;
+    ctx.fillRect(0, motmPhotoH - 1, W, H - motmPhotoH + 1);
+  }
   const glow = ctx.createRadialGradient(W * 0.3, -H * 0.05, 0, W * 0.3, -H * 0.05, H * 0.75);
-  glow.addColorStop(0, rgba(primary, 0.75));
-  glow.addColorStop(0.45, rgba(primary, 0.22));
+  glow.addColorStop(0, rgba(primary, overPhoto ? 0.55 : 0.75));
+  glow.addColorStop(0.45, rgba(primary, overPhoto ? 0.14 : 0.22));
   glow.addColorStop(1, rgba(primary, 0));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
@@ -242,24 +362,67 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   low.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = low;
   ctx.fillRect(0, 0, W, H);
-  ctx.save();
-  ctx.translate(W / 2, H / 2);
-  ctx.rotate(-0.42);
-  const streak = ctx.createLinearGradient(-90, 0, 90, 0);
-  streak.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  streak.addColorStop(0.5, rgba(primary, 0.16));
-  streak.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = streak;
-  ctx.fillRect(-90, -H, 180, H * 2);
-  ctx.restore();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-  for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
-  if (clubCrest) {
+  if (!overPhoto) {
     ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.filter = 'grayscale(1) brightness(1.8)';
-    drawContain(ctx, clubCrest, W / 2, H * 0.56, story ? 1100 : 900);
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-0.42);
+    const streak = ctx.createLinearGradient(-90, 0, 90, 0);
+    streak.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    streak.addColorStop(0.5, rgba(primary, 0.16));
+    streak.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = streak;
+    ctx.fillRect(-90, -H, 180, H * 2);
     ctx.restore();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+    for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+    if (clubCrest) {
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      ctx.filter = 'grayscale(1) brightness(1.8)';
+      drawContain(ctx, clubCrest, W / 2, H * 0.56, story ? 1100 : 900);
+      ctx.restore();
+    }
+  }
+  if (motmPhoto && cutout) {
+    // The cut-out player, standing on the headline with a glow of the club colour behind them,
+    // fading out at the bottom so the headline reads over their kit
+    const top = by(330, 170, 130);
+    const bottom = by(1180, 880, 680);
+    const boxW = W - 144;
+    const scale = Math.min(boxW / motmPhoto.naturalWidth, (bottom - top) / motmPhoto.naturalHeight);
+    const pw = Math.round(motmPhoto.naturalWidth * scale);
+    const ph = Math.round(motmPhoto.naturalHeight * scale);
+    const player = document.createElement('canvas');
+    player.width = pw;
+    player.height = ph;
+    const pctx = player.getContext('2d');
+    if (pctx) {
+      pctx.drawImage(motmPhoto, 0, 0, pw, ph);
+      pctx.globalCompositeOperation = 'destination-out';
+      const fadeOut = pctx.createLinearGradient(0, ph * 0.72, 0, ph);
+      fadeOut.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      fadeOut.addColorStop(1, 'rgba(0, 0, 0, 1)');
+      pctx.fillStyle = fadeOut;
+      pctx.fillRect(0, 0, pw, ph);
+      const halo = ctx.createRadialGradient(W / 2, bottom - ph * 0.55, 0, W / 2, bottom - ph * 0.55, Math.max(pw, ph) * 0.7);
+      halo.addColorStop(0, rgba(primary, 0.45));
+      halo.addColorStop(1, rgba(primary, 0));
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = 40;
+      ctx.drawImage(player, (W - pw) / 2, bottom - ph);
+      ctx.restore();
+    }
+  }
+  // What the frosted panels blur, when there's a photo
+  let backdrop: HTMLCanvasElement | undefined;
+  if (overPhoto) {
+    backdrop = document.createElement('canvas');
+    backdrop.width = W;
+    backdrop.height = H;
+    backdrop.getContext('2d')?.drawImage(canvas, 0, 0);
   }
 
   ctx.textAlign = 'center';
@@ -269,7 +432,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   // Header: crest and club name on the left, the competition on the right, or on a row of its own
   // underneath when a long club name leaves no room for it
   // Stories keep clear of the app's own bars (profile at the top, reply box at the bottom)
-  const headY = story ? 270 : 100;
+  const headY = by(270, 100, 84);
   const textX = M + 124;
   drawContain(ctx, clubCrest, M + 50, headY, 100);
   ctx.textAlign = 'left';
@@ -281,7 +444,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.fillStyle = FAINT;
   spaced(ctx, 4);
   ctx.font = `700 24px ${body}`;
-  const eyebrow = kind !== 'score' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
+  const eyebrow = kind === 'motm' ? 'AWARD' : kind !== 'score' ? 'TEAM NEWS' : match.status === 'completed' ? 'RESULT' : match.status === 'live' || match.status === 'halftime' ? 'LIVE' : 'FIXTURE';
   ctx.fillText(eyebrow, textX, headY + 26);
   spaced(ctx, 0);
   // The competition only: a custom title ("X vs Y") repeats what the card already shows
@@ -294,9 +457,9 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const label = sameRow ? competition : ellipsize(ctx, competition, W - M * 2 - 44);
     const pillW = ctx.measureText(label).width + 44;
     const pillX = sameRow ? W - M - pillW : M;
-    const pillY = sameRow ? headY : headY + (story ? 96 : 72);
+    const pillY = sameRow ? headY : headY + by(96, 72, 72);
     roundRect(ctx, pillX, pillY - 25, pillW, 50, 25);
-    ctx.fillStyle = rgba(primary, 0.18);
+    ctx.fillStyle = rgba(primary, overPhoto ? 0.32 : 0.18);
     ctx.fill();
     ctx.strokeStyle = rgba(ink, 0.55);
     ctx.lineWidth = 2;
@@ -308,11 +471,12 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.textAlign = 'center';
 
   const scored = kind === 'score' && !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
-  const [first, second] = opts.headline || (kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored));
+  const [first, second] = opts.headline
+    || (kind === 'motm' ? ['PLAYER OF', 'THE MATCH'] : kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored));
 
-  // Headline
-  const hlY = story ? 500 : 290;
-  const hlSize = story ? 170 : 132;
+  // Headline (on the Player of the Match card it sits under the photo)
+  const hlY = kind === 'motm' ? by(1150, 840, 640) : by(500, 290, 230);
+  const hlSize = kind === 'motm' ? by(128, 108, 92) : by(170, 132, 116);
   ctx.font = `900 ${hlSize}px ${heading}`;
   const gap = hlSize * 0.12;
   const wA = ctx.measureText(first).width;
@@ -321,13 +485,19 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.font = `900 ${Math.floor(hlSize * scale)}px ${heading}`;
   const startX = W / 2 - (wA + gap + wB) * scale / 2;
   ctx.textAlign = 'left';
+  ctx.save();
+  if (overPhoto) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 30;
+  }
   ctx.fillStyle = INK;
   ctx.fillText(first, startX, hlY);
   ctx.fillStyle = ink;
   ctx.fillText(second, startX + (wA + gap) * scale, hlY);
+  ctx.restore();
   ctx.textAlign = 'center';
 
-  if (kind !== 'score') {
+  if (kind === 'lineup' || kind === 'lineup-list') {
     const home = match.is_club_home ?? true;
     const xi = [...((home ? match.home_lineup_coords : match.away_lineup_coords) || [])]
       .sort((a, b) => (opts.keepOrder ? 0 : a.x - b.x || a.y - b.y)) // the pitch runs left to right: goalkeeper first, then back to front
@@ -538,98 +708,223 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       fit(ctx, when, 600, 34, W - M * 2, body);
       ctx.fillText(when, W / 2, after + 64);
     }
+  } else if (kind === 'motm') {
+    // Player of the Match: the photo fills the top (drawn with the background); without one, a big
+    // star in a ring of the club colour stands in. Then the name, a short line and the result
+    const m = opts.motm;
+    if (!motmPhoto) {
+      const cy = by(720, 520, 400);
+      const r = by(200, 170, 130);
+      ctx.beginPath();
+      ctx.arc(W / 2, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = rgba(primary, 0.2);
+      ctx.fill();
+      ctx.strokeStyle = rgba(ink, 0.7);
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      if (m?.name) {
+        ctx.fillStyle = INK;
+        ctx.font = `900 ${Math.round(r * 0.8)}px ${heading}`;
+        ctx.fillText(initialsOf(m.name), W / 2, cy + r * 0.05);
+      } else star(ctx, W / 2, cy, r * 0.6, ink);
+    }
+    const nameSize = by(64, 54, 46);
+    const nameY = hlY + hlSize * by(1.05, 1, 1);
+    if (m?.name) {
+      const name = m.name.toUpperCase();
+      ctx.fillStyle = INK;
+      spaced(ctx, 2);
+      fit(ctx, name, 800, nameSize, W - M * 2, heading);
+      ctx.fillText(name, W / 2, nameY);
+      spaced(ctx, 0);
+    }
+    if (m?.line) {
+      ctx.fillStyle = MUTED;
+      fit(ctx, m.line, 600, by(32, 28, 28), W - M * 2, body);
+      ctx.fillText(m.line, W / 2, nameY + by(62, 50, 50));
+    }
+    // The result: both crests, names and the score in one glass strip
+    const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
+    const stripH = by(150, 124, 104);
+    const stripY = by(1390, 1060, 830);
+    glass(ctx, M, stripY, W - M * 2, stripH, 36, backdrop);
+    const mid = stripY + stripH / 2;
+    const cb = stripH - 44;
+    drawContain(ctx, homeCrest, M + 30 + cb / 2, mid, cb);
+    drawContain(ctx, awayCrest, W - M - 30 - cb / 2, mid, cb);
+    const score = opts.hideScore ? 'v' : `${match.home_score ?? 0}–${match.away_score ?? 0}`;
+    ctx.font = `900 ${by(64, 56, 48)}px ${heading}`;
+    const scoreW = ctx.measureText(score).width;
+    const room = (W - M * 2 - 2 * (50 + cb) - scoreW - 60) / 2;
+    // Both names at the same size: the size the longer one fits at
+    const stripNameSize = Math.min(...[match.home_team_name, match.away_team_name].map(n => fit(ctx, n, 700, by(32, 28, 28), room, heading, 18)));
+    ctx.font = `700 ${stripNameSize}px ${heading}`;
+    ctx.fillStyle = INK;
+    ctx.textAlign = 'left';
+    ctx.fillText(ellipsize(ctx, match.home_team_name, room), M + 50 + cb, mid);
+    ctx.textAlign = 'right';
+    ctx.fillText(ellipsize(ctx, match.away_team_name, room), W - M - 50 - cb, mid);
+    ctx.textAlign = 'center';
+    ctx.font = `900 ${by(64, 56, 48)}px ${heading}`;
+    ctx.fillText(score, W / 2, mid + 2);
+    const { day } = kickoff(match);
+    const when = [day, match.venue].filter(Boolean).join(' · ');
+    if (when && !square) {
+      ctx.fillStyle = FAINT;
+      fit(ctx, when, 600, by(30, 26, 26), W - M * 2, body);
+      ctx.fillText(when, W / 2, stripY + stripH + by(60, 48, 48));
+    }
   } else {
     const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
-    const panelTop = story ? 640 : 400;
-    const panelH = story ? 540 : 420;
-    glass(ctx, M, panelTop, W - M * 2, panelH);
-    const crestBox = story ? 210 : 170;
+    const panelTop = by(640, 400, 320);
+    const panelH = by(540, 420, 330);
+    glass(ctx, M, panelTop, W - M * 2, panelH, 44, backdrop);
+    const crestBox = by(210, 170, 140);
     const colX = [M + 200, W - M - 200];
-    const crestY = panelTop + (story ? 200 : 150);
+    const crestY = panelTop + by(200, 150, 125);
     drawContain(ctx, homeCrest, colX[0], crestY, crestBox);
     drawContain(ctx, awayCrest, colX[1], crestY, crestBox);
     ctx.fillStyle = INK;
-    const nameY = panelTop + panelH - (story ? 110 : 82);
-    wrapTwo(ctx, match.home_team_name, 800, story ? 44 : 38, 340, heading, colX[0], nameY);
-    wrapTwo(ctx, match.away_team_name, 800, story ? 44 : 38, 340, heading, colX[1], nameY);
+    const nameY = panelTop + panelH - by(110, 82, 70);
+    wrapTwo(ctx, match.home_team_name, 800, by(44, 38, 34), 340, heading, colX[0], nameY);
+    wrapTwo(ctx, match.away_team_name, 800, by(44, 38, 34), 340, heading, colX[1], nameY);
 
     if (scored) {
       ctx.fillStyle = INK;
       const score = `${match.home_score ?? 0}–${match.away_score ?? 0}`;
-      fit(ctx, score, 900, story ? 160 : 132, 270, heading, 60);
+      fit(ctx, score, 900, by(160, 132, 120), 270, heading, 60);
       ctx.fillText(score, W / 2, crestY);
       if (match.home_penalty_score != null && match.away_penalty_score != null) {
         ctx.fillStyle = MUTED;
         ctx.font = `700 28px ${body}`;
-        ctx.fillText(`${match.home_penalty_score}–${match.away_penalty_score} on pens`, W / 2, crestY + (story ? 120 : 96));
+        ctx.fillText(`${match.home_penalty_score}–${match.away_penalty_score} on pens`, W / 2, crestY + by(120, 96, 88));
       }
     } else {
       // "VS" in a ring of the club colour
       ctx.beginPath();
-      ctx.arc(W / 2, crestY, story ? 74 : 60, 0, Math.PI * 2);
+      ctx.arc(W / 2, crestY, by(74, 60, 56), 0, Math.PI * 2);
       ctx.fillStyle = rgba(primary, 0.2);
       ctx.fill();
       ctx.strokeStyle = rgba(ink, 0.7);
       ctx.lineWidth = 3;
       ctx.stroke();
       ctx.fillStyle = INK;
-      ctx.font = `900 ${story ? 60 : 50}px ${heading}`;
+      ctx.font = `900 ${by(60, 50, 46)}px ${heading}`;
       ctx.fillText('VS', W / 2, crestY + 3);
     }
 
-    const below = panelTop + panelH + (story ? 70 : 50);
+    const below = panelTop + panelH + by(70, 50, 44);
+    // With a Player of the Match row under them, the scorers get fewer lines
+    const chip = scored && !!opts.motm?.name;
     if (scored && opts.events?.length) {
       // Goalscorers under each team
-      ctx.font = `600 ${story ? 32 : 28}px ${body}`;
-      const lineH = story ? 48 : 40;
-      const max = story ? 6 : 3;
+      ctx.font = `600 ${by(32, 28, 26)}px ${body}`;
+      const lineH = by(48, 40, 38);
+      const max = chip ? by(4, 3, 2) : by(6, 3, 3);
       (['home', 'away'] as const).forEach((side, i) => {
         const lines = scorerLines(opts.events!, side);
         const shown = lines.length > max ? [...lines.slice(0, max - 1), `+${lines.length - max + 1} more`] : lines;
+        if (opts.scorerBalls) {
+          // One left-aligned block per team, a ball beside each line
+          const size = Math.min(...shown.map(line => fit(ctx, line, 600, by(32, 28, 26), 360, body, 20)));
+          ctx.font = `600 ${size}px ${body}`;
+          const blockW = Math.max(0, ...shown.map(line => ctx.measureText(line).width)) + size * 1.1;
+          const x0 = colX[i] - blockW / 2;
+          ctx.textAlign = 'left';
+          shown.forEach((line, j) => {
+            ball(ctx, x0 + size * 0.4, below + j * lineH, size * 0.4);
+            ctx.fillStyle = MUTED;
+            ctx.fillText(line, x0 + size * 1.1, below + j * lineH);
+          });
+          ctx.textAlign = 'center';
+          return;
+        }
         shown.forEach((line, j) => {
           ctx.fillStyle = MUTED;
-          fit(ctx, line, 600, story ? 32 : 28, 400, body, 20);
+          fit(ctx, line, 600, by(32, 28, 26), 400, body, 20);
           ctx.fillText(line, colX[i], below + j * lineH);
         });
       });
     }
 
+    // Player of the Match: a glass row with their photo (or initials), the label, the name and a star
+    if (chip) {
+      const chipH = by(150, 112, 96);
+      const chipY = by(1480, 1045, 860);
+      const cw = W - M * 2;
+      glass(ctx, M, chipY - chipH / 2, cw, chipH, chipH / 2, backdrop);
+      const pr = chipH / 2 - 14;
+      const px = M + 14 + pr;
+      const chipPhoto = opts.motm!.photo ? await loadImage(opts.motm!.photo) : null;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(px, chipY, pr, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = rgba(primary, 0.35);
+      ctx.fillRect(px - pr, chipY - pr, pr * 2, pr * 2);
+      if (chipPhoto) drawCover(ctx, chipPhoto, px - pr, chipY - pr, pr * 2, pr * 2, opts.motm!.cutout ? 0 : opts.motm!.focusY ?? 0.3);
+      else {
+        ctx.fillStyle = INK;
+        ctx.font = `900 ${Math.round(pr * 0.8)}px ${heading}`;
+        ctx.fillText(initialsOf(opts.motm!.name), px, chipY + 2);
+      }
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(px, chipY, pr, 0, Math.PI * 2);
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      const tx = px + pr + 26;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = ink;
+      spaced(ctx, 3);
+      ctx.font = `800 ${by(22, 20, 19)}px ${body}`;
+      ctx.fillText('PLAYER OF THE MATCH', tx, chipY - by(24, 21, 19));
+      spaced(ctx, 0);
+      ctx.fillStyle = INK;
+      const room = W - M - by(66, 60, 56) - 50 - tx;
+      fit(ctx, opts.motm!.name, 800, by(48, 40, 36), room, heading);
+      ctx.fillText(ellipsize(ctx, opts.motm!.name, room), tx, chipY + by(20, 18, 16));
+      ctx.textAlign = 'center';
+      star(ctx, W - M - by(66, 60, 56), chipY, by(32, 28, 26), ink);
+    }
+
     // Kick-off, date and ground: on a fixture always, on a result as one quiet line
     const { day, time } = kickoff(match);
     if (!scored) {
-      const top = below - (story ? 10 : 15);
-      const cardH = story ? 270 : 210;
-      glass(ctx, M, top, W - M * 2, cardH, 36);
+      const top = below - by(10, 15, 15);
+      const cardH = by(270, 210, 200);
+      glass(ctx, M, top, W - M * 2, cardH, 36, backdrop);
       const cells: [string, string][] = [['DATE', day], ['KICK-OFF', time]];
       cells.forEach(([label, value], i) => {
         const cx = M + (W - M * 2) * (i === 0 ? 0.27 : 0.73);
         ctx.fillStyle = FAINT;
         spaced(ctx, 3);
         ctx.font = `700 22px ${body}`;
-        ctx.fillText(label, cx, top + (story ? 56 : 46));
+        ctx.fillText(label, cx, top + by(56, 46, 46));
         spaced(ctx, 0);
         ctx.fillStyle = INK;
-        fit(ctx, value || 'TBC', 800, story ? 54 : 46, (W - M * 2) / 2 - 60, heading);
-        ctx.fillText(value || 'TBC', cx, top + (story ? 110 : 96));
+        fit(ctx, value || 'TBC', 800, by(54, 46, 44), (W - M * 2) / 2 - 60, heading);
+        ctx.fillText(value || 'TBC', cx, top + by(110, 96, 92));
       });
       ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.fillRect(W / 2 - 1, top + 30, 2, story ? 115 : 100);
+      ctx.fillRect(W / 2 - 1, top + 30, 2, by(115, 100, 95));
       if (match.venue) {
-        ctx.fillRect(M + 40, top + (story ? 170 : 140), W - M * 2 - 80, 2);
+        ctx.fillRect(M + 40, top + by(170, 140, 134), W - M * 2 - 80, 2);
         ctx.fillStyle = MUTED;
-        fit(ctx, match.venue, 600, story ? 34 : 30, W - M * 2 - 80, body);
-        ctx.fillText(match.venue, W / 2, top + (story ? 222 : 176));
+        fit(ctx, match.venue, 600, by(34, 30, 28), W - M * 2 - 80, body);
+        ctx.fillText(match.venue, W / 2, top + by(222, 176, 168));
       }
     } else {
       ctx.fillStyle = FAINT;
       const line = [day, match.venue].filter(Boolean).join(' · ');
       fit(ctx, line, 600, 28, W - M * 2, body);
-      ctx.fillText(line, W / 2, H - (story ? 310 : 150));
+      ctx.fillText(line, W / 2, H - by(310, 150, 100));
     }
   }
 
   // Watermark: a quiet link to the club's page, so the graphic leads people back to the site
-  const markY = H - (story ? 240 : 64);
+  const markY = H - by(240, 64, 46);
   ctx.globalAlpha = 0.62;
   ctx.font = `600 26px ${body}`;
   spaced(ctx, 1);

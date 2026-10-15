@@ -57,3 +57,6 @@ CLAUDE.md
 
 /docs
 /docs
+
+# MediaPipe runtime, copied from node_modules by scripts/copy-mediapipe.mjs
+/public/vendor/mediapipe/wasm/
