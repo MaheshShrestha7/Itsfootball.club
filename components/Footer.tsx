@@ -252,6 +252,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
                   <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
                   <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Guides</Link>
+                  <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Ground Guides</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}

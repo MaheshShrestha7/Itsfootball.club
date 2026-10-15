@@ -6,6 +6,8 @@ import { GUIDES } from '@/lib/guides';
 import { newsPath } from '@/lib/slugs';
 import { COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
+import { groundSitemapEntries } from '@/lib/grounds';
+import { clubsWithHomeGrounds, groundUse, listGrounds } from '@/lib/supabase/grounds-lookup';
 
 // Generated per request from live data. Not ISR: open-next.config.ts has no incremental cache store,
 // so on Cloudflare a revalidated sitemap would never be saved and the build-time copy would be served forever.
@@ -15,7 +17,7 @@ export const dynamic = 'force-dynamic';
 // are deliberately left out: listing them here would contradict their robots meta tag.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
-  const data = await listSitemapData();
+  const [data, grounds, groundClubs] = await Promise.all([listSitemapData(), listGrounds(), clubsWithHomeGrounds()]);
   const { matches, events, news, teams, shopClubIds, galleryClubIds, teamCounts } = data;
   // Tournament-only clubs have no club pages, only their public tournament page (added below)
   const eventSlugById = new Map(data.clubs.filter(isEventClub).map(c => [c.id, c.slug]));
@@ -126,6 +128,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: running ? 'daily' : 'monthly',
       priority: running ? 0.7 : 0.5,
     });
+  }
+
+  // Ground guides (lib/grounds.ts): only pages that pass their own indexing rule
+  for (const g of groundSitemapEntries(grounds, groundUse(groundClubs).count)) {
+    entries.push({ url: url(g.path), lastModified: date(g.lastModified), changeFrequency: 'weekly', priority: g.priority });
   }
 
   return entries;
