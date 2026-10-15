@@ -27,6 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/create-club'), changeFrequency: 'monthly', priority: 0.7 },
     { url: url('/faq'), changeFrequency: 'monthly', priority: 0.5 },
     { url: url('/live-scores'), changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/lineup-builder'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/vs'), changeFrequency: 'monthly', priority: 0.6 },
     ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },

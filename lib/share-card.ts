@@ -28,6 +28,8 @@ export interface CardOptions {
   events?: Pick<MatchEvent, 'event_type' | 'team_side' | 'player_name' | 'minute' | 'added_minute'>[];
   /** Player photos by member id, as the public lineup shows them (none for juniors without consent) */
   photos?: Record<string, string | undefined>;
+  /** The two-tone headline in place of the default (the free lineup builder's "STARTING FIVE") */
+  headline?: [string, string];
 }
 
 const BASE = '#070B12';
@@ -266,7 +268,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.textAlign = 'center';
 
   const scored = kind === 'score' && !opts.hideScore && ['completed', 'live', 'halftime'].includes(match.status);
-  const [first, second] = kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored);
+  const [first, second] = opts.headline || (kind !== 'score' ? ['STARTING', 'XI'] : headline(match, scored));
 
   // Headline
   const hlY = story ? 500 : 290;
@@ -295,9 +297,12 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const { day, time } = kickoff(match);
 
     ctx.fillStyle = MUTED;
-    const sub = `vs ${opponent}${formation && formation.toLowerCase() !== 'custom' ? ` · ${formation}` : ''}`;
-    fit(ctx, sub, 600, 38, W - M * 2, body);
-    ctx.fillText(sub, W / 2, hlY + 100);
+    const sub = [opponent?.trim() && `vs ${opponent.trim()}`, formation && formation.toLowerCase() !== 'custom' && formation]
+      .filter(Boolean).join(' · ');
+    if (sub) {
+      fit(ctx, sub, 600, 38, W - M * 2, body);
+      ctx.fillText(sub, W / 2, hlY + 100);
+    }
 
     // Players placed on the lineup pitch: drawn where the coach put them, else (or when asked) as a numbered list
     const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));

@@ -2873,3 +2873,46 @@ dialog.confirm-dialog::backdrop {
 .vs-swipe { display: none; color: var(--text-muted); font-size: 0.8rem; text-align: center; margin-top: 0.5rem; }
 @media (max-width: 980px) { .vs-swipe { display: block; } .vs-grid tbody th { width: 120px; min-width: 120px; } }
 .vs-grid .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Free lineup builder (/tools/lineup-builder): pitch on the left, controls on the right; stacked on phones */
+.lineup-tool { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.lineup-tool-pitch-col { position: sticky; top: 90px; }
+.lineup-tool-pitch .pitch-player-node { cursor: grab; }
+.lineup-tool-hint { margin-top: 0.6rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
+.lineup-tool-controls { padding: 1.4rem; }
+.lineup-tool-optional { font-weight: 500; color: var(--text-muted); }
+.lineup-tool-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.lineup-tool-pill { padding: 0.5rem 0.9rem; border-radius: var(--radius-full); border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.15s ease; }
+.lineup-tool-pill.is-active { background: rgba(var(--club-primary-rgb), 0.15); border-color: rgba(var(--club-primary-rgb), 0.5); color: var(--club-ink); }
+.lineup-tool-colours { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.lineup-tool-swatch { position: relative; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(var(--tint-rgb), 0.2); cursor: pointer; padding: 0; overflow: hidden; }
+.lineup-tool-swatch.is-active { border-color: var(--text-primary); box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.18); }
+.lineup-tool-swatch-custom { background: conic-gradient(#EF4444, #F59E0B, #FACC15, #10B981, #0EA5E9, #7C3AED, #EF4444); }
+.lineup-tool-swatch-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.lineup-tool-divider { width: 1px; height: 24px; background: var(--border-subtle); margin: 0 0.25rem; }
+.lineup-tool-crest { position: relative; display: inline-flex; width: 38px; height: 38px; }
+.lineup-tool-crest img { width: 100%; height: 100%; object-fit: contain; }
+.lineup-tool-crest button { position: absolute; top: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%; border: 0; background: var(--bg-surface); color: var(--text-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.lineup-tool-players { list-style: none; padding: 0; margin: 0.3rem 0 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.lineup-tool-players li { display: grid; grid-template-columns: 44px 52px minmax(0, 1fr) 36px; gap: 0.4rem; align-items: center; }
+.lineup-tool-players .form-input { padding: 0.5rem 0.7rem; }
+.lineup-tool-num { text-align: center; font-family: var(--font-mono); }
+.lineup-tool-pos { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-align: center; }
+.lineup-tool-pos.is-gk { color: var(--c-amber); }
+.lineup-tool-captain { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted); font-weight: 900; cursor: pointer; }
+.lineup-tool-captain.is-active { background: #F59E0B; border-color: #F59E0B; color: #000; }
+.lineup-tool-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.lineup-tool-actions .btn { flex: 1 1 auto; }
+.lineup-tool-prompt { margin-top: 1rem; padding: 0.9rem 1rem; border-radius: var(--radius-md); border: 1px solid rgba(var(--club-primary-rgb), 0.3); background: rgba(var(--club-primary-rgb), 0.08); color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; }
+.lineup-tool-prompt.is-done { border-color: rgba(var(--club-primary-rgb), 0.6); background: rgba(var(--club-primary-rgb), 0.14); }
+.lineup-tool-prompt-done { color: var(--text-primary); }
+.lineup-tool-prompt-link { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--club-ink); font-weight: 700; }
+@media (max-width: 900px) {
+  .lineup-tool { grid-template-columns: 1fr; }
+  .lineup-tool-pitch-col { position: static; }
+}
+@media (max-width: 480px) {
+  .lineup-tool-controls { padding: 1rem; }
+  .lineup-tool-players li { grid-template-columns: 38px 46px minmax(0, 1fr) 34px; gap: 0.3rem; }
+  .lineup-tool-captain { width: 34px; height: 34px; }
+}
