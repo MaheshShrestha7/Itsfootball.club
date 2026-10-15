@@ -248,6 +248,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/tools/lineup-builder" style={{ color: 'var(--text-secondary)' }}>Free Lineup Builder</Link>
                   <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
                   <Link href="/tools/match-result-graphic-maker" style={{ color: 'var(--text-secondary)' }}>Free Result Graphic Maker</Link>
+                  <Link href="/tools/equal-playing-time-calculator" style={{ color: 'var(--text-secondary)' }}>Equal Playing Time Calculator</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}
