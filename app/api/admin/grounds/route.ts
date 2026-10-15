@@ -3,6 +3,7 @@ import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { pingIndexNow } from '@/lib/indexnow';
 import { isUuid } from '@/lib/ids';
+import { councilFromPin } from '@/lib/council-lookup';
 import {
   GROUNDS_PATH, cleanGroundInput, groundPath, slugify, suburbPath, type GroundInput, type GroundRow,
 } from '@/lib/grounds';
@@ -11,6 +12,7 @@ import {
 //   GET  ?clubId=            the club's home ground (if any), whether this club looks after its facts,
 //                            and whether the club is listed by name on ground pages
 //   GET  ?clubId=&q=         published grounds matching a name or suburb (to pick an existing one)
+//   GET  ?clubId=&lat=&lng=  the council that map pin is in (ABS boundaries, lib/council-lookup.ts)
 //   POST { clubId, action: 'save', groundId?, ground, listed }
 //          groundId of a ground this club looks after: update its facts (a new name or suburb keeps a
 //          redirect from the old address); of another club's ground: just make it this club's home
@@ -22,6 +24,13 @@ const COLUMNS =
   'id,steward_club_id,name,slug,suburb,suburb_slug,state,postcode,address,lat,lng,council_key,council_name,pitches,parking,toilets,canteen,accessibility,notes,is_published,previous_paths,facts_checked_at,updated_at';
 
 const MIGRATION_HINT = 'The grounds directory needs the 20261109_grounds.sql database migration.';
+
+/** Fills in the council from the map pin when the admin left it blank */
+async function withCouncil<T extends { lat: number | null; lng: number | null; council_key: string | null; council_name: string | null }>(row: T): Promise<T> {
+  if (row.council_key || row.lat == null || row.lng == null) return row;
+  const match = await councilFromPin(row.lat, row.lng);
+  return match ? { ...row, council_key: match.key, council_name: match.key === 'other' ? match.name : null } : row;
+}
 
 async function authorise(req: NextRequest, clubId: unknown, level: 'view' | 'edit') {
   if (typeof clubId !== 'string' || !isUuid(clubId)) return { error: NextResponse.json({ error: 'Missing club.' }, { status: 400 }) };
@@ -36,6 +45,12 @@ export async function GET(req: NextRequest) {
   const a = await authorise(req, req.nextUrl.searchParams.get('clubId'), 'view');
   if ('error' in a) return a.error;
   const { db, clubId } = a;
+
+  const lat = Number(req.nextUrl.searchParams.get('lat'));
+  const lng = Number(req.nextUrl.searchParams.get('lng'));
+  if (req.nextUrl.searchParams.has('lat') && req.nextUrl.searchParams.has('lng')) {
+    return NextResponse.json({ council: isFinite(lat) && isFinite(lng) ? await councilFromPin(lat, lng) : null });
+  }
 
   const q = (req.nextUrl.searchParams.get('q') || '').trim();
   if (q) {
@@ -103,7 +118,7 @@ export async function POST(req: NextRequest) {
     if (current.steward_club_id === clubId) {
       const cleaned = cleanGroundInput((body?.ground || {}) as GroundInput);
       if ('error' in cleaned) return NextResponse.json({ error: cleaned.error }, { status: 400 });
-      const row = cleaned.row;
+      const row = await withCouncil(cleaned.row);
       const oldPath = `${current.suburb_slug}/${current.slug}`;
       const moved = row.suburb_slug !== current.suburb_slug || row.slug !== current.slug;
       if (moved) {
@@ -126,7 +141,7 @@ export async function POST(req: NextRequest) {
   } else {
     const cleaned = cleanGroundInput((body?.ground || {}) as GroundInput);
     if ('error' in cleaned) return NextResponse.json({ error: cleaned.error }, { status: 400 });
-    const row = cleaned.row;
+    const row = await withCouncil(cleaned.row);
     if (!row.slug || !row.suburb_slug) return NextResponse.json({ error: 'Use letters or numbers in the ground and suburb names.' }, { status: 400 });
     const { data: clash, error: clashErr } = await db.from('grounds').select(COLUMNS).eq('suburb_slug', row.suburb_slug).eq('slug', row.slug).maybeSingle();
     if (clashErr) return NextResponse.json({ error: MIGRATION_HINT }, { status: 500 });

@@ -99,6 +99,23 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm(f => ({ ...f, [k]: v }));
   const pin = useMemo(() => parseLatLng(form.pin), [form.pin]);
+  // The council the pin is in (ABS boundaries), filled in unless the admin picked one themselves
+  const [autoCouncil, setAutoCouncil] = useState<string | null>(null);
+  const [councilPicked, setCouncilPicked] = useState(false);
+  const [pinTouched, setPinTouched] = useState(false);
+  useEffect(() => {
+    // A saved ground keeps its council until the pin is moved
+    if (mode !== 'edit' || !pin || councilPicked || (form.council_key && !pinTouched)) return;
+    let stale = false;
+    const t = setTimeout(async () => {
+      const r = await api('GET', undefined, `?clubId=${club.id}&lat=${pin.lat}&lng=${pin.lng}`);
+      const c = r.ok ? r.data.council : null;
+      if (stale || !c) return;
+      setForm(f => ({ ...f, state: c.state || f.state, council_key: c.key, council_name: c.key === 'other' ? c.name : '' }));
+      setAutoCouncil(c.name);
+    }, 400);
+    return () => { stale = true; clearTimeout(t); };
+  }, [pin?.lat, pin?.lng, mode, councilPicked, pinTouched, club.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const councils = COUNCILS.filter(c => c.state === form.state);
 
   const save = async (groundId?: string) => {
@@ -248,7 +265,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
           </div>
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label" htmlFor="g-pin">Map pin</label>
-            <input id="g-pin" className="form-input" value={form.pin} onChange={e => set('pin', e.target.value)} placeholder="Paste a Google Maps link to the ground, or -33.93, 150.80" />
+            <input id="g-pin" className="form-input" value={form.pin} onChange={e => { setPinTouched(true); set('pin', e.target.value); }} placeholder="Paste a Google Maps link to the ground, or -33.93, 150.80" />
             <p style={hint}>
               In Google Maps, drop a pin on the car park entrance or the clubhouse, then copy the link from the address bar (or right-click the pin and copy the numbers).
               {form.pin && (pin ? ' Pin found.' : ' No pin found in that yet.')}
@@ -261,12 +278,14 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="g-council">Council</label>
-            <select id="g-council" className="form-select" value={form.council_key} onChange={e => set('council_key', e.target.value)}>
+            <select id="g-council" className="form-select" value={form.council_key} onChange={e => { setCouncilPicked(true); setAutoCouncil(null); set('council_key', e.target.value); }}>
               <option value="">Pick the council</option>
               {councils.map(c => <option key={c.key} value={c.key}>{c.name}</option>)}
               <option value="other">Another council</option>
             </select>
-            <p style={hint}>Links the guide to the council&apos;s wet-weather status page.</p>
+            <p style={hint}>
+              {autoCouncil ? `Found from the map pin: ${autoCouncil}. Change it if that's wrong.` : 'Paste the map pin and we fill this in. It links the guide to the council\'s wet-weather status page.'}
+            </p>
           </div>
           {form.council_key === 'other' && (
             <div className="form-group">

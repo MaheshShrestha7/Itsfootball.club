@@ -1,6 +1,8 @@
 // Self-check for the grounds directory helpers.
 // Run: npx esbuild lib/grounds.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
+import { areaName, matchFromAttributes } from './council-lookup';
+import { COUNCILS } from './councils';
 import {
   cleanGroundInput, factCount, groundPath, groundQuestions, groundSitemapEntries, groundSummary, isIndexableGround,
   parseLatLng, pitchSummary, slugify, venueMatchesGround, type GroundRow,
@@ -92,5 +94,16 @@ assert.ok('error' in cleanGroundInput({ name: 'Craik Park', suburb: 'Austral', s
 assert.ok('error' in cleanGroundInput({ name: 'Craik Park', suburb: 'Austral', state: 'NSW', postcode: '21' }));
 assert.ok('error' in cleanGroundInput({ name: 'Craik Park', suburb: 'Austral', state: 'NSW', pin: 'not a link' }));
 assert.ok('error' in cleanGroundInput({ name: 'Craik Park', suburb: 'Austral', state: 'NSW', council_key: 'made-up' }));
+
+// Council from a map pin (ABS LGA attributes)
+assert.deepEqual(matchFromAttributes({ lga_code_2021: '14900', lga_name_2021: 'Liverpool', state_name_2021: 'New South Wales' }), { key: 'liverpool', name: 'Liverpool City Council', lgaCode: '14900', state: 'NSW' });
+assert.deepEqual(matchFromAttributes({ lga_code_2021: '18400', lga_name_2021: 'Wollondilly', state_name_2021: 'New South Wales' }), { key: 'other', name: 'Wollondilly council area', lgaCode: '18400', state: 'NSW' });
+assert.equal(areaName('Campbelltown (NSW)'), 'Campbelltown council area');
+assert.equal(areaName('Latrobe (Vic.)'), 'Latrobe council area');
+assert.equal(matchFromAttributes({ lga_code_2021: '19499', lga_name_2021: 'No usual address (NSW)' }), null);
+assert.equal(matchFromAttributes(undefined), null);
+// Every listed council has a unique 5-digit ABS code and an https link
+assert.equal(new Set(COUNCILS.map(c => c.lgaCode)).size, COUNCILS.length);
+assert.ok(COUNCILS.every(c => /^\d{5}$/.test(c.lgaCode) && c.url.startsWith('https://')));
 
 console.log('grounds.check: ok');

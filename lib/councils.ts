@@ -22,6 +22,8 @@ export const STATES: { code: AuState; name: string }[] = [
 
 export interface Council {
   key: string;
+  /** The ABS local government area code (ASGS 2021), used to find the council from a map pin */
+  lgaCode: string;
   name: string;
   state: AuState;
   url: string;
@@ -34,64 +36,67 @@ export interface Council {
 
 export const COUNCILS: Council[] = [
   {
-    key: 'blacktown', name: 'Blacktown City Council', state: 'NSW', kind: 'status',
+    key: 'blacktown', lgaCode: '10750', name: 'Blacktown City Council', state: 'NSW', kind: 'status',
     url: 'https://www.blacktown.nsw.gov.au/Sport-recreation/Sports-field-closures',
     note: 'The council posts one open or closed status for all its fields, updated on weekdays, so a field closed on Friday stays closed over the weekend.',
     phone: { label: 'Greenspace Services', number: '(02) 5300 6000' },
   },
   {
-    key: 'camden', name: 'Camden Council', state: 'NSW', kind: 'status',
+    key: 'camden', lgaCode: '11450', name: 'Camden Council', state: 'NSW', kind: 'status',
     url: 'https://www.camden.nsw.gov.au/parks-and-recreation/sports-field-status',
     note: 'The council lists every sports field as open, closed or managed by club, updated by 2pm, and Friday’s status applies all weekend.',
   },
   {
-    key: 'campbelltown', name: 'Campbelltown City Council', state: 'NSW', kind: 'status',
+    key: 'campbelltown', lgaCode: '11500', name: 'Campbelltown City Council', state: 'NSW', kind: 'status',
     url: 'https://www.campbelltown.nsw.gov.au/Parks-Sport-Recreation/Sports-Ground-Status',
     note: 'The council posts its latest sports ground closures for the Campbelltown area on its status page.',
   },
   {
-    key: 'canterbury-bankstown', name: 'City of Canterbury Bankstown', state: 'NSW', kind: 'status',
+    key: 'canterbury-bankstown', lgaCode: '11570', name: 'City of Canterbury Bankstown', state: 'NSW', kind: 'status',
     url: 'https://fieldav-public.cbcity.nsw.gov.au',
     note: 'The council keeps a wet weather status report for every park and field (open, closed or under maintenance), searchable by park.',
   },
   {
-    key: 'cumberland', name: 'Cumberland City Council', state: 'NSW', kind: 'info',
+    key: 'cumberland', lgaCode: '12380', name: 'Cumberland City Council', state: 'NSW', kind: 'info',
     url: 'https://www.cumberland.nsw.gov.au/sports-ground-listing-and-closures',
     note: 'The council’s sports ground list links to its sports ground closures page.',
   },
   {
-    key: 'fairfield', name: 'Fairfield City Council', state: 'NSW', kind: 'status',
+    key: 'fairfield', lgaCode: '12850', name: 'Fairfield City Council', state: 'NSW', kind: 'status',
     url: 'https://www.fairfieldcity.nsw.gov.au/Services/Sports-Parks-Recreation/Using-Our-Sportsfields-including-when-wet',
     note: 'The sportsfields status section of the council’s sportsfields page is its main source of closure information.',
     phone: { label: 'Customer Service', number: '(02) 9725 0222' },
   },
   {
-    key: 'hornsby', name: 'Hornsby Shire Council', state: 'NSW', kind: 'info',
+    key: 'hornsby', lgaCode: '14000', name: 'Hornsby Shire Council', state: 'NSW', kind: 'info',
     url: 'https://www.hornsby.nsw.gov.au/Community/Sports-and-recreation/Sporting-facilities/Sportsgrounds',
     note: 'Fields close in wet weather, and the council’s sportsgrounds page links to its closures page.',
   },
   {
-    key: 'liverpool', name: 'Liverpool City Council', state: 'NSW', kind: 'status',
+    key: 'liverpool', lgaCode: '14900', name: 'Liverpool City Council', state: 'NSW', kind: 'status',
     url: 'https://www.liverpool.nsw.gov.au/venues/Sports-and-Leisure/wet-weather',
     note: 'The council posts one status for all its grounds, with weekend decisions by 3:30pm Friday, reviewed Monday at 9:30am.',
   },
   {
-    key: 'parramatta', name: 'City of Parramatta', state: 'NSW', kind: 'status',
+    key: 'parramatta', lgaCode: '16260', name: 'City of Parramatta', state: 'NSW', kind: 'status',
     url: 'https://www.cityofparramatta.nsw.gov.au/community/sports-and-facilities/sportsground-status',
     note: 'The council lists its grounds as open or closed, updated by 2:30pm on weekdays in wet weather.',
   },
   {
-    key: 'penrith', name: 'Penrith City Council', state: 'NSW', kind: 'info',
+    key: 'penrith', lgaCode: '16350', name: 'Penrith City Council', state: 'NSW', kind: 'info',
     url: 'https://penrithcity.nsw.gov.au/facilities-recreation/sports/sports-ground-maintenance-and-closures',
     note: 'The council runs a 24-hour recorded closures line, and clubs decide closures for their own training and games, so check with your club too.',
     phone: { label: '24-hour recorded closures message', number: '(02) 4732 8017' },
   },
   {
-    key: 'ryde', name: 'City of Ryde', state: 'NSW', kind: 'status',
+    key: 'ryde', lgaCode: '16700', name: 'City of Ryde', state: 'NSW', kind: 'status',
     url: 'https://www.ryde.nsw.gov.au/Recreation/Parks-and-Sportsgrounds/Sportsground-Status',
     note: 'The council posts each wet weather update, with its time, on its sportsground status page.',
   },
 ];
+
+export const councilByLgaCode = (code: string | null | undefined): Council | undefined =>
+  code ? COUNCILS.find(c => c.lgaCode === code) : undefined;
 
 export const councilByKey = (key: string | null | undefined): Council | undefined =>
   key ? COUNCILS.find(c => c.key === key) : undefined;
