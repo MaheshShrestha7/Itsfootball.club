@@ -2,9 +2,11 @@
 import { AREA_SERVED, SITE_NAME, SITE_URL, SOCIAL_PROFILES } from './seo';
 import { CONTACT_EMAIL, FEE_PHRASE } from './faq';
 import { newsPath } from './slugs';
+import { isPlayed } from './public-tournaments';
 import type {
   ClubMetadataRow,
   EventMetadataRow,
+  EventTournamentRow,
   MatchMetadataRow,
   NewsArticleRow,
   NewsMetadataRow,
@@ -319,25 +321,55 @@ export function tournamentSchema(club: ClubMetadataRow, tournament: TournamentMe
 }
 
 /** A public tournament page (/tournaments/{slug}): the event, its organiser, and a breadcrumb */
-export function publicTournamentSchema(club: ClubMetadataRow, tournament: TournamentMetadataRow) {
+export function publicTournamentSchema(club: ClubMetadataRow, tournament: EventTournamentRow, summary: string) {
   const url = abs(`/tournaments/${club.slug}`);
   const organiser = club.config?.organiser;
+  const place = (name?: string | null) => (name ? { '@type': 'Place', name, address: name } : undefined);
+  const team = (name: string) => ({ '@type': 'SportsTeam', name, sport: 'Soccer' });
   return graph(
     {
       '@type': 'SportsEvent',
       '@id': `${url}#event`,
       url,
       name: tournament.name,
-      description: tournament.description,
+      // The answer-first summary (format, teams, venue, result so far) unless the organiser wrote their own
+      description: tournament.description || summary,
       sport: 'Soccer',
       startDate: tournament.start_date,
       endDate: tournament.end_date,
-      eventStatus: 'https://schema.org/EventScheduled',
+      eventStatus: tournament.status === 'cancelled' ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
       isAccessibleForFree: true,
-      location: tournament.venue ? { '@type': 'Place', name: tournament.venue, address: tournament.venue } : undefined,
+      location: place(tournament.venue),
       organizer: organiser ? { '@type': 'Organization', name: organiser } : undefined,
       image: absUrl(tournament.banner_url),
+      competitor: tournament.team_names.map(team),
+      // Each fixture with its teams, kick-off and (once played) score; the bracket's TBD slots are left out
+      subEvent: tournament.matches
+        .filter(m => m.home_team_name !== 'TBD' && m.away_team_name !== 'TBD')
+        .slice(0, 80)
+        .map(m => ({
+          '@type': 'SportsEvent',
+          name: `${m.home_team_name} vs ${m.away_team_name}`,
+          description: isPlayed(m) ? `${m.home_team_name} ${m.home_score ?? 0}-${m.away_score ?? 0} ${m.away_team_name}` : undefined,
+          sport: 'Soccer',
+          startDate: m.match_date,
+          eventStatus: MATCH_STATUS[m.status] || 'https://schema.org/EventScheduled',
+          eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+          location: place(m.venue || tournament.venue),
+          homeTeam: team(m.home_team_name),
+          awayTeam: team(m.away_team_name),
+        })),
+      mainEntityOfPage: { '@id': `${url}#page` },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${url}#page`,
+      url,
+      name: `${tournament.name} fixtures, table and bracket`,
+      isPartOf: { '@id': WEBSITE_ID },
+      about: { '@id': `${url}#event` },
+      inLanguage: 'en-AU',
     },
     {
       '@type': 'BreadcrumbList',

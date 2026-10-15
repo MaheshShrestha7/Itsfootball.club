@@ -70,3 +70,101 @@ export function teamCode(name: string): string {
   const code = words.length >= 2 ? words.map(w => w[0]).join('') : (words[0] || 'TBD');
   return code.slice(0, 3).padEnd(3, (words[0] || 'X').slice(1, 2) || 'X');
 }
+
+/** How each format reads in a sentence ("an 8-team group stage and knockout cup") */
+export const FORMAT_PHRASES: Record<string, string> = {
+  knockout: 'knockout cup',
+  league: 'league',
+  group_knockout: 'group stage and knockout cup',
+};
+
+/** The match fields the summary needs; matches from the page data and from the server lookup both fit */
+export interface SummaryMatch {
+  home_team_name: string;
+  away_team_name: string;
+  match_date?: string | null;
+  status: string;
+  home_score?: number | null;
+  away_score?: number | null;
+  home_penalty_score?: number | null;
+  away_penalty_score?: number | null;
+  winner_side?: string | null;
+  tournament_stage?: string | null;
+}
+
+const PLAYED = ['completed', 'full_time'];
+export const isPlayed = (m: SummaryMatch) => PLAYED.includes(m.status);
+
+export interface TournamentProgress {
+  played: number;
+  /** Matches that will be played (cancelled ones left out) */
+  total: number;
+  champion?: string;
+  runnerUp?: string;
+  /** The final's score from the champion's side, e.g. "2-1", and the shoot-out's if it went to one, e.g. "4-3" */
+  finalScore?: string;
+  finalPenalties?: string;
+  /** The next match still to kick off with both teams known */
+  next?: SummaryMatch;
+}
+
+/** Where a tournament is up to: matches played, the next match, and the winner once the final is played */
+export function tournamentProgress(matches: SummaryMatch[]): TournamentProgress {
+  const counted = matches.filter(m => m.status !== 'cancelled');
+  const progress: TournamentProgress = { played: counted.filter(isPlayed).length, total: counted.length };
+
+  const final = counted.find(m => m.tournament_stage === 'final');
+  if (final && isPlayed(final)) {
+    const [h, a] = [final.home_score ?? 0, final.away_score ?? 0];
+    const [hp, ap] = [final.home_penalty_score, final.away_penalty_score];
+    const side = final.winner_side === 'home' || final.winner_side === 'away' ? final.winner_side
+      : h !== a ? (h > a ? 'home' : 'away')
+      : hp != null && ap != null && hp !== ap ? (hp > ap ? 'home' : 'away') : null;
+    if (side) {
+      const home = side === 'home';
+      progress.champion = home ? final.home_team_name : final.away_team_name;
+      progress.runnerUp = home ? final.away_team_name : final.home_team_name;
+      progress.finalScore = home ? `${h}-${a}` : `${a}-${h}`;
+      if (h === a && hp != null && ap != null) progress.finalPenalties = home ? `${hp}-${ap}` : `${ap}-${hp}`;
+    }
+  }
+
+  progress.next = counted
+    .filter(m => !isPlayed(m) && m.status !== 'live' && m.status !== 'halftime' && m.match_date)
+    .filter(m => m.home_team_name !== 'TBD' && m.away_team_name !== 'TBD')
+    .sort((x, y) => Date.parse(x.match_date!) - Date.parse(y.match_date!))[0];
+  return progress;
+}
+
+interface SummaryInput {
+  name: string;
+  format?: string | null;
+  teamSize?: string | null;
+  teamCount: number;
+  venue?: string | null;
+  organiser?: string | null;
+  progress: TournamentProgress;
+}
+
+/** The pieces of the summary: what it is ("an 8-team 6-a-side soccer league") and where it's up to */
+export function tournamentSummaryParts({ format, teamSize, teamCount, progress }: SummaryInput) {
+  const what = [teamCount > 0 ? `${teamCount}-team` : '', teamSize || '', 'soccer', FORMAT_PHRASES[format || ''] || 'tournament']
+    .filter(Boolean).join(' ');
+  const article = /^(8|11-|18-)/.test(what) ? 'an' : 'a';
+  const result = progress.champion
+    ? `${progress.champion} won the final against ${progress.runnerUp}, ${progress.finalScore}${progress.finalPenalties ? ` (${progress.finalPenalties} on penalties)` : ''}.`
+    : progress.total > 0
+      ? `${progress.played} of ${progress.total} matches played.`
+      : '';
+  return { what: `${article} ${what}`, result };
+}
+
+/**
+ * The answer-first sentence about a tournament, for the page and its structured data:
+ * "Dashain Cup 2026 is an 8-team 6-a-side soccer group stage and knockout cup at Parramatta Park, organised by ..."
+ */
+export function tournamentSummary(input: SummaryInput): string {
+  const { what, result } = tournamentSummaryParts(input);
+  const first = `${input.name} is ${what}${input.venue ? ` at ${input.venue}` : ''}${input.organiser ? `, organised by ${input.organiser}` : ''}.`;
+  return [first, result].filter(Boolean).join(' ');
+}

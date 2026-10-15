@@ -19,7 +19,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { CONTACT_EMAIL } from '@/lib/faq';
 import { SITE_URL } from '@/lib/seo';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
-import { MAKER_PATH, isEventClub, tournamentManagePath, tournamentPagePath } from '@/lib/public-tournaments';
+import { MAKER_PATH, isEventClub, tournamentManagePath, tournamentPagePath, tournamentProgress, tournamentSummary } from '@/lib/public-tournaments';
 import type { Club, Match, Tournament } from '@/lib/supabase/types';
 
 export type TournamentTab = 'bracket' | 'standings' | 'fixtures' | 'teams';
@@ -141,12 +141,15 @@ const STAGE_NAMES: Record<string, string> = {
   semi_final: 'Semi-final', final: 'Final', third_place: '3rd place play-off',
 };
 
-function EmbedDialog({ slug, onClose }: { slug: string; onClose: () => void }) {
+const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function EmbedDialog({ slug, name, onClose }: { slug: string; name: string; onClose: () => void }) {
   useEscapeToClose(true, onClose);
   const [view, setView] = useState<'bracket' | 'tables' | 'fixtures'>('bracket');
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const pageUrl = `${SITE_URL}${tournamentPagePath(slug)}`;
-  const code = `<iframe src="${pageUrl}/embed?view=${view}" title="Live tournament bracket" width="100%" height="600" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+  // The link under the frame is for readers whose browser blocks frames, and lets search engines find the page
+  const code = `<iframe src="${pageUrl}/embed?view=${view}" title="${escapeHtml(name)} live bracket" width="100%" height="600" style="border:0;border-radius:12px" loading="lazy"></iframe>\n<p><a href="${pageUrl}">${escapeHtml(name)} fixtures, table and bracket</a> on itsfootball.club</p>`;
   const copy = async (what: 'code' | 'link') => {
     try {
       await navigator.clipboard.writeText(what === 'code' ? code : pageUrl);
@@ -213,6 +216,59 @@ function ShareButton({ title, slug }: { title: string; slug: string }) {
   );
 }
 
+/** Machine-readable date for crawlers, shown in the visitor's own time zone */
+function When({ value, withTime }: { value: Date; withTime?: boolean }) {
+  return (
+    <time dateTime={value.toISOString()}>
+      <LocalTime value={value} format={withTime ? 'both' : 'date'} options={withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' }} />
+    </time>
+  );
+}
+
+/**
+ * Plain-text facts about the tournament, whichever tab is open: the teams, dates, progress and winner
+ * are in the page's HTML for search engines and AI answers, not only behind the tabs.
+ */
+function TournamentFacts({ tournament, teams, formatLabel, organiser, progress }: {
+  tournament: Tournament;
+  teams: string[];
+  formatLabel: string;
+  organiser?: string;
+  progress: ReturnType<typeof tournamentProgress>;
+}) {
+  const start = parseTournamentDate(tournament.start_date);
+  const end = parseTournamentDate(tournament.end_date);
+  const multiDay = start && end && end.toDateString() !== start.toDateString();
+  const next = progress.next;
+  const nextDate = next?.match_date ? new Date(next.match_date) : null;
+  const rows: [string, React.ReactNode][] = [
+    ['Format', formatLabel],
+    [`Teams (${teams.length})`, teams.join(', ') || 'To be announced'],
+    [multiDay ? 'Dates' : 'Date', start ? <>{<When value={start} />}{multiDay && <> to <When value={end!} /></>}</> : 'To be confirmed'],
+    ...(tournament.venue ? [['Venue', tournament.venue] as [string, React.ReactNode]] : []),
+    ...(organiser ? [['Organiser', organiser] as [string, React.ReactNode]] : []),
+    ...(progress.total ? [['Matches played', `${progress.played} of ${progress.total}`] as [string, React.ReactNode]] : []),
+    ...(progress.champion ? [
+      ['Winner', progress.champion] as [string, React.ReactNode],
+      ['Final', `${progress.champion} ${progress.finalScore} ${progress.runnerUp}${progress.finalPenalties ? ` (${progress.finalPenalties} on penalties)` : ''}`] as [string, React.ReactNode],
+    ] : []),
+    ...(next && !progress.champion ? [['Next match', <>{next.home_team_name} vs {next.away_team_name}{nextDate && !isNaN(nextDate.getTime()) && <>, <When value={nextDate} withTime /></>}</>] as [string, React.ReactNode]] : []),
+  ];
+  return (
+    <section className="glass-panel" style={{ marginTop: '2.5rem', padding: '1.25rem 1.5rem' }} aria-labelledby="facts-title">
+      <h2 id="facts-title" className="lineup-tool-section" style={{ marginTop: 0 }}>{tournament.name} at a glance</h2>
+      <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, max-content) 1fr', gap: '0.5rem 1.25rem', margin: 0, fontSize: '0.9rem', lineHeight: 1.55 }}>
+        {rows.map(([label, value]) => (
+          <React.Fragment key={label}>
+            <dt style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{label}</dt>
+            <dd style={{ margin: 0, color: 'var(--text-secondary)', minWidth: 0, overflowWrap: 'anywhere' }}>{value}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 function NotFound() {
   return (
     <div style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
@@ -249,6 +305,12 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
   const canManage = hasClubAdminAccess(club.id);
   const formatLabel = [FORMAT_LABELS[tournament.format] || 'Tournament', config.team_size].filter(Boolean).join(' · ');
   const sponsors = (config.sponsors || []).filter(s => s?.name);
+  const progress = tournamentProgress(matches);
+  const teamNames = participants.map(p => p.name);
+  const summary = tournamentSummary({
+    name: tournament.name, format: tournament.format, teamSize: config.team_size, teamCount: participants.length,
+    venue: tournament.venue, organiser: config.organiser, progress,
+  });
 
   return (
     <>
@@ -300,9 +362,10 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
       </section>
 
       <main style={{ maxWidth: '1300px', width: '100%', margin: '0 auto', padding: '1.5rem 1.5rem 3rem', flex: 1 }}>
-        {tournament.description && (
-          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '820px', marginBottom: '1.5rem' }}>{tournament.description}</p>
-        )}
+        {/* Answer first: the sentence search and AI engines lift as the summary */}
+        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '820px', marginBottom: '1.5rem' }}>
+          {summary}{tournament.description ? <> {tournament.description}</> : null}
+        </p>
 
         {live.map(m => (
           <div key={m.id} className="glass-panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem 1rem', flexWrap: 'wrap', padding: '0.9rem 1.25rem', marginBottom: '1rem', borderColor: 'rgba(239, 68, 68, 0.45)' }}>
@@ -322,6 +385,8 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
         <div style={{ marginTop: live.length ? '1.5rem' : 0 }}>
           <TournamentTabs tournament={tournament} matches={matches} participants={participants} getTournamentStandings={getTournamentStandings} tab={activeTab} setTab={setTab} slug={club.slug} />
         </div>
+
+        <TournamentFacts tournament={tournament} teams={teamNames} formatLabel={formatLabel} organiser={config.organiser} progress={progress} />
 
         {sponsors.length > 0 && (
           <section style={{ marginTop: '2.5rem' }} aria-labelledby="sponsors-title">
@@ -356,7 +421,7 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
         </p>
       </main>
 
-      {embedOpen && <EmbedDialog slug={club.slug} onClose={() => setEmbedOpen(false)} />}
+      {embedOpen && <EmbedDialog slug={club.slug} name={tournament.name} onClose={() => setEmbedOpen(false)} />}
     </>
   );
 }

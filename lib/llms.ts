@@ -30,6 +30,7 @@ URL patterns (replace \`{club}\` with a club's slug, e.g. \`ancc\`):
 - \`/{club}/match/{matchId}\`: a single match: teams, kick-off time, venue, competition, live score and event timeline, the published lineup on a tactical pitch, the matchday squad (players confirmed available) and match statistics.
 - \`/{club}/events/{eventId}\`: a public club event (social, AGM, training day) with date, venue and event sponsors.
 - \`/{club}/tournaments\` and \`/{club}/tournaments/{tournamentId}\`: club-run tournaments and cups with fixtures, group tables and knockout brackets.
+- \`/tournaments/{name}\`: a stand-alone community tournament or cup made with the free tournament maker (no club site): an at-a-glance summary (format, teams, dates, venue, organiser, matches played, winner), fixtures and results, group tables and the knockout bracket, updated live as the organiser enters scores.
 - \`/{club}/shop\`: the club's merch shop (kits, scarves and other merchandise) with photos, sizes and prices. Orders are paid online and collected from the club. Only present once the club has a product on sale.
 - \`/{club}/member\`: how to become a member of the club and get a digital member pass.
 

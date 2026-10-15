@@ -33,6 +33,20 @@ const FEATURES = [
   'Free, with no ads',
 ];
 
+// Match counts per format, worked out the way the maker draws them (each group plays a round robin,
+// then the qualifiers play a knockout; byes are not matches). No 3rd place match.
+const roundRobinMatches = (teams: number) => (teams * (teams - 1)) / 2;
+const MATCH_COUNTS = [[4, 1], [6, 2], [8, 2], [12, 4], [16, 4], [24, 8], [32, 8]].map(([teams, groups]) => {
+  const sizes = Array.from({ length: groups }, (_, i) => Math.floor(teams / groups) + (i < teams % groups ? 1 : 0));
+  return {
+    teams,
+    knockout: teams - 1,
+    league: roundRobinMatches(teams),
+    groups: sizes.reduce((sum, n) => sum + roundRobinMatches(n), 0) + groups * 2 - 1,
+    groupLabel: groups === 1 ? '1 group of 4, top 2 play a final' : `${groups} groups of ${teams / groups}, top 2 go through`,
+  };
+});
+
 const QUESTIONS = [
   { q: 'What is the best free soccer tournament maker?', a: "itsfootball.club's tournament maker is free with no ads. It handles knockouts, leagues, and group stages followed by a knockout, with live scores, tables and a bracket that update as you enter results, all at one link you can share." },
   { q: 'How do I make a tournament bracket?', a: 'Type the tournament name, pick a format, paste your teams one per line and press Publish. The bracket and fixtures are drawn for you. As you enter scores, winners move into the next round on their own.' },
@@ -40,6 +54,8 @@ const QUESTIONS = [
   { q: 'Can I run a 6-a-side or 5-a-side gala day?', a: 'Yes. Pick "One day" and the team size, then change kick-off times and pitches for each match after publishing. It works for any team size from 5-a-side to 11-a-side.' },
   { q: 'How do groups and knockouts work?', a: 'Teams are dealt into groups and play each other once. The top teams from each group (you choose how many) go into a knockout bracket, which fills in automatically when the groups finish.' },
   { q: 'Can I put the bracket on our club website?', a: 'Yes. The Embed button on your tournament page gives you a short code to paste into any website or news article. It shows the live bracket, tables or fixtures and updates by itself.' },
+  { q: 'How many matches are in a knockout tournament?', a: 'One fewer than the number of teams, because every match knocks one team out: 8 teams play 7 matches and 16 teams play 15. A 3rd place match adds one more. If the number of teams is not a power of two, some teams get a bye into round 2.' },
+  { q: 'How many matches are in a round robin league?', a: 'Every team plays every other team once, so n teams play n × (n − 1) ÷ 2 matches: 6 teams play 15 matches, 8 teams play 28 and 10 teams play 45. For a one-day event with more than 6 teams, groups followed by a knockout keep the day shorter.' },
   { q: 'Is it really free?', a: 'Yes. Tournaments are free, with no ads and no paid tier. If you run a club, the full club website with a live match centre, member passes and payments is free too.' },
 ];
 
@@ -117,6 +133,34 @@ export default function TournamentMakerPage() {
           <ul style={{ ...bodyStyle, paddingLeft: '1.2rem', columns: '2 260px', columnGap: '2rem' }}>
             {FEATURES.map(f => <li key={f} style={{ breakInside: 'avoid', marginBottom: '0.3rem' }}>{f}</li>)}
           </ul>
+        </section>
+
+        <section style={{ marginTop: '2.5rem' }} aria-labelledby="counts">
+          <h2 id="counts" style={h2Style}>How many matches will you play?</h2>
+          <p style={bodyStyle}>
+            A knockout has one fewer match than teams. A league where everyone plays everyone once has n × (n − 1) ÷ 2 matches.
+            Groups followed by a knockout sit in between, which is why most one-day cups and gala days use them.
+          </p>
+          <div className="glass-panel" style={{ marginTop: '1rem', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <caption style={{ textAlign: 'left', padding: '0.9rem 0.8rem 0.4rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Matches by format and number of teams (no 3rd place match)</caption>
+              <thead>
+                <tr style={{ textAlign: 'left', color: 'var(--text-primary)' }}>
+                  {['Teams', 'Knockout', 'League', 'Groups + knockout'].map(h => <th key={h} scope="col" style={{ padding: '0.6rem 0.8rem', fontWeight: 800 }}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {MATCH_COUNTS.map(r => (
+                  <tr key={r.teams} style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                    <th scope="row" style={{ padding: '0.6rem 0.8rem', textAlign: 'left', color: 'var(--text-primary)' }}>{r.teams}</th>
+                    <td style={{ padding: '0.6rem 0.8rem' }}>{r.knockout}</td>
+                    <td style={{ padding: '0.6rem 0.8rem' }}>{r.league}</td>
+                    <td style={{ padding: '0.6rem 0.8rem' }}>{r.groups} <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{r.groupLabel}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section style={{ marginTop: '2.5rem' }} aria-labelledby="faq">

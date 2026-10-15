@@ -1,5 +1,6 @@
 import type { CalendarEvent, CalendarMatch } from '../calendar';
 import { fetchPaged } from '../paged';
+import type { SummaryMatch } from '../public-tournaments';
 
 // Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
 // Mirrors the slug/previous_slugs matching logic in lib/club-context.tsx's selectClubBySlug.
@@ -158,9 +159,17 @@ export interface EventTournamentRow extends TournamentMetadataRow {
   status: string | null;
   /** Teams entered, for deciding whether the page is worth indexing */
   team_count: number;
+  team_names: string[];
+  /** Its matches, for the server-rendered summary and structured data */
+  matches: EventMatchRow[];
 }
 
-/** The tournament of a tournament-only club (lib/public-tournaments.ts), with its team count */
+export interface EventMatchRow extends SummaryMatch {
+  id: string;
+  venue: string | null;
+}
+
+/** The tournament of a tournament-only club (lib/public-tournaments.ts), with its teams and matches */
 export async function findEventTournament(clubId: string): Promise<EventTournamentRow | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
@@ -176,9 +185,15 @@ export async function findEventTournament(clubId: string): Promise<EventTourname
     if (!res.ok) return null;
     const tournament = ((await res.json()) as Omit<EventTournamentRow, 'team_count'>[])[0];
     if (!tournament) return null;
-    const teams = await fetch(`${url}/rest/v1/tournament_participants?select=id&tournament_id=eq.${tournament.id}`, { headers, next: { revalidate: 60 } });
-    const team_count = teams.ok ? ((await teams.json()) as unknown[]).length : 0;
-    return { ...tournament, team_count };
+    const [teams, matches] = await Promise.all([
+      fetch(`${url}/rest/v1/tournament_participants?select=name&tournament_id=eq.${tournament.id}`, { headers, next: { revalidate: 60 } }),
+      fetch(
+        `${url}/rest/v1/matches?select=id,home_team_name,away_team_name,match_date,venue,status,home_score,away_score,home_penalty_score,away_penalty_score,winner_side,tournament_stage&tournament_id=eq.${tournament.id}&order=match_date`,
+        { headers, next: { revalidate: 60 } }
+      ),
+    ]);
+    const team_names = teams.ok ? ((await teams.json()) as { name: string }[]).map(t => t.name).filter(Boolean) : [];
+    return { ...tournament, team_count: team_names.length, team_names, matches: matches.ok ? ((await matches.json()) as EventMatchRow[]) : [] };
   } catch {
     return null;
   }
