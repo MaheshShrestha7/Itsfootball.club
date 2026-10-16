@@ -7,7 +7,7 @@ const PLATFORM_PAGES = ['about', 'clubs', 'create-club', 'my-clubs', 'faq', 'uns
 // The framable public tournament embed (see next.config.ts headers)
 const EMBED_PATH = /^\/tournaments\/[^/]+\/embed\/?$/;
 // The result graphic maker's "Remove background" runs MediaPipe, which is WebAssembly (lib/remove-background.ts)
-const WASM_PATH = /^\/tools\/(match-result|player-of-the-match)-graphic-maker\/?$/;
+const WASM_PATH = /^\/tools\/((match-result|player-of-the-match)-graphic-maker|(player|goalkeeper|soccer-player)-card-maker)\/?$/;
 
 // Club domain -> slug (null = no club has it). Per isolate; a changed domain shows up within a minute.
 const HOST_TTL_MS = 60_000;

@@ -10,6 +10,7 @@ export const LINEUP_TOOL: ToolPageLink = { path: '/tools/lineup-builder', label:
 export const TOURNAMENT_TOOL: ToolPageLink = { path: '/tools/tournament-maker', label: 'Soccer tournament maker', blurb: 'Groups, knockout or league, live link' };
 export const RESULT_TOOL: ToolPageLink = { path: '/tools/match-result-graphic-maker', label: 'Match result graphic maker', blurb: 'Full-time score for stories and posts' };
 export const PLAYING_TIME_TOOL: ToolPageLink = { path: '/tools/equal-playing-time-calculator', label: 'Equal playing time calculator', blurb: 'Fair minutes and a sub schedule' };
+export const PLAYER_CARD_TOOL: ToolPageLink = { path: '/tools/player-card-maker', label: 'Football player card maker', blurb: 'Your photo, rating and season stats' };
 export const SEASON_FEE_TOOL: ToolPageLink = { path: '/tools/season-fee-calculator', label: 'Season fee calculator', blurb: 'Break-even subs, card vs cash' };
 
 export const LINEUP_FORMAT_PAGES: ToolPageLink[] = [
@@ -34,7 +35,12 @@ export const PLAYING_TIME_FORMAT_PAGES: ToolPageLink[] = [
   { path: '/tools/5-a-side-substitution-planner', label: '5-a-side substitution planner', blurb: 'Rolling subs for 5v5' },
 ];
 
-export const FORMAT_PAGES = [...LINEUP_FORMAT_PAGES, ...TOURNAMENT_FORMAT_PAGES, ...RESULT_FORMAT_PAGES, ...PLAYING_TIME_FORMAT_PAGES];
+export const PLAYER_CARD_FORMAT_PAGES: ToolPageLink[] = [
+  { path: '/tools/goalkeeper-card-maker', label: 'Goalkeeper card maker', blurb: 'Clean sheets and saves on the card' },
+  { path: '/tools/soccer-player-card-maker', label: 'Soccer player card maker', blurb: 'Rec league and travel soccer stats' },
+];
+
+export const FORMAT_PAGES = [...LINEUP_FORMAT_PAGES, ...TOURNAMENT_FORMAT_PAGES, ...RESULT_FORMAT_PAGES, ...PLAYING_TIME_FORMAT_PAGES, ...PLAYER_CARD_FORMAT_PAGES];
 
 /** The hub page listing every tool, grouped as below */
 export const TOOLS_HUB: ToolPageLink = { path: '/tools', label: 'Free football tools', blurb: 'Every free tool, no sign-up' };
@@ -64,6 +70,13 @@ export const TOOL_GROUPS: ToolGroup[] = [
     formats: [...PLAYING_TIME_FORMAT_PAGES, ...RESULT_FORMAT_PAGES],
   },
   {
+    id: 'player-cards',
+    heading: 'Player cards',
+    blurb: 'Put a player’s photo, rating and season stats on a collectible-style card for the team chat and socials.',
+    main: [PLAYER_CARD_TOOL],
+    formats: PLAYER_CARD_FORMAT_PAGES,
+  },
+  {
     id: 'tournaments',
     heading: 'Tournaments and cups',
     blurb: 'Draw the fixtures and get a live page with tables and a bracket that update as you enter scores.',
@@ -82,7 +95,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
 export const MAIN_TOOLS = TOOL_GROUPS.flatMap(g => g.main);
 
 /** When the tool pages last changed: shown as "Updated" under each heading and as dateModified. Bump it when a tool changes. */
-export const TOOLS_UPDATED = '2026-10-15';
+export const TOOLS_UPDATED = '2026-10-16';
 
 export function formatUpdated(iso: string): string {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -116,6 +129,9 @@ const EXAMPLES: Record<string, Omit<ToolExample, 'src'>> = {
   '5-a-side-substitution-planner': { width: 800, height: 565, alt: 'Rotation chart for 8 players in a 5-a-side match of 2 × 20 minutes, every player on for 25 minutes with rolling subs, made with the free 5-a-side substitution planner', caption: '8 players over 2 × 20 minutes with rolling subs: 25 minutes each.' },
   'match-result-graphic-maker': { width: 800, height: 1000, alt: 'Full-time result graphic: Riverside Rovers 3, Northside United 1, with goalscorers, minutes and the Player of the Match, made with the free match result graphic maker', caption: 'A full-time result with scorers and the Player of the Match, as a 4:5 post.' },
   'player-of-the-match-graphic-maker': { width: 800, height: 1000, alt: 'Player of the Match graphic for Kai Tanaka with the 3-1 score, date and venue, made with the free Player of the Match graphic maker', caption: 'A Player of the Match card with the score, date and venue, as a 4:5 post.' },
+  'player-card-maker': { width: 800, height: 964, alt: 'Black gold football player card for Kai Tanaka, ST, rated 87, with goals, assists, appearances, Player of the Match, attendance streak and attendance %, made with the free football player card maker', caption: 'A Black gold card for a striker: 21 goals and 8 assists in 20 games. Add a photo and the player stands on the card.' },
+  'goalkeeper-card-maker': { width: 800, height: 964, alt: 'Silver goalkeeper card for Max Fraser, GK, rated 74, with 9 clean sheets and 41 saves in 19 games, made with the free goalkeeper card maker', caption: 'A Silver keeper card: 9 clean sheets and 41 saves in 19 games.' },
+  'soccer-player-card-maker': { width: 800, height: 964, alt: 'Blue club-colours soccer player card for Noah Patel, CM, rated 82, with goals, assists, games played and attendance, made with the free soccer player card maker', caption: 'A card in the team’s own blue, for a midfielder with 12 assists.' },
   'tournament-maker': { width: 800, height: 976, alt: 'Group tables for an eight-team cup with two groups of four and the top two going through to the knockouts, made with the free soccer tournament maker', caption: 'Eight teams in two groups of four, with the top two going into the knockouts.' },
   'round-robin-fixture-generator': { width: 800, height: 653, alt: 'League table for a six-team round robin where everyone plays everyone once, 15 matches in total, made with the free round robin fixture generator', caption: 'Six teams in a round robin: 15 matches, and the table fills in as scores go in.' },
   'knockout-cup-bracket-maker': { width: 800, height: 1151, alt: 'Knockout bracket for an eight-team cup with four quarter-finals and two semi-finals, seeded 1 v 8, made with the free knockout cup bracket maker', caption: 'An eight-team bracket, seeded 1 v 8, 4 v 5, 2 v 7 and 3 v 6.' },

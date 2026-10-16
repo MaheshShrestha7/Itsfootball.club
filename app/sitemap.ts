@@ -41,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/tools/lineup-builder'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/tournament-maker'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/match-result-graphic-maker'), changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/player-card-maker'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/equal-playing-time-calculator'), changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/season-fee-calculator'), changeFrequency: 'monthly', priority: 0.6 },
     ...FORMAT_PAGES.map(t => ({ url: url(t.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
