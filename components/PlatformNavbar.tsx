@@ -10,7 +10,8 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Wrench } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
+import { ToolsMenuDesktop, ToolsMenuMobile } from '@/components/ToolsMenu';
 
 export default function PlatformNavbar() {
   const clubs = useClub().clubs.filter(isListedClub);
@@ -55,10 +56,7 @@ export default function PlatformNavbar() {
             <Trophy size={16} />
             Clubs Directory
           </Link>
-          <Link href="/tools" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Wrench size={16} />
-            Free Tools
-          </Link>
+          <ToolsMenuDesktop />
           <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <HelpCircle size={16} />
             FAQ
@@ -316,10 +314,9 @@ export default function PlatformNavbar() {
                   <Trophy size={18} color="var(--c-amber)" />
                   <span>Clubs Directory</span>
                 </Link>
-                <Link
-                  href="/tools"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  style={{
+                <ToolsMenuMobile
+                  onNavigate={() => setMobileDrawerOpen(false)}
+                  rowStyle={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.75rem',
@@ -330,10 +327,7 @@ export default function PlatformNavbar() {
                     fontSize: '0.95rem',
                     background: 'rgba(var(--tint-rgb), 0.03)',
                   }}
-                >
-                  <Wrench size={18} color="var(--c-green)" />
-                  <span>Free Tools</span>
-                </Link>
+                />
                 <Link
                   href="/faq"
                   onClick={() => setMobileDrawerOpen(false)}

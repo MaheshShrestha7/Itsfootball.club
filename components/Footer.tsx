@@ -245,20 +245,31 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Explore Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Launch a New Club</Link>
                   <Link href="/live-scores" style={{ color: 'var(--text-secondary)' }}>Live Match Centre</Link>
-                  <Link href="/tools/lineup-builder" style={{ color: 'var(--text-secondary)' }}>Free Lineup Builder</Link>
-                  <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
-                  <Link href="/tools/match-result-graphic-maker" style={{ color: 'var(--text-secondary)' }}>Free Result Graphic Maker</Link>
-                  <Link href="/tools/player-card-maker" style={{ color: 'var(--text-secondary)' }}>Free Player Card Maker</Link>
-                  <Link href="/tools/equal-playing-time-calculator" style={{ color: 'var(--text-secondary)' }}>Equal Playing Time Calculator</Link>
-                  <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
-                  <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
-                  <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Guides</Link>
-                  <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Ground Guides</Link>
                   <Link href={`/${fallbackSlug}/member`} style={{ color: 'var(--text-secondary)' }}>Digital Pass Showcase</Link>
                 </>
               )}
             </div>
           </div>
+
+          {/* Free tools column (platform pages only; club sites link the tools hub in the bottom row) */}
+          {!club && (
+            <div>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                Free Tools
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
+                <Link href="/tools/lineup-builder" style={{ color: 'var(--text-secondary)' }}>Free Lineup Builder</Link>
+                <Link href="/tools/equal-playing-time-calculator" style={{ color: 'var(--text-secondary)' }}>Equal Playing Time Calculator</Link>
+                <Link href="/tools/match-result-graphic-maker" style={{ color: 'var(--text-secondary)' }}>Free Result Graphic Maker</Link>
+                <Link href="/tools/player-card-maker" style={{ color: 'var(--text-secondary)' }}>Free Player Card Maker</Link>
+                <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
+                <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
+                <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Guides</Link>
+                <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Ground Guides</Link>
+                <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
+              </div>
+            </div>
+          )}
 
           {/* Col 3: Club Management */}
           <div>
