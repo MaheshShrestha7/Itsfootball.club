@@ -496,6 +496,11 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
 
       {/* Controls, in three short sections so they read well on a phone */}
       <div className="lineup-tool-controls lineup-tool-glass">
+        {/* Up front, before anything is added: the badge, sponsor logos and any other photos never leave the device */}
+        <p className="lineup-tool-privacy">
+          <Lock size={14} aria-hidden="true" />
+          <span><strong>Private by design.</strong> All photos you upload stay on your device. They are processed in your browser and never uploaded to or stored on our server.</span>
+        </p>
         <h2 className="lineup-tool-section">Team</h2>
         <div className="lineup-tool-row">
           <div className="form-group">
@@ -582,10 +587,6 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
               </label>
             )}
           </div>
-          <p className="lineup-tool-privacy">
-            <Lock size={13} aria-hidden="true" />
-            <span>Your badge and sponsor logos stay on your device. They are processed in your browser and never uploaded to or stored on our server.</span>
-          </p>
         </div>
 
         <div className="lineup-tool-row">

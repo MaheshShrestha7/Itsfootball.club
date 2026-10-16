@@ -3048,8 +3048,10 @@ dialog.confirm-dialog::backdrop {
 .lineup-tool-sponsor { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 44px; padding: 5px; border-radius: 8px; background: rgba(255, 255, 255, 0.94); }
 .lineup-tool-sponsor img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .lineup-tool-sponsor button { position: absolute; top: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%; border: 0; background: var(--bg-surface); color: var(--text-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-.lineup-tool-privacy { display: flex; gap: 0.45rem; align-items: flex-start; margin: 0.65rem 0 0; padding: 0.55rem 0.7rem; border-radius: var(--radius-md); border: 1px solid rgba(var(--lb-rgb), 0.28); background: rgba(var(--lb-rgb), 0.08); color: var(--text-secondary); font-size: 0.78rem; line-height: 1.45; }
+.lineup-tool-privacy { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0 0 1.1rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-md); border: 1px solid rgba(var(--lb-rgb), 0.28); background: rgba(var(--lb-rgb), 0.08); color: var(--text-secondary); font-size: 0.78rem; line-height: 1.45; }
 .lineup-tool-privacy svg { flex: 0 0 auto; margin-top: 0.15rem; color: var(--text-primary); }
+.lineup-tool-privacy strong { color: var(--text-primary); }
+.lineup-tool-privacy + .lineup-tool-section { margin-top: 0.4rem; padding-top: 0; border-top: 0; }
 /* Free result & Player of the Match graphic maker (/tools/match-result-graphic-maker): the lineup
    builder's glass layout, with the live image on the left and the controls on the right */
 .rg-preview { padding: 0.9rem; }
