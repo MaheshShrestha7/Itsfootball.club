@@ -449,3 +449,22 @@ export function applicationRejected(p: ForGuardian & { brand: EmailBrand; member
     reason: p.childName ? `You're receiving this because you applied for ${p.childName} to join ${p.brand.name}.` : `You're receiving this because you applied for membership of ${p.brand.name}.`,
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Grounds directory
+// ---------------------------------------------------------------------------------------------
+
+/** "Suggest an edit" on a public ground guide, to the club that looks after the ground */
+export function groundSuggestion(p: { clubName: string; ground: string; topic: string; message: string; contact?: string | null; guideUrl: string; adminUrl: string }): RenderedEmail {
+  return renderEmail({
+    subject: `Suggested edit: ${p.ground} (${p.topic})`,
+    preheader: p.message.slice(0, 120),
+    heading: `Someone suggested an edit to ${p.ground}`,
+    paragraphs: [
+      `A visitor to the ${p.ground} ground guide thinks something needs changing. If they're right, update the ground details in Admin, Branding, Public Ground Guide, then mark the suggestion done.`,
+    ],
+    details: [['About', p.topic], ['Suggestion', p.message], ...(p.contact ? [['Contact', p.contact] as [string, string]] : []), ['Guide', p.guideUrl]],
+    cta: { label: 'Review in admin', url: p.adminUrl },
+    reason: `You're receiving this because ${p.clubName} looks after the ${p.ground} guide on itsfootball.club.`,
+  });
+}

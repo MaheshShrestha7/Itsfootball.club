@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
+import GettingThere from '@/components/grounds/GettingThere';
 import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
@@ -645,6 +646,9 @@ export default function MatchCenterPage({
             {teamBlock('away')}
           </div>
         </div>
+
+        {/* Directions, parking and wet weather from the ground guide, before and during the match */}
+        {match.status !== 'completed' && match.status !== 'cancelled' && <GettingThere match={match} />}
 
         {/* Player of the Match & Goal Scorers */}
         {(motmMember || goalEvents.length > 0) && (

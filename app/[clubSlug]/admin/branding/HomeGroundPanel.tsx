@@ -2,16 +2,18 @@
 
 // The club's home ground in the public grounds directory (/grounds/{suburb}/{ground}), saved on its own
 // through /api/admin/grounds (not with the branding form). Ground facts are public once saved; the
-// switch decides whether the club's name and senior home fixtures appear on the ground's page.
+// switch decides whether the club's name and senior fixtures appear on ground pages.
 // Sits inside the branding <form>, so every button is type="button" and Enter doesn't submit.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Circle, ExternalLink, MapPin, Plus, Search, Trash2, Loader2 } from 'lucide-react';
+import { Check, CheckCircle2, Circle, ExternalLink, MapPin, MessageSquare, Plus, Search, Trash2, Loader2, X } from 'lucide-react';
 import { getAccessToken } from '@/lib/supabase/client';
 import { COUNCILS, STATES } from '@/lib/councils';
 import {
-  MIN_INDEXABLE_FACTS, councilName, factCount, groundPath, mapEmbedUrl, parseLatLng, type GroundRow, type Pitch,
+  MIN_INDEXABLE_FACTS, SUGGESTION_TOPICS, councilName, factCount, groundPath, mapEmbedUrl, parseLatLng, type GroundRow, type Pitch,
 } from '@/lib/grounds';
 import type { Club } from '@/lib/supabase/types';
+
+interface Suggestion { id: string; ground_name?: string; topic: string; message: string; contact: string | null; created_at: string }
 
 interface Form {
   name: string; suburb: string; state: string; postcode: string; address: string; pin: string;
@@ -86,6 +88,18 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
   }, [club.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Visitors' "Suggest an edit" messages for the grounds this club looks after
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  useEffect(() => {
+    if (!steward) { setSuggestions([]); return; }
+    api('GET', undefined, `?clubId=${club.id}&suggestions=1`).then(r => setSuggestions(r.ok ? r.data.suggestions || [] : []));
+  }, [steward, club.id]);
+  const closeSuggestion = async (id: string, status: 'done' | 'dismissed') => {
+    const r = await api('POST', { clubId: club.id, action: 'suggestion', id, status });
+    if (r.ok) setSuggestions(list => list.filter(x => x.id !== id));
+    else setMessage({ ok: false, text: r.error || 'Could not update the suggestion.' });
+  };
 
   // Search existing grounds as the admin types (so two clubs sharing a park don't add it twice)
   useEffect(() => {
@@ -202,7 +216,35 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
               ))}
             </ul>
           ) : (
-            <p style={hint}>Another club looks after this ground&apos;s facts. Spotted something wrong? Use &quot;Something wrong? Tell us&quot; on the guide.</p>
+            <p style={hint}>Another club looks after this ground&apos;s facts. Spotted something wrong? Use &quot;Suggest an edit&quot; on the guide.</p>
+          )}
+          {steward && suggestions.length > 0 && (
+            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderLeft: '3px solid var(--c-amber)' }}>
+              <strong style={{ ...smallBtn, color: 'var(--text-primary)' }}>
+                <MessageSquare size={16} color="var(--c-amber)" /> {suggestions.length} suggested edit{suggestions.length === 1 ? '' : 's'} from visitors
+              </strong>
+              {suggestions.map(x => (
+                <div key={x.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {SUGGESTION_TOPICS.find(t => t.key === x.topic)?.label || 'Something else'}
+                      {x.ground_name && x.ground_name !== ground.name ? ` · ${x.ground_name}` : ''} · {new Date(x.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                    </div>
+                    <p style={{ margin: '0.2rem 0 0', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{x.message}</p>
+                    {x.contact && <p style={{ ...hint, marginTop: '0.2rem' }}>From {x.contact}</p>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button type="button" className="btn btn-outline" style={{ ...smallBtn, padding: '0.4rem 0.75rem', fontSize: '0.8rem' }} onClick={() => closeSuggestion(x.id, 'done')} title="I've updated the ground details">
+                      <Check size={14} /> Done
+                    </button>
+                    <button type="button" className="btn btn-outline" style={{ ...smallBtn, padding: '0.4rem 0.75rem', fontSize: '0.8rem' }} onClick={() => closeSuggestion(x.id, 'dismissed')} title="Not right, or not needed">
+                      <X size={14} /> Dismiss
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <p style={{ ...hint, marginTop: 0 }}>Nothing changes on the guide until you edit the ground details. Mark each one done once you have.</p>
+            </div>
           )}
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {steward && <button type="button" className="btn btn-primary" style={smallBtn} onClick={() => setMode('edit')}>Edit ground details</button>}
@@ -350,8 +392,8 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
           <div>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Show our club and fixtures on public ground pages</div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: '0.25rem' }}>
-              Ground facts like parking and toilets are public either way. With this on, your club name and senior home fixtures appear on
-              your ground&apos;s page. Junior teams, teams that hide scores, and training are never shown.
+              Ground facts like parking and toilets are public either way. With this on, your club name appears on your ground&apos;s page,
+              and your senior fixtures appear on the guide of the ground they&apos;re played at. Junior teams, teams that hide scores, and training are never shown.
             </div>
           </div>
         </div>

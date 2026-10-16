@@ -5,17 +5,17 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { MapPin, Car, Toilet, Coffee, Accessibility, CloudRain, Phone, ExternalLink, Navigation, Shield, Info, Mail } from 'lucide-react';
+import { MapPin, Car, Toilet, Coffee, Accessibility, CloudRain, Phone, ExternalLink, Navigation, Shield, Info } from 'lucide-react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import ShareGround from '@/components/grounds/ShareGround';
+import SuggestEdit from '@/components/grounds/SuggestEdit';
 import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { fitDescription, fitTitle, pageMetadata, SITE_URL } from '@/lib/seo';
-import { CONTACT_EMAIL } from '@/lib/faq';
 import {
   GROUNDS_PATH, councilName, directionsUrl, factCount, groundCouncil, groundPath, groundQuestions, groundSchema, groundSummary,
-  isIndexableGround, mapEmbedUrl, pitchSummary, suburbPath, type GroundFixture, type GroundRow,
+  isIndexableGround, mapEmbedUrl, pitchAnchor, pitchSummary, suburbPath, type GroundFixture, type GroundRow,
 } from '@/lib/grounds';
 import { clubsWithHomeGrounds, findGround, groundFixtures, groundUse, listGrounds } from '@/lib/supabase/grounds-lookup';
 
@@ -86,7 +86,7 @@ function FixtureRow({ f, timeZone }: { f: GroundFixture; timeZone: string }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700 }}>{done && f.homeScore != null && f.awayScore != null ? `${f.home} ${f.homeScore}–${f.awayScore} ${f.away}` : `${f.home} v ${f.away}`}</div>
-        {f.competition && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{f.competition}</div>}
+        {(f.competition || f.pitch) && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{[f.competition, f.pitch].filter(Boolean).join(' · ')}</div>}
       </div>
     </Link>
   );
@@ -193,7 +193,7 @@ export default async function GroundPage({ params }: Params) {
             <h2 id="pitches" style={h2Style}>Pitches ({pitchSummary(g.pitches)})</h2>
             <ul className="tool-links" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))' }}>
               {(g.pitches || []).map(p => (
-                <li key={p.label} id={`pitch-${p.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+                <li key={p.label} id={pitchAnchor(p.label)}>
                   <div className="glass-panel tool-link" style={{ borderLeft: '3px solid var(--club-primary)' }}>
                     <strong>{p.label}</strong>
                     <span>{[p.surface, p.size, p.lights ? 'Lights' : ''].filter(Boolean).join(' · ') || 'Pitch'}</span>
@@ -260,13 +260,7 @@ export default async function GroundPage({ params }: Params) {
           <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
             <Shield size={15} aria-hidden="true" /> {steward ? `Facts kept up to date by ${steward.name}` : 'Facts kept up to date by a local club'}
           </span>
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Ground guide: ${g.name}, ${g.suburb}`)}&body=${encodeURIComponent(`${url}\n\nWhat needs changing:\n`)}`}
-            className="btn btn-outline"
-            style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}
-          >
-            <Mail size={15} aria-hidden="true" /> Something wrong? Tell us
-          </a>
+          <SuggestEdit groundId={g.id} groundName={g.name} stewardName={steward?.name} />
         </div>
         {factCount(g) < 3 && (
           <p style={{ ...bodyStyle, fontSize: '0.82rem', marginTop: '1rem' }}>

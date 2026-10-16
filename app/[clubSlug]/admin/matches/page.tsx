@@ -9,6 +9,8 @@ import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
 import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
+import { venueText } from '@/lib/grounds';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import MatchShareButton from '@/components/MatchShareButton';
 import { QRCodeSVG } from 'qrcode.react';
@@ -158,6 +160,9 @@ export default function AdminMatchesPage({
     home_score: number;
     away_score: number;
     team_id: string;
+    /** The ground in the public directory ('' = not linked) and its pitch */
+    ground_id: string;
+    pitch_label: string;
   }>({
     title: '',
     match_type: 'friendly',
@@ -178,6 +183,8 @@ export default function AdminMatchesPage({
     home_score: 0,
     away_score: 0,
     team_id: '',
+    ground_id: '',
+    pitch_label: '',
   });
 
   const showToast = (msg: string) => {
@@ -210,6 +217,8 @@ export default function AdminMatchesPage({
       home_score: 0,
       away_score: 0,
       team_id: prefillTeam || (teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId),
+      ground_id: '',
+      pitch_label: '',
     });
     setIsFormModalOpen(true);
   };
@@ -264,6 +273,8 @@ export default function AdminMatchesPage({
       home_score: m.home_score ?? 0,
       away_score: m.away_score ?? 0,
       team_id: m.team_id || mainTeamId,
+      ground_id: m.ground_id || '',
+      pitch_label: m.pitch_label || '',
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setIsFormModalOpen(true);
@@ -330,6 +341,10 @@ export default function AdminMatchesPage({
     const teamId = isTeamFixture({ match_type: form.match_type }) ? (form.team_id || mainTeamId || null) : null;
     const homeScore = Number(form.home_score) || 0;
     const awayScore = Number(form.away_score) || 0;
+    // The ground guide link: sent only when set or changed (the picker only appears once the
+    // database has these columns, so a club that hasn't run the migration never sends them)
+    const groundId = form.ground_id || null;
+    const pitchLabel = groundId ? form.pitch_label || null : null;
 
     if (editingMatchId) {
       // Update existing fixture - PRESERVE status & scores
@@ -355,6 +370,8 @@ export default function AdminMatchesPage({
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
         ...(teamId !== (editingMatch?.team_id ?? null) ? { team_id: teamId } : {}),
+        ...(groundId !== (editingMatch?.ground_id ?? null) ? { ground_id: groundId } : {}),
+        ...(pitchLabel !== (editingMatch?.pitch_label ?? null) ? { pitch_label: pitchLabel } : {}),
         // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -392,6 +409,7 @@ export default function AdminMatchesPage({
         added_time: 0,
         period: resolvedStatus === 'completed' ? 'full_time' : 'pre_match',
         team_id: teamId,
+        ...(groundId ? { ground_id: groundId, pitch_label: pitchLabel } : {}),
         // Youth teams play small-sided: start their fixtures in the team's format
         ...(newMatchFormat(teamId) ? { match_format: newMatchFormat(teamId) } : {}),
       });
@@ -1351,7 +1369,12 @@ export default function AdminMatchesPage({
                   </label>
                   <select id="matches-venue-side"
                     value={form.is_club_home ? 'home' : 'away'}
-                    onChange={e => setForm({ ...form, is_club_home: e.target.value === 'home' })}
+                    onChange={e => setForm({
+                      ...form,
+                      is_club_home: e.target.value === 'home',
+                      // A new away fixture isn't at the home ground the picker started on
+                      ...(!editingMatchId && e.target.value === 'away' ? { ground_id: '', pitch_label: '' } : {}),
+                    })}
                     className="form-input"
                   >
                     <option value="home">Home (Fortress)</option>
@@ -1405,6 +1428,15 @@ export default function AdminMatchesPage({
                   />
                 </div>
               </div>
+
+              <MatchGroundPicker
+                key={editingMatchId || 'new'}
+                clubId={club.id}
+                groundId={form.ground_id}
+                pitch={form.pitch_label}
+                preferHome={!editingMatchId && form.is_club_home}
+                onChange={(g, pitch) => setForm(f => ({ ...f, ground_id: g?.id || '', pitch_label: g ? pitch : '', venue: g ? venueText(g.name, pitch) : f.venue }))}
+              />
 
               {/* Match Flyer Image Zone */}
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { areaName, matchFromAttributes } from './council-lookup';
 import { COUNCILS } from './councils';
 import {
-  cleanGroundInput, factCount, groundPath, groundQuestions, groundSitemapEntries, groundSummary, isIndexableGround,
+  cleanGroundInput, cleanSuggestion, factCount, groundForMatch, groundPath, mergeFixtures, pitchAnchor, venueText, groundQuestions, groundSitemapEntries, groundSummary, isIndexableGround,
   parseLatLng, pitchSummary, slugify, venueMatchesGround, type GroundRow,
 } from './grounds';
 
@@ -105,5 +105,33 @@ assert.equal(matchFromAttributes(undefined), null);
 // Every listed council has a unique 5-digit ABS code and an https link
 assert.equal(new Set(COUNCILS.map(c => c.lgaCode)).size, COUNCILS.length);
 assert.ok(COUNCILS.every(c => /^\d{5}$/.test(c.lgaCode) && c.url.startsWith('https://')));
+
+// Phase 2: fixtures linked to a ground
+assert.equal(venueText('Craik Park', 'Pitch 2'), 'Craik Park, Pitch 2');
+assert.equal(venueText('Craik Park', ''), 'Craik Park');
+assert.ok(venueMatchesGround(venueText('Craik Park', 'Pitch 2'), 'Craik Park'));
+assert.equal(pitchAnchor('Pitch 2 (Mini)'), 'pitch-pitch-2-mini');
+const fx = (id: string, date: string, pitch?: string) => ({ id, clubSlug: 'austral', home: 'A', away: 'B', date, status: 'upcoming', homeScore: null, awayScore: null, competition: null, ...(pitch ? { pitch } : {}) });
+const merged = mergeFixtures([fx('m1', '2026-10-01T00:00:00Z', 'Pitch 2'), fx('m3', '2026-10-20T00:00:00Z')], [fx('m1', '2026-10-01T00:00:00Z'), fx('m2', '2026-10-10T00:00:00Z')]);
+assert.deepEqual(merged.map(f => f.id), ['m3', 'm2', 'm1']);
+assert.equal(merged[2].pitch, 'Pitch 2'); // the linked copy (with its pitch) wins
+assert.equal(mergeFixtures([fx('a', '2026-10-01T00:00:00Z')], [fx('b', '2026-10-02T00:00:00Z')], 1).length, 1);
+
+// "Getting there": the linked ground, else the home ground when the venue names it
+assert.equal(groundForMatch({ ground_id: 'g1', is_club_home: false, venue: 'Anywhere' }, base, null)?.id, 'g1');
+assert.equal(groundForMatch({ ground_id: 'g1', is_club_home: true, venue: 'Craik Park' }, { ...base, is_published: false }, base), null);
+assert.equal(groundForMatch({ ground_id: 'gX', is_club_home: true, venue: 'Craik Park' }, base, base), null);
+assert.equal(groundForMatch({ is_club_home: true, venue: 'Craik Park, Field 2' }, null, base)?.id, 'g1');
+assert.equal(groundForMatch({ is_club_home: true, venue: 'Jamison Park' }, null, base), null);
+assert.equal(groundForMatch({ is_club_home: false, venue: 'Craik Park' }, null, base), null); // away: we don't know their ground
+
+// Suggest an edit
+const sug = cleanSuggestion({ topic: 'canteen', message: '  The canteen <b>closes</b> at 2pm  ', contact: ' sam@example.com ' });
+assert.deepEqual(sug, { row: { topic: 'canteen', message: 'The canteen closes at 2pm', contact: 'sam@example.com' } });
+assert.deepEqual(cleanSuggestion({ topic: 'made-up', message: 'Gate is on Fifth Ave' }), { row: { topic: 'other', message: 'Gate is on Fifth Ave', contact: null } });
+assert.ok('error' in cleanSuggestion({ message: 'hi' }));
+assert.ok('error' in cleanSuggestion({ message: 42 }));
+const long = cleanSuggestion({ message: 'x'.repeat(5000) });
+assert.ok('row' in long && long.row.message.length === 1000);
 
 console.log('grounds.check: ok');

@@ -281,6 +281,10 @@ export interface Match {
   next_match_slot?: 'home' | 'away';
   /** The club team playing this fixture (club_teams); none for internal and tournament matches */
   team_id?: string | null;
+  /** The ground in the public grounds directory (grounds); venue stays the text every screen shows */
+  ground_id?: string | null;
+  /** Which pitch at that ground, e.g. 'Pitch 2' */
+  pitch_label?: string | null;
   created_at?: string;
 }
 
