@@ -13,12 +13,17 @@ import {
 //                            and whether the club is listed by name on ground pages
 //   GET  ?clubId=&q=         published grounds matching a name or suburb (to pick an existing one)
 //   GET  ?clubId=&lat=&lng=  the council that map pin is in (ABS boundaries, lib/council-lookup.ts)
+//   GET  ?clubId=&venues=1   for the match form's ground picker (needs Fixtures access, not Branding):
+//                            whether fixtures can be linked yet (migration 20261110), the home ground,
+//                            and the grounds this club's fixtures were linked to lately (&q= searches)
+//   GET  ?clubId=&suggestions=1  open "Suggest an edit" messages for the grounds this club looks after
 //   POST { clubId, action: 'save', groundId?, ground, listed }
 //          groundId of a ground this club looks after: update its facts (a new name or suburb keeps a
 //          redirect from the old address); of another club's ground: just make it this club's home
 //          ground; none: add a new ground looked after by this club
 //   POST { clubId, action: 'listed', listed }   the "show our club on ground pages" switch
 //   POST { clubId, action: 'unlink' }           this club no longer has a home ground in the directory
+//   POST { clubId, action: 'suggestion', id, status: 'done' | 'dismissed' }   close a suggestion
 
 const COLUMNS =
   'id,steward_club_id,name,slug,suburb,suburb_slug,state,postcode,address,lat,lng,council_key,council_name,pitches,parking,toilets,canteen,accessibility,notes,is_published,previous_paths,facts_checked_at,updated_at';
@@ -32,19 +37,80 @@ async function withCouncil<T extends { lat: number | null; lng: number | null; c
   return match ? { ...row, council_key: match.key, council_name: match.key === 'other' ? match.name : null } : row;
 }
 
-async function authorise(req: NextRequest, clubId: unknown, level: 'view' | 'edit') {
+async function authorise(req: NextRequest, clubId: unknown, level: 'view' | 'edit', areas = ['branding']) {
   if (typeof clubId !== 'string' || !isUuid(clubId)) return { error: NextResponse.json({ error: 'Missing club.' }, { status: 400 }) };
-  const auth = await requireClubPerm(req, clubId, ['branding'], level);
+  const auth = await requireClubPerm(req, clubId, areas, level);
   if (!auth.ok) return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   const db = getServiceClient();
   if (!db) return { error: NextResponse.json({ error: 'Saving grounds is not configured on the server.' }, { status: 503 }) };
   return { db, clubId };
 }
 
+/** Published grounds matching a name, suburb or postcode */
+async function searchGrounds(db: NonNullable<ReturnType<typeof getServiceClient>>, q: string) {
+  const s = slugify(q);
+  if (s.length < 2) return NextResponse.json({ results: [] });
+  const { data, error } = await db
+    .from('grounds')
+    .select(COLUMNS)
+    .eq('is_published', true)
+    .or(`slug.ilike.%${s}%,suburb_slug.ilike.%${s}%,postcode.eq.${/^\d{4}$/.test(q) ? q : '0000'}`)
+    .order('name')
+    .limit(8);
+  if (error) return NextResponse.json({ error: MIGRATION_HINT }, { status: 500 });
+  return NextResponse.json({ results: data || [] });
+}
+
+/** The match form's ground picker: Fixtures editors use it, so it doesn't need Branding access */
+async function venues(req: NextRequest) {
+  const a = await authorise(req, req.nextUrl.searchParams.get('clubId'), 'edit', ['matches']);
+  if ('error' in a) return a.error;
+  const { db, clubId } = a;
+  const q = (req.nextUrl.searchParams.get('q') || '').trim();
+  if (q) return searchGrounds(db, q);
+  const { data: used, error } = await db
+    .from('matches')
+    .select('ground_id')
+    .eq('club_id', clubId)
+    .not('ground_id', 'is', null)
+    .order('match_date', { ascending: false })
+    .limit(200);
+  if (error) return NextResponse.json({ ready: false, home: null, recent: [] });
+  const { data: club } = await db.from('clubs').select('home_ground_id').eq('id', clubId).maybeSingle();
+  const homeId: string | null = club?.home_ground_id || null;
+  // &include= the ground an opened fixture is already linked to, so the picker can show it
+  const include = req.nextUrl.searchParams.get('include');
+  const linked = include && isUuid(include) ? include : null;
+  const ids = [...new Set([homeId, linked, ...(used || []).map(m => m.ground_id as string)].filter((id): id is string => !!id))].slice(0, 12);
+  const { data: grounds } = ids.length ? await db.from('grounds').select(COLUMNS).in('id', ids) : { data: [] };
+  const byId = new Map(((grounds || []) as GroundRow[]).map(g => [g.id, g]));
+  return NextResponse.json({
+    ready: true,
+    home: (homeId && byId.get(homeId)) || null,
+    recent: ids.filter(id => id !== homeId).map(id => byId.get(id)).filter(Boolean),
+  });
+}
+
 export async function GET(req: NextRequest) {
+  if (req.nextUrl.searchParams.has('venues')) return venues(req);
   const a = await authorise(req, req.nextUrl.searchParams.get('clubId'), 'view');
   if ('error' in a) return a.error;
   const { db, clubId } = a;
+
+  if (req.nextUrl.searchParams.has('suggestions')) {
+    const { data: mine } = await db.from('grounds').select('id, name').eq('steward_club_id', clubId);
+    const names = new Map((mine || []).map(g => [g.id as string, g.name as string]));
+    if (!names.size) return NextResponse.json({ suggestions: [] });
+    const { data, error } = await db
+      .from('ground_suggestions')
+      .select('id, ground_id, topic, message, contact, created_at')
+      .in('ground_id', [...names.keys()])
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) return NextResponse.json({ suggestions: [], migrated: false });
+    return NextResponse.json({ suggestions: (data || []).map(r => ({ ...r, ground_name: names.get(r.ground_id) })) });
+  }
 
   const lat = Number(req.nextUrl.searchParams.get('lat'));
   const lng = Number(req.nextUrl.searchParams.get('lng'));
@@ -53,19 +119,7 @@ export async function GET(req: NextRequest) {
   }
 
   const q = (req.nextUrl.searchParams.get('q') || '').trim();
-  if (q) {
-    const s = slugify(q);
-    if (s.length < 2) return NextResponse.json({ results: [] });
-    const { data, error } = await db
-      .from('grounds')
-      .select(COLUMNS)
-      .eq('is_published', true)
-      .or(`slug.ilike.%${s}%,suburb_slug.ilike.%${s}%,postcode.eq.${/^\d{4}$/.test(q) ? q : '0000'}`)
-      .order('name')
-      .limit(8);
-    if (error) return NextResponse.json({ error: MIGRATION_HINT }, { status: 500 });
-    return NextResponse.json({ results: data || [] });
-  }
+  if (q) return searchGrounds(db, q);
 
   const { data: club, error } = await db.from('clubs').select('home_ground_id, grounds_directory_listed').eq('id', clubId).maybeSingle();
   if (error) return NextResponse.json({ migrated: false, error: MIGRATION_HINT });
@@ -99,6 +153,17 @@ export async function POST(req: NextRequest) {
       const { data: g } = await db.from('grounds').select('slug, suburb_slug').eq('id', before.home_ground_id).maybeSingle();
       if (g) await pingIndexNow([groundPath(g), suburbPath(g.suburb_slug), GROUNDS_PATH]);
     }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === 'suggestion') {
+    const status = body?.status === 'done' || body?.status === 'dismissed' ? body.status : null;
+    if (!status || typeof body?.id !== 'string' || !isUuid(body.id)) return NextResponse.json({ error: 'Unknown suggestion.' }, { status: 400 });
+    const { data: row } = await db.from('ground_suggestions').select('id, ground_id').eq('id', body.id).maybeSingle();
+    const { data: g } = row ? await db.from('grounds').select('steward_club_id').eq('id', row.ground_id).maybeSingle() : { data: null };
+    if (!row || g?.steward_club_id !== clubId) return NextResponse.json({ error: 'That suggestion is not for a ground your club looks after.' }, { status: 404 });
+    const { error } = await db.from('ground_suggestions').update({ status, resolved_at: new Date().toISOString() }).eq('id', body.id);
+    if (error) return NextResponse.json({ error: 'Could not update the suggestion.' }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 

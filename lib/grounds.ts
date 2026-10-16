@@ -60,6 +60,8 @@ export interface GroundFixture {
   homeScore: number | null;
   awayScore: number | null;
   competition: string | null;
+  /** The pitch, when the fixture was linked to the ground with one */
+  pitch?: string | null;
 }
 
 /** 'Craik Park' -> 'craik-park'; accents dropped, '&' read as 'and' */
@@ -229,6 +231,55 @@ export function venueMatchesGround(venue: string | null | undefined, groundName:
   const v = slugify(venue || '');
   const n = slugify(groundName);
   return !!n && (v === n || v.startsWith(`${n}-`) || v.includes(`-${n}-`) || v.endsWith(`-${n}`));
+}
+
+/** The anchor of a pitch on its ground's page: 'Pitch 2' -> 'pitch-pitch-2' */
+export const pitchAnchor = (label: string) => `pitch-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+
+/** What a fixture's venue reads when its ground is picked from the directory: 'Craik Park, Pitch 2' */
+export const venueText = (groundName: string, pitch?: string | null) => (pitch ? `${groundName}, ${pitch}` : groundName);
+
+/** Fixtures from both reads (linked to the ground, or naming it in the venue), once each, newest first */
+export function mergeFixtures(linked: GroundFixture[], named: GroundFixture[], limit = 20): GroundFixture[] {
+  const byId = new Map<string, GroundFixture>();
+  for (const f of [...named, ...linked]) byId.set(f.id, { ...byId.get(f.id), ...f });
+  return [...byId.values()].sort((a, b) => Date.parse(b.date) - Date.parse(a.date)).slice(0, limit);
+}
+
+/**
+ * Which ground guide a match page's "Getting there" uses: the ground the fixture is linked to, else
+ * (for a home fixture whose venue names it) the club's home ground. Unpublished grounds never.
+ */
+export function groundForMatch(
+  match: { ground_id?: string | null; is_club_home: boolean; venue?: string | null },
+  linked: GroundRow | null,
+  home: GroundRow | null,
+): GroundRow | null {
+  if (match.ground_id) return linked?.id === match.ground_id && linked.is_published ? linked : null;
+  if (match.is_club_home && home?.is_published && venueMatchesGround(match.venue, home.name)) return home;
+  return null;
+}
+
+// "Suggest an edit" on a ground guide (table ground_suggestions, migration 20261110)
+export const SUGGESTION_TOPICS = [
+  { key: 'parking', label: 'Parking' },
+  { key: 'pitches', label: 'Pitches' },
+  { key: 'toilets', label: 'Toilets' },
+  { key: 'canteen', label: 'Canteen' },
+  { key: 'accessibility', label: 'Accessibility' },
+  { key: 'address', label: 'Address or map pin' },
+  { key: 'council', label: 'Council or wet weather' },
+  { key: 'other', label: 'Something else' },
+] as const;
+export type SuggestionTopic = (typeof SUGGESTION_TOPICS)[number]['key'];
+export const SUGGESTION_MAX = 1000;
+
+export function cleanSuggestion(input: { topic?: unknown; message?: unknown; contact?: unknown }):
+  { error: string } | { row: { topic: SuggestionTopic; message: string; contact: string | null } } {
+  const topic = SUGGESTION_TOPICS.find(t => t.key === input.topic)?.key || 'other';
+  const message = cut(input.message, SUGGESTION_MAX);
+  if (message.length < 5) return { error: 'Tell us what needs changing.' };
+  return { row: { topic, message, contact: cut(input.contact, 200) || null } };
 }
 
 /** Validates and cleans what an admin typed. Returns an error message, or the row to save. */

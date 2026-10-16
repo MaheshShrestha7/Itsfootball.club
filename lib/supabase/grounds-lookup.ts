@@ -3,7 +3,7 @@
 // (including before migration 20261109_grounds.sql has run), so the pages degrade to "not found"
 // rather than erroring, and nothing outside /grounds depends on these tables.
 import {
-  FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BACK, venueMatchesGround,
+  FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BACK, mergeFixtures, venueMatchesGround,
   type GroundClub, type GroundFixture, type GroundRow,
 } from '../grounds';
 
@@ -80,28 +80,23 @@ interface MatchRow {
   competition: string | null;
   venue: string | null;
   team_id: string | null;
+  pitch_label?: string | null;
 }
 
 interface TeamRow { id: string; club_id: string; is_default: boolean; is_junior: boolean; hide_public_scores: boolean }
 
-/**
- * Home fixtures of the opted-in clubs that were played (or are due) at this ground, newest first.
- * Never: junior teams, teams that hide their scores, inactive teams, or anything past 60 days ahead.
- * A fixture saved without a team follows the club's main team.
- */
-export async function groundFixtures(ground: GroundRow, clubs: GroundClub[]): Promise<GroundFixture[]> {
-  const ids = clubs.map(c => c.id).filter(id => /^[0-9a-f-]{36}$/i.test(id));
-  if (!ids.length) return [];
+const MATCH_COLUMNS = 'id,club_id,home_team_name,away_team_name,match_date,status,home_score,away_score,competition,venue,team_id';
+const uuidList = (ids: string[]) => `in.(${[...new Set(ids)].filter(id => /^[0-9a-f-]{36}$/i.test(id)).join(',')})`;
+
+function dateWindow() {
   const now = Date.now();
-  const from = new Date(now - FIXTURE_DAYS_BACK * 86400_000).toISOString();
-  const to = new Date(now + FIXTURE_DAYS_AHEAD * 86400_000).toISOString();
-  const inIds = `in.(${ids.join(',')})`;
-  const [matches, teams] = await Promise.all([
-    rows<MatchRow>(
-      `matches?select=id,club_id,home_team_name,away_team_name,match_date,status,home_score,away_score,competition,venue,team_id&club_id=${inIds}&is_club_home=eq.true&match_type=neq.internal&match_date=gte.${from}&match_date=lte.${to}&order=match_date.desc&limit=200`
-    ),
-    rows<TeamRow>(`club_teams?select=id,club_id,is_default,is_junior,hide_public_scores&club_id=${inIds}&is_active=eq.true&limit=1000`),
-  ]);
+  return `match_date=gte.${new Date(now - FIXTURE_DAYS_BACK * 86400_000).toISOString()}&match_date=lte.${new Date(now + FIXTURE_DAYS_AHEAD * 86400_000).toISOString()}`;
+}
+
+/** Drops junior, hidden-score and inactive teams' matches (a match without a team follows the club's main team) */
+async function publicFixtures(matches: MatchRow[], clubs: Pick<GroundClub, 'id' | 'slug'>[]): Promise<GroundFixture[]> {
+  if (!matches.length) return [];
+  const teams = await rows<TeamRow>(`club_teams?select=id,club_id,is_default,is_junior,hide_public_scores&club_id=${uuidList(clubs.map(c => c.id))}&is_active=eq.true&limit=1000`);
   const teamById = new Map(teams.map(t => [t.id, t]));
   const defaultTeam = new Map(teams.filter(t => t.is_default).map(t => [t.club_id, t]));
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
@@ -111,8 +106,7 @@ export async function groundFixtures(ground: GroundRow, clubs: GroundClub[]): Pr
     return !team || (!team.is_junior && !team.hide_public_scores);
   };
   return matches
-    .filter(m => venueMatchesGround(m.venue, ground.name) && safe(m) && slugById.has(m.club_id))
-    .slice(0, 20)
+    .filter(m => safe(m) && slugById.has(m.club_id))
     .map(m => ({
       id: m.id,
       clubSlug: slugById.get(m.club_id)!,
@@ -123,5 +117,40 @@ export async function groundFixtures(ground: GroundRow, clubs: GroundClub[]): Pr
       homeScore: m.home_score,
       awayScore: m.away_score,
       competition: m.competition,
+      ...(m.pitch_label ? { pitch: m.pitch_label } : {}),
     }));
+}
+
+/** Home fixtures of the opted-in clubs based here whose venue text names the ground */
+async function namedFixtures(ground: GroundRow, clubs: GroundClub[]): Promise<GroundFixture[]> {
+  if (!clubs.length) return [];
+  const matches = await rows<MatchRow>(
+    `matches?select=${MATCH_COLUMNS}&club_id=${uuidList(clubs.map(c => c.id))}&is_club_home=eq.true&match_type=neq.internal&${dateWindow()}&order=match_date.desc&limit=200`
+  );
+  return publicFixtures(matches.filter(m => venueMatchesGround(m.venue, ground.name)), clubs);
+}
+
+/**
+ * Fixtures linked to the ground from the match form (matches.ground_id, migration 20261110), home or
+ * away, of any opted-in club. Before that migration the read fails and this is simply empty.
+ */
+async function linkedFixtures(ground: GroundRow): Promise<GroundFixture[]> {
+  const matches = await rows<MatchRow>(
+    `matches?select=${MATCH_COLUMNS},pitch_label&ground_id=eq.${ground.id}&match_type=neq.internal&${dateWindow()}&order=match_date.desc&limit=200`
+  );
+  if (!matches.length) return [];
+  const clubs = (await rows<GroundClub & { config: { kind?: string } | null }>(
+    `clubs?select=id,slug,name,short_name,logo_url,primary_color,config&id=${uuidList(matches.map(m => m.club_id))}&is_active=eq.true&grounds_directory_listed=eq.true&limit=1000`
+  )).filter(c => c.config?.kind !== 'event');
+  return publicFixtures(matches, clubs);
+}
+
+/**
+ * Fixtures played (or due) at this ground, newest first: the opted-in home clubs' fixtures that name
+ * it, plus any opted-in club's fixtures linked to it. Never: junior teams, teams that hide their
+ * scores, inactive teams, internal matches, or anything past 60 days ahead.
+ */
+export async function groundFixtures(ground: GroundRow, homeClubs: GroundClub[]): Promise<GroundFixture[]> {
+  const [named, linked] = await Promise.all([namedFixtures(ground, homeClubs), linkedFixtures(ground)]);
+  return mergeFixtures(linked, named);
 }
