@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
+import { AuthAlert, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 import {
   ShieldAlert,
   ArrowLeft,
@@ -21,7 +22,7 @@ interface AdminGuardProps {
 }
 
 export default function AdminGuard({ club, children }: AdminGuardProps) {
-  const { user, isLoading, isAuthenticated, login, hasClubAdminAccess, getUserRoleForClub, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, login, sendPasswordReset, hasClubAdminAccess, getUserRoleForClub, logout } = useAuth();
   
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -29,6 +30,8 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
+  const [resetSentTo, setResetSentTo] = useState<string | null>(null);
+  const shake = useShake<HTMLFormElement>(loginError);
 
   // 1. Loading state
   if (isLoading) {
@@ -88,6 +91,20 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
       }
     };
 
+    const handleForgot = async () => {
+      setLoginError(null);
+      if (!emailInput.trim()) return setLoginError('Enter your email first, then choose "Forgot password?" again.');
+      const notReady = captchaError(captchaToken);
+      if (notReady) return setLoginError(notReady);
+      setSubmitting(true);
+      const res = await sendPasswordReset(emailInput, captchaToken);
+      setSubmitting(false);
+      captcha.current?.reset();
+      if (!res.success) return setLoginError(res.error || 'Could not send the reset email.');
+      // Same screen whether or not there is an account (no account fishing)
+      setResetSentTo(emailInput.trim());
+    };
+
     return (
       <div style={{
         minHeight: '75vh',
@@ -97,7 +114,7 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
         padding: '2rem 1rem',
       }}>
         <div
-          className="glass-panel"
+          className="glass-panel auth-card"
           style={{
             maxWidth: '520px',
             width: '100%',
@@ -142,71 +159,27 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
             Sign in with the account that manages this club to run fixtures, the squad and the club&apos;s branding.
           </p>
 
-          {/* Error Message */}
-          {loginError && (
-            <div
-              style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid #EF4444',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.75rem 1rem',
-                color: 'var(--c-red)',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1.5rem',
-                textAlign: 'left',
-              }}
-              role="alert"
-            >
-              <AlertCircle size={16} style={{ flexShrink: 0 }} />
-              <span>{loginError}</span>
-            </div>
-          )}
-
           {/* Credential Login Form */}
-          <form onSubmit={handleFormSubmit} style={{ textAlign: 'left', marginBottom: '0.5rem' }}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="admin-guard-email" style={{ fontSize: '0.8rem' }}>Email</label>
-              <input
-                id="admin-guard-email"
-                type="email"
-                required
-                autoComplete="email"
-                className="form-input"
-                placeholder="you@example.com"
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-              />
+          {resetSentTo ? (
+            <InboxSent email={resetSentTo} resendBusy={submitting} onResend={handleForgot} onChangeEmail={() => setResetSentTo(null)}
+              extra={<>
+              <div style={{ marginTop: '1rem' }}><Captcha ref={captcha} onToken={setCaptchaToken} /></div>
+              {loginError && <div style={{ marginTop: '0.75rem', textAlign: 'left' }}><AuthAlert kind="error">{loginError}</AuthAlert></div>}
+              </>}>
+              If there&apos;s an account for <strong style={{ color: 'var(--text-primary)' }}>{resetSentTo}</strong>, we&apos;ve emailed it a link to choose a new password.
+            </InboxSent>
+          ) : (
+          <form onSubmit={handleFormSubmit} ref={shake} style={{ textAlign: 'left', marginBottom: '0.5rem' }}>
+            <EmailField id="admin-guard-email" value={emailInput} onChange={setEmailInput} />
+            <PasswordField id="admin-guard-password" value={passwordInput} onChange={setPasswordInput}
+              aside={<button type="button" className="auth-link" onClick={handleForgot} disabled={submitting}>Forgot password?</button>} />
+            <div style={{ marginBottom: '1rem' }}>
+              <Captcha ref={captcha} onToken={setCaptchaToken} />
             </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="admin-guard-password" style={{ fontSize: '0.8rem' }}>Password</label>
-              <input
-                id="admin-guard-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="form-input"
-                placeholder="••••••••••••"
-                value={passwordInput}
-                onChange={e => setPasswordInput(e.target.value)}
-              />
-            </div>
-
-            <Captcha ref={captcha} onToken={setCaptchaToken} />
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: '0.5rem', height: '44px' }}
-            >
-              <KeyRound size={16} />
-              <span>{submitting ? 'Signing in...' : 'Sign in'}</span>
-            </button>
+            {loginError && <AuthAlert kind="error">{loginError}</AuthAlert>}
+            <SubmitButton busy={submitting} busyLabel="Signing in...">Sign in</SubmitButton>
           </form>
+          )}
 
           <div style={{ marginTop: '1.75rem', textAlign: 'center' }}>
             <Link
