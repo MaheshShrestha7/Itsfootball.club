@@ -3166,8 +3166,14 @@ dialog.confirm-dialog::backdrop {
 .pc-finish.is-blackgold { box-shadow: inset 0 0 0 1px #E8C46A; color: #F2D27A; }
 .pc-finish.is-inform { box-shadow: inset 0 0 0 1px #34D399; }
 .pc-finish.is-active { border-color: var(--text-primary); box-shadow: 0 0 0 3px rgba(var(--lb-rgb), 0.3); }
+.pc-types { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.45rem; }
+.pc-type { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.4rem 0.2rem 0.45rem; border-radius: 12px; border: 2px solid var(--border-medium); background: transparent; cursor: pointer; color: var(--text-primary); }
+.pc-type img { width: 100%; max-width: 64px; height: auto; }
+.pc-type span { font-size: 0.66rem; font-weight: 800; line-height: 1.1; text-align: center; }
+.pc-type.is-active { border-color: var(--text-primary); box-shadow: 0 0 0 3px rgba(var(--lb-rgb), 0.3); }
 @media (max-width: 480px) {
   .pc-finishes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-types { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .pc-stat { grid-template-columns: minmax(0, 1fr) 58px; padding: 0.45rem; }
 }
 .lineup-formations { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }

@@ -5,6 +5,8 @@
 
 export type PlayerCardFinish = 'blackgold' | 'club' | 'gold' | 'silver' | 'bronze' | 'inform';
 export type PlayerCardSize = 'card' | 'story' | 'post' | 'square';
+export type PlayerCardType = 'standard' | 'totw' | 'potm' | 'moment' | 'future' | 'signing' | 'legend' | 'tots' | 'upgrade' | 'cup';
+type Motif = 'none' | 'stars' | 'rays' | 'waves' | 'dots' | 'stripes' | 'chevrons';
 export type PlayerStatKey = 'goals' | 'assists' | 'apps' | 'motm' | 'streak' | 'att' | 'cs' | 'saves';
 
 export const POSITIONS = ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'] as const;
@@ -66,6 +68,17 @@ interface FinishStyle {
   beamAlpha: number;
 }
 
+const TYPE_STYLES: Partial<Record<PlayerCardType, FinishStyle>> = {
+  totw: { bg: [[0, '#1C1C1E'], [0.6, '#08080A'], [1, '#2A2108']], ink: '#FFFFFF', hi: '#FFD45C', sub: 'rgba(255,212,92,0.75)', line: 'rgba(255,212,92,0.5)', edge: '#FFC93C', gap: '#0A0A0A', beam: '#FFC93C', beamAlpha: 0.35 },
+  potm: { bg: [[0, '#2546B8'], [0.6, '#0E1A4D'], [1, '#060A1F']], ink: '#FFFFFF', hi: '#BFDBFE', sub: 'rgba(191,219,254,0.75)', line: 'rgba(191,219,254,0.45)', edge: '#93C5FD', gap: '#081033', beam: '#93C5FD', beamAlpha: 0.4 },
+  moment: { bg: [[0, '#14B8A6'], [0.5, '#0F4C4A'], [1, '#04201F']], ink: '#FFFFFF', hi: '#CCFBF1', sub: 'rgba(204,251,241,0.75)', line: 'rgba(204,251,241,0.45)', edge: '#5EEAD4', gap: '#032726', beam: '#FFFFFF', beamAlpha: 0.25 },
+  future: { bg: [[0, '#DB2777'], [0.5, '#6D28D9'], [1, '#1E0B4B']], ink: '#FFFFFF', hi: '#FDE68A', sub: 'rgba(255,255,255,0.75)', line: 'rgba(253,230,138,0.5)', edge: '#F9A8D4', gap: '#2E0F5E', beam: '#FFFFFF', beamAlpha: 0.3 },
+  legend: { bg: [[0, '#FFFBF0'], [0.55, '#F1DFB0'], [1, '#B98F3E']], ink: '#3B2A0A', hi: '#3B2A0A', sub: 'rgba(59,42,10,0.7)', line: 'rgba(59,42,10,0.3)', edge: '#FFFFFF', gap: '#C9A04E', beam: '#FFFFFF', beamAlpha: 0.5 },
+  tots: { bg: [[0, '#E0F2FE'], [0.5, '#7DD3FC'], [1, '#1E40AF']], ink: '#0B1E3F', hi: '#0B1E3F', sub: 'rgba(11,30,63,0.72)', line: 'rgba(11,30,63,0.32)', edge: '#FFFFFF', gap: '#2563EB', beam: '#FFFFFF', beamAlpha: 0.45 },
+  upgrade: { bg: [[0, '#14532D'], [0.6, '#052E16'], [1, '#02140A']], ink: '#FFFFFF', hi: '#BEF264', sub: 'rgba(190,242,100,0.75)', line: 'rgba(190,242,100,0.45)', edge: '#A3E635', gap: '#03200F', beam: '#A3E635', beamAlpha: 0.35 },
+  cup: { bg: [[0, '#B91C1C'], [0.55, '#450A0A'], [1, '#1A0303']], ink: '#FFFFFF', hi: '#FCD34D', sub: 'rgba(252,211,77,0.75)', line: 'rgba(252,211,77,0.45)', edge: '#FBBF24', gap: '#2A0505', beam: '#FCD34D', beamAlpha: 0.35 },
+};
+
 const mix = (a: string, b: string, t: number) => {
   const pa = parseInt(a.slice(1), 16);
   const pb = parseInt(b.slice(1), 16);
@@ -110,6 +123,34 @@ function finishStyle(finish: PlayerCardFinish, colour: string): FinishStyle {
   }
 }
 
+/** The look of a card: its type's colours, or the chosen finish on a Standard card (New Signing is in club colours) */
+function cardStyle(d: Pick<PlayerCardData, 'type' | 'finish' | 'colour'>): FinishStyle {
+  const type = d.type || 'standard';
+  if (type === 'signing') return finishStyle('club', d.colour);
+  return TYPE_STYLES[type] || finishStyle(d.finish, d.colour);
+}
+
+/** The card's edge colour, for tinting the tool around it */
+export const cardAccent = (d: Pick<PlayerCardData, 'type' | 'finish' | 'colour'>) => cardStyle(d).edge;
+
+/** The text in the pill above the name, such as "TEAM OF THE WEEK · ROUND 7" (none on a Standard card) */
+export function cardLabel(d: Pick<PlayerCardData, 'type' | 'detail' | 'rating'>): string {
+  const t = CARD_TYPES.find(c => c.key === d.type);
+  if (!t || t.key === 'standard') return '';
+  const detail = (d.detail || '').trim();
+  if (t.key === 'upgrade') {
+    const before = parseInt(detail, 10);
+    return /^\d{1,2}$/.test(detail) && before < d.rating ? `${t.label} · was ${before}` : t.label;
+  }
+  return detail ? `${t.label} · ${detail}` : t.label;
+}
+
+/** How much a Levelled Up card went up by, from the rating before (0 when it didn't) */
+export function upgradeBy(d: Pick<PlayerCardData, 'type' | 'detail' | 'rating'>): number {
+  if (d.type !== 'upgrade' || !/^\d{1,2}$/.test((d.detail || '').trim())) return 0;
+  return Math.max(0, d.rating - parseInt(d.detail!.trim(), 10));
+}
+
 /** The outline: a crown at the top centre (a point between two scooped dips and two rounded bumps),
  *  sweeping down to rounded corners, straight sides and a gentle point at the base */
 const OUTLINE = 'M32 92 C32 84 34 78 40 76 C80 46 124 24 166 22 Q176 19 181 27 C188 37 210 36 220 16 C230 36 252 37 259 27 Q264 19 274 22 C316 24 360 46 400 76 C406 78 408 84 408 92 L408 470 Q408 486 392 490 Q300 500 240 508 Q228 510 220 516 Q212 510 200 508 Q140 500 48 490 Q32 486 32 470 Z';
@@ -117,6 +158,21 @@ const OUTLINE = 'M32 92 C32 84 34 78 40 76 C80 46 124 24 166 22 Q176 19 181 27 C
 const RAILS: [number, number, number][] = [[22, 112, 448], [14, 150, 410], [7, 190, 370]];
 
 export const CARD_BOX = { w: 440, h: 530 };
+
+/** Special cards that mark a moment: each has its own colours and pattern, and a label above the name with
+ *  one short detail (the round, the month, what happened). Standard is the plain card in a chosen finish. */
+export const CARD_TYPES: { key: PlayerCardType; label: string; detail: string; placeholder: string; motif: Motif }[] = [
+  { key: 'standard', label: 'Standard', detail: '', placeholder: '', motif: 'none' },
+  { key: 'totw', label: 'Team of the Week', detail: 'Week or round', placeholder: 'Round 7', motif: 'stars' },
+  { key: 'potm', label: 'Player of the Month', detail: 'Month', placeholder: 'October', motif: 'rays' },
+  { key: 'moment', label: 'Moment', detail: 'What happened', placeholder: 'Hat-trick v Northside', motif: 'waves' },
+  { key: 'future', label: 'Future Star', detail: 'Age group', placeholder: 'Under 16s', motif: 'dots' },
+  { key: 'signing', label: 'New Signing', detail: 'Joined from', placeholder: 'from Eastside FC', motif: 'stripes' },
+  { key: 'legend', label: 'Club Legend', detail: 'Milestone', placeholder: '300 games', motif: 'rays' },
+  { key: 'tots', label: 'Team of the Season', detail: 'Season', placeholder: '2026', motif: 'stars' },
+  { key: 'upgrade', label: 'Levelled Up', detail: 'Rating before', placeholder: '81', motif: 'chevrons' },
+  { key: 'cup', label: 'Cup Winners', detail: 'Competition', placeholder: 'Grand Final 2026', motif: 'rays' },
+];
 
 /** Image sizes, and where the card sits on each (its scale and top edge, in pixels) */
 export const PLAYER_CARD_SIZES: Record<PlayerCardSize, { w: number; h: number; k: number; top: number }> = {
@@ -137,6 +193,10 @@ export interface PlayerCardPhoto {
 }
 
 export interface PlayerCardData {
+  /** A special card type; Standard (or none) uses the finish */
+  type?: PlayerCardType;
+  /** The type's detail: the round, the month, what happened, or (Levelled Up) the rating before */
+  detail?: string;
   finish: PlayerCardFinish;
   colour: string;
   name: string;
@@ -274,9 +334,80 @@ async function siteFonts(): Promise<Fonts> {
   return { heading, body };
 }
 
+/** The card type's pattern behind the player, in its edge colour */
+function drawMotif(ctx: CanvasRenderingContext2D, motif: Motif, colour: string) {
+  if (motif === 'none') return;
+  ctx.save();
+  ctx.strokeStyle = colour;
+  ctx.fillStyle = colour;
+  if (motif === 'stars') {
+    const star = (cx: number, cy: number, r: number) => {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const rr = i % 2 ? r * 0.45 : r;
+        ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+    ctx.globalAlpha = 0.35;
+    for (const [sx, sy, r] of [[60, 200, 9], [96, 250, 5], [380, 300, 8], [350, 190, 5], [70, 300, 6], [390, 120, 6], [48, 140, 4], [330, 60, 4], [110, 60, 5], [300, 250, 4], [140, 290, 3], [392, 240, 4]]) star(sx, sy, r);
+  } else if (motif === 'rays') {
+    ctx.globalAlpha = 0.16;
+    ctx.translate(220, 170);
+    for (let i = 0; i < 24; i++) {
+      ctx.rotate(Math.PI / 12);
+      if (i % 2 === 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-14, -420);
+      ctx.lineTo(14, -420);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (motif === 'waves') {
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 1.6;
+    for (let j = 0; j < 9; j++) {
+      ctx.beginPath();
+      for (let wx = 0; wx <= 440; wx += 8) ctx.lineTo(wx, 120 + j * 26 + Math.sin(wx / 38 + j * 0.7) * 12);
+      ctx.stroke();
+    }
+  } else if (motif === 'dots') {
+    ctx.globalAlpha = 0.3;
+    for (let dy = 30; dy < 330; dy += 16) {
+      for (let dx = 20; dx < 430; dx += 16) {
+        const r = 0.6 + 2.2 * Math.max(0, 1 - Math.hypot(dx - 440, dy) / 520);
+        ctx.beginPath();
+        ctx.arc(dx + ((dy / 16) % 2) * 8, dy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  } else if (motif === 'stripes') {
+    ctx.globalAlpha = 0.18;
+    ctx.translate(220, 265);
+    ctx.rotate(-0.5);
+    for (let i = -8; i <= 8; i += 2) ctx.fillRect(i * 34, -500, 26, 1000);
+  } else if (motif === 'chevrons') {
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = 10;
+    for (let j = 0; j < 7; j++) {
+      const cy = 330 - j * 50;
+      ctx.beginPath();
+      ctx.moveTo(20, cy + 60);
+      ctx.lineTo(220, cy - 30);
+      ctx.lineTo(420, cy + 60);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 /** The card itself, at scale k with its top-left corner at (x, y) */
 async function drawCard(ctx: CanvasRenderingContext2D, d: PlayerCardData, x: number, y: number, k: number, f: Fonts, watermark: boolean) {
-  const st = finishStyle(d.finish, d.colour);
+  const st = cardStyle(d);
+  const label = cardLabel(d).toUpperCase();
   const [photo, crest] = await Promise.all([d.photo ? loadImage(d.photo.src) : null, d.crest ? loadImage(d.crest) : d.club.trim() ? loadImage(shield(d.club, d.colour)) : null]);
   const { w: W, h: H } = CARD_BOX;
   const outline = new Path2D(OUTLINE);
@@ -325,6 +456,8 @@ async function drawCard(ctx: CanvasRenderingContext2D, d: PlayerCardData, x: num
   }
   ctx.restore();
 
+  drawMotif(ctx, CARD_TYPES.find(c => c.key === d.type)?.motif || 'none', st.edge);
+
   if (photo && d.photo) drawPhoto(ctx, photo, d.photo, k);
   else placeholder(ctx, st.ink);
   ctx.restore();
@@ -359,7 +492,31 @@ async function drawCard(ctx: CanvasRenderingContext2D, d: PlayerCardData, x: num
     }
   };
   chips(d.altPositions.filter(Boolean).slice(0, 2), 78);
-  chips([d.foot ? (d.foot === 'LR' ? 'L/R' : d.foot) : '', d.number ? `#${d.number}` : ''].filter(Boolean), 236);
+  chips([d.foot ? (d.foot === 'LR' ? 'L/R' : d.foot) : '', d.number ? `#${d.number}` : ''].filter(Boolean), label ? 216 : 236);
+
+  // The card type's label in a pill above the name, and a Levelled Up card's rise under the position
+  if (label) {
+    spacing(ctx, 1.6);
+    fitFont(ctx, label, 800, 12.5, 9, f.heading, 250);
+    const tw = ctx.measureText(label).width + 26;
+    roundRect(ctx, W / 2 - tw / 2, 292, tw, 22, 11);
+    ctx.fillStyle = st.edge;
+    ctx.fill();
+    ctx.fillStyle = st.gap;
+    ctx.fillText(label, W / 2, 307.5);
+  }
+  const up = upgradeBy(d);
+  if (up) {
+    const t = `▲ +${up}`;
+    spacing(ctx, 0.5);
+    ctx.font = `800 17px ${f.heading}`;
+    const tw = ctx.measureText(t).width + 18;
+    roundRect(ctx, 100 - tw / 2, 182, tw, 26, 13);
+    ctx.fillStyle = st.hi;
+    ctx.fill();
+    ctx.fillStyle = st.gap;
+    ctx.fillText(t, 100, 201);
+  }
 
   // Name
   const name = d.name.trim() || 'Your Name';
@@ -478,7 +635,7 @@ export async function drawPlayerCard(d: PlayerCardData, size: PlayerCardSize): P
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available in this browser.');
   const f = await siteFonts();
-  const st = finishStyle(d.finish, d.colour);
+  const st = cardStyle(d);
   const left = (W - CARD_BOX.w * k) / 2;
 
   if (size !== 'card') {
@@ -525,8 +682,9 @@ export async function drawPlayerCard(d: PlayerCardData, size: PlayerCardSize): P
       }
       ctx.fillStyle = '#FFFFFF';
       spacing(ctx, -1);
-      ctx.font = `900 84px ${f.heading}`;
-      ctx.fillText('PLAYER CARD', W / 2, 310);
+      const heading = (CARD_TYPES.find(c => c.key === d.type && c.key !== 'standard')?.label || 'Player card').toUpperCase();
+      fitFont(ctx, heading, 900, 84, 48, f.heading, W - 120);
+      ctx.fillText(heading, W / 2, 310);
       spacing(ctx, 0);
     }
   }
