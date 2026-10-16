@@ -133,17 +133,27 @@ function cardStyle(d: Pick<PlayerCardData, 'type' | 'finish' | 'colour'>): Finis
 /** The card's edge colour, for tinting the tool around it */
 export const cardAccent = (d: Pick<PlayerCardData, 'type' | 'finish' | 'colour'>) => cardStyle(d).edge;
 
-/** The text in the pill above the name, such as "TEAM OF THE WEEK · ROUND 7" (none on a Standard card) */
-export function cardLabel(d: Pick<PlayerCardData, 'type' | 'detail' | 'rating'>): string {
+/** The type's name as it reads on the card: the player's own wording if they changed it */
+const typeName = (d: Pick<PlayerCardData, 'type' | 'labelText'>) => {
   const t = CARD_TYPES.find(c => c.key === d.type);
-  if (!t || t.key === 'standard') return '';
+  return !t || t.key === 'standard' ? '' : (d.labelText || '').trim() || t.label;
+};
+
+/** The text in the pill above the name, such as "TEAM OF THE WEEK · ROUND 7" (none on a Standard card) */
+export function cardLabel(d: Pick<PlayerCardData, 'type' | 'detail' | 'rating' | 'labelText'>): string {
+  const name = typeName(d);
+  if (!name) return '';
   const detail = (d.detail || '').trim();
-  if (t.key === 'upgrade') {
+  if (d.type === 'upgrade') {
     const before = parseInt(detail, 10);
-    return /^\d{1,2}$/.test(detail) && before < d.rating ? `${t.label} · was ${before}` : t.label;
+    return /^\d{1,2}$/.test(detail) && before < d.rating ? `${name} · was ${before}` : name;
   }
-  return detail ? `${t.label} · ${detail}` : t.label;
+  return detail ? `${name} · ${detail}` : name;
 }
+
+/** The big heading on a story: the player's own, else the card type's name, else "Player card" */
+export const storyHeading = (d: Pick<PlayerCardData, 'type' | 'labelText' | 'heading'>) =>
+  (d.heading || '').trim() || typeName(d) || 'Player card';
 
 /** How much a Levelled Up card went up by, from the rating before (0 when it didn't) */
 export function upgradeBy(d: Pick<PlayerCardData, 'type' | 'detail' | 'rating'>): number {
@@ -197,6 +207,10 @@ export interface PlayerCardData {
   type?: PlayerCardType;
   /** The type's detail: the round, the month, what happened, or (Levelled Up) the rating before */
   detail?: string;
+  /** The player's own wording for the type's name in the label, such as "Legend" for Club Legend */
+  labelText?: string;
+  /** The player's own heading on a story, in place of the type's name or "Player card" */
+  heading?: string;
   finish: PlayerCardFinish;
   colour: string;
   name: string;
@@ -492,18 +506,18 @@ async function drawCard(ctx: CanvasRenderingContext2D, d: PlayerCardData, x: num
     }
   };
   chips(d.altPositions.filter(Boolean).slice(0, 2), 78);
-  chips([d.foot ? (d.foot === 'LR' ? 'L/R' : d.foot) : '', d.number ? `#${d.number}` : ''].filter(Boolean), label ? 216 : 236);
+  chips([d.foot ? (d.foot === 'LR' ? 'L/R' : d.foot) : '', d.number ? `#${d.number}` : ''].filter(Boolean), label ? 208 : 236);
 
   // The card type's label in a pill above the name, and a Levelled Up card's rise under the position
   if (label) {
     spacing(ctx, 1.6);
     fitFont(ctx, label, 800, 12.5, 9, f.heading, 250);
     const tw = ctx.measureText(label).width + 26;
-    roundRect(ctx, W / 2 - tw / 2, 292, tw, 22, 11);
+    roundRect(ctx, W / 2 - tw / 2, 284, tw, 22, 11);
     ctx.fillStyle = st.edge;
     ctx.fill();
     ctx.fillStyle = st.gap;
-    ctx.fillText(label, W / 2, 307.5);
+    ctx.fillText(label, W / 2, 299.5);
   }
   const up = upgradeBy(d);
   if (up) {
@@ -524,7 +538,7 @@ async function drawCard(ctx: CanvasRenderingContext2D, d: PlayerCardData, x: num
   ctx.textAlign = 'center';
   spacing(ctx, 0.2);
   fitFont(ctx, name, 800, 38, 22, f.heading, 330);
-  ctx.fillText(name, W / 2, 346);
+  ctx.fillText(name, W / 2, label ? 350 : 346);
 
   // Stats, in one row: label over value
   const stats = d.stats.slice(0, MAX_SHOWN_STATS);
@@ -682,7 +696,7 @@ export async function drawPlayerCard(d: PlayerCardData, size: PlayerCardSize): P
       }
       ctx.fillStyle = '#FFFFFF';
       spacing(ctx, -1);
-      const heading = (CARD_TYPES.find(c => c.key === d.type && c.key !== 'standard')?.label || 'Player card').toUpperCase();
+      const heading = storyHeading(d).toUpperCase();
       fitFont(ctx, heading, 900, 84, 48, f.heading, W - 120);
       ctx.fillText(heading, W / 2, 310);
       spacing(ctx, 0);

@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import Link from 'next/link';
 import { ArrowRight, Download, ImagePlus, Lock, Scissors, Share2, Undo2, X } from 'lucide-react';
 import {
-  CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, drawPlayerCard,
+  CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, drawPlayerCard, storyHeading,
   type PlayerCardFinish, type PlayerCardSize, type PlayerCardType, type PlayerStatKey,
 } from '@/lib/player-card';
 
@@ -21,6 +21,9 @@ interface State {
   type: PlayerCardType;
   /** Each card type's detail (the round, the month...), kept while switching between types */
   details: Partial<Record<PlayerCardType, string>>;
+  /** Each card type's own wording for its label, and for the heading on a story */
+  labels: Partial<Record<PlayerCardType, string>>;
+  headings: Partial<Record<PlayerCardType, string>>;
   finish: PlayerCardFinish;
   name: string;
   position: string;
@@ -62,6 +65,8 @@ function fresh(position: string): State {
     size: 'card',
     type: 'standard',
     details: {},
+    labels: {},
+    headings: {},
     finish: 'blackgold',
     name: '',
     position,
@@ -159,6 +164,8 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
           finish: defaultFinish || (FINISHES.some(f => f.key === saved.finish) ? saved.finish! : base.finish),
           type: defaultType || (CARD_TYPES.some(t => t.key === saved.type) ? saved.type! : base.type),
           details: saved.details && typeof saved.details === 'object' ? saved.details : {},
+          labels: saved.labels && typeof saved.labels === 'object' ? saved.labels : {},
+          headings: saved.headings && typeof saved.headings === 'object' ? saved.headings : {},
           stats: saved.stats && typeof saved.stats === 'object' ? saved.stats : {},
         });
       }
@@ -200,10 +207,14 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
 
   const cardType = CARD_TYPES.find(t => t.key === state.type) || CARD_TYPES[0];
   const detail = state.details[state.type] ?? '';
+  const labelText = state.labels[state.type] ?? '';
+  const heading = state.headings[state.type] ?? '';
 
   const render = () => drawPlayerCard({
     type: state.type,
     detail,
+    labelText,
+    heading,
     finish: state.finish,
     colour: state.colour,
     name: state.name,
@@ -363,6 +374,14 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
           ))}
         </div>
         <p className="rg-note">{state.size === 'card' ? 'Card downloads just the card, with a see-through background, for stickers and chats.' : 'The card on a dark background, ready to post.'}</p>
+        {state.size === 'story' && (
+          <div className="form-group" style={{ marginTop: '0.6rem' }}>
+            <label className="form-label" htmlFor="pc-heading">Story heading</label>
+            <input id="pc-heading" className="form-input" value={heading} maxLength={24} autoComplete="off"
+              placeholder={storyHeading({ type: state.type, labelText })}
+              onChange={e => update({ headings: { ...state.headings, [state.type]: e.target.value } })} />
+          </div>
+        )}
 
         <h2 className="lineup-tool-section">Card type</h2>
         <div className="pc-types" role="radiogroup" aria-label="Card type">
@@ -376,6 +395,13 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
         </div>
         {cardType.key !== 'standard' && (
           <div className="form-group" style={{ marginTop: '0.7rem' }}>
+            <label className="form-label" htmlFor="pc-label">Label on the card</label>
+            <input id="pc-label" className="form-input" value={labelText} maxLength={22} placeholder={cardType.label} autoComplete="off"
+              onChange={e => update({ labels: { ...state.labels, [state.type]: e.target.value } })} />
+          </div>
+        )}
+        {cardType.key !== 'standard' && (
+          <div className="form-group">
             <label className="form-label" htmlFor="pc-detail">{cardType.detail} <span className="lineup-tool-optional">(optional)</span></label>
             <input id="pc-detail" className={`form-input ${cardType.key === 'upgrade' ? 'pc-nation' : ''}`} value={detail} placeholder={cardType.placeholder} autoComplete="off"
               inputMode={cardType.key === 'upgrade' ? 'numeric' : undefined} maxLength={cardType.key === 'upgrade' ? 2 : 24}
@@ -386,10 +412,10 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
           {cardType.key === 'standard'
             ? 'The everyday card, in the finish you pick below.'
             : cardType.key === 'upgrade'
-              ? 'Put the rating from before, and the card shows how far it went up.'
+              ? 'Put the rating from before, and the card shows how far it went up. Change the label to say it your way.'
               : cardType.key === 'legend'
                 ? 'Each type has its own colours and a label above the name. For a legend, put their years at the club, like 2009–2026, as the season.'
-                : 'Each type has its own colours and a label above the name.'}
+                : 'Each type has its own colours and a label above the name. Change the label to say it your way.'}
         </p>
 
         <h2 className="lineup-tool-section">Player</h2>
