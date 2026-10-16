@@ -3191,6 +3191,62 @@ dialog.confirm-dialog::backdrop {
 .tool-link-main { padding: 1.15rem 1.3rem; gap: 0.3rem; border-left: 3px solid var(--tc, var(--club-primary)); }
 .tool-link-main strong { font-size: 1.08rem; }
 .tool-link-main em { font-style: normal; font-size: 0.82rem; font-weight: 700; color: var(--club-ink); display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.35rem; }
+/* /tools hub: jump bar, one card per main tool (example image, format buttons), groups and resources */
+.tools-jump { position: sticky; top: 70px; z-index: 20; display: flex; justify-content: center; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; margin: 0 -1rem; padding: 0.7rem 1rem; background: rgba(var(--dk-7-10-15), 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border-subtle); }
+.tools-jump::-webkit-scrollbar { display: none; }
+.tools-jump a { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.42rem 0.85rem; border-radius: 999px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+.tools-jump a:hover { color: var(--text-primary); border-color: rgba(var(--club-primary-rgb), 0.5); }
+.tools-jump i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tools-group { margin-top: 2.6rem; scroll-margin-top: 140px; }
+.tools-group-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 0 1.25rem; }
+.tools-group-pair .tool-cards { grid-template-columns: 1fr; }
+.tool-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 1rem; }
+.tool-card { display: flex; gap: 1.1rem; padding: 1rem; height: 100%; border-top: 3px solid var(--tc, var(--club-primary)); }
+.tool-card-thumb { flex-shrink: 0; width: 132px; aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.04); }
+.tool-card-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.tool-card-body { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; flex: 1; }
+.tool-card-body h3 { font-size: 1.12rem; font-weight: 800; margin: 0; }
+.tool-card-body h3 a { color: var(--text-primary); text-decoration: none; }
+.tool-card-body h3 a:hover { color: var(--club-ink); }
+.tool-card-body p { margin: 0; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; }
+.tool-card-formats { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.35rem; }
+.tool-card-formats > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 0.15rem; }
+.tool-chip { font-size: 0.8rem; font-weight: 600; padding: 0.28rem 0.62rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent); background: color-mix(in srgb, var(--tc) 10%, transparent); color: var(--text-primary); text-decoration: none; transition: background 0.15s; }
+.tool-chip:hover { background: color-mix(in srgb, var(--tc) 22%, transparent); }
+.tool-card-open { margin-top: auto; padding-top: 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--club-ink); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; align-self: flex-start; }
+.tool-card .sr-only, .tools-menu .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tool-resources { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.tool-resources .tool-link { flex-direction: row; align-items: center; gap: 0.8rem; }
+.tool-resources .tool-link > svg { color: var(--c-purple); flex-shrink: 0; }
+.tool-resources .tool-link > span { display: flex; flex-direction: column; gap: 0.15rem; font-size: inherit; color: inherit; }
+@media (max-width: 760px) {
+  .tools-jump { justify-content: flex-start; }
+  .tool-card { padding: 0.85rem; gap: 0.85rem; }
+  .tool-card-thumb { width: 84px; }
+  .tool-card-body h3 { font-size: 1.02rem; }
+  .tool-card-body p { font-size: 0.84rem; }
+}
+/* The Free Tools menu in the platform header (components/ToolsMenu.tsx) */
+.tools-menu-toggle { background: none; border: none; color: var(--text-muted); padding: 0.3rem 0.2rem; margin-left: 0.1rem; cursor: pointer; display: flex; align-items: center; border-radius: 6px; }
+.tools-menu-toggle:hover, .tools-menu-toggle[aria-expanded="true"] { color: var(--text-primary); }
+.tools-menu-panel { position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%); width: 600px; padding: 1.15rem; z-index: 100; white-space: normal; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.tools-menu-panel[hidden] { display: none; }
+/* Bridges the gap under the link so the panel stays open while the pointer moves down to it */
+.tools-menu-panel::before { content: ''; position: absolute; left: 0; right: 0; top: -16px; height: 16px; }
+.tools-menu-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.3rem; }
+.tools-menu-heading { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.35rem; text-decoration: none; }
+.tools-menu-heading:hover { color: var(--text-primary); }
+.tools-menu-heading > span { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; }
+.tools-menu-link { display: block; padding: 0.38rem 0.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.tools-menu-link:hover, .tools-menu-link:focus-visible { background: rgba(var(--tint-rgb), 0.06); }
+.tools-menu-foot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--border-subtle); font-size: 0.85rem; }
+.tools-menu-foot a { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-secondary); text-decoration: none; }
+.tools-menu-foot a:hover { color: var(--text-primary); }
+.tools-menu-foot .tools-menu-all { font-weight: 700; color: var(--club-ink); white-space: nowrap; }
+.tools-menu-mobile { display: flex; flex-direction: column; gap: 0.7rem; padding: 0.6rem 0.4rem 0.3rem 1rem; }
+.tools-menu-mobile[hidden] { display: none; }
+.tools-menu-mobile-heading { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.15rem; }
+.tools-menu-mobile a { display: block; padding: 0.4rem 0.5rem; font-size: 0.88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; border-radius: 6px; }
 .tool-needs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.7rem; color: var(--text-secondary); line-height: 1.6; }
 .tool-needs strong { color: var(--text-primary); }
 .tool-updated { margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted); }

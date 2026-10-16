@@ -4,6 +4,8 @@ export interface ToolPageLink {
   path: string;
   label: string;
   blurb: string;
+  /** Button text for a format page inside its main tool's card on /tools: the start of its label (e.g. "9-a-side"), so the rest can stay in the link for search engines and screen readers */
+  short?: string;
 }
 
 export const LINEUP_TOOL: ToolPageLink = { path: '/tools/lineup-builder', label: 'Football lineup builder', blurb: '5, 7, 9 or 11-a-side, 28 formations' };
@@ -14,32 +16,32 @@ export const PLAYER_CARD_TOOL: ToolPageLink = { path: '/tools/player-card-maker'
 export const SEASON_FEE_TOOL: ToolPageLink = { path: '/tools/season-fee-calculator', label: 'Season fee calculator', blurb: 'Break-even subs, card vs cash' };
 
 export const LINEUP_FORMAT_PAGES: ToolPageLink[] = [
-  { path: '/tools/11-a-side-lineup-builder', label: '11-a-side lineup builder', blurb: 'Opens on 4-3-3' },
-  { path: '/tools/9-a-side-lineup-builder', label: '9-a-side lineup builder', blurb: 'Opens on 3-3-2' },
-  { path: '/tools/7-a-side-lineup-builder', label: '7-a-side lineup builder', blurb: 'Opens on 2-3-1' },
-  { path: '/tools/5-a-side-formation-builder', label: '5-a-side formation builder', blurb: 'Opens on the 1-2-1 diamond' },
+  { path: '/tools/11-a-side-lineup-builder', label: '11-a-side lineup builder', blurb: 'Opens on 4-3-3', short: '11-a-side' },
+  { path: '/tools/9-a-side-lineup-builder', label: '9-a-side lineup builder', blurb: 'Opens on 3-3-2', short: '9-a-side' },
+  { path: '/tools/7-a-side-lineup-builder', label: '7-a-side lineup builder', blurb: 'Opens on 2-3-1', short: '7-a-side' },
+  { path: '/tools/5-a-side-formation-builder', label: '5-a-side formation builder', blurb: 'Opens on the 1-2-1 diamond', short: '5-a-side' },
 ];
 
 export const TOURNAMENT_FORMAT_PAGES: ToolPageLink[] = [
-  { path: '/tools/round-robin-fixture-generator', label: 'Round robin fixture generator', blurb: 'Everyone plays everyone once' },
-  { path: '/tools/knockout-cup-bracket-maker', label: 'Knockout cup bracket maker', blurb: 'Single elimination with byes' },
+  { path: '/tools/round-robin-fixture-generator', label: 'Round robin fixture generator', blurb: 'Everyone plays everyone once', short: 'Round robin' },
+  { path: '/tools/knockout-cup-bracket-maker', label: 'Knockout cup bracket maker', blurb: 'Single elimination with byes', short: 'Knockout cup' },
 ];
 
 export const RESULT_FORMAT_PAGES: ToolPageLink[] = [
-  { path: '/tools/player-of-the-match-graphic-maker', label: 'Player of the Match graphic maker', blurb: 'MOTM card with their photo' },
+  { path: '/tools/player-of-the-match-graphic-maker', label: 'Player of the Match graphic maker', blurb: 'MOTM card with their photo', short: 'Player of the Match' },
 ];
 
 export const PLAYING_TIME_FORMAT_PAGES: ToolPageLink[] = [
-  { path: '/tools/9-a-side-substitution-planner', label: '9-a-side substitution planner', blurb: 'Sub rotation for 9v9' },
-  { path: '/tools/7-a-side-substitution-planner', label: '7-a-side substitution planner', blurb: 'Sub rotation for 7v7' },
-  { path: '/tools/5-a-side-substitution-planner', label: '5-a-side substitution planner', blurb: 'Rolling subs for 5v5' },
+  { path: '/tools/9-a-side-substitution-planner', label: '9-a-side substitution planner', blurb: 'Sub rotation for 9v9', short: '9-a-side' },
+  { path: '/tools/7-a-side-substitution-planner', label: '7-a-side substitution planner', blurb: 'Sub rotation for 7v7', short: '7-a-side' },
+  { path: '/tools/5-a-side-substitution-planner', label: '5-a-side substitution planner', blurb: 'Rolling subs for 5v5', short: '5-a-side' },
 ];
 
 export const PLAYER_CARD_FORMAT_PAGES: ToolPageLink[] = [
-  { path: '/tools/goalkeeper-card-maker', label: 'Goalkeeper card maker', blurb: 'Clean sheets and saves on the card' },
-  { path: '/tools/soccer-player-card-maker', label: 'Soccer player card maker', blurb: 'Rec league and travel soccer stats' },
-  { path: '/tools/team-of-the-week-card-maker', label: 'Team of the Week card maker', blurb: 'Black and gold cards with the round' },
-  { path: '/tools/player-of-the-month-card-maker', label: 'Player of the Month card maker', blurb: 'An award card with the month' },
+  { path: '/tools/team-of-the-week-card-maker', label: 'Team of the Week card maker', blurb: 'Black and gold cards with the round', short: 'Team of the Week' },
+  { path: '/tools/player-of-the-month-card-maker', label: 'Player of the Month card maker', blurb: 'An award card with the month', short: 'Player of the Month' },
+  { path: '/tools/goalkeeper-card-maker', label: 'Goalkeeper card maker', blurb: 'Clean sheets and saves on the card', short: 'Goalkeeper' },
+  { path: '/tools/soccer-player-card-maker', label: 'Soccer player card maker', blurb: 'Rec league and travel soccer stats', short: 'Soccer' },
 ];
 
 export const FORMAT_PAGES = [...LINEUP_FORMAT_PAGES, ...TOURNAMENT_FORMAT_PAGES, ...RESULT_FORMAT_PAGES, ...PLAYING_TIME_FORMAT_PAGES, ...PLAYER_CARD_FORMAT_PAGES];
@@ -49,50 +51,62 @@ export const TOOLS_HUB: ToolPageLink = { path: '/tools', label: 'Free football t
 
 export interface ToolGroup {
   id: string;
+  /** Jump-bar and menu label */
+  short: string;
   heading: string;
   blurb: string;
   main: ToolPageLink[];
   formats: ToolPageLink[];
 }
 
-// The /tools hub sections and the "More free tools" links on each tool page (its own group first)
+// The /tools hub sections, the Free Tools menu and the "More free tools" links on each tool page (its own group first).
+// Grouped by the job: before kick-off, after the whistle, competitions, the club's own admin.
 export const TOOL_GROUPS: ToolGroup[] = [
   {
-    id: 'team-sheets',
-    heading: 'Team sheets and formations',
-    blurb: 'Pick a formation, name your players and download a lineup graphic for the team chat or socials.',
-    main: [LINEUP_TOOL],
-    formats: LINEUP_FORMAT_PAGES,
+    id: 'team-and-subs',
+    short: 'Team & subs',
+    heading: 'Pick the team and the subs',
+    blurb: 'Before kick-off: post the lineup and share fair minutes for every player.',
+    main: [LINEUP_TOOL, PLAYING_TIME_TOOL],
+    formats: [...LINEUP_FORMAT_PAGES, ...PLAYING_TIME_FORMAT_PAGES],
   },
   {
-    id: 'matchday',
-    heading: 'Matchday',
-    blurb: 'Share fair minutes before kick-off, then post the full-time score and your Player of the Match.',
-    main: [PLAYING_TIME_TOOL, RESULT_TOOL],
-    formats: [...PLAYING_TIME_FORMAT_PAGES, ...RESULT_FORMAT_PAGES],
-  },
-  {
-    id: 'player-cards',
-    heading: 'Player cards',
-    blurb: 'Put a player’s photo, rating and season stats on a collectible-style card for the team chat and socials.',
-    main: [PLAYER_CARD_TOOL],
-    formats: PLAYER_CARD_FORMAT_PAGES,
+    id: 'graphics-and-cards',
+    short: 'Graphics & cards',
+    heading: 'Graphics and player cards',
+    blurb: 'After the whistle: share the score and the Player of the Match, and make award cards for your players.',
+    main: [RESULT_TOOL, PLAYER_CARD_TOOL],
+    formats: [...RESULT_FORMAT_PAGES, ...PLAYER_CARD_FORMAT_PAGES],
   },
   {
     id: 'tournaments',
+    short: 'Tournaments',
     heading: 'Tournaments and cups',
-    blurb: 'Draw the fixtures and get a live page with tables and a bracket that update as you enter scores.',
+    blurb: 'Draw the fixtures and share a live page with tables and a bracket.',
     main: [TOURNAMENT_TOOL],
     formats: TOURNAMENT_FORMAT_PAGES,
   },
   {
-    id: 'club-money',
-    heading: 'Club money',
-    blurb: 'Work out what to charge for the season so the club breaks even, card fees and all.',
+    id: 'club-admin',
+    short: 'Club admin',
+    heading: 'Running the club',
+    blurb: 'Work out what to charge for the season so the club breaks even.',
     main: [SEASON_FEE_TOOL],
     formats: [],
   },
 ];
+
+/** The format pages that open a main tool with different defaults, shown as buttons on its /tools card */
+export const TOOL_FORMATS: Record<string, ToolPageLink[]> = {
+  [LINEUP_TOOL.path]: LINEUP_FORMAT_PAGES,
+  [PLAYING_TIME_TOOL.path]: PLAYING_TIME_FORMAT_PAGES,
+  [RESULT_TOOL.path]: RESULT_FORMAT_PAGES,
+  [PLAYER_CARD_TOOL.path]: PLAYER_CARD_FORMAT_PAGES,
+  [TOURNAMENT_TOOL.path]: TOURNAMENT_FORMAT_PAGES,
+};
+
+/** The public grounds directory, listed with the tools on /tools and in the Free Tools menu */
+export const GROUNDS_LINK: ToolPageLink = { path: '/grounds', label: 'Football grounds directory', blurb: 'Pitches, parking and directions by suburb' };
 
 export const MAIN_TOOLS = TOOL_GROUPS.flatMap(g => g.main);
 
