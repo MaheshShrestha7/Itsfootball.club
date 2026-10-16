@@ -38,6 +38,10 @@ export interface CardOptions {
   keepOrder?: boolean;
   /** The player marker's shape on the pitch (circle unless chosen in the free lineup builder) */
   marker?: MarkerShape;
+  /** The substitutes, listed under the lineup (the free lineup builder) */
+  subs?: { number: number; name: string }[];
+  /** Sponsor logos (data or blob URLs from the person's own device), in a strip at the bottom of the lineup cards */
+  sponsors?: string[];
   /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
@@ -585,15 +589,49 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       ctx.fillText(sub, W / 2, hlY + 100);
     }
 
+    // The subs and the sponsors' logos (the free lineup builder) sit at the bottom, above the watermark,
+    // and the pitch or list shrinks to make room for them
+    const subs = (opts.subs || []).filter(s => s.name.trim());
+    const sponsorImgs = (await Promise.all((opts.sponsors || []).slice(0, 6).map(loadImage))).filter((i): i is HTMLImageElement => !!i);
+    const sponsorH = sponsorImgs.length ? by(170, 118, 118) : 0;
+    let subLines: string[] = [];
+    let subSize = by(32, 28, 28);
+    if (subs.length) {
+      const items = subs.map(s => `${s.number > 0 ? `${s.number} ` : ''}${juniorPublicName(s.name)}`);
+      const room = W - M * 2 - 80;
+      const wrap = (size: number) => {
+        ctx.font = `600 ${size}px ${body}`;
+        const lines: string[] = [];
+        for (const item of items) {
+          const last = lines[lines.length - 1];
+          if (last && ctx.measureText(`${last}  ·  ${item}`).width <= room) lines[lines.length - 1] = `${last}  ·  ${item}`;
+          else lines.push(item);
+        }
+        return lines;
+      };
+      // Two lines at a readable size, else smaller, and at most three lines in the end
+      for (; subSize > 20 && wrap(subSize).length > 2; subSize -= 2);
+      subLines = wrap(subSize).slice(0, 3);
+      ctx.font = `600 ${subSize}px ${body}`;
+      if (subLines.length === 3) subLines[2] = ellipsize(ctx, subLines[2], room);
+    }
+    const subLineH = Math.round(subSize * 1.45);
+    const subHead = by(66, 56, 56);
+    const subsH = subLines.length ? subHead + subLineH * subLines.length + by(20, 14, 14) : 0;
+    const extrasGap = by(28, 20, 20);
+    // The lowest the lineup may reach: clear of the watermark (and, on a story, of the app's reply box)
+    const floor = H - by(240, 64, 46) - by(44, 30, 30) - sponsorH - (sponsorH && subsH ? 16 : 0) - subsH - (subsH || sponsorH ? extrasGap : 0);
+    const hasExtras = subsH > 0 || sponsorH > 0;
+
     // Players placed on the lineup pitch: drawn where the coach put them, else (or when asked) as a numbered list
     const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
     let after: number;
     if (kind === 'lineup' && lineupHasPositions(match)) {
       // The match page's vertical TacticalPitch, redrawn: striped grass, its markings, and each
       // player as a photo (or initials in club colours) with a shirt-number tag, armband and name tag
-      const pitchH = story ? 920 : 800;
-      const pitchW = Math.round(Math.min(W - M * 2, pitchH * (9 / 13) * 1.05));
       const top = story ? 625 : 430;
+      const pitchH = hasExtras ? Math.min(story ? 920 : 800, floor - top) : story ? 920 : 800;
+      const pitchW = Math.round(Math.min(W - M * 2, pitchH * (9 / 13) * 1.05));
       const left = (W - pitchW) / 2;
       const k = pitchW / 400; // the app's pitch is ~400px wide on a phone, where a marker is 44px
       ctx.save();
@@ -750,8 +788,8 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       });
       after = top + pitchH;
     } else {
-      const rowH = story ? 74 : 64;
       const top = story ? 670 : 470;
+      const rowH = hasExtras ? Math.min(story ? 74 : 64, Math.floor((floor - top - 48) / Math.max(1, xi.length))) : story ? 74 : 64;
       glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
       ctx.textAlign = 'left';
       xi.forEach((p, i) => {
@@ -761,19 +799,58 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
           ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
         }
         ctx.fillStyle = ink;
-        ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
+        ctx.font = `900 ${Math.min(story ? 44 : 38, Math.round(rowH * 0.7))}px ${heading}`;
         ctx.textAlign = 'center';
         if (p.number > 0) ctx.fillText(String(p.number), M + 90, y); // no shirt number: no "0"
         ctx.textAlign = 'left';
         ctx.fillStyle = INK;
         const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
-        fit(ctx, name, 700, story ? 42 : 36, W - M * 2 - 220, body);
+        fit(ctx, name, 700, Math.min(story ? 42 : 36, Math.round(rowH * 0.66)), W - M * 2 - 220, body);
         ctx.fillText(name, M + 160, y);
       });
       ctx.textAlign = 'center';
       after = top + rowH * xi.length + 48;
     }
-    if (story && (day || time)) {
+    if (hasExtras) {
+      let y = floor + extrasGap;
+      if (subsH) {
+        // "SUBS" over the bench names, in a glass panel like the list's
+        glass(ctx, M, y, W - M * 2, subsH, 36);
+        ctx.fillStyle = ink;
+        spaced(ctx, 4);
+        ctx.font = `800 22px ${body}`;
+        ctx.fillText('SUBS', W / 2, y + subHead * 0.6);
+        spaced(ctx, 0);
+        ctx.fillStyle = INK;
+        ctx.font = `600 ${subSize}px ${body}`;
+        subLines.forEach((l, i) => ctx.fillText(l, W / 2, y + subHead + subLineH * i + subLineH / 2));
+        y += subsH + 16;
+      }
+      if (sponsorH) {
+        ctx.fillStyle = FAINT;
+        spaced(ctx, 4);
+        ctx.font = `700 20px ${body}`;
+        ctx.fillText('OUR SPONSORS', W / 2, y + 14);
+        spaced(ctx, 0);
+        // White tiles, so a logo made for a light page reads on the dark card
+        const gap = 18;
+        const tileH = sponsorH - by(40, 34, 34);
+        const tileW = Math.min(by(260, 240, 240), (W - M * 2 - gap * (sponsorImgs.length - 1)) / sponsorImgs.length);
+        let x = W / 2 - (tileW * sponsorImgs.length + gap * (sponsorImgs.length - 1)) / 2;
+        for (const img of sponsorImgs) {
+          roundRect(ctx, x, y + sponsorH - tileH, tileW, tileH, 18);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+          ctx.fill();
+          const pad = Math.round(tileH * 0.14);
+          const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
+          const w = img.naturalWidth * scale;
+          const h = img.naturalHeight * scale;
+          ctx.drawImage(img, x + (tileW - w) / 2, y + sponsorH - tileH + (tileH - h) / 2, w, h);
+          x += tileW + gap;
+        }
+      }
+    }
+    if (story && (day || time) && !hasExtras) {
       ctx.fillStyle = MUTED;
       const when = [day, time, match.venue].filter(Boolean).join(' · ');
       fit(ctx, when, 600, 34, W - M * 2, body);

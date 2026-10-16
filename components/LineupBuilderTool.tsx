@@ -1,11 +1,12 @@
 'use client';
 
 // The free lineup builder at /tools/lineup-builder: pick a format and shape, type the names, drag
-// players around the pitch and download the graphic. No login and nothing is saved on the server;
-// the image is drawn in the browser by the same code as a club's matchday share cards.
+// players around the pitch, add the subs and sponsors, and download the graphic. No login and nothing is
+// saved on the server; the image (badge and sponsor logos included) is drawn in the browser by the same
+// code as a club's matchday share cards.
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Download, ImagePlus, RotateCcw, Share2, X } from 'lucide-react';
+import { ArrowRight, Download, ImagePlus, Lock, RotateCcw, Share2, X } from 'lucide-react';
 import { FORMAT_PRESETS } from '@/components/TacticalPitch';
 import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type MarkerShape } from '@/lib/share-card';
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
@@ -107,6 +108,13 @@ const MARKERS: { key: MarkerShape; label: string }[] = [
   { key: 'triangle', label: 'Triangle' },
 ];
 
+/** The whole squad, starters and subs, is at most 20 players */
+const MAX_SQUAD = 20;
+/** Subs before anyone changes it: 4, so 15 players for 11-a-side */
+const DEFAULT_SUBS = 4;
+/** Sponsor logos on the image, in one row */
+const MAX_SPONSORS = 6;
+
 const COLOURS = ['#10B981', '#DC2626', '#2563EB', '#0EA5E9', '#FACC15', '#F97316', '#7C3AED', '#E5E7EB'];
 
 interface Player { name: string; number: string }
@@ -128,6 +136,10 @@ interface State {
   layout: 'pitch' | 'list';
   /** The player icon on the pitch and the image */
   marker: MarkerShape;
+  /** Players in the squad, starters included (the rest are subs), up to MAX_SQUAD */
+  squad: number;
+  /** The subs' names and numbers, as far as they've been typed (the rest take the next shirt numbers) */
+  subs: Player[];
 }
 
 const STORAGE_KEY = 'ifc-lineup-builder';
@@ -149,6 +161,8 @@ function fresh(format: Format, shape?: string, players: Player[] = []): State {
     size: 'post',
     layout: 'pitch',
     marker: 'circle',
+    squad: Math.min(MAX_SQUAD, coords.length + DEFAULT_SUBS),
+    subs: [],
   };
 }
 
@@ -175,6 +189,7 @@ interface Props {
 export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShape }: Props = {}) {
   const [state, setState] = useState<State>(() => fresh(defaultFormat, defaultShape));
   const [crest, setCrest] = useState<string | null>(null);
+  const [sponsors, setSponsors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [downloaded, setDownloaded] = useState(false);
@@ -194,7 +209,11 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       const sameFormat = !defaultShape || saved?.format === defaultFormat;
       if (saved && sameFormat && SHAPES[saved.format] && (saved.shape === FREE || SHAPES[saved.format][saved.shape]) && saved.coords?.length === saved.players?.length) {
         const base = SHAPES[saved.format][saved.base] ? saved.base : fresh(saved.format).base;
-        setState({ ...fresh(saved.format), ...saved, base });
+        const next = { ...fresh(saved.format), ...saved, base };
+        // A lineup saved before subs existed, or a squad out of range, gets the default squad
+        if (!Number.isInteger(next.squad) || next.squad < next.coords.length || next.squad > MAX_SQUAD) next.squad = fresh(saved.format).squad;
+        if (!Array.isArray(next.subs)) next.subs = [];
+        setState(next);
       }
     } catch { /* storage blocked or corrupt */ }
     loaded.current = true;
@@ -213,11 +232,19 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
   const setFormat = (format: Format) => {
     if (format === state.format) return;
     const next = fresh(format, undefined, state.players);
-    update({ format, shape: next.shape, base: next.base, coords: next.coords, players: next.players, captain: state.captain < next.players.length ? state.captain : -1 });
+    // The same number of subs, as far as the squad limit allows
+    const squad = Math.min(MAX_SQUAD, next.players.length + Math.max(0, state.squad - state.coords.length));
+    update({ format, shape: next.shape, base: next.base, coords: next.coords, players: next.players, squad, captain: state.captain < next.players.length ? state.captain : -1 });
   };
   const setShape = (shape: string) => (shape === FREE ? update({ shape }) : update({ shape, base: shape, coords: fresh(state.format, shape).coords }));
   const setPlayer = (i: number, patch: Partial<Player>) =>
     update({ players: state.players.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+
+  // The subs on the bench: those typed so far, then empty ones numbered on from the starters
+  const subs = Array.from({ length: Math.max(0, state.squad - state.coords.length) }, (_, i) =>
+    state.subs[i] || { name: '', number: String(state.coords.length + i + 1) });
+  const setSub = (i: number, patch: Partial<Player>) =>
+    update({ subs: subs.map((p, j) => (j === i ? { ...p, ...patch } : p)).concat(state.subs.slice(subs.length)) });
 
   // Dragging a player: the pitch is vertical, so left is across (y) and top runs from their goal down to ours (x)
   const move = (i: number, e: ReactPointerEvent) => {
@@ -260,6 +287,23 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
     reader.readAsDataURL(file);
   };
 
+  // Sponsor logos are read in the browser like the badge and kept in memory only (not even in this browser's storage)
+  const pickSponsors = (files: FileList | null) => {
+    const images = [...(files || [])].filter(f => f.type.startsWith('image/')).slice(0, MAX_SPONSORS - sponsors.length);
+    // Read together, then added in the order they were picked
+    Promise.all(images.map(file => new Promise<string | null>(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    }))).then(srcs => {
+      const added = srcs.filter((src): src is string => !!src);
+      if (!added.length) return;
+      setSponsors(list => [...list, ...added].slice(0, MAX_SPONSORS));
+      setDownloaded(false);
+    });
+  };
+
   const size = FORMATS.find(f => f.key === state.format)!;
   const fileName = `${(state.team.trim() || 'lineup').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lineup'}-starting-${size.word.toLowerCase()}.png`;
 
@@ -285,7 +329,11 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       competition: state.competition.trim(),
       match_date: '',
     } as unknown as Match;
-    return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', { format: state.size, headline: ['STARTING', size.word], keepOrder: true, marker: state.marker });
+    return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', {
+      format: state.size, headline: ['STARTING', size.word], keepOrder: true, marker: state.marker,
+      subs: subs.map(p => ({ name: p.name.trim(), number: parseInt(p.number, 10) || 0 })).filter(p => p.name),
+      sponsors,
+    });
   };
 
   const run = async (share: boolean) => {
@@ -433,6 +481,16 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
             />
           )}
         </div>
+        {subs.some(p => p.name.trim()) && (
+          <div className="lineup-tool-bench" aria-label="Subs">
+            <span className="lineup-tool-bench-label">Subs</span>
+            {subs.filter(p => p.name.trim()).map((p, i) => (
+              <span key={i} className="lineup-tool-bench-chip">
+                {p.number && <b>{p.number}</b>}{juniorPublicName(p.name)}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="lineup-tool-hint">Tap a player to name them. Drag to move them anywhere.</p>
       </div>
 
@@ -508,6 +566,28 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
           </div>
         </div>
 
+        <div className="form-group">
+          <span className="form-label">Sponsors <span className="lineup-tool-optional">(optional, up to {MAX_SPONSORS} logos)</span></span>
+          <div className="lineup-tool-sponsors">
+            {sponsors.map((src, i) => (
+              <span key={i} className="lineup-tool-sponsor">
+                <img src={src} alt={`Sponsor logo ${i + 1}`} />
+                <button type="button" aria-label={`Remove sponsor logo ${i + 1}`} onClick={() => { setSponsors(list => list.filter((_, j) => j !== i)); setDownloaded(false); }}><X size={12} /></button>
+              </span>
+            ))}
+            {sponsors.length < MAX_SPONSORS && (
+              <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                <ImagePlus size={15} /> {sponsors.length ? 'Add another' : 'Add sponsor logos'}
+                <input type="file" accept="image/*" multiple hidden data-sponsor-input onChange={e => { pickSponsors(e.target.files); e.target.value = ''; }} />
+              </label>
+            )}
+          </div>
+          <p className="lineup-tool-privacy">
+            <Lock size={13} aria-hidden="true" />
+            <span>Your badge and sponsor logos stay on your device. They are processed in your browser and never uploaded to or stored on our server.</span>
+          </p>
+        </div>
+
         <div className="lineup-tool-row">
           <div className="form-group">
             <span className="form-label" id="lb-style">Image style</span>
@@ -554,6 +634,31 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
             </li>
           ))}
         </ol>
+
+        <div className="lineup-tool-players-head lineup-tool-subs-head">
+          <h3 className="lineup-tool-subhead">Subs</h3>
+          <select className="form-select lineup-tool-squad" aria-label="Squad size" value={state.squad} onChange={e => update({ squad: Number(e.target.value) })}>
+            {Array.from({ length: MAX_SQUAD - state.coords.length + 1 }, (_, n) => (
+              <option key={n} value={state.coords.length + n}>
+                {n ? `${state.coords.length + n} players (${n} sub${n > 1 ? 's' : ''})` : 'No subs'}
+              </option>
+            ))}
+          </select>
+        </div>
+        {subs.length > 0 && (
+          <ol className="lineup-tool-players lineup-tool-subs">
+            {subs.map((p, i) => (
+              <li key={i}>
+                <span className="lineup-tool-pos">SUB</span>
+                <input className="form-input lineup-tool-num" inputMode="numeric" maxLength={2} aria-label={`Sub ${i + 1} shirt number`}
+                  value={p.number} onChange={e => setSub(i, { number: e.target.value.replace(/\D/g, '') })} />
+                <input className="form-input" maxLength={28} placeholder="Sub name" aria-label={`Sub ${i + 1} name`}
+                  autoComplete="off" value={p.name} onChange={e => setSub(i, { name: e.target.value })} />
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="lineup-tool-hint" style={{ textAlign: 'left', marginTop: '0.5rem' }}>Named subs are listed under the lineup on the image.</p>
 
         {/* Stays in reach at the bottom of the screen while scrolling through the players on a phone */}
         <div className="lineup-tool-actions">
