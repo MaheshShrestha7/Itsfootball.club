@@ -16,10 +16,12 @@ export function GET() {
       display: 'standalone',
       background_color: '#070A0F',
       theme_color: '#070A0F',
+      // ?v=2: /icon.png and /logo.png held the old crest until the October logo change, and phones
+      // and Google keep icons by URL, so the version makes them fetch the new ones
       icons: [
-        { src: '/icon.png', sizes: '192x192', type: 'image/png' },
-        { src: '/logo.png', sizes: '512x512', type: 'image/png' },
-        { src: '/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: '/icon.png?v=2', sizes: '192x192', type: 'image/png' },
+        { src: '/logo.png?v=2', sizes: '512x512', type: 'image/png' },
+        { src: '/maskable-512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
     { headers: { 'Content-Type': 'application/manifest+json' } }

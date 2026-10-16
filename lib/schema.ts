@@ -64,7 +64,7 @@ export function homeSchema() {
       '@id': ORGANIZATION_ID,
       name: SITE_NAME,
       url: SITE_URL,
-      logo: { '@type': 'ImageObject', url: abs('/logo.png'), width: 512, height: 512 },
+      logo: { '@type': 'ImageObject', url: abs('/logo.png?v=2'), width: 512, height: 512 },
       description: 'A free platform for grassroots and community football and soccer clubs: club websites, live match centres, lineups, digital member passes, club merch shops and sponsor showcases.',
       email: CONTACT_EMAIL,
       areaServed: AREA_SERVED,

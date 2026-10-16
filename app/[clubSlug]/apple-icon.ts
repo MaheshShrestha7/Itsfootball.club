@@ -10,7 +10,7 @@ export default async function AppleIcon({ params }: { params: Promise<{ clubSlug
   const { clubSlug } = await params;
   const own = (await findClubAppIcons(clubSlug))?.icon192;
   // Fetched rather than read from disk: the Cloudflare Worker has no filesystem
-  for (const src of [own, `${SITE_URL}/icon.png`]) {
+  for (const src of [own, `${SITE_URL}/icon.png?v=2`]) {
     if (!src) continue;
     const res = await fetch(src, { next: { revalidate: 3600 } }).catch(() => null);
     if (res?.ok) return new Response(await res.arrayBuffer(), { headers: { 'Content-Type': 'image/png' } });
