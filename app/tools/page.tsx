@@ -2,7 +2,7 @@
 // AI assistants have one page to land on and cite. Built from lib/tool-pages.ts, like the sitemap and llms.txt.
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
-import { ArrowRight, ClipboardList, Timer, Trophy, Wallet, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Award, ClipboardList, Timer, Trophy, Wallet, type LucideIcon } from 'lucide-react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
@@ -10,11 +10,11 @@ import { ToolUpdated, h2Style, bodyStyle, linkStyle } from '@/components/ToolLan
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { GUIDES, GUIDES_HUB } from '@/lib/guides';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
-import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOOL_GROUPS, TOOLS_HUB, TOURNAMENT_TOOL, TOOLS_UPDATED, type ToolPageLink, toolOgImage } from '@/lib/tool-pages';
+import { LINEUP_TOOL, PLAYER_CARD_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOOL_GROUPS, TOOLS_HUB, TOURNAMENT_TOOL, TOOLS_UPDATED, type ToolPageLink, toolOgImage } from '@/lib/tool-pages';
 
 const TITLE = 'Free Football Tools for Coaches and Clubs | No Sign-up';
 const DESCRIPTION =
-  'Free soccer tools for grassroots coaches, clubs and organisers: lineup builder, equal playing time calculator, tournament maker, result graphics and a season fee calculator. No sign-up.';
+  'Free soccer tools for grassroots coaches, clubs and organisers: lineup builder, equal playing time calculator, tournament maker, result graphics, a player card maker and a season fee calculator. No sign-up.';
 const H1 = 'Free football tools for coaches, clubs and organisers';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: TOOLS_HUB.path, image: toolOgImage(TOOLS_HUB.path) });
@@ -22,6 +22,7 @@ export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, p
 const GROUP_ICONS: Record<string, { Icon: LucideIcon; color: string }> = {
   'team-sheets': { Icon: ClipboardList, color: 'var(--c-blue)' },
   matchday: { Icon: Timer, color: 'var(--c-green)' },
+  'player-cards': { Icon: Award, color: 'var(--c-purple)' },
   tournaments: { Icon: Trophy, color: 'var(--c-amber)' },
   'club-money': { Icon: Wallet, color: 'var(--c-red)' },
 };
@@ -31,6 +32,7 @@ const NEEDS: { need: string; tool: ToolPageLink; answer: string }[] = [
   { need: 'Posting the team for Saturday?', tool: LINEUP_TOOL, answer: 'pick a formation, name your players and download a team sheet image.' },
   { need: 'Want every kid to get the same minutes?', tool: PLAYING_TIME_TOOL, answer: 'enter the squad and match length and get a substitution schedule.' },
   { need: 'Sharing the score after full time?', tool: RESULT_TOOL, answer: 'add both badges, the score and the scorers, and download a story or post.' },
+  { need: 'Making a card for a player?', tool: PLAYER_CARD_TOOL, answer: 'add their photo, position and season stats and download a player card.' },
   { need: 'Running a gala day or end-of-season cup?', tool: TOURNAMENT_TOOL, answer: 'draw the fixtures and share a live page with tables and a bracket.' },
   { need: "Setting this season's rego fee?", tool: SEASON_FEE_TOOL, answer: 'add up the costs and see the fee each player pays to break even.' },
 ];
@@ -84,7 +86,7 @@ export default function ToolsHubPage() {
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{H1}</h1>
           {/* Answer first: the sentence search and AI engines lift as the summary */}
           <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            Free soccer tools for grassroots football: build a lineup, plan fair substitutions, post your full-time result,
+            Free soccer tools for grassroots football: build a lineup, plan fair substitutions, post your full-time result, make a player card,
             run a tournament with a live bracket and set the season&apos;s fees. They work in the browser on a phone or
             computer, with no sign-up and nothing to install.
           </p>

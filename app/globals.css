@@ -3143,6 +3143,33 @@ dialog.confirm-dialog::backdrop {
   .rg-tool .lineup-tool-actions { flex-wrap: nowrap; }
   .rg-thumb { display: block; }
 }
+/* Free football player card maker (/tools/player-card-maker): the result maker's layout, plus the stats
+   grid and the finish swatches. The card itself has its own outline, so its preview has no frame. */
+.pc-preview-wrap.is-card img { border-radius: 0; box-shadow: none; filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.5)); }
+.pc-preview-wrap.is-card .rg-preview-empty { aspect-ratio: 1100 / 1325; }
+.pc-photo { border-radius: 16px; }
+.pc-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+.pc-nation { max-width: 110px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; }
+.pc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+.pc-stat { display: grid; grid-template-columns: minmax(0, 1fr) 64px; grid-template-rows: auto auto; gap: 0.3rem 0.4rem; align-items: center; padding: 0.5rem 0.55rem; border-radius: var(--radius-md); border: 1px solid rgba(var(--tint-rgb), 0.1); background: rgba(var(--tint-rgb), 0.03); }
+.pc-stat.is-on { border-color: rgba(var(--lb-rgb), 0.5); background: linear-gradient(140deg, rgba(var(--lb-rgb), 0.12), rgba(var(--tint-rgb), 0.02)); }
+.pc-stat label { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 0.3rem; font-size: 0.74rem; font-weight: 700; color: var(--text-secondary); }
+.pc-stat label b { font-size: 0.66rem; color: var(--text-muted); letter-spacing: 0.06em; }
+.lineup-tool-controls .pc-stat .form-input { min-height: 38px; padding: 0.35rem 0.55rem; font-weight: 800; font-size: 1.05rem; }
+.pc-stat .rg-chip { height: 38px; font-size: 0.66rem; }
+.pc-stat .rg-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+.pc-club-row { display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem; }
+.pc-club-row .rg-crest label { color: var(--text-muted); }
+.pc-finishes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.4rem; }
+.pc-finish { height: 52px; border-radius: 10px; border: 2px solid transparent; display: flex; align-items: flex-end; justify-content: center; padding: 0 0.15rem 0.3rem; cursor: pointer; color: #fff; }
+.pc-finish span { font-size: 0.66rem; font-weight: 800; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); line-height: 1.1; text-align: center; }
+.pc-finish.is-blackgold { box-shadow: inset 0 0 0 1px #E8C46A; color: #F2D27A; }
+.pc-finish.is-inform { box-shadow: inset 0 0 0 1px #34D399; }
+.pc-finish.is-active { border-color: var(--text-primary); box-shadow: 0 0 0 3px rgba(var(--lb-rgb), 0.3); }
+@media (max-width: 480px) {
+  .pc-finishes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-stat { grid-template-columns: minmax(0, 1fr) 58px; padding: 0.45rem; }
+}
 .lineup-formations { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
 .lineup-formation-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .lineup-formation-list li { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: var(--radius-full); background: rgba(var(--club-primary-rgb), 0.1); color: var(--club-ink); }
