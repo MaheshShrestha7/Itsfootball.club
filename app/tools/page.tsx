@@ -32,7 +32,7 @@ const NEEDS: { need: string; tool: ToolPageLink; answer: string }[] = [
   { need: 'Posting the team for Saturday?', tool: LINEUP_TOOL, answer: 'pick a formation, name your players and download a team sheet image.' },
   { need: 'Want every kid to get the same minutes?', tool: PLAYING_TIME_TOOL, answer: 'enter the squad and match length and get a substitution schedule.' },
   { need: 'Sharing the score after full time?', tool: RESULT_TOOL, answer: 'add both badges, the score and the scorers, and download a story or post.' },
-  { need: 'Making a card for a player?', tool: PLAYER_CARD_TOOL, answer: 'add their photo, position and season stats and download a player card.' },
+  { need: 'Making a card for a player?', tool: PLAYER_CARD_TOOL, answer: 'add their photo, position and season stats and download a player card, or a Team of the Week or Player of the Month card.' },
   { need: 'Running a gala day or end-of-season cup?', tool: TOURNAMENT_TOOL, answer: 'draw the fixtures and share a live page with tables and a bracket.' },
   { need: "Setting this season's rego fee?", tool: SEASON_FEE_TOOL, answer: 'add up the costs and see the fee each player pays to break even.' },
 ];

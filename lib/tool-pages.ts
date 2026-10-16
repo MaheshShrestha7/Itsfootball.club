@@ -38,6 +38,8 @@ export const PLAYING_TIME_FORMAT_PAGES: ToolPageLink[] = [
 export const PLAYER_CARD_FORMAT_PAGES: ToolPageLink[] = [
   { path: '/tools/goalkeeper-card-maker', label: 'Goalkeeper card maker', blurb: 'Clean sheets and saves on the card' },
   { path: '/tools/soccer-player-card-maker', label: 'Soccer player card maker', blurb: 'Rec league and travel soccer stats' },
+  { path: '/tools/team-of-the-week-card-maker', label: 'Team of the Week card maker', blurb: 'Black and gold cards with the round' },
+  { path: '/tools/player-of-the-month-card-maker', label: 'Player of the Month card maker', blurb: 'An award card with the month' },
 ];
 
 export const FORMAT_PAGES = [...LINEUP_FORMAT_PAGES, ...TOURNAMENT_FORMAT_PAGES, ...RESULT_FORMAT_PAGES, ...PLAYING_TIME_FORMAT_PAGES, ...PLAYER_CARD_FORMAT_PAGES];
@@ -132,6 +134,8 @@ const EXAMPLES: Record<string, Omit<ToolExample, 'src'>> = {
   'player-card-maker': { width: 800, height: 964, alt: 'Black gold football player card for Kai Tanaka, ST, rated 87, with goals, assists, appearances, Player of the Match, attendance streak and attendance %, made with the free football player card maker', caption: 'A Black gold card for a striker: 21 goals and 8 assists in 20 games. Add a photo and the player stands on the card.' },
   'goalkeeper-card-maker': { width: 800, height: 964, alt: 'Silver goalkeeper card for Max Fraser, GK, rated 74, with 9 clean sheets and 41 saves in 19 games, made with the free goalkeeper card maker', caption: 'A Silver keeper card: 9 clean sheets and 41 saves in 19 games.' },
   'soccer-player-card-maker': { width: 800, height: 964, alt: 'Blue club-colours soccer player card for Noah Patel, CM, rated 82, with goals, assists, games played and attendance, made with the free soccer player card maker', caption: 'A card in the team’s own blue, for a midfielder with 12 assists.' },
+  'team-of-the-week-card-maker': { width: 800, height: 964, alt: 'Team of the Week card for Kai Tanaka, ST, rated 86, black and gold with stars and a Team of the Week · Round 7 label, made with the free Team of the Week card maker', caption: 'A Team of the Week card with the round on it. Make one for each player picked.' },
+  'player-of-the-month-card-maker': { width: 800, height: 964, alt: 'Player of the Month card for Kai Tanaka, ST, rated 88, royal blue with a sunburst and a Player of the Month · October label, made with the free Player of the Month card maker', caption: 'A Player of the Month card with the month on it.' },
   'tournament-maker': { width: 800, height: 976, alt: 'Group tables for an eight-team cup with two groups of four and the top two going through to the knockouts, made with the free soccer tournament maker', caption: 'Eight teams in two groups of four, with the top two going into the knockouts.' },
   'round-robin-fixture-generator': { width: 800, height: 653, alt: 'League table for a six-team round robin where everyone plays everyone once, 15 matches in total, made with the free round robin fixture generator', caption: 'Six teams in a round robin: 15 matches, and the table fills in as scores go in.' },
   'knockout-cup-bracket-maker': { width: 800, height: 1151, alt: 'Knockout bracket for an eight-team cup with four quarter-finals and two semi-finals, seeded 1 v 8, made with the free knockout cup bracket maker', caption: 'An eight-team bracket, seeded 1 v 8, 4 v 5, 2 v 7 and 3 v 6.' },

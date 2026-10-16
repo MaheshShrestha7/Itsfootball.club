@@ -1,7 +1,8 @@
 'use client';
 
 // The free football player card maker at /tools/player-card-maker: a player's photo, rating, position and
-// season stats on a collectible-style card, in one of six finishes, downloaded as the card alone (a
+// season stats on a collectible-style card, as a Standard card in one of six finishes or a special card type
+// (Team of the Week, Player of the Month, Levelled Up and more), downloaded as the card alone (a
 // see-through PNG) or on a story, post or square. No login and nothing is uploaded: the photo stays on the
 // device, its background is removed there (lib/remove-background.ts) and the card is drawn in the browser
 // (lib/player-card.ts).
@@ -9,14 +10,20 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import Link from 'next/link';
 import { ArrowRight, Download, ImagePlus, Lock, Scissors, Share2, Undo2, X } from 'lucide-react';
 import {
-  KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, drawPlayerCard,
-  type PlayerCardFinish, type PlayerCardSize, type PlayerStatKey,
+  CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, drawPlayerCard, storyHeading,
+  type PlayerCardFinish, type PlayerCardSize, type PlayerCardType, type PlayerStatKey,
 } from '@/lib/player-card';
 
 type Foot = '' | 'R' | 'L' | 'LR';
 
 interface State {
   size: PlayerCardSize;
+  type: PlayerCardType;
+  /** Each card type's detail (the round, the month...), kept while switching between types */
+  details: Partial<Record<PlayerCardType, string>>;
+  /** Each card type's own wording for its label, and for the heading on a story */
+  labels: Partial<Record<PlayerCardType, string>>;
+  headings: Partial<Record<PlayerCardType, string>>;
   finish: PlayerCardFinish;
   name: string;
   position: string;
@@ -56,6 +63,10 @@ const statDefaults = (position: string) => [...(position === 'GK' ? KEEPER_STATS
 function fresh(position: string): State {
   return {
     size: 'card',
+    type: 'standard',
+    details: {},
+    labels: {},
+    headings: {},
     finish: 'blackgold',
     name: '',
     position,
@@ -109,10 +120,14 @@ interface Props {
   defaultPosition?: string;
   /** The finish it opens on */
   defaultFinish?: PlayerCardFinish;
+  /** The card type it opens on (the Team of the Week page opens on Team of the Week) */
+  defaultType?: PlayerCardType;
 }
 
-export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }: Props = {}) {
-  const [state, setState] = useState<State>(() => ({ ...fresh(defaultPosition), ...(defaultFinish ? { finish: defaultFinish } : {}) }));
+export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, defaultType }: Props = {}) {
+  const [state, setState] = useState<State>(() => ({
+    ...fresh(defaultPosition), ...(defaultFinish ? { finish: defaultFinish } : {}), ...(defaultType ? { type: defaultType } : {}),
+  }));
   // The photo isn't remembered (too big for browser storage, and it's theirs); the rest is
   const [photo, setPhoto] = useState<string | null>(null);
   // "Remove background": the cut-out replaces the photo, and the original is kept to put it back
@@ -147,6 +162,10 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
           shown,
           size: saved.size && saved.size in PLAYER_CARD_SIZES ? saved.size : base.size,
           finish: defaultFinish || (FINISHES.some(f => f.key === saved.finish) ? saved.finish! : base.finish),
+          type: defaultType || (CARD_TYPES.some(t => t.key === saved.type) ? saved.type! : base.type),
+          details: saved.details && typeof saved.details === 'object' ? saved.details : {},
+          labels: saved.labels && typeof saved.labels === 'object' ? saved.labels : {},
+          headings: saved.headings && typeof saved.headings === 'object' ? saved.headings : {},
           stats: saved.stats && typeof saved.stats === 'object' ? saved.stats : {},
         });
       }
@@ -186,7 +205,16 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
     else if (state.shown.length < MAX_SHOWN_STATS) update({ shown: [...state.shown, key] });
   };
 
+  const cardType = CARD_TYPES.find(t => t.key === state.type) || CARD_TYPES[0];
+  const detail = state.details[state.type] ?? '';
+  const labelText = state.labels[state.type] ?? '';
+  const heading = state.headings[state.type] ?? '';
+
   const render = () => drawPlayerCard({
+    type: state.type,
+    detail,
+    labelText,
+    heading,
     finish: state.finish,
     colour: state.colour,
     name: state.name,
@@ -240,7 +268,7 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
   };
   const onUp = () => { drag.current = null; };
 
-  const fileName = `player-card-${slug(state.name) || 'football'}${state.size === 'card' ? '' : `-${state.size}`}.png`;
+  const fileName = `${state.type === 'standard' ? 'player-card' : slug(cardType.label)}-${slug(state.name) || 'football'}${state.size === 'card' ? '' : `-${state.size}`}.png`;
 
   const run = async (share: boolean) => {
     setBusy(true);
@@ -313,7 +341,9 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
     if (crest) update({ crest });
   };
 
-  const accent = state.finish === 'club' ? state.colour : state.finish === 'inform' ? '#10B981' : '#D9AE4A';
+  const accent = state.type === 'standard'
+    ? (state.finish === 'club' ? state.colour : state.finish === 'inform' ? '#10B981' : '#D9AE4A')
+    : cardAccent({ type: state.type, finish: state.finish, colour: state.colour });
 
   return (
     <div className="lineup-tool rg-tool pc-tool" style={{ '--lb-rgb': hexRgb(accent) } as CSSProperties}>
@@ -344,6 +374,49 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
           ))}
         </div>
         <p className="rg-note">{state.size === 'card' ? 'Card downloads just the card, with a see-through background, for stickers and chats.' : 'The card on a dark background, ready to post.'}</p>
+        {state.size === 'story' && (
+          <div className="form-group" style={{ marginTop: '0.6rem' }}>
+            <label className="form-label" htmlFor="pc-heading">Story heading</label>
+            <input id="pc-heading" className="form-input" value={heading} maxLength={24} autoComplete="off"
+              placeholder={storyHeading({ type: state.type, labelText })}
+              onChange={e => update({ headings: { ...state.headings, [state.type]: e.target.value } })} />
+          </div>
+        )}
+
+        <h2 className="lineup-tool-section">Card type</h2>
+        <div className="pc-types" role="radiogroup" aria-label="Card type">
+          {CARD_TYPES.map(t => (
+            <button key={t.key} type="button" role="radio" aria-checked={state.type === t.key}
+              className={`pc-type ${state.type === t.key ? 'is-active' : ''}`} onClick={() => update({ type: t.key })}>
+              <img src={`/images/tools/card-types/${t.key}.webp`} alt="" width={64} height={77} loading="lazy" />
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+        {cardType.key !== 'standard' && (
+          <div className="form-group" style={{ marginTop: '0.7rem' }}>
+            <label className="form-label" htmlFor="pc-label">Label on the card</label>
+            <input id="pc-label" className="form-input" value={labelText} maxLength={22} placeholder={cardType.label} autoComplete="off"
+              onChange={e => update({ labels: { ...state.labels, [state.type]: e.target.value } })} />
+          </div>
+        )}
+        {cardType.key !== 'standard' && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="pc-detail">{cardType.detail} <span className="lineup-tool-optional">(optional)</span></label>
+            <input id="pc-detail" className={`form-input ${cardType.key === 'upgrade' ? 'pc-nation' : ''}`} value={detail} placeholder={cardType.placeholder} autoComplete="off"
+              inputMode={cardType.key === 'upgrade' ? 'numeric' : undefined} maxLength={cardType.key === 'upgrade' ? 2 : 24}
+              onChange={e => update({ details: { ...state.details, [state.type]: cardType.key === 'upgrade' ? e.target.value.replace(/\D/g, '') : e.target.value } })} />
+          </div>
+        )}
+        <p className="rg-note">
+          {cardType.key === 'standard'
+            ? 'The everyday card, in the finish you pick below.'
+            : cardType.key === 'upgrade'
+              ? 'Put the rating from before, and the card shows how far it went up. Change the label to say it your way.'
+              : cardType.key === 'legend'
+                ? 'Each type has its own colours and a label above the name. For a legend, put their years at the club, like 2009–2026, as the season.'
+                : 'Each type has its own colours and a label above the name. Change the label to say it your way.'}
+        </p>
 
         <h2 className="lineup-tool-section">Player</h2>
         <div className="rg-motm">
@@ -500,18 +573,22 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish }
             </div>
           </div>
         </div>
-        <p className="rg-note">The badge sits at the bottom of the card; without one it shows a shield with the club’s initials. The colour is used by the Club finish.</p>
+        <p className="rg-note">The badge sits at the bottom of the card; without one it shows a shield with the club’s initials. The colour is used by the Club finish and the New Signing card.</p>
 
-        <h2 className="lineup-tool-section">Finish</h2>
-        <div className="pc-finishes" role="radiogroup" aria-label="Card finish">
-          {FINISHES.map(f => (
-            <button key={f.key} type="button" role="radio" aria-checked={state.finish === f.key}
-              className={`pc-finish ${state.finish === f.key ? 'is-active' : ''} is-${f.key}`}
-              style={{ background: f.swatch || `linear-gradient(160deg, ${state.colour}, #111)` }} onClick={() => update({ finish: f.key })}>
-              <span>{f.label}</span>
-            </button>
-          ))}
-        </div>
+        {state.type === 'standard' && (
+          <>
+            <h2 className="lineup-tool-section">Finish</h2>
+            <div className="pc-finishes" role="radiogroup" aria-label="Card finish">
+              {FINISHES.map(f => (
+                <button key={f.key} type="button" role="radio" aria-checked={state.finish === f.key}
+                  className={`pc-finish ${state.finish === f.key ? 'is-active' : ''} is-${f.key}`}
+                  style={{ background: f.swatch || `linear-gradient(160deg, ${state.colour}, #111)` }} onClick={() => update({ finish: f.key })}>
+                  <span>{f.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Stays in reach at the bottom of the screen on a phone, with a thumbnail of the card */}
         <div className="lineup-tool-actions">
