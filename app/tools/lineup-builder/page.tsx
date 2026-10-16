@@ -40,6 +40,7 @@ const QUESTIONS = [
   { q: 'What is the best formation for 9-a-side?', a: '3-2-3 is a popular 9-a-side shape for attacking width. 3-3-2 adds a midfielder for control, and 4-3-1 is the most defensive of the common shapes.' },
   { q: 'What is the best 5-a-side formation?', a: '1-2-1 (a diamond) is the usual 5-a-side shape: one defender, two wide players and a pivot up front. 2-1-1 is steadier at the back, and 2-2 is simple for casual games.' },
   { q: 'Can I show the lineup as a list instead of a pitch?', a: 'Yes. Choose List under Image style for a numbered team sheet with the captain marked. Pitch is the default.' },
+  { q: 'Can I change the background of the lineup graphic?', a: 'Yes. Under Look, pick a background (Dark, Midnight, your team colour, or Two-tone with a second colour), a pattern (dots, stripes, hoops, chevron, halftone or plain) and switch on Light shine for rays of light and a glossy sweep.' },
   { q: 'What size is the image?', a: 'Post is 1080 × 1350 for an Instagram or Facebook feed post and WhatsApp chats. Story is 1080 × 1920 for Instagram and Facebook stories and WhatsApp status.' },
   { q: 'Can I see who is available before I pick the team?', a: "Yes, with a free itsfootball.club club site. Players mark themselves available for each fixture, you pick the lineup from that squad, and it publishes to your club's match page with live scores." },
 ];
@@ -54,6 +55,7 @@ const FEATURES = [
   'Pitch or list layout',
   'Subs bench, up to 20 players in the squad',
   'Sponsor logos along the bottom',
+  'Backgrounds in dark, midnight, your team colour or two-tone, with stripes, hoops, chevron or halftone patterns and an optional light shine',
   'Post (4:5) and story (9:16) PNG download',
   'No sign-up, nothing uploaded',
 ];

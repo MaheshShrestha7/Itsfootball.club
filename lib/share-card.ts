@@ -40,6 +40,8 @@ export interface CardOptions {
   marker?: MarkerShape;
   /** The substitutes, listed under the lineup (the free lineup builder) */
   subs?: { number: number; name: string }[];
+  /** The card's look (the free lineup builder): background shade, a pattern over it and a light shine */
+  look?: CardLook;
   /** Sponsor logos (data or blob URLs from the person's own device), in a strip at the bottom of the lineup cards */
   sponsors?: string[];
   /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
@@ -52,6 +54,17 @@ export interface CardOptions {
   scorerBalls?: boolean;
   /** Icons beside the date, the ground and the Player of the Match's stats (the free result graphic maker) */
   icons?: boolean;
+}
+
+export interface CardLook {
+  /** dark: near-black (the default); midnight: deep navy; club: the team colour, deepened; duo: the team colour into `second` */
+  shade?: 'dark' | 'midnight' | 'club' | 'duo';
+  /** The duo shade's second colour */
+  second?: string;
+  /** dots: the default faint grid */
+  pattern?: 'dots' | 'stripes' | 'hoops' | 'chevron' | 'halftone' | 'none';
+  /** Rays of light from the top corner and a glossy sweep across */
+  shine?: boolean;
 }
 
 export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
@@ -95,6 +108,14 @@ const INK = '#F8FAFC';
 const MUTED = 'rgba(248, 250, 252, 0.68)';
 const FAINT = 'rgba(248, 250, 252, 0.42)';
 
+/** A colour taken `k` of the way to white */
+const mixWhite = (c: string, k: number) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(c);
+  if (!m) return c;
+  const n = parseInt(m[1], 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * k);
+  return `#${[ch((n >> 16) & 255), ch((n >> 8) & 255), ch(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+};
 const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
 const rgba = (c: string, a: number) => {
   const n = parseInt(c.slice(1), 16);
@@ -377,7 +398,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
   const primary = hex(club.primary_color, '#10B981');
   const secondary = hex(club.secondary_color, primary);
-  const ink = readableClubInk(primary, 'dark'); // the club colour, lifted until it reads on the dark card
+  // The club colour, lifted until it reads on the dark card. On a background in the club colour itself
+  // it is lifted most of the way to white, so the accent words still stand out
+  const lifted = readableClubInk(primary, 'dark');
+  const ink = opts.look?.shade === 'club' || opts.look?.shade === 'duo' ? mixWhite(lifted, 0.6) : lifted;
   const clubCrest = await crest(club.logo_url);
   const [backgroundPhoto, motmPhoto] = await Promise.all([
     opts.background?.src ? loadImage(opts.background.src) : Promise.resolve(null),
@@ -396,6 +420,28 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   // photo, darkened so the text reads, and a softer glow)
   ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, W, H);
+  const look = opts.look || {};
+  if (!photo && look.shade && look.shade !== 'dark') {
+    const deep = (c: string, k: number) => {
+      const n = parseInt(c.slice(1), 16);
+      return `rgb(${Math.round(((n >> 16) & 255) * k)}, ${Math.round(((n >> 8) & 255) * k)}, ${Math.round((n & 255) * k)})`;
+    };
+    const g = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    if (look.shade === 'midnight') {
+      g.addColorStop(0, '#13234A');
+      g.addColorStop(1, '#060B1A');
+    } else if (look.shade === 'club') {
+      g.addColorStop(0, deep(primary, 0.62));
+      g.addColorStop(0.55, deep(primary, 0.32));
+      g.addColorStop(1, deep(primary, 0.14));
+    } else {
+      const two = hex(look.second, '#0F172A');
+      g.addColorStop(0, deep(primary, 0.6));
+      g.addColorStop(1, deep(two, 0.55));
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H, opts.background?.focusY ?? 0.5);
     const dim = Math.min(0.9, Math.max(0.15, opts.background?.dim ?? 0.55));
@@ -441,8 +487,69 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillStyle = streak;
     ctx.fillRect(-90, -H, 180, H * 2);
     ctx.restore();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-    for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+    const pattern = look.pattern || 'dots';
+    ctx.save();
+    if (pattern === 'dots') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+      for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+    } else if (pattern === 'stripes') {
+      // Broad diagonal kit stripes
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(-0.5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      for (let x = -H * 1.5; x < H * 1.5; x += 140) ctx.fillRect(x, -H * 1.5, 70, H * 3);
+    } else if (pattern === 'hoops') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+      for (let y = 0; y < H; y += 120) ctx.fillRect(0, y, W, 60);
+    } else if (pattern === 'chevron') {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.075)';
+      ctx.lineWidth = 28;
+      for (let y = -200; y < H + 200; y += 150) {
+        ctx.beginPath();
+        ctx.moveTo(-40, y + 220);
+        ctx.lineTo(W / 2, y);
+        ctx.lineTo(W + 40, y + 220);
+        ctx.stroke();
+      }
+    } else if (pattern === 'halftone') {
+      // Dots that grow towards the bottom corner
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+      for (let y = 18; y < H; y += 28) for (let x = 18; x < W; x += 28) {
+        const t = Math.max(0, (x / W + y / H) / 2 - 0.35) / 0.65;
+        if (t > 0) { ctx.beginPath(); ctx.arc(x, y, 1 + t * 8, 0, Math.PI * 2); ctx.fill(); }
+      }
+    }
+    ctx.restore();
+    if (look.shine) {
+      // Rays of light fanning down from the top left, then a soft glossy sweep across the card
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const ox = W * 0.12;
+      const oy = -H * 0.08;
+      for (let i = 0; i < 7; i++) {
+        const a = 0.35 + i * 0.16;
+        const spread = 0.035 + (i % 3) * 0.015;
+        const len = H * 1.4;
+        const ray = ctx.createRadialGradient(ox, oy, 0, ox, oy, len);
+        ray.addColorStop(0, `rgba(255, 255, 255, ${0.13 - i * 0.008})`);
+        ray.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = ray;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox + Math.cos(a - spread) * len, oy + Math.sin(a - spread) * len);
+        ctx.lineTo(ox + Math.cos(a + spread) * len, oy + Math.sin(a + spread) * len);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      const sheen = ctx.createLinearGradient(0, H * 0.15, W, H * 0.55);
+      sheen.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      sheen.addColorStop(0.48, 'rgba(255, 255, 255, 0)');
+      sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0.07)');
+      sheen.addColorStop(0.56, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sheen;
+      ctx.fillRect(0, 0, W, H);
+    }
     if (clubCrest) {
       ctx.save();
       ctx.globalAlpha = 0.07;

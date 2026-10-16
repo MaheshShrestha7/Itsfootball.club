@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEve
 import Link from 'next/link';
 import { ArrowRight, Download, ImagePlus, Lock, RotateCcw, Share2, X } from 'lucide-react';
 import { FORMAT_PRESETS } from '@/components/TacticalPitch';
-import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type MarkerShape } from '@/lib/share-card';
+import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type CardLook, type MarkerShape } from '@/lib/share-card';
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
 import { juniorPublicName } from '@/lib/teams';
 
@@ -138,6 +138,8 @@ interface State {
   marker: MarkerShape;
   /** Players in the squad, starters included (the rest are subs), up to MAX_SQUAD */
   squad: number;
+  /** Background shade, pattern and shine of the image */
+  look: Required<CardLook>;
   /** The subs' names and numbers, as far as they've been typed (the rest take the next shirt numbers) */
   subs: Player[];
 }
@@ -163,6 +165,7 @@ function fresh(format: Format, shape?: string, players: Player[] = []): State {
     marker: 'circle',
     squad: Math.min(MAX_SQUAD, coords.length + DEFAULT_SUBS),
     subs: [],
+    look: { shade: 'dark', second: '#0F172A', pattern: 'dots', shine: false },
   };
 }
 
@@ -213,6 +216,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
         // A lineup saved before subs existed, or a squad out of range, gets the default squad
         if (!Number.isInteger(next.squad) || next.squad < next.coords.length || next.squad > MAX_SQUAD) next.squad = fresh(saved.format).squad;
         if (!Array.isArray(next.subs)) next.subs = [];
+        next.look = { ...fresh(saved.format).look, ...(saved.look || {}) };
         setState(next);
       }
     } catch { /* storage blocked or corrupt */ }
@@ -331,6 +335,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
     } as unknown as Match;
     return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', {
       format: state.size, headline: ['STARTING', size.word], keepOrder: true, marker: state.marker,
+      look: state.look,
       subs: subs.map(p => ({ name: p.name.trim(), number: parseInt(p.number, 10) || 0 })).filter(p => p.name),
       sponsors,
     });
@@ -569,6 +574,48 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
               </label>
             )}
           </div>
+        </div>
+
+        <div className="form-group">
+          <span className="form-label" id="lb-shade">Background</span>
+          <div className="lineup-tool-segment" role="radiogroup" aria-labelledby="lb-shade">
+            {([['dark', 'Dark'], ['midnight', 'Midnight'], ['club', 'Team colour'], ['duo', 'Two-tone']] as const).map(([key, label]) => (
+              <button key={key} type="button" role="radio" aria-checked={state.look.shade === key}
+                className={state.look.shade === key ? 'is-active' : ''} onClick={() => update({ look: { ...state.look, shade: key } })}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {state.look.shade === 'duo' && (
+            <div className="lineup-tool-colours" style={{ marginTop: '0.5rem' }}>
+              <span className="lineup-tool-optional" style={{ fontSize: '0.8rem' }}>Second colour</span>
+              {['#0F172A', '#1E3A8A', '#7F1D1D', '#FACC15', '#F8FAFC', '#7C3AED'].map(c => (
+                <button key={c} type="button" aria-label={`Second colour ${c}`} aria-pressed={state.look.second === c}
+                  className={`lineup-tool-swatch ${state.look.second === c ? 'is-active' : ''}`} style={{ background: c }} onClick={() => update({ look: { ...state.look, second: c } })} />
+              ))}
+              <label className="lineup-tool-swatch lineup-tool-swatch-custom" title="Pick any colour">
+                <input type="color" value={state.look.second} aria-label="Pick any second colour" onChange={e => update({ look: { ...state.look, second: e.target.value.toUpperCase() } })} />
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div className="form-group">
+          <span className="form-label" id="lb-pattern">Pattern</span>
+          <div className="lineup-tool-patterns" role="radiogroup" aria-labelledby="lb-pattern">
+            {([['dots', 'Dots'], ['stripes', 'Stripes'], ['hoops', 'Hoops'], ['chevron', 'Chevron'], ['halftone', 'Halftone'], ['none', 'Plain']] as const).map(([key, label]) => (
+              <button key={key} type="button" role="radio" aria-checked={state.look.pattern === key}
+                className={`lineup-tool-pattern lineup-tool-pattern-${key} ${state.look.pattern === key ? 'is-active' : ''}`}
+                onClick={() => update({ look: { ...state.look, pattern: key } })}>
+                <span aria-hidden="true" />{label}
+              </button>
+            ))}
+          </div>
+          <label className="lineup-tool-toggle">
+            <input type="checkbox" checked={state.look.shine} onChange={e => update({ look: { ...state.look, shine: e.target.checked } })} />
+            <span>Light shine</span>
+            <span className="lineup-tool-optional">Rays of light and a glossy sweep</span>
+          </label>
         </div>
 
         <div className="form-group">
