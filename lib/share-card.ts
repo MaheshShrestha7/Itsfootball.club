@@ -38,6 +38,12 @@ export interface CardOptions {
   keepOrder?: boolean;
   /** The player marker's shape on the pitch (circle unless chosen in the free lineup builder) */
   marker?: MarkerShape;
+  /** The substitutes, listed under the lineup (the free lineup builder) */
+  subs?: { number: number; name: string }[];
+  /** The card's look (the free lineup builder): background shade, a pattern over it and a light shine */
+  look?: CardLook;
+  /** Sponsor logos (data or blob URLs from the person's own device), in a strip at the bottom of the lineup cards */
+  sponsors?: string[];
   /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
@@ -48,6 +54,17 @@ export interface CardOptions {
   scorerBalls?: boolean;
   /** Icons beside the date, the ground and the Player of the Match's stats (the free result graphic maker) */
   icons?: boolean;
+}
+
+export interface CardLook {
+  /** dark: near-black (the default); midnight: deep navy; club: the team colour, deepened; duo: the team colour into `second` */
+  shade?: 'dark' | 'midnight' | 'club' | 'duo';
+  /** The duo shade's second colour */
+  second?: string;
+  /** dots: the default faint grid */
+  pattern?: 'dots' | 'stripes' | 'hoops' | 'chevron' | 'halftone' | 'none';
+  /** Rays of light from the top corner and a glossy sweep across */
+  shine?: boolean;
 }
 
 export type MarkerShape = 'circle' | 'jersey' | 'square' | 'triangle' | 'hexagon';
@@ -91,6 +108,14 @@ const INK = '#F8FAFC';
 const MUTED = 'rgba(248, 250, 252, 0.68)';
 const FAINT = 'rgba(248, 250, 252, 0.42)';
 
+/** A colour taken `k` of the way to white */
+const mixWhite = (c: string, k: number) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(c);
+  if (!m) return c;
+  const n = parseInt(m[1], 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * k);
+  return `#${[ch((n >> 16) & 255), ch((n >> 8) & 255), ch(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+};
 const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
 const rgba = (c: string, a: number) => {
   const n = parseInt(c.slice(1), 16);
@@ -373,7 +398,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
   const primary = hex(club.primary_color, '#10B981');
   const secondary = hex(club.secondary_color, primary);
-  const ink = readableClubInk(primary, 'dark'); // the club colour, lifted until it reads on the dark card
+  // The club colour, lifted until it reads on the dark card. On a background in the club colour itself
+  // it is lifted most of the way to white, so the accent words still stand out
+  const lifted = readableClubInk(primary, 'dark');
+  const ink = opts.look?.shade === 'club' || opts.look?.shade === 'duo' ? mixWhite(lifted, 0.6) : lifted;
   const clubCrest = await crest(club.logo_url);
   const [backgroundPhoto, motmPhoto] = await Promise.all([
     opts.background?.src ? loadImage(opts.background.src) : Promise.resolve(null),
@@ -392,6 +420,28 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   // photo, darkened so the text reads, and a softer glow)
   ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, W, H);
+  const look = opts.look || {};
+  if (!photo && look.shade && look.shade !== 'dark') {
+    const deep = (c: string, k: number) => {
+      const n = parseInt(c.slice(1), 16);
+      return `rgb(${Math.round(((n >> 16) & 255) * k)}, ${Math.round(((n >> 8) & 255) * k)}, ${Math.round((n & 255) * k)})`;
+    };
+    const g = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    if (look.shade === 'midnight') {
+      g.addColorStop(0, '#13234A');
+      g.addColorStop(1, '#060B1A');
+    } else if (look.shade === 'club') {
+      g.addColorStop(0, deep(primary, 0.62));
+      g.addColorStop(0.55, deep(primary, 0.32));
+      g.addColorStop(1, deep(primary, 0.14));
+    } else {
+      const two = hex(look.second, '#0F172A');
+      g.addColorStop(0, deep(primary, 0.6));
+      g.addColorStop(1, deep(two, 0.55));
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H, opts.background?.focusY ?? 0.5);
     const dim = Math.min(0.9, Math.max(0.15, opts.background?.dim ?? 0.55));
@@ -437,8 +487,69 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillStyle = streak;
     ctx.fillRect(-90, -H, 180, H * 2);
     ctx.restore();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-    for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+    const pattern = look.pattern || 'dots';
+    ctx.save();
+    if (pattern === 'dots') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+      for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+    } else if (pattern === 'stripes') {
+      // Broad diagonal kit stripes
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(-0.5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      for (let x = -H * 1.5; x < H * 1.5; x += 140) ctx.fillRect(x, -H * 1.5, 70, H * 3);
+    } else if (pattern === 'hoops') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+      for (let y = 0; y < H; y += 120) ctx.fillRect(0, y, W, 60);
+    } else if (pattern === 'chevron') {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.075)';
+      ctx.lineWidth = 28;
+      for (let y = -200; y < H + 200; y += 150) {
+        ctx.beginPath();
+        ctx.moveTo(-40, y + 220);
+        ctx.lineTo(W / 2, y);
+        ctx.lineTo(W + 40, y + 220);
+        ctx.stroke();
+      }
+    } else if (pattern === 'halftone') {
+      // Dots that grow towards the bottom corner
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+      for (let y = 18; y < H; y += 28) for (let x = 18; x < W; x += 28) {
+        const t = Math.max(0, (x / W + y / H) / 2 - 0.35) / 0.65;
+        if (t > 0) { ctx.beginPath(); ctx.arc(x, y, 1 + t * 8, 0, Math.PI * 2); ctx.fill(); }
+      }
+    }
+    ctx.restore();
+    if (look.shine) {
+      // Rays of light fanning down from the top left, then a soft glossy sweep across the card
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const ox = W * 0.12;
+      const oy = -H * 0.08;
+      for (let i = 0; i < 7; i++) {
+        const a = 0.35 + i * 0.16;
+        const spread = 0.035 + (i % 3) * 0.015;
+        const len = H * 1.4;
+        const ray = ctx.createRadialGradient(ox, oy, 0, ox, oy, len);
+        ray.addColorStop(0, `rgba(255, 255, 255, ${0.13 - i * 0.008})`);
+        ray.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = ray;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox + Math.cos(a - spread) * len, oy + Math.sin(a - spread) * len);
+        ctx.lineTo(ox + Math.cos(a + spread) * len, oy + Math.sin(a + spread) * len);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      const sheen = ctx.createLinearGradient(0, H * 0.15, W, H * 0.55);
+      sheen.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      sheen.addColorStop(0.48, 'rgba(255, 255, 255, 0)');
+      sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0.07)');
+      sheen.addColorStop(0.56, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sheen;
+      ctx.fillRect(0, 0, W, H);
+    }
     if (clubCrest) {
       ctx.save();
       ctx.globalAlpha = 0.07;
@@ -585,15 +696,49 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       ctx.fillText(sub, W / 2, hlY + 100);
     }
 
+    // The subs and the sponsors' logos (the free lineup builder) sit at the bottom, above the watermark,
+    // and the pitch or list shrinks to make room for them
+    const subs = (opts.subs || []).filter(s => s.name.trim());
+    const sponsorImgs = (await Promise.all((opts.sponsors || []).slice(0, 6).map(loadImage))).filter((i): i is HTMLImageElement => !!i);
+    const sponsorH = sponsorImgs.length ? by(170, 118, 118) : 0;
+    let subLines: string[] = [];
+    let subSize = by(32, 28, 28);
+    if (subs.length) {
+      const items = subs.map(s => `${s.number > 0 ? `${s.number} ` : ''}${juniorPublicName(s.name)}`);
+      const room = W - M * 2 - 80;
+      const wrap = (size: number) => {
+        ctx.font = `600 ${size}px ${body}`;
+        const lines: string[] = [];
+        for (const item of items) {
+          const last = lines[lines.length - 1];
+          if (last && ctx.measureText(`${last}  ·  ${item}`).width <= room) lines[lines.length - 1] = `${last}  ·  ${item}`;
+          else lines.push(item);
+        }
+        return lines;
+      };
+      // Two lines at a readable size, else smaller, and at most three lines in the end
+      for (; subSize > 20 && wrap(subSize).length > 2; subSize -= 2);
+      subLines = wrap(subSize).slice(0, 3);
+      ctx.font = `600 ${subSize}px ${body}`;
+      if (subLines.length === 3) subLines[2] = ellipsize(ctx, subLines[2], room);
+    }
+    const subLineH = Math.round(subSize * 1.45);
+    const subHead = by(66, 56, 56);
+    const subsH = subLines.length ? subHead + subLineH * subLines.length + by(20, 14, 14) : 0;
+    const extrasGap = by(28, 20, 20);
+    // The lowest the lineup may reach: clear of the watermark (and, on a story, of the app's reply box)
+    const floor = H - by(240, 64, 46) - by(44, 30, 30) - sponsorH - (sponsorH && subsH ? 16 : 0) - subsH - (subsH || sponsorH ? extrasGap : 0);
+    const hasExtras = subsH > 0 || sponsorH > 0;
+
     // Players placed on the lineup pitch: drawn where the coach put them, else (or when asked) as a numbered list
     const placed = xi.filter(p => p.name?.trim() && Number.isFinite(p.x) && Number.isFinite(p.y));
     let after: number;
     if (kind === 'lineup' && lineupHasPositions(match)) {
       // The match page's vertical TacticalPitch, redrawn: striped grass, its markings, and each
       // player as a photo (or initials in club colours) with a shirt-number tag, armband and name tag
-      const pitchH = story ? 920 : 800;
-      const pitchW = Math.round(Math.min(W - M * 2, pitchH * (9 / 13) * 1.05));
       const top = story ? 625 : 430;
+      const pitchH = hasExtras ? Math.min(story ? 920 : 800, floor - top) : story ? 920 : 800;
+      const pitchW = Math.round(Math.min(W - M * 2, pitchH * (9 / 13) * 1.05));
       const left = (W - pitchW) / 2;
       const k = pitchW / 400; // the app's pitch is ~400px wide on a phone, where a marker is 44px
       ctx.save();
@@ -750,8 +895,8 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       });
       after = top + pitchH;
     } else {
-      const rowH = story ? 74 : 64;
       const top = story ? 670 : 470;
+      const rowH = hasExtras ? Math.min(story ? 74 : 64, Math.floor((floor - top - 48) / Math.max(1, xi.length))) : story ? 74 : 64;
       glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
       ctx.textAlign = 'left';
       xi.forEach((p, i) => {
@@ -761,19 +906,58 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
           ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
         }
         ctx.fillStyle = ink;
-        ctx.font = `900 ${story ? 44 : 38}px ${heading}`;
+        ctx.font = `900 ${Math.min(story ? 44 : 38, Math.round(rowH * 0.7))}px ${heading}`;
         ctx.textAlign = 'center';
         if (p.number > 0) ctx.fillText(String(p.number), M + 90, y); // no shirt number: no "0"
         ctx.textAlign = 'left';
         ctx.fillStyle = INK;
         const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
-        fit(ctx, name, 700, story ? 42 : 36, W - M * 2 - 220, body);
+        fit(ctx, name, 700, Math.min(story ? 42 : 36, Math.round(rowH * 0.66)), W - M * 2 - 220, body);
         ctx.fillText(name, M + 160, y);
       });
       ctx.textAlign = 'center';
       after = top + rowH * xi.length + 48;
     }
-    if (story && (day || time)) {
+    if (hasExtras) {
+      let y = floor + extrasGap;
+      if (subsH) {
+        // "SUBS" over the bench names, in a glass panel like the list's
+        glass(ctx, M, y, W - M * 2, subsH, 36);
+        ctx.fillStyle = ink;
+        spaced(ctx, 4);
+        ctx.font = `800 22px ${body}`;
+        ctx.fillText('SUBS', W / 2, y + subHead * 0.6);
+        spaced(ctx, 0);
+        ctx.fillStyle = INK;
+        ctx.font = `600 ${subSize}px ${body}`;
+        subLines.forEach((l, i) => ctx.fillText(l, W / 2, y + subHead + subLineH * i + subLineH / 2));
+        y += subsH + 16;
+      }
+      if (sponsorH) {
+        ctx.fillStyle = FAINT;
+        spaced(ctx, 4);
+        ctx.font = `700 20px ${body}`;
+        ctx.fillText('OUR SPONSORS', W / 2, y + 14);
+        spaced(ctx, 0);
+        // White tiles, so a logo made for a light page reads on the dark card
+        const gap = 18;
+        const tileH = sponsorH - by(40, 34, 34);
+        const tileW = Math.min(by(260, 240, 240), (W - M * 2 - gap * (sponsorImgs.length - 1)) / sponsorImgs.length);
+        let x = W / 2 - (tileW * sponsorImgs.length + gap * (sponsorImgs.length - 1)) / 2;
+        for (const img of sponsorImgs) {
+          roundRect(ctx, x, y + sponsorH - tileH, tileW, tileH, 18);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+          ctx.fill();
+          const pad = Math.round(tileH * 0.14);
+          const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
+          const w = img.naturalWidth * scale;
+          const h = img.naturalHeight * scale;
+          ctx.drawImage(img, x + (tileW - w) / 2, y + sponsorH - tileH + (tileH - h) / 2, w, h);
+          x += tileW + gap;
+        }
+      }
+    }
+    if (story && (day || time) && !hasExtras) {
       ctx.fillStyle = MUTED;
       const when = [day, time, match.venue].filter(Boolean).join(' · ');
       fit(ctx, when, 600, 34, W - M * 2, body);

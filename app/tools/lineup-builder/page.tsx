@@ -34,11 +34,13 @@ const FORMATIONS = [
 const QUESTIONS = [
   { q: 'What is the best free football lineup builder?', a: 'itsfootball.club\'s lineup builder is free with no account or ads. It covers 5, 7, 9 and 11-a-side with 28 formations plus free form, and downloads a post or story image for social media and WhatsApp.' },
   { q: 'How do I make a soccer lineup graphic?', a: 'Pick your format and formation, tap each player on the pitch to type their name and number, drag them into position, choose your team colour and badge, then press Download image. It takes about a minute.' },
-  { q: 'Do I need to sign up or install an app?', a: 'No. It runs in your phone or computer browser with no login. Your lineup is kept only in your own browser, and the image is drawn on your device, so nothing is uploaded.' },
+  { q: 'Do I need to sign up or install an app?', a: 'No. It runs in your phone or computer browser with no login. Your lineup is kept only in your own browser, and the image is drawn on your device, so nothing is uploaded, not even your badge or sponsor logos.' },
+  { q: 'Can I add subs and sponsors to the lineup graphic?', a: 'Yes. Choose the squad size under Subs (up to 20 players, 15 for 11-a-side to start with) and type the subs\' names; they are listed under the lineup. Add up to 6 sponsor logos under Look and they appear in a strip along the bottom of the image.' },
   { q: 'What is the best formation for 7-a-side?', a: '2-3-1 is the most common 7-a-side formation in junior football, because it gives width in midfield and a clear striker. 3-2-1 is safer at the back, and 2-1-2-1 suits a team that keeps the ball.' },
   { q: 'What is the best formation for 9-a-side?', a: '3-2-3 is a popular 9-a-side shape for attacking width. 3-3-2 adds a midfielder for control, and 4-3-1 is the most defensive of the common shapes.' },
   { q: 'What is the best 5-a-side formation?', a: '1-2-1 (a diamond) is the usual 5-a-side shape: one defender, two wide players and a pivot up front. 2-1-1 is steadier at the back, and 2-2 is simple for casual games.' },
   { q: 'Can I show the lineup as a list instead of a pitch?', a: 'Yes. Choose List under Image style for a numbered team sheet with the captain marked. Pitch is the default.' },
+  { q: 'Can I change the background of the lineup graphic?', a: 'Yes. Under Look, pick a background (Dark, Midnight, your team colour, or Two-tone with a second colour), a pattern (dots, stripes, hoops, chevron, halftone or plain) and switch on Light shine for rays of light and a glossy sweep.' },
   { q: 'What size is the image?', a: 'Post is 1080 × 1350 for an Instagram or Facebook feed post and WhatsApp chats. Story is 1080 × 1920 for Instagram and Facebook stories and WhatsApp status.' },
   { q: 'Can I see who is available before I pick the team?', a: "Yes, with a free itsfootball.club club site. Players mark themselves available for each fixture, you pick the lineup from that squad, and it publishes to your club's match page with live scores." },
 ];
@@ -51,6 +53,9 @@ const FEATURES = [
   'Circle, jersey, square, hexagon or triangle player icons',
   'Team colour and your own badge',
   'Pitch or list layout',
+  'Subs bench, up to 20 players in the squad',
+  'Sponsor logos along the bottom',
+  'Backgrounds in dark, midnight, your team colour or two-tone, with stripes, hoops, chevron or halftone patterns and an optional light shine',
   'Post (4:5) and story (9:16) PNG download',
   'No sign-up, nothing uploaded',
 ];
