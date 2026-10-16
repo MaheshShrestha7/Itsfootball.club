@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/auth-context';
 import { BrandWordmark } from '@/components/BrandLogo';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import { useDialog } from '@/lib/use-escape-to-close';
-import { Lock, X, KeyRound, AlertCircle, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
+import { X } from 'lucide-react';
+import { AuthAlert, AuthTabs, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -34,6 +35,13 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
   const [canResend, setCanResend] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
+  // "Check your inbox" after a reset email or a sign-up that needs its email confirmed
+  const [sentTo, setSentTo] = useState<{ kind: 'reset' | 'confirm'; email: string } | null>(null);
+  const shake = useShake<HTMLFormElement>(errorMsg);
+  // Opening the popup again starts from the form, not an old "Check your inbox"
+  useEffect(() => {
+    if (!isOpen) setSentTo(null);
+  }, [isOpen]);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -66,7 +74,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         const res = await sendPasswordReset(email, captchaToken);
         if (!res.success) setErrorMsg(res.error || 'Could not send the reset email.');
         // Same message whether or not there is an account (no account fishing)
-        else setNoticeMsg(`If there's an account for ${email.trim()}, we've emailed it a link to choose a new password. Check your spam folder too.`);
+        else setSentTo({ kind: 'reset', email: email.trim() });
       } else if (mode === 'login') {
         const res = await login(email, password, captchaToken);
         if (!res.success) {
@@ -83,8 +91,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         if (!res.success) {
           setErrorMsg(res.error || 'Failed to register account.');
         } else if (res.needsEmailConfirmation) {
-          setNoticeMsg(`Account created. We sent a confirmation link to ${email.trim()}. Click it to finish signing in (check your spam folder too).`);
-          setCanResend(true);
+          setSentTo({ kind: 'confirm', email: email.trim() });
           setMode('login');
           setPassword('');
         } else {
@@ -131,6 +138,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         overflowY: 'auto',
         padding: '1.5rem 1rem',
       }}
+      className="auth-modal-backdrop"
       onClick={onClose}
     >
       <div
@@ -138,9 +146,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
-        className="glass-panel"
+        className="glass-panel auth-modal"
         style={{
-          maxWidth: '480px',
+          maxWidth: '460px',
           width: '100%',
           padding: '2.25rem',
           background: 'var(--bg-surface-elevated)',
@@ -176,178 +184,87 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', redi
         </button>
 
         {/* Header Logo */}
-        <BrandWordmark height={48} style={{ margin: '0.25rem auto 1.25rem auto' }} />
+        <BrandWordmark height={44} style={{ margin: '0.25rem auto 1.1rem auto' }} />
 
-        <h3 id="auth-modal-title" style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-          {mode === 'reset' ? 'Reset your password' : mode === 'login' ? 'Sign In to itsfootball.club' : 'Create Football Profile'}
+        {sentTo ? (
+          <InboxSent email={sentTo.email} resendBusy={submitting}
+            title={sentTo.kind === 'confirm' ? 'Confirm your email' : 'Check your inbox'}
+            onResend={() => (sentTo.kind === 'confirm' ? handleResend() : handleSubmit({ preventDefault() {} } as React.FormEvent))}
+            onChangeEmail={() => { setSentTo(null); setErrorMsg(null); setNoticeMsg(null); }}
+            extra={<>
+            <div style={{ marginTop: '1rem' }}><Captcha ref={captcha} onToken={setCaptchaToken} /></div>
+            {errorMsg && <div style={{ marginTop: '0.75rem', textAlign: 'left' }}><AuthAlert kind="error">{errorMsg}</AuthAlert></div>}
+            </>}>
+            {sentTo.kind === 'confirm'
+              ? <>Your account is made. Open the link we sent to <strong style={{ color: 'var(--text-primary)' }}>{sentTo.email}</strong> to finish signing in.</>
+              : <>If there&apos;s an account for <strong style={{ color: 'var(--text-primary)' }}>{sentTo.email}</strong>, we&apos;ve emailed it a link to choose a new password.</>}
+          </InboxSent>
+        ) : (<>
+        <h3 id="auth-modal-title" style={{ fontSize: '1.45rem', fontWeight: 900, textAlign: 'center', color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+          {mode === 'reset' ? 'Reset your password' : mode === 'login' ? 'Welcome back' : 'Create your account'}
         </h3>
-        <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.4rem', lineHeight: 1.5 }}>
           {mode === 'reset'
             ? 'Enter your account email and we\'ll send you a link to choose a new password.'
             : mode === 'login'
-            ? 'Access your member digital pass, club management, or match reporting.'
-            : 'Join the premier platform for club management and matchday passes.'}
+            ? 'Sign in to run your club, your member pass and match reporting.'
+            : 'For club owners and committee. Joining a club as a player or supporter? Use that club\'s Join page.'}
         </p>
 
-        {/* Tab switch */}
         {allowSignup && mode !== 'reset' && (
-        <div style={{
-          display: 'flex',
-          background: 'rgba(var(--shade-rgb), 0.3)',
-          padding: '0.3rem',
-          borderRadius: '10px',
-          marginBottom: '1.5rem',
-          border: '1px solid var(--border-subtle)',
-        }}>
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setErrorMsg(null); }}
-            style={{
-              flex: 1,
-              padding: '0.5rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: mode === 'login' ? 'var(--club-primary)' : 'transparent',
-              color: mode === 'login' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setErrorMsg(null); }}
-            style={{
-              flex: 1,
-              padding: '0.5rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: mode === 'signup' ? 'var(--club-primary)' : 'transparent',
-              color: mode === 'signup' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            Register
-          </button>
-        </div>
+          <AuthTabs idPrefix="authmodal" label="Sign in or create an account" value={mode as 'login' | 'signup'}
+            onChange={m => { setMode(m); setErrorMsg(null); }}
+            options={[['login', 'Sign in'], ['signup', 'Create account']] as const} />
         )}
 
-        {/* Error Alert */}
-
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+        <form id="authmodal-panel" ref={shake} key={mode} className="auth-panel" onSubmit={handleSubmit}>
           {mode === 'signup' && (
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="authmodal-full-name" className="form-label" style={{ fontSize: '0.78rem' }}>Full Name *</label>
-              <input autoComplete="name" id="authmodal-full-name"
-                type="text"
-                required
-                className="form-input"
-                placeholder="Your full name"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-              />
+            <div className="auth-field">
+              <label htmlFor="authmodal-full-name" className="form-label">Full name</label>
+              <input autoComplete="name" id="authmodal-full-name" type="text" required className="form-input" style={{ minHeight: '46px' }}
+                placeholder="Your full name" value={fullName} onChange={e => setFullName(e.target.value)} />
             </div>
           )}
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="authmodal-email-address" className="form-label" style={{ fontSize: '0.78rem' }}>Email Address *</label>
-            <input autoComplete="email" id="authmodal-email-address"
-              type="email"
-              required
-              className="form-input"
-              placeholder="name@footballclub.org"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-          </div>
+          <EmailField id="authmodal-email-address" value={email} onChange={setEmail} />
 
           {mode !== 'reset' && (
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="authmodal-password" className="form-label" style={{ fontSize: '0.78rem' }}>Password</label>
-            <input id="authmodal-password"
-              type="password"
-              required
-              minLength={mode === 'signup' ? 8 : undefined}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              className="form-input"
-              placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••••••'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-            {mode === 'login' && (
-              <button
-                type="button"
-                onClick={() => { setMode('reset'); setErrorMsg(null); setNoticeMsg(null); setCanResend(false); }}
-                style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.4rem', color: 'var(--club-ink)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Forgot password?
-              </button>
-            )}
+            <PasswordField id="authmodal-password" value={password} onChange={setPassword}
+              isNew={mode === 'signup'} showStrength={mode === 'signup'}
+              aside={mode === 'login' ? (
+                <button type="button" className="auth-link" onClick={() => { setMode('reset'); setErrorMsg(null); setNoticeMsg(null); setCanResend(false); }}>
+                  Forgot password?
+                </button>
+              ) : undefined} />
+          )}
+
+          <div style={{ marginBottom: '1rem' }}>
+            <Captcha ref={captcha} onToken={setCaptchaToken} />
           </div>
-          )}
 
-          <Captcha ref={captcha} onToken={setCaptchaToken} />
-
-    {errorMsg && (
-      <div
-        style={{
-          background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid #EF4444',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.65rem 0.85rem',
-          color: 'var(--c-red)',
-          fontSize: '0.78rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: 0,
-        }}
-        role="alert"
-      >
-        <AlertCircle size={15} style={{ flexShrink: 0 }} />
-        <span>{errorMsg}</span>
-      </div>
-    )}
-
-          {noticeMsg && (
-            <div role="status" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10B981', color: 'var(--c-green)', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.8rem' }}>
-              {noticeMsg}
-            </div>
-          )}
+          {errorMsg && <AuthAlert kind="error">{errorMsg}</AuthAlert>}
+          {noticeMsg && <AuthAlert kind="ok">{noticeMsg}</AuthAlert>}
 
           {canResend && (
-            <button type="button" onClick={handleResend} disabled={submitting} className="btn btn-secondary" style={{ height: '40px', width: '100%' }}>
+            <button type="button" onClick={handleResend} disabled={submitting} className="btn btn-secondary" style={{ minHeight: '44px', width: '100%', marginBottom: '0.75rem' }}>
               Resend confirmation email
             </button>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn btn-primary"
-            style={{ height: '44px', width: '100%', marginTop: '0.5rem' }}
-          >
-            <KeyRound size={16} />
-            <span>{submitting ? 'Processing...' : mode === 'reset' ? 'Email Me a Reset Link' : mode === 'login' ? 'Sign In to Account' : 'Complete Registration'}</span>
-          </button>
+          <SubmitButton busy={submitting} busyLabel={mode === 'reset' ? 'Sending...' : mode === 'login' ? 'Signing in...' : 'Creating your account...'}
+            >
+            {mode === 'reset' ? 'Email me a reset link' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </SubmitButton>
 
           {mode === 'reset' && (
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setErrorMsg(null); setNoticeMsg(null); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-            >
-              Back to sign in
-            </button>
+            <div className="auth-foot" style={{ marginTop: '0.9rem' }}>
+              <button type="button" className="auth-link" onClick={() => { setMode('login'); setErrorMsg(null); setNoticeMsg(null); }}>
+                Back to sign in
+              </button>
+            </div>
           )}
         </form>
+        </>)}
       </div>
     </div>,
     document.body

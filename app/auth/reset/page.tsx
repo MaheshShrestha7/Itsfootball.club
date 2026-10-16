@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { isPlatformHost } from '@/lib/slugs';
+import { KeyRound, Check } from 'lucide-react';
+import { AuthAlert, PasswordField, SubmitButton } from '@/components/auth/AuthBits';
 
 // Where the "reset your password" email lands (see sendPasswordReset in lib/auth-context.tsx). The
 // link has already signed the person in, so all that's left is choosing the new password.
@@ -32,8 +34,9 @@ export default function ResetPasswordPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', background: 'var(--bg-pitch)', color: 'var(--text-primary)' }}>
-      <div className="glass-panel" style={{ maxWidth: '440px', width: '100%', padding: '2.25rem 2rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '0.5rem' }}>Choose a new password</h1>
+      <div className="glass-panel auth-card" style={{ maxWidth: '440px', width: '100%', padding: '2.25rem 2rem' }}>
+        <div className="auth-sent-icon" aria-hidden="true" style={{ width: '64px', height: '64px', borderRadius: '18px', marginBottom: '0.9rem' }}><KeyRound size={28} /></div>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 900, textAlign: 'center', marginBottom: '0.5rem' }}>Choose a new password</h1>
 
         {isLoading ? (
           <p role="status" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Checking your link...</p>
@@ -52,20 +55,17 @@ export default function ResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>For {user.email}</p>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="reset-password" className="form-label">New password</label>
-              <input id="reset-password" type="password" required minLength={8} autoComplete="new-password" className="form-input"
-                placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
+            <div>
+              <PasswordField id="reset-password" label="New password" value={password} onChange={setPassword} isNew showStrength />
+              <PasswordField id="reset-password-confirm" label="Type it again" value={confirm} onChange={setConfirm} isNew />
+              {confirm && (
+                <div className="auth-field-hint" role="status" style={{ marginTop: '-0.6rem', marginBottom: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.35rem', color: confirm === password ? 'var(--c-green)' : 'var(--text-muted)' }}>
+                  {confirm === password ? <><Check size={14} /> Passwords match</> : 'Keep typing: the two passwords don\'t match yet'}
+                </div>
+              )}
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="reset-password-confirm" className="form-label">Type it again</label>
-              <input id="reset-password-confirm" type="password" required minLength={8} autoComplete="new-password" className="form-input"
-                value={confirm} onChange={e => setConfirm(e.target.value)} />
-            </div>
-            {error && <div role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem' }}>{error}</div>}
-            <button type="submit" disabled={saving} className="btn btn-primary" style={{ width: '100%' }}>
-              {saving ? 'Saving...' : 'Save new password'}
-            </button>
+            {error && <AuthAlert kind="error">{error}</AuthAlert>}
+            <SubmitButton busy={saving} busyLabel="Saving...">Save new password</SubmitButton>
           </form>
         )}
       </div>

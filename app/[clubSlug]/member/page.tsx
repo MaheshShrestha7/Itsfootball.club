@@ -51,8 +51,10 @@ import {
   AlertCircle,
   ExternalLink,
   Check,
-  ChevronRight
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react';
+import { AuthAlert, AuthTabs, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { DATE_LOCALE } from '@/lib/dates';
 
@@ -89,6 +91,14 @@ function ageFrom(dateOfBirth: string): number | null {
 }
 
 /** A first guess at "joining as" from the tier name; the applicant can change it */
+// A short burst in the club's colours when an application goes in (skipped when reduced motion is on)
+function celebrate(primary: string, accent: string) {
+  if (typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  import('canvas-confetti').then(({ default: confetti }) => {
+    confetti({ particleCount: 90, spread: 70, startVelocity: 38, origin: { y: 0.35 }, colors: [primary, accent, '#FFFFFF'], disableForReducedMotion: true, zIndex: 9999 });
+  }).catch(() => {});
+}
+
 const guessRole = (tier: string): 'player' | 'supporter' =>
   /player|squad|academy|youth|junior|senior|team/i.test(tier) ? 'player' : 'supporter';
 
@@ -175,10 +185,20 @@ export default function MemberPortalPage({
     && !!joinableTeams.find(t => t.id === signupForm.teamId)?.is_junior;
   const needsGuardian = isMinor || juniorTeamPicked || addingChild;
   const [signupError, setSignupError] = useState<string | null>(null);
+  // After a sign-in link or reset email goes out, the card shows "Check your inbox" for this address
+  const [sentTo, setSentTo] = useState<{ kind: 'link' | 'reset'; email: string } | null>(null);
+  // The application form's step (1 about you, 2 membership, 3 confirm) and which way it last moved
+  const [joinStep, setJoinStep] = useState(1);
+  const [joinDir, setJoinDir] = useState<'back' | undefined>(undefined);
+  const goJoinStep = (n: number) => { setJoinDir(n < joinStep ? 'back' : undefined); setJoinStep(n); joinShake.current?.closest('.auth-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const signInShake = useShake<HTMLFormElement>(loginError);
+  const joinShake = useShake<HTMLFormElement>(signupError);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
   // Signed in, not a member yet: their own application, and whether they're filling it in again
   const [myApplication, setMyApplication] = useState<MyApplication | null>(null);
   const [reapplying, setReapplying] = useState(false);
+  // A new visit to the form starts at step 1
+  useEffect(() => { setJoinStep(1); setJoinDir(undefined); }, [gatewayTab, addingChild, reapplying]);
   const [submitting, setSubmitting] = useState(false);
   // Club admins and staff who have a password can still use it
   // Member sign-in: an emailed link, or a password for people who set one
@@ -443,6 +463,9 @@ export default function MemberPortalPage({
   // Email a one-time sign-in link (Supabase Auth)
   const handleRequestMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    await sendMagicLink();
+  };
+  const sendMagicLink = async () => {
     setLoginError(null);
     setLoginNotice(null);
 
@@ -467,7 +490,7 @@ export default function MemberPortalPage({
       return;
     }
     // Same message whether or not the email belongs to a member (no account enumeration)
-    setLoginNotice('If this email has a membership or an application with us, a sign-in link is on its way. Check your inbox.');
+    setSentTo({ kind: 'link', email: loginEmail.trim().toLowerCase() });
   };
 
   // Password sign-in. The page follows the auth state, so it switches to the member's pass by itself.
@@ -497,13 +520,15 @@ export default function MemberPortalPage({
     captcha.current?.reset();
     if (!res.success) return setLoginError(res.error || 'Could not send the reset email.');
     // Same message whether or not there is an account (no account fishing)
-    setLoginNotice(`If there's an account for ${loginEmail.trim()}, we've emailed it a link to choose a new password.`);
+    setSentTo({ kind: 'reset', email: loginEmail.trim() });
   };
 
   // Handle Membership Application Submit
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
+    // Enter in an earlier step moves on rather than sending
+    if (joinStep < 3) return goJoinStep(joinStep + 1);
     if (submitting) return;
     if (!signupForm.termsAccepted) return setSignupError('Please accept the club terms and privacy policy.');
     if (needsGuardian && !signupForm.guardianEmail.trim()) return setSignupError('Please add the parent or guardian\'s email: the club emails them about the player, and they sign in with it.');
@@ -623,6 +648,7 @@ export default function MemberPortalPage({
 
     if (res.success && res.member) {
       setSubmittedApplication(res.member);
+      celebrate(club.primary_color, club.accent_color);
     } else {
       setSignupError(res.message || 'Could not submit application.');
     }
@@ -740,51 +766,16 @@ export default function MemberPortalPage({
         {/* UN-AUTHENTICATED: GATEWAY & APPLICATION PORTAL */}
         {/* ==================================================================== */}
         {!activeMember || addingChild ? (
-          <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-            {/* Club Brand Card */}
-            <div className="glass-panel" style={{
-              padding: '2.5rem 2rem',
-              textAlign: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-              marginBottom: '2rem',
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '4px',
-                background: `linear-gradient(90deg, ${club.primary_color}, #F59E0B)`,
-              }} />
-
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                <img loading="eager" decoding="async" width={74} height={74}
-                  src={club.logo_url || DEFAULT_CREST}
-                  alt={`${club.name} crest`}
-                  style={{
-                    width: '74px',
-                    height: '74px',
-                    borderRadius: '18px',
-                    border: `3px solid ${club.primary_color}`,
-                    objectFit: 'cover',
-                    background: '#000000',
-                  }}
-                />
+          <div style={{ maxWidth: gatewayTab === 'signin' && !addingChild && !reapplying ? '560px' : '640px', margin: '0 auto' }}>
+            {!(addingChild || reapplying || (!myApplication && !(childMembers.length > 0 && signedInEmail))) && (
+              <div className="glass-panel auth-card" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
+                <header className="auth-head" style={{ marginBottom: 0 }}>
+                  <img loading="eager" decoding="async" width={64} height={64} className="auth-crest"
+                    src={club.logo_url || DEFAULT_CREST} alt={`${club.name} crest`} />
+                  <h1>{club.name} members</h1>
+                </header>
               </div>
-
-              <span className="badge badge-primary" style={{ marginBottom: '0.75rem', padding: '0.25rem 0.75rem' }}>
-                OFFICIAL MEMBER GATEWAY
-              </span>
-
-              <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                {club.name} Member Portal
-              </h1>
-
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '460px', margin: '0 auto', lineHeight: 1.5 }}>
-                Access your official virtual turnstile pass, track squad and club season statistics, and message club administration.
-              </p>
-            </div>
+            )}
 
             {/* A parent or guardian (not a member themselves): their children, instead of the tabs */}
             {!activeMember && childMembers.length > 0 && !addingChild && signedInEmail && (
@@ -869,249 +860,101 @@ export default function MemberPortalPage({
 
             {/* Gateway Switcher Tabs */}
             {(addingChild || reapplying || (!myApplication && !(childMembers.length > 0 && signedInEmail))) && (<>
-            {!addingChild && (<div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.5rem',
-              background: 'rgba(var(--shade-rgb), 0.4)',
-              padding: '0.35rem',
-              borderRadius: '12px',
-              border: '1px solid var(--border-subtle)',
-              marginBottom: '1.75rem',
-            }}>
-              <button
-                type="button"
-                onClick={() => { setGatewayTab('signin'); setSubmittedApplication(null); }}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '9px',
-                  border: 'none',
-                  background: gatewayTab === 'signin' ? 'var(--club-primary)' : 'transparent',
-                  color: gatewayTab === 'signin' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-                  fontWeight: 800,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.4rem',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <User size={16} />
-                <span>Member Sign In</span>
-              </button>
+            <div className="glass-panel auth-card">
+              <header className={`auth-head${gatewayTab === 'signup' && (joinStep > 1 || submittedApplication) ? ' is-compact' : ''}`}>
+                <img loading="eager" decoding="async" width={64} height={64} className="auth-crest"
+                  src={club.logo_url || DEFAULT_CREST} alt={`${club.name} crest`} />
+                <h1>{addingChild ? 'Add your child' : gatewayTab === 'signin' ? `${club.name} members` : `Join ${club.name}`}</h1>
+                <p>{addingChild
+                  ? `Their details, then yours as their parent or guardian. ${club.name} will review the application and email you.`
+                  : gatewayTab === 'signin'
+                  ? 'Sign in to see your member pass, season stats and messages from the club.'
+                  : 'Apply in three quick steps. The committee reviews every application and emails you the outcome.'}</p>
+              </header>
 
-              <button
-                type="button"
-                onClick={() => { setGatewayTab('signup'); setSubmittedApplication(null); }}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '9px',
-                  border: 'none',
-                  background: gatewayTab === 'signup' ? 'var(--club-primary)' : 'transparent',
-                  color: gatewayTab === 'signup' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-                  fontWeight: 800,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.4rem',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Zap size={16} style={{ flexShrink: 0 }} />
-                {/* Short enough to stay on one line beside "Member Sign In" on a phone */}
-                <span style={{ whiteSpace: 'nowrap' }}>Apply to Join</span>
-              </button>
-            </div>)}
+              {!addingChild && !reapplying && !submittedApplication && (
+                <AuthTabs idPrefix="gateway" label="Sign in or join" value={gatewayTab}
+                  onChange={tab => { setGatewayTab(tab); setSubmittedApplication(null); setLoginError(null); setLoginNotice(null); }}
+                  options={[['signin', 'Sign in'], ['signup', 'Join the club']] as const} />
+              )}
 
-            {/* Error or Notice Alert */}
-            {loginNotice && (
-              <div style={{
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '8px',
-                padding: '0.85rem 1rem',
-                color: 'var(--c-green)',
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1.5rem',
-              }}>
-                <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
-                <span>{loginNotice}</span>
-              </div>
-            )}
+              <div id="gateway-panel" role="tabpanel" aria-labelledby={`gateway-tab-${gatewayTab}`} key={gatewayTab}
+                className="auth-panel" data-dir={gatewayTab === 'signin' ? 'back' : undefined}>
+            {gatewayTab === 'signin' && (sentTo ? (
+              <InboxSent email={sentTo.email} resendBusy={sendingLink}
+                title={sentTo.kind === 'reset' ? 'Check your inbox' : 'Check your inbox'}
+                onResend={() => (sentTo.kind === 'link' ? sendMagicLink() : handleForgotPassword())}
+                onChangeEmail={() => { setSentTo(null); setLoginError(null); }}
+                extra={<>
+                <div style={{ marginTop: '1rem' }}><Captcha ref={captcha} onToken={setCaptchaToken} /></div>
+                {loginError && <div style={{ marginTop: '0.75rem', textAlign: 'left' }}><AuthAlert kind="error">{loginError}</AuthAlert></div>}
+                </>}>
+                {sentTo.kind === 'reset'
+                  ? <>If there&apos;s an account for <strong style={{ color: 'var(--text-primary)' }}>{sentTo.email}</strong>, we&apos;ve emailed it a link to choose a new password.</>
+                  : <>If <strong style={{ color: 'var(--text-primary)' }}>{sentTo.email}</strong> has a membership or an application with {club.name}, a sign-in link is on its way. Open it on this device. It works once.</>}
+              </InboxSent>
+            ) : (
+              <>
+                <AuthTabs quiet idPrefix="signin" label="How to sign in" value={signInMethod}
+                  onChange={m => { setSignInMethod(m); setLoginError(null); setLoginNotice(null); }}
+                  options={[['link', 'Email me a link'], ['password', 'Password']] as const} />
 
-            {loginError && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '8px',
-                padding: '0.85rem 1rem',
-                color: 'var(--c-red)',
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1.5rem',
-              }}>
-                <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            {/* TAB 1: MEMBER SIGN IN */}
-            {gatewayTab === 'signin' && (
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <div role="tablist" aria-label="How to sign in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', padding: '0.3rem', marginBottom: '1.5rem', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
-                  {([['link', 'Magic Link', Sparkles], ['password', 'Password', KeyRound]] as const).map(([method, label, Icon]) => (
-                    <button
-                      key={method}
-                      type="button"
-                      role="tab"
-                      id={`signin-tab-${method}`}
-                      aria-selected={signInMethod === method}
-                      aria-controls="signin-tabpanel"
-                      onClick={() => { setSignInMethod(method); setLoginError(null); setLoginNotice(null); }}
-                      style={{
-                        padding: '0.55rem',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: signInMethod === method ? 'var(--bg-surface-elevated)' : 'transparent',
-                        boxShadow: signInMethod === method ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-                        color: signInMethod === method ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem',
-                      }}
-                    >
-                      <Icon size={15} />
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <form id="signin-tabpanel" role="tabpanel" aria-labelledby={`signin-tab-${signInMethod}`} onSubmit={signInMethod === 'link' ? handleRequestMagicLink : handlePasswordSignIn}>
-                  <div style={{ marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Member Email Address:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Mail size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input autoComplete="email" aria-label="Email"
-                        type="email"
-                        required
-                        value={loginEmail}
-                        onChange={e => setLoginEmail(e.target.value)}
-                        placeholder="e.g. member@email.com"
-                        className="form-input" style={{ paddingLeft: '2.5rem' }}
-                      />
-                    </div>
-                    {signInMethod === 'link' && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                        We&apos;ll email you a single-use link. Use the same address your membership was registered with.
-                      </div>
-                    )}
-                  </div>
+                <form id="signin-panel" role="tabpanel" aria-labelledby={`signin-tab-${signInMethod}`} ref={signInShake}
+                  onSubmit={signInMethod === 'link' ? handleRequestMagicLink : handlePasswordSignIn}>
+                  <EmailField id="member-signin-email" value={loginEmail} onChange={setLoginEmail}
+                    hint={signInMethod === 'link' ? 'Use the email your membership is registered with. No password needed.' : undefined} />
 
                   {signInMethod === 'password' && (
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <label htmlFor="member-signin-password" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                        Password:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Lock size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input id="member-signin-password"
-                          type="password"
-                          required
-                          autoComplete="current-password"
-                          value={loginPassword}
-                          onChange={e => setLoginPassword(e.target.value)}
-                          placeholder="Your password"
-                          className="form-input" style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                      <button type="button" onClick={handleForgotPassword} disabled={sendingLink} style={{ background: 'none', border: 'none', padding: 0, marginTop: '0.45rem', color: 'var(--club-ink)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                        Forgot password?
-                      </button>
-                    </div>
+                    <PasswordField id="member-signin-password" value={loginPassword} onChange={setLoginPassword}
+                      aside={<button type="button" className="auth-link" onClick={handleForgotPassword} disabled={sendingLink}>Forgot password?</button>} />
                   )}
 
                   <div style={{ marginBottom: '1rem' }}>
                     <Captcha ref={captcha} onToken={setCaptchaToken} />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={sendingLink}
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                  >
-                    {signInMethod === 'link' ? <Sparkles size={18} /> : <KeyRound size={18} />}
-                    <span>{signInMethod === 'link'
-                      ? (sendingLink ? 'Sending...' : 'Email Me a Sign-In Link')
-                      : (sendingLink ? 'Signing in...' : 'Sign In')}</span>
-                  </button>
+                  {loginError && <AuthAlert kind="error">{loginError}</AuthAlert>}
+                  {loginNotice && <AuthAlert kind="ok">{loginNotice}</AuthAlert>}
+
+                  <SubmitButton busy={sendingLink} busyLabel={signInMethod === 'link' ? 'Sending your link...' : 'Signing in...'}
+                    >
+                    {signInMethod === 'link' ? 'Email me a sign-in link' : 'Sign in'}
+                  </SubmitButton>
                 </form>
 
                 {signedInEmail && !activeMember ? (
-                  <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  <div className="auth-foot">
                     Signed in as {signedInEmail}.{' '}
-                    <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
-                      Use a different email
-                    </button>
+                    <button type="button" className="auth-link" onClick={handleLogout} style={{ minHeight: '44px', padding: '0 0.4rem' }}>Use a different email</button>
                   </div>
                 ) : (
-                  <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    Not a member yet?{' '}
-                    <button type="button" onClick={() => setGatewayTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
-                      Apply for membership
-                    </button>
+                  <div className="auth-foot">
+                    New to {club.name}?{' '}
+                    <button type="button" className="auth-link" onClick={() => setGatewayTab('signup')} style={{ minHeight: '44px', padding: '0 0.4rem' }}>Apply to join</button>
                   </div>
                 )}
-              </div>
-            )}
+              </>
+            ))}
 
-            {/* TAB 2: APPLY FOR MEMBERSHIP (SIGN-UP FORM) */}
             {gatewayTab === 'signup' && (
-              <div className="glass-panel" style={{ padding: '2rem' }}>
+              <>
                 {submittedApplication ? (
                   /* Application Confirmation Screen */
-                  <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                    <div style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '50%',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      border: '2px solid #F59E0B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1.25rem auto',
-                    }}>
-                      <Clock size={32} color="var(--c-amber)" />
+                  <div className="auth-sent" role="status" style={{ padding: '0.5rem 0' }}>
+                    <div className="auth-sent-icon" aria-hidden="true" style={{ color: 'var(--c-amber)', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.35)' }}>
+                      <Clock size={34} />
+                      <span className="auth-sent-tick">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                      </span>
                     </div>
+                    <h2>Application sent, {submittedApplication.full_name.split(' ')[0]}</h2>
+                    <p>Your application for <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.membership_tier}</strong> is with the {club.name} committee.</p>
 
-                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', marginBottom: '0.75rem' }}>
-                      ⏳ APPLICATION PENDING COMMITTEE REVIEW
-                    </span>
-
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                      Application Received, {submittedApplication.full_name}!
-                    </h2>
-
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 1.5rem auto' }}>
-                      Your membership application for <strong>{submittedApplication.membership_tier}</strong> has been safely recorded in the {club.name} administrative queue.
-                      We&apos;ll email you as soon as the committee has decided. Once you&apos;re approved, your digital pass is activated and you can sign in.
-                    </p>
+                    <ol className="auth-next" aria-label="What happens next">
+                      <li className="is-done"><strong>Application sent</strong><span>Just now</span></li>
+                      <li className="is-now"><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
+                      <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>Then sign in here for your member pass</span></li>
+                    </ol>
 
                     <div style={{
                       background: 'rgba(var(--shade-rgb), 0.35)',
@@ -1126,9 +969,7 @@ export default function MemberPortalPage({
                       border: '1px solid var(--border-subtle)',
                     }}>
                       <div>Applicant: <strong className="text-primary">{submittedApplication.full_name}</strong></div>
-                      <div>Email: <strong className="text-primary">{submittedApplication.guardian_email || submittedApplication.email}</strong></div>
-                      <div>Membership Tier: <strong style={{ color: 'var(--c-green)' }}>{submittedApplication.membership_tier}</strong></div>
-                      <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{applicationRef(submittedApplication.id)}</code></div>
+                                            <div>Application Ref: <code style={{ color: 'var(--c-amber)' }}>{applicationRef(submittedApplication.id)}</code></div>
                     </div>
 
                     {(() => {
@@ -1158,42 +999,27 @@ export default function MemberPortalPage({
                         className="btn btn-primary"
                         style={{ padding: '0.75rem 1.5rem' }}
                       >
-                        Return to Member Sign-In
+                        Back to sign in
                       </button>
                     )}
                   </div>
                 ) : (
-                  /* Application Registration Form */
-                  <form onSubmit={handleSignupSubmit}>
-                    <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)', paddingBottom: '0.75rem' }}>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                        {addingChild ? 'Apply for your child' : 'Club Membership Application'}
-                      </h2>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        {addingChild
-                          ? `Their details, then yours as their parent or guardian. ${club.name} will review the application and email you.`
-                          : `Join the ${club.name} community. Applications are reviewed by club administration.`}
-                      </p>
-                    </div>
+                  /* Application form, in three steps. Only the current step is on the page, so the browser checks just its fields. */
+                  <form onSubmit={handleSignupSubmit} ref={joinShake}>
+                    <ol className="auth-steps" aria-label={`Step ${joinStep} of 3`}>
+                      {['About you', 'Membership', 'Confirm'].map((label, i) => (
+                        <li key={label} className={i + 1 < joinStep ? 'is-done' : i + 1 === joinStep ? 'is-now' : ''} aria-current={i + 1 === joinStep ? 'step' : undefined}>
+                          {i + 1}. {label}
+                        </li>
+                      ))}
+                    </ol>
 
-                    {signupError && (
-                      <div style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        padding: '0.75rem 1rem',
-                        color: 'var(--c-red)',
-                        fontSize: '0.82rem',
-                        marginBottom: '1rem',
-                      }}>
-                        {signupError}
-                      </div>
-                    )}
-
+                    <div key={joinStep} className="auth-panel" data-dir={joinDir}>
+                    {joinStep === 1 && (<>
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-full-name" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          Full Name *
+                          {addingChild ? 'Child’s full name' : 'Full name'}
                         </label>
                         <input autoComplete="name" id="member-full-name"
                           type="text"
@@ -1204,13 +1030,30 @@ export default function MemberPortalPage({
                           className="form-input"
                         />
                       </div>
+                      <div>
+                        <label htmlFor="member-date-of-birth" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
+                          Date of birth{juniorTeamPicked ? '' : ' (optional)'}
+                        </label>
+                        <input id="member-date-of-birth"
+                          type="date"
+                          required={juniorTeamPicked}
+                          max={todayIso()}
+                          value={signupForm.dateOfBirth}
+                          onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
+                          className="form-input"
+                        />
+                      </div>
+                    </div>
 
+                    <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-email-address" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          {needsGuardian ? 'Player\'s Own Email (optional)' : 'Email Address *'}
+                          {needsGuardian ? 'Player\'s own email (optional)' : 'Email'}
                         </label>
                         <input autoComplete="email" id="member-email-address"
                           type="email"
+                          inputMode="email"
+                          autoCapitalize="none"
                           required={!needsGuardian}
                           value={signupForm.email}
                           readOnly={reapplying}
@@ -1219,12 +1062,9 @@ export default function MemberPortalPage({
                           className="form-input"
                         />
                       </div>
-                    </div>
-
-                    <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-phone-number" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          Phone Number
+                          Phone (optional)
                         </label>
                         <input autoComplete="tel" id="member-phone-number"
                           type="tel"
@@ -1234,48 +1074,47 @@ export default function MemberPortalPage({
                           className="form-input"
                         />
                       </div>
-
-                      <div>
-                        <label htmlFor="member-membership-tier" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          Membership Tier *
-                        </label>
-                        <select id="member-membership-tier"
-                          value={signupForm.tier}
-                          onChange={e => setSignupForm({ ...signupForm, tier: e.target.value, role: guessRole(e.target.value) })}
-                          className="form-select"
-                        >
-                          {formPlans.length ? formPlans.map(p => (
-                            <option key={p.id} value={p.name}>
-                              {p.name}: {p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Free'}
-                            </option>
-                          )) : (
-                            <>
-                              <option value="Supporter Season Pass">Supporter Season Pass</option>
-                              <option value="Senior Squad Player">Senior Squad Player</option>
-                              <option value="Academy / Youth Squad">Academy / Youth Squad</option>
-                              <option value="Club Volunteer">Club Volunteer</option>
-                              <option value="VIP Gold Pass">VIP Gold Pass</option>
-                            </>
-                          )}
-                        </select>
-                      </div>
                     </div>
+                    {isMinor && !addingChild && (
+                      <div className="auth-field-hint" style={{ marginTop: '-0.25rem', marginBottom: '1rem' }}>Under 18: we&apos;ll ask for a parent or guardian in the next step.</div>
+                    )}
+                    </>)}
+
+                    {joinStep === 2 && (<>
+                    <fieldset style={{ border: 'none', padding: 0, margin: '0 0 1.1rem 0' }}>
+                      <legend className="form-label" style={{ display: 'block', marginBottom: '0.45rem' }}>Membership</legend>
+                      <div style={{ display: 'grid', gap: '0.55rem' }}>
+                        {/* The club's own plans and fees (Admin > Finance). Without any, the built-in tiers carry no price. */}
+                        {(formPlans.length ? formPlans.map(p => ({
+                          name: p.name,
+                          price: p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Free',
+                          hint: [p.duration_months ? (p.duration_months === 12 ? '12 months' : `${p.duration_months} month${p.duration_months === 1 ? '' : 's'}`) : '', p.description || ''].filter(Boolean).join(' · '),
+                        })) : ['Supporter Season Pass', 'Senior Squad Player', 'Academy / Youth Squad', 'Club Volunteer', 'VIP Gold Pass'].map(name => ({ name, price: '', hint: '' }))
+                        ).map(({ name, price, hint }) => (
+                          <label key={name} className="auth-choice">
+                            <input type="radio" name="member-membership-tier" value={name} checked={signupForm.tier === name} required
+                              onChange={() => setSignupForm({ ...signupForm, tier: name, role: guessRole(name) })} />
+                            <span>
+                              <span className="auth-choice-title">{name}</span>
+                              {hint && <span className="auth-choice-hint">{hint}</span>}
+                            </span>
+                            {price && <span className="auth-choice-price">{price}</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
 
                     {/* Joining as: decides the squad role, so it's asked, not guessed from the tier name */}
                     <fieldset style={{ border: 'none', padding: 0, margin: '0 0 1rem 0' }}>
-                      <legend style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Joining as *</legend>
-                      <div className="form-row-2" style={{ gap: '0.75rem' }}>
+                      <legend className="form-label" style={{ display: 'block', marginBottom: '0.45rem' }}>Joining as</legend>
+                      <div className="form-row-2" style={{ gap: '0.55rem' }}>
                         {([['player', 'Player', 'I want to play for the club'], ['supporter', 'Supporter / non-playing', 'Fan, volunteer, family or social member']] as const).map(([value, title, hint]) => (
-                          <label key={value} style={{
-                            display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer', padding: '0.7rem 0.85rem', borderRadius: '8px',
-                            border: `1px solid ${signupForm.role === value ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
-                            background: signupForm.role === value ? 'rgba(16, 185, 129, 0.08)' : 'rgba(var(--shade-rgb), 0.4)',
-                          }}>
+                          <label key={value} className="auth-choice">
                             <input type="radio" name="member-joining-as" value={value} checked={signupForm.role === value}
-                              onChange={() => setSignupForm({ ...signupForm, role: value })} style={{ marginTop: '0.2rem' }} />
+                              onChange={() => setSignupForm({ ...signupForm, role: value })} />
                             <span>
-                              <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</span>
-                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{hint}</span>
+                              <span className="auth-choice-title">{title}</span>
+                              <span className="auth-choice-hint">{hint}</span>
                             </span>
                           </label>
                         ))}
@@ -1289,8 +1128,8 @@ export default function MemberPortalPage({
                         gridTemplateColumns: '1fr 1fr',
                         gap: '1rem',
                         marginBottom: '1rem',
-                        background: 'rgba(16, 185, 129, 0.05)',
-                        border: '1px solid rgba(16, 185, 129, 0.2)',
+                        background: 'rgba(var(--club-primary-rgb), 0.05)',
+                        border: '1px solid rgba(var(--club-primary-rgb), 0.2)',
                         padding: '0.75rem',
                         borderRadius: '8px',
                       }}>
@@ -1352,33 +1191,18 @@ export default function MemberPortalPage({
                       </div>
                     )}
 
-                    <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label htmlFor="member-date-of-birth" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          Date of Birth{juniorTeamPicked ? ' *' : ''}
-                        </label>
-                        <input id="member-date-of-birth"
-                          type="date"
-                          required={juniorTeamPicked}
-                          max={todayIso()}
-                          value={signupForm.dateOfBirth}
-                          onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
-                          className="form-input"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="member-emergency-contact" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          {needsGuardian ? 'Emergency Contact (if not the guardian)' : 'Emergency Contact (name & phone)'}
-                        </label>
-                        <input id="member-emergency-contact"
-                          type="text"
-                          maxLength={255}
-                          value={signupForm.emergencyContact}
-                          onChange={e => setSignupForm({ ...signupForm, emergencyContact: e.target.value })}
-                          placeholder="e.g. Jo Smith, 0400 000 000"
-                          className="form-input"
-                        />
-                      </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label htmlFor="member-emergency-contact" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
+                        {needsGuardian ? 'Emergency contact, if not the guardian (optional)' : 'Emergency contact, name and phone (optional)'}
+                      </label>
+                      <input id="member-emergency-contact"
+                        type="text"
+                        maxLength={255}
+                        value={signupForm.emergencyContact}
+                        onChange={e => setSignupForm({ ...signupForm, emergencyContact: e.target.value })}
+                        placeholder="e.g. Jo Smith, 0400 000 000"
+                        className="form-input"
+                      />
                     </div>
 
                     {needsGuardian && (
@@ -1420,16 +1244,26 @@ export default function MemberPortalPage({
                         </div>
                       </fieldset>
                     )}
+                    </>)}
 
-                    <div style={{ marginBottom: '1.5rem' }}>
+                    {joinStep === 3 && (<>
+                    <div className="auth-summary">
+                      <div>{addingChild ? 'Child' : 'Name'}: <strong>{signupForm.fullName || '-'}</strong></div>
+                      <div>Email: <strong>{(needsGuardian ? signupForm.guardianEmail : signupForm.email) || '-'}</strong></div>
+                      <div>Membership: <strong>{signupForm.tier}</strong>{(() => { const p = plans.find(x => x.name === signupForm.tier); return p && p.price_cents > 0 ? <> · <strong>{formatMoney(p.price_cents, currency)}</strong>, paid after you apply</> : null; })()}</div>
+                      <div>Joining as: <strong>{signupForm.role === 'player' ? `Player${signupForm.position ? `, ${signupForm.position}` : ''}` : 'Supporter'}</strong></div>
+                      <button type="button" className="auth-link" style={{ justifySelf: 'start', marginTop: '0.2rem' }} onClick={() => goJoinStep(1)}>Change details</button>
+                    </div>
+
+                    <div style={{ marginBottom: '1.25rem' }}>
                       <label htmlFor="member-motivation-amp-background-notes" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                        Motivation &amp; Background Notes:
+                        Anything the committee should know? (optional)
                       </label>
                       <textarea id="member-motivation-amp-background-notes"
                         rows={2}
                         value={signupForm.notes}
                         onChange={e => setSignupForm({ ...signupForm, notes: e.target.value })}
-                        placeholder="Tell the club committee why you would like to join..."
+                        placeholder="e.g. played for Westside last season, keen to help with the juniors"
                         className="form-textarea" style={{ resize: 'none' }}
                       />
                     </div>
@@ -1457,16 +1291,34 @@ export default function MemberPortalPage({
                         </label>
                       )}
                     </div>
+                    </>)}
+                    </div>
 
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="btn btn-primary"
-                      style={{ width: '100%', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Zap size={18} />
-                      <span>{submitting ? 'Sending...' : reapplying ? 'Send My Application Again' : 'Submit Membership Application'}</span>
-                    </button>
+                    {signupError && <AuthAlert kind="error">{signupError}</AuthAlert>}
+
+                    <div className="auth-step-nav">
+                      {joinStep > 1 && (
+                        <button type="button" className="btn btn-secondary" onClick={() => goJoinStep(joinStep - 1)}>
+                          <ArrowLeft size={16} /><span>Back</span>
+                        </button>
+                      )}
+                      {joinStep < 3 ? (
+                        <button type="button" className="btn btn-primary auth-submit" style={{ flex: 1 }} onClick={e => {
+                          const form = (e.currentTarget as HTMLButtonElement).form;
+                          if (form && !form.reportValidity()) return;
+                          setSignupError(null);
+                          goJoinStep(joinStep + 1);
+                        }}>
+                          <span>Continue</span><ArrowRight size={17} />
+                        </button>
+                      ) : (
+                        <div style={{ flex: 1 }}>
+                          <SubmitButton busy={submitting} busyLabel="Sending...">
+                            {reapplying ? 'Send my application again' : 'Send my application'}
+                          </SubmitButton>
+                        </div>
+                      )}
+                    </div>
 
                     {reapplying && (
                       <button type="button" onClick={() => setReapplying(false)} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }}>
@@ -1475,8 +1327,10 @@ export default function MemberPortalPage({
                     )}
                   </form>
                 )}
-              </div>
+              </>
             )}
+              </div>
+            </div>
             </>)}
           </div>
         ) : (
