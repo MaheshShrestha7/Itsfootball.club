@@ -124,10 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         client.from('club_members').select('club_id, role, roles').eq('user_id', userId)
       ),
       client.rpc('my_club_permissions'),
-      client.rpc('is_platform_admin').catch(() => ({ data: false })),
+      client.rpc('is_platform_admin').then(({ data }) => Boolean(data), () => false),
     ]);
 
-    setIsPlatformAdmin(Boolean(platformAdminRes?.data));
+    setIsPlatformAdmin(Boolean(platformAdminRes));
 
     const roles: Record<string, ClubRole> = {};
     // Squad roles are labels ('Player, Club Admin'), so map them to a permission level

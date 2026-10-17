@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { secureToken } from '@/lib/tokens';
+import { secureToken } from '@/lib/ids';
 
 /**
  * Record a platform-level visit (to itsfootball.club home, pricing, about, directory, etc.)

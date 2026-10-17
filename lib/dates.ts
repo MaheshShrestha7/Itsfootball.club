@@ -4,3 +4,10 @@
  * instead of 'en-US', 'en-GB' or the browser's own default.
  */
 export const DATE_LOCALE = 'en-AU';
+
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
