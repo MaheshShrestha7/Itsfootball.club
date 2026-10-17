@@ -61,7 +61,7 @@ import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
-import { membershipTermEnd, todayIso } from './finance';
+import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
 import { publicScoreHidden } from './teams';
 import { DATE_LOCALE } from '@/lib/dates';
 
@@ -227,7 +227,11 @@ interface ClubContextType {
   memberMessages: MemberMessage[];
   applyForMembership: (clubId: string, input: MemberApplicationInput) => Promise<{ success: boolean; member?: ClubMember; message: string; error?: string }>;
   /** Saved to the database straight away, then the applicant is emailed (emailed: false if that failed) */
-  approveMemberApplication: (memberId: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
+  approveMemberApplication: (
+    memberId: string,
+    adminName?: string,
+    options?: { waiveFee?: boolean; waiverReason?: string }
+  ) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
@@ -2722,6 +2726,9 @@ export function ClubProvider({
         reviewed_at: updated.reviewed_at,
         reviewed_by: updated.reviewed_by,
         qr_code_token: updated.qr_code_token,
+        fee_waived_at: updated.fee_waived_at ?? null,
+        fee_waived_by: updated.fee_waived_by ?? null,
+        fee_waiver_reason: updated.fee_waiver_reason ?? null,
         // Only when approving sets a new term (never clears dates a payment set)
         ...(updated.membership_status === 'approved' && updated.membership_starts_at
           ? { membership_starts_at: updated.membership_starts_at, membership_expires_at: updated.membership_expires_at }
@@ -2736,10 +2743,57 @@ export function ClubProvider({
     return null;
   }, [applyServerRow]);
 
-  const approveMemberApplication = useCallback(async (memberId: string, adminName: string = 'Club Committee'): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
+  const approveMemberApplication = useCallback(async (
+    memberId: string,
+    adminName: string = 'Club Committee',
+    options?: { waiveFee?: boolean; waiverReason?: string }
+  ): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
     const member = members.find(m => m.id === memberId);
     if (!member) {
       return { success: false, message: 'Member record not found.' };
+    }
+
+    const club = clubsRef.current.find(c => c.id === member.club_id);
+    const policy = club?.membership_payment_policy || 'require_payment';
+    const client = getSupabaseClient();
+
+    // Check if the applicant's chosen membership tier requires payment
+    const { data: plan } = await (client?.from('membership_plans')
+      .select('id, name, price_cents, duration_months')
+      .eq('club_id', member.club_id)
+      .eq('name', member.membership_tier)
+      .maybeSingle() ?? Promise.resolve({ data: null }));
+
+    const priceCents = plan?.price_cents ?? 0;
+    const isPaidPlan = priceCents > 0;
+
+    if (isPaidPlan && !member.fee_waived_at) {
+      // Check if signup payment is confirmed
+      const { data: paidRows } = await (client?.from('payments')
+        .select('id, status')
+        .eq('member_id', member.id)
+        .eq('club_id', member.club_id)
+        .eq('kind', 'membership_signup')
+        .eq('status', 'paid')
+        .limit(1) ?? Promise.resolve({ data: null }));
+
+      const isPaid = Array.isArray(paidRows) && paidRows.length > 0;
+
+      if (!isPaid) {
+        if (options?.waiveFee) {
+          if (!policyAllowsWaiver(policy)) {
+            return {
+              success: false,
+              message: 'Fee waivers are disabled for this club. You can enable them under Finance -> Settings.',
+            };
+          }
+        } else {
+          return {
+            success: false,
+            message: `Payment required: ${member.full_name} has not paid the fee for ${member.membership_tier}. Unpaid applications cannot be approved under this club's policy.`,
+          };
+        }
+      }
     }
 
     const activeToken = secureToken('pass');
@@ -2749,11 +2803,9 @@ export function ClubProvider({
     let term: Partial<Pick<ClubMember, 'membership_starts_at' | 'membership_expires_at'>> = {};
     if (!member.membership_starts_at) {
       const today = todayIso();
-      const { data: plan } = await getSupabaseClient()?.from('membership_plans').select('duration_months')
-        .eq('club_id', member.club_id).eq('name', member.membership_tier).maybeSingle() ?? { data: null };
       term = {
         membership_starts_at: today,
-        membership_expires_at: membershipTermEnd(today, clubsRef.current.find(c => c.id === member.club_id), plan?.duration_months || 12),
+        membership_expires_at: membershipTermEnd(today, club, plan?.duration_months || 12),
       };
     }
 
@@ -2765,6 +2817,11 @@ export function ClubProvider({
       reviewed_at: new Date().toISOString(),
       reviewed_by: adminName,
       qr_code_token: activeToken,
+      ...(options?.waiveFee ? {
+        fee_waived_at: new Date().toISOString(),
+        fee_waived_by: adminName,
+        fee_waiver_reason: options.waiverReason?.trim() || 'Fee waived by committee',
+      } : {}),
       updated_at: new Date().toISOString(),
     };
 

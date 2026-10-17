@@ -1,7 +1,18 @@
 // Self-check for finance helpers.
 // Run: npx esbuild lib/finance.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { bookingFeeCents, bookingFeeText, membershipTermEnd, parseMoneyToCents, paymentReference, toCsv } from './finance';
+import {
+  bookingFeeCents,
+  bookingFeeText,
+  membershipTermEnd,
+  parseMoneyToCents,
+  paymentReference,
+  toCsv,
+  DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
+  MEMBERSHIP_PAYMENT_POLICIES,
+  policyAllowsWaiver,
+  policyAutoApprovesOnPayment,
+} from './finance';
 import { matchesFileSignature } from './file-signature';
 
 assert.equal(parseMoneyToCents('12.50'), 1250);
@@ -59,4 +70,23 @@ assert.equal(membershipTermEnd('2026-06-15', { ...july, fiscal_grace_days: 0 }),
 assert.equal(membershipTermEnd('2025-12-20', { membership_renewal: 'fiscal', fiscal_year_start_month: 1, fiscal_grace_days: 14 }), '2027-01-01');
 assert.equal(membershipTermEnd('2026-06-15', { membership_renewal: 'anniversary', fiscal_grace_days: 30 }), '2027-06-15'); // year to year ignores it
 
-console.log('finance: money, booking fee, CSV, file signatures and membership terms OK');
+// Membership payment policy checks
+assert.equal(DEFAULT_MEMBERSHIP_PAYMENT_POLICY, 'require_payment');
+assert.equal(policyAllowsWaiver('require_payment'), false);
+assert.equal(policyAllowsWaiver(null), false);
+assert.equal(policyAllowsWaiver(undefined), false);
+assert.equal(policyAllowsWaiver('allow_waiver'), true);
+assert.equal(policyAllowsWaiver('auto_approve_with_waiver'), true);
+assert.equal(policyAllowsWaiver('auto_approve'), false);
+
+assert.equal(policyAutoApprovesOnPayment('require_payment'), false);
+assert.equal(policyAutoApprovesOnPayment(null), false);
+assert.equal(policyAutoApprovesOnPayment(undefined), false);
+assert.equal(policyAutoApprovesOnPayment('auto_approve'), true);
+assert.equal(policyAutoApprovesOnPayment('auto_approve_with_waiver'), true);
+assert.equal(policyAutoApprovesOnPayment('allow_waiver'), false);
+
+assert.equal(MEMBERSHIP_PAYMENT_POLICIES.length, 4);
+assert.equal(MEMBERSHIP_PAYMENT_POLICIES[0].id, 'require_payment');
+
+console.log('finance: money, booking fee, CSV, file signatures, membership terms and payment policies OK');

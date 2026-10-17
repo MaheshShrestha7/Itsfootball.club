@@ -9,8 +9,9 @@ import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
   bookingFeeCents, formatMoney, parseMoneyToCents, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
+  MEMBERSHIP_PAYMENT_POLICIES, DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
 } from '@/lib/finance';
-import type { RenewalMode } from '@/lib/finance';
+import type { RenewalMode, MembershipPaymentPolicy } from '@/lib/finance';
 import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
@@ -612,6 +613,99 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
 // ------------------------------------------------------------------------------------------------
 const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
 
+// Membership application payment & approval controls
+function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; db: Shared['db']; flash: Shared['flash'] }) {
+  const { clubs, updateClubBranding } = useClub();
+  const club = clubs.find(c => c.id === clubId);
+  const savedPolicy = club?.membership_payment_policy || DEFAULT_MEMBERSHIP_PAYMENT_POLICY;
+  const [policy, setPolicy] = useState<MembershipPaymentPolicy>(savedPolicy);
+  useEffect(() => { setPolicy(savedPolicy); }, [savedPolicy]);
+
+  const dirty = policy !== savedPolicy;
+
+  const save = async () => {
+    const { error } = await db!.rpc('set_membership_payment_policy', { p_club_id: clubId, p_policy: policy });
+    if (error) return flash('error', error.message);
+    updateClubBranding(clubId, { membership_payment_policy: policy });
+    flash('ok', 'Membership approval & payment policy saved.');
+  };
+
+  return (
+    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div>
+          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+            Membership Signup & Payment Policy
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem' }}>
+            Control whether applicants can be approved before paying, permit committee fee waivers, or auto-approve on payment.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: '0.65rem' }}>
+        {MEMBERSHIP_PAYMENT_POLICIES.map(p => {
+          const isSelected = policy === p.id;
+          return (
+            <label
+              key={p.id}
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                alignItems: 'flex-start',
+                padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                background: isSelected ? 'rgba(16, 185, 129, 0.08)' : 'rgba(var(--shade-rgb), 0.2)',
+                border: `1.5px solid ${isSelected ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <input
+                type="radio"
+                name="membership-payment-policy"
+                checked={isSelected}
+                onChange={() => setPolicy(p.id)}
+                style={{ marginTop: '0.25rem', accentColor: 'var(--club-primary)' }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.92rem' }}>{p.title}</strong>
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '0.1rem 0.45rem',
+                      background: isSelected ? 'var(--club-primary)' : 'rgba(255,255,255,0.08)',
+                      color: isSelected ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    {p.badge}
+                  </span>
+                </div>
+                <span style={{ display: 'block', fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  {p.description}
+                </span>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-primary"
+        style={{ alignSelf: 'flex-start', marginTop: '0.25rem' }}
+        onClick={save}
+        disabled={!dirty}
+      >
+        <Save size={16} /> Save Policy
+      </button>
+    </div>
+  );
+}
+
 // How memberships renew. Saved through set_membership_renewal(), so Finance roles don't need the
 // branding page's rights over the rest of the club record.
 function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db']; flash: Shared['flash'] }) {
@@ -766,6 +860,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
         )}
       </div>
 
+      <MembershipPaymentPolicyPanel clubId={club.id} db={db} flash={flash} />
       <RenewalPanel clubId={club.id} db={db} flash={flash} />
 
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

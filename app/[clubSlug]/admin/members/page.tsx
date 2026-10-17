@@ -8,7 +8,7 @@ import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { ClubMember, isPlayerMember } from '@/lib/supabase/types';
+import { ClubMember, isPlayerMember, MembershipPlan } from '@/lib/supabase/types';
 import {
   UserCheck,
   Users,
@@ -32,12 +32,16 @@ import {
   Reply,
   Award,
   RotateCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Lock,
+  Gift,
+  Settings
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
 import { DATE_LOCALE } from '@/lib/dates';
+import { formatMoney, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
@@ -91,6 +95,20 @@ export default function AdminMembersPage({
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [waiveModalMember, setWaiveModalMember] = useState<ClubMember | null>(null);
+  const [waiveReason, setWaiveReason] = useState('');
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [currency, setCurrency] = useState('AUD');
+
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    client.from('membership_plans').select('*').eq('club_id', club.id)
+      .then(({ data }) => setPlans((data || []) as MembershipPlan[]));
+    client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => data?.currency && setCurrency(data.currency));
+  }, [club.id]);
 
   // Sign-up payment status per member (paid by card, or a bank receipt waiting in Finance)
   const [signupPayments, setSignupPayments] = useState<Record<string, string>>({});
@@ -178,6 +196,27 @@ export default function AdminMembersPage({
         : `Application for ${member.full_name} rejected. The email to them didn't go out.`);
       setRejectModalMember(null);
       setRejectReason('');
+    } finally {
+      setReviewing(null);
+    }
+  };
+
+  const handleWaiveConfirm = async () => {
+    if (!waiveModalMember || reviewing) return;
+    const member = waiveModalMember;
+    setReviewing(member.id);
+    try {
+      const res = await approveMemberApplication(
+        member.id,
+        user?.full_name || 'Club Committee',
+        { waiveFee: true, waiverReason: waiveReason.trim() || 'Approved with fee waiver' }
+      );
+      if (!res.success) return notify('Not approved', res.message);
+      showToast(res.emailed
+        ? `✓ Approved ${member.full_name} (fee waived). We've emailed them how to sign in.`
+        : `✓ Approved ${member.full_name} (fee waived). Let them know they can sign in.`);
+      setWaiveModalMember(null);
+      setWaiveReason('');
     } finally {
       setReviewing(null);
     }
@@ -328,6 +367,50 @@ export default function AdminMembersPage({
           )}
         </div>
       </div>
+
+      {/* Membership Signup & Payment Policy Banner */}
+      {(() => {
+        const policyId = club.membership_payment_policy || 'require_payment';
+        const currentPolicy = MEMBERSHIP_PAYMENT_POLICIES.find(p => p.id === policyId) || MEMBERSHIP_PAYMENT_POLICIES[0];
+        return (
+          <div
+            className="glass-panel"
+            style={{
+              padding: '0.85rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              borderLeft: '4px solid var(--club-primary)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <CreditCard size={18} color="var(--club-primary)" />
+              <div>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Signup Payment Policy:{' '}
+                </span>
+                <strong style={{ color: 'var(--text-primary)', fontSize: '0.86rem' }}>
+                  {currentPolicy.title}
+                </strong>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                  — {currentPolicy.description}
+                </span>
+              </div>
+            </div>
+            <Link
+              href={`/${resolvedParams.clubSlug}/admin/finance?tab=settings`}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem' }}
+            >
+              <Settings size={13} />
+              <span>Configure Policy</span>
+            </Link>
+          </div>
+        );
+      })()}
 
       {/* Navigation Tabs & Search */}
       <div style={{
@@ -528,12 +611,37 @@ export default function AdminMembersPage({
                           </div>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', color: 'var(--text-primary)' }}>
                           <CreditCard size={14} color="var(--text-muted)" />
                           <span>Tier: <strong>{member.membership_tier}</strong></span>
-                          {signupPayments[member.id] === 'paid' && <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>PAID</span>}
-                          {signupPayments[member.id] === 'awaiting_review' && <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)' }}>RECEIPT TO CHECK</span>}
+                          {(() => {
+                            const memberPlan = plans.find(p => p.name === member.membership_tier);
+                            const planPrice = memberPlan?.price_cents ?? 0;
+                            const hasFee = planPrice > 0;
+                            const isPaid = signupPayments[member.id] === 'paid';
+                            const isAwaiting = signupPayments[member.id] === 'awaiting_review';
+                            const isWaived = !!member.fee_waived_at;
+
+                            if (isWaived) {
+                              return <span className="badge" style={{ background: 'rgba(99,102,241,0.2)', color: '#818CF8' }}>✓ FEE WAIVED</span>;
+                            }
+                            if (isPaid) {
+                              return <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>✓ PAID</span>;
+                            }
+                            if (isAwaiting) {
+                              return <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)' }}>⏳ RECEIPT TO CHECK</span>;
+                            }
+                            if (hasFee) {
+                              return <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--c-red)' }}>✕ UNPAID ({formatMoney(planPrice, currency)})</span>;
+                            }
+                            return <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>FREE TIER</span>;
+                          })()}
                         </div>
+                        {member.fee_waived_at && (
+                          <div style={{ fontSize: '0.74rem', color: '#818CF8', background: 'rgba(99,102,241,0.08)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                            Fee waived by {member.fee_waived_by || 'Committee'}: &ldquo;{member.fee_waiver_reason || 'Fee waiver'}&rdquo;
+                          </div>
+                        )}
 
                         {/* What the applicant told us: joining as, age, emergency contact, consent */}
                         {isPending && (
@@ -632,31 +740,81 @@ export default function AdminMembersPage({
                     </div>
 
                     {/* Action Buttons */}
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', display: 'flex', gap: '0.6rem' }}>
-                      {isPending ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(member)}
-                            disabled={reviewing === member.id}
-                            className="btn btn-primary btn-sm"
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                          >
-                            <Check size={16} />
-                            <span>{reviewing === member.id ? 'Approving...' : 'Approve Pass'}</span>
-                          </button>
+                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                      {isPending ? (() => {
+                        const memberPlan = plans.find(p => p.name === member.membership_tier);
+                        const planPrice = memberPlan?.price_cents ?? 0;
+                        const hasFee = planPrice > 0;
+                        const isPaid = signupPayments[member.id] === 'paid';
+                        const isWaived = !!member.fee_waived_at;
+                        const policy = club.membership_payment_policy || 'require_payment';
+                        const allowWaiver = policyAllowsWaiver(policy);
+                        const canApprove = !hasFee || isPaid || isWaived;
 
-                          <button
-                            type="button"
-                            onClick={() => setRejectModalMember(member)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-red)' }}
-                          >
-                            <X size={16} />
-                            <span>Reject</span>
-                          </button>
-                        </>
-                      ) : isApproved ? (
+                        return (
+                          <>
+                            {canApprove ? (
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(member)}
+                                disabled={reviewing === member.id}
+                                className="btn btn-primary btn-sm"
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                              >
+                                <Check size={16} />
+                                <span>{reviewing === member.id ? 'Approving...' : 'Approve Pass'}</span>
+                              </button>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="btn btn-secondary btn-sm"
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.35rem',
+                                    opacity: 0.7,
+                                    cursor: 'not-allowed',
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    borderColor: 'rgba(239, 68, 68, 0.25)',
+                                    color: 'var(--c-red)',
+                                  }}
+                                  title="Member must pay their membership fee before approval can be granted"
+                                >
+                                  <Lock size={14} />
+                                  <span>Payment Required ({formatMoney(planPrice, currency)})</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {allowWaiver && !canApprove && (
+                              <button
+                                type="button"
+                                onClick={() => { setWaiveModalMember(member); setWaiveReason(''); }}
+                                disabled={reviewing === member.id}
+                                className="btn btn-secondary btn-sm"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: '#818CF8' }}
+                                title="Waive membership fee for hardship, life member, or committee discretion"
+                              >
+                                <Gift size={14} />
+                                <span>Waive Fee &amp; Approve</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => setRejectModalMember(member)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-red)' }}
+                            >
+                              <X size={16} />
+                              <span>Reject</span>
+                            </button>
+                          </>
+                        );
+                      })() : isApproved ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '0.5rem', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
                             <CheckCircle2 size={14} /> Turnstile Pass Active
@@ -794,6 +952,84 @@ export default function AdminMembersPage({
                 style={{ background: '#EF4444', color: '#FFFFFF', border: 'none' }}
               >
                 {reviewing ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fee Waiver Modal */}
+      {waiveModalMember && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem',
+        }}>
+          <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Gift size={20} color="#818CF8" />
+                <span>Waive Fee &amp; Approve</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setWaiveModalMember(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              You are approving <strong className="text-primary">{waiveModalMember.full_name}</strong> and waiving their membership fee ({waiveModalMember.membership_tier ? `${waiveModalMember.membership_tier}` : 'fee'}). This decision will be recorded in the club audit log.
+            </p>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label htmlFor="members-reason-for-waiver" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                Reason for Waiver:
+              </label>
+              <textarea id="members-reason-for-waiver"
+                rows={3}
+                value={waiveReason}
+                onChange={e => setWaiveReason(e.target.value)}
+                placeholder="e.g. Life member honorarium, scholarship, financial hardship, or committee sponsor."
+                style={{
+                  width: '100%',
+                  background: 'rgba(var(--shade-rgb), 0.5)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  padding: '0.75rem',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem',
+                  resize: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setWaiveModalMember(null)}
+                className="btn btn-secondary btn-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleWaiveConfirm}
+                disabled={!!reviewing}
+                className="btn btn-sm"
+                style={{ background: '#6366F1', color: '#FFFFFF', border: 'none' }}
+              >
+                {reviewing ? 'Approving...' : 'Confirm Waiver & Approve'}
               </button>
             </div>
           </div>

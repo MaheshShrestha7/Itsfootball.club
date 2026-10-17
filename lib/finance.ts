@@ -162,3 +162,62 @@ export function membershipTermEnd(from: string, rule: RenewalRule | null | undef
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return `${year}-${pad(month)}-${pad(Math.min(d, lastDay))}`;
 }
+
+// ------------------------------------------------------------------------------------------------
+// Membership payment & approval policy (configured by admins)
+// ------------------------------------------------------------------------------------------------
+export type MembershipPaymentPolicy =
+  | 'require_payment'
+  | 'allow_waiver'
+  | 'auto_approve'
+  | 'auto_approve_with_waiver';
+
+export const DEFAULT_MEMBERSHIP_PAYMENT_POLICY: MembershipPaymentPolicy = 'require_payment';
+
+export interface PaymentPolicyMeta {
+  id: MembershipPaymentPolicy;
+  title: string;
+  shortLabel: string;
+  badge: string;
+  description: string;
+}
+
+export const MEMBERSHIP_PAYMENT_POLICIES: PaymentPolicyMeta[] = [
+  {
+    id: 'require_payment',
+    title: '1. Require Payment Before Approval (Default)',
+    shortLabel: 'Payment Required',
+    badge: 'Strict',
+    description: 'Members must pay their membership fee before committee approval can be finalized. Unpaid applications cannot be approved directly. Free tiers ($0) are unaffected.',
+  },
+  {
+    id: 'allow_waiver',
+    title: '2. Allow Fee Waiver',
+    shortLabel: 'Fee Waiver Allowed',
+    badge: 'Discretionary',
+    description: 'Payment is required by default, but club admins can waive the fee for scholarships, hardship, or life members with a recorded reason.',
+  },
+  {
+    id: 'auto_approve',
+    title: '3. Auto-Approve on Payment',
+    shortLabel: 'Auto-Approve on Payment',
+    badge: 'Automated',
+    description: 'Members are automatically approved and digital passes activated immediately as soon as their payment is confirmed. Unpaid applications remain pending.',
+  },
+  {
+    id: 'auto_approve_with_waiver',
+    title: 'Auto-Approve on Payment + Allow Fee Waiver',
+    shortLabel: 'Auto-Approve & Waiver',
+    badge: 'Automated + Waiver',
+    description: 'Auto-approves upon confirmed payment, and allows admins to manually waive fees for exceptional cases.',
+  },
+];
+
+export function policyAllowsWaiver(policy?: MembershipPaymentPolicy | null): boolean {
+  return policy === 'allow_waiver' || policy === 'auto_approve_with_waiver';
+}
+
+export function policyAutoApprovesOnPayment(policy?: MembershipPaymentPolicy | null): boolean {
+  return policy === 'auto_approve' || policy === 'auto_approve_with_waiver';
+}
+

@@ -22,6 +22,7 @@ export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | '
 
 export type HeroPinType = 'event' | 'fixture' | 'news' | 'image';
 export type SeasonStatus = 'active' | 'completed' | 'upcoming';
+export type MembershipPaymentPolicy = 'require_payment' | 'allow_waiver' | 'auto_approve' | 'auto_approve_with_waiver';
 
 export interface ClubSeason {
   id: string;
@@ -87,6 +88,8 @@ export interface Club {
   fiscal_year_start_month?: number;
   /** Fiscal year: joining this many days (or fewer) before it starts counts for the next year */
   fiscal_grace_days?: number;
+  /** Membership signup payment policy (set through set_membership_payment_policy(); not synced) */
+  membership_payment_policy?: MembershipPaymentPolicy;
   /** Home-screen icons drawn from the crest (lib/app-icons.ts) */
   app_icons?: AppIcons | null;
   /** Whether U18 teams count as junior (default true) */
@@ -169,6 +172,10 @@ export interface ClubMember {
   executive_bio?: string;
   executive_order?: number;
   executive_season?: string;
+  /** Fee waiver info when an admin waives the membership fee */
+  fee_waived_at?: string | null;
+  fee_waived_by?: string | null;
+  fee_waiver_reason?: string | null;
   created_at?: string;
   updated_at?: string;
 }
