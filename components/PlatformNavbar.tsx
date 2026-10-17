@@ -10,12 +10,12 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Gauge } from 'lucide-react';
 import { ToolsMenuDesktop, ToolsMenuMobile } from '@/components/ToolsMenu';
 
 export default function PlatformNavbar() {
   const clubs = useClub().clubs.filter(isListedClub);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, isPlatformAdmin } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -140,6 +140,28 @@ export default function PlatformNavbar() {
           {/* Auth Status / Sign In Trigger */}
           {isAuthenticated && user ? (
             <div className="row row-loose">
+              {isPlatformAdmin && (
+                <Link
+                  href="/admin/platform"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    color: '#818CF8',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="itsfootball.club Platform Control Room"
+                >
+                  <Gauge size={15} color="#818CF8" />
+                  <span>Control Room</span>
+                </Link>
+              )}
               <Link
                 href="/my-clubs"
                 style={{
@@ -274,6 +296,27 @@ export default function PlatformNavbar() {
 
               {/* Navigation Links */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.75rem' }}>
+                {isAuthenticated && user && isPlatformAdmin && (
+                  <Link
+                    href="/admin/platform"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: '8px',
+                      color: '#818CF8',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      border: '1px solid rgba(99, 102, 241, 0.35)',
+                    }}
+                  >
+                    <Gauge size={18} color="#818CF8" />
+                    <span>Control Room (Owner)</span>
+                  </Link>
+                )}
                 {isAuthenticated && user && (
                   <Link
                     href="/my-clubs"

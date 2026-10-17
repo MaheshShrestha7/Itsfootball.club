@@ -899,3 +899,105 @@ export interface Expense {
   season?: string | null;
   created_at: string;
 }
+
+// ------------------------------------------------------------------------------------------------
+// Platform Owner / Super-Admin (supabase/migrations/20261112_platform_admin_and_metrics.sql)
+// ------------------------------------------------------------------------------------------------
+export interface PlatformAdmin {
+  id: string;
+  user_id?: string | null;
+  email: string;
+  full_name?: string | null;
+  role: 'super_admin' | 'operator' | 'analyst';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformDailyTrend {
+  date: string;
+  clubs: number;
+  users: number;
+  members: number;
+  visits: number;
+  revenue_cents: number;
+}
+
+export interface PlatformTopClub {
+  id: string;
+  name: string;
+  short_name: string;
+  slug: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  is_active: boolean;
+  members: number;
+  teams: number;
+  visits: number;
+  gmv_cents: number;
+}
+
+export interface PlatformSignupFunnel {
+  paid: number;
+  awaiting_review: number;
+  unpaid_pending: number;
+  fee_waived: number;
+  direct_approved: number;
+}
+
+export interface PlatformRecentActivity {
+  type: 'club_created' | 'member_signup' | 'payment_received' | 'gate_scan';
+  title: string;
+  subtitle: string;
+  created_at: string;
+}
+
+export interface PlatformMetrics {
+  period_days: number;
+  total_clubs: number;
+  active_clubs: number;
+  new_clubs_period: number;
+  total_users: number;
+  new_users_period: number;
+  total_members: number;
+  members_pending: number;
+  members_approved: number;
+  members_rejected: number;
+  members_waived: number;
+  paid_signups_count: number;
+  paid_signups_cents: number;
+  total_gmv_cents: number;
+  period_gmv_cents: number;
+  total_visits_period: number;
+  club_visits_period: number;
+  platform_visits_period: number;
+  daily_trends: PlatformDailyTrend[];
+  top_clubs: PlatformTopClub[];
+  funnel: PlatformSignupFunnel;
+  recent_activity: PlatformRecentActivity[];
+}
+
+export interface PlatformClubItem {
+  id: string;
+  name: string;
+  short_name: string;
+  slug: string;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  primary_color?: string | null;
+  is_active: boolean;
+  created_at: string;
+  owner_id?: string | null;
+  owner_email?: string | null;
+  owner_name?: string | null;
+  custom_domain?: string | null;
+  membership_payment_policy: MembershipPaymentPolicy;
+  member_count: number;
+  pending_count: number;
+  team_count: number;
+  match_count: number;
+  visits_30d: number;
+  gmv_cents: number;
+  stripe_ready: boolean;
+}
+

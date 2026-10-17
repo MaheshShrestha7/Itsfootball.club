@@ -24,6 +24,7 @@ import {
   Layers, ClipboardList, Share2, Timer,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
+import { trackPlatformVisit } from '@/lib/platform-tracking';
 
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
@@ -102,6 +103,10 @@ export default function PlatformHomePage() {
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  useEffect(() => {
+    trackPlatformVisit('/');
+  }, []);
 
   // Hero playground: the visitor's club name + colours drive the live mock beside it
   const [clubName, setClubName] = useState('');

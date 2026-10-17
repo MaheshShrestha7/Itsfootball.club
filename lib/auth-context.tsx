@@ -59,6 +59,8 @@ interface AuthContextType {
   /** Shows a role in the UI straight away (e.g. right after creating a club). The database still decides what is allowed. */
   assignClubRole: (clubId: string, role: ClubRole) => void;
   refreshRoles: () => Promise<void>;
+  /** Whether the user is a verified platform owner / super-admin in platform_admins */
+  isPlatformAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dbRoles, setDbRoles] = useState<Record<string, ClubRole>>({});
   const [uiRoles, setUiRoles] = useState<Record<string, ClubRole>>({});
   const [access, setAccess] = useState<Record<string, ClubAccess>>({});
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadRoles = useCallback(async (userId: string) => {
@@ -115,13 +118,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!client) return;
     // Links approved memberships made under this email (by a club admin) to the account first,
     // then reads every linked row, including the `roles` labels the claim RPC doesn't return
-    const [owned, memberships, perms] = await Promise.all([
+    const [owned, memberships, perms, platformAdminRes] = await Promise.all([
       client.from('clubs').select('id').eq('owner_id', userId),
       client.rpc('claim_my_memberships').then(() =>
         client.from('club_members').select('club_id, role, roles').eq('user_id', userId)
       ),
       client.rpc('my_club_permissions'),
+      client.rpc('is_platform_admin').catch(() => ({ data: false })),
     ]);
+
+    setIsPlatformAdmin(Boolean(platformAdminRes?.data));
 
     const roles: Record<string, ClubRole> = {};
     // Squad roles are labels ('Player, Club Admin'), so map them to a permission level
@@ -171,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDbRoles({});
         setUiRoles({});
         setAccess({});
+        setIsPlatformAdmin(false);
         setIsLoading(false);
         return;
       }
@@ -347,6 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getClubAccess,
         assignClubRole,
         refreshRoles,
+        isPlatformAdmin,
       }}
     >
       {children}
