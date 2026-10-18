@@ -264,9 +264,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                 <Link href="/tools/player-card-maker" style={{ color: 'var(--text-secondary)' }}>Free Player Card Maker</Link>
                 <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
                 <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
-                <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Guides</Link>
-                <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Ground Guides</Link>
-                <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
+                <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Grassroots Guides (11)</Link>
+                <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Grounds &amp; Rain Status</Link>
+                <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools (20)</Link>
               </div>
             </div>
           )}
@@ -296,7 +296,8 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Clubs Directory</Link>
                   <Link href="/my-clubs" style={{ color: 'var(--text-secondary)' }}>My Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Register New Club</Link>
-                  <Link href="/vs" style={{ color: 'var(--text-secondary)' }}>Compare Alternatives</Link>
+                  <Link href="/compare" style={{ color: 'var(--text-secondary)' }}>Compare Alternatives</Link>
+                  <Link href="/best-free-football-club-website-builders-australia" style={{ color: 'var(--text-secondary)' }}>Best Club Builders Australia</Link>
                   <Link href="/about" style={{ color: 'var(--text-secondary)' }}>About Us</Link>
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
                 </>

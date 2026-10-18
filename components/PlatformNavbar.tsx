@@ -10,7 +10,7 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Gauge } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Gauge, BookOpen, MapPin, Scale } from 'lucide-react';
 import { ToolsMenuDesktop, ToolsMenuMobile } from '@/components/ToolsMenu';
 
 export default function PlatformNavbar() {
@@ -51,13 +51,25 @@ export default function PlatformNavbar() {
         {/* Desktop Navigation Links */}
         {/* nowrap: items briefly wrapped to two lines under the (slightly wider) fallback font, then
             snapped back when the webfont loaded - a visible layout shift on every platform page */}
-        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.5rem', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-          <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <nav className="desktop-platform-nav" style={{ alignItems: 'center', gap: '1.25rem', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+          <Link href="/clubs" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Trophy size={16} />
-            Clubs Directory
+            Clubs
           </Link>
           <ToolsMenuDesktop />
-          <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Link href="/guides" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <BookOpen size={16} />
+            Guides
+          </Link>
+          <Link href="/grounds" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <MapPin size={16} />
+            Grounds
+          </Link>
+          <Link href="/compare" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Scale size={16} />
+            Compare
+          </Link>
+          <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <HelpCircle size={16} />
             FAQ
           </Link>
@@ -372,6 +384,75 @@ export default function PlatformNavbar() {
                   }}
                 />
                 <Link
+                  href="/guides"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <BookOpen size={18} color="var(--c-purple)" />
+                    <span>Guides Library</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(168, 85, 247, 0.15)', color: 'var(--c-purple)' }}>
+                    11 Guides
+                  </span>
+                </Link>
+                <Link
+                  href="/grounds"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <MapPin size={18} color="var(--c-green)" />
+                    <span>Grounds &amp; Rain Status</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>
+                    Sydney
+                  </span>
+                </Link>
+                <Link
+                  href="/compare"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Scale size={18} color="var(--c-blue)" />
+                    <span>Compare Alternatives</span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)' }}>
+                    Australia
+                  </span>
+                </Link>
+                <Link
                   href="/faq"
                   onClick={() => setMobileDrawerOpen(false)}
                   style={{
@@ -474,8 +555,8 @@ export default function PlatformNavbar() {
         .mobile-platform-trigger {
           display: flex;
         }
-        /* 1100px: below that the links (with Free Tools) no longer fit, so the menu button takes over */
-        @media (min-width: 1100px) {
+        /* 1240px: below that the expanded links no longer fit, so the menu button takes over */
+        @media (min-width: 1240px) {
           .desktop-platform-nav {
             display: flex !important;
           }

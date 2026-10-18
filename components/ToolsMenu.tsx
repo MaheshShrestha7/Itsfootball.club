@@ -104,6 +104,14 @@ export function ToolsMenuMobile({ onNavigate, rowStyle }: { onNavigate: () => vo
             ))}
           </div>
         ))}
+        <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <Link href="/guides" onClick={onNavigate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--club-ink)', fontWeight: 600, fontSize: '0.88rem' }}>
+            <BookOpen size={15} /> Guides (MiniRoos rules, minutes, rego fees)
+          </Link>
+          <Link href={TOOLS_HUB.path} onClick={onNavigate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+            All free tools <ArrowRight size={14} />
+          </Link>
+        </div>
       </div>
     </div>
   );
