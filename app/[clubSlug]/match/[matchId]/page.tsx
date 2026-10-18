@@ -518,7 +518,7 @@ export default function MatchCenterPage({
             <h1 style={{ width: '100%', margin: '0 0 0.2rem 0', fontFamily: 'inherit', lineHeight: 'inherit', fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', overflowWrap: 'anywhere' }}>
               <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
               <span className="text-muted" style={{ margin: '0 0.35rem' }}>
-                {['completed', 'full_time', 'live', 'halftime'].includes(match.status) && !match.score_hidden
+                {['completed', 'full_time', 'live', 'halftime'].includes(match.status) && !scoreHidden
                   ? `${match.home_score ?? 0}–${match.away_score ?? 0}`
                   : 'vs'}
               </span>

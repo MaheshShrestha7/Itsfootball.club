@@ -251,12 +251,12 @@ export function mergeFixtures(linked: GroundFixture[], named: GroundFixture[], l
  * (for a home fixture whose venue names it) the club's home ground. Unpublished grounds never.
  */
 export function groundForMatch(
-  match: { ground_id?: string | null; is_club_home: boolean; venue?: string | null },
+  match: { ground_id?: string | null; is_club_home?: boolean | null; venue?: string | null },
   linked: GroundRow | null,
   home: GroundRow | null,
 ): GroundRow | null {
   if (match.ground_id) return linked?.id === match.ground_id && linked.is_published ? linked : null;
-  if (match.is_club_home && home?.is_published && venueMatchesGround(match.venue, home.name)) return home;
+  if (Boolean(match.is_club_home) && home?.is_published && venueMatchesGround(match.venue, home.name)) return home;
   return null;
 }
 

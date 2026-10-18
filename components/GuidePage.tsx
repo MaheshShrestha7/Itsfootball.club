@@ -11,7 +11,7 @@ import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
 import { GUIDES, GUIDES_HUB, GUIDES_UPDATED, guideByPath } from '@/lib/guides';
-import { TOOLS_HUB, formatUpdated, toolOgImage, type ToolPageLink } from '@/lib/tool-pages';
+import { TOOLS_HUB, formatUpdated, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface GuideSource {
   /** What the document is, e.g. "MiniRoos National Playing Formats" */

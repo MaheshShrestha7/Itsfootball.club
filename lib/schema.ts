@@ -351,7 +351,7 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground
 
   const { startDate, endDate } = matchIsoDates(match.match_date, match.match_time);
 
-  let locationNode: Json = undefined;
+  let locationNode: Json | undefined = undefined;
   if (ground) {
     locationNode = {
       '@type': 'Place',
