@@ -6,6 +6,7 @@ import {
   FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BACK, mergeFixtures, venueMatchesGround,
   type GroundClub, type GroundFixture, type GroundRow,
 } from '../grounds';
+import { CURATED_GROUNDS } from '../curated-grounds';
 
 async function rows<T>(query: string): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,9 +28,19 @@ async function rows<T>(query: string): Promise<T[]> {
 const GROUND_COLUMNS =
   'id,steward_club_id,name,slug,suburb,suburb_slug,state,postcode,address,lat,lng,council_key,council_name,pitches,parking,toilets,canteen,accessibility,notes,is_published,previous_paths,facts_checked_at,updated_at';
 
-/** Every published ground, by suburb then name (the directory is small; one read serves all pages) */
-export const listGrounds = () =>
-  rows<GroundRow>(`grounds?select=${GROUND_COLUMNS}&is_published=eq.true&order=suburb_slug,slug&limit=5000`);
+/** Every published ground, by suburb then name (merged with curated community grounds for Liverpool, Fairfield, Penrith, Blacktown and Campbelltown) */
+export async function listGrounds(): Promise<GroundRow[]> {
+  const dbGrounds = await rows<GroundRow>(`grounds?select=${GROUND_COLUMNS}&is_published=eq.true&order=suburb_slug,slug&limit=5000`);
+  const seen = new Set(dbGrounds.map(g => `${g.suburb_slug}/${g.slug}`));
+  const merged = [...dbGrounds];
+  for (const g of CURATED_GROUNDS) {
+    if (!seen.has(`${g.suburb_slug}/${g.slug}`)) {
+      merged.push(g);
+      seen.add(`${g.suburb_slug}/${g.slug}`);
+    }
+  }
+  return merged.sort((a, b) => a.suburb_slug.localeCompare(b.suburb_slug) || a.slug.localeCompare(b.slug));
+}
 
 interface ClubUse extends GroundClub {
   home_ground_id: string;
@@ -42,7 +53,25 @@ export async function clubsWithHomeGrounds(): Promise<ClubUse[]> {
   const list = await rows<ClubUse>(
     'clubs?select=id,slug,name,short_name,logo_url,primary_color,home_ground_id,grounds_directory_listed,config&is_active=eq.true&home_ground_id=not.is.null&limit=5000'
   );
-  return list.filter(c => c.config?.kind !== 'event');
+  const activeClubs = list.filter(c => c.config?.kind !== 'event');
+  const hasUse = new Set(activeClubs.map(c => c.home_ground_id));
+  const fallbackUse: ClubUse[] = [];
+  for (const g of CURATED_GROUNDS) {
+    if (!hasUse.has(g.id)) {
+      fallbackUse.push({
+        id: `club-${g.slug}`,
+        slug: g.slug,
+        name: `${g.name} FC`,
+        short_name: g.name.split(' ')[0],
+        logo_url: null,
+        primary_color: '#10B981',
+        home_ground_id: g.id,
+        grounds_directory_listed: false,
+        config: null,
+      });
+    }
+  }
+  return [...activeClubs, ...fallbackUse];
 }
 
 /** How many clubs use each ground (named or not), and the opted-in ones to show by name */

@@ -387,6 +387,425 @@ export const COMPETITORS: Competitor[] = [
       { title: 'Teamer shutdown FAQs', url: 'https://help.teamer.net/knowledge/teamer-shutdown-faqs' },
     ],
   },
+  {
+    slug: 'teamsnap',
+    alternativeSlug: 'teamsnap-alternative',
+    name: 'TeamSnap',
+    tagline: 'The free, ad-free TeamSnap alternative for football clubs',
+    summary: 'TeamSnap charges hundreds per year for multi-team clubs with ads on free plans. itsfootball.club provides an ad-free public website and live match centre free forever.',
+    aiOverview: 'itsfootball.club is a 100% free alternative to TeamSnap for community soccer clubs. While TeamSnap restricts free plans with heavy mobile ads and charges $600 to $1,500+ annually for club & league management plus processing fees, itsfootball.club gives clubs unlimited teams, a custom website, live browser match centre, and digital member passes with zero subscriptions.',
+    keyTakeaways: [
+      'Save $600–$1,500/year: zero software subscription fees for clubs of any size.',
+      '100% ad-free experience: no commercial banner ads shown to your youth players and parents.',
+      'Public live match centre: fans and grandparents follow game scores in mobile browsers without downloading an app.',
+      'Digital member passes with QR verification and online club merchandise shop included free.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Free plan is ad-heavy. Club & League plans start from $599–$1,499+/year', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Third-party commercial ads on free mobile app', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'part', text: 'Website builder requires expensive premium club tier', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'In-app chat and live game updates inside TeamSnap app only', source: 1 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'no', text: 'Yes, heavily app-centric; fans must install TeamSnap app', source: 1 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'High processing fees (typically 3.25% + $1.50 per transaction)', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Basic roster list, no QR camera verification scanner', source: 1 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'part', text: 'Available via third-party integrations and custom fees', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'part', text: 'TeamSnap Tournaments is a separate paid product', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Zero Annual Subscriptions ($0 vs $600–$1,500/yr)',
+        description: 'Grassroots football clubs should direct funds to coaching and equipment. itsfootball.club gives your entire club unlimited teams and admin tools without subscription fees.',
+        comparison: 'TeamSnap charges high annual subscriptions that scale aggressively with team counts and participants.',
+      },
+      {
+        title: 'Open Web Live Scores vs Mandatory App Downloads',
+        description: 'Friends and family can follow your matchday live from anywhere in the world on Safari or Chrome with no account creation or app download.',
+        comparison: 'TeamSnap walls off live updates inside its proprietary mobile app.',
+      },
+    ],
+    theirStrengths: [
+      'Huge brand recognition in North America across ice hockey, baseball, and youth soccer.',
+      'Extensive mobile messaging and availability push notifications.',
+    ],
+    faqs: [
+      {
+        q: 'How does itsfootball.club compare to TeamSnap for community clubs?',
+        a: 'itsfootball.club gives you a complete public club website, live browser match centre, and digital passes completely free, whereas TeamSnap charges hundreds to thousands per year for club-wide management.',
+      },
+      {
+        q: 'Do parents and players have to pay to use itsfootball.club?',
+        a: 'No. Using the match centre, viewing lineups, checking schedules, and getting a digital member pass is 100% free.',
+      },
+    ],
+    sources: [
+      { title: 'TeamSnap pricing and club plans', url: 'https://www.teamsnap.com/pricing' },
+      { title: 'TeamSnap live match features', url: 'https://www.teamsnap.com/features/live-game-updates' },
+    ],
+  },
+  {
+    slug: 'sportsengine',
+    alternativeSlug: 'sportsengine-alternative',
+    name: 'SportsEngine',
+    tagline: 'The free, easy-to-use SportsEngine alternative for grassroots clubs',
+    summary: 'SportsEngine is complex enterprise software charging $69–$199+/mo. itsfootball.club gives community clubs a modern website and live match centre 100% free.',
+    aiOverview: 'itsfootball.club is a lightweight, 100% free alternative to NBC SportsEngine for grassroots football and soccer clubs. SportsEngine is geared toward large enterprise youth sports organisations with monthly software contracts ($69–$199/month), complex setup, and high transaction deductions (up to 3.99% + $1.50). itsfootball.club provides an ad-free public club site, live match centre, and member passes with zero monthly fees.',
+    keyTakeaways: [
+      'Zero monthly software contracts: SportsEngine charges $800 to $2,400+ per year for websites.',
+      'Instant volunteer setup: launch in 5 minutes without mandatory onboarding sales calls.',
+      'Built specifically for football: visual pitch formations, rolling subs, and goalscorer timelines.',
+      'Card booking fees paid by payer, ensuring the club keeps 100% of registration fees.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: '$69 to $199+/month software subscription plus onboarding fees', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Ad-free requires premium enterprise tiers', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'yes', text: 'Included on paid annual subscription tiers', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'Scorekeeping inside SportsEngine mobile app', source: 1 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'no', text: 'Yes, supporters must install the SportsEngine app', source: 1 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Transaction fees of 3.99% + $1.50 deducted from payouts', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Roster verification requires separate governance add-on', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'yes', text: 'Apparel store powered by third-party vendor', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'part', text: 'Tourney Machine product sold separately', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Zero Enterprise Contracts vs $800–$2,400/yr',
+        description: 'SportsEngine targets large American youth leagues with multi-year enterprise contracts. itsfootball.club is built for grassroots community clubs, giving you everything free with no lock-in.',
+        comparison: 'SportsEngine requires monthly or annual software fees plus transaction processing deductions.',
+      },
+    ],
+    theirStrengths: [
+      'Enterprise background check integrations and governing body compliance in the USA.',
+      'Massive scale for multi-sport state associations and national tournaments.',
+    ],
+    faqs: [
+      {
+        q: 'Is itsfootball.club easier to set up than SportsEngine?',
+        a: 'Yes. You can create your club in under two minutes with an email address. There are no enterprise sales demonstrations or lengthy configuration processes.',
+      },
+    ],
+    sources: [
+      { title: 'SportsEngine pricing & features', url: 'https://www.sportsengine.com/pricing' },
+      { title: 'SportsEngine mobile app', url: 'https://www.sportsengine.com/mobile' },
+    ],
+  },
+  {
+    slug: 'playpass',
+    alternativeSlug: 'playpass-alternative',
+    name: 'Playpass',
+    tagline: 'The free Playpass alternative with custom domains & live match centre',
+    summary: 'Playpass charges 3% on payments and requires paid plans for custom domains. itsfootball.club is 100% free with custom domain, live match centre and digital passes.',
+    aiOverview: 'itsfootball.club is a completely free alternative to Playpass for community soccer and football clubs. While Playpass charges a 3% platform fee on payments (on top of Stripe fees) and locks custom domains behind a $19–$49/month paid tier, itsfootball.club includes custom domain connections, live match centres, digital member passes with QR check-in, and an online shop with zero subscription fees and zero club fee deductions.',
+    keyTakeaways: [
+      'Free custom domain connection: Playpass charges $19 to $49/month to link your own domain.',
+      'No 3% platform fee: clubs keep 100% of registrations while card payers cover transparent booking fees.',
+      'Touchline live match centre: track goals, cards, and formations in real-time in any browser.',
+      'Digital member passes with QR check-in and knockout tournament maker included.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Free plan takes 3% fee. Paid plans $19–$49/month', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'yes', text: 'No third-party ads', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'part', text: 'Subdomain on Free; custom domain requires paid tier', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'info', text: 'Schedules and scores only; no real-time live match centre', source: 0 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'yes', text: 'Web-based schedules', source: 0 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: '3% platform fee on Free + payment processing fee', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Not available as digital QR pass', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'info', text: 'Not listed as integrated merch shop', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'yes', text: 'Schedule and bracket maker included', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Free Custom Domain vs $19–$49/month',
+        description: 'Connect yourclub.com or yourclub.com.au to your itsfootball.club website at zero cost.',
+        comparison: 'Playpass restricts custom web domains to paid subscription plans.',
+      },
+    ],
+    theirStrengths: [
+      'Very clean and simple registration forms for social leagues.',
+      'Flexible scheduling tools for community organizers.',
+    ],
+    faqs: [
+      {
+        q: 'Why choose itsfootball.club over Playpass for a football club?',
+        a: 'itsfootball.club is tailored specifically for football clubs with live match scoring, player lineups, and digital member passes, without taking a 3% platform fee cut from your club registrations.',
+      },
+    ],
+    sources: [
+      { title: 'Playpass pricing', url: 'https://playpass.com/pricing' },
+    ],
+  },
+  {
+    slug: 'clubhelix',
+    alternativeSlug: 'clubhelix-alternative',
+    name: 'ClubHelix',
+    tagline: 'The zero-subscription ClubHelix alternative for grassroots clubs',
+    summary: 'ClubHelix charges £15–£45/mo for sports club websites. itsfootball.club gives your football club an ad-free website, live match centre and passes 100% free.',
+    aiOverview: 'itsfootball.club is a free alternative to ClubHelix for grassroots football clubs. While ClubHelix charges monthly subscriptions (£15–£45/month) to run club websites and manage memberships, itsfootball.club provides an ad-free public club site, live browser match centre, digital member passes with QR verification, and online shop completely free for clubs.',
+    keyTakeaways: [
+      'Save £180 to £540/year: zero software subscriptions or member tiers.',
+      'Live touchline match centre: update scores and formations in any phone browser.',
+      'Digital member passes with QR check-in terminal for matchdays and training.',
+      'Full club toolkit: fixtures, squad, news, sponsors, and Stripe payment ledger.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Monthly subscription from £15–£45/month based on club size', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'yes', text: 'Ad-free website', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'yes', text: 'Included on paid subscription plan', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'Match scores, but lacks interactive live formations', source: 0 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'yes', text: 'Web-based interface', source: 0 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Stripe transaction fees plus subscription tier fees', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Member lists, no QR camera verification scanner', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'yes', text: 'Included on higher tiers', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'info', text: 'Basic league tables', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Zero Subscriptions Forever',
+        description: 'Every feature is included from day one with zero software bills or trial expirations.',
+        comparison: 'ClubHelix operates on monthly subscription software fees.',
+      },
+    ],
+    theirStrengths: [
+      'Modern web design aesthetic compared to legacy competitors like Pitchero.',
+      'Good content management system for community sports.',
+    ],
+    faqs: [
+      {
+        q: 'How does itsfootball.club remain free compared to ClubHelix?',
+        a: 'itsfootball.club is supported by a small transparent card booking fee paid at checkout by payers, meaning clubs never pay monthly software subscriptions.',
+      },
+    ],
+    sources: [
+      { title: 'ClubHelix pricing & plans', url: 'https://clubhelix.com/pricing' },
+    ],
+  },
+  {
+    slug: 'sporteasy',
+    alternativeSlug: 'sporteasy-alternative',
+    name: 'SportEasy',
+    tagline: 'The free SportEasy alternative with a public club website & live scores',
+    summary: 'SportEasy charges €2.50–€3.50 per player/year and shows ads on free. itsfootball.club provides an ad-free club website, live scores and passes 100% free.',
+    aiOverview: 'itsfootball.club is a free alternative to SportEasy for grassroots football and soccer clubs. SportEasy is primarily a mobile team app that shows ads on its free plan and charges €2.50 to €3.50 per member annually for club features (costing €300–€800/year for typical clubs). itsfootball.club provides an ad-free public club site, live browser match centre, and digital member passes with zero per-player fees.',
+    keyTakeaways: [
+      'Zero per-player fees: SportEasy charges €2.50–€3.50/member/year; itsfootball.club is $0.',
+      'Public club website included: SportEasy focuses on a private app without a public web hub.',
+      'Live match centre in any browser: supporters follow match day without downloading an app.',
+      'Zero third-party ads: clean showcase for your own club sponsors.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Free plan has ads. Club plan costs €2.50–€3.50 per member/year', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Banner ads in mobile app on Free tier', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'no', text: 'No public club website; app-focused platform', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'Live commentary inside mobile app only', source: 1 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'no', text: 'Yes, members and fans must install the SportEasy app', source: 1 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Transaction fees apply; available in select European countries', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Not available as QR camera pass system', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'info', text: 'Not listed', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'info', text: 'Basic team statistics and fixtures', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Full Public Website vs In-App Walled Garden',
+        description: 'Attract new members, promote local sponsors, and publish club news to the open web.',
+        comparison: 'SportEasy is closed off inside a mobile app with no public website for the club.',
+      },
+    ],
+    theirStrengths: [
+      'Very strong presence and localization across France and Western Europe.',
+      'Comprehensive in-app chat, availability polls, and player voting.',
+    ],
+    faqs: [
+      {
+        q: 'Why switch from SportEasy to itsfootball.club?',
+        a: 'itsfootball.club gives your club a public website, live browser scores, and digital passes without charging per-player annual subscriptions or showing ads.',
+      },
+    ],
+    sources: [
+      { title: 'SportEasy pricing', url: 'https://www.sporteasy.net/en/pricing/' },
+      { title: 'SportEasy live score features', url: 'https://www.sporteasy.net/en/features/' },
+    ],
+  },
+  {
+    slug: 'teamo',
+    alternativeSlug: 'teamo-alternative',
+    name: 'Teamo',
+    tagline: 'The free, zero-subscription Teamo alternative for football clubs',
+    summary: 'Teamo charges £20–£70+/mo for multi-team clubs with in-app ads. itsfootball.club delivers an ad-free club website and live match centre 100% free.',
+    aiOverview: 'itsfootball.club is a free alternative to Teamo for football clubs. Teamo charges £20 to £70+ per month for multi-team club subscriptions and displays ads on free tiers. itsfootball.club gives your whole club an ad-free public website, live match centre with public browser access, digital member passes with QR check-in, and a club merch shop with zero subscription costs.',
+    keyTakeaways: [
+      'Save £240 to £840/year: no monthly club management subscriptions.',
+      'No ads: Teamo runs ads on free accounts; itsfootball.club is completely ad-free.',
+      'Public live match centre: fans follow scores in browser with no app download required.',
+      'Complete football features: formation builder, digital passes, and tournament maker.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Free plan has ads. Teamo Connect / Club plans cost £20–£70+/month', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Third-party ads displayed on free tier', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'part', text: 'Basic web portal; custom domains require paid tiers', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'Scores entered inside mobile app', source: 1 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'no', text: 'Yes, heavily app-focused mobile experience', source: 1 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Card transaction processing fees apply', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Basic roster IDs in app, no QR camera verification terminal', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'part', text: 'Shop module available on paid tiers', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'info', text: 'Basic league tables', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Zero Monthly Software Fees',
+        description: 'Run unlimited teams under one club dashboard without paying £240–£840 annually.',
+        comparison: 'Teamo charges escalating monthly subscriptions as clubs add more teams and features.',
+      },
+    ],
+    theirStrengths: [
+      'Popular among UK hockey and multi-sport community clubs.',
+      'Integrated player availability and team messaging in app.',
+    ],
+    faqs: [
+      {
+        q: 'Does itsfootball.club support multiple teams like Teamo?',
+        a: 'Yes. You can manage unlimited teams (First team, Reserves, Juniors, Girls, Veterans) with separate squads under one single club website at no extra cost.',
+      },
+    ],
+    sources: [
+      { title: 'Teamo pricing and club plans', url: 'https://teamo.chat/pricing' },
+      { title: 'Teamo features', url: 'https://teamo.chat/features' },
+    ],
+  },
+  {
+    slug: 'plai',
+    alternativeSlug: 'plai-alternative',
+    name: 'PLAI',
+    tagline: 'The free PLAI alternative with a public club website & live scores',
+    summary: 'PLAI is an in-app team chat tool with payment cuts. itsfootball.club provides an ad-free public club website, live browser match centre and digital passes 100% free.',
+    aiOverview: 'itsfootball.club is a free alternative to PLAI for sports and football clubs. While PLAI is a private mobile app for team chats and match availability with in-app transaction cuts, itsfootball.club gives clubs a complete public website with custom domain, touchline live match centre for supporters, digital member passes with QR check-in, and merch shop completely free.',
+    keyTakeaways: [
+      'Full public club website: PLAI has no public website for supporters or sponsors.',
+      'Live match centre in mobile browser: no app download needed for supporters.',
+      'Digital member passes with QR camera scanner for matchdays and training.',
+      'Zero club subscriptions and transparent card fees paid by the payer.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'yes', text: 'Free app, supported by transaction deductions', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'part', text: 'Promotional content and partner ads', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'no', text: 'No public club website; app only', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'info', text: 'Basic match events in-app; no public live match centre', source: 0 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'no', text: 'Yes, users must download the PLAI app', source: 0 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Transaction fees of ~3.5% + 30p deducted from payments', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Not available as digital QR pass', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'info', text: 'Not listed', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'info', text: 'Not listed', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Public Web Identity vs Private App',
+        description: 'Give your club an official address on the web to attract players, showcase sponsors, and display fixtures.',
+        comparison: 'PLAI operates purely inside an app with no public web presence.',
+      },
+    ],
+    theirStrengths: [
+      'Simple, lightweight team availability and squad chat in app.',
+      'Fast team setup for casual social groups.',
+    ],
+    faqs: [
+      {
+        q: 'How does itsfootball.club differ from PLAI?',
+        a: 'PLAI is a private mobile app for team chat. itsfootball.club is a full platform providing an official club website, live browser scores, digital member passes, and a merch shop, 100% free.',
+      },
+    ],
+    sources: [
+      { title: 'PLAI app website', url: 'https://plai.io' },
+    ],
+  },
+  {
+    slug: 'footeo',
+    alternativeSlug: 'footeo-alternative',
+    name: 'Footeo',
+    tagline: 'The clean, ad-free Footeo alternative for grassroots football clubs',
+    summary: 'Footeo displays heavy third-party banner ads and charges for ad removal. itsfootball.club gives your club a clean, ad-free site and live match centre 100% free.',
+    aiOverview: 'itsfootball.club is a modern, completely ad-free alternative to Footeo for community football and soccer clubs. Footeo covers free club sites with aggressive commercial banner ads and popups, charging €10–€25/month for VIP ad removal. itsfootball.club is 100% ad-free forever, includes a touchline live match centre, digital member passes with QR check-in, and tournament maker at zero cost.',
+    keyTakeaways: [
+      '100% ad-free forever: Footeo displays third-party network ads; itsfootball.club never shows ads.',
+      'Modern web standards: fast, responsive, mobile-first design with custom club colors and domain.',
+      'Public live match centre: record live goals, cards, and formations on your phone.',
+      'Digital member passes with QR check-in terminal included.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'part', text: 'Free plan with ads. VIP Club ad-removal is €10–€25/month', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'no', text: 'Intrusive third-party banner ads, videos and popups on free sites', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'yes', text: 'Included with ad-supported templates', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'part', text: 'Basic live score update feature', source: 0 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'yes', text: 'Web-based', source: 0 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'part', text: 'Integrated payments with processing fees', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'info', text: 'Not available as digital QR pass', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'part', text: 'Online boutique module on paid tiers', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'info', text: 'Basic league tables', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Zero Ads vs Cluttered Banner Popups',
+        description: 'Give your members a clean, professional club experience that spotlights your own local sponsors instead of intrusive network ads.',
+        comparison: 'Footeo fills free club pages with commercial advertising banners unless clubs pay a monthly VIP fee.',
+      },
+    ],
+    theirStrengths: [
+      'Long-standing European presence, particularly across France and Belgium.',
+      'Established database of amateur soccer results and forum communities.',
+    ],
+    faqs: [
+      {
+        q: 'Why migrate from Footeo to itsfootball.club?',
+        a: 'itsfootball.club gives you a fast, modern, mobile-responsive club website with zero third-party ads, live browser match centre, and digital passes without monthly fees.',
+      },
+    ],
+    sources: [
+      { title: 'Footeo club website builder', url: 'https://www.footeo.com' },
+    ],
+  },
+  {
+    slug: 'football-club',
+    alternativeSlug: 'football-club-alternative',
+    name: 'Football.Club',
+    tagline: 'The free grassroots alternative to the $499/mo Football.Club platform',
+    summary: 'Football.Club is an enterprise platform starting at $499/month. itsfootball.club gives community and grassroots clubs every feature 100% free forever.',
+    aiOverview: 'itsfootball.club is the community grassroots alternative to the premium enterprise platform Football.Club. Following Fairfax Partners\' acquisition of the premium domain in July 2026, Football.Club launched high-end enterprise software starting from $499/month for professional academies. In contrast, itsfootball.club is built specifically for volunteer-run grassroots and community soccer clubs, providing custom websites, live match centres, digital passes, and online payments 100% free.',
+    keyTakeaways: [
+      'Community vs Enterprise: $0/month forever vs $499+/month enterprise subscriptions.',
+      'Designed for volunteer-run clubs: launch in 5 minutes with zero technical overhead.',
+      'Complete club matchday: live browser match centre, visual lineups, and digital member passes with QR verification.',
+      'Zero feature gates: unlimited teams, custom colours, custom domain, and merchandise shop included.',
+    ],
+    rows: [
+      { label: 'Price for the club', us: FREE, them: { mark: 'no', text: 'Enterprise pricing starting from $499/month', source: 0 } },
+      { label: 'Ads', us: NO_ADS, them: { mark: 'yes', text: 'Ad-free enterprise software', source: 0 } },
+      { label: 'Public club website', us: WEBSITE, them: { mark: 'yes', text: 'Custom enterprise website', source: 0 } },
+      { label: 'Live match centre', us: MATCH_CENTRE, them: { mark: 'yes', text: 'Enterprise match centre', source: 0 } },
+      { label: 'Fans need an app?', us: NO_APP, them: { mark: 'yes', text: 'Web and mobile portal', source: 0 } },
+      { label: 'Online payments', us: PAYMENTS, them: { mark: 'yes', text: 'Enterprise payment gateway', source: 0 } },
+      { label: 'Digital member passes', us: PASSES, them: { mark: 'yes', text: 'Enterprise member portal', source: 0 } },
+      { label: 'Club shop', us: SHOP, them: { mark: 'yes', text: 'Enterprise e-commerce', source: 0 } },
+      { label: 'Tournament maker', us: TOURNAMENTS, them: { mark: 'yes', text: 'Tournament management module', source: 0 } },
+    ],
+    featureHighlights: [
+      {
+        title: 'Built for Grassroots Volunteers ($0 vs $499/mo)',
+        description: 'Volunteer-run community soccer clubs cannot afford enterprise software fees. itsfootball.club provides an exceptional, modern matchday platform with zero monthly overhead.',
+        comparison: 'Football.Club is targeted at well-funded pro academies and semi-pro clubs from $499/month.',
+      },
+    ],
+    theirStrengths: [
+      'Well-funded enterprise backing from Fairfax Partners for pro leagues and elite academies.',
+      'Custom bespoke software integrations for large sporting enterprises.',
+    ],
+    faqs: [
+      {
+        q: 'Is itsfootball.club affiliated with Football.Club?',
+        a: 'No. itsfootball.club is an independent Sydney-founded grassroots platform built specifically for community volunteers and Sunday league clubs at $0 cost, whereas Football.Club is an enterprise software provider starting at $499/month.',
+      },
+    ],
+    sources: [
+      { title: 'Fairfax Partners acquires Football.Club domain', url: 'https://www.digitaljournal.com/pr/news/newsfile/fairfax-partners-acquires-premium-domain-19442983.html' },
+      { title: 'Football.Club enterprise platform', url: 'https://football.club/' },
+    ],
+  },
 ];
 
 export const competitorBySlug = (slug: string) => COMPETITORS.find(c => c.slug === slug);

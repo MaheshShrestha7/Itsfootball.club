@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
+import { HOMEPAGE_FAQS } from '@/lib/schema';
 
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
@@ -801,6 +802,41 @@ export default function PlatformHomePage() {
           </div>
         </section>
       )}
+
+      {/* ================= FREQUENTLY ASKED QUESTIONS ================= */}
+      <section className="lp-section" style={{ paddingTop: 0 }}>
+        <div className="container" style={{ maxWidth: '880px' }}>
+          <div className="lp-head lp-head-center lp-reveal">
+            <div className="lp-eyebrow">Grassroots club FAQ</div>
+            <h2 className="lp-h2">Frequently asked questions.</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginTop: '0.5rem' }}>
+              Everything club committees, volunteers, and managers ask before getting started.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', marginTop: '1.75rem' }}>
+            {HOMEPAGE_FAQS.map(f => (
+              <details
+                key={f.q}
+                className="glass-panel"
+                style={{ padding: '1.15rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+              >
+                <summary style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{f.q}</span>
+                  <span style={{ color: 'var(--club-ink)', fontSize: '1.2rem', fontWeight: 300 }}>+</span>
+                </summary>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: '0.85rem', fontSize: '0.98rem' }}>
+                  {f.a}
+                </p>
+              </details>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
+            <Link href="/faq" style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.98rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              Read the full FAQ with all 30+ answers <ArrowRight size={15} />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ================= FINAL CTA ================= */}
       <section className="lp-section" style={{ paddingTop: 0 }}>

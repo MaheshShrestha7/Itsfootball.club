@@ -23,6 +23,7 @@ import JsonLd from '@/components/JsonLd';
 import CellView, { SourceLink } from '@/app/vs/CellView';
 import { CONTACT_EMAIL } from '@/lib/faq';
 import {
+  CHECKED_ON,
   COMPETITORS,
   competitorBySlugOrAlternative,
   ALL_COMPARE_SLUGS,
@@ -152,6 +153,9 @@ export default async function CompareAlternativePage({ params }: Props) {
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '1.1rem auto 0', fontSize: '1.1rem', lineHeight: 1.65 }}>
             {c.summary}
+          </p>
+          <p className="tool-updated" style={{ marginTop: '0.85rem' }}>
+            Last reviewed &amp; verified: <time dateTime="2026-10-18">{CHECKED_ON}</time>
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.85rem', marginTop: '1.75rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>

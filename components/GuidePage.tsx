@@ -124,8 +124,7 @@ export default function GuidePage(p: GuidePageProps) {
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 4.6vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15 }}>{p.h1}</h1>
           <p className="tool-updated">
-            Written by Mahesh Shrestha (Sydney grassroots volunteer) •{' '}
-            {p.sources.length ? 'Checked against primary sources on ' : 'Updated '}
+            Written by Mahesh Shrestha (Sydney grassroots volunteer) • Last reviewed &amp; checked on{' '}
             <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time>
           </p>
         </header>

@@ -103,6 +103,24 @@ export default function CompareHubPage() {
           </p>
         </section>
 
+        {/* Featured Australia Guide Banner */}
+        <section style={{ marginBottom: '2.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem 1.75rem', borderLeft: '4px solid var(--club-ink)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <div>
+              <div className="badge badge-primary" style={{ marginBottom: '0.4rem', fontSize: '0.72rem' }}>2026 AUSTRALIA GUIDE</div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: '0 0 0.35rem 0' }}>
+                Best Free Football Club Website Builders in Australia (2026 Ranked)
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', margin: 0, maxWidth: '640px' }}>
+                Read our in-depth, independent ranking of itsfootball.club, Stack Team App, Pitchero, Spond, and Playpass for Australian community soccer clubs.
+              </p>
+            </div>
+            <Link href="/best-free-football-club-website-builders-australia" className="btn btn-primary" style={ctaStyle}>
+              Read Australian Ranking <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
+
         {/* Direct Competitor Cards */}
         <section aria-label="Individual Competitor Comparisons" style={{ marginBottom: '3.5rem' }}>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.25rem' }}>

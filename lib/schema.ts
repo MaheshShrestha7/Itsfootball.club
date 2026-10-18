@@ -121,9 +121,48 @@ export function homeSchema() {
         target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/clubs?q={search_term_string}` },
         'query-input': 'required name=search_term_string',
       },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE_URL}/#faq`,
+      mainEntity: HOMEPAGE_FAQS.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: f.a,
+        },
+      })),
     }
   );
 }
+
+export const HOMEPAGE_FAQS = [
+  {
+    q: 'Is itsfootball.club really free for grassroots clubs?',
+    a: 'Yes, 100% free with no monthly subscriptions, no setup fees, and no feature gates. Every club gets a custom website, live match centre, digital member passes with QR check-in, lineup builder, and club shop at zero software cost.',
+  },
+  {
+    q: 'Do supporters or parents need to install an app to follow live matches?',
+    a: 'No app is required. itsfootball.club runs directly in any phone or desktop browser. Anyone with your club link can view live scores, goalscorers, pitch formations, and match commentary with zero downloads.',
+  },
+  {
+    q: 'Can we connect our club’s own custom web address?',
+    a: 'Yes. You can link your own custom domain (e.g. yourclub.com.au) to your itsfootball.club website for free, with custom club crest, colors, and branding.',
+  },
+  {
+    q: 'How does itsfootball.club compare to Pitchero, Spond, or Stack Team App?',
+    a: 'Unlike Pitchero (which charges £38–£99/mo and limits free clubs to 1 team) or Stack Team App (which charges $4.99–$9.99/mo per team to remove ads), itsfootball.club is completely free, ad-free, and includes an open public website and live match centre.',
+  },
+  {
+    q: 'How does matchday live scoring work on mobile?',
+    a: 'Club coaches or volunteers open the Match Centre on their phone at the touchline to record goals, assists, yellow/red cards, and substitutions. Scores and stats update on the public match page in real time.',
+  },
+  {
+    q: 'How do online membership payments and registrations work?',
+    a: 'Clubs connect their own Stripe account to collect annual registration fees, tournament entry fees, and merchandise sales. A transparent card booking fee is paid by the payer at checkout, ensuring the club receives 100% of its fees.',
+  },
+];
 
 function clubRef(club: ClubMetadataRow): Json {
   return { '@type': ['SportsClub', 'SportsOrganization', 'SportsTeam'], '@id': clubId(club), name: club.name, url: clubUrl(club) };

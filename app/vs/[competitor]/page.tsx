@@ -7,7 +7,7 @@ import CellView, { SourceLink } from '../CellView';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import { CONTACT_EMAIL } from '@/lib/faq';
-import { COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
+import { CHECKED_ON, COMPETITORS, competitorBySlug, type Competitor } from '@/lib/competitors';
 import JsonLd from '@/components/JsonLd';
 import { ORGANIZATION_ID } from '@/lib/schema';
 import { SITE_NAME, SITE_URL, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
@@ -60,6 +60,9 @@ export default async function VsPage({ params }: Props) {
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0.9rem auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
             {c.summary}
+          </p>
+          <p className="tool-updated" style={{ marginTop: '0.85rem' }}>
+            Last reviewed &amp; verified: <time dateTime="2026-10-18">{CHECKED_ON}</time>
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>

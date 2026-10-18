@@ -52,6 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/guides'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
     ...GUIDES.map(g => ({ url: url(g.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/compare'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
+    { url: url('/best-free-football-club-website-builders-australia'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
     ...COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: url('/vs'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
     ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),

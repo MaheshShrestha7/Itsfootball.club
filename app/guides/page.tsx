@@ -63,6 +63,24 @@ export default function GuidesIndexPage() {
           <p className="tool-updated">Updated <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time></p>
         </header>
 
+        {/* Featured Guide Banner */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div className="glass-panel" style={{ padding: '1.4rem 1.6rem', borderLeft: '4px solid var(--club-ink)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <div>
+              <div className="badge badge-primary" style={{ marginBottom: '0.35rem', fontSize: '0.72rem' }}>2026 AUSTRALIA RANKING</div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: '0 0 0.35rem 0' }}>
+                Best Free Football Club Website Builders in Australia
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', margin: 0, maxWidth: '640px' }}>
+                Independent review and ranking of itsfootball.club, Stack Team App, Pitchero, Spond, and Playpass for Australian community soccer clubs.
+              </p>
+            </div>
+            <Link href="/best-free-football-club-website-builders-australia" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+              Read the Review <ArrowRight size={15} />
+            </Link>
+          </div>
+        </div>
+
         <ul className="tool-links tool-links-main">
           {GUIDES.map(g => (
             <li key={g.path}>
