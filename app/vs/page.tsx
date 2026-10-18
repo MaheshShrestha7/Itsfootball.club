@@ -60,7 +60,7 @@ export default function VsIndexPage() {
                 {COLUMNS.map(c => (
                   <th scope="col" key={c.slug}>
                     {c.name}
-                    <Link href={`/vs/${c.slug}`} className="vs-more">{c.closed ? 'Moving on' : 'Full comparison'} <ArrowRight size={12} /></Link>
+                    <Link href={`/compare/${c.alternativeSlug}`} className="vs-more">{c.closed ? 'Moving on' : 'Full comparison'} <ArrowRight size={12} /></Link>
                   </th>
                 ))}
               </tr>

@@ -94,6 +94,23 @@ const mockJuniorMatch: MatchMetadataRow = {
   score_hidden: true,
 };
 const juniorNode = matchNode(mockClub, mockJuniorMatch);
-assert.ok(!juniorNode.description.includes('2-1'), 'Hidden score must not leak score into description');
+const desc = String(juniorNode.description || '');
+assert.ok(!desc.includes('2-1'), 'Hidden score must not leak score into description');
+
+// 6. Competitor comparison routes & data validation
+import { COMPETITORS, competitorBySlugOrAlternative, ALL_COMPARE_SLUGS } from './competitors';
+assert.ok(ALL_COMPARE_SLUGS.includes('pitchero-alternative'), 'pitchero-alternative slug must exist');
+assert.ok(ALL_COMPARE_SLUGS.includes('spond-alternative'), 'spond-alternative slug must exist');
+assert.ok(ALL_COMPARE_SLUGS.includes('teamapp-alternative'), 'teamapp-alternative slug must exist');
+
+for (const slug of ['pitchero', 'pitchero-alternative', 'spond', 'spond-alternative', 'teamapp', 'teamapp-alternative']) {
+  const comp = competitorBySlugOrAlternative(slug);
+  assert.ok(comp, `Slug ${slug} must resolve to a valid competitor`);
+  assert.ok(comp.aiOverview && comp.aiOverview.length > 50, `${comp.name} must have an AEO aiOverview`);
+  assert.ok(comp.keyTakeaways && comp.keyTakeaways.length >= 3, `${comp.name} must have key takeaways`);
+  assert.ok(comp.faqs && comp.faqs.length >= 2, `${comp.name} must have FAQs`);
+  assert.ok(comp.rows.length >= 5, `${comp.name} must have comparison rows`);
+}
 
 console.log('schema checks passed');
+

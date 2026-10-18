@@ -47,6 +47,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...FORMAT_PAGES.map(t => ({ url: url(t.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/guides'), changeFrequency: 'monthly', priority: 0.6 },
     ...GUIDES.map(g => ({ url: url(g.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/compare'), changeFrequency: 'monthly', priority: 0.7 },
+    ...COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: url('/vs'), changeFrequency: 'monthly', priority: 0.6 },
     ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },
