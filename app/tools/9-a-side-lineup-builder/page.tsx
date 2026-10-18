@@ -34,7 +34,7 @@ export default function NineASideLineupBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 9-A-SIDE"
       h1="9-a-side lineup builder"
-      intro="Set out your 9-a-side soccer team in a 3-3-2, or switch to 3-2-3, 4-3-1 and more. Tap players to name them, drag them into place and download a team sheet image for Instagram, Facebook or the team WhatsApp. Free, with no login."
+      intro="Build 9-a-side soccer starting lineups across 6 tactical formations including 3-3-2, 3-2-3, and 4-3-1. Designed for Under 10 and Under 11 MiniRoos teams, you can assign shirt numbers, positions, bench substitutes (up to 20 players), and sponsor logos. Download high-resolution matchday PNG graphics (1080 × 1350 post or 1080 × 1920 story) instantly without signing up."
       description={DESCRIPTION}
       appName="Free 9-a-Side Lineup Builder"
       alternateNames={['9v9 formation maker', '9-a-side team sheet maker', '9 a side football lineup tool']}

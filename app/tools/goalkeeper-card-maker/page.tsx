@@ -38,7 +38,7 @@ export default function GoalkeeperCardMakerPage() {
       parent={PLAYER_CARD_TOOL}
       badge="FREE TOOL · GOALKEEPERS"
       h1="Goalkeeper card maker"
-      intro="Make a goalkeeper card in a minute: your photo, rating, clean sheets, saves and appearances, with your club badge and colours. It opens on GK with the keeper stats ready to fill in. Free, with no login."
+      intro="Create custom goalkeeper cards showcasing clean sheets, match saves, penalty stops, and appearances alongside your calculated GK rating. Upload a keeper kit photo with instant on-device background removal, customize your club crest and colours, and select gold or silver finishes. Export transparent card PNGs or social graphics (1080 × 1350 post, 1080 × 1920 story) free without signing up."
       description={DESCRIPTION}
       appName="Free Goalkeeper Card Maker"
       alternateNames={['Keeper card maker', 'Goalie card maker', 'Football goalkeeper card', 'Soccer goalie card creator']}

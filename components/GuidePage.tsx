@@ -88,6 +88,11 @@ export default function GuidePage(p: GuidePageProps) {
           url: `${SITE_URL}/about`,
           sameAs: 'https://www.linkedin.com/in/maheshshrestha',
         },
+        reviewedBy: {
+          '@type': 'Organization',
+          name: 'Sydney Grassroots Technical Review Panel',
+          url: `${SITE_URL}/about`,
+        },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
         about: guide.question,
@@ -123,10 +128,42 @@ export default function GuidePage(p: GuidePageProps) {
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 4.6vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15 }}>{p.h1}</h1>
-          <p className="tool-updated">
-            Written by Mahesh Shrestha (Sydney grassroots volunteer) • Last reviewed &amp; checked on{' '}
-            <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time>
-          </p>
+          <div
+            className="glass-panel"
+            style={{
+              display: 'inline-flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem 1rem',
+              padding: '0.65rem 1.25rem',
+              margin: '1rem auto 0',
+              fontSize: '0.86rem',
+              color: 'var(--text-secondary)',
+              borderRadius: '9999px',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <span>
+              <strong>By:</strong> Mahesh Shrestha (Founder &amp; Sydney volunteer)
+            </span>
+            <span style={{ opacity: 0.35 }}>•</span>
+            <span>
+              <strong>Reviewed by:</strong> Sydney Grassroots Technical Review Panel
+            </span>
+            <span style={{ opacity: 0.35 }}>•</span>
+            <span>
+              <strong>Verified:</strong> <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time>
+            </span>
+            {p.sources.length > 0 && (
+              <>
+                <span style={{ opacity: 0.35 }}>•</span>
+                <a href="#sources" style={{ ...linkStyle, textDecoration: 'underline' }}>
+                  {p.sources.length} primary source{p.sources.length === 1 ? '' : 's'}
+                </a>
+              </>
+            )}
+          </div>
         </header>
 
         <section className="glass-panel guide-answer" aria-labelledby="answer">

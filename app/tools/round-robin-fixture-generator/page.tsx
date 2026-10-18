@@ -36,7 +36,7 @@ export default function RoundRobinFixtureGeneratorPage() {
       parent={TOURNAMENT_TOOL}
       badge="FREE TOOL · ROUND ROBIN"
       h1="Round robin fixture generator"
-      intro="Paste your teams and get a round robin fixture list where every team plays every other team once, round by round. Publish it as a live soccer league with a table that updates as you enter scores, at one link for players, families and local news. Free."
+      intro="A round robin requires N × (N − 1) ÷ 2 total matches across N − 1 rounds for even team counts: 6 teams play 6 × 5 ÷ 2 = 15 matches, and 8 teams play 8 × 7 ÷ 2 = 28 matches. Generate your fair circle-method fixture draw and live updating standings table below."
       description={DESCRIPTION}
       appName="Free Round Robin Fixture Generator"
       alternateNames={['Round robin schedule maker', 'Soccer league fixture generator', 'League draw generator']}

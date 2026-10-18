@@ -24,7 +24,7 @@ const ROWS = [
   { label: '4-a-side, 2 × 20 min', onField: 4, minutes: 40, squads: [5, 6, 7] },
 ];
 
-const ANSWER = 'In Australia, Football Australia’s Game Time Policy template gives every MiniRoos player (under 6 to under 11) equal game time in each game, and every youth player (under 12 to under 18) at least half of each game. To share the minutes evenly, multiply the players on the field by the match length and divide by the squad size: 9 players × 50 minutes ÷ 12 players = 37.5 minutes each.';
+const ANSWER = 'Under Football Australia’s Game Time Policy, MiniRoos players (under 6 to 11) must receive equal playing time in every match, while youth players receive at least half of each game. To calculate fair minutes, multiply players on the field by match length and divide by squad size: 9 players × 50 min ÷ 12 squad = 37.5 minutes each.';
 
 export default function EqualPlayingTimeGuidePage() {
   return (

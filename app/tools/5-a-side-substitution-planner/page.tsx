@@ -25,7 +25,7 @@ export default function FiveASideSubstitutionPlannerPage() {
       parent={PLAYING_TIME_TOOL}
       badge="FREE TOOL · 5-A-SIDE"
       h1="5-a-side substitution planner"
-      intro="In 5-a-side, each player’s fair share is 5 × match length ÷ squad size: with 8 players over two 20-minute halves, that is exactly 25 minutes each, with one rolling sub every 5 minutes. This planner opens on 5v5 with 8 players and tells you who comes on when. Free, with no login."
+      intro="To calculate equal playing time in 5-a-side soccer and futsal, multiply 5 players by match duration and divide by squad size: 5 players × 40 min ÷ 8 squad = 25.0 min each. With 7 players over 40 minutes, each plays 5 × 40 ÷ 7 = 28.6 minutes. Plan your rolling substitution intervals below."
       description={DESCRIPTION}
       appName="5-a-Side Substitution Planner"
       alternateNames={['5v5 rolling subs calculator', 'Futsal substitution planner', '5 a side playing time calculator']}

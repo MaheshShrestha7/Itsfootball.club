@@ -15,7 +15,7 @@ export interface Guide extends ToolPageLink {
 export const GUIDES_HUB: ToolPageLink = { path: '/guides', label: 'Guides', blurb: 'Junior rules, fair minutes, fixtures and fees' };
 
 /** When the guides were last checked against their sources: shown as "Updated" and as dateModified */
-export const GUIDES_UPDATED = '2026-10-15';
+export const GUIDES_UPDATED = '2026-10-18';
 
 export const GUIDES: Guide[] = [
   {

@@ -25,7 +25,7 @@ export default function SevenASideSubstitutionPlannerPage() {
       parent={PLAYING_TIME_TOOL}
       badge="FREE TOOL · 7-A-SIDE"
       h1="7-a-side substitution planner"
-      intro="In 7-a-side, each player’s fair share is 7 × match length ÷ squad size: with 10 players over two 25-minute halves, that is exactly 35 minutes each. This planner opens on 7v7 with 10 players and works out who comes on for whom, at which minute. Free, with no login."
+      intro="To calculate equal playing time in 7-a-side soccer, multiply 7 field players by match minutes and divide by squad size: 7 players × 50 min ÷ 10 squad = 35.0 min each. In Under 8 MiniRoos (40 min) with 10 players: 7 × 40 ÷ 10 = 28.0 min each. Generate your rotation schedule below."
       description={DESCRIPTION}
       appName="7-a-Side Substitution Planner"
       alternateNames={['7v7 sub rotation', '7v7 playing time calculator', '7 a side substitution calculator']}

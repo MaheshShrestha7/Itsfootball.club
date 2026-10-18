@@ -34,7 +34,7 @@ export default function ElevenASideLineupBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 11-A-SIDE"
       h1="11-a-side lineup builder"
-      intro="Pick your senior or amateur soccer starting XI in a 4-3-3, or switch to 4-4-2, 4-2-3-1, 3-5-2 and eight more. Name your players, mark the captain, add the opponent and download a matchday team sheet for Instagram, Facebook or the club WhatsApp. Free, with no login."
+      intro="Create and download an 11-a-side starting XI matchday graphic choosing from 12 tactical formations, including 4-3-3, 4-4-2, and 4-2-3-1. Customize player names, shirt numbers, team badges, substitute benches (up to 20 players), and sponsor strips. Export social media graphics in 1080 × 1350 feed post or 1080 × 1920 story formats instantly."
       description={DESCRIPTION}
       appName="Free 11-a-Side Lineup Builder"
       alternateNames={['Starting XI maker', '11v11 formation builder', 'Matchday team sheet maker']}

@@ -31,7 +31,7 @@ export default function FiveASideFormationBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 5-A-SIDE & FUTSAL"
       h1="5-a-side formation builder"
-      intro="Plan your 5-a-side or futsal team in the 1-2-1 diamond, or switch to 2-1-1, 2-2 or 1-1-2. Name your players, move them around the pitch and download a lineup image for the group chat. Free, with no login."
+      intro="Plan 5-a-side and futsal lineups using 4 preset formations including the 1-2-1 diamond, 2-1-1, 2-2, and 1-1-2 shapes plus free form. Position outfield players and your goalkeeper, assign shirt numbers, and customize club colours and badges. Export high-resolution PNG graphics (1080 × 1350 post or 1080 × 1920 story) instantly without signing up."
       description={DESCRIPTION}
       appName="Free 5-a-Side Formation Builder"
       alternateNames={['5 a side lineup builder', 'Futsal formation maker', '1-2-1 diamond formation tool']}

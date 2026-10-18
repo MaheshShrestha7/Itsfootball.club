@@ -113,10 +113,21 @@ export default function LineupBuilderPage() {
             Free football lineup builder
           </h1>
           {/* Answer first: the sentence search and AI engines lift as the summary */}
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '660px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            Make your soccer starting lineup for 5, 7, 9 or 11-a-side in a minute: pick a formation, tap players to name
-            them, drag them into place and download a team sheet image for Instagram, Facebook or WhatsApp. Free, with no login.
-          </p>
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: '740px',
+              margin: '1.25rem auto 0',
+              padding: '1rem 1.4rem',
+              textAlign: 'left',
+              borderLeft: '4px solid var(--club-green, #10b981)',
+              background: 'rgba(255, 255, 255, 0.03)',
+            }}
+          >
+            <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.02rem', lineHeight: 1.65, fontWeight: 500 }}>
+              Build and download soccer lineup graphics for 5, 7, 9, or 11-a-side matches across 28 preset tactical formations. Add player names, shirt numbers, captain bands, bench substitutes (up to 20 squad members), club badges, and sponsor logos. Export high-resolution post (1080 × 1350) or story (1080 × 1920) PNG images free without signing up.
+            </p>
+          </div>
           <ToolUpdated />
         </header>
 

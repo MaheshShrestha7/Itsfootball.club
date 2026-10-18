@@ -34,7 +34,7 @@ export default function SevenASideLineupBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 7-A-SIDE"
       h1="7-a-side lineup builder"
-      intro="Build your 7-a-side soccer lineup in a 2-3-1, the standard shape for junior football, or try 3-2-1, 2-2-2 and more. Name your players, drag them into position and download a team sheet image in a minute. Free, with no login."
+      intro="Create 7-a-side soccer lineups using 6 tactical formations including 2-3-1, 3-2-1, and 2-2-2, designed for Under 8 and Under 9 MiniRoos. Set player names, shirt numbers, captain badges, bench substitutes (up to 20 players), and sponsor logos. Download high-resolution matchday PNG images (1080 × 1350 post or 1080 × 1920 story) instantly for social media."
       description={DESCRIPTION}
       appName="Free 7-a-Side Lineup Builder"
       alternateNames={['7 a side formation tool', '7v7 lineup maker', 'MiniRoos team sheet maker']}

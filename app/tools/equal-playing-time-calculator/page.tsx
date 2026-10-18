@@ -39,7 +39,7 @@ export default function EqualPlayingTimeCalculatorPage() {
       path={PATH}
       badge="FREE TOOL · NO SIGN-UP"
       h1="Equal playing time calculator"
-      intro="Equal playing time = players on the pitch × match length ÷ squad size. For 9-a-side over two 30-minute halves with 13 players, that is 41.5 minutes each. Pick your format, match length and squad below and get a minute-by-minute substitution schedule that gives every player the same minutes. Free, with no login."
+      intro="To calculate equal playing time in football, multiply on-pitch players by match duration and divide by squad size: 9 players × 60 min ÷ 13 squad = 41.5 min each. For 7-a-side over 40 min with 10 players: 7 × 40 ÷ 10 = 28.0 min each. Use the free rotation planner below to generate a fair substitution schedule."
       description={DESCRIPTION}
       appName="Equal Playing Time Calculator"
       alternateNames={['Soccer substitution calculator', 'Sub rotation planner', 'Fair playing time calculator', 'Youth soccer playing time calculator', 'Football substitution planner']}

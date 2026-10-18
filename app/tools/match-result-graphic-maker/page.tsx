@@ -50,7 +50,7 @@ export default function MatchResultGraphicMakerPage() {
       path={PATH}
       badge="FREE TOOL · NO SIGN-UP"
       h1="Free match result & Player of the Match graphic maker"
-      intro="Make a full-time score graphic for your football or soccer club in a minute: add both badges, the final score and goalscorers, pick a photo, and download a story (9:16), post (4:5) or square (1:1) image for Instagram, Facebook or WhatsApp. Free, with no login."
+      intro="Generate professional match result and Player of the Match graphics for your soccer club in 60 seconds. Add team badges, final scores, penalty shootouts, goalscorer minutes, and match photos. Download high-resolution PNG graphics formatted for 9:16 stories (1080 × 1920), 4:5 feed posts (1080 × 1350), or 1:1 squares (1080 × 1080) free without login."
       description={DESCRIPTION}
       appName="Free Match Result Graphic Maker"
       alternateNames={['Football result graphic maker', 'Soccer score graphic maker', 'Full time score template', 'Man of the Match graphic maker', 'MOTM graphic maker']}

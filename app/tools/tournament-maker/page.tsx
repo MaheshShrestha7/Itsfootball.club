@@ -111,10 +111,21 @@ export default function TournamentMakerPage() {
             Free soccer tournament maker
           </h1>
           {/* Answer first: the sentence search and AI engines lift as the summary */}
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            Make a live bracket for your summer cup, charity day or 6-a-side gala day. Paste in the teams, pick a format and
-            share one link where players, families and local news can follow fixtures, tables and results as you enter scores.
-          </p>
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: '740px',
+              margin: '1.25rem auto 0',
+              padding: '1rem 1.4rem',
+              textAlign: 'left',
+              borderLeft: '4px solid var(--club-green, #10b981)',
+              background: 'rgba(255, 255, 255, 0.03)',
+            }}
+          >
+            <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.02rem', lineHeight: 1.65, fontWeight: 500 }}>
+              Run soccer tournaments across knockout, round robin league, or group stage formats for up to 32 teams. A knockout bracket requires N − 1 matches (e.g. 16 teams = 15 matches), while a round robin requires N × (N − 1) ÷ 2 matches (e.g. 8 teams = 28 matches). Generate your live updating tournament schedule below.
+            </p>
+          </div>
           <ToolUpdated />
         </header>
 

@@ -39,7 +39,7 @@ export default function PlayerOfTheMonthCardMakerPage() {
       parent={PLAYER_CARD_TOOL}
       badge="FREE TOOL · PLAYER OF THE MONTH"
       h1="Player of the Month card maker"
-      intro="Make a Player of the Month card for your club’s winner: their photo, rating, position and stats on a blue award card with the month on it. Download for Instagram, Facebook or the team chat. Free, with no login."
+      intro="Celebrate your grassroots football award winners with custom Player of the Month cards. Feature their photo with automatic background cutout, award month, calculated rating, key monthly stats (goals, assists, clean sheets), and club badge. Download transparent PNG cards or social graphics (1080 × 1350 post, 1080 × 1920 story) instantly with no account required."
       description={DESCRIPTION}
       appName="Free Player of the Month Card Maker"
       alternateNames={['POTM card maker', 'Player of the Month graphic maker', 'Football Player of the Month template', 'Monthly award card for football clubs']}

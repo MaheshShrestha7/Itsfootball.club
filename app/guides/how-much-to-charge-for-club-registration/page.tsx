@@ -21,7 +21,7 @@ const STRIPE = CARD_PRESETS[0];
 const ex = seasonBudget({ costs: EXAMPLE_COSTS, players: EXAMPLE_PLAYERS, incomeCents: EXAMPLE_INCOME, bufferPercent: 5, card: STRIPE, unpaidPercent: 10, feeCents: null });
 const stripeText = `${STRIPE.percent}% + ${money(STRIPE.fixedCents)}`;
 
-const ANSWER = `Charge enough to cover the season: add up every cost, add a 5–10% buffer, take off sponsorship and grants, then divide by the number of players who will pay. For an example senior team of ${EXAMPLE_PLAYERS} with ${money(ex.costsCents, true)} of costs and ${money(EXAMPLE_INCOME, true)} of sponsorship, that is ${money(ex.breakEvenCents)} each, or ${money(ex.cardPriceCents)} if players pay by card at Stripe’s Australian rate of ${stripeText}.`;
+const ANSWER = `To calculate club registration fees: sum all season costs, add a 5–10% contingency buffer, subtract confirmed sponsorship, and divide by paying players. For an 18-player squad with ${money(ex.costsCents, true)} in costs and ${money(EXAMPLE_INCOME, true)} sponsorship, break-even is ${money(ex.breakEvenCents)} cash, or ${money(ex.cardPriceCents)} including Stripe card processing (${stripeText}).`;
 
 export default function RegistrationFeeGuidePage() {
   return (

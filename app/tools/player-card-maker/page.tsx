@@ -70,7 +70,7 @@ export default function PlayerCardMakerPage() {
       path={PATH}
       badge="FREE TOOL · NO SIGN-UP"
       h1="Free football player card maker"
-      intro="Make your own football player card in a minute: your photo, rating, position and Sunday League stats (goals, assists, clean sheets and attendance streak) with your club badge and colours. Keep it Standard or pick a special card such as Team of the Week, Player of the Month or Levelled Up. Download it for the team chat, Instagram or TikTok. Free, with no login."
+      intro="Create custom football player cards in 60 seconds: upload a photo with instant on-device background removal, set position, calculate ratings from Sunday League stats (goals, assists, clean sheets), and add your club crest. Download transparent card PNGs, 9:16 stories (1080 × 1920), 4:5 feed posts (1080 × 1350), or 1:1 squares (1080 × 1080) free without an account."
       description={DESCRIPTION}
       appName="Free Football Player Card Maker"
       alternateNames={['Soccer player card maker', 'Make your own football card', 'Football card creator', 'Player rating card maker', 'Custom football card generator']}

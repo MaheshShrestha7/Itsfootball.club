@@ -39,7 +39,7 @@ export default function SoccerPlayerCardMakerPage() {
       parent={PLAYER_CARD_TOOL}
       badge="FREE TOOL · SOCCER"
       h1="Soccer player card maker"
-      intro="Make a custom soccer player card in a minute: your photo, rating, position and season stats (goals, assists, games played and attendance) with your team badge and colors. Free, with no login, for rec, travel and adult league soccer."
+      intro="Design custom soccer trading cards for youth rec, travel, and adult league players in under a minute. Upload your uniform photo with automated background cutout, set your position and calculated rating, display season stats, and customize team colors and crests. Download transparent card PNGs or social media graphics (1080 × 1350 post, 1080 × 1920 story) free."
       description={DESCRIPTION}
       appName="Free Soccer Player Card Maker"
       alternateNames={['Custom soccer card maker', 'Soccer card creator', 'Make your own soccer card', 'Soccer trading card maker']}

@@ -183,7 +183,29 @@ export default function ToolLandingPage(p: ToolLandingProps) {
         <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{p.h1}</h1>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>{p.intro}</p>
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: '740px',
+              margin: '1.25rem auto 0',
+              padding: '1rem 1.4rem',
+              textAlign: 'left',
+              borderLeft: '4px solid var(--club-green, #10b981)',
+              background: 'rgba(255, 255, 255, 0.03)',
+            }}
+          >
+            <p
+              style={{
+                color: 'var(--text-primary)',
+                margin: 0,
+                fontSize: '1.02rem',
+                lineHeight: 1.65,
+                fontWeight: 500,
+              }}
+            >
+              {p.intro}
+            </p>
+          </div>
           <ToolUpdated />
         </header>
 
