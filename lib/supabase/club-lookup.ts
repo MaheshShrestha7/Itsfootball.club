@@ -66,7 +66,9 @@ export interface MatchMetadataRow {
   status: string;
   competition: string | null;
   match_date: string;
+  match_time?: string | null;
   venue: string | null;
+  ground_id?: string | null;
   is_club_home: boolean | null;
   home_team_logo: string | null;
   away_team_logo: string | null;
@@ -88,7 +90,7 @@ export async function findMatchById(matchId: string): Promise<MatchMetadataRow |
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&id=eq.${encodeURIComponent(matchId)}`,
+      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&id=eq.${encodeURIComponent(matchId)}`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },
@@ -114,7 +116,7 @@ export async function listClubLiveMatches(clubId: string, limit = 5): Promise<Ma
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&club_id=eq.${encodeURIComponent(clubId)}&order=match_date.desc&limit=20`,
+      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&club_id=eq.${encodeURIComponent(clubId)}&order=match_date.desc&limit=20`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },

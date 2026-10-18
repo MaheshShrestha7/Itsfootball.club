@@ -21,12 +21,11 @@ async function load() {
 }
 
 export async function generateMetadata() {
-  const { indexable } = await load();
   return pageMetadata({
     title: 'Community Soccer Grounds: Parking, Pitches & Wet Weather',
     description: 'Free guides to community soccer grounds in Australia: where to park, which pitch, toilets and canteen, and how to check if a ground is closed after rain.',
     path: GROUNDS_PATH,
-    noIndex: indexable.length < MIN_INDEXABLE_DIRECTORY,
+    noIndex: false,
   });
 }
 

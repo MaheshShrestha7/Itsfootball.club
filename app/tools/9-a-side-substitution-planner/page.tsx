@@ -6,7 +6,7 @@ import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/9-a-side-substitution-planner';
 const TITLE = '9-a-Side Substitution Planner | Equal Minutes Sub Rotation for 9v9';
-const DESCRIPTION = 'Plan fair 9-a-side subs: enter your squad (12, 13 or 14 players) and halves or quarters, and get a 9v9 sub rotation where every player gets equal minutes. Free, no sign-up.';
+const DESCRIPTION = 'Plan fair 9-a-side soccer substitutions: enter 12 to 14 players to get equal minutes and an exact substitution schedule. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

@@ -6,7 +6,7 @@ import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/7-a-side-substitution-planner';
 const TITLE = '7-a-Side Substitution Planner | Fair Sub Rotation for 7v7 Junior Soccer';
-const DESCRIPTION = 'Work out fair 7-a-side subs: enter 9, 10 or 11 players and halves or quarters, and get a 7v7 rotation with the minute of every change and equal minutes for every child. Free, no sign-up.';
+const DESCRIPTION = 'Plan fair 7-a-side substitutions: enter 9 to 11 players to get equal playing time and the exact minute for every substitution. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

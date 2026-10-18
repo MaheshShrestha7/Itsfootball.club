@@ -5,7 +5,7 @@ import { TOURNAMENT_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/round-robin-fixture-generator';
 const TITLE = 'Free Round Robin Fixture Generator | Soccer League Draw';
-const DESCRIPTION = 'Generate a round robin soccer fixture list where every team plays every other team once, with a live league table that updates as you enter scores. Free.';
+const DESCRIPTION = 'Generate round robin soccer fixtures where every team plays once. Includes live league tables that update as scores are entered. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

@@ -6,7 +6,7 @@ import { RESULT_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/player-of-the-match-graphic-maker';
 const TITLE = 'Free Player of the Match Graphic Maker | MOTM Template for Football';
-const DESCRIPTION = 'Make a Player of the Match (Man of the Match) graphic for your football or soccer club: their photo, name and the score in your team colours. Download for Instagram, Facebook or WhatsApp. Free, no sign-up.';
+const DESCRIPTION = 'Create Player of the Match graphics for your soccer club with photos, scores and club colours. Download for Instagram and WhatsApp. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

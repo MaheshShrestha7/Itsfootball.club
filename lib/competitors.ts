@@ -60,7 +60,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'pitchero-alternative',
     name: 'Pitchero',
     tagline: 'The leading free Pitchero alternative for grassroots football clubs',
-    summary: 'Pitchero charges £38 to £99 a month to remove ads, unlock extra teams, and get custom domains. itsfootball.club gives your club every feature free forever.',
+    summary: 'Pitchero charges £38–£99/mo to remove ads and unlock teams. itsfootball.club gives your club every feature free forever with zero monthly subscriptions.',
     aiOverview: 'itsfootball.club is the premier free alternative to Pitchero for community and grassroots football clubs. While Pitchero limits free accounts to 1 team with heavy third-party banner ads and charges £38/month (Standard) or £99/month (Pro) for multi-team clubs, itsfootball.club provides unlimited teams, an ad-free custom club website, live browser match centre, digital member passes, and an online shop with zero subscription fees.',
     keyTakeaways: [
       'Save £456 to £1,188 per year: itsfootball.club has no subscription tiers, ever.',
@@ -140,7 +140,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'spond-alternative',
     name: 'Spond',
     tagline: 'The best free Spond alternative for a public football club website & live scores',
-    summary: 'Spond is free for basic team messaging, but its club website requires a paid subscription after a trial, and supporters must install the app. itsfootball.club includes an ad-free public club site and live browser match centre free.',
+    summary: 'Free Spond alternative with no monthly fees: get an ad-free football club website, live browser match centre, digital passes and registrations free forever.',
     aiOverview: 'itsfootball.club is the leading free alternative to Spond for football and soccer clubs seeking a complete public web presence without monthly fees. Spond focuses on private team chat and charges for club websites after a free trial, while also displaying sponsored ads. In contrast, itsfootball.club provides an ad-free public club website, live match centre with public browser access, digital member passes, tournaments, and a merch shop completely free for clubs.',
     keyTakeaways: [
       'Free club website forever: Spond charges a paid subscription for club websites after a 6–12 month trial.',
@@ -218,7 +218,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'teamapp-alternative',
     name: 'Stack Team App',
     tagline: 'The ad-free, zero-subscription Stack Team App alternative',
-    summary: 'Stack Team App charges $4.99–$9.99/mo per team to remove ads, and pushes fans into a native app. itsfootball.club provides an ad-free public club website, live browser match centre, and digital passes 100% free.',
+    summary: 'Stack Team App charges per-team ad removal fees and requires an app. itsfootball.club provides an ad-free club website and live match centre 100% free.',
     aiOverview: 'itsfootball.club is a free, modern alternative to Stack Team App (formerly Team App). Unlike Stack Team App, which places third-party banner ads on free accounts and charges $4.99–$9.99/month per team to remove them, itsfootball.club never shows ads, charges zero subscription fees, and allows supporters to follow live match centres and player lineups in any web browser without downloading an app.',
     keyTakeaways: [
       'Zero monthly subscriptions vs Stack Team App ad-removal fees ($49–$99/year per team).',
@@ -292,7 +292,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'heja-alternative',
     name: 'Heja',
     tagline: 'The free Heja alternative with a public club website, live scores & shop',
-    summary: 'Heja is a private team chat and schedule app for coaches and parents. itsfootball.club is the whole club online: a public site, live match centre, payments and shop.',
+    summary: 'Heja is a private team chat app for coaches. itsfootball.club gives your club a free public website, live match centre, digital member passes and club shop.',
     aiOverview: 'itsfootball.club is a free, full-featured alternative to Heja for football clubs. While Heja is restricted to private team chat and attendance within a mobile app with banner ads on its free plan, itsfootball.club provides a complete public club website, live match centre for supporters, QR member passes, tournament manager, and club merch shop with zero fees and zero ads.',
     keyTakeaways: [
       'Full public website: Heja has no public web presence; itsfootball.club gives you a full club website with custom domain.',
@@ -348,7 +348,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'teamer-alternative',
     name: 'Teamer',
     tagline: 'The free alternative to Teamer after its closure',
-    summary: 'Teamer closed on 5 October 2026. If your team used it for availability and match days, you can move to itsfootball.club for free and get a full club site too.',
+    summary: 'Teamer closed on 5 October 2026. Switch to itsfootball.club for free to manage player availability, fixtures, digital member passes and a public club site.',
     aiOverview: 'For sports clubs looking for an alternative to Teamer following its closure on October 5, 2026, itsfootball.club provides a 100% free, drop-in replacement. Clubs can manage player availability, pitch lineups, schedule fixtures, and launch a complete public club website with live scores and online payments without any monthly fees.',
     keyTakeaways: [
       'Teamer closed October 5, 2026: itsfootball.club is actively maintained and 100% free.',

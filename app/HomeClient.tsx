@@ -232,10 +232,11 @@ export default function PlatformHomePage() {
           <div>
             <div className="lp-kicker">
               <span className="pulse-dot" aria-hidden="true" />
-              Built for grassroots football &amp; soccer clubs
+              Free football &amp; soccer club website builder
             </div>
 
             <h1 className="lp-h1">
+              <span className="sr-only">Free football club website with live match centre — </span>
               {/* Explicit breaks: left to wrap, the fallback font fits "Big-club matchday." on one line
                   and the webfont doesn't, so the swap would shift the whole page */}
               Grassroots club.<br /><em>Big-club</em><br />matchday.

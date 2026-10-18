@@ -9,7 +9,7 @@ import { toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/season-fee-calculator';
 const TITLE = 'Club Registration Fee Calculator | Season Budget & Subs Break-Even (AUD)';
-const DESCRIPTION = 'Work out what to charge players this season: add pitch hire, association rego, referees, insurance and kit, take off sponsor money, and get the break-even fee per player, plus what Stripe card fees cost versus chasing cash. Free, no sign-up.';
+const DESCRIPTION = 'Calculate fair registration fees for your soccer club: add pitch hire, rego and refs to get the break-even player cost and card fees. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

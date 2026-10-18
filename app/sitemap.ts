@@ -30,29 +30,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return t.length ? new Date(Math.max(...t)) : undefined;
   };
 
+  const staticDate = new Date('2026-10-18T00:00:00Z');
+
   const entries: MetadataRoute.Sitemap = [
-    { url: url('/'), changeFrequency: 'weekly', priority: 1 },
-    { url: url('/clubs'), changeFrequency: 'daily', priority: 0.8 },
-    { url: url('/about'), changeFrequency: 'yearly', priority: 0.5 },
-    { url: url('/create-club'), changeFrequency: 'monthly', priority: 0.7 },
-    { url: url('/faq'), changeFrequency: 'monthly', priority: 0.5 },
-    { url: url('/live-scores'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools'), changeFrequency: 'monthly', priority: 0.7 },
-    { url: url('/tools/lineup-builder'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools/tournament-maker'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools/match-result-graphic-maker'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools/player-card-maker'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools/equal-playing-time-calculator'), changeFrequency: 'monthly', priority: 0.6 },
-    { url: url('/tools/season-fee-calculator'), changeFrequency: 'monthly', priority: 0.6 },
-    ...FORMAT_PAGES.map(t => ({ url: url(t.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
-    { url: url('/guides'), changeFrequency: 'monthly', priority: 0.6 },
-    ...GUIDES.map(g => ({ url: url(g.path), changeFrequency: 'monthly' as const, priority: 0.5 })),
-    { url: url('/compare'), changeFrequency: 'monthly', priority: 0.7 },
-    ...COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), changeFrequency: 'monthly' as const, priority: 0.7 })),
-    { url: url('/vs'), changeFrequency: 'monthly', priority: 0.6 },
-    ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
-    { url: url('/privacy'), changeFrequency: 'yearly', priority: 0.2 },
-    { url: url('/terms'), changeFrequency: 'yearly', priority: 0.2 },
+    { url: url('/'), lastModified: staticDate, changeFrequency: 'weekly', priority: 1 },
+    { url: url('/pricing'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.8 },
+    { url: url('/grounds'), lastModified: staticDate, changeFrequency: 'daily', priority: 0.8 },
+    { url: url('/clubs'), lastModified: staticDate, changeFrequency: 'daily', priority: 0.8 },
+    { url: url('/about'), lastModified: staticDate, changeFrequency: 'yearly', priority: 0.5 },
+    { url: url('/create-club'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
+    { url: url('/faq'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.5 },
+    { url: url('/live-scores'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
+    { url: url('/tools/lineup-builder'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/tournament-maker'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/match-result-graphic-maker'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/player-card-maker'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/equal-playing-time-calculator'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    { url: url('/tools/season-fee-calculator'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    ...FORMAT_PAGES.map(t => ({ url: url(t.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/guides'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    ...GUIDES.map(g => ({ url: url(g.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/compare'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
+    ...COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.7 })),
+    { url: url('/vs'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
+    ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/privacy'), lastModified: staticDate, changeFrequency: 'yearly', priority: 0.2 },
+    { url: url('/terms'), lastModified: staticDate, changeFrequency: 'yearly', priority: 0.2 },
   ];
 
   for (const club of clubs) {
@@ -120,14 +124,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  // Public tournament pages, once they're real tournaments (the page is noindex until then too)
+  // Public tournament pages (/tournaments/{slug})
   for (const t of data.tournaments) {
     const slug = eventSlugById.get(t.club_id);
-    if (!slug || (teamCounts.get(t.id) || 0) < MIN_INDEXABLE_TEAMS) continue;
+    if (!slug) continue;
     const running = !t.status || !['completed', 'archived', 'cancelled'].includes(t.status);
     entries.push({
       url: url(tournamentPagePath(slug)),
-      lastModified: date(t.updated_at),
+      lastModified: date(t.updated_at) || staticDate,
       changeFrequency: running ? 'daily' : 'monthly',
       priority: running ? 0.7 : 0.5,
     });
@@ -135,7 +139,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Ground guides (lib/grounds.ts): only pages that pass their own indexing rule
   for (const g of groundSitemapEntries(grounds, groundUse(groundClubs).count)) {
-    entries.push({ url: url(g.path), lastModified: date(g.lastModified), changeFrequency: 'weekly', priority: g.priority });
+    if (g.path === '/grounds' && entries.some(e => e.url === url('/grounds'))) continue;
+    entries.push({ url: url(g.path), lastModified: date(g.lastModified) || staticDate, changeFrequency: 'weekly', priority: g.priority });
   }
 
   return entries;

@@ -510,17 +510,19 @@ export default function MatchCenterPage({
 
           {/* Status & Competition Tag */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
-            <h1 style={{ width: '100%', margin: '0 0 0.2rem 0', fontFamily: 'inherit', lineHeight: 'inherit', fontSize: 'clamp(0.95rem, 4vw, 1.1rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', overflowWrap: 'anywhere' }}>
-                {titleIsTeams || !match.title ? (
-                  // Full names on every screen (this line wraps): it's the page's H1, so it reads once, in full
-                  <>
-                    <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
-                    <span className="text-muted"> vs </span>
-                    <span style={{ color: titleColors.away }}>{match.away_team_name}</span>
-                  </>
-                ) : (
-                  <span style={{ color: 'var(--c-amber)' }}>{match.title}</span>
-                )}
+            {match.title && !titleIsTeams && (
+              <div style={{ width: '100%', color: 'var(--c-amber)', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
+                {match.title}
+              </div>
+            )}
+            <h1 style={{ width: '100%', margin: '0 0 0.2rem 0', fontFamily: 'inherit', lineHeight: 'inherit', fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', overflowWrap: 'anywhere' }}>
+              <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
+              <span className="text-muted" style={{ margin: '0 0.35rem' }}>
+                {['completed', 'full_time', 'live', 'halftime'].includes(match.status) && !match.score_hidden
+                  ? `${match.home_score ?? 0}–${match.away_score ?? 0}`
+                  : 'vs'}
+              </span>
+              <span style={{ color: titleColors.away }}>{match.away_team_name}</span>
             </h1>
             {match.status === 'live' ? (
               <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>

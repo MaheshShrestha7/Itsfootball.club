@@ -6,7 +6,7 @@ import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/5-a-side-substitution-planner';
 const TITLE = '5-a-Side Substitution Planner | Rolling Subs Calculator for 5v5 & Futsal';
-const DESCRIPTION = 'Plan rolling subs for 5-a-side and futsal: enter 6, 7 or 8 players and the match length, and get a rotation where everyone plays equal minutes. Free, no sign-up.';
+const DESCRIPTION = 'Plan rolling substitutions for 5-a-side and futsal. Enter 6 to 8 players to get equal playing time for everyone on the court. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

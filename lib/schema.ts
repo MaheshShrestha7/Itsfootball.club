@@ -3,6 +3,7 @@ import { AREA_SERVED, SITE_NAME, SITE_URL, SOCIAL_PROFILES } from './seo';
 import { CONTACT_EMAIL, FEE_PHRASE } from './faq';
 import { newsPath } from './slugs';
 import { isPlayed } from './public-tournaments';
+import { groundPath, type GroundRow } from './grounds';
 import type {
   ClubMetadataRow,
   EventMetadataRow,
@@ -43,7 +44,14 @@ export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 const BASED_IN = 'Sydney, NSW, Australia';
 /** Who builds the platform: E-E-A-T for search and AI engines, described in full on /about */
-const FOUNDER = { '@type': 'Person', '@id': `${SITE_URL}/about#founder`, name: 'Mahesh Shrestha', jobTitle: 'Founder', url: `${SITE_URL}/about` };
+export const FOUNDER = {
+  '@type': 'Person',
+  '@id': `${SITE_URL}/about#founder`,
+  name: 'Mahesh Shrestha',
+  jobTitle: 'Founder',
+  url: `${SITE_URL}/about`,
+  sameAs: ['https://www.linkedin.com/in/maheshshrestha'],
+};
 const clubUrl = (club: ClubMetadataRow) => abs(`/${club.slug}`);
 const clubId = (club: ClubMetadataRow) => `${clubUrl(club)}#club`;
 
@@ -258,8 +266,41 @@ const MATCH_STATUS: Record<string, string> = {
   canceled: 'https://schema.org/EventCancelled',
 };
 
+/** Combines match date and local kick-off time into ISO 8601 strings with timezone offset and calculates match end time */
+export function matchIsoDates(matchDate: string, matchTime?: string | null): { startDate: string; endDate: string } {
+  const d = new Date(matchDate);
+  if (isNaN(d.getTime())) return { startDate: matchDate, endDate: matchDate };
+  const timeParts = matchTime?.match(/^(\d{1,2}):(\d{2})$/);
+  if (timeParts && d.getUTCHours() === 0 && d.getUTCMinutes() === 0) {
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const hours = Number(timeParts[1]);
+    const mins = Number(timeParts[2]);
+
+    // Australia/Sydney timezone offset (AEST +10:00 or AEDT +11:00)
+    const testDate = new Date(`${year}-${month}-${day}T12:00:00Z`);
+    const offsetPart = new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', timeZoneName: 'shortOffset' })
+      .formatToParts(testDate)
+      .find(p => p.type === 'timeZoneName')?.value;
+    const offsetMatch = offsetPart?.match(/GMT([+-]\d+)/);
+    const offsetHours = offsetMatch ? Number(offsetMatch[1]) : 11;
+    const offsetStr = `${offsetHours >= 0 ? '+' : '-'}${String(Math.abs(offsetHours)).padStart(2, '0')}:00`;
+
+    const startIso = `${year}-${month}-${day}T${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00${offsetStr}`;
+    const totalMinutes = hours * 60 + mins + 105; // 90 min match + 15 min halftime
+    const endH = Math.floor(totalMinutes / 60) % 24;
+    const endM = totalMinutes % 60;
+    const endIso = `${year}-${month}-${day}T${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00${offsetStr}`;
+    return { startDate: startIso, endDate: endIso };
+  }
+  const startIso = d.toISOString();
+  const endIso = new Date(d.getTime() + 105 * 60 * 1000).toISOString();
+  return { startDate: startIso, endDate: endIso };
+}
+
 /** SportsEvent node for a live or scheduled match fixture */
-export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow): Json {
+export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground?: GroundRow | null): Json {
   const clubIsHome = match.is_club_home !== false;
   const team = (name: string, logo: string | null, isClub: boolean): Json =>
     isClub ? { ...clubRef(club), logo: absUrl(logo) || absUrl(club.logo_url) } : { '@type': 'SportsTeam', name, logo: absUrl(logo) };
@@ -268,6 +309,43 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow): Json 
   const played = ['completed', 'full_time', 'live', 'halftime'].includes(match.status);
   const isLive = match.status === 'live' || match.status === 'halftime';
   const venue = match.venue || club.stadium_name;
+
+  const { startDate, endDate } = matchIsoDates(match.match_date, match.match_time);
+
+  let locationNode: Json = undefined;
+  if (ground) {
+    locationNode = {
+      '@type': 'Place',
+      '@id': abs(`${groundPath(ground)}#place`),
+      name: ground.name,
+      url: abs(groundPath(ground)),
+      address: {
+        '@type': 'PostalAddress',
+        ...(ground.address ? { streetAddress: ground.address } : {}),
+        addressLocality: ground.suburb,
+        addressRegion: ground.state,
+        ...(ground.postcode ? { postalCode: ground.postcode } : {}),
+        addressCountry: 'AU',
+      },
+      ...(ground.lat != null && ground.lng != null ? {
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: ground.lat,
+          longitude: ground.lng,
+        },
+      } : {}),
+    };
+  } else if (venue) {
+    locationNode = {
+      '@type': 'Place',
+      name: venue,
+      address: club.stadium_address ? {
+        '@type': 'PostalAddress',
+        streetAddress: club.stadium_address,
+        addressCountry: 'AU',
+      } : venue,
+    };
+  }
 
   return {
     '@type': 'SportsEvent',
@@ -278,10 +356,11 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow): Json 
       ? `${isLive ? 'LIVE: ' : ''}${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}${match.competition ? ` (${match.competition})` : ''}`
       : `${match.home_team_name} vs ${match.away_team_name}${match.competition ? `, ${match.competition}` : ''}`,
     sport: 'Soccer',
-    startDate: match.match_date,
+    startDate,
+    endDate,
     eventStatus: MATCH_STATUS[match.status] || 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    location: venue ? { '@type': 'Place', name: venue, address: venue } : undefined,
+    location: locationNode,
     homeTeam: home,
     awayTeam: away,
     competitor: [home, away],
@@ -292,8 +371,8 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow): Json 
 }
 
 /** A fixture: both teams, kick-off, venue, and the live/final score in the description */
-export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow) {
-  return graph(matchNode(club, match));
+export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow, ground?: GroundRow | null) {
+  return graph(matchNode(club, match, ground));
 }
 
 /** A public club event (social, AGM, training day...) */

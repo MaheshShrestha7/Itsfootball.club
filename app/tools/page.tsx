@@ -15,7 +15,7 @@ import { GROUNDS_LINK, LINEUP_TOOL, PLAYER_CARD_TOOL, PLAYING_TIME_TOOL, RESULT_
 
 const TITLE = 'Free Football Tools for Coaches and Clubs | No Sign-up';
 const DESCRIPTION =
-  'Free soccer tools for grassroots coaches, clubs and organisers: lineup builder, equal playing time calculator, tournament maker, result graphics, a player card maker and a season fee calculator. No sign-up.';
+  'Free football tools for coaches and clubs: lineup builder, equal playing time calculator, tournament brackets and match graphics. Free, no sign-up.';
 const H1 = 'Free football tools for coaches, clubs and organisers';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: TOOLS_HUB.path, image: toolOgImage(TOOLS_HUB.path) });

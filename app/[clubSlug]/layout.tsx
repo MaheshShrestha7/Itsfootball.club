@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { clubExists } from '@/lib/supabase/server-data';
-import { SITE_NAME, clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
+import { SITE_NAME, clubImage, clubName, clubPageMetadata, clubPageTitle, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { findClubBySlug } from '@/lib/supabase/club-lookup';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import ClubLayoutClient from './ClubLayoutClient';
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
     manifest: `/${club.slug}/manifest.webmanifest`,
     appleWebApp: { capable: true, title: club.short_name || club.name, statusBarStyle: 'default' },
     ...pageMetadata({
-      title: fitTitle(clubName(club), 'Fixtures, Squad & Live Scores', SITE_NAME),
+      title: clubPageTitle(club),
       description: fitDescription(
         `Official website of ${club.name}: live match centre, fixtures, results, squad, club news and sponsors.`,
         club.motto && `${club.motto.replace(/[.!\s]+$/, '')}.`,

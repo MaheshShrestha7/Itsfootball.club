@@ -9,6 +9,10 @@ export const DEFAULT_OG_IMAGE = '/og-image.jpg';
 export const SOCIAL_PROFILES = [
   { name: 'Facebook', url: 'https://www.facebook.com/ItsFootball.Club' },
   { name: 'TikTok', url: 'https://www.tiktok.com/@itsfootball.club' },
+  { name: 'Instagram', url: 'https://www.instagram.com/itsfootball.club' },
+  { name: 'YouTube', url: 'https://www.youtube.com/@itsfootballclub' },
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/company/itsfootball-club' },
+  { name: 'Crunchbase', url: 'https://www.crunchbase.com/organization/itsfootball-club' },
 ];
 /** Where the platform is aimed, for schema.org areaServed */
 export const AREA_SERVED = ['Australia', 'New Zealand', 'Oceania', 'United Kingdom'];
@@ -21,7 +25,9 @@ function truncateWords(text: string, max: number): string {
   if (text.length <= max) return text;
   const cut = text.slice(0, max - 1);
   const space = cut.lastIndexOf(' ');
-  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:|•–—-]+$/, '')}…`;
+  const trimmed = (space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:|•–—-]+$/, '');
+  const clean = trimmed.replace(/\s+(at|in|on|with|for|to|of|and|the|a|by|from|or)$/i, '');
+  return `${clean}…`;
 }
 
 /** A title part, or [preferred, shorter] alternatives (e.g. a club's full name and short name). */
@@ -71,9 +77,11 @@ interface PageMetaInput {
   imageIsSquare?: boolean;
   type?: 'website' | 'article';
   noIndex?: boolean;
+  /** When true with noIndex, sets robots follow: false (default is follow: true so links remain crawlable) */
+  noFollow?: boolean;
 }
 
-export function pageMetadata({ title, description, path, image, imageIsSquare, type = 'website', noIndex }: PageMetaInput): Metadata {
+export function pageMetadata({ title, description, path, image, imageIsSquare, type = 'website', noIndex, noFollow }: PageMetaInput): Metadata {
   const url = image || DEFAULT_OG_IMAGE;
   return {
     title: { absolute: title },
@@ -93,8 +101,20 @@ export function pageMetadata({ title, description, path, image, imageIsSquare, t
       description,
       images: [url],
     },
-    ...(noIndex ? { robots: { index: false, follow: false } } : {}),
+    ...(noIndex ? { robots: { index: false, follow: !noFollow } } : {}),
   };
+}
+
+/** Builds a club page title that prioritises the club's full name first for branded search authority */
+export function clubPageTitle(club: ClubMetadataRow): string {
+  const hasShort = club.short_name && club.short_name.toLowerCase() !== club.name.toLowerCase();
+  const withShort = hasShort ? `${club.name} (${club.short_name})` : club.name;
+  const suffix = ': Fixtures, Results & Live Scores';
+  if ((withShort + suffix).length <= TITLE_MAX) return `${withShort}${suffix}`;
+  if ((club.name + suffix).length <= TITLE_MAX) return `${club.name}${suffix}`;
+  const shortSuffix = ': Fixtures & Live Scores';
+  if ((club.name + shortSuffix).length <= TITLE_MAX) return `${club.name}${shortSuffix}`;
+  return fitTitle([withShort, club.name], 'Fixtures, Results & Live Scores', SITE_NAME);
 }
 
 /** Club name plus its short name as the fallback when the title runs long */

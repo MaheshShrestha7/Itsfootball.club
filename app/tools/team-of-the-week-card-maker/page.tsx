@@ -6,7 +6,7 @@ import { LINEUP_TOOL, PLAYER_CARD_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/team-of-the-week-card-maker';
 const TITLE = 'Free Team of the Week Card Maker | Football Player Cards';
-const DESCRIPTION = 'Make Team of the Week cards for your football club: each player’s photo, rating, position and stats on a black and gold card with the round. Download for Instagram, Facebook or the team chat. Free, no sign-up.';
+const DESCRIPTION = 'Make black and gold Team of the Week cards for your football club with photos, ratings and stats. Download high-res cards for socials. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

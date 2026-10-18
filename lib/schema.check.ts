@@ -86,6 +86,31 @@ const standaloneMatch = matchSchema(mockClub, mockLiveMatch) as { '@context': st
 const standaloneEvent = standaloneMatch['@graph'][0];
 assert.equal(standaloneEvent['@type'], 'SportsEvent');
 assert.ok(standaloneEvent.description.includes('LIVE:'));
+assert.ok(standaloneEvent.endDate, 'SportsEvent must have endDate');
+assert.ok(new Date(standaloneEvent.endDate).getTime() > new Date(standaloneEvent.startDate).getTime(), 'endDate must be after startDate');
+
+// Match schema with linked ground
+const mockGround: any = {
+  id: 'g1',
+  name: 'Craik Park',
+  suburb: 'Austral',
+  suburb_slug: 'austral',
+  slug: 'craik-park',
+  state: 'NSW',
+  address: 'Fifteenth Ave',
+  lat: -33.93,
+  lng: 150.81,
+};
+const matchWithGround = matchSchema(mockClub, mockLiveMatch, mockGround) as { '@graph': any[] };
+const groundEvent = matchWithGround['@graph'][0];
+assert.equal(groundEvent.location['@type'], 'Place');
+assert.ok(groundEvent.location.url.includes('/grounds/austral/craik-park'));
+assert.equal(groundEvent.location.address['@type'], 'PostalAddress');
+assert.equal(groundEvent.location.address.addressLocality, 'Austral');
+
+// Founder Person entity E-E-A-T
+import { FOUNDER } from './schema';
+assert.ok(Array.isArray(FOUNDER.sameAs) && FOUNDER.sameAs.some(url => url.includes('linkedin.com')), 'FOUNDER must have LinkedIn sameAs');
 
 // 5. Match with score hidden (junior rules)
 const mockJuniorMatch: MatchMetadataRow = {

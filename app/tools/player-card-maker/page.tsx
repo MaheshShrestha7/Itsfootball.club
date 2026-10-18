@@ -7,7 +7,7 @@ import { CARD_TYPES } from '@/lib/player-card';
 
 const PATH = '/tools/player-card-maker';
 const TITLE = 'Free Football Player Card Maker | Make Your Own Soccer Card';
-const DESCRIPTION = 'Make your own football player card: your photo, rating, position and Sunday League stats (goals, assists, clean sheets, attendance streak) with your club badge. Download for WhatsApp, Instagram or TikTok. Free, no sign-up.';
+const DESCRIPTION = 'Create custom football player cards with your photo, club badge, rating and season stats. Download for Instagram, WhatsApp and TikTok. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

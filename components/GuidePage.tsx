@@ -81,8 +81,13 @@ export default function GuidePage(p: GuidePageProps) {
         inLanguage: 'en-AU',
         datePublished: GUIDES_UPDATED,
         dateModified: GUIDES_UPDATED,
-        image: `${SITE_URL}${toolOgImage(guide.tool.path)}`,
-        author: { '@id': ORGANIZATION_ID },
+        author: {
+          '@type': 'Person',
+          name: 'Mahesh Shrestha',
+          jobTitle: 'Founder',
+          url: `${SITE_URL}/about`,
+          sameAs: 'https://www.linkedin.com/in/maheshshrestha',
+        },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
         about: guide.question,
@@ -119,7 +124,8 @@ export default function GuidePage(p: GuidePageProps) {
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>{p.badge}</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 4.6vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15 }}>{p.h1}</h1>
           <p className="tool-updated">
-            {p.sources.length ? 'Checked against the sources below on ' : 'Updated '}
+            Written by Mahesh Shrestha (Sydney grassroots volunteer) •{' '}
+            {p.sources.length ? 'Checked against primary sources on ' : 'Updated '}
             <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time>
           </p>
         </header>

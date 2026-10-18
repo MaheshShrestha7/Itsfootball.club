@@ -484,6 +484,9 @@ export default function ClubPublicPage({
   return (
     // The page's main landmark, so screen-reader users can jump past the menu straight to it
     <main style={{ position: 'relative' }}>
+      <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+        {club.name}
+      </h1>
       {/* 4.1 HERO SHOWCASE SECTION (MULTI-SLIDE CAROUSEL & CREST EMBLEM) */}
       <section
         onMouseEnter={() => setIsSliderPaused(true)}
@@ -562,7 +565,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
 
-                        <h1 style={{
+                        <h2 style={{
                           fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)',
                           fontWeight: 900,
                           lineHeight: 1.1,
@@ -571,7 +574,7 @@ export default function ClubPublicPage({
                           color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
-                        </h1>
+                        </h2>
 
                         <p style={{
                           fontSize: '1.15rem',
@@ -626,7 +629,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
 
-                        <h1 style={{
+                        <h2 style={{
                           fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
                           fontWeight: 900,
                           lineHeight: 1.15,
@@ -635,7 +638,7 @@ export default function ClubPublicPage({
                           color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
-                        </h1>
+                        </h2>
 
                         <p style={{
                           fontSize: '1.1rem',
@@ -687,7 +690,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
 
-                        <h1 style={{
+                        <h2 style={{
                           fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
                           fontWeight: 900,
                           lineHeight: 1.15,
@@ -696,7 +699,7 @@ export default function ClubPublicPage({
                           color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
-                        </h1>
+                        </h2>
 
                         <p style={{
                           fontSize: '1.1rem',
@@ -746,7 +749,7 @@ export default function ClubPublicPage({
                           </span>
                         </div>
 
-                        <h1 style={{
+                        <h2 style={{
                           fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
                           fontWeight: 900,
                           lineHeight: 1.15,
@@ -755,7 +758,7 @@ export default function ClubPublicPage({
                           color: 'var(--text-primary)',
                         }}>
                           {currentSlide.title}
-                        </h1>
+                        </h2>
 
                         <p style={{
                           fontSize: '1.1rem',
@@ -810,7 +813,7 @@ export default function ClubPublicPage({
                     </span>
                   </div>
 
-                  <h1 style={{
+                  <h2 style={{
                     fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)',
                     fontWeight: 900,
                     lineHeight: 1.1,
@@ -819,7 +822,7 @@ export default function ClubPublicPage({
                     color: 'var(--text-primary)',
                   }}>
                     {club.stadium_name}
-                  </h1>
+                  </h2>
 
                   <p style={{
                     fontSize: '1.15rem',

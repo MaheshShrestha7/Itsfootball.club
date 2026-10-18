@@ -6,7 +6,7 @@ import { PLAYER_CARD_TOOL, RESULT_FORMAT_PAGES, toolOgImage } from '@/lib/tool-p
 
 const PATH = '/tools/player-of-the-month-card-maker';
 const TITLE = 'Free Player of the Month Card Maker | Football Award Graphic';
-const DESCRIPTION = 'Make a Player of the Month card for your football club: the player’s photo, rating, position, the month and their stats on a blue award card. Download for Instagram, Facebook or the team chat. Free, no sign-up.';
+const DESCRIPTION = 'Create custom Player of the Month award cards with photos, ratings and stats in your club colours. Download high-res PNG for socials. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

@@ -11,7 +11,7 @@ import { MAKER_PATH } from '@/lib/public-tournaments';
 import { toolOgImage } from '@/lib/tool-pages';
 
 const TITLE = 'Free Soccer Tournament Maker | Live Bracket & Fixtures';
-const DESCRIPTION = 'Make a free live bracket for your soccer cup, charity day or 6-a-side gala day. Groups, knockouts or a league, with fixtures and tables that update as you enter scores.';
+const DESCRIPTION = 'Create live soccer tournament brackets, round robins and knockout cups. Fixtures and group tables update live as you enter scores. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: MAKER_PATH, image: toolOgImage(MAKER_PATH) });
 
