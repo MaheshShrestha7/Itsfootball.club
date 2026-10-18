@@ -1001,3 +1001,54 @@ export interface PlatformClubItem {
   stripe_ready: boolean;
 }
 
+export interface PlatformUserMembership {
+  club_id: string;
+  club_name: string;
+  club_slug: string;
+  role: string;
+  membership_status: string;
+  membership_tier: string;
+  fee_waived: boolean;
+}
+
+export interface PlatformUserItem {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string | null;
+  created_at: string;
+  last_sign_in_at?: string | null;
+  is_super_admin: boolean;
+  clubs_owned_count: number;
+  memberships_count: number;
+  memberships: PlatformUserMembership[];
+}
+
+export interface PlatformHealthStats {
+  server_timestamp: string;
+  counts: {
+    clubs: number;
+    members: number;
+    payments: number;
+    matches: number;
+    events: number;
+    gate_scans: number;
+    analytics: number;
+  };
+  status: string;
+}
+
+export interface PlatformAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  level: 'info' | 'warning' | 'critical' | 'success';
+  target: 'all' | 'admins' | 'members' | 'public';
+  link_url?: string | null;
+  link_text?: string | null;
+  is_active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+}
+

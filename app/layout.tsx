@@ -5,6 +5,7 @@ import './globals.css';
 import { ClubProvider } from '@/lib/club-context';
 import { AuthProvider } from '@/lib/auth-context';
 import SyncStatusBanner from '@/components/SyncStatusBanner';
+import PlatformAnnouncementBanner from '@/components/PlatformAnnouncementBanner';
 import { ConfirmRoot } from '@/components/ConfirmDialog';
 import ServiceWorker from '@/components/ServiceWorker';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -66,6 +67,7 @@ export default async function RootLayout({
     <html lang="en-AU" data-theme={theme} className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <body>
         <AuthProvider>
+          <PlatformAnnouncementBanner />
           <ClubProvider initialData={initialData} hostSlug={requestHeaders.get('x-club-host-slug') || undefined}>
             <SyncStatusBanner />
             {children}
