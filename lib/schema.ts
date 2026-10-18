@@ -58,6 +58,7 @@ export function aboutSchema() {
 
 /** Platform homepage: the publisher, the product (free for clubs) and the site, with a sitelinks search box backed by /clubs?q= */
 export function homeSchema() {
+  const sameAs = SOCIAL_PROFILES.map(p => p.url);
   return graph(
     {
       '@type': 'Organization',
@@ -68,12 +69,12 @@ export function homeSchema() {
       description: 'A free platform for grassroots and community football and soccer clubs: club websites, live match centres, lineups, digital member passes, club merch shops and sponsor showcases.',
       email: CONTACT_EMAIL,
       areaServed: AREA_SERVED,
-      sameAs: SOCIAL_PROFILES.map(p => p.url),
+      sameAs,
       founder: FOUNDER,
       foundingLocation: { '@type': 'Place', name: BASED_IN },
     },
     {
-      '@type': 'WebApplication',
+      '@type': ['SoftwareApplication', 'WebApplication'],
       '@id': `${SITE_URL}/#app`,
       name: SITE_NAME,
       url: SITE_URL,
@@ -99,6 +100,7 @@ export function homeSchema() {
       },
       areaServed: AREA_SERVED,
       publisher: { '@id': ORGANIZATION_ID },
+      sameAs,
     },
     {
       '@type': 'WebSite',
@@ -116,7 +118,7 @@ export function homeSchema() {
 }
 
 function clubRef(club: ClubMetadataRow): Json {
-  return { '@type': 'SportsTeam', '@id': clubId(club), name: club.name, url: clubUrl(club) };
+  return { '@type': ['SportsClub', 'SportsOrganization', 'SportsTeam'], '@id': clubId(club), name: club.name, url: clubUrl(club) };
 }
 
 // "Club Media Team" is an organisation, not a person
@@ -160,11 +162,11 @@ export function newsArticleSchema(club: ClubMetadataRow, article: NewsArticleRow
   });
 }
 
-/** Club homepage: the club itself plus a BlogPosting for each news article shown in its News section */
+/** Club homepage: the club (SportsClub / SportsOrganization) plus news postings and match fixtures */
 function clubNode(club: ClubMetadataRow) {
   const logo = absUrl(club.logo_url);
   return {
-    '@type': 'SportsTeam',
+    '@type': ['SportsClub', 'SportsOrganization', 'SportsTeam'],
     '@id': clubId(club),
     name: club.name,
     alternateName: club.short_name !== club.name ? club.short_name : undefined,
@@ -180,8 +182,16 @@ function clubNode(club: ClubMetadataRow) {
   };
 }
 
-export function clubSchema(club: ClubMetadataRow, news: NewsMetadataRow[]) {
-  return graph(clubNode(club), ...news.map(article => articleNode(club, article)));
+export function clubSchema(
+  club: ClubMetadataRow,
+  news: NewsMetadataRow[] = [],
+  matches: MatchMetadataRow[] = []
+) {
+  return graph(
+    clubNode(club),
+    ...news.map(article => articleNode(club, article)),
+    ...matches.map(m => matchNode(club, m))
+  );
 }
 
 /** A club's /about page: about the club itself */
@@ -248,23 +258,24 @@ const MATCH_STATUS: Record<string, string> = {
   canceled: 'https://schema.org/EventCancelled',
 };
 
-/** A fixture: both teams, kick-off, venue, and the live/final score in the description */
-export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow) {
+/** SportsEvent node for a live or scheduled match fixture */
+export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow): Json {
   const clubIsHome = match.is_club_home !== false;
   const team = (name: string, logo: string | null, isClub: boolean): Json =>
     isClub ? { ...clubRef(club), logo: absUrl(logo) || absUrl(club.logo_url) } : { '@type': 'SportsTeam', name, logo: absUrl(logo) };
   const home = team(match.home_team_name, match.home_team_logo, clubIsHome);
   const away = team(match.away_team_name, match.away_team_logo, !clubIsHome);
   const played = ['completed', 'full_time', 'live', 'halftime'].includes(match.status);
+  const isLive = match.status === 'live' || match.status === 'halftime';
   const venue = match.venue || club.stadium_name;
 
-  return graph({
+  return {
     '@type': 'SportsEvent',
     '@id': abs(`/${club.slug}/match/${match.id}#event`),
     url: abs(`/${club.slug}/match/${match.id}`),
     name: `${match.home_team_name} vs ${match.away_team_name}`,
     description: played && !match.score_hidden
-      ? `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}${match.competition ? ` (${match.competition})` : ''}`
+      ? `${isLive ? 'LIVE: ' : ''}${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}${match.competition ? ` (${match.competition})` : ''}`
       : `${match.home_team_name} vs ${match.away_team_name}${match.competition ? `, ${match.competition}` : ''}`,
     sport: 'Soccer',
     startDate: match.match_date,
@@ -277,7 +288,12 @@ export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow) {
     organizer: clubRef(club),
     image: absUrl(club.banner_url) || absUrl(club.logo_url),
     superEvent: match.competition ? { '@type': 'SportsEvent', name: match.competition } : undefined,
-  });
+  };
+}
+
+/** A fixture: both teams, kick-off, venue, and the live/final score in the description */
+export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow) {
+  return graph(matchNode(club, match));
 }
 
 /** A public club event (social, AGM, training day...) */

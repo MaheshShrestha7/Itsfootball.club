@@ -104,6 +104,38 @@ export async function findMatchById(matchId: string): Promise<MatchMetadataRow |
   }
 }
 
+/** A club's live and upcoming match fixtures, for schema.org SportsEvent markup */
+export async function listClubLiveMatches(clubId: string, limit = 5): Promise<MatchMetadataRow[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !/^[0-9a-f-]{36}$/i.test(clubId)) return [];
+
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,venue,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&club_id=eq.${encodeURIComponent(clubId)}&order=match_date.desc&limit=20`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        next: { revalidate: 30 },
+      }
+    );
+    if (!res.ok) return [];
+    const rows: MatchMetadataRow[] = await res.json();
+    const hidden = await hiddenScoreTeams(clubId);
+    const enriched = rows.map(r => ({ ...r, score_hidden: matchScoreHidden(r, hidden) }));
+
+    // Prioritise live fixtures ('live', 'halftime'), followed by upcoming fixtures
+    const live = enriched.filter(m => m.status === 'live' || m.status === 'halftime');
+    if (live.length > 0) return live.slice(0, limit);
+    const upcoming = enriched.filter(m => m.status === 'upcoming');
+    if (upcoming.length > 0) return upcoming.slice(0, limit);
+    return enriched.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchOne<T>(table: string, select: string, id: string): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
