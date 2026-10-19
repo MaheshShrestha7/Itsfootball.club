@@ -86,6 +86,104 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
   );
 }
 
+interface TacticalPlayer {
+  num: number;
+  name: string;
+  role: string;
+  confirmed: string;
+  goals: number;
+  assists: number;
+}
+
+const TACTICAL_ROSTER: TacticalPlayer[] = [
+  { num: 1, name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1 },
+  { num: 2, name: 'C. Dawson', role: 'Left Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3 },
+  { num: 3, name: 'M. Romero', role: 'Center Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0 },
+  { num: 4, name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1 },
+  { num: 5, name: 'J. Lewis', role: 'Right Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4 },
+  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5 },
+  { num: 7, name: 'L. Hughes', role: 'Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6 },
+  { num: 8, name: 'M. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11 },
+  { num: 9, name: 'J. Park', role: 'Left Winger', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8 },
+  { num: 10, name: 'D. Okafor', role: 'Striker', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4 },
+  { num: 11, name: 'S. Adebayo', role: 'Right Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5 },
+];
+
+const BENCH_SQUAD = [
+  { num: 12, name: 'R. Sterling', role: 'Sub · FWD' },
+  { num: 14, name: 'E. Dier', role: 'Sub · CB' },
+  { num: 16, name: 'B. White', role: 'Sub · FB' },
+  { num: 17, name: 'O. Watkins', role: 'Sub · ST' },
+  { num: 19, name: 'C. Wilson', role: 'Sub · MID' },
+];
+
+const FORMATIONS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', { label: string; coords: [number, number][] }> = {
+  '4-3-3': {
+    label: '4-3-3',
+    coords: [
+      [8, 50],   // 1 GK
+      [26, 16],  // 2 LB
+      [24, 38],  // 3 CB
+      [24, 62],  // 4 CB
+      [26, 84],  // 5 RB
+      [48, 30],  // 6 CM
+      [42, 50],  // 7 CDM
+      [48, 70],  // 8 CM
+      [74, 18],  // 9 LW
+      [82, 50],  // 10 ST
+      [74, 82],  // 11 RW
+    ],
+  },
+  '4-2-3-1': {
+    label: '4-2-3-1',
+    coords: [
+      [8, 50],   // 1 GK
+      [26, 16],  // 2 LB
+      [24, 38],  // 3 CB
+      [24, 62],  // 4 CB
+      [26, 84],  // 5 RB
+      [42, 35],  // 6 CDM
+      [42, 65],  // 7 CDM
+      [64, 18],  // 8 LM
+      [62, 50],  // 9 CAM
+      [64, 82],  // 10 RM
+      [82, 50],  // 11 ST
+    ],
+  },
+  '3-5-2': {
+    label: '3-5-2',
+    coords: [
+      [8, 50],   // 1 GK
+      [24, 25],  // 2 LCB
+      [22, 50],  // 3 CB
+      [24, 75],  // 4 RCB
+      [48, 12],  // 5 LWB
+      [46, 35],  // 6 CM
+      [40, 50],  // 7 CDM
+      [46, 65],  // 8 CM
+      [48, 88],  // 9 RWB
+      [78, 36],  // 10 ST
+      [78, 64],  // 11 ST
+    ],
+  },
+  '4-4-2': {
+    label: '4-4-2',
+    coords: [
+      [8, 50],   // 1 GK
+      [26, 16],  // 2 LB
+      [24, 38],  // 3 CB
+      [24, 62],  // 4 CB
+      [26, 84],  // 5 RB
+      [52, 16],  // 6 LM
+      [48, 38],  // 7 CM
+      [48, 62],  // 8 CM
+      [52, 84],  // 9 RM
+      [78, 36],  // 10 ST
+      [78, 64],  // 11 ST
+    ],
+  },
+};
+
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
   { tool: LINEUP_TOOL, Icon: ClipboardList, color: 'var(--c-blue)', text: 'Pick a formation, name your players and download a team sheet for the group chat.' },
@@ -186,6 +284,11 @@ export default function PlatformHomePage() {
   const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
+
+  // Tactical Pitch state
+  const [formation, setFormation] = useState<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2'>('4-3-3');
+  const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(10);
+  const activePitchPlayer = TACTICAL_ROSTER.find(p => p.num === selectedPitchPlayer);
 
   // Live match clock (advances steadily between 71' and 89')
   const [minute, setMinute] = useState(72);
@@ -737,24 +840,112 @@ export default function PlatformHomePage() {
               </div>
             </article>
 
-            {/* Lineup + availability */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#60A5FA' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><Users size={19} /></div>
-                <h3>Availability &amp; lineups</h3>
-                <p>Share one link and players reply in a tap. Then drag the ones who are in onto the pitch and publish the XI.</p>
-              </div>
-              <div className="lp-viz lp-play">
-                <div className="lp-pitch">
-                  <div className="lp-pitch-half" />
-                  {[[8, 50], [24, 20], [22, 40], [22, 60], [24, 80], [40, 30], [38, 50], [40, 70], [56, 22], [58, 50], [56, 78]].map(([x, y], i) => (
-                    <div key={i} className="lp-pl" style={{ left: `${x}%`, top: `${y}%`, '--i': i } as React.CSSProperties}>{i + 1}</div>
-                  ))}
+            {/* Interactive Tactical Pitch & Lineup Workbench */}
+            <article className="lp-tile lp-tile-wide lp-reveal" style={{ '--tc': '#60A5FA' } as React.CSSProperties}>
+              <div className="lp-tile-head-row">
+                <div>
+                  <div className="lp-tile-ico"><Users size={19} /></div>
+                  <h3>Tactical pitch &amp; 1-tap availability</h3>
+                  <p>Share one link before Thursday. When players tap in, arrange your XI on the pitch and publish the team sheet.</p>
                 </div>
-                <div className="lp-avail">
-                  <span style={{ background: 'rgba(16,185,129,.15)', color: 'var(--c-green)' }}>16 in</span>
-                  <span style={{ background: 'rgba(239,68,68,.12)', color: 'var(--c-red)' }}>2 out</span>
-                  <span style={{ background: 'rgba(148,163,184,.12)', color: 'var(--text-primary)' }}>3 maybe</span>
+                <div className="lp-pitch-formation-picker" role="group" aria-label="Pitch formation">
+                  <span className="lp-formation-label">Formation:</span>
+                  <div className="lp-formation-btns">
+                    {(Object.keys(FORMATIONS) as Array<keyof typeof FORMATIONS>).map(f => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={`lp-formation-btn ${formation === f ? 'is-active' : ''}`}
+                        onClick={() => setFormation(f)}
+                      >
+                        {FORMATIONS[f].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="lp-viz lp-tactical-stage">
+                <div className="lp-tactical-pitch">
+                  <div className="lp-pitch-half" />
+                  <div className="lp-pitch-box" />
+                  <div className="lp-pitch-goal-area" />
+                  <div className="lp-pitch-penalty-spot" />
+                  <div className="lp-pitch-center-arc" />
+
+                  {/* 11 Dynamic Player Tokens */}
+                  {FORMATIONS[formation].coords.map(([x, y], i) => {
+                    const player = TACTICAL_ROSTER[i];
+                    const isSelected = selectedPitchPlayer === player.num;
+                    return (
+                      <button
+                        key={player.num}
+                        type="button"
+                        className={`lp-pitch-token ${isSelected ? 'is-selected' : ''}`}
+                        style={{ left: `${x}%`, top: `${y}%` }}
+                        onClick={() => setSelectedPitchPlayer(isSelected ? null : player.num)}
+                        title={`${player.name} (${player.role})`}
+                      >
+                        <span className="lp-token-num">{player.num}</span>
+                        <span className="lp-token-name">{player.name.split(' ')[1] || player.name}</span>
+                      </button>
+                    );
+                  })}
+
+                  {/* Floating Tactical Inspector Card */}
+                  {activePitchPlayer && (
+                    <div className="lp-pitch-inspector" aria-live="polite">
+                      <div className="lp-inspector-top">
+                        <div className="lp-inspector-badge">#{activePitchPlayer.num}</div>
+                        <div className="min-w-0">
+                          <div className="lp-inspector-name">{activePitchPlayer.name}</div>
+                          <div className="lp-inspector-role">{activePitchPlayer.role}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="lp-inspector-close"
+                          onClick={() => setSelectedPitchPlayer(null)}
+                          aria-label="Close player card"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="lp-inspector-status">
+                        <span className="pulse-dot" style={{ background: '#10B981', width: 6, height: 6 }} />
+                        <span>Confirmed &middot; {activePitchPlayer.confirmed}</span>
+                      </div>
+                      <div className="lp-inspector-stats">
+                        <span><b>{activePitchPlayer.goals}</b> goals</span>
+                        <span><b>{activePitchPlayer.assists}</b> assists</span>
+                        <span className="lp-inspector-tag">Starting XI</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Availability Status Bar & Bench Strip */}
+                <div className="lp-tactical-footer">
+                  <div className="lp-avail-badges">
+                    <span className="lp-avail-badge in">
+                      <Check size={12} /> 11 Starting XI
+                    </span>
+                    <span className="lp-avail-badge sub">
+                      <ArrowLeftRight size={12} /> 5 Bench
+                    </span>
+                    <span className="lp-avail-badge out">
+                      <X size={12} /> 2 Out
+                    </span>
+                  </div>
+                  <div className="lp-bench-row">
+                    <span className="lp-bench-heading">Bench:</span>
+                    <div className="lp-bench-tags">
+                      {BENCH_SQUAD.map(b => (
+                        <span key={b.num} className="lp-bench-tag" title={b.role}>
+                          #{b.num} {b.name.split(' ')[1]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
