@@ -111,6 +111,45 @@
 .lp-swatch[aria-pressed='true'] { outline-color: var(--sw-p); }
 .lp-swatch:focus-visible { outline-color: #fff; }
 
+.lp-matchday-tag {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.lp-kit-styles {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+.lp-kit-pills {
+  display: flex;
+  gap: 0.4rem;
+}
+.lp-kit-pill {
+  padding: 0.28rem 0.65rem;
+  border-radius: 99px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lp-kit-pill:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+.lp-kit-pill.is-active {
+  background: var(--lp-p);
+  border-color: var(--lp-p);
+  color: var(--lp-on-p);
+}
+
 .lp-hero-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1.75rem; font-size: 0.82rem; color: var(--text-muted); }
 .lp-hero-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .lp-hero-meta svg { color: #10B981; }
@@ -143,6 +182,12 @@
   display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem;
   background: linear-gradient(120deg, var(--lp-s), color-mix(in srgb, var(--lp-p) 35%, var(--lp-s)));
 }
+.lp-crest-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
 .lp-crest {
   width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center;
   font-family: var(--font-heading); font-weight: 900; font-size: 0.8rem; color: var(--lp-on-p);
@@ -152,7 +197,19 @@
 .lp-club-name { font-family: var(--font-heading); font-weight: 800; font-size: 1rem; color: #fff; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-club-nav { font-size: 0.66rem; color: rgba(255, 255, 255, 0.65); display: flex; gap: 0.7rem; margin-top: 2px; }
 
-.lp-score { padding: 1.1rem 1rem 0.9rem; }
+.lp-score {
+  padding: 1.1rem 1rem 0.9rem;
+  position: relative;
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+.lp-score.is-goal-flash {
+  box-shadow: inset 0 0 32px rgba(245, 158, 11, 0.3);
+  animation: lpGoalFlash 0.6s var(--ease-out);
+}
+@keyframes lpGoalFlash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.22); }
+}
 .lp-score-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; }
 .lp-live-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; color: #F87171; font-family: var(--font-mono); }
 .lp-comp { font-size: 0.68rem; color: var(--text-muted); }
@@ -162,17 +219,159 @@
 .lp-team-away { width: 38px; height: 38px; border-radius: 50%; background: #1E293B; border: 2px solid #475569; display: grid; place-items: center; font-weight: 900; font-size: 0.75rem; color: #CBD5E1; }
 .lp-digits { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-mono); font-size: 2.3rem; font-weight: 700; line-height: 1; }
 .lp-digits .sep { color: var(--text-muted); font-size: 1.5rem; }
-.lp-timeline { margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display: grid; gap: 0.45rem; }
+
+/* Touchline Action Controller */
+.lp-dugout-bar {
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.lp-dugout-title {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.lp-dugout-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.lp-dugout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  border: 1px solid var(--border-medium);
+  background: #141C2A;
+  color: var(--text-primary);
+  transition: transform 0.12s var(--ease-out), background 0.15s ease, border-color 0.15s ease;
+}
+.lp-dugout-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.lp-dugout-btn:active {
+  transform: scale(0.95);
+}
+.lp-btn-goal:hover,
+.lp-btn-goal.is-active {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #F59E0B;
+  color: #FBBF24;
+}
+.lp-btn-sub:hover,
+.lp-btn-sub.is-active {
+  background: rgba(96, 165, 250, 0.22);
+  border-color: #60A5FA;
+  color: #93C5FD;
+}
+.lp-btn-card:hover,
+.lp-btn-card.is-active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #FCA5A5;
+}
+.lp-dugout-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+.lp-dugout-reset:hover {
+  color: var(--text-primary);
+}
+
+/* Electronic 4th Official LED Sub Board */
+.lp-sub-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: #06090E;
+  border: 1.5px solid #1E293B;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.8);
+  animation: subBoardDrop 0.25s var(--ease-out);
+}
+@keyframes subBoardDrop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.lp-sub-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.6);
+}
+.lp-sub-panel.in { border-left: 3px solid #10B981; }
+.lp-sub-panel.out { border-left: 3px solid #EF4444; }
+.lp-sub-tag {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.lp-sub-panel.in .lp-sub-tag { color: #34D399; }
+.lp-sub-panel.out .lp-sub-tag { color: #F87171; }
+.lp-sub-num {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.lp-sub-panel.in .lp-sub-num {
+  color: #10B981;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+}
+.lp-sub-panel.out .lp-sub-num {
+  color: #EF4444;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+}
+.lp-sub-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-timeline { margin-top: 0.85rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display: grid; gap: 0.45rem; }
 .lp-ev { display: grid; grid-template-columns: 2.4rem 18px 1fr; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text-secondary); }
 .lp-ev time { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); text-align: right; }
 .lp-ev b { color: var(--text-primary); font-weight: 700; }
-/* The 71' goal row is rendered from the start (hidden) so nothing below it shifts when it arrives */
 .lp-ev-goal { visibility: hidden; }
-.lp-ev-goal.is-in { visibility: visible; animation: lpEvIn 600ms var(--ease-out) both; }
+.lp-ev-goal.is-in { visibility: visible; animation: lpEvIn 500ms var(--ease-out) both; }
 .lp-ev-goal b { color: var(--lp-a); }
 @keyframes lpEvIn { from { opacity: 0; transform: translateY(-6px); } }
 @keyframes lpFade { from { opacity: 0; } }
-.lp-card-yellow { width: 10px; height: 14px; border-radius: 2px; background: #FACC15; margin-left: 4px; }
+.lp-card-yellow { width: 10px; height: 14px; border-radius: 2px; background: #FACC15; display: inline-block; margin-left: 2px; box-shadow: 0 0 4px rgba(250, 204, 21, 0.4); }
+.lp-card-red { width: 10px; height: 14px; border-radius: 2px; background: #EF4444; display: inline-block; margin-left: 2px; box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
 
 /* Floating member pass */
 .lp-pass {

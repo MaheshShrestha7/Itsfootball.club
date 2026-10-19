@@ -21,11 +21,70 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer,
+  Layers, ClipboardList, Share2, Timer, RotateCcw,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
+
+interface DugoutEvent {
+  id: string;
+  minute: number;
+  type: 'goal' | 'sub' | 'yellow' | 'red';
+  headline: string;
+  detail: string;
+  isHome?: boolean;
+}
+
+const DEFAULT_EVENTS: DugoutEvent[] = [
+  { id: '1', minute: 71, type: 'goal', headline: 'GOAL!', detail: 'D. Okafor, assist M. Silva', isHome: true },
+  { id: '2', minute: 58, type: 'sub', headline: 'Sub', detail: 'J. Park on for L. Hughes', isHome: true },
+  { id: '3', minute: 41, type: 'yellow', headline: 'Yellow card', detail: 'Riverside #6 (tactical foul)' },
+  { id: '4', minute: 23, type: 'goal', headline: 'Goal', detail: 'M. Silva (free kick)', isHome: true },
+];
+
+const KIT_STYLES = [
+  { id: 'solid', label: 'Solid' },
+  { id: 'stripes', label: 'Stripes' },
+  { id: 'hoops', label: 'Hoops' },
+  { id: 'sash', label: 'Sash' },
+] as const;
+
+type KitStyle = typeof KIT_STYLES[number]['id'];
+
+function MiniJersey({ primary, accent, style }: { primary: string; accent: string; style: KitStyle }) {
+  const sId = `pat-s-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const hId = `pat-h-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
+  return (
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))', flexShrink: 0 }}>
+      <defs>
+        <pattern id={sId} width="8" height="32" patternUnits="userSpaceOnUse">
+          <rect width="4" height="32" fill={primary} />
+          <rect x="4" width="4" height="32" fill={accent} />
+        </pattern>
+        <pattern id={hId} width="32" height="8" patternUnits="userSpaceOnUse">
+          <rect width="32" height="4" fill={primary} />
+          <rect y="4" width="32" height="4" fill={accent} />
+        </pattern>
+      </defs>
+      <path
+        d="M9 4L3 9L7 14L10 12V28H22V12L25 14L29 9L23 4H19C19 6 17 7 16 7C15 7 13 6 13 4H9Z"
+        fill={
+          style === 'solid' ? primary :
+          style === 'stripes' ? `url(#${sId})` :
+          style === 'hoops' ? `url(#${hId})` :
+          primary
+        }
+        stroke="rgba(255,255,255,0.25)"
+        strokeWidth="1.2"
+      />
+      {style === 'sash' && (
+        <path d="M10 6L22 26H19L9 8V6H10Z" fill={accent} />
+      )}
+      <path d="M13 4C13 6 15 7 16 7C17 7 19 6 19 4" stroke={accent} strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
@@ -118,14 +177,93 @@ export default function PlatformHomePage() {
   const slugCheck = useMemo(() => validateClubSlug(clubName, allClubs), [clubName, allClubs]);
   const previewSlug = slugCheck.cleanSlug || 'yourclub';
 
-  // One scripted goal so the mock reads as live: the clock ticks on and the home side scores at 71'
-  const [minute, setMinute] = useState(67);
+  // Interactive Dugout & Matchday Controller State
+  const [homeScore, setHomeScore] = useState(2);
+  const [isGoalFlash, setIsGoalFlash] = useState(false);
+  const [subBoardActive, setSubBoardActive] = useState(false);
+  const [refCardActive, setRefCardActive] = useState<'yellow' | 'red' | null>(null);
+  const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
+  const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Live match clock (advances steadily between 71' and 89')
+  const [minute, setMinute] = useState(72);
   useEffect(() => {
-    if (minute >= 74) return;
-    const t = setTimeout(() => setMinute(m => m + 1), 1800);
+    if (minute >= 89) return;
+    const t = setTimeout(() => setMinute(m => m + 1), 3500);
     return () => clearTimeout(t);
   }, [minute]);
-  const goalIn = minute >= 71;
+
+  const triggerGoal = () => {
+    setHomeScore(s => s + 1);
+    setIsGoalFlash(true);
+    setTimeout(() => setIsGoalFlash(false), 1400);
+    const newEv: DugoutEvent = {
+      id: String(Date.now()),
+      minute: minute,
+      type: 'goal',
+      headline: 'GOAL!',
+      detail: `${displayName} scores! Touchline eruption`,
+      isHome: true,
+    };
+    setEvents(prev => [newEv, ...prev.slice(0, 4)]);
+  };
+
+  const triggerSub = () => {
+    setSubBoardActive(prev => {
+      const next = !prev;
+      if (next) {
+        const newEv: DugoutEvent = {
+          id: String(Date.now()),
+          minute: minute,
+          type: 'sub',
+          headline: 'Tactical Sub',
+          detail: '#10 J. Park on for #7 L. Hughes',
+          isHome: true,
+        };
+        setEvents(p => [newEv, ...p.slice(0, 4)]);
+      }
+      return next;
+    });
+  };
+
+  const triggerCard = () => {
+    const nextCard: 'yellow' | 'red' | null = refCardActive === 'yellow' ? 'red' : refCardActive === 'red' ? null : 'yellow';
+    setRefCardActive(nextCard);
+    if (nextCard) {
+      const newEv: DugoutEvent = {
+        id: String(Date.now()),
+        minute: minute,
+        type: nextCard,
+        headline: nextCard === 'red' ? 'RED CARD!' : 'Yellow Card',
+        detail: nextCard === 'red' ? 'Riverside #4 violent conduct' : 'Riverside #6 deliberate handball',
+      };
+      setEvents(p => [newEv, ...p.slice(0, 4)]);
+    }
+  };
+
+  const resetDugout = () => {
+    setHomeScore(2);
+    setIsGoalFlash(false);
+    setSubBoardActive(false);
+    setRefCardActive(null);
+    setEvents(DEFAULT_EVENTS);
+  };
+
+  const isDugoutModified = homeScore !== 2 || subBoardActive || refCardActive !== null || events.length !== 4;
+
+  const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!stageRef.current) return;
+    const rect = stageRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: -(y * 10), y: x * 10 });
+  };
+
+  const handleStageMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
 
   const claim = (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,9 +369,9 @@ export default function PlatformHomePage() {
       >
         <div className="container lp-hero-grid">
           <div>
-            <div className="lp-kicker">
+            <div className="lp-kicker lp-matchday-tag">
               <span className="pulse-dot" aria-hidden="true" />
-              Free football &amp; soccer club website builder
+              Matchday Saturday &middot; Free Grassroots Platform
             </div>
 
             <h1 className="lp-h1">
@@ -296,6 +434,22 @@ export default function PlatformHomePage() {
               ))}
             </div>
 
+            <div className="lp-kit-styles" role="group" aria-label="Kit pattern style">
+              <span className="lp-swatches-label">Kit pattern:</span>
+              <div className="lp-kit-pills">
+                {KIT_STYLES.map(k => (
+                  <button
+                    key={k.id}
+                    type="button"
+                    className={`lp-kit-pill ${kitStyle === k.id ? 'is-active' : ''}`}
+                    onClick={() => setKitStyle(k.id)}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {demoClub && (
               <Link href={`/${demoClub.slug}`} className="lp-demo">
                 Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
@@ -322,7 +476,14 @@ export default function PlatformHomePage() {
           </div>
 
           {/* Live product mock, painted in the visitor's name and colours */}
-          <div className="lp-stage" aria-hidden="true" data-theme="dark">
+          <div
+            ref={stageRef}
+            className="lp-stage"
+            aria-hidden="true"
+            data-theme="dark"
+            onMouseMove={handleStageMouseMove}
+            onMouseLeave={handleStageMouseLeave}
+          >
             <div className="lp-toast">
               <div className="lp-toast-ico"><CalendarCheck size={16} /></div>
               <div>
@@ -337,16 +498,19 @@ export default function PlatformHomePage() {
                 <div className="lp-url">itsfootball.club/<b>{previewSlug}</b></div>
               </div>
               <div className="lp-club-head">
-                <div className="lp-crest">{initials(displayName)}</div>
+                <div className="lp-crest-wrap">
+                  <div className="lp-crest">{initials(displayName)}</div>
+                  <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
+                </div>
                 <div className="min-w-0">
                   <div className="lp-club-name">{displayName}</div>
                   <div className="lp-club-nav"><span>Fixtures</span><span>Squad</span><span>News</span><span>Membership</span></div>
                 </div>
               </div>
-              <div className="lp-score">
+              <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
                 <div className="lp-score-top">
                   <span className="lp-live-chip"><span className="pulse-dot" /> LIVE {minute}&apos;</span>
-                  <span className="lp-comp">Sunday League · Div 2</span>
+                  <span className="lp-comp">Sunday League · Div 2 · Pitch 1</span>
                 </div>
                 <div className="lp-board">
                   <div className="lp-team">
@@ -354,27 +518,106 @@ export default function PlatformHomePage() {
                     <span>{displayName}</span>
                   </div>
                   <div className="lp-digits">
-                    <div style={{ zoom: 0.62 }}><ScoreboardDigitRoll value={goalIn ? 2 : 1} isGoal={goalIn && minute < 74} /></div>
+                    <div style={{ zoom: 0.65 }}>
+                      <ScoreboardDigitRoll value={homeScore} isGoal={isGoalFlash} accentColor={palette.accent} />
+                    </div>
                     <span className="sep">:</span>
-                    <div style={{ zoom: 0.62 }}><ScoreboardDigitRoll value={1} /></div>
+                    <div style={{ zoom: 0.65 }}>
+                      <ScoreboardDigitRoll value={1} />
+                    </div>
                   </div>
                   <div className="lp-team">
                     <div className="lp-team-away">RVR</div>
                     <span>Riverside Rovers</span>
                   </div>
                 </div>
-                <div className="lp-timeline">
-                  <div className={`lp-ev lp-ev-goal${goalIn ? ' is-in' : ''}`}>
-                    <time>71&apos;</time><Goal size={15} color={palette.accent} /><span><b>GOAL!</b> D. Okafor, assist M. Silva</span>
+
+                {/* Touchline Action Controller Buttons */}
+                <div className="lp-dugout-bar" role="toolbar" aria-label="Touchline matchday controls">
+                  <div className="lp-dugout-title">TOUCHLINE ACTION</div>
+                  <div className="lp-dugout-btns">
+                    <button
+                      type="button"
+                      className={`lp-dugout-btn lp-btn-goal ${isGoalFlash ? 'is-active' : ''}`}
+                      onClick={triggerGoal}
+                      title="Celebrate a goal and advance the score roll"
+                    >
+                      <Goal size={13} /> Goal!
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-dugout-btn lp-btn-sub ${subBoardActive ? 'is-active' : ''}`}
+                      onClick={triggerSub}
+                      title="Toggle the 4th official electronic LED substitution board"
+                    >
+                      <ArrowLeftRight size={13} /> Sub
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-dugout-btn lp-btn-card ${refCardActive ? 'is-active' : ''}`}
+                      onClick={triggerCard}
+                      title="Cycle yellow and red referee cards"
+                    >
+                      <span className={refCardActive === 'red' ? 'lp-card-red' : 'lp-card-yellow'} />
+                      {refCardActive === 'red' ? 'Red Card' : 'Card'}
+                    </button>
+                    {isDugoutModified && (
+                      <button
+                        type="button"
+                        className="lp-dugout-reset"
+                        onClick={resetDugout}
+                        title="Reset match simulation"
+                      >
+                        <RotateCcw size={11} /> Reset
+                      </button>
+                    )}
                   </div>
-                  <div className="lp-ev"><time>58&apos;</time><ArrowLeftRight size={14} color="var(--c-sky)" /><span>Sub: J. Park on for L. Hughes</span></div>
-                  <div className="lp-ev"><time>41&apos;</time><span className="lp-card-yellow" /><span>Yellow card, Riverside #6</span></div>
-                  <div className="lp-ev"><time>23&apos;</time><Goal size={15} color="var(--text-primary)" /><span><b>Goal</b> M. Silva</span></div>
+                </div>
+
+                {/* Electronic Sub Board */}
+                {subBoardActive && (
+                  <div className="lp-sub-board" aria-live="polite">
+                    <div className="lp-sub-panel in">
+                      <span className="lp-sub-tag">▲ IN</span>
+                      <span className="lp-sub-num">10</span>
+                      <span className="lp-sub-name">J. Park</span>
+                    </div>
+                    <div className="lp-sub-panel out">
+                      <span className="lp-sub-tag">▼ OUT</span>
+                      <span className="lp-sub-num">07</span>
+                      <span className="lp-sub-name">L. Hughes</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Match Events Timeline */}
+                <div className="lp-timeline">
+                  {events.map(ev => (
+                    <div key={ev.id} className={`lp-ev ${ev.type === 'goal' ? 'lp-ev-goal is-in' : ''}`}>
+                      <time>{ev.minute}&apos;</time>
+                      {ev.type === 'goal' ? (
+                        <Goal size={14} color={palette.accent} />
+                      ) : ev.type === 'sub' ? (
+                        <ArrowLeftRight size={13} color="var(--c-sky)" />
+                      ) : ev.type === 'red' ? (
+                        <span className="lp-card-red" />
+                      ) : (
+                        <span className="lp-card-yellow" />
+                      )}
+                      <span><b>{ev.headline}</b> {ev.detail}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="lp-pass">
+            <div
+              className="lp-pass"
+              style={{
+                transform: `perspective(700px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) rotateZ(5deg)`,
+                transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            >
               <div className="lp-pass-top">
                 <div>
                   <div className="lp-pass-label">MEMBER PASS · 2026/27</div>
