@@ -21,7 +21,7 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer, RotateCcw,
+  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
@@ -183,6 +183,14 @@ const FORMATIONS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', { label: strin
     ],
   },
 };
+
+const PASS_TIERS = [
+  { id: 'player', label: 'Player', name: 'Alex Morgan', role: 'Senior Squad #10', color: '#10B981', num: '10', type: 'MATCHDAY PASS' },
+  { id: 'supporter', label: 'Member', name: 'Jordan Davies', role: 'Grandstand West', color: '#F59E0B', num: 'SEA', type: 'SEASON TICKET' },
+  { id: 'official', label: 'Official', name: 'Sarah Chen', role: 'All-Area Access', color: '#A78BFA', num: 'COM', type: 'COMMITTEE' },
+] as const;
+
+type PassTierId = typeof PASS_TIERS[number]['id'];
 
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
@@ -366,6 +374,30 @@ export default function PlatformHomePage() {
 
   const handleStageMouseLeave = () => {
     setTilt({ x: 0, y: 0 });
+  };
+
+  // Holographic Pass & Turnstile state
+  const [passTier, setPassTier] = useState<PassTierId>('player');
+  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'granted'>('idle');
+  const [passTilt, setPassTilt] = useState({ x: 0, y: 0 });
+
+  const triggerGateScan = () => {
+    if (scanState === 'scanning') return;
+    setScanState('scanning');
+    setTimeout(() => {
+      setScanState('granted');
+    }, 850);
+  };
+
+  const handlePassMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPassTilt({ x: -(y * 14), y: x * 14 });
+  };
+
+  const handlePassMouseLeave = () => {
+    setPassTilt({ x: 0, y: 0 });
   };
 
   const claim = (e: React.FormEvent) => {
@@ -758,29 +790,104 @@ export default function PlatformHomePage() {
       <section className="lp-section">
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-eyebrow">Sound familiar?</div>
-            <h2 className="lp-h2">Your club runs on volunteers. Not on five different apps.</h2>
-          </div>
-          <div className="lp-vs lp-reveal">
-            <div className="lp-vs-col lp-vs-before lp-play">
-              <div className="lp-vs-title">Most clubs today</div>
-              <ul>
-                <li><X size={16} /><span><s>&ldquo;Who&apos;s available Saturday?&rdquo; buried in the group chat</s></span></li>
-                <li><X size={16} /><span><s>Subs tracked in someone&apos;s spreadsheet, chased in cash</s></span></li>
-                <li><X size={16} /><span><s>A social page as the club&apos;s only &ldquo;website&rdquo;</s></span></li>
-                <li><X size={16} /><span><s>Scores posted hours later, if at all</s></span></li>
-                <li><X size={16} /><span><s>Sponsors who never see what their money did</s></span></li>
-              </ul>
+            <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> The Matchday Reality Check
             </div>
-            <div className="lp-vs-col lp-vs-after">
-              <div className="lp-vs-title">With itsfootball.club</div>
-              <ul>
-                <li><Check size={16} /><span>Players tap in or out from one link, and you pick the lineup from who&apos;s in</span></li>
-                <li><Check size={16} /><span>Memberships paid by card or bank transfer, with receipts and a proper ledger</span></li>
-                <li><Check size={16} /><span>A real club website with your crest, colours and own address</span></li>
-                <li><Check size={16} /><span>Every goal, card and sub live, straight from the touchline</span></li>
-                <li><Check size={16} /><span>A sponsor report with impressions and clicks, ready for renewal talks</span></li>
-              </ul>
+            <h2 className="lp-h2">Your club runs on volunteers. Not on 40-message group chats.</h2>
+            <p className="lp-lede" style={{ maxWidth: 640, margin: '0.65rem auto 0' }}>
+              Every grassroots manager knows the Sunday morning panic. Here is what happens when your club runs on itsfootball.club instead.
+            </p>
+          </div>
+
+          <div className="lp-vs-showcase lp-reveal">
+            {/* Left Column: Sunday Morning Group Chat Meltdown */}
+            <div className="lp-vs-col lp-vs-chaos">
+              <div className="lp-chat-header">
+                <div className="lp-chat-title-group">
+                  <span className="lp-chat-avatar"><Users size={16} /></span>
+                  <div>
+                    <div className="lp-chat-name">Sunday League Div 2 Squad (19)</div>
+                    <div className="lp-chat-sub">14 unread messages &middot; Sunday 9:18 AM</div>
+                  </div>
+                </div>
+                <span className="lp-chat-badge">9 AM CHAOS</span>
+              </div>
+
+              <div className="lp-chat-messages">
+                <div className="lp-bubble">
+                  <div className="lp-bubble-author">Dave M. (CB) <time>8:42 AM</time></div>
+                  <div className="lp-bubble-text">Anyone got spare shinpads and socks? Left mine in the boot of someone&apos;s car last week 🤦‍♂️</div>
+                </div>
+                <div className="lp-bubble">
+                  <div className="lp-bubble-author">Kev T. (Striker) <time>8:59 AM</time></div>
+                  <div className="lp-bubble-text">Gaffer can&apos;t play today, back seized up taking the wheelie bins out. Good luck lads</div>
+                </div>
+                <div className="lp-bubble">
+                  <div className="lp-bubble-author">Steve (Coach) <time>9:08 AM</time></div>
+                  <div className="lp-bubble-text">That leaves us with 9 players. And who has the council padlock key for Pitch 2??</div>
+                </div>
+                <div className="lp-bubble">
+                  <div className="lp-bubble-author">Marcus (Treasurer) <time>9:14 AM</time></div>
+                  <div className="lp-bubble-text">URGENT: 7 of you still owe $15 cash for ref fees. If no ref fee, no match! Bring coins!</div>
+                </div>
+              </div>
+
+              <div className="lp-chat-footer">
+                <AlertTriangle size={15} color="#EF4444" />
+                <span>Kick-off in 45 mins &middot; 9 players confirmed &middot; Gate locked &middot; $105 cash missing</span>
+              </div>
+            </div>
+
+            {/* Right Column: itsfootball.club Match Hub */}
+            <div className="lp-vs-col lp-vs-control">
+              <div className="lp-hub-header">
+                <div className="lp-hub-title-group">
+                  <span className="lp-hub-avatar"><Check size={16} /></span>
+                  <div>
+                    <div className="lp-hub-name">{displayName || 'Eastside Rovers'} Match Hub</div>
+                    <div className="lp-hub-sub">Saturday 10:30 AM Kick-off &middot; Pitch 1 Ready</div>
+                  </div>
+                </div>
+                <span className="lp-hub-badge">CONTROLLED</span>
+              </div>
+
+              <div className="lp-hub-cards">
+                <div className="lp-hub-item">
+                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
+                  <div>
+                    <div className="lp-hub-item-title">1-Tap Squad Confirmation</div>
+                    <div className="lp-hub-item-desc">Starting XI + 4 Bench locked on Thursday night. 0 group chat arguments.</div>
+                  </div>
+                </div>
+                <div className="lp-hub-item">
+                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
+                  <div>
+                    <div className="lp-hub-item-title">Digital Match Sheet &amp; Tactical XI</div>
+                    <div className="lp-hub-item-desc">Ref and opposition view official team sheet from a live link on their phone.</div>
+                  </div>
+                </div>
+                <div className="lp-hub-item">
+                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
+                  <div>
+                    <div className="lp-hub-item-title">Automated Sub Ledger &amp; Ref Fee</div>
+                    <div className="lp-hub-item-desc">100% of player subs settled digitally via card. Ref paid on time from club wallet.</div>
+                  </div>
+                </div>
+                <div className="lp-hub-item">
+                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
+                  <div>
+                    <div className="lp-hub-item-title">Ground GPS &amp; Turnstile Passes</div>
+                    <div className="lp-hub-item-desc">Pitch directions and member passes in supporters&apos; Apple/Google Wallets.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lp-hub-footer">
+                <div className="lp-hub-pill">
+                  <span className="pulse-dot" style={{ background: '#10B981', width: 7, height: 7 }} />
+                  <span>15 Players Ready &middot; Ref Fee Settled &middot; Live Match Centre Armed</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -790,7 +897,9 @@ export default function PlatformHomePage() {
       <section className="lp-section" id="features" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="lp-head lp-reveal">
-            <div className="lp-eyebrow">Everything your club runs on</div>
+            <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> Club Operating System
+            </div>
             <h2 className="lp-h2">From kick-off to the clubhouse, in one place.</h2>
             <p className="lp-lede">Everything below is live in the product today. Your committee switches it on; supporters, players and sponsors just open a link.</p>
           </div>
@@ -821,21 +930,88 @@ export default function PlatformHomePage() {
               </div>
             </article>
 
-            {/* Member pass */}
+            {/* 3D Holographic Member Pass & Gate Scanner */}
             <article className="lp-tile lp-reveal" style={{ '--tc': '#34D399' } as React.CSSProperties}>
               <div>
                 <div className="lp-tile-ico"><QrCode size={19} /></div>
                 <h3>Digital member passes</h3>
-                <p>Every member gets a pass with their own QR code. Scan it at the gate, or put up a door QR so people check themselves in.</p>
+                <p>Every member gets a wallet pass with their own QR code. Scan it at the gate or turnstile in under a second.</p>
+                <div className="lp-tier-pills" role="group" aria-label="Pass tier">
+                  {PASS_TIERS.map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`lp-tier-pill ${passTier === t.id ? 'is-active' : ''}`}
+                      onClick={() => { setPassTier(t.id); setScanState('idle'); }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="lp-viz lp-play">
-                <div className="lp-scan">
-                  <div className="lp-scan-reticle">
-                    <i /><i /><i /><i />
-                    <div className="lp-scan-qr"><QRCodeSVG value="https://itsfootball.club" size={64} /></div>
+
+              <div className="lp-viz lp-pass-stage">
+                {(() => {
+                  const currentTier = PASS_TIERS.find(t => t.id === passTier) || PASS_TIERS[0];
+                  return (
+                    <div
+                      className="lp-pass-3d-wrap"
+                      onMouseMove={handlePassMouseMove}
+                      onMouseLeave={handlePassMouseLeave}
+                    >
+                      <div
+                        className={`lp-holo-pass ${scanState === 'granted' ? 'is-granted' : ''}`}
+                        style={{
+                          transform: `perspective(600px) rotateX(${passTilt.x}deg) rotateY(${passTilt.y}deg)`,
+                          '--tier-color': currentTier.color,
+                        } as React.CSSProperties}
+                      >
+                        <div className="lp-holo-sheen" aria-hidden="true" />
+                        <div className="lp-holo-head">
+                          <div>
+                            <span className="lp-holo-type">{currentTier.type}</span>
+                            <div className="lp-holo-club">{displayName}</div>
+                          </div>
+                          <span className="lp-holo-num">{currentTier.num}</span>
+                        </div>
+
+                        <div className="lp-holo-body">
+                          <div>
+                            <div className="lp-holo-name">{currentTier.name}</div>
+                            <div className="lp-holo-role">{currentTier.role}</div>
+                          </div>
+                          <div className="lp-holo-qr-wrap">
+                            <QRCodeSVG value={`https://itsfootball.club/${previewSlug}/verify`} size={46} />
+                            {scanState === 'scanning' && <div className="lp-laser-sweep" />}
+                          </div>
+                        </div>
+
+                        <div className="lp-holo-footer">
+                          <span className="lp-holo-valid">VALID 2026/27</span>
+                          <span className="lp-holo-chip"><Check size={10} /> VERIFIED</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Gate Scanner Controller */}
+                <div className="lp-turnstile-bar">
+                  <button
+                    type="button"
+                    className={`lp-scan-btn ${scanState === 'scanning' ? 'is-scanning' : ''}`}
+                    onClick={triggerGateScan}
+                  >
+                    <Zap size={13} /> {scanState === 'scanning' ? 'Scanning...' : 'Simulate Gate Scan'}
+                  </button>
+                  <div className={`lp-turnstile-indicator ${scanState}`}>
+                    <span className="lp-turnstile-lamp" />
+                    <span>
+                      {scanState === 'idle' && 'Turnstile ready'}
+                      {scanState === 'scanning' && 'Verifying pass...'}
+                      {scanState === 'granted' && 'Gate unlocked'}
+                    </span>
                   </div>
-                  <div className="lp-scan-laser" />
-                  <div className="lp-stamp">ACCESS GRANTED</div>
                 </div>
               </div>
             </article>
@@ -1051,7 +1227,9 @@ export default function PlatformHomePage() {
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-eyebrow">One platform, everyone at the club</div>
+            <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> Every Matchday Role
+            </div>
             <h2 className="lp-h2">What&apos;s in it for you?</h2>
           </div>
           <div className="lp-reveal">
@@ -1118,13 +1296,18 @@ export default function PlatformHomePage() {
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="lp-head lp-reveal">
-            <div className="lp-eyebrow">Kick-off in three steps</div>
+            <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> 3-Minute Setup
+            </div>
             <h2 className="lp-h2">Live before your next training session.</h2>
           </div>
           <div className="lp-steps">
             {CREATE_CLUB_STEPS.map((s, i) => (
               <div key={s.name} className="lp-step lp-reveal">
-                <div className="lp-step-n">0{i + 1}</div>
+                <div className="lp-step-marker">
+                  <span className="lp-step-badge">STEP 0{i + 1}</span>
+                  <span className="lp-step-milestone">{i === 0 ? 'Club Identity' : i === 1 ? 'Squad Setup' : 'Matchday 1'}</span>
+                </div>
                 <h3>{s.name}</h3>
                 <p>{s.text}</p>
               </div>
@@ -1138,7 +1321,9 @@ export default function PlatformHomePage() {
         <div className="container">
           <div className="lp-head lp-reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div>
-              <div className="lp-eyebrow">Free tools, no sign-up</div>
+              <div className="lp-matchday-tag">
+                <span className="pulse-dot" /> Grassroots Utility Hub
+              </div>
               <h2 id="lp-tools-h" className="lp-h2">Not ready for a club site? Start with a tool.</h2>
             </div>
             <Link href={TOOLS_HUB.path} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1164,7 +1349,9 @@ export default function PlatformHomePage() {
           <div className="container">
             <div className="lp-head lp-reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div>
-                <div className="lp-eyebrow">See it for real</div>
+                <div className="lp-matchday-tag">
+                  <span className="pulse-dot" /> Live Network
+                </div>
                 <h2 className="lp-h2">Clubs already on the pitch.</h2>
               </div>
               <Link href="/clubs" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1200,7 +1387,9 @@ export default function PlatformHomePage() {
         <section className="lp-section" style={{ paddingTop: 0 }}>
           <div className="container">
             <div className="lp-head lp-head-center lp-reveal">
-              <div className="lp-eyebrow">Club partners</div>
+              <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> Grassroots Sponsors
+            </div>
               <h2 className="lp-h2">Backed by sponsors across the network.</h2>
             </div>
             <div className="sponsor-scroll-strip">
@@ -1241,7 +1430,9 @@ export default function PlatformHomePage() {
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container" style={{ maxWidth: '880px' }}>
           <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-eyebrow">Grassroots club FAQ</div>
+            <div className="lp-matchday-tag">
+              <span className="pulse-dot" /> Committee FAQ
+            </div>
             <h2 className="lp-h2">Frequently asked questions.</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginTop: '0.5rem' }}>
               Everything club committees, volunteers, and managers ask before getting started.
@@ -1276,7 +1467,7 @@ export default function PlatformHomePage() {
       <section className="lp-section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="lp-final lp-reveal" data-theme="dark">
-            <div className="lp-eyebrow" style={{ justifyContent: 'center' }}><Zap size={13} /> Free to set up</div>
+            <div className="lp-matchday-tag" style={{ justifyContent: 'center' }}><Zap size={13} /> Free to set up &middot; No credit card required</div>
             <h2 className="lp-h2">Give your club the matchday it deserves.</h2>
             <p>Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
             <div className="lp-final-actions">
