@@ -20,7 +20,8 @@ import {
 //   POST { clubId, action: 'save', groundId?, ground, listed }
 //          groundId of a ground this club looks after: update its facts (a new name or suburb keeps a
 //          redirect from the old address); of another club's ground: just make it this club's home
-//          ground; none: add a new ground looked after by this club
+//          ground; of a ground no club looks after (added by the platform): this club takes it over;
+//          none: add a new ground looked after by this club
 //   POST { clubId, action: 'listed', listed }   the "show our club on ground pages" switch
 //   POST { clubId, action: 'unlink' }           this club no longer has a home ground in the directory
 //   POST { clubId, action: 'suggestion', id, status: 'done' | 'dismissed' }   close a suggestion
@@ -200,6 +201,10 @@ export async function POST(req: NextRequest) {
       if (upErr) return NextResponse.json({ error: 'Could not save the ground. Check the details and try again.' }, { status: 500 });
       saved = data as GroundRow;
       if (moved) pinged.push(`${GROUNDS_PATH}/${oldPath}`, suburbPath(current.suburb_slug));
+    } else if (!current.steward_club_id) {
+      // Added by the platform with no club looking after it: the first club to pick it takes it over
+      const { data } = await db.from('grounds').update({ steward_club_id: clubId }).eq('id', groundId).is('steward_club_id', null).select(COLUMNS).maybeSingle();
+      saved = (data as GroundRow | null) || current;
     } else {
       saved = current; // another club looks after it: this club just plays there
     }

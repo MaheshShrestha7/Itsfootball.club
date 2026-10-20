@@ -6,6 +6,7 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import GroundList from '@/components/grounds/GroundList';
+import { OSM_COPYRIGHT_URL } from '@/lib/ground-import';
 import GroundsSearch from '@/components/grounds/GroundsSearch';
 import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
@@ -103,6 +104,11 @@ export default async function GroundsDirectoryPage() {
           </div>
           <Link href="/create-club" className="btn btn-primary">Launch your free club site</Link>
         </section>
+        {grounds.some(g => g.source === 'osm') && (
+          <p style={{ ...bodyStyle, fontSize: '0.78rem', marginTop: '1.5rem', textAlign: 'center' }}>
+            Some ground locations and pitches © <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener" style={{ color: 'var(--club-ink)' }}>OpenStreetMap contributors</a> (ODbL).
+          </p>
+        )}
       </main>
       <Footer />
     </div>

@@ -56,3 +56,20 @@ export async function requireClubPerm(
   const { data } = await auth.supabase.rpc('has_club_perm', { p_club_id: clubId, p_areas: areas, p_level: level });
   return data === true ? auth : { ok: false, status: 403, error: 'Your role at this club does not allow this.' };
 }
+
+/**
+ * requireUser, and the caller is an active platform admin (platform_admins, migration 20261112).
+ * `write`: analysts can look but not change anything.
+ */
+export async function requirePlatformAdmin(request: Request, write = false): Promise<AuthCheck> {
+  const auth = await requireUser(request);
+  if (!auth.ok) return auth;
+  const { data: isAdmin } = await auth.supabase.rpc('is_platform_admin');
+  if (isAdmin !== true) return { ok: false, status: 403, error: 'Only platform admins can do this.' };
+  if (write) {
+    const { data: rows } = await auth.supabase.from('platform_admins').select('role, user_id, email').eq('is_active', true);
+    const me = (rows || []).find(r => r.user_id === auth.userId || (auth.confirmedEmail && (r.email || '').toLowerCase() === auth.confirmedEmail));
+    if (me?.role === 'analyst') return { ok: false, status: 403, error: 'Analysts can view grounds but not change them.' };
+  }
+  return auth;
+}
