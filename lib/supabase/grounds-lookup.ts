@@ -25,8 +25,9 @@ async function rows<T>(query: string): Promise<T[]> {
   }
 }
 
-const GROUND_COLUMNS =
-  'id,steward_club_id,name,slug,suburb,suburb_slug,state,postcode,address,lat,lng,council_key,council_name,pitches,parking,toilets,canteen,accessibility,notes,is_published,previous_paths,facts_checked_at,updated_at';
+// Every column: includes grounds.source once migration 20261114 has run (for the OpenStreetMap credit),
+// without failing before it has
+const GROUND_COLUMNS = '*';
 
 /** Every published ground, by suburb then name (merged with curated community grounds for Liverpool, Fairfield, Penrith, Blacktown and Campbelltown) */
 export async function listGrounds(): Promise<GroundRow[]> {

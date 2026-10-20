@@ -8,6 +8,7 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import GroundList from '@/components/grounds/GroundList';
+import { OSM_COPYRIGHT_URL } from '@/lib/ground-import';
 import { h2Style, bodyStyle } from '@/components/ToolLandingPage';
 import { fitDescription, fitTitle, pageMetadata, SITE_URL } from '@/lib/seo';
 import {
@@ -113,6 +114,11 @@ export default async function SuburbGroundsPage({ params }: Params) {
         <p style={{ ...bodyStyle, marginTop: '2rem', textAlign: 'center' }}>
           <Link href={GROUNDS_PATH} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>All community soccer grounds</Link>
         </p>
+        {grounds.some(g => g.source === 'osm') && (
+          <p style={{ ...bodyStyle, fontSize: '0.78rem', marginTop: '1.5rem', textAlign: 'center' }}>
+            Some ground locations and pitches © <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener" style={{ color: 'var(--club-ink)' }}>OpenStreetMap contributors</a> (ODbL).
+          </p>
+        )}
       </main>
       <Footer />
     </div>

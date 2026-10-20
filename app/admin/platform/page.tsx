@@ -17,6 +17,7 @@ import ClubsTab from '@/components/admin/platform/ClubsTab';
 import UsersTab from '@/components/admin/platform/UsersTab';
 import HealthTab from '@/components/admin/platform/HealthTab';
 import BroadcastsTab from '@/components/admin/platform/BroadcastsTab';
+import GroundsTab from '@/components/admin/platform/GroundsTab';
 import ClubDetailDrawer from '@/components/admin/platform/ClubDetailDrawer';
 import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal';
 
@@ -26,6 +27,7 @@ import {
   Users,
   Activity,
   Radio,
+  MapPin,
   RefreshCw,
   UserPlus,
   ShieldCheck,
@@ -38,7 +40,7 @@ const PERIOD_OPTIONS = [
   { days: 90, label: 'Last 90 Days' },
 ];
 
-type TabType = 'cockpit' | 'clubs' | 'users' | 'health' | 'broadcasts';
+type TabType = 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts';
 
 export default function PlatformOwnerDashboard() {
   const { user, isAuthenticated, isLoading: authLoading, isPlatformAdmin } = useAuth();
@@ -403,6 +405,7 @@ export default function PlatformOwnerDashboard() {
             { id: 'cockpit' as TabType, label: 'Cockpit Overview', icon: Gauge },
             { id: 'clubs' as TabType, label: `Clubs Fleet (${clubs.length})`, icon: Building },
             { id: 'users' as TabType, label: 'Platform Users', icon: Users },
+            { id: 'grounds' as TabType, label: 'Grounds', icon: MapPin },
             { id: 'health' as TabType, label: 'System Health & Vitals', icon: Activity },
             { id: 'broadcasts' as TabType, label: 'Broadcasts & Banners', icon: Radio },
           ].map(tab => {
@@ -460,6 +463,10 @@ export default function PlatformOwnerDashboard() {
 
         {activeTab === 'users' && (
           <UsersTab />
+        )}
+
+        {activeTab === 'grounds' && (
+          <GroundsTab showToast={showToast} />
         )}
 
         {activeTab === 'health' && (
