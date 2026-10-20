@@ -9,7 +9,6 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import SponsorLogo from '@/components/SponsorLogo';
-import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { sponsorHref } from '@/lib/sponsors';
@@ -21,7 +20,7 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle, Clock, Crosshair, ChevronRight, ChevronDown, FileText,
+  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle, Clock,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
@@ -31,26 +30,19 @@ interface DugoutEvent {
   id: string;
   minute: number;
   type: 'goal' | 'sub' | 'yellow' | 'red';
-  headline: string;
   detail: string;
-  isHome?: boolean;
 }
 
 const DEFAULT_EVENTS: DugoutEvent[] = [
-  { id: '1', minute: 71, type: 'goal', headline: 'GOAL!', detail: 'D. Okafor, assist M. Silva', isHome: true },
-  { id: '2', minute: 58, type: 'sub', headline: 'Sub', detail: 'J. Park on for L. Hughes', isHome: true },
-  { id: '3', minute: 41, type: 'yellow', headline: 'Yellow card', detail: 'Riverside #6 (tactical foul)' },
-  { id: '4', minute: 23, type: 'goal', headline: 'Goal', detail: 'M. Silva (free kick)', isHome: true },
+  { id: '1', minute: 72, type: 'goal', detail: 'J. Silva' },
+  { id: '2', minute: 68, type: 'yellow', detail: 'T. Cole, Riverside' },
+  { id: '3', minute: 65, type: 'sub', detail: 'J. Park on for L. Hughes' },
+  { id: '4', minute: 55, type: 'red', detail: 'M. Evans, Riverside' },
 ];
 
-const KIT_STYLES = [
-  { id: 'solid', label: 'Solid' },
-  { id: 'stripes', label: 'Stripes' },
-  { id: 'sash', label: 'Sash' },
-  { id: 'checkered', label: 'Checkered' },
-] as const;
+const EVENT_LABEL: Record<DugoutEvent['type'], string> = { goal: 'Goal', sub: 'Sub', yellow: 'Yellow Card', red: 'Red Card' };
 
-type KitStyle = typeof KIT_STYLES[number]['id'];
+type KitStyle = 'solid' | 'stripes' | 'sash' | 'checkered';
 
 function MiniJersey({ primary, accent, style }: { primary: string; accent: string; style: KitStyle }) {
   const sId = `pat-s-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -96,25 +88,35 @@ interface TacticalPlayer {
   confirmed: string;
   goals: number;
   assists: number;
-  rating: number;
-  avgPos: { x: number; y: number };
   zone: 'gk' | 'def' | 'mid' | 'att';
 }
 
 const TACTICAL_ROSTER: TacticalPlayer[] = [
-  { num: 1, label: '1', name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, rating: 7.9, avgPos: { x: 14, y: 50 }, zone: 'gk' },
-  { num: 3, label: '3', name: 'M. Romero', role: 'Right Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, rating: 7.6, avgPos: { x: 32, y: 22 }, zone: 'def' },
-  { num: 4, label: '4', name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, rating: 7.8, avgPos: { x: 30, y: 40 }, zone: 'def' },
-  { num: 5, label: '5', name: 'C. Dawson', role: 'Center Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, rating: 7.5, avgPos: { x: 30, y: 60 }, zone: 'def' },
-  { num: 2, label: '2', name: 'J. Lewis', role: 'Left Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, rating: 7.7, avgPos: { x: 32, y: 80 }, zone: 'def' },
-  { num: 12, label: '12', name: 'L. Hughes', role: 'Right Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, rating: 7.4, avgPos: { x: 50, y: 24 }, zone: 'mid' },
-  { num: 8, label: '8', name: 'J. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, rating: 8.4, avgPos: { x: 54, y: 48 }, zone: 'mid' },
-  { num: 6, label: '6', name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, rating: 7.9, avgPos: { x: 46, y: 76 }, zone: 'mid' },
-  { num: 10, label: '10', name: 'K. De Bruyne', role: 'Attacking Mid', confirmed: 'Wednesday 4:20 PM', goals: 8, assists: 14, rating: 8.8, avgPos: { x: 65, y: 50 }, zone: 'mid' },
-  { num: 7, label: '7', name: 'D. Okafor', role: 'Right Winger', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, rating: 8.2, avgPos: { x: 74, y: 22 }, zone: 'att' },
-  { num: 9, label: '9', name: 'J. Park', role: 'Striker', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, rating: 8.6, avgPos: { x: 80, y: 50 }, zone: 'att' },
-  { num: 11, label: '11', name: 'S. Adebayo', role: 'Left Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, rating: 8.1, avgPos: { x: 74, y: 80 }, zone: 'att' },
+  { num: 1, label: '1', name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, zone: 'gk' },
+  { num: 3, label: '3', name: 'M. Romero', role: 'Right Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, zone: 'def' },
+  { num: 4, label: '4', name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, zone: 'def' },
+  { num: 5, label: '5', name: 'C. Dawson', role: 'Center Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, zone: 'def' },
+  { num: 2, label: '2', name: 'J. Lewis', role: 'Left Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, zone: 'def' },
+  { num: 12, label: '12', name: 'L. Hughes', role: 'Right Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, zone: 'mid' },
+  { num: 8, label: '8', name: 'J. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, zone: 'mid' },
+  { num: 6, label: '6', name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, zone: 'mid' },
+  { num: 7, label: '7', name: 'D. Okafor', role: 'Right Winger', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, zone: 'att' },
+  { num: 9, label: '9', name: 'J. Park', role: 'Striker', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, zone: 'att' },
+  { num: 11, label: '11', name: 'S. Adebayo', role: 'Left Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, zone: 'att' },
 ];
+
+// The availability tile: a sample of replies, not everyone says yes
+const AVAILABILITY = [
+  { num: 1, name: 'S. Turner', role: 'Goalkeeper', status: 'in' },
+  { num: 4, name: 'L. Davies', role: 'Center Back', status: 'in' },
+  { num: 8, name: 'J. Silva', role: 'Playmaker', status: 'in' },
+  { num: 15, name: 'R. Grant', role: 'Winger', status: 'maybe' },
+  { num: 7, name: 'D. Okafor', role: 'Right Winger', status: 'in' },
+  { num: 9, name: 'J. Park', role: 'Striker', status: 'in' },
+  { num: 18, name: 'T. Moss', role: 'Striker', status: 'out' },
+  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', status: 'in' },
+] as const;
+const AVAIL_LABEL = { in: 'In', maybe: 'Maybe', out: 'Out' };
 
 const BENCH_SQUAD = [
   { num: 14, name: 'E. Dier', role: 'Sub · CB' },
@@ -123,131 +125,21 @@ const BENCH_SQUAD = [
   { num: 19, name: 'C. Wilson', role: 'Sub · MID' },
 ];
 
-const FORMATIONS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', { label: string; coords: [number, number][] }> = {
-  '4-3-3': {
-    label: '4-3-3',
-    coords: [
-      [11, 50],  // 0: GK
-      [29, 18],  // 1: 3
-      [31, 39],  // 2: 4
-      [31, 61],  // 3: 5
-      [29, 82],  // 4: DF
-      [48, 22],  // 5: MF
-      [48, 50],  // 6: 8
-      [48, 78],  // 7: 6
-      [63, 50],  // 8: 10
-      [74, 20],  // 9: 7
-      [78, 50],  // 10: 9
-      [74, 80],  // 11: 11
-    ],
-  },
-  '4-4-2': {
-    label: '4-4-2',
-    coords: [
-      [11, 50],  // 0: GK
-      [29, 18],  // 1: 3
-      [31, 39],  // 2: 4
-      [31, 61],  // 3: 5
-      [29, 82],  // 4: DF
-      [50, 18],  // 5: MF
-      [48, 38],  // 6: 8
-      [48, 62],  // 7: 6
-      [62, 50],  // 8: 10
-      [50, 82],  // 9: 7
-      [78, 38],  // 10: 9
-      [78, 62],  // 11: 11
-    ],
-  },
-  '3-5-2': {
-    label: '3-5-2',
-    coords: [
-      [11, 50],  // 0: GK
-      [29, 26],  // 1: 3
-      [27, 50],  // 2: 4
-      [29, 74],  // 3: 5
-      [49, 86],  // 4: DF
-      [49, 14],  // 5: MF
-      [47, 36],  // 6: 8
-      [44, 50],  // 7: 6
-      [60, 50],  // 8: 10
-      [47, 64],  // 9: 7
-      [78, 38],  // 10: 9
-      [78, 62],  // 11: 11
-    ],
-  },
-  '4-2-3-1': {
-    label: '4-2-3-1',
-    coords: [
-      [11, 50],  // 0: GK
-      [29, 18],  // 1: 3
-      [31, 39],  // 2: 4
-      [31, 61],  // 3: 5
-      [29, 82],  // 4: DF
-      [46, 36],  // 5: MF
-      [46, 64],  // 6: 6
-      [62, 50],  // 7: 8
-      [64, 50],  // 8: 10
-      [74, 18],  // 9: 7
-      [80, 50],  // 10: 9
-      [74, 82],  // 11: 11
-    ],
-  },
+type Formation = '4-3-3' | '4-4-2' | '3-5-2';
+
+// Coordinates line up with TACTICAL_ROSTER order: GK, RB, CB, CB, LB, three midfielders, three forwards
+const FORMATIONS: Record<Formation, [number, number][]> = {
+  '4-3-3': [[11, 50], [29, 18], [31, 39], [31, 61], [29, 82], [50, 24], [48, 50], [50, 76], [74, 20], [78, 50], [74, 80]],
+  '4-4-2': [[11, 50], [29, 18], [31, 39], [31, 61], [29, 82], [50, 18], [48, 38], [48, 62], [50, 82], [76, 38], [76, 62]],
+  '3-5-2': [[11, 50], [29, 26], [27, 50], [29, 74], [49, 86], [49, 14], [47, 36], [44, 50], [47, 64], [76, 38], [76, 62]],
 };
 
-const TACTICAL_LINKS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', [number, number, boolean?][]> = {
-  '4-3-3': [
-    [0, 2, true],
-    [1, 2, false],
-    [2, 3, false],
-    [3, 4, false],
-    [2, 6, true],
-    [3, 6, true],
-    [6, 5, true],
-    [6, 7, true],
-    [6, 8, true],
-    [8, 10, true],
-    [5, 9, true],
-    [7, 11, true],
-  ],
-  '4-4-2': [
-    [1, 2, false],
-    [2, 3, false],
-    [3, 4, false],
-    [2, 6, true],
-    [3, 7, true],
-    [6, 5, true],
-    [7, 9, true],
-    [6, 8, true],
-    [7, 8, true],
-    [8, 10, true],
-    [8, 11, true],
-  ],
-  '3-5-2': [
-    [1, 2, false],
-    [2, 3, false],
-    [2, 7, true],
-    [7, 6, true],
-    [7, 9, true],
-    [6, 8, true],
-    [9, 8, true],
-    [8, 10, true],
-    [8, 11, true],
-  ],
-  '4-2-3-1': [
-    [1, 2, false],
-    [2, 3, false],
-    [3, 4, false],
-    [2, 5, true],
-    [3, 6, true],
-    [5, 7, true],
-    [6, 7, true],
-    [7, 8, true],
-    [8, 10, true],
-    [7, 9, true],
-    [7, 11, true],
-  ],
+// Passing lanes drawn between player indices; true adds an arrowhead
+const TACTICAL_LINKS: Record<Formation, [number, number, boolean][]> = {
+  '4-3-3': [[0, 2, true], [1, 2, false], [2, 3, false], [3, 4, false], [2, 6, true], [3, 6, true], [6, 5, true], [6, 7, true], [6, 9, true], [5, 8, true], [7, 10, true]],
+  '4-4-2': [[1, 2, false], [2, 3, false], [3, 4, false], [2, 6, true], [3, 7, true], [6, 5, true], [7, 8, true], [6, 9, true], [7, 10, true]],
+  '3-5-2': [[1, 2, false], [2, 3, false], [2, 7, true], [7, 6, true], [7, 8, true], [6, 9, true], [8, 10, true], [5, 6, true]],
 };
-
 
 const PASS_TIERS = [
   { id: 'player', label: 'Player', name: 'Alex Morgan', role: 'Senior Squad #10', color: '#10B981', num: '10', type: 'MATCHDAY PASS' },
@@ -259,10 +151,10 @@ type PassTierId = typeof PASS_TIERS[number]['id'];
 
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
-  { tool: LINEUP_TOOL, Icon: ClipboardList, color: 'var(--c-blue)', text: 'Pick a formation, name your players and download a team sheet for the group chat.' },
-  { tool: PLAYING_TIME_TOOL, Icon: Timer, color: 'var(--c-green)', text: 'Give every player the same minutes, with a sub schedule you can print or send.' },
-  { tool: RESULT_TOOL, Icon: Images, color: 'var(--c-red)', text: 'Turn the full-time score and scorers into a story or post for Instagram.' },
-  { tool: TOURNAMENT_TOOL, Icon: Trophy, color: 'var(--c-amber)', text: 'Draw the fixtures and share a live page with tables and a bracket.' },
+  { tool: LINEUP_TOOL, Icon: ClipboardList, color: 'var(--c-blue)', text: 'Pick a formation and download a team sheet.' },
+  { tool: PLAYING_TIME_TOOL, Icon: Timer, color: 'var(--c-green)', text: 'Equal minutes for everyone, with a sub plan.' },
+  { tool: RESULT_TOOL, Icon: Images, color: 'var(--c-red)', text: 'Turn the final score into an Instagram post.' },
+  { tool: TOURNAMENT_TOOL, Icon: Trophy, color: 'var(--c-amber)', text: 'Fixtures, tables and a bracket on one live page.' },
 ];
 
 // "I'm a..." switcher: each role gets its own pitch and the action that role can actually take.
@@ -320,12 +212,6 @@ const AUDIENCES = [
 
 const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
 
-function initials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'FC';
-  return words.length === 1 ? words[0].slice(0, 3).toUpperCase() : words.slice(0, 3).map(w => w[0]).join('').toUpperCase();
-}
-
 export default function PlatformHomePage() {
   const router = useRouter();
   const { clubs: allClubs, sponsors } = useClub();
@@ -356,12 +242,7 @@ export default function PlatformHomePage() {
   const [subOutPlayer, setSubOutPlayer] = useState('L. Baker #11');
   const [matchStatus, setMatchStatus] = useState<'live' | 'halftime' | 'ended'>('live');
   const [refCardActive, setRefCardActive] = useState<'yellow' | 'red' | null>(null);
-  const [events, setEvents] = useState<DugoutEvent[]>([
-    { id: '1', minute: 72, type: 'goal', headline: '72\' Goal', detail: 'J. Silva, Home' },
-    { id: '2', minute: 68, type: 'yellow', headline: '68\' Yellow Card', detail: 'T. Cole, Away' },
-    { id: '3', minute: 65, type: 'sub', headline: '65\' Sub', detail: 'Tactical replacement' },
-    { id: '4', minute: 55, type: 'red', headline: '55\' Red Card', detail: 'M. Evans, Away' },
-  ]);
+  const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
   const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
   const [isKitFlash, setIsKitFlash] = useState(false);
   const handleKitSelect = (style: KitStyle) => {
@@ -369,29 +250,24 @@ export default function PlatformHomePage() {
     setIsKitFlash(true);
     setTimeout(() => setIsKitFlash(false), 1200);
   };
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const stageRef = useRef<HTMLDivElement>(null);
-
-  // Tactical Pitch state & Dynamic 3D Tilt
-  const [formation, setFormation] = useState<'4-3-3' | '4-4-2' | '3-5-2'>('4-3-3');
+  // Tactical Pitch state
+  const [formation, setFormation] = useState<Formation>('4-3-3');
   const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(8);
   const activePitchPlayer = TACTICAL_ROSTER.find(p => p.num === selectedPitchPlayer) || TACTICAL_ROSTER[6];
-  const [pitchTilt, setPitchTilt] = useState({ x: 26, y: 0 });
-  const pitchRef = useRef<HTMLDivElement>(null);
 
+  // Tilt is written straight to CSS variables so mouse moves don't re-render the page
   const handlePitchMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pitchRef.current) return;
-    const rect = pitchRef.current.getBoundingClientRect();
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setPitchTilt({
-      x: 26 - y * 14,
-      y: x * 12,
-    });
+    el.style.setProperty('--tilt-x', `${38 - y * 10}deg`);
+    el.style.setProperty('--tilt-y', `${x * 12}deg`);
   };
 
-  const handlePitchMouseLeave = () => {
-    setPitchTilt({ x: 26, y: 0 });
+  const handlePitchMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.removeProperty('--tilt-x');
+    e.currentTarget.style.removeProperty('--tilt-y');
   };
 
   // Live match clock (advances steadily between 71' and 89')
@@ -406,44 +282,23 @@ export default function PlatformHomePage() {
     setHomeScore(s => s + 1);
     setIsGoalFlash(true);
     setTimeout(() => setIsGoalFlash(false), 1400);
-    const newEv: DugoutEvent = {
-      id: String(Date.now()),
-      minute: minute,
-      type: 'goal',
-      headline: `${minute}' Goal`,
-      detail: `${displayName} scores! Touchline eruption`,
-      isHome: true,
-    };
-    setEvents(prev => [newEv, ...prev.slice(0, 3)]);
+    setEvents(prev => [{ id: String(Date.now()), minute, type: 'goal', detail: 'D. Okafor' }, ...prev.slice(0, 3)]);
   };
 
   const triggerSub = () => {
     const isSilva = subInPlayer.includes('Silva');
-    setSubInPlayer(isSilva ? 'J. Park #10' : 'J. Silva #8');
-    setSubOutPlayer(isSilva ? 'L. Hughes #7' : 'L. Baker #11');
-    const newEv: DugoutEvent = {
-      id: String(Date.now()),
-      minute: minute,
-      type: 'sub',
-      headline: `${minute}' Sub`,
-      detail: isSilva ? '#10 J. Park on' : '#8 J. Silva on',
-      isHome: true,
-    };
-    setEvents(p => [newEv, ...p.slice(0, 3)]);
+    setSubInPlayer(isSilva ? 'J. Park #9' : 'J. Silva #8');
+    setSubOutPlayer(isSilva ? 'L. Hughes #12' : 'L. Baker #11');
+    const detail = isSilva ? 'J. Park on for L. Hughes' : 'J. Silva on for L. Baker';
+    setEvents(p => [{ id: String(Date.now()), minute, type: 'sub', detail }, ...p.slice(0, 3)]);
   };
 
   const triggerCard = () => {
     const nextCard: 'yellow' | 'red' | null = refCardActive === 'yellow' ? 'red' : refCardActive === 'red' ? null : 'yellow';
     setRefCardActive(nextCard);
     if (nextCard) {
-      const newEv: DugoutEvent = {
-        id: String(Date.now()),
-        minute: minute,
-        type: nextCard,
-        headline: nextCard === 'red' ? `${minute}' Red Card` : `${minute}' Yellow Card`,
-        detail: nextCard === 'red' ? 'M. Evans, violent tackle' : 'T. Cole, tactical foul',
-      };
-      setEvents(p => [newEv, ...p.slice(0, 3)]);
+      const detail = nextCard === 'red' ? 'M. Evans, Riverside' : 'T. Cole, Riverside';
+      setEvents(p => [{ id: String(Date.now()), minute, type: nextCard, detail }, ...p.slice(0, 3)]);
     }
   };
 
@@ -460,30 +315,19 @@ export default function PlatformHomePage() {
     setAwayScore(1);
     setIsGoalFlash(false);
     setMatchStatus('live');
+    setMinute(72);
     setSubInPlayer('J. Silva #8');
     setSubOutPlayer('L. Baker #11');
     setRefCardActive(null);
     setEvents(DEFAULT_EVENTS);
   };
 
-  const isDugoutModified = homeScore !== 2 || matchStatus !== 'live' || refCardActive !== null || events.length !== 4;
-
-  const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!stageRef.current) return;
-    const rect = stageRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: -(y * 10), y: x * 10 });
-  };
-
-  const handleStageMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-  };
+  const isDugoutModified = events !== DEFAULT_EVENTS || matchStatus !== 'live' || refCardActive !== null;
+  const isLive = matchStatus === 'live';
 
   // Holographic Pass & Turnstile state
   const [passTier, setPassTier] = useState<PassTierId>('player');
   const [scanState, setScanState] = useState<'idle' | 'scanning' | 'granted'>('idle');
-  const [passTilt, setPassTilt] = useState({ x: 0, y: 0 });
 
   const triggerGateScan = () => {
     if (scanState === 'scanning') return;
@@ -491,17 +335,6 @@ export default function PlatformHomePage() {
     setTimeout(() => {
       setScanState('granted');
     }, 850);
-  };
-
-  const handlePassMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setPassTilt({ x: -(y * 14), y: x * 14 });
-  };
-
-  const handlePassMouseLeave = () => {
-    setPassTilt({ x: 0, y: 0 });
   };
 
   const claim = (e: React.FormEvent) => {
@@ -619,7 +452,7 @@ export default function PlatformHomePage() {
               </h1>
 
               <p className="lp-hero-sub">
-                Empowering your local club with professional matchday tools.
+                A free club website, live scores and member passes, set up in 3 minutes.
               </p>
 
               {/* 1.2 Claim URL section */}
@@ -657,48 +490,22 @@ export default function PlatformHomePage() {
               {/* 1.3 Color and kit pattern selection */}
               <div className="lp-color-kit-section">
                 <div className="lp-swatches-col">
-                  <div className="lp-swatches-header">
-                    <span className="lp-swatches-label">Primary</span>
-                    <span className="lp-swatches-label">Secondary</span>
-                    <span className="lp-swatches-label">Tertiary</span>
-                  </div>
-                  <div className="lp-swatch-boxes" role="group" aria-label="Palette selection">
-                    {[
-                      { name: 'Navy Blue', hex: '#0F1E36' },
-                      { name: 'White', hex: '#FFFFFF' },
-                      { name: 'Gold', hex: '#D4AF37' },
-                      { name: 'Red', hex: '#DC2626' },
-                      { name: 'Green', hex: '#16A34A' },
-                    ].map((sw, i) => (
+                  <span className="lp-swatches-label" id="lp-colours-label">Club colours</span>
+                  <div className="lp-swatch-boxes" role="group" aria-labelledby="lp-colours-label">
+                    {FOOTBALL_COLOR_PALETTES.map((p, i) => (
                       <button
-                        key={sw.name}
+                        key={p.name}
                         type="button"
                         className={`lp-swatch-box ${paletteIdx === i ? 'is-active' : ''}`}
-                        style={{ background: sw.hex }}
+                        style={{ background: `linear-gradient(135deg, ${p.primary} 0 50%, ${p.accent} 50% 100%)` }}
                         onClick={() => setPaletteIdx(i)}
-                        title={sw.name}
+                        aria-label={p.name}
+                        aria-pressed={paletteIdx === i}
+                        title={p.name}
                       />
                     ))}
                   </div>
-                  <div className="lp-swatch-dropdown-chips">
-                    <button
-                      type="button"
-                      className="lp-chip-dropdown is-active"
-                      onClick={() => setPaletteIdx((paletteIdx + 1) % FOOTBALL_COLOR_PALETTES.length)}
-                    >
-                      <span className="lp-chip-dot" style={{ background: palette.primary }} />
-                      <span>{palette.name.split(' ')[0] || 'Navy Blue'}</span>
-                      <ChevronDown size={12} />
-                    </button>
-                    <span className="lp-chip-dropdown">
-                      <span className="lp-chip-dot" style={{ background: '#D4AF37' }} />
-                      <span>Gold</span>
-                    </span>
-                    <span className="lp-chip-dropdown">
-                      <span className="lp-chip-dot" style={{ background: '#16A34A' }} />
-                      <span>Green</span>
-                    </span>
-                  </div>
+                  <span className="lp-swatch-name">{palette.name}</span>
                 </div>
 
                 <div className="lp-kit-pattern-col">
@@ -745,8 +552,8 @@ export default function PlatformHomePage() {
                         key={k.id}
                         type="button"
                         className={`lp-kit-style-pill ${kitStyle === k.id ? 'is-active' : ''}`}
-                        onClick={() => handleKitSelect(k.id as any)}
-                        title={`Select ${k.label} Kit Pattern`}
+                        onClick={() => handleKitSelect(k.id as KitStyle)}
+                        aria-pressed={kitStyle === k.id}
                       >
                         {k.icon}
                         <span>{k.label}</span>
@@ -759,19 +566,12 @@ export default function PlatformHomePage() {
 
           {/* Right Column: Live Matchday Command Console */}
           <div
-            ref={stageRef}
             className="lp-stage"
-            aria-hidden="true"
+            role="region"
+            aria-label="Try the live match centre"
             data-theme="dark"
-            onMouseMove={handleStageMouseMove}
-            onMouseLeave={handleStageMouseLeave}
           >
-            <div
-              className="lp-browser"
-              style={{
-                transform: `perspective(1000px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35}deg)`,
-              }}
-            >
+            <div className="lp-browser">
               <div className="lp-browser-bar">
                 <div className="lp-dots">
                   <i className="dot-red" />
@@ -780,29 +580,31 @@ export default function PlatformHomePage() {
                 </div>
                 <div className="lp-browser-tab">
                   <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                  <span>itsfootball.club - Matchday Center</span>
+                  <span>{displayName} · Match Centre</span>
                 </div>
-                <div className="lp-url">itsfootball.club</div>
+                <div className="lp-url">itsfootball.club/{previewSlug}</div>
               </div>
 
               <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
-                <div className="lp-mock-clock">{minute}:14</div>
+                <div className="lp-mock-clock">{isLive ? `${minute}'` : matchStatus === 'halftime' ? 'HT' : 'FT'}</div>
 
                 <div className="lp-mock-score-row">
-                  <div className={`lp-mock-team-badge ${isKitFlash ? 'is-kit-flash' : ''}`} title={`Home Kit: ${kitStyle}`}>
+                  <div className={`lp-mock-team-badge ${isKitFlash ? 'is-kit-flash' : ''}`}>
                     <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                    <span className="lp-mock-team">HOME</span>
+                    <span className="lp-mock-team" title={displayName}>{displayName}</span>
                   </div>
                   <div className="lp-mock-digit">{homeScore}</div>
                   <span className="lp-mock-colon">:</span>
                   <div className="lp-mock-digit">{awayScore}</div>
                   <div className="lp-mock-team-badge">
-                    <span className="lp-mock-team">AWAY</span>
+                    <span className="lp-mock-team">Riverside</span>
                   </div>
                 </div>
 
                 <div className="lp-mock-live-wrap">
-                  <span className="lp-mock-live-badge">● Live Match</span>
+                  <span className={`lp-mock-live-badge is-${matchStatus}`} aria-live="polite">
+                    {isLive ? '● Live Match' : matchStatus === 'halftime' ? 'Half Time' : 'Full Time'}
+                  </span>
                   <span className={`lp-mock-kit-pill ${isKitFlash ? 'is-kit-flash' : ''}`} title={`Active Match Kit: ${kitStyle.toUpperCase()}`}>
                     <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
                     <span className="lp-kit-tag-text">{kitStyle.toUpperCase()} KIT</span>
@@ -827,7 +629,7 @@ export default function PlatformHomePage() {
                     type="button"
                     className={`lp-action-card btn-goal ${isGoalFlash ? 'is-active' : ''}`}
                     onClick={triggerGoal}
-                    title="Celebrate a goal and advance the score roll"
+                    disabled={!isLive}
                   >
                     <Goal size={16} />
                     <span>Goal!</span>
@@ -836,7 +638,7 @@ export default function PlatformHomePage() {
                     type="button"
                     className="lp-action-card btn-sub"
                     onClick={triggerSub}
-                    title="Execute player substitution on LED board"
+                    disabled={!isLive}
                   >
                     <ArrowLeftRight size={16} />
                     <span>Sub</span>
@@ -845,7 +647,7 @@ export default function PlatformHomePage() {
                     type="button"
                     className={`lp-action-card btn-card ${refCardActive ? 'is-active' : ''}`}
                     onClick={triggerCard}
-                    title="Cycle referee yellow/red cards"
+                    disabled={!isLive}
                   >
                     <span className="lp-mini-card" />
                     <span>Card</span>
@@ -854,7 +656,8 @@ export default function PlatformHomePage() {
                     type="button"
                     className={`lp-action-card btn-half ${matchStatus === 'halftime' ? 'is-active' : ''}`}
                     onClick={triggerHalfTime}
-                    title="Toggle half time whistle"
+                    disabled={matchStatus === 'ended'}
+                    aria-pressed={matchStatus === 'halftime'}
                   >
                     <Clock size={16} />
                     <span>Half Time</span>
@@ -863,7 +666,7 @@ export default function PlatformHomePage() {
                     type="button"
                     className={`lp-action-card btn-end ${matchStatus === 'ended' ? 'is-active' : ''}`}
                     onClick={triggerEndMatch}
-                    title="Full time whistle"
+                    aria-pressed={matchStatus === 'ended'}
                   >
                     <X size={16} />
                     <span>End Match</span>
@@ -872,54 +675,42 @@ export default function PlatformHomePage() {
 
                 {/* Live Match Events Summary (2-column layout matching mockup) */}
                 <div className="lp-mockup-events">
-                  <div className="lp-mockup-events-title">Live Match Events</div>
-                  <div className="lp-mockup-events-grid">
-                    <div className="lp-mockup-events-col-left">
-                      <div className="lp-mock-event">
-                        <Goal size={13} color="#10B981" />
-                        <span className="lp-mock-ev-time">72&apos; Goal</span>
-                        <span className="lp-mock-ev-desc">J. Silva, Home</span>
-                      </div>
-                    </div>
-                    <div className="lp-mockup-events-col-right">
-                      <div className="lp-mock-event">
-                        <span className="lp-card-yellow" />
-                        <span className="lp-mock-ev-time">68&apos;</span>
-                        <span className="lp-mock-ev-desc yellow"><b>Yellow Card</b> T. Cole, Away</span>
-                      </div>
-                      <div className="lp-mock-event">
-                        <ArrowLeftRight size={12} color="#10B981" />
-                        <span className="lp-mock-ev-time">65&apos;</span>
-                        <span className="lp-mock-ev-desc green"><b>Sub</b></span>
-                      </div>
-                      <div className="lp-mock-event">
-                        <span className="lp-card-red" />
-                        <span className="lp-mock-ev-time">55&apos;</span>
-                        <span className="lp-mock-ev-desc red"><b>Red Card</b> M. Evans, Away</span>
-                      </div>
-                    </div>
+                  <div className="lp-mockup-events-title">
+                    <span>Live Match Events</span>
+                    {isDugoutModified && (
+                      <button type="button" className="lp-mock-reset" onClick={resetDugout}>
+                        <RotateCcw size={11} /> Reset
+                      </button>
+                    )}
                   </div>
+                  <ul className="lp-mockup-events-list" aria-live="polite">
+                    {events.map(ev => (
+                      <li key={ev.id} className="lp-mock-event">
+                        {ev.type === 'goal' ? <Goal size={13} color="#10B981" />
+                          : ev.type === 'sub' ? <ArrowLeftRight size={12} color="#10B981" />
+                          : <span className={`lp-card-${ev.type}`} />}
+                        <span className="lp-mock-ev-time">{ev.minute}&apos;</span>
+                        <span className={`lp-mock-ev-desc ${ev.type === 'sub' ? 'green' : ev.type === 'goal' ? '' : ev.type}`}>
+                          <b>{EVENT_LABEL[ev.type]}</b> {ev.detail}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-          {/* 3. Just underneath 1 & 2: Lineup graphic (interactive) showing as if layed beneath 1 & 2 */}
+          {/* Lineup pitch laid beneath the copy and match centre */}
           <div className="lp-hero-pitch-layer">
             <div className="lp-hero-pitch-grid">
               <div
-                ref={pitchRef}
               className="lp-pitch-3d-scene"
               onMouseMove={handlePitchMouseMove}
               onMouseLeave={handlePitchMouseLeave}
             >
-              <div
-                className="lp-tactical-pitch"
-                style={{
-                  transform: `rotateX(${pitchTilt.x}deg) rotateY(${pitchTilt.y}deg) scale(0.96)`,
-                }}
-              >
+              <div className="lp-tactical-pitch">
                 {/* Full Pitch Authentic Markings */}
                 <div className="lp-pitch-boundary" />
                 <div className="lp-pitch-halfway" />
@@ -953,8 +744,8 @@ export default function PlatformHomePage() {
                     </marker>
                   </defs>
                   {TACTICAL_LINKS[formation].map(([fromIdx, toIdx, hasArrow], lIdx) => {
-                    const fromCoord = FORMATIONS[formation].coords[fromIdx];
-                    const toCoord = FORMATIONS[formation].coords[toIdx];
+                    const fromCoord = FORMATIONS[formation][fromIdx];
+                    const toCoord = FORMATIONS[formation][toIdx];
                     if (!fromCoord || !toCoord) return null;
                     return (
                       <line
@@ -970,8 +761,8 @@ export default function PlatformHomePage() {
                   })}
                 </svg>
 
-                {/* 11 3D Neon Glowing Player Tokens */}
-                {FORMATIONS[formation].coords.map(([x, y], i) => {
+                {/* 11 player tokens */}
+                {FORMATIONS[formation].map(([x, y], i) => {
                   const player = TACTICAL_ROSTER[i];
                   const isSelected = selectedPitchPlayer === player.num;
                   return (
@@ -981,6 +772,8 @@ export default function PlatformHomePage() {
                       className={`lp-pitch-token zone-${player.zone} ${isSelected ? 'is-selected' : ''}`}
                       style={{ left: `${x}%`, top: `${y}%` }}
                       onClick={() => setSelectedPitchPlayer(player.num)}
+                      aria-label={`#${player.label} ${player.name}, ${player.role}`}
+                      aria-pressed={isSelected}
                       title={`${player.name} (${player.role})`}
                     >
                       <span className="lp-token-num">{player.label}</span>
@@ -997,7 +790,7 @@ export default function PlatformHomePage() {
                 <div className="min-w-0 flex-1">
                   <div className="lp-wcard-name">#{activePitchPlayer.label} {activePitchPlayer.name}</div>
                   <div className="lp-wcard-sub">
-                    <Clock size={12} color="#10B981" /> {activePitchPlayer.goals ? `${activePitchPlayer.goals} Goals` : 'Matchday XI'} &middot; {activePitchPlayer.role}
+                    <Check size={12} color="#10B981" /> Confirmed {activePitchPlayer.confirmed} &middot; {activePitchPlayer.role}
                   </div>
                 </div>
                 <span className="lp-wcard-role-pill">
@@ -1007,31 +800,14 @@ export default function PlatformHomePage() {
 
               <div className="lp-wcard-stats">
                 <div className="lp-wcard-stat-col">
-                  <div className="lp-wcard-stat-label">Rating</div>
-                  <div className="lp-wcard-stat-val">{activePitchPlayer.rating.toFixed(1)}</div>
-                  <div className="lp-wcard-stat-sub">Pass Map &middot; {activePitchPlayer.assists} Ast</div>
+                  <div className="lp-wcard-stat-label">Goals</div>
+                  <div className="lp-wcard-stat-val">{activePitchPlayer.goals}</div>
+                  <div className="lp-wcard-stat-sub">This season</div>
                 </div>
-                <div className="lp-passmap-widget">
-                  <div className="lp-passmap-title">Avg Position</div>
-                  <div className="lp-passmap-box">
-                    <div className="lp-passmap-pitch-outline" />
-                    <div
-                      className="lp-passmap-heat"
-                      style={{
-                        left: `${activePitchPlayer.avgPos.x}%`,
-                        top: `${activePitchPlayer.avgPos.y}%`,
-                        transition: 'left 0.35s ease, top 0.35s ease',
-                      }}
-                    />
-                    <span
-                      className="lp-passmap-dot"
-                      style={{
-                        left: `${activePitchPlayer.avgPos.x}%`,
-                        top: `${activePitchPlayer.avgPos.y}%`,
-                        transition: 'left 0.35s ease, top 0.35s ease',
-                      }}
-                    />
-                  </div>
+                <div className="lp-wcard-stat-col">
+                  <div className="lp-wcard-stat-label">Assists</div>
+                  <div className="lp-wcard-stat-val">{activePitchPlayer.assists}</div>
+                  <div className="lp-wcard-stat-sub">This season</div>
                 </div>
               </div>
 
@@ -1044,83 +820,51 @@ export default function PlatformHomePage() {
                       type="button"
                       className={`lp-formation-btn ${formation === f ? 'is-active' : ''}`}
                       onClick={() => setFormation(f)}
+                      aria-pressed={formation === f}
                     >
                       {f}
                     </button>
                   ))}
                 </div>
               </div>
-
-              <div className="lp-wcard-actions">
-                <button type="button" className="lp-wcard-action-btn">
-                  <div className="lp-wcard-btn-left">
-                    <Crosshair size={14} color="#60A5FA" />
-                    <span>Set Pieces</span>
-                  </div>
-                  <ChevronRight size={14} />
-                </button>
-                <button type="button" className="lp-wcard-action-btn">
-                  <div className="lp-wcard-btn-left">
-                    <FileText size={14} color="#34D399" />
-                    <span>Tactical Notes</span>
-                  </div>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
             </div>
           </div>
         </div>
-
-          {/* Trust and Meta Footer Bar below 3D Pitch */}
-          <div className="lp-hero-footer-bar">
-            <div className="lp-hero-meta">
-              <span><Check size={15} /> Free to set up</span>
-              <span><Check size={15} /> Your crest, colours &amp; domain</span>
-              <span><Check size={15} /> Nothing for supporters to install</span>
-            </div>
-            {demoClub && (
-              <Link href={`/${demoClub.slug}`} className="lp-demo">
-                Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
-              </Link>
-            )}
-            {isAuthenticated && user ? (
-              <div className="lp-hero-signin">
-                Welcome back, {user.full_name.split(' ')[0]}.{' '}
-                <Link href="/my-clubs" className="lp-linkbtn">Go to my clubs</Link>
-              </div>
-            ) : (
-              <div className="lp-hero-signin">
-                Already run a club here?{' '}
-                <button type="button" className="lp-linkbtn" onClick={() => openAuth('login')}>Sign in</button>
-              </div>
-            )}
-          </div>
         </div>
       </section>
 
-      {/* ================= CLUB STRIP (real clubs) ================= */}
-      {clubs.length > 0 && (
-        <div className="lp-strip">
-          <div className="container lp-strip-inner">
-            <span className="lp-strip-label">Already kicking off on itsfootball.club</span>
-            <div className="lp-strip-clubs">
-              {clubs.slice(0, 12).map(c => (
-                <Link key={c.id} href={`/${c.slug}`} className="lp-strip-club">
-                  <img src={c.logo_url || DEFAULT_CREST} alt="" width={24} height={24} loading="lazy" decoding="async" />
-                  {c.name}
-                </Link>
-              ))}
-            </div>
+      {/* Trust bar under the hero (the pitch runs to the hero's bottom edge) */}
+      <div className="container">
+        <div className="lp-hero-footer-bar">
+          <div className="lp-hero-meta">
+            <span><Check size={15} /> Your crest, colours &amp; domain</span>
+            <span><Check size={15} /> Nothing for supporters to install</span>
           </div>
+          {demoClub && (
+            <Link href={`/${demoClub.slug}`} className="lp-demo">
+              Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
+            </Link>
+          )}
+          {isAuthenticated && user ? (
+            <div className="lp-hero-signin">
+              Welcome back, {user.full_name.split(' ')[0]}.{' '}
+              <Link href="/my-clubs" className="lp-linkbtn">Go to my clubs</Link>
+            </div>
+          ) : (
+            <div className="lp-hero-signin">
+              Already run a club here?{' '}
+              <button type="button" className="lp-linkbtn" onClick={() => openAuth('login')}>Sign in</button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ================= BEFORE / AFTER ================= */}
       <section className="lp-section">
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
             <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> The Matchday Reality Check
+              The Matchday Reality Check
             </div>
             <h2 className="lp-h2">Your club runs on volunteers. Not on 40-message group chats.</h2>
             <p className="lp-lede" style={{ maxWidth: 640, margin: '0.65rem auto 0' }}>
@@ -1139,17 +883,17 @@ export default function PlatformHomePage() {
                     <div className="lp-chat-sub">14 unread messages &middot; Sunday 9:18 AM</div>
                   </div>
                 </div>
-                <span className="lp-chat-badge">9 AM CHAOS</span>
+                <span className="lp-chat-badge">BEFORE</span>
               </div>
 
               <div className="lp-chat-messages">
                 <div className="lp-bubble">
-                  <div className="lp-bubble-author">Dave M. (CB) <time>8:42 AM</time></div>
+                  <div className="lp-bubble-author">Dave M. (Centre Back) <time>8:42 AM</time></div>
                   <div className="lp-bubble-text">Anyone got spare shinpads and socks? Left mine in the boot of someone&apos;s car last week 🤦‍♂️</div>
                 </div>
                 <div className="lp-bubble">
                   <div className="lp-bubble-author">Kev T. (Striker) <time>8:59 AM</time></div>
-                  <div className="lp-bubble-text">Gaffer can&apos;t play today, back seized up taking the wheelie bins out. Good luck lads</div>
+                  <div className="lp-bubble-text">Can&apos;t play today, did my back taking the wheelie bins out. Sorry guys</div>
                 </div>
                 <div className="lp-bubble">
                   <div className="lp-bubble-author">Steve (Coach) <time>9:08 AM</time></div>
@@ -1174,10 +918,10 @@ export default function PlatformHomePage() {
                   <span className="lp-hub-avatar"><Check size={16} /></span>
                   <div>
                     <div className="lp-hub-name">{displayName || 'Eastside Rovers'} Match Hub</div>
-                    <div className="lp-hub-sub">Saturday 10:30 AM Kick-off &middot; Pitch 1 Ready</div>
+                    <div className="lp-hub-sub">Sunday 10:00 AM kick-off &middot; Pitch 1</div>
                   </div>
                 </div>
-                <span className="lp-hub-badge">CONTROLLED</span>
+                <span className="lp-hub-badge">AFTER</span>
               </div>
 
               <div className="lp-hub-cards">
@@ -1185,28 +929,28 @@ export default function PlatformHomePage() {
                   <div className="lp-hub-item-icon check"><Check size={16} /></div>
                   <div>
                     <div className="lp-hub-item-title">1-Tap Squad Confirmation</div>
-                    <div className="lp-hub-item-desc">Starting XI + 4 Bench locked on Thursday night. 0 group chat arguments.</div>
+                    <div className="lp-hub-item-desc">Starting XI + 4 bench picked by Thursday night, straight from players&apos; replies.</div>
                   </div>
                 </div>
                 <div className="lp-hub-item">
                   <div className="lp-hub-item-icon check"><Check size={16} /></div>
                   <div>
-                    <div className="lp-hub-item-title">Digital Match Sheet &amp; Tactical XI</div>
-                    <div className="lp-hub-item-desc">Ref and opposition view official team sheet from a live link on their phone.</div>
+                    <div className="lp-hub-item-title">Lineup Published to the Club Site</div>
+                    <div className="lp-hub-item-desc">The XI on a tactical pitch, at a link anyone can open on their phone.</div>
                   </div>
                 </div>
                 <div className="lp-hub-item">
                   <div className="lp-hub-item-icon check"><Check size={16} /></div>
                   <div>
-                    <div className="lp-hub-item-title">Automated Sub Ledger &amp; Ref Fee</div>
-                    <div className="lp-hub-item-desc">100% of player subs settled digitally via card. Ref paid on time from club wallet.</div>
+                    <div className="lp-hub-item-title">Subs Paid Online</div>
+                    <div className="lp-hub-item-desc">Members pay by card or bank transfer and get a receipt. No coins at the gate.</div>
                   </div>
                 </div>
                 <div className="lp-hub-item">
                   <div className="lp-hub-item-icon check"><Check size={16} /></div>
                   <div>
-                    <div className="lp-hub-item-title">Ground GPS &amp; Turnstile Passes</div>
-                    <div className="lp-hub-item-desc">Pitch directions and member passes in supporters&apos; Apple/Google Wallets.</div>
+                    <div className="lp-hub-item-title">Ground Map &amp; Member Passes</div>
+                    <div className="lp-hub-item-desc">Directions to the ground on the club site, and a QR member pass on every phone.</div>
                   </div>
                 </div>
               </div>
@@ -1214,7 +958,7 @@ export default function PlatformHomePage() {
               <div className="lp-hub-footer">
                 <div className="lp-hub-pill">
                   <span className="pulse-dot" style={{ background: '#10B981', width: 7, height: 7 }} />
-                  <span>15 Players Ready &middot; Ref Fee Settled &middot; Live Match Centre Armed</span>
+                  <span>15 Players Ready &middot; Subs Paid &middot; Live Match Centre Ready</span>
                 </div>
               </div>
             </div>
@@ -1227,7 +971,7 @@ export default function PlatformHomePage() {
         <div className="container">
           <div className="lp-head lp-reveal">
             <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> Club Operating System
+              Club Operating System
             </div>
             <h2 className="lp-h2">From kick-off to the clubhouse, in one place.</h2>
             <p className="lp-lede">Everything below is live in the product today. Your committee switches it on; supporters, players and sponsors just open a link.</p>
@@ -1264,7 +1008,7 @@ export default function PlatformHomePage() {
               <div>
                 <div className="lp-tile-ico"><QrCode size={19} /></div>
                 <h3>Digital member passes</h3>
-                <p>Every member gets a wallet pass with their own QR code. Scan it at the gate or turnstile in under a second.</p>
+                <p>Every member gets a pass on their phone with their own QR code. Scan it at the gate or turnstile in under a second.</p>
                 <div className="lp-tier-pills" role="group" aria-label="Pass tier">
                   {PASS_TIERS.map(t => (
                     <button
@@ -1283,17 +1027,10 @@ export default function PlatformHomePage() {
                 {(() => {
                   const currentTier = PASS_TIERS.find(t => t.id === passTier) || PASS_TIERS[0];
                   return (
-                    <div
-                      className="lp-pass-3d-wrap"
-                      onMouseMove={handlePassMouseMove}
-                      onMouseLeave={handlePassMouseLeave}
-                    >
+                    <div className="lp-pass-3d-wrap">
                       <div
                         className={`lp-holo-pass ${scanState === 'granted' ? 'is-granted' : ''}`}
-                        style={{
-                          transform: `perspective(600px) rotateX(${passTilt.x}deg) rotateY(${passTilt.y}deg)`,
-                          '--tier-color': currentTier.color,
-                        } as React.CSSProperties}
+                        style={{ '--tier-color': currentTier.color } as React.CSSProperties}
                       >
                         <div className="lp-holo-sheen" aria-hidden="true" />
                         <div className="lp-holo-head">
@@ -1351,21 +1088,21 @@ export default function PlatformHomePage() {
                 <div>
                   <div className="lp-tile-ico"><Users size={19} /></div>
                   <h3>1-tap availability &amp; official team sheets</h3>
-                  <p>Send one link before Thursday. When players tap in, your starting XI is locked, the ref gets a digital match sheet, and subs know their roles.</p>
+                  <p>Send one link before Thursday. As players tap in, you pick the XI, publish the lineup to the club site, and the bench knows where they stand.</p>
                 </div>
               </div>
 
               <div className="lp-viz lp-avail-stage">
                 <div className="lp-avail-grid">
-                  {TACTICAL_ROSTER.slice(0, 8).map(player => (
+                  {AVAILABILITY.map(player => (
                     <div key={player.num} className="lp-avail-card">
                       <div className="lp-avail-card-num">#{player.num}</div>
                       <div className="lp-avail-card-info">
                         <div className="lp-avail-card-name">{player.name}</div>
                         <div className="lp-avail-card-role">{player.role}</div>
                       </div>
-                      <span className="lp-avail-card-status">
-                        <Check size={12} /> Confirmed
+                      <span className={`lp-avail-card-status is-${player.status}`}>
+                        {player.status === 'in' ? <Check size={12} /> : player.status === 'out' ? <X size={12} /> : <Clock size={12} />} {AVAIL_LABEL[player.status]}
                       </span>
                     </div>
                   ))}
@@ -1373,13 +1110,13 @@ export default function PlatformHomePage() {
                 <div className="lp-tactical-footer">
                   <div className="lp-avail-badges">
                     <span className="lp-avail-badge in">
-                      <Check size={12} /> 11 Starting XI Confirmed
+                      <Check size={12} /> 15 In
                     </span>
-                    <span className="lp-avail-badge sub">
-                      <ArrowLeftRight size={12} /> 5 Bench Available
+                    <span className="lp-avail-badge maybe">
+                      <Clock size={12} /> 1 Maybe
                     </span>
                     <span className="lp-avail-badge out">
-                      <X size={12} /> 2 Unavailable
+                      <X size={12} /> 2 Out
                     </span>
                   </div>
                   <div className="lp-bench-row">
@@ -1435,7 +1172,7 @@ export default function PlatformHomePage() {
             </article>
 
             {/* Tournaments */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#FBBF24' } as React.CSSProperties}>
+            <article className="lp-tile lp-reveal" style={{ '--tc': '#2DD4BF' } as React.CSSProperties}>
               <div>
                 <div className="lp-tile-ico"><Trophy size={19} /></div>
                 <h3>Tournaments &amp; cups</h3>
@@ -1499,7 +1236,7 @@ export default function PlatformHomePage() {
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
             <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> Every Matchday Role
+              Every Matchday Role
             </div>
             <h2 className="lp-h2">What&apos;s in it for you?</h2>
           </div>
@@ -1568,7 +1305,7 @@ export default function PlatformHomePage() {
         <div className="container">
           <div className="lp-head lp-reveal">
             <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> 3-Minute Setup
+              3-Minute Setup
             </div>
             <h2 className="lp-h2">Live before your next training session.</h2>
           </div>
@@ -1577,7 +1314,7 @@ export default function PlatformHomePage() {
               <div key={s.name} className="lp-step lp-reveal">
                 <div className="lp-step-marker">
                   <span className="lp-step-badge">STEP 0{i + 1}</span>
-                  <span className="lp-step-milestone">{i === 0 ? 'Club Identity' : i === 1 ? 'Squad Setup' : 'Matchday 1'}</span>
+                  <span className="lp-step-milestone">{s.milestone}</span>
                 </div>
                 <h3>{s.name}</h3>
                 <p>{s.text}</p>
@@ -1590,14 +1327,12 @@ export default function PlatformHomePage() {
       {/* ================= FREE TOOLS (no club needed) ================= */}
       <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-tools-h">
         <div className="container">
-          <div className="lp-head lp-reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div className="lp-head lp-head-split lp-reveal">
             <div>
-              <div className="lp-matchday-tag">
-                <span className="pulse-dot" /> Grassroots Utility Hub
-              </div>
+              <div className="lp-matchday-tag">Free tools</div>
               <h2 id="lp-tools-h" className="lp-h2">Not ready for a club site? Start with a tool.</h2>
             </div>
-            <Link href={TOOLS_HUB.path} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Link href={TOOLS_HUB.path} className="btn btn-secondary lp-head-link">
               All free tools <ArrowRight size={16} />
             </Link>
           </div>
@@ -1605,27 +1340,30 @@ export default function PlatformHomePage() {
             {HOME_TOOLS.map(t => (
               <Link key={t.tool.path} href={t.tool.path} className="lp-tile lp-tool lp-reveal" style={{ '--tc': t.color } as React.CSSProperties}>
                 <div className="lp-tile-ico"><t.Icon size={20} /></div>
-                <h3>{t.tool.label}</h3>
-                <p>{t.text}</p>
-                <span className="lp-tool-go">Open the tool <ArrowRight size={14} /></span>
+                <div>
+                  <h3>{t.tool.label} <ArrowRight size={14} className="lp-tool-arrow" /></h3>
+                  <p>{t.text}</p>
+                </div>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ================= REAL CLUBS ================= */}
+      {/* ================= PROOF: real clubs and their sponsors ================= */}
       {clubs.length > 0 && (
-        <section className="lp-section" style={{ paddingTop: 0 }}>
+        <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-clubs-h">
           <div className="container">
-            <div className="lp-head lp-reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div className="lp-head lp-head-split lp-reveal">
               <div>
-                <div className="lp-matchday-tag">
-                  <span className="pulse-dot" /> Live Network
-                </div>
-                <h2 className="lp-h2">Clubs already on the pitch.</h2>
+                <div className="lp-matchday-tag">On the network</div>
+                <h2 id="lp-clubs-h" className="lp-h2">Clubs already on the pitch.</h2>
+                <p className="lp-lede">
+                  {clubs.length} {clubs.length === 1 ? 'club runs' : 'clubs run'} on itsfootball.club
+                  {allSponsors.length > 0 && <>, backed by {allSponsors.length} local {allSponsors.length === 1 ? 'sponsor' : 'sponsors'}</>}.
+                </p>
               </div>
-              <Link href="/clubs" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Link href="/clubs" className="btn btn-secondary lp-head-link">
                 Browse all clubs <ArrowRight size={16} />
               </Link>
             </div>
@@ -1649,87 +1387,61 @@ export default function PlatformHomePage() {
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-      )}
 
-      {/* ================= SPONSORS (aggregated across every club) ================= */}
-      {allSponsors.length > 0 && (
-        <section className="lp-section" style={{ paddingTop: 0 }}>
-          <div className="container">
-            <div className="lp-head lp-head-center lp-reveal">
-              <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> Grassroots Sponsors
-            </div>
-              <h2 className="lp-h2">Backed by sponsors across the network.</h2>
-            </div>
-            <div className="sponsor-scroll-strip">
-              {allSponsors.map(({ sponsor, club }) => {
-                const href = sponsorHref(sponsor.website_url);
-                const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
-                const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
-                return (
-                  <a
-                    key={sponsor.id}
-                    href={href || `/${club.slug}`}
-                    target={href ? '_blank' : undefined}
-                    rel={href ? 'noopener noreferrer' : undefined}
-                    className="glass-panel glass-panel-interactive sponsor-scroll-card"
-                    style={{
-                      width: '220px', padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', textAlign: 'center', gap: '0.75rem',
-                      borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
-                    }}
-                  >
-                    <SponsorLogo src={sponsor.logo_url} name={sponsor.name}
-                      height={isPlatinum ? 56 : isGold ? 46 : 38} style={{ maxWidth: '100%' }} />
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{sponsor.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', width: '100%', justifyContent: 'center' }}>
-                      <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt=""
-                        style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'cover' }} />
-                      <span className="text-meta">{club.short_name} · <span style={{ textTransform: 'capitalize' }}>{sponsor.tier}</span></span>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
+            {allSponsors.length > 0 && (
+              <>
+                <h3 className="lp-subhead lp-reveal">Backed by local sponsors</h3>
+                <div className="sponsor-scroll-strip">
+                  {allSponsors.map(({ sponsor, club }) => {
+                    const href = sponsorHref(sponsor.website_url);
+                    const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
+                    const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
+                    return (
+                      <a
+                        key={sponsor.id}
+                        href={href || `/${club.slug}`}
+                        target={href ? '_blank' : undefined}
+                        rel={href ? 'noopener noreferrer' : undefined}
+                        className="glass-panel glass-panel-interactive sponsor-scroll-card lp-sponsor"
+                        style={{ '--sc': isPlatinum ? '#F59E0B' : club.primary_color } as React.CSSProperties}
+                      >
+                        <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={isPlatinum ? 56 : isGold ? 46 : 38} style={{ maxWidth: '100%' }} />
+                        <div className="lp-sponsor-name">{sponsor.name}</div>
+                        <div className="lp-sponsor-club">
+                          <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt="" />
+                          <span className="text-meta">{club.short_name} · <span className="lp-sponsor-tier">{sponsor.tier}</span></span>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
 
       {/* ================= FREQUENTLY ASKED QUESTIONS ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
-        <div className="container" style={{ maxWidth: '880px' }}>
+      <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-faq-h">
+        <div className="container lp-faq">
           <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-matchday-tag">
-              <span className="pulse-dot" /> Committee FAQ
-            </div>
-            <h2 className="lp-h2">Frequently asked questions.</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginTop: '0.5rem' }}>
-              Everything club committees, volunteers, and managers ask before getting started.
-            </p>
+            <div className="lp-matchday-tag">Committee FAQ</div>
+            <h2 id="lp-faq-h" className="lp-h2">Frequently asked questions.</h2>
+            <p className="lp-lede">Everything club committees, volunteers, and managers ask before getting started.</p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', marginTop: '1.75rem' }}>
+          <div className="lp-faq-list">
             {HOMEPAGE_FAQS.map(f => (
-              <details
-                key={f.q}
-                className="glass-panel"
-                style={{ padding: '1.15rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
-              >
-                <summary style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <details key={f.q} className="glass-panel lp-faq-item">
+                <summary>
                   <span>{f.q}</span>
-                  <span style={{ color: 'var(--club-ink)', fontSize: '1.2rem', fontWeight: 300 }}>+</span>
+                  <span className="lp-faq-icon" aria-hidden="true" />
                 </summary>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: '0.85rem', fontSize: '0.98rem' }}>
-                  {f.a}
-                </p>
+                <p>{f.a}</p>
               </details>
             ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
-            <Link href="/faq" style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.98rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-              Read the full FAQ with all 30+ answers <ArrowRight size={15} />
-            </Link>
+          <div className="lp-faq-more">
+            <Link href="/faq">Read the full FAQ with all 30+ answers <ArrowRight size={15} /></Link>
           </div>
         </div>
       </section>
@@ -1742,14 +1454,9 @@ export default function PlatformHomePage() {
             <h2 className="lp-h2">Give your club the matchday it deserves.</h2>
             <p>Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
             <div className="lp-final-actions">
-              <Link href="/create-club" className="btn btn-primary btn-lg" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Link href="/create-club" className="btn btn-primary btn-lg lp-head-link">
                 Create your club <ArrowRight size={18} />
               </Link>
-              {!isAuthenticated && (
-                <button type="button" className="btn btn-secondary btn-lg" onClick={() => openAuth('signup')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                  Create a free account
-                </button>
-              )}
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@
 .lp { position: relative; overflow-x: clip; }
 .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border-width: 0 !important; }
 .lp-section { padding: clamp(4rem, 9vw, 7rem) 0; position: relative; }
-.lp-eyebrow {
+.lp-eyebrow, .lp-matchday-tag {
   display: inline-flex; align-items: center; gap: 0.5rem;
   font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase; color: #10B981;
@@ -23,15 +23,18 @@
 .lp-lede { color: var(--text-secondary); font-size: clamp(1rem, 1.6vw, 1.12rem); max-width: 56ch; margin-top: 1rem; }
 .lp-head { margin-bottom: clamp(2.5rem, 5vw, 3.5rem); }
 .lp-head-center { text-align: center; }
+.lp-head-split { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; }
+.lp-head-link { display: inline-flex; align-items: center; gap: 0.45rem; }
+.lp-subhead { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; margin: clamp(2.5rem, 5vw, 3.5rem) 0 1rem; }
 .lp-head-center .lp-h2, .lp-head-center .lp-lede { margin-left: auto; margin-right: auto; }
 
 /* ---------- Hero ---------- */
 .lp-hero {
-  padding: clamp(2rem, 4vw, 3rem) 0 clamp(2.5rem, 4vw, 4rem);
+  padding: clamp(2rem, 4vw, 3rem) 0 0;
   position: relative;
   background:
     linear-gradient(180deg, rgba(6, 11, 20, 0.72) 0%, rgba(6, 11, 20, 0.58) 35%, rgba(6, 11, 20, 0.88) 75%, #060B14 100%),
-    url('/images/stadium_hero_bg.jpg') center 18% / cover no-repeat;
+    url('/images/stadium_hero_bg.webp') center 18% / cover no-repeat;
   overflow: hidden;
   transition: --lp-p 400ms var(--ease-out), --lp-s 400ms var(--ease-out), --lp-a 400ms var(--ease-out);
 }
@@ -127,11 +130,6 @@
   display: flex;
   flex-direction: column;
 }
-.lp-swatches-header {
-  display: flex;
-  gap: 1.25rem;
-  margin-bottom: 0.35rem;
-}
 .lp-swatches-label {
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -159,41 +157,15 @@
   transform: scale(1.1);
   border-color: rgba(255, 255, 255, 0.55);
 }
+.lp-swatch-name {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #E2E8F0;
+}
 .lp-swatch-box.is-active {
   border-color: #38BDF8;
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
   transform: scale(1.08);
-}
-.lp-swatch-dropdown-chips {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.lp-chip-dropdown {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: #E2E8F0;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.lp-chip-dropdown.is-active {
-  border-color: rgba(56, 189, 248, 0.6);
-  color: #fff;
-  background: rgba(56, 189, 248, 0.18);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
-}
-.lp-chip-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
 }
 
 .lp-kit-pattern-col {
@@ -301,6 +273,8 @@
   color: #CBD5E1;
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
+.lp-browser-tab { min-width: 0; }
+.lp-browser-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-url {
   flex: 1;
   min-width: 0;
@@ -366,7 +340,12 @@
   font-size: 0.85rem;
   font-weight: 800;
   letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: #FFFFFF;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lp-mock-digit {
   width: 44px;
@@ -409,6 +388,16 @@
   font-weight: 800;
   padding: 0.18rem 0.65rem;
   letter-spacing: 0.04em;
+}
+.lp-mock-live-badge.is-halftime {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #FBBF24;
+}
+.lp-mock-live-badge.is-ended {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.45);
+  color: #CBD5E1;
 }
 .lp-mock-kit-pill {
   display: inline-flex;
@@ -499,7 +488,13 @@
   transition: transform 0.12s var(--ease-out), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
 }
-.lp-action-card:hover {
+.lp-action-card:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.lp-action-card:not(:disabled):hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.35);
   background: rgba(25, 38, 58, 0.9);
@@ -563,19 +558,33 @@
   font-weight: 700;
   color: #CBD5E1;
   margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
-.lp-mockup-events-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.35fr;
-  gap: 0.75rem;
-  align-items: start;
-}
-.lp-mockup-events-col-left,
-.lp-mockup-events-col-right {
+.lp-mockup-events-list {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
+.lp-mock-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #CBD5E1;
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+.lp-mock-reset:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
 .lp-mock-event {
   display: flex;
   align-items: center;
@@ -622,10 +631,13 @@
 }
 
 /* 3. Just underneath 1 and 2: 3D Lineup Pitch Layer layed beneath 1 & 2 */
+/* The pitch tucks under the copy and match centre and runs off the hero's bottom edge (clipped by .lp-hero) */
 .lp-hero-pitch-layer {
+  --pitch-tuck: 5.5rem;
   position: relative;
-  margin-top: -6.2rem;
   z-index: 5;
+  margin-top: calc(-1 * var(--pitch-tuck));
+  margin-bottom: calc(-1 * clamp(2rem, 4vw, 3.5rem));
 }
 .lp-hero-pitch-grid {
   display: grid;
@@ -634,6 +646,7 @@
   align-items: start;
 }
 .lp-pitch-3d-scene {
+  --tilt-x: 38deg; /* shared by the pitch, its tokens (counter-rotated to stay upright) and the mouse tilt */
   perspective: 1200px;
   perspective-origin: 50% 12%;
   width: 100%;
@@ -646,7 +659,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9.6;
-  transform: rotateX(28deg);
+  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y, 0deg)) scale(0.96);
   transform-origin: 50% 12%;
   transform-style: preserve-3d;
   border-radius: 18px;
@@ -853,7 +866,7 @@
 /* 3D Neon Glowing Player Tokens */
 .lp-pitch-token {
   position: absolute;
-  transform: translate(-50%, -50%) rotateX(-24deg) translateZ(14px);
+  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(14px);
   transform-style: preserve-3d;
   display: flex;
   flex-direction: column;
@@ -880,7 +893,7 @@
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 .lp-pitch-token:hover {
-  transform: translate(-50%, -50%) rotateX(-24deg) translateZ(26px) scale(1.15);
+  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(26px) scale(1.15);
   z-index: 10;
 }
 .lp-pitch-token:hover::after {
@@ -888,7 +901,7 @@
   opacity: 0.5;
 }
 .lp-pitch-token.is-selected {
-  transform: translate(-50%, -50%) rotateX(-24deg) translateZ(30px) scale(1.2);
+  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(30px) scale(1.2);
   z-index: 12;
 }
 .lp-pitch-token.is-selected::after {
@@ -960,7 +973,7 @@
 
 /* Docked Player Inspector Card (matching mockup) */
 .lp-workbench-card {
-  margin-top: 6.2rem;
+  margin-top: calc(var(--pitch-tuck) + 1rem); /* clears the match centre above */
   border-radius: 20px;
   background: rgba(13, 20, 32, 0.85);
   backdrop-filter: blur(16px);
@@ -1054,67 +1067,6 @@
   color: var(--text-muted);
   margin-top: 0.2rem;
 }
-.lp-passmap-widget {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-}
-.lp-passmap-title {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-.lp-passmap-box {
-  width: 78px;
-  height: 48px;
-  border-radius: 8px;
-  background: #081710;
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
-}
-.lp-passmap-pitch-outline {
-  position: absolute;
-  inset: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  pointer-events: none;
-}
-.lp-passmap-pitch-outline::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.2);
-}
-.lp-passmap-heat {
-  position: absolute;
-  left: 55%;
-  top: 48%;
-  width: 36px;
-  height: 36px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.8) 0%, rgba(245, 158, 11, 0.45) 50%, transparent 80%);
-  filter: blur(5px);
-}
-.lp-passmap-dot {
-  position: absolute;
-  left: 55%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px #fff;
-}
 .lp-wcard-section {
   display: flex;
   flex-direction: column;
@@ -1156,42 +1108,11 @@
   font-weight: 900;
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
 }
-.lp-wcard-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  margin-top: 0.25rem;
-}
-.lp-wcard-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.65rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid var(--border-medium);
-  background: rgba(255, 255, 255, 0.035);
-  color: #E2E8F0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.lp-wcard-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
-}
-.lp-wcard-btn-left {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
 
 /* Trust and Meta Footer Bar below 3D Pitch */
 .lp-hero-footer-bar {
-  margin-top: 2.25rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1267,20 +1188,6 @@
   50% { translate: 0 -8px; }
 }
 
-/* ---------- Club strip ---------- */
-.lp-strip { border-block: 1px solid var(--border-subtle); background: rgba(255, 255, 255, 0.015); padding: 1.25rem 0; }
-.lp-strip-inner { display: flex; align-items: center; gap: 1.5rem; }
-.lp-strip-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-.lp-strip-clubs { display: flex; gap: 0.6rem; overflow-x: auto; scrollbar-width: none; padding: 2px; }
-.lp-strip-clubs::-webkit-scrollbar { display: none; }
-.lp-strip-club {
-  display: inline-flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
-  padding: 0.35rem 0.8rem 0.35rem 0.35rem; border-radius: 99px;
-  border: 1px solid var(--border-subtle); background: var(--bg-surface);
-  font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);
-}
-.lp-strip-club:hover { border-color: var(--border-medium); color: var(--text-primary); }
-.lp-strip-club img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #000; }
 
 /* ---------- Phase 4: Sunday Meltdown vs Saturday Control ---------- */
 .lp-vs-showcase {
@@ -1543,10 +1450,12 @@
 
 /* free tools strip: compact tiles, whole card is the link */
 .lp-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
-.lp-tile.lp-tool { min-height: 0; gap: 0; color: var(--text-primary); text-decoration: none; }
-.lp-tool h3 { font-size: 1.1rem; }
-.lp-tool p { font-size: 0.86rem; }
-.lp-tool-go { margin-top: auto; padding-top: 1rem; font-size: 0.82rem; font-weight: 700; color: var(--tc); display: inline-flex; align-items: center; gap: 0.3rem; }
+.lp-tile.lp-tool { min-height: 0; flex-direction: row; align-items: flex-start; gap: 0.9rem; padding: 1.15rem 1.25rem; color: var(--text-primary); text-decoration: none; }
+.lp-tool .lp-tile-ico { margin-bottom: 0; flex-shrink: 0; }
+.lp-tool h3 { font-size: 1rem; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.2rem; }
+.lp-tool p { font-size: 0.84rem; }
+.lp-tool-arrow { color: var(--tc); transition: transform 0.2s var(--ease-out); }
+.lp-tool:hover .lp-tool-arrow { transform: translateX(3px); }
 
 /* match centre viz */
 .lp-mc { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: center; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 1.1rem 1.25rem; }
@@ -1599,7 +1508,6 @@
 }
 .lp-pass-3d-wrap {
   perspective: 700px;
-  cursor: grab;
 }
 .lp-holo-pass {
   position: relative;
@@ -1885,9 +1793,19 @@
   background: rgba(16, 185, 129, 0.15);
   color: var(--c-green);
 }
-.lp-avail-badge.sub {
-  background: rgba(96, 165, 250, 0.15);
-  color: var(--c-sky);
+.lp-avail-badge.maybe {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--c-amber);
+}
+.lp-avail-card-status.is-maybe {
+  color: #FBBF24;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.lp-avail-card-status.is-out {
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.28);
 }
 .lp-avail-badge.out {
   background: rgba(239, 68, 68, 0.12);
@@ -2166,9 +2084,6 @@
 }
 @media (max-width: 720px) {
   .lp-tools { grid-template-columns: minmax(0, 1fr); gap: 0.85rem; }
-  .lp-tile.lp-tool { padding: 1.1rem 1.2rem; }
-  .lp-tool .lp-tile-ico { margin-bottom: 0.6rem; }
-  .lp-tool-go { padding-top: 0.6rem; }
   .lp-action-cards { grid-template-columns: repeat(3, 1fr); }
   .lp-events-grid { grid-template-columns: 1fr; }
   .lp-vs-showcase, .lp-steps, .lp-aud-panel { grid-template-columns: 1fr; }
@@ -2176,18 +2091,13 @@
   .lp-tile-wide { grid-column: auto; }
   .lp-tile { min-height: 0; }
   .lp-mc { grid-template-columns: 1fr; gap: 0.75rem; }
-  .lp-strip-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-  .lp-strip-clubs { max-width: 100%; }
 }
 @media (max-width: 520px) {
   .lp-stage { padding: 1rem 0; }
   .lp-action-cards { grid-template-columns: repeat(2, 1fr); }
   .lp-avail-grid { grid-template-columns: 1fr; }
-  .lp-wcard-stats { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-  .lp-passmap-widget { align-items: flex-start; }
   .lp-pass { right: 0; bottom: -1rem; width: 190px; }
   .lp-toast { right: 0; top: -0.5rem; max-width: calc(100% - 1rem); }
-  .lp-claim { flex-wrap: wrap; }
   .lp-claim-field { flex: 1; min-width: 0; display: flex; align-items: center; }
   .lp-claim-prefix { padding: 0.5rem 0 0 0.5rem; }
   .lp-claim input { flex-basis: 100%; order: 0; padding-left: 0.5rem; }
@@ -2200,8 +2110,10 @@
 /* ---------- Light theme: Stadium Floodlights OFF in Daylight ---------- */
 [data-theme='light'] .lp-hero {
   background:
+    /* Extra wash behind the text column so copy stays readable over the busy photo */
+    linear-gradient(90deg, rgba(243, 245, 249, 0.9) 0%, rgba(243, 245, 249, 0.82) 42%, rgba(243, 245, 249, 0) 62%),
     linear-gradient(180deg, rgba(243, 245, 249, 0.78) 0%, rgba(243, 245, 249, 0.55) 35%, rgba(243, 245, 249, 0.9) 85%, #F3F5F9 100%),
-    url('/images/stadium_hero_daytime.jpg') center 18% / cover no-repeat;
+    url('/images/stadium_hero_daytime.webp') center 18% / cover no-repeat;
 }
 /* Floodlights are turned OFF in daylight */
 [data-theme='light'] .lp-hero::before {
@@ -2224,8 +2136,9 @@
   color: #0F172A;
 }
 [data-theme='light'] .lp-hero-sub {
-  color: #475569;
+  color: #334155;
 }
+[data-theme='light'] .lp-claim-status { color: #475569; }
 [data-theme='light'] .lp-claim {
   background: #FFFFFF;
   border-color: rgba(15, 23, 42, 0.16);
@@ -2237,18 +2150,9 @@
 [data-theme='light'] .lp-swatches-label {
   color: #475569;
 }
+[data-theme='light'] .lp-swatch-name { color: #334155; }
 [data-theme='light'] .lp-swatch-box {
   border-color: rgba(15, 23, 42, 0.2);
-}
-[data-theme='light'] .lp-chip-dropdown {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.16);
-  color: #334155;
-}
-[data-theme='light'] .lp-chip-dropdown.is-active {
-  background: rgba(37, 99, 235, 0.1);
-  color: #1D4ED8;
-  border-color: rgba(37, 99, 235, 0.4);
 }
 [data-theme='light'] .lp-kit-style-pill {
   background: #FFFFFF;
@@ -2412,11 +2316,6 @@
   border-color: #10B981;
   color: #FFFFFF;
 }
-[data-theme='light'] .lp-wcard-action-btn {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.14);
-  color: #0F172A;
-}
 
 /* Existing Light theme tokens */
 [data-theme='light'] .lp-eyebrow,
@@ -2436,7 +2335,6 @@
 [data-theme='light'] .lp-swatch:focus-visible { outline-color: var(--text-primary); }
 [data-theme='light'] .lp-hero::after,
 [data-theme='light'] .lp-kicker,
-[data-theme='light'] .lp-strip,
 [data-theme='light'] .lp-step { background: rgba(15, 23, 42, 0.025); border-color: var(--border-subtle); }
 [data-theme='light'] .lp-hero::after { background: none; }
 [data-theme='light'] .lp-step-badge {
@@ -2631,23 +2529,29 @@
 
 /* Mobile & Tablet Responsive Enhancements */
 @media (max-width: 1024px) {
+  /* Single column: text spans the full width, so wash the whole photo */
+  [data-theme='light'] .lp-hero {
+    background:
+      linear-gradient(180deg, rgba(243, 245, 249, 0.88) 0%, rgba(243, 245, 249, 0.8) 50%, rgba(243, 245, 249, 0.92) 85%, #F3F5F9 100%),
+      url('/images/stadium_hero_daytime.webp') center 18% / cover no-repeat;
+  }
   .lp-hero-upper {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
   }
   .lp-stage {
     max-width: 100%;
     margin: 0 auto;
   }
-  .lp-hero-pitch-layer {
-    margin-top: 1.5rem;
-  }
+  .lp-hero { padding-bottom: 2.5rem; }
+  .lp-hero-pitch-layer { margin-bottom: 0; --pitch-tuck: 0px; margin-top: 1.5rem; }
+  .lp-pitch-3d-scene { --tilt-x: 24deg; }
+  .lp-tactical-pitch { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y, 0deg)) scale(0.88); }
   .lp-hero-pitch-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
   }
   .lp-workbench-card {
-    margin-top: 0;
     max-width: 100%;
   }
 }
@@ -2683,12 +2587,9 @@
     padding: 0.45rem 0.15rem;
     font-size: 0.65rem;
   }
-  .lp-mockup-events-grid {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
+  .lp-mock-team { max-width: 5.5rem; letter-spacing: 0.06em; }
+  .lp-pitch-3d-scene { --tilt-x: 16deg; }
   .lp-tactical-pitch {
-    transform: rotateX(16deg) scale(0.98);
     aspect-ratio: 16 / 10.8;
   }
   .lp-token-num {
@@ -2697,3 +2598,37 @@
     font-size: 0.72rem;
   }
 }
+
+/* ---------- Sponsors (moved out of inline styles) ---------- */
+.lp-sponsor {
+  width: 220px; padding: 1.5rem 1.25rem;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.75rem;
+  border-top: 3px solid var(--sc);
+}
+.lp-sponsor-name { font-size: 0.9rem; font-weight: 800; color: var(--text-primary); }
+.lp-sponsor-club {
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%;
+  padding-top: 0.6rem; border-top: 1px solid var(--border-subtle);
+}
+.lp-sponsor-club img { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; }
+.lp-sponsor-tier { text-transform: capitalize; }
+
+/* ---------- FAQ ---------- */
+.lp-faq { max-width: 880px; }
+.lp-faq-list { display: flex; flex-direction: column; gap: 0.9rem; }
+.lp-faq-item { padding: 1.15rem 1.4rem; border-radius: var(--radius-md); }
+.lp-faq-item summary {
+  font-weight: 800; font-size: 1.05rem; color: var(--text-primary); cursor: pointer;
+  list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+}
+.lp-faq-item summary::-webkit-details-marker { display: none; }
+.lp-faq-icon { position: relative; width: 14px; height: 14px; flex-shrink: 0; color: var(--club-ink); }
+.lp-faq-icon::before, .lp-faq-icon::after {
+  content: ''; position: absolute; left: 0; top: 50%; width: 100%; height: 2px; margin-top: -1px;
+  background: currentColor; border-radius: 2px; transition: transform 0.2s var(--ease-out);
+}
+.lp-faq-icon::after { transform: rotate(90deg); }
+.lp-faq-item[open] .lp-faq-icon::after { transform: rotate(0deg); }
+.lp-faq-item p { color: var(--text-secondary); line-height: 1.65; margin-top: 0.85rem; font-size: 0.98rem; }
+.lp-faq-more { text-align: center; margin-top: 1.75rem; }
+.lp-faq-more a { color: var(--club-ink); font-weight: 700; font-size: 0.98rem; display: inline-flex; align-items: center; gap: 0.35rem; }
