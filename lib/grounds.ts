@@ -38,6 +38,8 @@ export interface GroundRow {
   previous_paths: string[] | null;
   facts_checked_at: string;
   updated_at: string;
+  /** 'osm' when the ground was imported from OpenStreetMap (migration 20261114): its page credits OpenStreetMap */
+  source?: string | null;
 }
 
 /** A club shown on a ground page: only clubs that opted in */

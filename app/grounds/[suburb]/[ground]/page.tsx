@@ -17,6 +17,7 @@ import {
   GROUNDS_PATH, councilName, directionsUrl, factCount, groundCouncil, groundPath, groundQuestions, groundSchema, groundSummary,
   isIndexableGround, mapEmbedUrl, pitchAnchor, pitchSummary, suburbPath, type GroundFixture, type GroundRow,
 } from '@/lib/grounds';
+import { OSM_COPYRIGHT_URL } from '@/lib/ground-import';
 import { clubsWithHomeGrounds, findGround, groundFixtures, groundUse, listGrounds } from '@/lib/supabase/grounds-lookup';
 
 type Params = { params: Promise<{ suburb: string; ground: string }> };
@@ -258,10 +259,15 @@ export default async function GroundPage({ params }: Params) {
 
         <div style={{ marginTop: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
-            <Shield size={15} aria-hidden="true" /> {steward ? `Facts kept up to date by ${steward.name}` : 'Facts kept up to date by a local club'}
+            <Shield size={15} aria-hidden="true" /> {steward ? `Facts kept up to date by ${steward.name}` : g.steward_club_id ? 'Facts kept up to date by a local club' : 'Facts kept up to date by itsfootball.club'}
           </span>
           <SuggestEdit groundId={g.id} groundName={g.name} stewardName={steward?.name} />
         </div>
+        {g.source === 'osm' && (
+          <p style={{ ...bodyStyle, fontSize: '0.78rem', marginTop: '1rem' }}>
+            Location and pitches © <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener" style={linkStyle}>OpenStreetMap contributors</a> (ODbL).
+          </p>
+        )}
         {factCount(g) < 3 && (
           <p style={{ ...bodyStyle, fontSize: '0.82rem', marginTop: '1rem' }}>
             This guide is still being filled in. Club admins can add parking, pitches and facilities in Admin, Branding.
