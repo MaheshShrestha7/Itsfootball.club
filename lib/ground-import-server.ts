@@ -3,7 +3,7 @@
 // pitches in it (OpenStreetMap through the Overpass API, ODbL). Points are matched to outlines
 // locally, so a big council doesn't mean hundreds of lookups. Never import this from client code.
 import { councilByLgaCode, type AuState } from './councils';
-import { areaName } from './council-lookup';
+import { MAP_USER_AGENT as USER_AGENT, areaName } from './council-lookup';
 import {
   absPlaceName, buildCandidates, inRings, overpassQuery, ringsBbox,
   type Bbox, type Candidate, type OsmElement, type Rings,
@@ -11,7 +11,6 @@ import {
 
 const ABS = 'https://geo.abs.gov.au/arcgis/rest/services/ASGS2021';
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
-const USER_AGENT = 'itsfootball.club grounds import (contact@itsfootball.club)';
 
 const STATE_NAMES: Record<AuState, string> = {
   NSW: 'New South Wales', VIC: 'Victoria', QLD: 'Queensland', WA: 'Western Australia', SA: 'South Australia',
@@ -25,7 +24,7 @@ interface ArcFeature { attributes?: Record<string, string>; geometry?: { rings?:
 async function arcQuery(layer: 'LGA' | 'SAL' | 'POA', params: Record<string, string>, timeoutMs = 20000): Promise<ArcFeature[]> {
   const res = await fetch(`${ABS}/${layer}/MapServer/0/query`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': USER_AGENT },
     body: new URLSearchParams({ f: 'json', outSR: '4326', ...params }),
     signal: AbortSignal.timeout(timeoutMs),
   });

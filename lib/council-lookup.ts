@@ -5,6 +5,9 @@ import { councilByLgaCode, type AuState } from './councils';
 
 const ABS_LGA_QUERY = 'https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/LGA/MapServer/0/query';
 
+// geo.abs.gov.au answers 403 to requests with no User-Agent. Node's fetch adds one, a Cloudflare Worker's doesn't, so send our own.
+export const MAP_USER_AGENT = 'itsfootball.club grounds import (contact@itsfootball.club)';
+
 const STATE_BY_ABS_NAME: Record<string, AuState> = {
   'New South Wales': 'NSW', Victoria: 'VIC', Queensland: 'QLD', 'Western Australia': 'WA', 'South Australia': 'SA',
   Tasmania: 'TAS', 'Australian Capital Territory': 'ACT', 'Northern Territory': 'NT',
@@ -51,7 +54,11 @@ export async function councilFromPin(lat: number, lng: number): Promise<CouncilM
     f: 'json',
   });
   try {
-    const res = await fetch(`${ABS_LGA_QUERY}?${params}`, { signal: AbortSignal.timeout(4000), next: { revalidate: 86400 } });
+    const res = await fetch(`${ABS_LGA_QUERY}?${params}`, {
+      headers: { 'User-Agent': MAP_USER_AGENT },
+      signal: AbortSignal.timeout(4000),
+      next: { revalidate: 86400 },
+    });
     if (!res.ok) return null;
     const json = (await res.json()) as { features?: { attributes?: Record<string, string> }[] };
     return matchFromAttributes(json.features?.[0]?.attributes);
