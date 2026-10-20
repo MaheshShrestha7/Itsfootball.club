@@ -93,20 +93,21 @@ interface TacticalPlayer {
   confirmed: string;
   goals: number;
   assists: number;
+  zone: 'gk' | 'def' | 'mid' | 'att';
 }
 
 const TACTICAL_ROSTER: TacticalPlayer[] = [
-  { num: 1, name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1 },
-  { num: 2, name: 'C. Dawson', role: 'Left Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3 },
-  { num: 3, name: 'M. Romero', role: 'Center Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0 },
-  { num: 4, name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1 },
-  { num: 5, name: 'J. Lewis', role: 'Right Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4 },
-  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5 },
-  { num: 7, name: 'L. Hughes', role: 'Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6 },
-  { num: 8, name: 'M. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11 },
-  { num: 9, name: 'J. Park', role: 'Left Winger', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8 },
-  { num: 10, name: 'D. Okafor', role: 'Striker', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4 },
-  { num: 11, name: 'S. Adebayo', role: 'Right Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5 },
+  { num: 1, name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, zone: 'gk' },
+  { num: 2, name: 'C. Dawson', role: 'Left Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, zone: 'def' },
+  { num: 3, name: 'M. Romero', role: 'Center Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, zone: 'def' },
+  { num: 4, name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, zone: 'def' },
+  { num: 5, name: 'J. Lewis', role: 'Right Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, zone: 'def' },
+  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, zone: 'mid' },
+  { num: 7, name: 'L. Hughes', role: 'Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, zone: 'mid' },
+  { num: 8, name: 'M. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, zone: 'mid' },
+  { num: 9, name: 'J. Park', role: 'Left Winger', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, zone: 'att' },
+  { num: 10, name: 'D. Okafor', role: 'Striker', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, zone: 'att' },
+  { num: 11, name: 'S. Adebayo', role: 'Right Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, zone: 'att' },
 ];
 
 const BENCH_SQUAD = [
@@ -182,6 +183,50 @@ const FORMATIONS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', { label: strin
       [78, 64],  // 11 ST
     ],
   },
+};
+
+const TACTICAL_LINKS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', [number, number][]> = {
+  '4-3-3': [
+    [0, 1], [0, 2], [0, 3], [0, 4],
+    [1, 2], [2, 3], [3, 4],
+    [2, 6], [3, 6],
+    [1, 5], [4, 7],
+    [6, 5], [6, 7],
+    [5, 8], [7, 10],
+    [5, 9], [7, 9], [6, 9],
+    [8, 9], [10, 9],
+  ],
+  '4-2-3-1': [
+    [0, 1], [0, 2], [0, 3], [0, 4],
+    [1, 2], [2, 3], [3, 4],
+    [2, 5], [3, 6],
+    [5, 6],
+    [1, 7], [4, 9],
+    [5, 8], [6, 8],
+    [7, 8], [9, 8],
+    [7, 10], [9, 10], [8, 10],
+  ],
+  '3-5-2': [
+    [0, 1], [0, 2], [0, 3],
+    [1, 2], [2, 3],
+    [1, 4], [3, 8],
+    [2, 6],
+    [4, 5], [8, 7],
+    [6, 5], [6, 7], [5, 7],
+    [5, 9], [7, 10],
+    [9, 10],
+    [4, 9], [8, 10],
+  ],
+  '4-4-2': [
+    [0, 1], [0, 2], [0, 3], [0, 4],
+    [1, 2], [2, 3], [3, 4],
+    [1, 5], [4, 8],
+    [2, 6], [3, 7],
+    [5, 6], [6, 7], [7, 8],
+    [5, 9], [8, 10],
+    [6, 9], [7, 10],
+    [9, 10],
+  ],
 };
 
 const PASS_TIERS = [
@@ -627,7 +672,12 @@ export default function PlatformHomePage() {
               </div>
             </div>
 
-            <div className="lp-browser">
+            <div
+              className="lp-browser"
+              style={{
+                transform: `perspective(1000px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35}deg)`,
+              }}
+            >
               <div className="lp-browser-bar">
                 <div className="lp-dots"><i /><i /><i /></div>
                 <div className="lp-url">itsfootball.club/<b>{previewSlug}</b></div>
@@ -743,26 +793,6 @@ export default function PlatformHomePage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            <div
-              className="lp-pass"
-              style={{
-                transform: `perspective(700px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) rotateZ(5deg)`,
-                transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            >
-              <div className="lp-pass-top">
-                <div>
-                  <div className="lp-pass-label">MEMBER PASS · 2026/27</div>
-                  <div className="lp-pass-name">Alex Morgan</div>
-                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>{initials(displayName)} · Senior member</div>
-                </div>
-              </div>
-              <div className="lp-pass-row">
-                <span className="lp-pass-verified"><Check size={11} /> VERIFIED</span>
-                <div className="lp-pass-qr"><QRCodeSVG value={`https://itsfootball.club/${previewSlug}/verify`} size={58} /></div>
               </div>
             </div>
           </div>
@@ -1049,6 +1079,24 @@ export default function PlatformHomePage() {
                   <div className="lp-pitch-penalty-spot" />
                   <div className="lp-pitch-center-arc" />
 
+                  {/* Dynamic Tactical Passing Mesh */}
+                  <svg className="lp-pitch-mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    {TACTICAL_LINKS[formation].map(([fromIdx, toIdx], lIdx) => {
+                      const fromCoord = FORMATIONS[formation].coords[fromIdx];
+                      const toCoord = FORMATIONS[formation].coords[toIdx];
+                      return (
+                        <line
+                          key={`${formation}-${lIdx}`}
+                          x1={`${fromCoord[0]}%`}
+                          y1={`${fromCoord[1]}%`}
+                          x2={`${toCoord[0]}%`}
+                          y2={`${toCoord[1]}%`}
+                          className="lp-pitch-link"
+                        />
+                      );
+                    })}
+                  </svg>
+
                   {/* 11 Dynamic Player Tokens */}
                   {FORMATIONS[formation].coords.map(([x, y], i) => {
                     const player = TACTICAL_ROSTER[i];
@@ -1057,7 +1105,7 @@ export default function PlatformHomePage() {
                       <button
                         key={player.num}
                         type="button"
-                        className={`lp-pitch-token ${isSelected ? 'is-selected' : ''}`}
+                        className={`lp-pitch-token zone-${player.zone} ${isSelected ? 'is-selected' : ''}`}
                         style={{ left: `${x}%`, top: `${y}%` }}
                         onClick={() => setSelectedPitchPlayer(isSelected ? null : player.num)}
                         title={`${player.name} (${player.role})`}
