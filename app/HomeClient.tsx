@@ -21,7 +21,7 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle,
+  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle, Clock, Crosshair, ChevronRight, ChevronDown, FileText,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
@@ -46,15 +46,15 @@ const DEFAULT_EVENTS: DugoutEvent[] = [
 const KIT_STYLES = [
   { id: 'solid', label: 'Solid' },
   { id: 'stripes', label: 'Stripes' },
-  { id: 'hoops', label: 'Hoops' },
   { id: 'sash', label: 'Sash' },
+  { id: 'checkered', label: 'Checkered' },
 ] as const;
 
 type KitStyle = typeof KIT_STYLES[number]['id'];
 
 function MiniJersey({ primary, accent, style }: { primary: string; accent: string; style: KitStyle }) {
   const sId = `pat-s-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
-  const hId = `pat-h-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const cId = `pat-c-${primary.replace(/[^a-zA-Z0-9]/g, '')}-${accent.replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))', flexShrink: 0 }}>
       <defs>
@@ -62,9 +62,11 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
           <rect width="4" height="32" fill={primary} />
           <rect x="4" width="4" height="32" fill={accent} />
         </pattern>
-        <pattern id={hId} width="32" height="8" patternUnits="userSpaceOnUse">
-          <rect width="32" height="4" fill={primary} />
-          <rect y="4" width="32" height="4" fill={accent} />
+        <pattern id={cId} width="16" height="16" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill={primary} />
+          <rect x="8" width="8" height="8" fill={accent} />
+          <rect y="8" width="8" height="8" fill={accent} />
+          <rect x="8" y="8" width="8" height="8" fill={primary} />
         </pattern>
       </defs>
       <path
@@ -72,7 +74,7 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
         fill={
           style === 'solid' ? primary :
           style === 'stripes' ? `url(#${sId})` :
-          style === 'hoops' ? `url(#${hId})` :
+          style === 'checkered' ? `url(#${cId})` :
           primary
         }
         stroke="rgba(255,255,255,0.25)"
@@ -88,30 +90,33 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
 
 interface TacticalPlayer {
   num: number;
+  label: string;
   name: string;
   role: string;
   confirmed: string;
   goals: number;
   assists: number;
+  rating: number;
+  avgPos: { x: number; y: number };
   zone: 'gk' | 'def' | 'mid' | 'att';
 }
 
 const TACTICAL_ROSTER: TacticalPlayer[] = [
-  { num: 1, name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, zone: 'gk' },
-  { num: 2, name: 'C. Dawson', role: 'Left Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, zone: 'def' },
-  { num: 3, name: 'M. Romero', role: 'Center Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, zone: 'def' },
-  { num: 4, name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, zone: 'def' },
-  { num: 5, name: 'J. Lewis', role: 'Right Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, zone: 'def' },
-  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, zone: 'mid' },
-  { num: 7, name: 'L. Hughes', role: 'Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, zone: 'mid' },
-  { num: 8, name: 'M. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, zone: 'mid' },
-  { num: 9, name: 'J. Park', role: 'Left Winger', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, zone: 'att' },
-  { num: 10, name: 'D. Okafor', role: 'Striker', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, zone: 'att' },
-  { num: 11, name: 'S. Adebayo', role: 'Right Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, zone: 'att' },
+  { num: 1, label: '1', name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, rating: 7.9, avgPos: { x: 14, y: 50 }, zone: 'gk' },
+  { num: 3, label: '3', name: 'M. Romero', role: 'Right Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, rating: 7.6, avgPos: { x: 32, y: 22 }, zone: 'def' },
+  { num: 4, label: '4', name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, rating: 7.8, avgPos: { x: 30, y: 40 }, zone: 'def' },
+  { num: 5, label: '5', name: 'C. Dawson', role: 'Center Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, rating: 7.5, avgPos: { x: 30, y: 60 }, zone: 'def' },
+  { num: 2, label: '2', name: 'J. Lewis', role: 'Left Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, rating: 7.7, avgPos: { x: 32, y: 80 }, zone: 'def' },
+  { num: 12, label: '12', name: 'L. Hughes', role: 'Right Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, rating: 7.4, avgPos: { x: 50, y: 24 }, zone: 'mid' },
+  { num: 8, label: '8', name: 'J. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, rating: 8.4, avgPos: { x: 54, y: 48 }, zone: 'mid' },
+  { num: 6, label: '6', name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, rating: 7.9, avgPos: { x: 46, y: 76 }, zone: 'mid' },
+  { num: 10, label: '10', name: 'K. De Bruyne', role: 'Attacking Mid', confirmed: 'Wednesday 4:20 PM', goals: 8, assists: 14, rating: 8.8, avgPos: { x: 65, y: 50 }, zone: 'mid' },
+  { num: 7, label: '7', name: 'D. Okafor', role: 'Right Winger', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, rating: 8.2, avgPos: { x: 74, y: 22 }, zone: 'att' },
+  { num: 9, label: '9', name: 'J. Park', role: 'Striker', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, rating: 8.6, avgPos: { x: 80, y: 50 }, zone: 'att' },
+  { num: 11, label: '11', name: 'S. Adebayo', role: 'Left Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, rating: 8.1, avgPos: { x: 74, y: 80 }, zone: 'att' },
 ];
 
 const BENCH_SQUAD = [
-  { num: 12, name: 'R. Sterling', role: 'Sub · FWD' },
   { num: 14, name: 'E. Dier', role: 'Sub · CB' },
   { num: 16, name: 'B. White', role: 'Sub · FB' },
   { num: 17, name: 'O. Watkins', role: 'Sub · ST' },
@@ -122,112 +127,127 @@ const FORMATIONS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', { label: strin
   '4-3-3': {
     label: '4-3-3',
     coords: [
-      [8, 50],   // 1 GK
-      [26, 16],  // 2 LB
-      [24, 38],  // 3 CB
-      [24, 62],  // 4 CB
-      [26, 84],  // 5 RB
-      [48, 30],  // 6 CM
-      [42, 50],  // 7 CDM
-      [48, 70],  // 8 CM
-      [74, 18],  // 9 LW
-      [82, 50],  // 10 ST
-      [74, 82],  // 11 RW
-    ],
-  },
-  '4-2-3-1': {
-    label: '4-2-3-1',
-    coords: [
-      [8, 50],   // 1 GK
-      [26, 16],  // 2 LB
-      [24, 38],  // 3 CB
-      [24, 62],  // 4 CB
-      [26, 84],  // 5 RB
-      [42, 35],  // 6 CDM
-      [42, 65],  // 7 CDM
-      [64, 18],  // 8 LM
-      [62, 50],  // 9 CAM
-      [64, 82],  // 10 RM
-      [82, 50],  // 11 ST
-    ],
-  },
-  '3-5-2': {
-    label: '3-5-2',
-    coords: [
-      [8, 50],   // 1 GK
-      [24, 25],  // 2 LCB
-      [22, 50],  // 3 CB
-      [24, 75],  // 4 RCB
-      [48, 12],  // 5 LWB
-      [46, 35],  // 6 CM
-      [40, 50],  // 7 CDM
-      [46, 65],  // 8 CM
-      [48, 88],  // 9 RWB
-      [78, 36],  // 10 ST
-      [78, 64],  // 11 ST
+      [11, 50],  // 0: GK
+      [29, 18],  // 1: 3
+      [31, 39],  // 2: 4
+      [31, 61],  // 3: 5
+      [29, 82],  // 4: DF
+      [48, 22],  // 5: MF
+      [48, 50],  // 6: 8
+      [48, 78],  // 7: 6
+      [63, 50],  // 8: 10
+      [74, 20],  // 9: 7
+      [78, 50],  // 10: 9
+      [74, 80],  // 11: 11
     ],
   },
   '4-4-2': {
     label: '4-4-2',
     coords: [
-      [8, 50],   // 1 GK
-      [26, 16],  // 2 LB
-      [24, 38],  // 3 CB
-      [24, 62],  // 4 CB
-      [26, 84],  // 5 RB
-      [52, 16],  // 6 LM
-      [48, 38],  // 7 CM
-      [48, 62],  // 8 CM
-      [52, 84],  // 9 RM
-      [78, 36],  // 10 ST
-      [78, 64],  // 11 ST
+      [11, 50],  // 0: GK
+      [29, 18],  // 1: 3
+      [31, 39],  // 2: 4
+      [31, 61],  // 3: 5
+      [29, 82],  // 4: DF
+      [50, 18],  // 5: MF
+      [48, 38],  // 6: 8
+      [48, 62],  // 7: 6
+      [62, 50],  // 8: 10
+      [50, 82],  // 9: 7
+      [78, 38],  // 10: 9
+      [78, 62],  // 11: 11
+    ],
+  },
+  '3-5-2': {
+    label: '3-5-2',
+    coords: [
+      [11, 50],  // 0: GK
+      [29, 26],  // 1: 3
+      [27, 50],  // 2: 4
+      [29, 74],  // 3: 5
+      [49, 86],  // 4: DF
+      [49, 14],  // 5: MF
+      [47, 36],  // 6: 8
+      [44, 50],  // 7: 6
+      [60, 50],  // 8: 10
+      [47, 64],  // 9: 7
+      [78, 38],  // 10: 9
+      [78, 62],  // 11: 11
+    ],
+  },
+  '4-2-3-1': {
+    label: '4-2-3-1',
+    coords: [
+      [11, 50],  // 0: GK
+      [29, 18],  // 1: 3
+      [31, 39],  // 2: 4
+      [31, 61],  // 3: 5
+      [29, 82],  // 4: DF
+      [46, 36],  // 5: MF
+      [46, 64],  // 6: 6
+      [62, 50],  // 7: 8
+      [64, 50],  // 8: 10
+      [74, 18],  // 9: 7
+      [80, 50],  // 10: 9
+      [74, 82],  // 11: 11
     ],
   },
 };
 
-const TACTICAL_LINKS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', [number, number][]> = {
+const TACTICAL_LINKS: Record<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2', [number, number, boolean?][]> = {
   '4-3-3': [
-    [0, 1], [0, 2], [0, 3], [0, 4],
-    [1, 2], [2, 3], [3, 4],
-    [2, 6], [3, 6],
-    [1, 5], [4, 7],
-    [6, 5], [6, 7],
-    [5, 8], [7, 10],
-    [5, 9], [7, 9], [6, 9],
-    [8, 9], [10, 9],
-  ],
-  '4-2-3-1': [
-    [0, 1], [0, 2], [0, 3], [0, 4],
-    [1, 2], [2, 3], [3, 4],
-    [2, 5], [3, 6],
-    [5, 6],
-    [1, 7], [4, 9],
-    [5, 8], [6, 8],
-    [7, 8], [9, 8],
-    [7, 10], [9, 10], [8, 10],
-  ],
-  '3-5-2': [
-    [0, 1], [0, 2], [0, 3],
-    [1, 2], [2, 3],
-    [1, 4], [3, 8],
-    [2, 6],
-    [4, 5], [8, 7],
-    [6, 5], [6, 7], [5, 7],
-    [5, 9], [7, 10],
-    [9, 10],
-    [4, 9], [8, 10],
+    [0, 2, true],
+    [1, 2, false],
+    [2, 3, false],
+    [3, 4, false],
+    [2, 6, true],
+    [3, 6, true],
+    [6, 5, true],
+    [6, 7, true],
+    [6, 8, true],
+    [8, 10, true],
+    [5, 9, true],
+    [7, 11, true],
   ],
   '4-4-2': [
-    [0, 1], [0, 2], [0, 3], [0, 4],
-    [1, 2], [2, 3], [3, 4],
-    [1, 5], [4, 8],
-    [2, 6], [3, 7],
-    [5, 6], [6, 7], [7, 8],
-    [5, 9], [8, 10],
-    [6, 9], [7, 10],
-    [9, 10],
+    [1, 2, false],
+    [2, 3, false],
+    [3, 4, false],
+    [2, 6, true],
+    [3, 7, true],
+    [6, 5, true],
+    [7, 9, true],
+    [6, 8, true],
+    [7, 8, true],
+    [8, 10, true],
+    [8, 11, true],
+  ],
+  '3-5-2': [
+    [1, 2, false],
+    [2, 3, false],
+    [2, 7, true],
+    [7, 6, true],
+    [7, 9, true],
+    [6, 8, true],
+    [9, 8, true],
+    [8, 10, true],
+    [8, 11, true],
+  ],
+  '4-2-3-1': [
+    [1, 2, false],
+    [2, 3, false],
+    [3, 4, false],
+    [2, 5, true],
+    [3, 6, true],
+    [5, 7, true],
+    [6, 7, true],
+    [7, 8, true],
+    [8, 10, true],
+    [7, 9, true],
+    [7, 11, true],
   ],
 };
+
 
 const PASS_TIERS = [
   { id: 'player', label: 'Player', name: 'Alex Morgan', role: 'Senior Squad #10', color: '#10B981', num: '10', type: 'MATCHDAY PASS' },
@@ -330,26 +350,57 @@ export default function PlatformHomePage() {
 
   // Interactive Dugout & Matchday Controller State
   const [homeScore, setHomeScore] = useState(2);
+  const [awayScore, setAwayScore] = useState(1);
   const [isGoalFlash, setIsGoalFlash] = useState(false);
-  const [subBoardActive, setSubBoardActive] = useState(false);
+  const [subInPlayer, setSubInPlayer] = useState('J. Silva #8');
+  const [subOutPlayer, setSubOutPlayer] = useState('L. Baker #11');
+  const [matchStatus, setMatchStatus] = useState<'live' | 'halftime' | 'ended'>('live');
   const [refCardActive, setRefCardActive] = useState<'yellow' | 'red' | null>(null);
-  const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
+  const [events, setEvents] = useState<DugoutEvent[]>([
+    { id: '1', minute: 72, type: 'goal', headline: '72\' Goal', detail: 'J. Silva, Home' },
+    { id: '2', minute: 68, type: 'yellow', headline: '68\' Yellow Card', detail: 'T. Cole, Away' },
+    { id: '3', minute: 65, type: 'sub', headline: '65\' Sub', detail: 'Tactical replacement' },
+    { id: '4', minute: 55, type: 'red', headline: '55\' Red Card', detail: 'M. Evans, Away' },
+  ]);
   const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
+  const [isKitFlash, setIsKitFlash] = useState(false);
+  const handleKitSelect = (style: KitStyle) => {
+    setKitStyle(style);
+    setIsKitFlash(true);
+    setTimeout(() => setIsKitFlash(false), 1200);
+  };
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Tactical Pitch state
-  const [formation, setFormation] = useState<'4-3-3' | '4-2-3-1' | '3-5-2' | '4-4-2'>('4-3-3');
-  const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(10);
-  const activePitchPlayer = TACTICAL_ROSTER.find(p => p.num === selectedPitchPlayer);
+  // Tactical Pitch state & Dynamic 3D Tilt
+  const [formation, setFormation] = useState<'4-3-3' | '4-4-2' | '3-5-2'>('4-3-3');
+  const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(8);
+  const activePitchPlayer = TACTICAL_ROSTER.find(p => p.num === selectedPitchPlayer) || TACTICAL_ROSTER[6];
+  const [pitchTilt, setPitchTilt] = useState({ x: 26, y: 0 });
+  const pitchRef = useRef<HTMLDivElement>(null);
+
+  const handlePitchMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!pitchRef.current) return;
+    const rect = pitchRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPitchTilt({
+      x: 26 - y * 14,
+      y: x * 12,
+    });
+  };
+
+  const handlePitchMouseLeave = () => {
+    setPitchTilt({ x: 26, y: 0 });
+  };
 
   // Live match clock (advances steadily between 71' and 89')
   const [minute, setMinute] = useState(72);
   useEffect(() => {
-    if (minute >= 89) return;
+    if (minute >= 89 || matchStatus !== 'live') return;
     const t = setTimeout(() => setMinute(m => m + 1), 3500);
     return () => clearTimeout(t);
-  }, [minute]);
+  }, [minute, matchStatus]);
 
   const triggerGoal = () => {
     setHomeScore(s => s + 1);
@@ -359,29 +410,26 @@ export default function PlatformHomePage() {
       id: String(Date.now()),
       minute: minute,
       type: 'goal',
-      headline: 'GOAL!',
+      headline: `${minute}' Goal`,
       detail: `${displayName} scores! Touchline eruption`,
       isHome: true,
     };
-    setEvents(prev => [newEv, ...prev.slice(0, 4)]);
+    setEvents(prev => [newEv, ...prev.slice(0, 3)]);
   };
 
   const triggerSub = () => {
-    setSubBoardActive(prev => {
-      const next = !prev;
-      if (next) {
-        const newEv: DugoutEvent = {
-          id: String(Date.now()),
-          minute: minute,
-          type: 'sub',
-          headline: 'Tactical Sub',
-          detail: '#10 J. Park on for #7 L. Hughes',
-          isHome: true,
-        };
-        setEvents(p => [newEv, ...p.slice(0, 4)]);
-      }
-      return next;
-    });
+    const isSilva = subInPlayer.includes('Silva');
+    setSubInPlayer(isSilva ? 'J. Park #10' : 'J. Silva #8');
+    setSubOutPlayer(isSilva ? 'L. Hughes #7' : 'L. Baker #11');
+    const newEv: DugoutEvent = {
+      id: String(Date.now()),
+      minute: minute,
+      type: 'sub',
+      headline: `${minute}' Sub`,
+      detail: isSilva ? '#10 J. Park on' : '#8 J. Silva on',
+      isHome: true,
+    };
+    setEvents(p => [newEv, ...p.slice(0, 3)]);
   };
 
   const triggerCard = () => {
@@ -392,22 +440,33 @@ export default function PlatformHomePage() {
         id: String(Date.now()),
         minute: minute,
         type: nextCard,
-        headline: nextCard === 'red' ? 'RED CARD!' : 'Yellow Card',
-        detail: nextCard === 'red' ? 'Riverside #4 violent conduct' : 'Riverside #6 deliberate handball',
+        headline: nextCard === 'red' ? `${minute}' Red Card` : `${minute}' Yellow Card`,
+        detail: nextCard === 'red' ? 'M. Evans, violent tackle' : 'T. Cole, tactical foul',
       };
-      setEvents(p => [newEv, ...p.slice(0, 4)]);
+      setEvents(p => [newEv, ...p.slice(0, 3)]);
     }
+  };
+
+  const triggerHalfTime = () => {
+    setMatchStatus(s => s === 'halftime' ? 'live' : 'halftime');
+  };
+
+  const triggerEndMatch = () => {
+    setMatchStatus(s => s === 'ended' ? 'live' : 'ended');
   };
 
   const resetDugout = () => {
     setHomeScore(2);
+    setAwayScore(1);
     setIsGoalFlash(false);
-    setSubBoardActive(false);
+    setMatchStatus('live');
+    setSubInPlayer('J. Silva #8');
+    setSubOutPlayer('L. Baker #11');
     setRefCardActive(null);
     setEvents(DEFAULT_EVENTS);
   };
 
-  const isDugoutModified = homeScore !== 2 || subBoardActive || refCardActive !== null || events.length !== 4;
+  const isDugoutModified = homeScore !== 2 || matchStatus !== 'live' || refCardActive !== null || events.length !== 4;
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!stageRef.current) return;
@@ -547,101 +606,483 @@ export default function PlatformHomePage() {
           '--lp-on-p': onPrimary,
         } as React.CSSProperties}
       >
-        <div className="container lp-hero-grid">
-          <div>
-            <div className="lp-kicker lp-matchday-tag">
-              <span className="pulse-dot" aria-hidden="true" />
-              Matchday Saturday &middot; Free Grassroots Platform
+        <div className="container lp-hero-stage">
+          {/* Upper Row: 1 (Left Controls) & 2 (Right Matchday Center) */}
+          <div className="lp-hero-upper">
+            {/* 1. On left side */}
+            <div className="lp-hero-left">
+              {/* 1.1 "Grassroot club. Big-club matchday" section */}
+              <h1 className="lp-h1">
+                <span className="sr-only">Free football club website with live match centre — </span>
+                Grassroots club.<br />
+                Big-club matchday.
+              </h1>
+
+              <p className="lp-hero-sub">
+                Empowering your local club with professional matchday tools.
+              </p>
+
+              {/* 1.2 Claim URL section */}
+              <form className="lp-claim" onSubmit={claim}>
+                <div className="lp-claim-field">
+                  <label htmlFor="lp-club-name" className="lp-claim-prefix">itsfootball.club/</label>
+                  <input
+                    id="lp-club-name"
+                    value={clubName}
+                    onChange={e => setClubName(e.target.value)}
+                    placeholder="yourclub"
+                    autoComplete="off"
+                    maxLength={60}
+                    aria-describedby="lp-claim-status"
+                  />
+                </div>
+                <button type="submit" className="lp-claim-btn">
+                  Claim URL
+                </button>
+              </form>
+              <div
+                id="lp-claim-status"
+                aria-live="polite"
+                className={`lp-claim-status ${clubName.trim() ? (slugCheck.valid ? 'ok' : 'bad') : ''}`}
+              >
+                {!clubName.trim() ? (
+                  <>Type your club&apos;s name to check your web address.</>
+                ) : slugCheck.valid ? (
+                  <><CheckCircle2 size={15} /> itsfootball.club/{slugCheck.cleanSlug} looks free. Claim it before someone else does.</>
+                ) : (
+                  <><AlertCircle size={15} /> {slugCheck.error}</>
+                )}
+              </div>
+
+              {/* 1.3 Color and kit pattern selection */}
+              <div className="lp-color-kit-section">
+                <div className="lp-swatches-col">
+                  <div className="lp-swatches-header">
+                    <span className="lp-swatches-label">Primary</span>
+                    <span className="lp-swatches-label">Secondary</span>
+                    <span className="lp-swatches-label">Tertiary</span>
+                  </div>
+                  <div className="lp-swatch-boxes" role="group" aria-label="Palette selection">
+                    {[
+                      { name: 'Navy Blue', hex: '#0F1E36' },
+                      { name: 'White', hex: '#FFFFFF' },
+                      { name: 'Gold', hex: '#D4AF37' },
+                      { name: 'Red', hex: '#DC2626' },
+                      { name: 'Green', hex: '#16A34A' },
+                    ].map((sw, i) => (
+                      <button
+                        key={sw.name}
+                        type="button"
+                        className={`lp-swatch-box ${paletteIdx === i ? 'is-active' : ''}`}
+                        style={{ background: sw.hex }}
+                        onClick={() => setPaletteIdx(i)}
+                        title={sw.name}
+                      />
+                    ))}
+                  </div>
+                  <div className="lp-swatch-dropdown-chips">
+                    <button
+                      type="button"
+                      className="lp-chip-dropdown is-active"
+                      onClick={() => setPaletteIdx((paletteIdx + 1) % FOOTBALL_COLOR_PALETTES.length)}
+                    >
+                      <span className="lp-chip-dot" style={{ background: palette.primary }} />
+                      <span>{palette.name.split(' ')[0] || 'Navy Blue'}</span>
+                      <ChevronDown size={12} />
+                    </button>
+                    <span className="lp-chip-dropdown">
+                      <span className="lp-chip-dot" style={{ background: '#D4AF37' }} />
+                      <span>Gold</span>
+                    </span>
+                    <span className="lp-chip-dropdown">
+                      <span className="lp-chip-dot" style={{ background: '#16A34A' }} />
+                      <span>Green</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="lp-kit-pattern-col">
+                  <span className="lp-swatches-label">Kit Pattern</span>
+                  <div className="lp-kit-pill-grid">
+                    {[
+                      {
+                        id: 'solid',
+                        label: 'Solid',
+                        icon: <span className="lp-pattern-dot" />,
+                      },
+                      {
+                        id: 'stripes',
+                        label: 'Stripes',
+                        icon: (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <rect x="1" y="1" width="2" height="10" rx="0.5" />
+                            <rect x="5" y="1" width="2" height="10" rx="0.5" />
+                            <rect x="9" y="1" width="2" height="10" rx="0.5" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: 'sash',
+                        label: 'Sash',
+                        icon: (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <polygon points="1,11 3.5,11 11,2 8.5,2" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: 'checkered',
+                        label: 'Checkered',
+                        icon: (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <rect x="1" y="1" width="4.5" height="4.5" />
+                            <rect x="6.5" y="6.5" width="4.5" height="4.5" />
+                          </svg>
+                        ),
+                      },
+                    ].map((k) => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        className={`lp-kit-style-pill ${kitStyle === k.id ? 'is-active' : ''}`}
+                        onClick={() => handleKitSelect(k.id as any)}
+                        title={`Select ${k.label} Kit Pattern`}
+                      >
+                        {k.icon}
+                        <span>{k.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <h1 className="lp-h1">
-              <span className="sr-only">Free football club website with live match centre — </span>
-              {/* Explicit breaks: left to wrap, the fallback font fits "Big-club matchday." on one line
-                  and the webfont doesn't, so the swap would shift the whole page */}
-              Grassroots club.<br /><em>Big-club</em><br />matchday.
-            </h1>
-
-            <p className="lp-hero-sub">
-              itsfootball.club is the free platform for grassroots football and soccer clubs: your official club website, live match centre,
-              digital member passes, subs collection, a merch shop and sponsor reporting, run by your committee from one
-              dashboard. No developer. No spreadsheets. No 40-message group chats.
-            </p>
-
-            <form className="lp-claim" onSubmit={claim}>
-              <div className="lp-claim-field">
-                <label htmlFor="lp-club-name" className="lp-claim-prefix">itsfootball.club/</label>
-                <input
-                  id="lp-club-name"
-                  value={clubName}
-                  onChange={e => setClubName(e.target.value)}
-                  placeholder="your club name"
-                  autoComplete="off"
-                  maxLength={60}
-                  aria-describedby="lp-claim-status"
-                />
-              </div>
-              <button type="submit" className="lp-claim-btn">
-                Claim it <ArrowRight size={17} />
-              </button>
-            </form>
+          {/* Right Column: Live Matchday Command Console */}
+          <div
+            ref={stageRef}
+            className="lp-stage"
+            aria-hidden="true"
+            data-theme="dark"
+            onMouseMove={handleStageMouseMove}
+            onMouseLeave={handleStageMouseLeave}
+          >
             <div
-              id="lp-claim-status"
-              aria-live="polite"
-              className={`lp-claim-status ${clubName.trim() ? (slugCheck.valid ? 'ok' : 'bad') : ''}`}
+              className="lp-browser"
+              style={{
+                transform: `perspective(1000px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35}deg)`,
+              }}
             >
-              {!clubName.trim() ? (
-                <>Type your club&apos;s name to check your web address.</>
-              ) : slugCheck.valid ? (
-                <><CheckCircle2 size={15} /> itsfootball.club/{slugCheck.cleanSlug} looks free. Claim it before someone else does.</>
-              ) : (
-                <><AlertCircle size={15} /> {slugCheck.error}</>
-              )}
-            </div>
+              <div className="lp-browser-bar">
+                <div className="lp-dots">
+                  <i className="dot-red" />
+                  <i className="dot-yellow" />
+                  <i className="dot-green" />
+                </div>
+                <div className="lp-browser-tab">
+                  <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
+                  <span>itsfootball.club - Matchday Center</span>
+                </div>
+                <div className="lp-url">itsfootball.club</div>
+              </div>
 
-            <div className="lp-swatches" role="group" aria-label="Preview club colours">
-              <span className="lp-swatches-label">Try your colours</span>
-              {FOOTBALL_COLOR_PALETTES.map((p, i) => (
-                <button
-                  key={p.name}
-                  type="button"
-                  className="lp-swatch"
-                  aria-label={p.name}
-                  aria-pressed={i === paletteIdx}
-                  title={p.name}
-                  onClick={() => setPaletteIdx(i)}
-                  style={{ '--sw-p': p.primary, '--sw-a': p.accent } as React.CSSProperties}
-                />
-              ))}
-            </div>
+              <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
+                <div className="lp-mock-clock">{minute}:14</div>
 
-            <div className="lp-kit-styles" role="group" aria-label="Kit pattern style">
-              <span className="lp-swatches-label">Kit pattern:</span>
-              <div className="lp-kit-pills">
-                {KIT_STYLES.map(k => (
+                <div className="lp-mock-score-row">
+                  <div className={`lp-mock-team-badge ${isKitFlash ? 'is-kit-flash' : ''}`} title={`Home Kit: ${kitStyle}`}>
+                    <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
+                    <span className="lp-mock-team">HOME</span>
+                  </div>
+                  <div className="lp-mock-digit">{homeScore}</div>
+                  <span className="lp-mock-colon">:</span>
+                  <div className="lp-mock-digit">{awayScore}</div>
+                  <div className="lp-mock-team-badge">
+                    <span className="lp-mock-team">AWAY</span>
+                  </div>
+                </div>
+
+                <div className="lp-mock-live-wrap">
+                  <span className="lp-mock-live-badge">● Live Match</span>
+                  <span className={`lp-mock-kit-pill ${isKitFlash ? 'is-kit-flash' : ''}`} title={`Active Match Kit: ${kitStyle.toUpperCase()}`}>
+                    <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
+                    <span className="lp-kit-tag-text">{kitStyle.toUpperCase()} KIT</span>
+                  </span>
+                </div>
+
+                {/* Dual-Channel Electronic LED Substitution Board */}
+                <div className="lp-sub-matrix" aria-live="polite">
+                  <div className="lp-sub-panel in">
+                    <span className="lp-sub-tag">SUB IN:</span>
+                    <span className="lp-sub-num">{subInPlayer}</span>
+                  </div>
+                  <div className="lp-sub-panel out">
+                    <span className="lp-sub-tag">SUB OUT:</span>
+                    <span className="lp-sub-num">{subOutPlayer}</span>
+                  </div>
+                </div>
+
+                {/* 5 Prominent Tactile Action Cards */}
+                <div className="lp-action-cards" role="toolbar" aria-label="Touchline matchday controls">
                   <button
-                    key={k.id}
                     type="button"
-                    className={`lp-kit-pill ${kitStyle === k.id ? 'is-active' : ''}`}
-                    onClick={() => setKitStyle(k.id)}
+                    className={`lp-action-card btn-goal ${isGoalFlash ? 'is-active' : ''}`}
+                    onClick={triggerGoal}
+                    title="Celebrate a goal and advance the score roll"
                   >
-                    {k.label}
+                    <Goal size={16} />
+                    <span>Goal!</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    className="lp-action-card btn-sub"
+                    onClick={triggerSub}
+                    title="Execute player substitution on LED board"
+                  >
+                    <ArrowLeftRight size={16} />
+                    <span>Sub</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`lp-action-card btn-card ${refCardActive ? 'is-active' : ''}`}
+                    onClick={triggerCard}
+                    title="Cycle referee yellow/red cards"
+                  >
+                    <span className="lp-mini-card" />
+                    <span>Card</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`lp-action-card btn-half ${matchStatus === 'halftime' ? 'is-active' : ''}`}
+                    onClick={triggerHalfTime}
+                    title="Toggle half time whistle"
+                  >
+                    <Clock size={16} />
+                    <span>Half Time</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`lp-action-card btn-end ${matchStatus === 'ended' ? 'is-active' : ''}`}
+                    onClick={triggerEndMatch}
+                    title="Full time whistle"
+                  >
+                    <X size={16} />
+                    <span>End Match</span>
+                  </button>
+                </div>
+
+                {/* Live Match Events Summary (2-column layout matching mockup) */}
+                <div className="lp-mockup-events">
+                  <div className="lp-mockup-events-title">Live Match Events</div>
+                  <div className="lp-mockup-events-grid">
+                    <div className="lp-mockup-events-col-left">
+                      <div className="lp-mock-event">
+                        <Goal size={13} color="#10B981" />
+                        <span className="lp-mock-ev-time">72&apos; Goal</span>
+                        <span className="lp-mock-ev-desc">J. Silva, Home</span>
+                      </div>
+                    </div>
+                    <div className="lp-mockup-events-col-right">
+                      <div className="lp-mock-event">
+                        <span className="lp-card-yellow" />
+                        <span className="lp-mock-ev-time">68&apos;</span>
+                        <span className="lp-mock-ev-desc yellow"><b>Yellow Card</b> T. Cole, Away</span>
+                      </div>
+                      <div className="lp-mock-event">
+                        <ArrowLeftRight size={12} color="#10B981" />
+                        <span className="lp-mock-ev-time">65&apos;</span>
+                        <span className="lp-mock-ev-desc green"><b>Sub</b></span>
+                      </div>
+                      <div className="lp-mock-event">
+                        <span className="lp-card-red" />
+                        <span className="lp-mock-ev-time">55&apos;</span>
+                        <span className="lp-mock-ev-desc red"><b>Red Card</b> M. Evans, Away</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          {/* 3. Just underneath 1 & 2: Lineup graphic (interactive) showing as if layed beneath 1 & 2 */}
+          <div className="lp-hero-pitch-layer">
+            <div className="lp-hero-pitch-grid">
+              <div
+                ref={pitchRef}
+              className="lp-pitch-3d-scene"
+              onMouseMove={handlePitchMouseMove}
+              onMouseLeave={handlePitchMouseLeave}
+            >
+              <div
+                className="lp-tactical-pitch"
+                style={{
+                  transform: `rotateX(${pitchTilt.x}deg) rotateY(${pitchTilt.y}deg) scale(0.96)`,
+                }}
+              >
+                {/* Full Pitch Authentic Markings */}
+                <div className="lp-pitch-boundary" />
+                <div className="lp-pitch-halfway" />
+                <div className="lp-pitch-center-circle">
+                  <div className="lp-pitch-center-spot" />
+                </div>
+
+                {/* Left Penalty Area (Defending) */}
+                <div className="lp-pitch-box left" />
+                <div className="lp-pitch-goal-area left" />
+                <div className="lp-pitch-penalty-spot left" />
+                <div className="lp-pitch-penalty-arc left" />
+
+                {/* Right Penalty Area (Attacking) */}
+                <div className="lp-pitch-box right" />
+                <div className="lp-pitch-goal-area right" />
+                <div className="lp-pitch-penalty-spot right" />
+                <div className="lp-pitch-penalty-arc right" />
+
+                {/* 4 Corner Arcs */}
+                <div className="lp-pitch-corner top-left" />
+                <div className="lp-pitch-corner bottom-left" />
+                <div className="lp-pitch-corner top-right" />
+                <div className="lp-pitch-corner bottom-right" />
+
+                {/* Dynamic Passing Network with Directional Arrowheads */}
+                <svg className="lp-pitch-mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <marker id="meshArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto">
+                      <path d="M 0 2 L 6 5 L 0 8 z" fill="rgba(110, 231, 183, 0.9)" />
+                    </marker>
+                  </defs>
+                  {TACTICAL_LINKS[formation].map(([fromIdx, toIdx, hasArrow], lIdx) => {
+                    const fromCoord = FORMATIONS[formation].coords[fromIdx];
+                    const toCoord = FORMATIONS[formation].coords[toIdx];
+                    if (!fromCoord || !toCoord) return null;
+                    return (
+                      <line
+                        key={`${formation}-${lIdx}`}
+                        x1={`${fromCoord[0]}%`}
+                        y1={`${fromCoord[1]}%`}
+                        x2={`${toCoord[0]}%`}
+                        y2={`${toCoord[1]}%`}
+                        className="lp-pitch-link"
+                        markerEnd={hasArrow ? "url(#meshArrow)" : undefined}
+                      />
+                    );
+                  })}
+                </svg>
+
+                {/* 11 3D Neon Glowing Player Tokens */}
+                {FORMATIONS[formation].coords.map(([x, y], i) => {
+                  const player = TACTICAL_ROSTER[i];
+                  const isSelected = selectedPitchPlayer === player.num;
+                  return (
+                    <button
+                      key={player.num}
+                      type="button"
+                      className={`lp-pitch-token zone-${player.zone} ${isSelected ? 'is-selected' : ''}`}
+                      style={{ left: `${x}%`, top: `${y}%` }}
+                      onClick={() => setSelectedPitchPlayer(player.num)}
+                      title={`${player.name} (${player.role})`}
+                    >
+                      <span className="lp-token-num">{player.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {demoClub && (
-              <Link href={`/${demoClub.slug}`} className="lp-demo">
-                Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
-              </Link>
-            )}
+            {/* Docked Player Inspector Card (matching mockup) */}
+            <div className="lp-workbench-card">
+              <div className="lp-wcard-header">
+                <div className="lp-wcard-avatar">{activePitchPlayer.label}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="lp-wcard-name">#{activePitchPlayer.label} {activePitchPlayer.name}</div>
+                  <div className="lp-wcard-sub">
+                    <Clock size={12} color="#10B981" /> {activePitchPlayer.goals ? `${activePitchPlayer.goals} Goals` : 'Matchday XI'} &middot; {activePitchPlayer.role}
+                  </div>
+                </div>
+                <span className="lp-wcard-role-pill">
+                  {activePitchPlayer.zone === 'gk' ? 'GK' : activePitchPlayer.zone === 'def' ? 'DEF' : activePitchPlayer.zone === 'mid' ? 'MID' : 'FWD'}
+                </span>
+              </div>
 
+              <div className="lp-wcard-stats">
+                <div className="lp-wcard-stat-col">
+                  <div className="lp-wcard-stat-label">Rating</div>
+                  <div className="lp-wcard-stat-val">{activePitchPlayer.rating.toFixed(1)}</div>
+                  <div className="lp-wcard-stat-sub">Pass Map &middot; {activePitchPlayer.assists} Ast</div>
+                </div>
+                <div className="lp-passmap-widget">
+                  <div className="lp-passmap-title">Avg Position</div>
+                  <div className="lp-passmap-box">
+                    <div className="lp-passmap-pitch-outline" />
+                    <div
+                      className="lp-passmap-heat"
+                      style={{
+                        left: `${activePitchPlayer.avgPos.x}%`,
+                        top: `${activePitchPlayer.avgPos.y}%`,
+                        transition: 'left 0.35s ease, top 0.35s ease',
+                      }}
+                    />
+                    <span
+                      className="lp-passmap-dot"
+                      style={{
+                        left: `${activePitchPlayer.avgPos.x}%`,
+                        top: `${activePitchPlayer.avgPos.y}%`,
+                        transition: 'left 0.35s ease, top 0.35s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="lp-wcard-section">
+                <div className="lp-wcard-section-label">Formation Selector</div>
+                <div className="lp-formation-btns">
+                  {(['4-3-3', '4-4-2', '3-5-2'] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      className={`lp-formation-btn ${formation === f ? 'is-active' : ''}`}
+                      onClick={() => setFormation(f)}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lp-wcard-actions">
+                <button type="button" className="lp-wcard-action-btn">
+                  <div className="lp-wcard-btn-left">
+                    <Crosshair size={14} color="#60A5FA" />
+                    <span>Set Pieces</span>
+                  </div>
+                  <ChevronRight size={14} />
+                </button>
+                <button type="button" className="lp-wcard-action-btn">
+                  <div className="lp-wcard-btn-left">
+                    <FileText size={14} color="#34D399" />
+                    <span>Tactical Notes</span>
+                  </div>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          {/* Trust and Meta Footer Bar below 3D Pitch */}
+          <div className="lp-hero-footer-bar">
             <div className="lp-hero-meta">
               <span><Check size={15} /> Free to set up</span>
               <span><Check size={15} /> Your crest, colours &amp; domain</span>
               <span><Check size={15} /> Nothing for supporters to install</span>
             </div>
-
+            {demoClub && (
+              <Link href={`/${demoClub.slug}`} className="lp-demo">
+                Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
+              </Link>
+            )}
             {isAuthenticated && user ? (
               <div className="lp-hero-signin">
                 Welcome back, {user.full_name.split(' ')[0]}.{' '}
@@ -653,148 +1094,6 @@ export default function PlatformHomePage() {
                 <button type="button" className="lp-linkbtn" onClick={() => openAuth('login')}>Sign in</button>
               </div>
             )}
-          </div>
-
-          {/* Live product mock, painted in the visitor's name and colours */}
-          <div
-            ref={stageRef}
-            className="lp-stage"
-            aria-hidden="true"
-            data-theme="dark"
-            onMouseMove={handleStageMouseMove}
-            onMouseLeave={handleStageMouseLeave}
-          >
-            <div className="lp-toast">
-              <div className="lp-toast-ico"><CalendarCheck size={16} /></div>
-              <div>
-                <b>Sam R. is in for Saturday</b>
-                <small>16 available · 2 out · 3 yet to reply</small>
-              </div>
-            </div>
-
-            <div
-              className="lp-browser"
-              style={{
-                transform: `perspective(1000px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35}deg)`,
-              }}
-            >
-              <div className="lp-browser-bar">
-                <div className="lp-dots"><i /><i /><i /></div>
-                <div className="lp-url">itsfootball.club/<b>{previewSlug}</b></div>
-              </div>
-              <div className="lp-club-head">
-                <div className="lp-crest-wrap">
-                  <div className="lp-crest">{initials(displayName)}</div>
-                  <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                </div>
-                <div className="min-w-0">
-                  <div className="lp-club-name">{displayName}</div>
-                  <div className="lp-club-nav"><span>Fixtures</span><span>Squad</span><span>News</span><span>Membership</span></div>
-                </div>
-              </div>
-              <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
-                <div className="lp-score-top">
-                  <span className="lp-live-chip"><span className="pulse-dot" /> LIVE {minute}&apos;</span>
-                  <span className="lp-comp">Sunday League · Div 2 · Pitch 1</span>
-                </div>
-                <div className="lp-board">
-                  <div className="lp-team">
-                    <div className="lp-crest">{initials(displayName)}</div>
-                    <span>{displayName}</span>
-                  </div>
-                  <div className="lp-digits">
-                    <div style={{ zoom: 0.65 }}>
-                      <ScoreboardDigitRoll value={homeScore} isGoal={isGoalFlash} accentColor={palette.accent} />
-                    </div>
-                    <span className="sep">:</span>
-                    <div style={{ zoom: 0.65 }}>
-                      <ScoreboardDigitRoll value={1} />
-                    </div>
-                  </div>
-                  <div className="lp-team">
-                    <div className="lp-team-away">RVR</div>
-                    <span>Riverside Rovers</span>
-                  </div>
-                </div>
-
-                {/* Touchline Action Controller Buttons */}
-                <div className="lp-dugout-bar" role="toolbar" aria-label="Touchline matchday controls">
-                  <div className="lp-dugout-title">TOUCHLINE ACTION</div>
-                  <div className="lp-dugout-btns">
-                    <button
-                      type="button"
-                      className={`lp-dugout-btn lp-btn-goal ${isGoalFlash ? 'is-active' : ''}`}
-                      onClick={triggerGoal}
-                      title="Celebrate a goal and advance the score roll"
-                    >
-                      <Goal size={13} /> Goal!
-                    </button>
-                    <button
-                      type="button"
-                      className={`lp-dugout-btn lp-btn-sub ${subBoardActive ? 'is-active' : ''}`}
-                      onClick={triggerSub}
-                      title="Toggle the 4th official electronic LED substitution board"
-                    >
-                      <ArrowLeftRight size={13} /> Sub
-                    </button>
-                    <button
-                      type="button"
-                      className={`lp-dugout-btn lp-btn-card ${refCardActive ? 'is-active' : ''}`}
-                      onClick={triggerCard}
-                      title="Cycle yellow and red referee cards"
-                    >
-                      <span className={refCardActive === 'red' ? 'lp-card-red' : 'lp-card-yellow'} />
-                      {refCardActive === 'red' ? 'Red Card' : 'Card'}
-                    </button>
-                    {isDugoutModified && (
-                      <button
-                        type="button"
-                        className="lp-dugout-reset"
-                        onClick={resetDugout}
-                        title="Reset match simulation"
-                      >
-                        <RotateCcw size={11} /> Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Electronic Sub Board */}
-                {subBoardActive && (
-                  <div className="lp-sub-board" aria-live="polite">
-                    <div className="lp-sub-panel in">
-                      <span className="lp-sub-tag">▲ IN</span>
-                      <span className="lp-sub-num">10</span>
-                      <span className="lp-sub-name">J. Park</span>
-                    </div>
-                    <div className="lp-sub-panel out">
-                      <span className="lp-sub-tag">▼ OUT</span>
-                      <span className="lp-sub-num">07</span>
-                      <span className="lp-sub-name">L. Hughes</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Match Events Timeline */}
-                <div className="lp-timeline">
-                  {events.map(ev => (
-                    <div key={ev.id} className={`lp-ev ${ev.type === 'goal' ? 'lp-ev-goal is-in' : ''}`}>
-                      <time>{ev.minute}&apos;</time>
-                      {ev.type === 'goal' ? (
-                        <Goal size={14} color={palette.accent} />
-                      ) : ev.type === 'sub' ? (
-                        <ArrowLeftRight size={13} color="var(--c-sky)" />
-                      ) : ev.type === 'red' ? (
-                        <span className="lp-card-red" />
-                      ) : (
-                        <span className="lp-card-yellow" />
-                      )}
-                      <span><b>{ev.headline}</b> {ev.detail}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -1046,118 +1345,41 @@ export default function PlatformHomePage() {
               </div>
             </article>
 
-            {/* Interactive Tactical Pitch & Lineup Workbench */}
+            {/* Squad Availability & Match Sheets */}
             <article className="lp-tile lp-tile-wide lp-reveal" style={{ '--tc': '#60A5FA' } as React.CSSProperties}>
               <div className="lp-tile-head-row">
                 <div>
                   <div className="lp-tile-ico"><Users size={19} /></div>
-                  <h3>Tactical pitch &amp; 1-tap availability</h3>
-                  <p>Share one link before Thursday. When players tap in, arrange your XI on the pitch and publish the team sheet.</p>
-                </div>
-                <div className="lp-pitch-formation-picker" role="group" aria-label="Pitch formation">
-                  <span className="lp-formation-label">Formation:</span>
-                  <div className="lp-formation-btns">
-                    {(Object.keys(FORMATIONS) as Array<keyof typeof FORMATIONS>).map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        className={`lp-formation-btn ${formation === f ? 'is-active' : ''}`}
-                        onClick={() => setFormation(f)}
-                      >
-                        {FORMATIONS[f].label}
-                      </button>
-                    ))}
-                  </div>
+                  <h3>1-tap availability &amp; official team sheets</h3>
+                  <p>Send one link before Thursday. When players tap in, your starting XI is locked, the ref gets a digital match sheet, and subs know their roles.</p>
                 </div>
               </div>
 
-              <div className="lp-viz lp-tactical-stage">
-                <div className="lp-tactical-pitch">
-                  <div className="lp-pitch-half" />
-                  <div className="lp-pitch-box" />
-                  <div className="lp-pitch-goal-area" />
-                  <div className="lp-pitch-penalty-spot" />
-                  <div className="lp-pitch-center-arc" />
-
-                  {/* Dynamic Tactical Passing Mesh */}
-                  <svg className="lp-pitch-mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    {TACTICAL_LINKS[formation].map(([fromIdx, toIdx], lIdx) => {
-                      const fromCoord = FORMATIONS[formation].coords[fromIdx];
-                      const toCoord = FORMATIONS[formation].coords[toIdx];
-                      return (
-                        <line
-                          key={`${formation}-${lIdx}`}
-                          x1={`${fromCoord[0]}%`}
-                          y1={`${fromCoord[1]}%`}
-                          x2={`${toCoord[0]}%`}
-                          y2={`${toCoord[1]}%`}
-                          className="lp-pitch-link"
-                        />
-                      );
-                    })}
-                  </svg>
-
-                  {/* 11 Dynamic Player Tokens */}
-                  {FORMATIONS[formation].coords.map(([x, y], i) => {
-                    const player = TACTICAL_ROSTER[i];
-                    const isSelected = selectedPitchPlayer === player.num;
-                    return (
-                      <button
-                        key={player.num}
-                        type="button"
-                        className={`lp-pitch-token zone-${player.zone} ${isSelected ? 'is-selected' : ''}`}
-                        style={{ left: `${x}%`, top: `${y}%` }}
-                        onClick={() => setSelectedPitchPlayer(isSelected ? null : player.num)}
-                        title={`${player.name} (${player.role})`}
-                      >
-                        <span className="lp-token-num">{player.num}</span>
-                        <span className="lp-token-name">{player.name.split(' ')[1] || player.name}</span>
-                      </button>
-                    );
-                  })}
-
-                  {/* Floating Tactical Inspector Card */}
-                  {activePitchPlayer && (
-                    <div className="lp-pitch-inspector" aria-live="polite">
-                      <div className="lp-inspector-top">
-                        <div className="lp-inspector-badge">#{activePitchPlayer.num}</div>
-                        <div className="min-w-0">
-                          <div className="lp-inspector-name">{activePitchPlayer.name}</div>
-                          <div className="lp-inspector-role">{activePitchPlayer.role}</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="lp-inspector-close"
-                          onClick={() => setSelectedPitchPlayer(null)}
-                          aria-label="Close player card"
-                        >
-                          ✕
-                        </button>
+              <div className="lp-viz lp-avail-stage">
+                <div className="lp-avail-grid">
+                  {TACTICAL_ROSTER.slice(0, 8).map(player => (
+                    <div key={player.num} className="lp-avail-card">
+                      <div className="lp-avail-card-num">#{player.num}</div>
+                      <div className="lp-avail-card-info">
+                        <div className="lp-avail-card-name">{player.name}</div>
+                        <div className="lp-avail-card-role">{player.role}</div>
                       </div>
-                      <div className="lp-inspector-status">
-                        <span className="pulse-dot" style={{ background: '#10B981', width: 6, height: 6 }} />
-                        <span>Confirmed &middot; {activePitchPlayer.confirmed}</span>
-                      </div>
-                      <div className="lp-inspector-stats">
-                        <span><b>{activePitchPlayer.goals}</b> goals</span>
-                        <span><b>{activePitchPlayer.assists}</b> assists</span>
-                        <span className="lp-inspector-tag">Starting XI</span>
-                      </div>
+                      <span className="lp-avail-card-status">
+                        <Check size={12} /> Confirmed
+                      </span>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-                {/* Availability Status Bar & Bench Strip */}
                 <div className="lp-tactical-footer">
                   <div className="lp-avail-badges">
                     <span className="lp-avail-badge in">
-                      <Check size={12} /> 11 Starting XI
+                      <Check size={12} /> 11 Starting XI Confirmed
                     </span>
                     <span className="lp-avail-badge sub">
-                      <ArrowLeftRight size={12} /> 5 Bench
+                      <ArrowLeftRight size={12} /> 5 Bench Available
                     </span>
                     <span className="lp-avail-badge out">
-                      <X size={12} /> 2 Out
+                      <X size={12} /> 2 Unavailable
                     </span>
                   </div>
                   <div className="lp-bench-row">
@@ -1173,6 +1395,7 @@ export default function PlatformHomePage() {
                 </div>
               </div>
             </article>
+
 
             {/* Payments */}
             <article className="lp-tile lp-reveal" style={{ '--tc': '#FBBF24' } as React.CSSProperties}>
