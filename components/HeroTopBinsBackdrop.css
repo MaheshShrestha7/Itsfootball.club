@@ -1,0 +1,388 @@
+/* Hero Top Bins Soccer Goal Atmospheric Animation
+   Built adhering to Emil Kowalski animation standards:
+   - Composite-only: transform and opacity
+   - Strict cubic-bezier(0.23, 1, 0.32, 1) curve
+   - Spring decay on net deformation
+   - Zero layout reflow
+   - Full prefers-reduced-motion & pointer gating
+*/
+
+.hero-top-bins-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  contain: paint layout;
+}
+
+/* Atmospheric stadium lighting */
+.goal-floodlights {
+  position: absolute;
+  top: -15%;
+  right: -5%;
+  width: 75vw;
+  height: 65vh;
+  background: radial-gradient(
+    ellipse 65% 55% at 75% 20%,
+    color-mix(in srgb, var(--goal-p) 20%, transparent),
+    color-mix(in srgb, var(--goal-p) 5%, transparent) 45%,
+    transparent 75%
+  );
+  filter: blur(48px);
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+}
+
+.goal-turf-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(
+    to top,
+    rgba(10, 16, 26, 0.92) 0%,
+    rgba(10, 16, 26, 0.45) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Goal SVG canvas */
+.goal-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.72;
+  transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform;
+}
+
+/* Post rattle on impact */
+.is-rattling .goal-frame {
+  animation: goal-post-rattle 140ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes goal-post-rattle {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-2.5px) rotate(0.15deg); }
+  60% { transform: translateY(1.5px) rotate(-0.1deg); }
+  85% { transform: translateY(-0.8px); }
+  100% { transform: translateY(0); }
+}
+
+/* Interactive Top Bins Targets */
+.top-bin-target {
+  pointer-events: auto;
+  cursor: crosshair;
+  transform-origin: center;
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.target-ring-outer {
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  fill: transparent;
+  animation: target-ring-spin 12s linear infinite;
+  transform-origin: center;
+}
+
+.target-ring-inner {
+  stroke-width: 1.8;
+  fill: color-mix(in srgb, var(--goal-a) 12%, transparent);
+  transition: fill 0.2s ease, stroke-width 0.2s ease;
+}
+
+.target-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  fill: var(--goal-a);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+  user-select: none;
+}
+
+@keyframes target-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .top-bin-target:hover {
+    transform: scale(1.12);
+  }
+  .top-bin-target:hover .target-ring-inner {
+    fill: color-mix(in srgb, var(--goal-a) 28%, transparent);
+    stroke-width: 2.5;
+  }
+  .top-bin-target:hover .target-label {
+    filter: drop-shadow(0 0 8px var(--goal-a));
+  }
+}
+
+/* Net ripple spring on ball impact */
+.net-plane {
+  transform-origin: 340px 120px;
+}
+
+.net-left.is-rippling-left {
+  animation: net-bulge-left 360ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  transform-origin: 340px 120px;
+}
+
+.net-right.is-rippling-right {
+  animation: net-bulge-right 360ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  transform-origin: 860px 120px;
+}
+
+@keyframes net-bulge-left {
+  0% { transform: scale(1) translate3d(0, 0, 0); }
+  35% { transform: scale(1.18) translate3d(-18px, -14px, 0); }
+  65% { transform: scale(0.96) translate3d(4px, 2px, 0); }
+  85% { transform: scale(1.03) translate3d(-2px, -1px, 0); }
+  100% { transform: scale(1) translate3d(0, 0, 0); }
+}
+
+@keyframes net-bulge-right {
+  0% { transform: scale(1) translate3d(0, 0, 0); }
+  35% { transform: scale(1.18) translate3d(18px, -14px, 0); }
+  65% { transform: scale(0.96) translate3d(-4px, 2px, 0); }
+  85% { transform: scale(1.03) translate3d(2px, -1px, 0); }
+  100% { transform: scale(1) translate3d(0, 0, 0); }
+}
+
+/* Ball flight animation */
+.ball-flight-group {
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.ball-flight-group.is-right-arc {
+  animation: ball-shot-flight-right 950ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.ball-flight-group.is-left-arc {
+  animation: ball-shot-flight-left 950ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes ball-shot-flight-right {
+  0% {
+    transform: translate3d(var(--start-x), var(--start-y), 0) scale(1.2) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  /* Apex of curl into the top bin right */
+  55% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x)), calc(var(--start-y) + var(--delta-y)), 0) scale(0.62) rotate(840deg);
+    opacity: 1;
+  }
+  /* Net bulge bounce down */
+  75% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x) + 12px), calc(var(--start-y) + var(--delta-y) + 32px), 0) scale(0.55) rotate(980deg);
+    opacity: 0.85;
+  }
+  /* Roll down along back net and fade */
+  100% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x) + 8px), calc(var(--start-y) + var(--delta-y) + 90px), 0) scale(0.5) rotate(1120deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ball-shot-flight-left {
+  0% {
+    transform: translate3d(var(--start-x), var(--start-y), 0) scale(1.2) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  /* Apex of curl into the top bin left */
+  55% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x)), calc(var(--start-y) + var(--delta-y)), 0) scale(0.62) rotate(-840deg);
+    opacity: 1;
+  }
+  /* Net bulge bounce down */
+  75% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x) - 12px), calc(var(--start-y) + var(--delta-y) + 32px), 0) scale(0.55) rotate(-980deg);
+    opacity: 0.85;
+  }
+  /* Roll down along back net and fade */
+  100% {
+    transform: translate3d(calc(var(--start-x) + var(--delta-x) - 8px), calc(var(--start-y) + var(--delta-y) + 90px), 0) scale(0.5) rotate(-1120deg);
+    opacity: 0;
+  }
+}
+
+.ball-trail-flare {
+  transform: translate3d(-30px, 12px, 0) scaleX(2.5);
+  opacity: 0.45;
+  filter: blur(8px);
+}
+
+.soccer-ball-mesh {
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.7));
+}
+
+/* Floating celebratory score */
+.floating-top-bin-score {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  animation: float-score-pop 1100ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.floating-top-bin-score.is-left {
+  left: 34%;
+  top: 25%;
+}
+
+.floating-top-bin-score.is-right {
+  right: 18%;
+  top: 25%;
+}
+
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--goal-a);
+  color: #0F172A;
+  font-family: var(--font-heading, sans-serif);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--goal-a) 40%, transparent);
+}
+
+@keyframes float-score-pop {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    transform: translate3d(0, -8px, 0) scale(1.08);
+    opacity: 1;
+  }
+  30% {
+    transform: translate3d(0, -14px, 0) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate3d(0, -32px, 0) scale(0.98);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(0, -45px, 0) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Quick shoot triggers for seamless user interaction */
+.hero-top-bins-controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.hero-shoot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  color: var(--text-secondary, #94A3B8);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 0.2s ease,
+              color 0.2s ease;
+  user-select: none;
+}
+
+.shoot-ball {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-shoot-btn:hover {
+    transform: translateY(-1.5px);
+    border-color: var(--goal-p);
+    color: #FFFFFF;
+  }
+  .hero-shoot-btn:hover .shoot-ball {
+    transform: rotate(35deg) scale(1.15);
+  }
+}
+
+.hero-shoot-btn:active {
+  transform: scale(0.96);
+}
+
+.hero-streak-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--goal-a) 18%, rgba(15, 23, 42, 0.75));
+  border: 1px solid color-mix(in srgb, var(--goal-a) 40%, transparent);
+  color: var(--goal-a);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 900px) {
+  .hero-top-bins-controls {
+    top: auto;
+    bottom: 0.75rem;
+    right: 50%;
+    transform: translateX(50%);
+    width: max-content;
+  }
+  .goal-svg {
+    opacity: 0.55;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .target-ring-outer {
+    animation: none;
+  }
+  .ball-flight-group.is-right-arc,
+  .ball-flight-group.is-left-arc {
+    animation: none;
+    opacity: 0;
+  }
+  .is-rattling .goal-frame {
+    animation: none;
+  }
+  .net-left.is-rippling-left,
+  .net-right.is-rippling-right {
+    animation: none;
+  }
+  .floating-top-bin-score {
+    animation: float-score-pop 600ms ease forwards;
+  }
+}

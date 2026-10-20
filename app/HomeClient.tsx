@@ -10,6 +10,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import SponsorLogo from '@/components/SponsorLogo';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
+import HeroTopBinsBackdrop from '@/components/HeroTopBinsBackdrop';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { sponsorHref } from '@/lib/sponsors';
@@ -291,6 +292,7 @@ export default function PlatformHomePage() {
   const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
   const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [shotNonce, setShotNonce] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
 
   // Tactical Pitch state
@@ -309,6 +311,7 @@ export default function PlatformHomePage() {
   const triggerGoal = () => {
     setHomeScore(s => s + 1);
     setIsGoalFlash(true);
+    setShotNonce(n => n + 1);
     setTimeout(() => setIsGoalFlash(false), 1400);
     const newEv: DugoutEvent = {
       id: String(Date.now()),
@@ -502,6 +505,11 @@ export default function PlatformHomePage() {
           '--lp-on-p': onPrimary,
         } as React.CSSProperties}
       >
+        <HeroTopBinsBackdrop
+          shotNonce={shotNonce}
+          primaryColor={palette.primary}
+          accentColor={palette.accent}
+        />
         <div className="container lp-hero-grid">
           <div>
             <div className="lp-kicker lp-matchday-tag">
