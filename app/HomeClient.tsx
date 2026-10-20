@@ -444,15 +444,14 @@ export default function PlatformHomePage() {
           <div className="lp-hero-upper">
             {/* 1. On left side */}
             <div className="lp-hero-left">
-              {/* 1.1 "Grassroot club. Big-club matchday" section */}
+              {/* No hidden keyword text in the H1 (Google treats it as hidden text); the definition below carries the keywords */}
               <h1 className="lp-h1">
-                <span className="sr-only">Free football club website with live match centre — </span>
                 Grassroots club.<br />
                 Big-club matchday.
               </h1>
 
               <p className="lp-hero-sub">
-                A free club website, live scores and member passes, set up in 3 minutes.
+                itsfootball.club is the free platform for grassroots football clubs: club website, live match centre and member passes.
               </p>
 
               {/* 1.2 Claim URL section */}

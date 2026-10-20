@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { homeSchema, clubSchema, matchSchema, matchNode } from './schema';
 import type { ClubMetadataRow, MatchMetadataRow, NewsMetadataRow } from './supabase/club-lookup';
 
-// 1. Homepage schema: Organization and SoftwareApplication with sameAs
+// 1. Homepage schema: Organization and the platform Service with sameAs
 const home = homeSchema() as { '@context': string; '@graph': any[] };
 assert.equal(home['@context'], 'https://schema.org');
 const nodes = home['@graph'];
@@ -14,10 +14,15 @@ assert.ok(org, 'Organization node must be present');
 assert.ok(Array.isArray(org.sameAs), 'Organization must have sameAs array');
 assert.ok(org.sameAs.includes('https://www.facebook.com/ItsFootball.Club'), 'Organization sameAs must include Facebook page');
 
-const app = nodes.find(n => Array.isArray(n['@type']) ? n['@type'].includes('SoftwareApplication') : n['@type'] === 'SoftwareApplication');
-assert.ok(app, 'SoftwareApplication node must be present');
-assert.ok(Array.isArray(app.sameAs), 'SoftwareApplication must have sameAs array');
-assert.ok(app.sameAs.includes('https://www.facebook.com/ItsFootball.Club'), 'SoftwareApplication sameAs must include Facebook page');
+// No SoftwareApplication: Google reports it as an invalid software-app rich result without aggregateRating/review
+assert.ok(!JSON.stringify(nodes).includes('SoftwareApplication'), 'Homepage must not use SoftwareApplication');
+const app = nodes.find(n => n['@type'] === 'Service');
+assert.ok(app, 'Service node must be present');
+assert.equal(app.offers.price, '0', 'Service must offer the free plan');
+assert.equal(app.provider['@id'], org['@id'], 'Service must be provided by the Organization');
+assert.ok(app.hasOfferCatalog.itemListElement.length > 0, 'Service must list its features');
+assert.ok(Array.isArray(app.sameAs), 'Service must have sameAs array');
+assert.ok(app.sameAs.includes('https://www.facebook.com/ItsFootball.Club'), 'Service sameAs must include Facebook page');
 
 // 2. Active public club schema: SportsClub / SportsOrganization
 const mockClub: ClubMetadataRow = {

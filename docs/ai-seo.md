@@ -57,7 +57,7 @@ assistant.
 | --- | --- | --- | --- | --- |
 | 1 | Pricing + booking fee + `/faq` link in llms.txt | 1 | DONE | `app/llms.txt/route.ts`, `lib/llms.ts` |
 | 2 | `/pricing.md` for buying agents | 1 | DONE | `app/pricing.md/route.ts`, `lib/llms.ts` |
-| 3 | `SoftwareApplication` (free offer, features, area served) in home JSON-LD | 1 | DONE | `homeSchema()` in `lib/schema.ts` |
+| 3 | Platform entity (free offer, features, area served) in home JSON-LD; now a `Service`, since Google flags `SoftwareApplication` without reviews as invalid | 1 | DONE | `homeSchema()` in `lib/schema.ts` |
 | 4 | `sameAs` social profiles + contact on `Organization` | 1 | DONE | `SOCIAL_PROFILES` in `lib/seo.ts` |
 | 5 | Quotable definition sentence on the homepage | 1 | DONE | hero sub in `app/HomeClient.tsx` |
 | 6 | News articles get their own pages `/{club}/news/{slug}` | 2 | DONE | `app/[clubSlug]/news/[newsSlug]/`, `@schema/news/...`, sitemap, club page cards are now links |
@@ -188,7 +188,7 @@ Log results in a sheet with date, engine, prompt, runs, cited count, competitors
 - `/ancc/news/selroti-strikers-wins-3rd-edition-of-ancc-dashain-cup-at-craik-park`: own title,
   canonical, `BlogPosting` + `BreadcrumbList`, and the full article text in the HTML without JavaScript.
 - Club page news cards link to `/ancc/news/...`; the sitemap lists the 3 ANCC articles.
-- Home JSON-LD has `WebApplication` with price 0, areaServed and the fee.
+- Home JSON-LD has a `Service` with price 0, areaServed, the fee and the feature list (was `WebApplication`; switched 2026-10-21 to clear the Search Console software-app error).
 - Not checked: the in-browser swap from plain paragraphs to formatted HTML (hydration), on a real phone.
 
 ## Checks after any change here

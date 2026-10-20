@@ -633,7 +633,7 @@
 /* 3. Just underneath 1 and 2: 3D Lineup Pitch Layer layed beneath 1 & 2 */
 /* The pitch tucks under the copy and match centre and runs off the hero's bottom edge (clipped by .lp-hero) */
 .lp-hero-pitch-layer {
-  --pitch-tuck: 5.5rem;
+  --pitch-tuck: 4rem;
   position: relative;
   z-index: 5;
   margin-top: calc(-1 * var(--pitch-tuck));
