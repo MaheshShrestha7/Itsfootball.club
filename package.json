@@ -6,9 +6,9 @@
     "predev": "node scripts/copy-mediapipe.mjs",
     "dev": "next dev",
     "build": "node scripts/copy-mediapipe.mjs && next build",
-    "build:cloudflare": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
+    "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "indexnow": "node scripts/indexnow.mjs",
     "council-links": "esbuild scripts/check-council-links.ts --bundle --platform=node --format=esm --log-level=warning --outfile=.council-links.mjs && node .council-links.mjs",
     "check": "esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/video.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/supabase/sync.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/paged.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/finance.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/email/email.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/slugs.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/push.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/article-text.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/shop.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/tickets.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/permissions.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/teams.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/admin-calendar.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/payments-server.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/member-season-stats.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/player-stats.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/seo.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/schema.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/public-tournaments.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/playing-time.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/season-fees.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/grounds.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/ground-import.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/player-card.check.ts --bundle --platform=node --log-level=warning | node && esbuild lib/tool-pages.check.ts --bundle --platform=node --log-level=warning | node"
@@ -22,21 +22,21 @@
     "dompurify": "^3.4.16",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.475.0",
-    "next": "^15.1.7",
+    "next": "^16.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "stripe": "^22.6.2"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.6",
+    "@opennextjs/cloudflare": "^1.20.12",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "esbuild": "^0.25.4",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^15.5.25",
+    "eslint-config-next": "^16.4.2",
     "typescript": "^5.7.3"
   }
 }

@@ -5,7 +5,7 @@ complete club website with a live match center, member passes, tournaments, paym
 portal. Each club gets its own branded pages at `itsfootball.club/{club}`, and can also run them on
 its own domain.
 
-Built with **Next.js 15 (App Router) + React 19**, **Supabase** (Postgres, Auth, Realtime, Storage),
+Built with **Next.js 16 (App Router) + React 19**, **Supabase** (Postgres, Auth, Realtime, Storage),
 **Cloudflare Workers** (via OpenNext), **Cloudflare R2**, **Stripe Connect**, **Resend** and Web Push.
 
 ---
@@ -138,7 +138,7 @@ volunteer the keys to everything, including finances and children's data. See [R
 
 | Layer | Technology |
 | --- | --- |
-| Framework | Next.js 15 (App Router), React 19, TypeScript |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Hosting | Cloudflare Workers via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) |
 | Database and auth | Supabase: Postgres with Row Level Security, Auth, Realtime, Storage |
 | File storage | Cloudflare R2 through the S3 API (falls back to Supabase Storage) |
@@ -251,7 +251,7 @@ flowchart TB
 
     subgraph Edge["Cloudflare"]
         DNS["itsfootball.club or the club's own domain<br/>Cloudflare for SaaS"]
-        subgraph Worker["Cloudflare Worker: Next.js 15 via OpenNext"]
+        subgraph Worker["Cloudflare Worker: Next.js 16 via OpenNext"]
             MW["middleware.ts<br/>CSP nonce, domain to club rewrite"]
             PAGES["Pages: React server + client<br/>public site, club app, admin portal"]
             API["API routes /api/*<br/>privileged work"]
