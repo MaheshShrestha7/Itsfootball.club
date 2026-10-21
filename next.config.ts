@@ -51,9 +51,11 @@ const CSP_DIRECTIVES = [
     (R2_PUBLIC_ORIGIN ? ` ${R2_PUBLIC_ORIGIN}` : ''),
   // Fonts are self-hosted by next/font, so no Google Fonts hosts are needed
   "font-src 'self' data:",
+  // geo.abs.gov.au, overpass-api.de: Mission Control -> Grounds -> Import from map looks up councils,
+  // suburbs and pitches from the admin's browser (lib/ground-import-fetch.ts)
   "connect-src 'self'" +
     (SUPABASE_HOST ? ` https://${SUPABASE_HOST} wss://${SUPABASE_HOST}` : ' https://*.supabase.co wss://*.supabase.co') +
-    " https://*.r2.cloudflarestorage.com",
+    " https://*.r2.cloudflarestorage.com https://geo.abs.gov.au https://overpass-api.de",
   // www.google.com: the stadium map embed on club home pages (www.google.com/maps -> /maps/embed)
   "frame-src https://www.openstreetmap.org https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://challenges.cloudflare.com",
   // The service worker (public/sw.js). Without this, workers fall back to script-src, where

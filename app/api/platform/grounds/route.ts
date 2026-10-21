@@ -3,10 +3,10 @@ import { requirePlatformAdmin } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { pingIndexNow } from '@/lib/indexnow';
 import { isUuid } from '@/lib/ids';
-import { councilFromPin } from '@/lib/council-lookup';
+import { MAP_USER_AGENT, councilFromPin } from '@/lib/council-lookup';
 import { CURATED_GROUNDS } from '@/lib/curated-grounds';
 import { STATES, type AuState } from '@/lib/councils';
-import { councilAreas, findGroundsInCouncil } from '@/lib/ground-import-server';
+import { MapServiceError, councilAreas, findGroundsInCouncil } from '@/lib/ground-import-fetch';
 import { findExisting } from '@/lib/ground-import';
 import {
   GROUNDS_PATH, cleanGroundInput, groundPath, isIndexableGround, slugify, suburbPath, type GroundInput, type GroundRow,
@@ -16,6 +16,8 @@ import {
 //   GET                          every ground, drafts included, with who looks after it and how many clubs use it
 //   GET ?areas=1&state=NSW       the state's council areas (ABS) for "Import from map"
 //   GET ?find=<ABS LGA code>     ground candidates in that council area (OpenStreetMap), matched to the directory
+//   GET ?match=1                 every ground's name, pin and map ref, to match candidates the browser found
+//                                (the browser does the map lookups itself; ?areas and ?find are the fallback)
 //   GET ?lat=&lng=               the council a map pin is in
 //   POST { action: 'save', groundId?, ground, publish? }  add a ground with no club, or edit any ground
 //   POST { action: 'publish', id, published }             publish a draft, or take a ground down
@@ -78,9 +80,9 @@ export async function GET(req: NextRequest) {
     const state = (p.get('state') || '').toUpperCase() as AuState;
     if (!STATES.some(s => s.code === state)) return NextResponse.json({ error: 'Pick a state.' }, { status: 400 });
     try {
-      return NextResponse.json({ areas: await councilAreas(state) });
-    } catch {
-      return NextResponse.json({ error: 'Couldn’t load the council list from the ABS right now. Try again in a minute.' }, { status: 502 });
+      return NextResponse.json({ areas: await councilAreas(state, { userAgent: MAP_USER_AGENT }) });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof MapServiceError ? e.message : 'Couldn’t load the council list from the ABS right now. Try again in a minute.' }, { status: 502 });
     }
   }
 
@@ -88,16 +90,18 @@ export async function GET(req: NextRequest) {
     const code = (p.get('find') || '').replace(/[^0-9]/g, '');
     if (!code) return NextResponse.json({ error: 'Pick a council area.' }, { status: 400 });
     try {
-      const [search, existing] = await Promise.all([findGroundsInCouncil(code), directoryForMatching(db)]);
+      const [search, existing] = await Promise.all([findGroundsInCouncil(code, { userAgent: MAP_USER_AGENT }), directoryForMatching(db)]);
       return NextResponse.json({
         council: search.council,
         candidates: search.candidates.map(c => ({ ...c, existing: findExisting(c, existing, slugify) })),
       });
     } catch (e) {
-      const message = e instanceof Error && !/^ABS /.test(e.message) ? e.message : 'Couldn’t reach the map services right now. Try again in a minute.';
+      const message = e instanceof Error ? e.message : 'Couldn’t reach the map services right now. Try again in a minute.';
       return NextResponse.json({ error: message }, { status: 502 });
     }
   }
+
+  if (p.has('match')) return NextResponse.json({ grounds: await directoryForMatching(db) });
 
   if (p.has('lat') && p.has('lng')) {
     const lat = Number(p.get('lat'));
