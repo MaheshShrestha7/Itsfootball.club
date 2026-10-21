@@ -6,7 +6,7 @@
     "predev": "node scripts/copy-mediapipe.mjs",
     "dev": "next dev",
     "build": "node scripts/copy-mediapipe.mjs && next build",
-    "build:cloudflare": "opennextjs-cloudflare build",
+    "build:cloudflare": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
     "start": "next start",
     "lint": "next lint",
     "indexnow": "node scripts/indexnow.mjs",
