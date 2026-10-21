@@ -8,9 +8,10 @@ import {
   Check, CheckCircle2, Download, ExternalLink, Layers, Loader2, MapPin, Plus, RefreshCw, Search, ShieldCheck, Trash2, X,
 } from 'lucide-react';
 import { getAccessToken } from '@/lib/supabase/client';
-import { COUNCILS, STATES } from '@/lib/councils';
-import { councilName, groundPath, mapEmbedUrl, parseLatLng, pitchSummary, type GroundRow, type Pitch } from '@/lib/grounds';
-import { OSM_COPYRIGHT_URL, pitchesLine, type Candidate } from '@/lib/ground-import';
+import { COUNCILS, STATES, type AuState } from '@/lib/councils';
+import { councilName, groundPath, mapEmbedUrl, parseLatLng, pitchSummary, slugify, type GroundRow, type Pitch } from '@/lib/grounds';
+import { OSM_COPYRIGHT_URL, findExisting, pitchesLine, type Candidate } from '@/lib/ground-import';
+import { councilAreas, findGroundsInCouncil } from '@/lib/ground-import-fetch';
 
 interface ListedGround extends GroundRow {
   source?: string | null;
@@ -44,7 +45,7 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown }):
     body: init?.body ? JSON.stringify(init.body) : undefined,
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || 'Something went wrong. Try again.');
+  if (!res.ok) throw new Error(json.error || `The server couldn’t do that (error ${res.status}). Try again.`);
   return json as T;
 }
 
@@ -256,13 +257,18 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
     setAreas([]);
     setAreasError(null);
     setCode('');
-    api<{ areas: Area[] }>(`?areas=1&state=${state}`)
-      .then(({ areas }) => {
-        if (!live) return;
-        setAreas(areas);
-        setCode((areas.find(a => a.listed) || areas[0])?.code || '');
+    // The browser asks the ABS itself; the server is the fallback; the councils we list are the last resort
+    councilAreas(state as AuState)
+      .catch(() => api<{ areas: Area[] }>(`?areas=1&state=${state}`).then(r => r.areas))
+      .catch(e => {
+        if (live) setAreasError(`${(e as Error).message} Showing only the councils we already list.`);
+        return COUNCILS.filter(c => c.state === state).map(c => ({ code: c.lgaCode, name: c.name, listed: true }));
       })
-      .catch(e => live && setAreasError((e as Error).message));
+      .then(list => {
+        if (!live) return;
+        setAreas(list);
+        setCode((list.find(a => a.listed) || list[0])?.code || '');
+      });
     return () => { live = false; };
   }, [state]);
 
@@ -276,7 +282,21 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
     setRows(null);
     setSkipped([]);
     try {
-      const res = await api<{ council: FoundCouncil; candidates: Candidate[] }>(`?find=${code}`);
+      let res: { council: FoundCouncil; candidates: Candidate[] };
+      try {
+        // In the browser first: no Worker time or CPU limits, and the map services see a normal browser
+        const [search, { grounds }] = await Promise.all([
+          findGroundsInCouncil(code),
+          api<{ grounds: Parameters<typeof findExisting>[1] }>('?match=1'),
+        ]);
+        res = { council: search.council, candidates: search.candidates.map(c => ({ ...c, existing: findExisting(c, grounds, slugify) })) };
+      } catch (browserError) {
+        try {
+          res = await api<{ council: FoundCouncil; candidates: Candidate[] }>(`?find=${code}`);
+        } catch (serverError) {
+          throw new Error(`${(browserError as Error).message} (From the server too: ${(serverError as Error).message})`);
+        }
+      }
       setCouncil(res.council);
       setRows(res.candidates.map(c => ({ ...c, unnamed: !c.name, picked: !c.existing && !c.school && !c.private && !!c.name && !!c.suburb })));
     } catch (e) {

@@ -1,6 +1,6 @@
 // "Import from map" in Mission Control -> Grounds: finds soccer pitches in one council area on
 // OpenStreetMap and turns them into ground candidates, one per park. Pure functions only (the
-// fetching is in lib/ground-import-server.ts), so lib/ground-import.check.ts can test them.
+// fetching is in lib/ground-import-fetch.ts), so lib/ground-import.check.ts can test them.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, available under the ODbL: pages built from it
 // credit OpenStreetMap, and the names, pins and pitches we import must be shareable under the ODbL
