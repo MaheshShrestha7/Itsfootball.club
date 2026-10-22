@@ -68,6 +68,8 @@ interface HomeHeroSlide {
   phoneTabLabel?: string;
   badge: string;
   bgImage: string;
+  /** A flyer used as the background: shown softly blurred so the headline over it stays readable */
+  bgIsFlyer?: boolean;
   title: string;
   subtitle: string;
   ctaLabel?: string;
@@ -309,15 +311,14 @@ export default function ClubPublicPage({
 
         if (item.type === 'event') {
           const evt = events.find(e => e.id === item.target_id) || nextEvent;
-          // The flyer shows in the slide's card; behind the headline it would be too busy to read over
-          const bgImage = item.image_url && item.image_url !== evt?.flyer_url ? item.image_url : '';
           return {
             id: item.id || `pin-event-${idx}`,
             category: 'event',
             phoneTabLabel: evt?.category ? EVENT_TAB_LABELS[evt.category] : 'Event',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
             badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
-            bgImage: bgImage || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+            bgImage: evt?.flyer_url || item.image_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+            bgIsFlyer: Boolean(evt?.flyer_url),
             title: item.title || evt?.title || `${club.name} Open Event`,
             subtitle: item.subtitle || evt?.description || 'Fan sessions and trial opportunities.',
             ctaLabel: item.cta_label || 'RSVP / Inquire for Event',
@@ -383,7 +384,8 @@ export default function ClubPublicPage({
         category: 'event',
         tabLabel: 'Events & Trials',
         badge: `UPCOMING EVENT • ${nextEvent?.category?.toUpperCase() || 'CALENDAR'}`,
-        bgImage: club.banner_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+        bgImage: nextEvent?.flyer_url || club.banner_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+        bgIsFlyer: Boolean(nextEvent?.flyer_url),
         title: nextEvent?.title || `${club.name} Open Training Session`,
         subtitle: nextEvent?.description || 'Fan sessions, community training camps, and player trial opportunities.',
         targetEvent: nextEvent,
@@ -499,13 +501,21 @@ export default function ClubPublicPage({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
-          background: `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), url(${currentSlide.bgImage}) center/cover no-repeat`,
+          background: currentSlide.bgIsFlyer
+            ? 'var(--bg-pitch)'
+            : `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), url(${currentSlide.bgImage}) center/cover no-repeat`,
           borderBottom: '1px solid var(--border-subtle)',
           padding: '2.5rem 0 2.5rem 0',
           transition: 'background-image 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
           overflow: 'hidden',
         }}
       >
+        {currentSlide.bgIsFlyer && (
+          <>
+            <div aria-hidden style={{ position: 'absolute', inset: '-24px', zIndex: 0, pointerEvents: 'none', background: `url(${JSON.stringify(currentSlide.bgImage)}) center/cover no-repeat`, filter: 'blur(6px) saturate(1.15)' }} />
+            <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.55) 0%, rgba(var(--dk-7-10-15), 0.9) 75%, var(--bg-pitch) 100%)' }} />
+          </>
+        )}
         {/* Heraldic Shield Watermark in Background */}
         <div style={{
           position: 'absolute',
