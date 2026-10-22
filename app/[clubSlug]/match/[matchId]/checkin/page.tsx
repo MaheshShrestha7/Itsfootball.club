@@ -227,7 +227,7 @@ export default function MatchDoorCheckinPage({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               <span className="row row-inline row-tight">
                 <Calendar size={13} color="var(--club-primary)" />
-                <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
+                <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
               </span>
               <span className="row row-inline row-tight">
                 <Clock size={13} color="var(--club-primary)" />

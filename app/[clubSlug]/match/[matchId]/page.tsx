@@ -266,7 +266,7 @@ export default function MatchCenterPage({
           The requested fixture does not exist or may have been rescheduled.
         </p>
         <Link href={club ? `/${club.slug}` : '/'} className="btn btn-primary">
-          Return to Club Headquarters
+          Back to the club
         </Link>
       </div>
     );
@@ -546,7 +546,7 @@ export default function MatchCenterPage({
             )}
             <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <Calendar size={12} />
-              <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
+              <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
               {match.match_time && (
                 <>
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />
@@ -738,9 +738,9 @@ export default function MatchCenterPage({
           paddingBottom: '2px',
         }}>
           {[
-            { id: 'timeline', label: 'Timeline & Commentary' },
-            { id: 'lineups', label: 'Tactical Pitch & Lineups' },
-            { id: 'stats', label: 'Match Statistics' },
+            { id: 'timeline', label: 'Timeline & Commentary', short: 'Timeline' },
+            { id: 'lineups', label: 'Tactical Pitch & Lineups', short: 'Lineups' },
+            { id: 'stats', label: 'Match Statistics', short: 'Stats' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -759,7 +759,9 @@ export default function MatchCenterPage({
                 whiteSpace: 'nowrap',
               }}
             >
-              {tab.label}
+              {/* Short labels on phone, so all three tabs fit without scrolling */}
+              <span className="label-long">{tab.label}</span>
+              <span className="label-short">{tab.short}</span>
             </button>
           ))}
         </div>

@@ -520,7 +520,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   }}
                 >
                   <Shield size={16} color={club.primary_color} />
-                  <span>Clubhouse Overview</span>
+                  <span>Club home</span>
                 </Link>
 
                 <Link

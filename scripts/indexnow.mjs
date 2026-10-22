@@ -2,7 +2,7 @@
 // pages straight away, via IndexNow (https://www.indexnow.org). Google doesn't use IndexNow; it reads the sitemap.
 //
 //   npm run indexnow                    URLs in the live sitemap changed in the last 48 hours, plus the
-//                                       platform pages (home, tools, FAQ, /vs...), which change on deploys
+//                                       platform pages (home, tools, guides, compare, FAQ...), which change on deploys
 //   npm run indexnow -- --hours 6       a different window
 //   npm run indexnow -- <url> <url>...  just these URLs
 //   add --dry-run to print the list without sending it
@@ -21,7 +21,7 @@ const hours = hoursAt >= 0 ? Number(args[hoursAt + 1]) : 48;
 const given = args.filter((a, i) => /^https?:\/\//.test(a) && args[i - 1] !== '--hours');
 
 // Pages that belong to the platform rather than a club: the first path segment is one of these (or none)
-const PLATFORM = new Set(['', 'tools', 'vs', 'faq', 'about', 'live-scores', 'clubs', 'create-club']);
+const PLATFORM = new Set(['', 'tools', 'guides', 'compare', 'pricing', 'faq', 'about', 'live-scores', 'clubs', 'create-club']);
 
 async function fromSitemap() {
   const res = await fetch(`${SITE}/sitemap.xml`);
