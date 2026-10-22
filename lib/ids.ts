@@ -35,6 +35,12 @@ export function stableId(key: string): string {
   );
 }
 
+/** The last 4 characters of a pass token, for showing on screen. The full token gets you through the
+ *  gate, so it only ever goes into the QR code, never into readable text someone could copy. */
+export function passTokenHint(token: string | null | undefined): string {
+  return token ? `••••${token.slice(-4)}` : '';
+}
+
 /** Unguessable token for passes / door codes (crypto-strength, unlike Math.random) */
 export function secureToken(prefix = 'tok'): string {
   const bytes = new Uint8Array(16);

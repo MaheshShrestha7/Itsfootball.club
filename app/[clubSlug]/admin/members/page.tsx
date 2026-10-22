@@ -1,6 +1,7 @@
 'use client';
 
 import React, { use, useState, useEffect } from 'react';
+import { passTokenHint } from '@/lib/ids';
 import { useUrlTab } from '@/lib/use-url-tab';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -703,7 +704,7 @@ export default function AdminMembersPage({
 
                         {member.qr_code_token && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                            Pass Token: <code style={{ color: 'var(--c-green)' }}>{member.qr_code_token}</code>
+                            Pass <code style={{ color: 'var(--c-green)' }}>{passTokenHint(member.qr_code_token)}</code>
                           </div>
                         )}
                       </div>

@@ -814,9 +814,15 @@ export interface ClubPaymentSettings {
   club_id: string;
   currency: string;
   bank_details?: string | null;
+  /** Server only: not readable from the browser (migration 20261116). Use stripe_connected. */
   stripe_account_id?: string | null;
   stripe_charges_enabled: boolean;
+  /** Whether a Stripe account is linked, finished or not (generated from stripe_account_id) */
+  stripe_connected?: boolean;
 }
+
+/** The club_payment_settings columns the browser may read (the Stripe account id stays on the server) */
+export const PUBLIC_PAYMENT_SETTINGS = 'club_id, currency, bank_details, stripe_charges_enabled';
 
 export interface MembershipPlan {
   id: string;

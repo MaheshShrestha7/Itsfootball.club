@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { PlatformAnnouncement } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
+import { safeLinkHref } from '@/lib/sponsors';
 import {
   Radio,
   PlusCircle,
@@ -63,6 +64,10 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
+    if (linkUrl.trim() && !safeLinkHref(linkUrl)) {
+      alert('Use a full web address (https://…) or a path on this site, such as /tools.');
+      return;
+    }
     const client = getSupabaseClient();
     if (!client) return;
     setSaving(true);
@@ -264,10 +269,10 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
                   {ann.message}
                 </p>
 
-                {ann.link_url && (
+                {safeLinkHref(ann.link_url) && (
                   <div style={{ marginTop: '0.65rem' }}>
                     <a
-                      href={ann.link_url}
+                      href={safeLinkHref(ann.link_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ fontSize: '0.8rem', color: '#818CF8', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}

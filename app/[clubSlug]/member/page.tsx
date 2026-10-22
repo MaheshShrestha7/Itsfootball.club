@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
+import { passTokenHint } from '@/lib/ids';
 import { clubTeamsOf, teamsOfMember, teamOfMatch } from '@/lib/teams';
 import { clubPlaysIn, kickoff, soonestFirst } from '@/lib/fixtures';
 import { SITE_URL, authReturnUrl, safeNextPath } from '@/lib/slugs';
@@ -1362,7 +1363,7 @@ export default function MemberPortalPage({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    {activeMember.membership_tier} • {club.name} • Pass Token: <code style={{ color: 'var(--club-ink)' }}>{activeMember.qr_code_token}</code>
+                    {activeMember.membership_tier} • {club.name} • Pass <code style={{ color: 'var(--club-ink)' }}>{passTokenHint(activeMember.qr_code_token)}</code>
                   </div>
                 </div>
               </div>

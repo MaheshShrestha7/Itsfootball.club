@@ -160,12 +160,14 @@ function sameSecret(a: string, b: string) {
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const db = getServiceClient();
-  if (!secret || !db || !process.env.RESEND_API_KEY) {
-    const missing = [!secret && 'CRON_SECRET', !db && 'SUPABASE_SECRET_KEY', !process.env.RESEND_API_KEY && 'RESEND_API_KEY'].filter(Boolean);
-    return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
-  }
+  if (!secret) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
   if (!sameSecret(req.headers.get('authorization') || '', `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // Which settings are missing is only told to the cron itself
+  if (!db || !process.env.RESEND_API_KEY) {
+    const missing = [!db && 'SUPABASE_SECRET_KEY', !process.env.RESEND_API_KEY && 'RESEND_API_KEY'].filter(Boolean);
+    return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
   }
 
   const drafts = (await Promise.all([availabilityDrafts(db), eventDrafts(db), renewalDrafts(db)])).flat();

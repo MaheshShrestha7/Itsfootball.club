@@ -13,6 +13,13 @@ export function sponsorHref(url: string | undefined): string | undefined {
   }
 }
 
+/** A link set by an admin: a web address (as sponsorHref) or a path on this site such as /tools */
+export function safeLinkHref(url: string | null | undefined): string | undefined {
+  const trimmed = (url || '').trim();
+  if (/^\/(?![/\\])/.test(trimmed) && !/\s/.test(trimmed)) return trimmed;
+  return sponsorHref(trimmed || undefined);
+}
+
 /** Highest tier first (platinum, gold, silver, bronze, grassroots), then the admin's display order */
 export function sortSponsorsByTier<T extends Pick<Sponsor, 'tier' | 'display_order'>>(list: T[]): T[] {
   return [...list].sort(
