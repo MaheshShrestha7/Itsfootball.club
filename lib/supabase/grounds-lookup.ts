@@ -54,25 +54,8 @@ export async function clubsWithHomeGrounds(): Promise<ClubUse[]> {
   const list = await rows<ClubUse>(
     'clubs?select=id,slug,name,short_name,logo_url,primary_color,home_ground_id,grounds_directory_listed,config&is_active=eq.true&home_ground_id=not.is.null&limit=5000'
   );
-  const activeClubs = list.filter(c => c.config?.kind !== 'event');
-  const hasUse = new Set(activeClubs.map(c => c.home_ground_id));
-  const fallbackUse: ClubUse[] = [];
-  for (const g of CURATED_GROUNDS) {
-    if (!hasUse.has(g.id)) {
-      fallbackUse.push({
-        id: `club-${g.slug}`,
-        slug: g.slug,
-        name: `${g.name} FC`,
-        short_name: g.name.split(' ')[0],
-        logo_url: null,
-        primary_color: '#10B981',
-        home_ground_id: g.id,
-        grounds_directory_listed: false,
-        config: null,
-      });
-    }
-  }
-  return [...activeClubs, ...fallbackUse];
+  // Only real clubs: a ground counts as "used" (and can be indexed) once a club on itsfootball.club plays there
+  return list.filter(c => c.config?.kind !== 'event');
 }
 
 /** How many clubs use each ground (named or not), and the opted-in ones to show by name */

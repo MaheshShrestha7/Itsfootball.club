@@ -23,8 +23,8 @@ import JsonLd from '@/components/JsonLd';
 import CellView, { SourceLink } from '@/app/vs/CellView';
 import { CONTACT_EMAIL } from '@/lib/faq';
 import {
-  CHECKED_ON,
-  COMPETITORS,
+  CHECKED_COMPETITORS,
+  checkedOnLabel,
   competitorBySlugOrAlternative,
   ALL_COMPARE_SLUGS,
   type Competitor,
@@ -54,6 +54,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       'Compare pricing, ads, match centre, and digital passes.'
     ),
     path: canonicalPath,
+    // Unchecked pages say nothing about the competitor yet, so they stay out of search
+    noIndex: c.unchecked,
   });
 }
 
@@ -94,20 +96,6 @@ function schemaFor(c: Competitor) {
           },
         })),
       },
-      {
-        '@type': 'SoftwareApplication',
-        name: SITE_NAME,
-        url: SITE_URL,
-        applicationCategory: 'SportsApplication',
-        operatingSystem: 'Any (Web browser on iPhone, Android, Tablet, Desktop)',
-        description: 'Zero-subscription football & soccer club management platform with an ad-free public club website, live match centre, digital passes, and club shop.',
-        offers: {
-          '@type': 'Offer',
-          price: '0',
-          priceCurrency: 'AUD',
-          description: 'Free for clubs with every feature included.',
-        },
-      },
     ],
   };
 }
@@ -119,7 +107,8 @@ export default async function CompareAlternativePage({ params }: Props) {
   const c = competitorBySlugOrAlternative(slug);
   if (!c) notFound();
 
-  const otherCompetitors = COMPETITORS.filter(comp => comp.slug !== c.slug);
+  const otherCompetitors = CHECKED_COMPETITORS.filter(comp => comp.slug !== c.slug);
+  const checkedLabel = checkedOnLabel(c.checkedOn);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -148,15 +137,17 @@ export default async function CompareAlternativePage({ params }: Props) {
             {c.closed ? (
               <>Looking for a Free Alternative to <span style={{ color: 'var(--c-amber)' }}>{c.name}</span>?</>
             ) : (
-              <>The 100% Free <span style={{ color: 'var(--club-ink)' }}>{c.name}</span> Alternative for Football Clubs</>
+              <>A Free <span style={{ color: 'var(--club-ink)' }}>{c.name}</span> Alternative for Football Clubs</>
             )}
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '1.1rem auto 0', fontSize: '1.1rem', lineHeight: 1.65 }}>
             {c.summary}
           </p>
-          <p className="tool-updated" style={{ marginTop: '0.85rem' }}>
-            Last reviewed &amp; verified: <time dateTime="2026-10-18">{CHECKED_ON}</time>
-          </p>
+          {!c.unchecked && (
+            <p className="tool-updated" style={{ marginTop: '0.85rem' }}>
+              {c.name} facts checked: <time dateTime={c.checkedOn}>{checkedLabel}</time>
+            </p>
+          )}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.85rem', marginTop: '1.75rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>
               Create your club free <ArrowRight size={18} />
@@ -176,6 +167,16 @@ export default async function CompareAlternativePage({ params }: Props) {
           </div>
         )}
 
+        {c.unchecked && (
+          <div className="glass-panel" role="note" style={{ padding: '1.1rem 1.4rem', marginBottom: '2rem', display: 'flex', gap: '0.85rem', alignItems: 'flex-start', borderLeft: '4px solid var(--border-medium)' }}>
+            <HelpCircle size={22} color="var(--text-muted)" style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+              We haven&apos;t checked {c.name}&apos;s current plans and prices yet, so this page only describes itsfootball.club.
+              For {c.name}&apos;s details, see <SourceLink source={c.sources[0]} />.
+            </p>
+          </div>
+        )}
+
         {/* AI Overview / AEO Quotable Summary Box */}
         <section aria-label="AI Summary" className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2.5rem', border: '1px solid rgba(var(--club-primary-rgb), 0.25)', background: 'linear-gradient(135deg, rgba(var(--club-primary-rgb), 0.05) 0%, rgba(var(--club-primary-rgb), 0.01) 100%)', borderRadius: 'var(--radius-lg)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', color: 'var(--club-ink)', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
@@ -189,7 +190,7 @@ export default async function CompareAlternativePage({ params }: Props) {
         {/* Key Takeaways Grid */}
         <section aria-label="Key Takeaways" style={{ marginBottom: '3rem' }}>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.25rem' }}>
-            Key Differences at a Glance
+            {c.unchecked ? 'What itsfootball.club Offers' : 'Key Differences at a Glance'}
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             {c.keyTakeaways.map((takeaway, idx) => (
@@ -211,10 +212,12 @@ export default async function CompareAlternativePage({ params }: Props) {
                 Feature Comparison: itsfootball.club vs {c.name}
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
-                Every competitor claim is verified against their published pricing and documentation.
+                {c.unchecked
+                  ? `${c.name}'s column hasn't been checked yet.`
+                  : `Each ${c.name} fact links to the page it came from.`}
               </p>
             </div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Verified October 2026</span>
+            {!c.unchecked && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Checked {checkedLabel}</span>}
           </div>
 
           <div className="glass-panel vs-table">
@@ -248,9 +251,11 @@ export default async function CompareAlternativePage({ params }: Props) {
                   <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6, flex: 1 }}>
                     {feat.description}
                   </p>
-                  <div style={{ marginTop: '1rem', padding: '0.75rem 0.9rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--border-medium)', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--text-secondary)' }}>Contrast:</strong> {feat.comparison}
-                  </div>
+                  {feat.comparison && (
+                    <div style={{ marginTop: '1rem', padding: '0.75rem 0.9rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--border-medium)', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      <strong style={{ color: 'var(--text-secondary)' }}>{c.name}:</strong> {feat.comparison}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -303,7 +308,7 @@ export default async function CompareAlternativePage({ params }: Props) {
             Switch from {c.name} in an Afternoon. It&apos;s Free.
           </h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '560px', margin: '0.6rem auto 1.5rem', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            No credit card required. No contract. Set up your club, add your squads, and enjoy zero software fees.
+            No credit card required. No contract. Set up your club and add your squads. There is no subscription for the club.
           </p>
           <ol className="vs-steps">
             <li><span><strong>Create your club</strong> in 60 seconds with just an email.</span></li>
@@ -345,7 +350,7 @@ export default async function CompareAlternativePage({ params }: Props) {
 
         <footer style={{ marginTop: '2.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>
           <p>
-            Competitor pricing and features verified as of October 2026. Spotted something that has changed? Email{' '}
+            {c.unchecked ? `${c.name}'s details haven't been checked yet.` : `${c.name} pricing and features checked on ${checkedLabel}.`} Spotted something that has changed? Email{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)' }}>{CONTACT_EMAIL}</a> and we will verify and update it.
           </p>
         </footer>

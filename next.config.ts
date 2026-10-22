@@ -86,6 +86,13 @@ const nextConfig: NextConfig = {
   // tools that don't run JavaScript saw club pages with no title, description or canonical. The club
   // layout already waits on the same cached club lookup, so this costs next to nothing.
   htmlLimitedBots: /.*/,
+  // /vs pages duplicated /compare; send old links and search results to the matching compare page
+  async redirects() {
+    return [
+      { source: '/vs', destination: '/compare', permanent: true },
+      { source: '/vs/:slug', destination: '/compare/:slug-alternative', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

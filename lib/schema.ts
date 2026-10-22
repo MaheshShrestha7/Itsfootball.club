@@ -145,7 +145,7 @@ export function homeSchema() {
 export const HOMEPAGE_FAQS = [
   {
     q: 'Is itsfootball.club really free for grassroots clubs?',
-    a: 'Yes, 100% free with no monthly subscriptions, no setup fees, and no feature gates. Every club gets a custom website, live match centre, digital member passes with QR check-in, lineup builder, and club shop at zero software cost.',
+    a: 'Yes. There is no monthly subscription, no setup fee and no paid plan. Every club gets a custom website, live match centre, digital member passes with QR check-in, lineup builder and club shop. The only charge is a booking fee on online card payments, paid by the person paying, not the club.',
   },
   {
     q: 'Do supporters or parents need to install an app to follow live matches?',

@@ -2311,7 +2311,7 @@ export default function ClubPublicPage({
               </h2>
 
               <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                Our sacred home fortress. Built to host premier championship fixtures, youth tournament finals, and community training camps.
+                Where {club.name} play home matches. Check the fixture list for kickoff times and which pitch.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
@@ -2319,7 +2319,7 @@ export default function ClubPublicPage({
                   <MapPin size={20} color="var(--club-primary)" />
                   <div>
                     <div className="text-meta">Location Address</div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_address}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_address || 'Not listed yet'}</div>
                   </div>
                 </div>
 
@@ -2327,14 +2327,16 @@ export default function ClubPublicPage({
                   <Shield size={20} color="var(--club-primary)" />
                   <div>
                     <div className="text-meta">Pitch Surface</div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_pitch_type}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_pitch_type || 'Not listed yet'}</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Parking: {club.stadium_parking_info}
-              </div>
+              {club.stadium_parking_info?.trim() && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                  Parking: {club.stadium_parking_info}
+                </div>
+              )}
             </div>
 
             {/* Interactive Map Embed / Visual Map Presentation */}
@@ -2372,7 +2374,7 @@ export default function ClubPublicPage({
                 }}>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{club.stadium_name}</div>
-                    <div className="text-meta">Gates open 90m before kickoff</div>
+                    {club.stadium_address?.trim() && <div className="text-meta">{club.stadium_address}</div>}
                   </div>
                   <a
                     href={`https://maps.google.com/?q=${encodeURIComponent(club.stadium_address)}`}

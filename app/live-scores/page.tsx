@@ -171,7 +171,7 @@ export default function LiveScoresPage() {
           </p>
           <p style={{ ...bodyStyle, marginTop: '0.75rem' }}>
             Already using another app for scores?{' '}
-            <Link href="/vs" style={linkStyle}>See how we compare with Pitchero, Spond and others</Link>.
+            <Link href="/compare" style={linkStyle}>See how we compare with Pitchero, Spond and others</Link>.
           </p>
         </section>
 
