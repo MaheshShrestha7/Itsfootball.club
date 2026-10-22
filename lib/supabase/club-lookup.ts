@@ -166,11 +166,14 @@ export interface EventMetadataRow {
   end_time: string | null;
   location: string | null;
   description: string | null;
+  /** Missing until migration 20261115_event_flyers.sql runs */
+  flyer_url?: string | null;
 }
 
-/** Public events only (row-level security hides private ones from the anon key). */
+/** Public events only (row-level security hides private ones from the anon key).
+ *  `*` rather than a column list, so the lookup still works before newer columns (flyer_url) exist. */
 export const findEventById = (eventId: string) =>
-  fetchOne<EventMetadataRow>('events', 'id,club_id,title,category,start_time,end_time,location,description', eventId);
+  fetchOne<EventMetadataRow>('events', '*', eventId);
 
 export interface TournamentMetadataRow {
   id: string;

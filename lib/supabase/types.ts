@@ -325,6 +325,8 @@ export interface ClubEvent {
   door_qr_checkin_enabled?: boolean;
   /** > 0: a paid, ticketed event (supabase/migrations/20261018_event_tickets.sql) */
   ticket_price_cents?: number;
+  /** Flyer / poster image; '' or missing = none (supabase/migrations/20261115_event_flyers.sql) */
+  flyer_url?: string;
   created_at?: string;
 }
 

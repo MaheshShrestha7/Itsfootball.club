@@ -9,6 +9,7 @@ import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
+import ImageUploadZone from '@/components/ImageUploadZone';
 import {
   Calendar,
   Plus,
@@ -19,6 +20,7 @@ import {
   MapPin,
   X,
   Sparkles,
+  ImageIcon,
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
@@ -69,6 +71,12 @@ export default function AdminEventsPage({
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
 
+  // Flyers need migration 20261115_event_flyers.sql; until it runs the upload stays hidden so saves keep working
+  const [flyersReady, setFlyersReady] = useState<boolean | null>(() => (getSupabaseClient() ? null : true));
+  useEffect(() => {
+    getSupabaseClient()?.from('events').select('flyer_url').limit(1).then(({ error }) => setFlyersReady(!error));
+  }, []);
+
   const doorCheckinUrl = useDoorCheckinUrl(qrModalEvent ? `/${club.slug}/events/${qrModalEvent.id}/checkin` : null, qrModalEvent?.id);
 
   const filteredEvents = clubEvents.filter(e => {
@@ -97,7 +105,7 @@ export default function AdminEventsPage({
           title: evt.title,
           subtitle: evt.description,
           badge: `PINNED EVENT • ${evt.category.toUpperCase()}`,
-          image_url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+          image_url: evt.flyer_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
           cta_label: 'RSVP / Event Details',
           cta_link: `/${club.slug}#events`,
           is_active: true,
@@ -122,6 +130,7 @@ export default function AdminEventsPage({
     is_public: true,
     door_qr_checkin_enabled: true,
     ticket_price: '',
+    flyer_url: '',
     repeat_weeks: 1,
   });
 
@@ -139,6 +148,7 @@ export default function AdminEventsPage({
       is_public: true,
       door_qr_checkin_enabled: true,
       ticket_price: '',
+      flyer_url: '',
       repeat_weeks: 1,
     });
     setModalOpen(true);
@@ -168,6 +178,7 @@ export default function AdminEventsPage({
       is_public: evt.is_public,
       door_qr_checkin_enabled: evt.door_qr_checkin_enabled ?? true,
       ticket_price: evt.ticket_price_cents ? (evt.ticket_price_cents / 100).toFixed(2) : '',
+      flyer_url: evt.flyer_url || '',
       repeat_weeks: 1,
     });
     setModalOpen(true);
@@ -179,13 +190,18 @@ export default function AdminEventsPage({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
-    const { ticket_price, repeat_weeks, ...fields } = form;
+    const { ticket_price, repeat_weeks, flyer_url, ...fields } = form;
     const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
     const start = new Date(form.start_time).getTime();
+
+    // Only sent once the flyer column exists, and only when there is a flyer to set or clear
+    const editing = editingEventId ? clubEvents.find(e => e.id === editingEventId) : undefined;
+    const flyer = flyersReady && (flyer_url || editing?.flyer_url) ? { flyer_url } : {};
 
     if (editingEventId) {
       updateEvent(editingEventId, {
         ...fields,
+        ...flyer,
         start_time: new Date(start).toISOString(),
         ticket_price_cents,
       });
@@ -205,6 +221,7 @@ export default function AdminEventsPage({
           is_public: form.is_public,
           door_qr_checkin_enabled: form.door_qr_checkin_enabled,
           ticket_price_cents,
+          ...flyer,
         });
       }
       if (repeat_weeks > 1) {
@@ -321,6 +338,11 @@ export default function AdminEventsPage({
                   {(evt.ticket_price_cents ?? 0) > 0 && (
                     <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
                       {formatMoney(evt.ticket_price_cents ?? 0, currency)} ticket · {ticketsSold[evt.id] || 0} sold
+                    </span>
+                  )}
+                  {evt.flyer_url && (
+                    <span className="badge row row-tight" style={{ backgroundColor: 'rgba(var(--club-primary-rgb), 0.15)', color: 'var(--club-ink)', fontSize: '0.7rem' }}>
+                      <ImageIcon size={11} /> Flyer
                     </span>
                   )}
                 </div>
@@ -545,6 +567,25 @@ export default function AdminEventsPage({
                   onChange={e => setForm({ ...form, description: e.target.value })}
                 />
               </div>
+
+              {flyersReady && (
+                <div className="form-group">
+                  <ImageUploadZone
+                    clubId={club.id}
+                    label="Event Flyer (optional)"
+                    recommendedText="A poster or flyer, portrait or landscape (PNG, JPG, WebP up to 5MB). Shown on the public event page."
+                    currentImageUrl={form.flyer_url}
+                    folder="event-flyers"
+                    maxDimension={1600}
+                    onUploadComplete={url => setForm(f => ({ ...f, flyer_url: url }))}
+                  />
+                </div>
+              )}
+              {flyersReady === false && (
+                <p className="text-note" style={{ margin: '0 0 1rem' }}>
+                  Event flyers turn on after a quick database update (migration 20261115_event_flyers.sql).
+                </p>
+              )}
 
               <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">

@@ -35,7 +35,7 @@ export async function generateMetadata({
       ),
       path,
       type: 'article',
-      ...clubImage(club),
+      ...(event.flyer_url ? { image: event.flyer_url, imageIsSquare: false } : clubImage(club)),
     });
   });
 }

@@ -434,7 +434,7 @@ export function eventSchema(club: ClubMetadataRow, event: EventMetadataRow) {
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: place ? { '@type': 'Place', name: place, address: place } : undefined,
     organizer: clubRef(club),
-    image: absUrl(club.banner_url) || absUrl(club.logo_url),
+    image: absUrl(event.flyer_url) || absUrl(club.banner_url) || absUrl(club.logo_url),
   });
 }
 

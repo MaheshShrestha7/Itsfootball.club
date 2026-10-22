@@ -77,6 +77,37 @@ export default function EventDetailsPage({
 
         {/* Event Header */}
         <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', borderTop: `4px solid ${categoryColor}` }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '1.75rem' }}>
+          {event.flyer_url && (
+            <a
+              href={event.flyer_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open the ${event.title} flyer full size`}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(var(--shade-rgb), 0.35)',
+                flex: '0 1 340px',
+                minWidth: 'min(260px, 100%)',
+              }}
+            >
+              {/* The flyer blurred behind itself, so a portrait poster doesn't sit in empty bars */}
+              <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(event.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.45 }} />
+              <img
+                src={event.flyer_url}
+                alt={`${event.title} flyer`}
+                decoding="async"
+                style={{ position: 'relative', display: 'block', maxWidth: '100%', maxHeight: 'min(75vh, 560px)', objectFit: 'contain' }}
+              />
+            </a>
+          )}
+
+          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
           <span className="badge" style={{
             backgroundColor: `${categoryColor}25`,
             color: categoryColor,
@@ -149,6 +180,8 @@ export default function EventDetailsPage({
           >
             <span>{(event.ticket_price_cents ?? 0) > 0 ? 'Ask about this event' : 'RSVP / Inquire for Event'}</span>
           </button>
+          </div>
+          </div>
         </div>
 
         <EventTickets event={event} />
