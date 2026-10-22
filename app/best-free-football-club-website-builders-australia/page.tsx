@@ -333,6 +333,10 @@ export default function BestWebsiteBuildersAustraliaPage() {
             Spond&apos;s app is free but its club website is A$22 a month after a 12-month trial, and Playpass&apos;s free plan takes 3% of payments.
             The right one depends on whether you play other sports, whether you mind ads, and who pays the card fees.
           </p>
+          <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-primary)', margin: '0.85rem 0 0' }}>
+            <strong>Our recommendation:</strong> if you&apos;re a football-only club and want a free public website with live scores, we built itsfootball.club for exactly that.
+            If your club runs other sports too, look at Team App or Pitchero first.
+          </p>
         </section>
 
         <section aria-labelledby="criteria-heading" style={{ marginBottom: '3rem' }}>
