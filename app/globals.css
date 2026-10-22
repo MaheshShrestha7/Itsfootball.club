@@ -3283,6 +3283,8 @@ dialog.confirm-dialog::backdrop {
 .guide-cta p { color: var(--text-secondary); line-height: 1.6; margin: 0; }
 .guide-cta .btn { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
 .guide-cta .guide-cta-more { flex-basis: 100%; font-size: 0.88rem; }
+.guide-join { margin: 1.25rem 0 0.4rem; padding: 1.1rem 1.3rem; }
+.guide-join .guide-join-title { font-size: 1.02rem; font-weight: 900; color: var(--text-primary); margin: 0 0 0.25rem; }
 .guide-sources { margin: 0 0 0.8rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; line-height: 1.5; }
 .guide-sources span { display: block; font-size: 0.84rem; color: var(--text-muted); }
 /* Free equal playing time calculator (/tools/equal-playing-time-calculator): the lineup builder's glass
