@@ -102,11 +102,6 @@ export default function GuidePage(p: GuidePageProps) {
           url: `${SITE_URL}/about`,
           sameAs: 'https://www.linkedin.com/in/maheshshrestha',
         },
-        reviewedBy: {
-          '@type': 'Organization',
-          name: 'Sydney Grassroots Technical Review Panel',
-          url: `${SITE_URL}/about`,
-        },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
         about: guide.question,
@@ -160,10 +155,6 @@ export default function GuidePage(p: GuidePageProps) {
           >
             <span>
               <strong>By:</strong> Mahesh Shrestha (Founder &amp; Sydney volunteer)
-            </span>
-            <span style={{ opacity: 0.35 }}>•</span>
-            <span>
-              <strong>Reviewed by:</strong> Sydney Grassroots Technical Review Panel
             </span>
             <span style={{ opacity: 0.35 }}>•</span>
             <span>
