@@ -98,7 +98,7 @@ export const SYNC_ENTITY_KEYS = ENTITIES.map(e => e.key);
 
 const PAGE_SIZE = 1000;
 // Columns that hold dates / uuids / coordinates: an empty string from a form must become NULL
-const EMPTY_TO_NULL = /(_at|_date|_id|date_of_birth|_lat|_lng|^custom_domain)$/;
+const EMPTY_TO_NULL = /(_at|_date|_id|date_of_birth|_lat|_lng|^custom_domain|^flyer_url)$/;
 // A row that points at a parent we can't resolve is skipped rather than sent with a NULL
 const REQUIRED_FKS = ['club_id', 'member_id', 'tournament_id', 'match_id'];
 

@@ -1798,6 +1798,16 @@ export default function ClubPublicPage({
             {upcomingEvents.map(evt => (
               <div key={evt.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
+                  {evt.flyer_url && (
+                    <Link
+                      href={`/${club.slug}/events/${evt.id}`}
+                      aria-label={`${evt.title} flyer`}
+                      style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '180px', overflow: 'hidden', borderRadius: 'var(--radius-md)', background: 'rgba(var(--shade-rgb), 0.35)', margin: '-0.5rem -0.5rem 1rem' }}
+                    >
+                      <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(evt.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
+                      <img src={evt.flyer_url} alt="" loading="lazy" decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                    </Link>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <span className="badge" style={{
                       backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.15)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',

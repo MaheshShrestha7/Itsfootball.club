@@ -14,6 +14,8 @@ interface ImageUploadZoneProps {
   clubId?: string;
   aspectRatio?: '1:1' | '16:9' | 'free';
   maxSizeBytes?: number; // Default 5MB
+  /** Longest side after compression; defaults to 1200 for 16:9 images and 500 otherwise (logos) */
+  maxDimension?: number;
 }
 
 // Client-side compression to prevent gigantic base64 strings from exhausting localStorage
@@ -110,6 +112,7 @@ export default function ImageUploadZone({
   clubId,
   aspectRatio = 'free',
   maxSizeBytes = 5 * 1024 * 1024, // 5MB
+  maxDimension,
 }: ImageUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -153,7 +156,7 @@ export default function ImageUploadZone({
 
     try {
       setUploadProgress(50);
-      const url = await uploadImage(file, { folder, clubId, maxDimension: aspectRatio === '16:9' ? 1200 : 500 });
+      const url = await uploadImage(file, { folder, clubId, maxDimension: maxDimension ?? (aspectRatio === '16:9' ? 1200 : 500) });
       setUploadProgress(100);
       setPreviewUrl(url);
       setUrlInputValue(url);
