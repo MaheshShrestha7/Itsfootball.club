@@ -309,13 +309,15 @@ export default function ClubPublicPage({
 
         if (item.type === 'event') {
           const evt = events.find(e => e.id === item.target_id) || nextEvent;
+          // The flyer shows in the slide's card; behind the headline it would be too busy to read over
+          const bgImage = item.image_url && item.image_url !== evt?.flyer_url ? item.image_url : '';
           return {
             id: item.id || `pin-event-${idx}`,
             category: 'event',
             phoneTabLabel: evt?.category ? EVENT_TAB_LABELS[evt.category] : 'Event',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
             badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
-            bgImage: item.image_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+            bgImage: bgImage || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
             title: item.title || evt?.title || `${club.name} Open Event`,
             subtitle: item.subtitle || evt?.description || 'Fan sessions and trial opportunities.',
             ctaLabel: item.cta_label || 'RSVP / Inquire for Event',
@@ -1070,6 +1072,16 @@ export default function ClubPublicPage({
                         border: '1.5px solid rgba(245, 158, 11, 0.3)',
                         background: 'rgba(var(--dk-14-20-30), 0.9)',
                       }}>
+                        {activeSlideEvent.flyer_url && (
+                          <Link
+                            href={`/${club.slug}/events/${activeSlideEvent.id}`}
+                            aria-label={`${activeSlideEvent.title} flyer`}
+                            style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '220px', overflow: 'hidden', borderRadius: 'var(--radius-md)', background: 'rgba(0, 0, 0, 0.35)', margin: '-0.75rem -0.75rem 1.25rem' }}
+                          >
+                            <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(activeSlideEvent.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
+                            <img src={activeSlideEvent.flyer_url} alt="" decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                          </Link>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                           <span className="badge badge-gold">EVENT INVITATION</span>
                           <span className="text-note">
