@@ -35,6 +35,10 @@ import {
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
+import MatchReport from '@/components/MatchReport';
+import { matchReport } from '@/lib/match-report';
+import { DATE_LOCALE } from '@/lib/dates';
+import { TIME_ZONE } from '@/lib/email/format';
 import GettingThere from '@/components/grounds/GettingThere';
 import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
@@ -257,7 +261,7 @@ export default function MatchCenterPage({
           The requested fixture does not exist or may have been rescheduled.
         </p>
         <Link href={club ? `/${club.slug}` : '/'} className="btn btn-primary">
-          Return to Club Headquarters
+          Back to the club
         </Link>
       </div>
     );
@@ -537,7 +541,7 @@ export default function MatchCenterPage({
             )}
             <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <Calendar size={12} />
-              <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
+              <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
               {match.match_time && (
                 <>
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />
@@ -644,6 +648,26 @@ export default function MatchCenterPage({
         {/* Directions, parking and wet weather from the ground guide, before and during the match */}
         {match.status !== 'completed' && match.status !== 'cancelled' && <GettingThere match={match} />}
 
+        {/* Full-time report in plain sentences, from the logged events (none when the team hides scores) */}
+        {match.status === 'completed' && !scoreHidden && (
+          <MatchReport
+            source={`Written from the match events ${club.name} logged.`}
+            paragraphs={matchReport({
+              home: match.home_team_name,
+              away: match.away_team_name,
+              homeScore: match.home_score ?? 0,
+              awayScore: match.away_score ?? 0,
+              competition: match.competition && match.competition !== 'Premier Regional League' ? match.competition : undefined,
+              venue: match.venue,
+              // The club's time zone, so the server's HTML and the browser agree on the day
+              dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
+              goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
+              redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name })),
+              playerOfTheMatch: motmMember?.full_name,
+            })}
+          />
+        )}
+
         {/* Player of the Match & Goal Scorers */}
         {(motmMember || goalEvents.length > 0) && (
           <div
@@ -729,9 +753,9 @@ export default function MatchCenterPage({
           paddingBottom: '2px',
         }}>
           {[
-            { id: 'timeline', label: 'Timeline & Commentary' },
-            { id: 'lineups', label: 'Tactical Pitch & Lineups' },
-            { id: 'stats', label: 'Match Statistics' },
+            { id: 'timeline', label: 'Timeline & Commentary', short: 'Timeline' },
+            { id: 'lineups', label: 'Tactical Pitch & Lineups', short: 'Lineups' },
+            { id: 'stats', label: 'Match Statistics', short: 'Stats' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -750,7 +774,9 @@ export default function MatchCenterPage({
                 whiteSpace: 'nowrap',
               }}
             >
-              {tab.label}
+              {/* Short labels on phone, so all three tabs fit without scrolling */}
+              <span className="label-long">{tab.label}</span>
+              <span className="label-short">{tab.short}</span>
             </button>
           ))}
         </div>

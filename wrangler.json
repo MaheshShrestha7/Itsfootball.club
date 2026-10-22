@@ -7,7 +7,7 @@
     "nodejs_compat"
   ],
   "triggers": {
-    "crons": ["0 22 * * *"]
+    "crons": ["0 22 * * *", "17 * * * *"]
   },
   "assets": {
     "directory": ".open-next/assets",

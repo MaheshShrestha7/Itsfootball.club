@@ -237,8 +237,8 @@ export default function ClubIdentitySection({
   const statCards = [
     {
       id: 'members',
-      label: 'Total Members',
-      sublabel: 'Registered Club Members',
+      label: 'Members',
+      sublabel: 'Signed up with the club',
       value: stats.totalMembers,
       icon: Users,
       accentColor: primaryColor,
@@ -246,8 +246,8 @@ export default function ClubIdentitySection({
     },
     {
       id: 'players',
-      label: 'Total Players',
-      sublabel: 'Senior & Roster Athletes',
+      label: 'Players',
+      sublabel: 'Across all our teams',
       value: stats.totalPlayers,
       icon: Shield,
       accentColor: primaryColor,
@@ -256,7 +256,7 @@ export default function ClubIdentitySection({
     {
       id: 'matches',
       label: 'Matches Played',
-      sublabel: 'Completed & In-Play Fixtures',
+      sublabel: 'Results and live games',
       value: stats.matchesPlayed,
       icon: Trophy,
       accentColor: '#F59E0B',
@@ -273,8 +273,8 @@ export default function ClubIdentitySection({
     },
     {
       id: 'events',
-      label: 'Events & Trials',
-      sublabel: 'Scheduled Sessions & AGMs',
+      label: 'Events',
+      sublabel: 'Trials, socials and meetings',
       value: stats.eventsCount,
       icon: Calendar,
       accentColor: primaryColor,
@@ -282,8 +282,8 @@ export default function ClubIdentitySection({
     },
     {
       id: 'sponsors',
-      label: 'Sponsors Count',
-      sublabel: 'Commercial Partners',
+      label: 'Sponsors',
+      sublabel: 'Local businesses backing us',
       value: stats.sponsorsCount,
       icon: Award,
       accentColor: primaryColor,

@@ -418,7 +418,8 @@ export default function ClubPublicPage({
   if (!club) {
     if (!isHydrated) {
       return (
-        <PageSkeleton label="Loading the club" />      );
+        <PageSkeleton label="Loading the club" />
+      );
     }
 
     return (
@@ -1070,7 +1071,7 @@ export default function ClubPublicPage({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                           <div className="row">
                             <Calendar size={15} color="var(--club-primary)" />
-                            <span><LocalTime value={activeSlideEvent.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} /></span>
+                            <span><LocalTime value={activeSlideEvent.start_time} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} /></span>
                           </div>
                           <div className="row">
                             <MapPin size={15} color="var(--club-primary)" />
@@ -1634,6 +1635,11 @@ export default function ClubPublicPage({
           </div>
 
           <div className="stack">
+            {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).length === 0 && (
+              <p className="text-meta" style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                {fixturesTab === 'upcoming' ? 'No upcoming fixtures yet. Check back soon.' : 'No results yet this season.'}
+              </p>
+            )}
             {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).map(match => {
               const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
               const hideScore = publicScoreHidden(match, clubTeams);
@@ -1679,7 +1685,7 @@ export default function ClubPublicPage({
                   )}
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
                     <Calendar size={14} color="var(--text-muted)" />
-                    <LocalTime value={match.match_date} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
+                    <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />} • {match.venue}
@@ -1832,7 +1838,7 @@ export default function ClubPublicPage({
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                   <div className="row">
                     <Calendar size={14} color="var(--club-primary)" />
-                    <span className="text-primary"><LocalTime value={evt.start_time} locale="en-US" options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
+                    <span className="text-primary"><LocalTime value={evt.start_time} options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
                   </div>
                   <div className="row">
                     <MapPin size={14} color="var(--club-primary)" />
@@ -1956,7 +1962,8 @@ export default function ClubPublicPage({
         </div>
       </section>
 
-      {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE */}
+      {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE: left out until the club lists someone */}
+      {executiveStaff.length > 0 && (
       <section className="club-reveal" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
@@ -2006,6 +2013,7 @@ export default function ClubPublicPage({
           </div>
         </div>
       </section>
+      )}
 
       {/* 4.7 PLAYERS (SQUAD ROSTER) & LEADERBOARD */}
       <section id="squad" className="club-reveal" style={{ padding: '5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -2034,14 +2042,15 @@ export default function ClubPublicPage({
           {topPlayers.length === 0 && (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No players in this position yet.</p>
           )}
-          <div className="grid-responsive-3" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
+          <div className="grid-responsive-3 top-players" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
             {topPlayers.map((player, rank) => {
               const stat = statFor(player.id);
+              const hasStats = !!(stat?.appearances || stat?.goals || stat?.assists || stat?.motm_awards);
 
               return (
                 <div
                   key={player.id}
-                  className="glass-panel glass-panel-interactive"
+                  className="glass-panel glass-panel-interactive top-player"
                   style={{
                     overflow: 'hidden',
                     display: 'flex',
@@ -2049,7 +2058,7 @@ export default function ClubPublicPage({
                   }}
                 >
                   {/* Photo & Number Banner */}
-                  <div style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
+                  <div className="top-player-photo" style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
                     <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.9), transparent)' }} />
                     <div style={{
@@ -2084,8 +2093,10 @@ export default function ClubPublicPage({
                   </div>
 
                   {/* Player Stats Mini Grid */}
-                  <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+                  <div className="top-player-body" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {/* All zeros says nothing: shown once the player has a stat */}
+                    {hasStats && (
+                    <div className="top-player-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
                       <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
                         <div className="text-meta">APPS</div>
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{stat?.appearances || 0}</div>
@@ -2103,9 +2114,16 @@ export default function ClubPublicPage({
                         <div style={{ fontWeight: 800, color: 'var(--c-blue)' }}>{stat?.motm_awards || 0}</div>
                       </div>
                     </div>
+                    )}
+                    {/* Phone: one line instead of the four tiles */}
+                    {hasStats && (
+                      <div className="top-player-line text-meta">
+                        {countOf(stat?.appearances, 'app')} · {countOf(stat?.goals, 'goal')} · {countOf(stat?.assists, 'assist')}
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      <span>Nationality: <strong className="text-secondary">{player.nationality || 'Local'}</strong></span>
+                      {player.nationality ? <span>Nationality: <strong className="text-secondary">{player.nationality}</strong></span> : <span />}
                       <Link href={`/${club.slug}/member`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>
                         View Pass &rarr;
                       </Link>

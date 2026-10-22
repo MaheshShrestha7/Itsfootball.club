@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import ArticleBody from '@/components/ArticleBody';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
-import { BRAND_IMAGE, fallbackToBrandImage } from '@/lib/image-fallback';
+import CoverImage from '@/components/CoverImage';
 import { decodeSlugParam, newsPath } from '@/lib/slugs';
 
 /** A club news article on its own page (replaces the old pop-up on the club home page), so it can be shared, indexed and cited */
@@ -51,12 +51,13 @@ export default function NewsArticlePage({
       {backLink}
 
       <article>
-        <img
-          decoding="async"
-          src={article.cover_image_url || club.banner_url || BRAND_IMAGE}
-          onError={fallbackToBrandImage}
+        {/* No cover: the club's banner, else a panel in the club colours with its crest (not the platform logo) */}
+        <CoverImage
+          loading="eager"
+          src={article.cover_image_url || club.banner_url || undefined}
           alt={article.title}
-          style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-xl)', objectFit: 'cover', marginBottom: '1.5rem' }}
+          crestUrl={club.logo_url || undefined}
+          style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-xl)', marginBottom: '1.5rem' }}
         />
         {!!article.tags?.length && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>

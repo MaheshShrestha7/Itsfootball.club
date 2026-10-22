@@ -10,6 +10,8 @@ export interface Guide extends ToolPageLink {
   tool: ToolPageLink;
   /** Tool pages that link back to this guide */
   linkedFrom: string[];
+  /** When this guide went live (datePublished): never change it when the guide is edited */
+  published: string;
   /** When this guide was last checked against its sources, if later than GUIDES_UPDATED */
   updated?: string;
 }
@@ -22,6 +24,7 @@ export const GUIDES_UPDATED = '2026-10-18';
 export const GUIDES: Guide[] = [
   {
     path: '/guides/miniroos-rules-by-age',
+    published: '2026-10-15',
     label: 'MiniRoos rules by age',
     blurb: 'Players, subs, match length and pitch size, under 6 to under 11',
     question: 'How many players, subs and minutes are there in MiniRoos football?',
@@ -30,6 +33,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/equal-playing-time-junior-football',
+    published: '2026-10-15',
     label: 'Equal playing time in junior football',
     blurb: 'What Football Australia says, and how to share the minutes',
     question: 'Do junior football players have to get equal playing time?',
@@ -38,6 +42,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/round-robin-how-many-matches',
+    published: '2026-10-15',
     label: 'How many matches in a round robin?',
     blurb: 'Matches, rounds and time slots for 3 to 12 teams',
     question: 'How many matches and rounds does a round robin tournament have?',
@@ -46,6 +51,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/how-much-to-charge-for-club-registration',
+    published: '2026-10-15',
     label: 'How much to charge for club registration',
     blurb: 'The break-even fee, card fees and the surcharge ban',
     question: 'How much should a community soccer club charge for registration?',
@@ -54,6 +60,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/how-many-subs-in-7-a-side',
+    published: '2026-10-18',
     label: 'How many subs in 7-a-side',
     blurb: 'Bench limits, rolling rotation rules and fair minutes for Under 8 and Under 9',
     question: 'How many substitutes are allowed in 7-a-side football?',
@@ -62,6 +69,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/miniroos-rules-nsw-vic-qld-wa',
+    published: '2026-10-18',
     label: 'MiniRoos rules by state: NSW, VIC, QLD & WA',
     blurb: 'National formats vs state variations, retreat lines and competition policies',
     question: 'How do MiniRoos rules compare between NSW, Victoria, Queensland and WA?',
@@ -70,6 +78,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/2027-football-australia-registration-fees',
+    published: '2026-10-18',
     label: '2027 Football Australia registration fees',
     blurb: 'The new National Football Development Contribution and fee freeze explained',
     question: 'What is the Football Australia 2027 National Football Development Contribution?',
@@ -78,6 +87,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/how-to-start-a-football-club-in-australia',
+    published: '2026-10-18',
     label: 'How to start a football club in Australia',
     blurb: 'Step-by-step: association affiliation, incorporation, constitution & kits',
     question: 'How do you start a community football (soccer) club in Australia?',
@@ -86,6 +96,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/football-club-sponsorship-proposal-template',
+    published: '2026-10-18',
     label: 'Club sponsorship proposal template',
     blurb: 'Sponsorship packages, pricing tiers, pitch valuation and proposal outline',
     question: 'How do you write a grassroots football club sponsorship proposal?',
@@ -94,6 +105,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/football-club-committee-roles-and-responsibilities',
+    published: '2026-10-18',
     label: 'Club committee roles and responsibilities',
     blurb: 'President, Secretary, Treasurer, Registrar and Member Protection duties',
     question: 'What are the committee roles in an Australian community football club?',
@@ -102,6 +114,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/is-the-ground-closed-after-rain-sydney-councils',
+    published: '2026-10-18',
     label: 'Is the ground closed after rain? Sydney councils',
     blurb: 'Wet weather inspection times, council status hotlines and weekend ground rules',
     question: 'How do Sydney councils decide when sportsgrounds close after rain?',
@@ -110,6 +123,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/how-to-register-on-playfootball',
+    published: '2026-10-22',
     label: 'How to register on PlayFootball',
     blurb: 'Step by step for players and parents, plus pending approvals, transfers and refunds',
     question: 'How do you register for a football club on PlayFootball?',
@@ -119,6 +133,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/sport-vouchers-for-football-by-state',
+    published: '2026-10-22',
     label: 'Sport vouchers for football, by state',
     blurb: 'Active and Creative Kids, Get Active Kids, Play On!, KidSport and the rest',
     question: 'Which government sport vouchers can you use for football registration in Australia?',
@@ -128,6 +143,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/football-club-agm-agenda-template',
+    published: '2026-10-22',
     label: 'Football club AGM agenda template',
     blurb: 'Deadlines, notice periods, a running order you can copy, and what to lodge after',
     question: 'What has to happen at a football club AGM in Australia?',
@@ -137,6 +153,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/extreme-heat-policy-football-australia',
+    published: '2026-10-22',
     label: 'Extreme heat and lightning policy',
     blurb: 'When hot-weather games are cancelled, drinks breaks and the 30-second lightning rule',
     question: 'When are junior football games cancelled because of heat in Australia?',
@@ -146,6 +163,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/grants-for-football-clubs-australia',
+    published: '2026-10-22',
     label: 'Grants for football clubs in Australia',
     blurb: 'Football Australia, state and council grants, and tax-deductible donations',
     question: 'What grants can a community football club in Australia apply for?',
@@ -155,6 +173,7 @@ export const GUIDES: Guide[] = [
   },
   {
     path: '/guides/bunnings-sausage-sizzle-fundraiser',
+    published: '2026-10-22',
     label: 'Running a Bunnings sausage sizzle',
     blurb: 'How to ask your store, food rules by state, the roster and the shopping list',
     question: 'How does a football club book and run a Bunnings sausage sizzle fundraiser?',
@@ -165,7 +184,7 @@ export const GUIDES: Guide[] = [
 ];
 
 /** The date a guide was last checked against its sources */
-export const guideUpdated = (g: Guide) => g.updated ?? GUIDES_UPDATED;
+export const guideUpdated = (g: Guide) => [g.updated ?? GUIDES_UPDATED, g.published].sort().at(-1)!;
 
 /** The most recent check across all guides, for the index page */
 export const GUIDES_LAST_UPDATED = GUIDES.map(guideUpdated).sort().at(-1)!;

@@ -1552,6 +1552,24 @@ textarea {
   }
 }
 
+/* A long label with a short version for phones */
+.label-short { display: none; }
+@media (max-width: 640px) {
+  .label-long { display: none; }
+  .label-short { display: inline; }
+}
+
+/* Club home Top Players: on phone, the top 3 as shorter cards with a one-line stat summary
+   ("View full squad" lists everyone). Six full cards were about 2,000px of scrolling. */
+.top-player-line { display: none; }
+@media (max-width: 640px) {
+  .top-players > .top-player:nth-child(n + 4) { display: none !important; }
+  .top-player-photo { height: 150px !important; }
+  .top-player-stats { display: none !important; }
+  .top-player-line { display: block; }
+  .top-player-body { padding: 0.85rem 1.1rem !important; gap: 0.5rem !important; }
+}
+
 /* Mobile-Friendly Horizontal Scroll Pill Strip */
 .scroll-pill-strip {
   display: flex;
