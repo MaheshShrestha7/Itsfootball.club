@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { PlatformAnnouncement } from '@/lib/supabase/types';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X, ExternalLink } from 'lucide-react';
+import { safeLinkHref } from '@/lib/sponsors';
 
 export default function PlatformAnnouncementBanner() {
   const [announcement, setAnnouncement] = useState<PlatformAnnouncement | null>(null);
@@ -80,6 +81,8 @@ export default function PlatformAnnouncementBanner() {
 
   const style = getStyle();
   const Icon = style.icon;
+  // Only web addresses or paths on this site (also enforced by the database, migration 20261116)
+  const linkHref = safeLinkHref(announcement.link_url);
 
   return (
     <div
@@ -104,9 +107,9 @@ export default function PlatformAnnouncementBanner() {
         <span>
           <strong>{announcement.title}:</strong> {announcement.message}
         </span>
-        {announcement.link_url && (
+        {linkHref && (
           <a
-            href={announcement.link_url}
+            href={linkHref}
             target="_blank"
             rel="noopener noreferrer"
             style={{

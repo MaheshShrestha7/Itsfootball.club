@@ -157,6 +157,11 @@ export default function PlatformAdminsModal({
               <option value="analyst">Analyst</option>
             </select>
           </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: '-0.25rem 0 0.9rem' }}>
+            Super Admins can do everything, including adding and removing admins. Operators can suspend clubs, post
+            announcements and edit grounds. Analysts can only look. Someone without an account yet gets access once
+            they sign up and confirm this email address.
+          </p>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
             <button

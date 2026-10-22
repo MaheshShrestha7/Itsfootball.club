@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { CreditCard, Landmark, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { bookingFeeCents, formatMoney, paymentReference } from '@/lib/finance';
-import type { ClubPaymentSettings } from '@/lib/supabase/types';
+import { PUBLIC_PAYMENT_SETTINGS, type ClubPaymentSettings } from '@/lib/supabase/types';
 
 interface PaymentStepProps {
   clubId: string;
@@ -44,7 +44,7 @@ export default function PaymentStep(props: PaymentStepProps) {
   useEffect(() => {
     const client = getSupabaseClient();
     if (!client) return setSettings(null);
-    client.from('club_payment_settings').select('*').eq('club_id', clubId).maybeSingle()
+    client.from('club_payment_settings').select(PUBLIC_PAYMENT_SETTINGS).eq('club_id', clubId).maybeSingle()
       .then(({ data }) => setSettings(data ?? null));
   }, [clubId]);
 

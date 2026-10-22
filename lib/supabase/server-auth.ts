@@ -67,9 +67,15 @@ export async function requirePlatformAdmin(request: Request, write = false): Pro
   const { data: isAdmin } = await auth.supabase.rpc('is_platform_admin');
   if (isAdmin !== true) return { ok: false, status: 403, error: 'Only platform admins can do this.' };
   if (write) {
-    const { data: rows } = await auth.supabase.from('platform_admins').select('role, user_id, email').eq('is_active', true);
-    const me = (rows || []).find(r => r.user_id === auth.userId || (auth.confirmedEmail && (r.email || '').toLowerCase() === auth.confirmedEmail));
-    if (me?.role === 'analyst') return { ok: false, status: 403, error: 'Analysts can view grounds but not change them.' };
+    // Super admins and Operators can change things (migration 20261116); before that migration, fall back to the role column
+    const { data: canWrite, error } = await auth.supabase.rpc('is_platform_operator');
+    if (!error) {
+      if (canWrite !== true) return { ok: false, status: 403, error: 'Analysts can view grounds but not change them.' };
+    } else {
+      const { data: rows } = await auth.supabase.from('platform_admins').select('role, user_id, email').eq('is_active', true);
+      const me = (rows || []).find(r => r.user_id === auth.userId || (auth.confirmedEmail && (r.email || '').toLowerCase() === auth.confirmedEmail));
+      if (me?.role === 'analyst') return { ok: false, status: 403, error: 'Analysts can view grounds but not change them.' };
+    }
   }
   return auth;
 }

@@ -15,6 +15,7 @@ import type { RenewalMode, MembershipPaymentPolicy } from '@/lib/finance';
 import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
+import { PUBLIC_PAYMENT_SETTINGS } from '@/lib/supabase/types';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 
@@ -70,7 +71,10 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   const load = useCallback(async () => {
     if (!db) return;
     const [s, pl, pk, pay, exp] = await Promise.all([
-      db.from('club_payment_settings').select('*').eq('club_id', club.id).maybeSingle(),
+      // The Stripe account id isn't readable here (migration 20261116); stripe_connected says whether there is one.
+      // Before that migration stripe_connected doesn't exist yet, so fall back to every column.
+      db.from('club_payment_settings').select(`${PUBLIC_PAYMENT_SETTINGS}, stripe_connected`).eq('club_id', club.id).maybeSingle()
+        .then(res => (res.error ? db.from('club_payment_settings').select('*').eq('club_id', club.id).maybeSingle() : res)),
       db.from('membership_plans').select('*').eq('club_id', club.id).order('sort_order'),
       db.from('sponsorship_packages').select('*').eq('club_id', club.id).order('sort_order'),
       db.from('payments').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
@@ -832,7 +836,7 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
     load();
   };
 
-  const stripeState = settings?.stripe_charges_enabled ? 'connected' : settings?.stripe_account_id ? 'incomplete' : 'none';
+  const stripeState = settings?.stripe_charges_enabled ? 'connected' : (settings?.stripe_connected ?? settings?.stripe_account_id) ? 'incomplete' : 'none';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
