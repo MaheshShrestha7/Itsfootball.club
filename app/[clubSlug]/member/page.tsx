@@ -745,7 +745,7 @@ export default function MemberPortalPage({
             }}
           >
             <ArrowLeft size={16} />
-            <span>Back to {club.name} Clubhouse</span>
+            <span>Back to {club.name}</span>
           </Link>
         </div>
 

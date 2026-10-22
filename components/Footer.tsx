@@ -250,11 +250,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
               {club ? (
                 <>
                   <Link href={`/${club.slug}/about`} style={{ color: 'var(--text-secondary)' }}>About the Club</Link>
-                  <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Live Match Centre</Link>
                   <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)' }}>Fixtures &amp; Results</Link>
-                  <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)' }}>First Team Squad</Link>
+                  <Link href={`/${club.slug}#squad`} style={{ color: 'var(--text-secondary)' }}>Squad</Link>
                   <Link href={`/${club.slug}#leaderboard`} style={{ color: 'var(--text-secondary)' }}>Player Leaderboards</Link>
-                  <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Virtual Member Pass</Link>
                 </>
               ) : (
                 <>
@@ -301,10 +299,11 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                       <Link href={`/${club.slug}/admin/branding`} style={{ color: 'var(--text-secondary)' }}>Branding &amp; Domain</Link>
                       <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)' }}>Match Controller</Link>
                       <Link href={`/${club.slug}/admin/scanner`} style={{ color: 'var(--text-secondary)' }}>QR Pass &amp; Event Scanner</Link>
+                      {/* A steward's tool, so only shown to club admins */}
+                      <Link href={`/${club.slug}/verify`} style={{ color: 'var(--text-secondary)' }}>Pass Verification</Link>
                     </>
                   )}
-                  <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Member Portal</Link>
-                  <Link href={`/${club.slug}/verify`} style={{ color: 'var(--text-secondary)' }}>Pass Verification Portal</Link>
+                  <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Membership &amp; Pass</Link>
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
                 </>
               ) : (

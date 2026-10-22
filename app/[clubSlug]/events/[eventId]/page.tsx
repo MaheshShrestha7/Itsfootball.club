@@ -135,7 +135,7 @@ export default function EventDetailsPage({
               <div>
                 <div className="text-meta">Date</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  <LocalTime value={event.start_time} locale="en-US" options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
+                  <LocalTime value={event.start_time} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
                 </div>
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function EventDetailsPage({
               <div>
                 <div className="text-meta">Time</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  <LocalTime value={event.start_time} format="time" locale="en-US" options={{ hour: 'numeric', minute: '2-digit' }} />
+                  <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </div>
               </div>
             </div>
