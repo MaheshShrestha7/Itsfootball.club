@@ -1,5 +1,6 @@
 'use client';
 
+import { PageSkeleton, Skeleton } from '@/components/Skeleton';
 import React, { useState, useEffect, useRef, useCallback, useMemo, use } from 'react';
 import dynamic from 'next/dynamic';
 import LocalTime from '@/components/LocalTime';
@@ -45,7 +46,7 @@ import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortNa
 
 // Only needed once the lineups tab opens
 const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
-  loading: () => <p className="text-note" style={{ textAlign: 'center', padding: '2rem' }}>Loading pitch…</p>,
+  loading: () => <Skeleton style={{ aspectRatio: '3 / 4', maxHeight: 560, maxWidth: 420, margin: '0 auto' }} />,
 });
 
 type Side = 'home' | 'away';
@@ -247,17 +248,8 @@ export default function MatchCenterPage({
   if (!club || !match) {
     if (!isHydrated || syncStatus.phase === 'loading') {
       return (
-        <div style={{ minHeight: '100dvh', background: 'var(--bg-pitch)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', padding: '2rem' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            border: '3px solid rgba(var(--tint-rgb), 0.1)',
-            borderTopColor: '#10B981',
-            animation: 'spin 0.8s linear infinite',
-            marginBottom: '1rem',
-          }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading match fixture...</p>
+        <div style={{ minHeight: '100dvh', background: 'var(--bg-pitch)', color: 'var(--text-primary)' }}>
+          <PageSkeleton kind="match" label="Loading the match" />
         </div>
       );
     }

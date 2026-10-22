@@ -1,5 +1,6 @@
 'use client';
 
+import { PageSkeleton } from '@/components/Skeleton';
 import React, { useState, useEffect, use, useMemo } from 'react';
 import { fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
@@ -417,43 +418,7 @@ export default function ClubPublicPage({
   if (!club) {
     if (!isHydrated) {
       return (
-        <div style={{
-          minHeight: '70vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1.25rem',
-          padding: '2rem',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            position: 'relative',
-            width: '64px',
-            height: '64px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              border: '3px solid rgba(var(--tint-rgb), 0.08)',
-              borderTopColor: 'var(--club-primary, #10B981)',
-              animation: 'spin 0.9s linear infinite',
-            }} />
-            <Shield size={28} color="var(--club-primary, #10B981)" style={{ opacity: 0.9 }} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-              Loading club...
-            </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-              Syncing matchday lineups, squad rosters, and live turnstiles
-            </p>
-          </div>
-        </div>
+        <PageSkeleton label="Loading the club" />
       );
     }
 
@@ -1538,7 +1503,7 @@ export default function ClubPublicPage({
       })()}
 
       {/* 4.3 FIXTURES & RESULTS */}
-      <section id="fixtures" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="fixtures" className="club-reveal" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
             <div>
@@ -1614,7 +1579,17 @@ export default function ClubPublicPage({
               </div>
 
               {/* Tab switchers */}
-              <div style={{ display: 'flex', background: 'rgba(var(--tint-rgb), 0.05)', padding: '4px', borderRadius: 'var(--radius-md)', flex: 1, minWidth: '220px' }}>
+              <div style={{ display: 'flex', position: 'relative', background: 'rgba(var(--tint-rgb), 0.05)', padding: '4px', borderRadius: 'var(--radius-md)', flex: 1, minWidth: '220px' }}>
+                {/* One club-colour pill that slides between the two tabs */}
+                <span
+                  aria-hidden="true"
+                  className="tab-slider"
+                  style={{
+                    position: 'absolute', top: 4, bottom: 4, left: 4, width: 'calc(50% - 4px)',
+                    borderRadius: 'var(--radius-sm)', background: 'var(--club-primary)',
+                    translate: fixturesTab === 'results' ? '100% 0' : '0 0',
+                  }}
+                />
                 <button
                   onClick={() => setFixturesTab('upcoming')}
                   style={{
@@ -1622,8 +1597,10 @@ export default function ClubPublicPage({
                     padding: '0.5rem 0.85rem',
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
-                    background: fixturesTab === 'upcoming' ? 'var(--club-primary)' : 'transparent',
+                    position: 'relative',
+                    background: 'transparent',
                     color: fixturesTab === 'upcoming' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
+                    transition: 'color 0.25s ease',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1640,8 +1617,10 @@ export default function ClubPublicPage({
                     padding: '0.5rem 0.85rem',
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
-                    background: fixturesTab === 'results' ? 'var(--club-primary)' : 'transparent',
+                    position: 'relative',
+                    background: 'transparent',
                     color: fixturesTab === 'results' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
+                    transition: 'color 0.25s ease',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1805,7 +1784,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.4 SCHEDULED SOCIAL EVENTS */}
-      <section id="events" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="events" className="club-reveal" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
             <div>
@@ -1882,7 +1861,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.5 LATEST NEWS SHOWCASE & VIDEO */}
-      <section id="news" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="news" className="club-reveal" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ marginBottom: '2.5rem' }}>
             <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MEDIA & DISPATCHES</span>
@@ -1985,7 +1964,7 @@ export default function ClubPublicPage({
 
       {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE: left out until the club lists someone */}
       {executiveStaff.length > 0 && (
-      <section style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section className="club-reveal" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -2037,7 +2016,7 @@ export default function ClubPublicPage({
       )}
 
       {/* 4.7 PLAYERS (SQUAD ROSTER) & LEADERBOARD */}
-      <section id="squad" style={{ padding: '5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="squad" className="club-reveal" style={{ padding: '5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           {/* Section Header & Position Filters */}
           <div style={{
@@ -2313,7 +2292,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.8 HOME GROUND DETAILS & MAP */}
-      <section id="stadium" style={{ padding: '5rem 0', background: 'rgba(var(--tint-rgb), 0.015)' }}>
+      <section id="stadium" className="club-reveal" style={{ padding: '5rem 0', background: 'rgba(var(--tint-rgb), 0.015)' }}>
         <div className="container">
           <div style={{
             display: 'grid',

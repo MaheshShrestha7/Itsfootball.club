@@ -3598,3 +3598,56 @@ dialog.confirm-dialog::backdrop {
   .auth-sent-tick path { animation: none; stroke-dashoffset: 0; }
   .auth-spinner { animation-duration: 1.6s; }
 }
+
+/* Club home sections rise in as they scroll into view, like the platform homepage's .lp-reveal.
+   Decorative, so CSS only: browsers without view timelines (and reduced motion) just show them. */
+@supports ((animation-timeline: view()) and (animation-range: entry)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .club-reveal > .container {
+      animation: clubReveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+  }
+}
+@keyframes clubReveal {
+  from { opacity: 0; translate: 0 24px; }
+}
+
+/* Sliding tab pill (club home Upcoming / Results) */
+.tab-slider {
+  transition: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+
+/* Loading placeholders: glass panels with a soft sweep (components/Skeleton.tsx) */
+.skeleton {
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(100deg, transparent 30%, rgba(var(--tint-rgb), 0.06) 50%, transparent 70%) 0 0 / 200% 100%,
+    rgba(var(--tint-rgb), 0.04);
+  border: 1px solid var(--border-subtle);
+  animation: skeletonSweep 1.4s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
+@keyframes skeletonSweep {
+  from { background-position: 150% 0, 0 0; }
+  to { background-position: -50% 0, 0 0; }
+}
+
+/* Availability answers (In / Maybe / Out): a small pop and the icon drawing in when one is picked */
+.app-answers button[aria-pressed="true"],
+.answer-pop[aria-pressed="true"] {
+  @media (prefers-reduced-motion: no-preference) { animation: answerPop 280ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+}
+.app-answers button[aria-pressed="true"] svg :is(path, circle, line, polyline) {
+  @media (prefers-reduced-motion: no-preference) {
+    stroke-dasharray: 32;
+    stroke-dashoffset: 32;
+    animation: authDraw 320ms 80ms ease-out forwards;
+  }
+}
+@keyframes answerPop {
+  40% { scale: 1.06; }
+}
+
