@@ -81,6 +81,43 @@ export interface MatchMetadataRow {
   score_hidden?: boolean;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * True only when Supabase answered and the row isn't there, so the page can return a real 404.
+ * A failed lookup counts as found: a network blip must never 404 a real match or article.
+ */
+async function publicRowMissing(path: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return false;
+  try {
+    const res = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 30 } });
+    if (!res.ok) return false;
+    const rows: unknown = await res.json();
+    return Array.isArray(rows) && rows.length === 0;
+  } catch {
+    return false;
+  }
+}
+
+/** A match id that isn't this club's (matches are public to everyone by RLS) */
+export async function matchMissing(clubSlug: string, matchId: string): Promise<boolean> {
+  if (!UUID.test(matchId)) return true;
+  const club = await findClubBySlug(clubSlug);
+  if (!club) return false;
+  return publicRowMissing(`matches?select=id&id=eq.${matchId}&club_id=eq.${club.id}&limit=1`);
+}
+
+/** A news slug this club has never used (news is public to everyone by RLS) */
+export async function newsMissing(clubSlug: string, slug: string): Promise<boolean> {
+  const club = await findClubBySlug(clubSlug);
+  if (!club || !slug) return false;
+  return publicRowMissing(`news_articles?select=id&club_id=eq.${club.id}&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+}
+
 export async function findMatchById(matchId: string): Promise<MatchMetadataRow | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
@@ -388,13 +425,15 @@ export interface SitemapData {
   teams: { club_id: string; slug: string }[];
   shopClubIds: string[];
   galleryClubIds: string[];
+  /** Clubs with at least one active sponsorship package (an empty sponsor page is thin) */
+  sponsorClubIds: string[];
   /** Teams entered per tournament */
   teamCounts: Map<string, number>;
 }
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
-  const [clubs, matches, events, tournaments, news, teams, products, photos, participants] = await Promise.all([
+  const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
@@ -406,6 +445,7 @@ export async function listSitemapData(): Promise<SitemapData> {
     // ponytail: reads one row per photo; a distinct-club_id view if galleries grow into the tens of thousands
     fetchRows<{ club_id: string }>('media_gallery?select=club_id&media_type=eq.image&order=id'),
     fetchRows<{ tournament_id: string }>('tournament_participants?select=tournament_id&order=id'),
+    fetchRows<{ club_id: string }>('sponsorship_packages?select=club_id&is_active=eq.true&order=id'),
   ]);
   const teamCounts = new Map<string, number>();
   for (const p of participants) teamCounts.set(p.tournament_id, (teamCounts.get(p.tournament_id) || 0) + 1);
@@ -413,6 +453,7 @@ export async function listSitemapData(): Promise<SitemapData> {
     clubs, matches, events, tournaments, news, teams,
     shopClubIds: Array.from(new Set(products.map(p => p.club_id))),
     galleryClubIds: Array.from(new Set(photos.map(p => p.club_id))),
+    sponsorClubIds: Array.from(new Set(packages.map(p => p.club_id))),
     teamCounts,
   };
 }

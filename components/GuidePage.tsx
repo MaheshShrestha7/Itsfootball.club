@@ -93,7 +93,7 @@ export default function GuidePage(p: GuidePageProps) {
         url,
         mainEntityOfPage: url,
         inLanguage: 'en-AU',
-        datePublished: updated,
+        datePublished: guide.published,
         dateModified: updated,
         author: {
           '@type': 'Person',

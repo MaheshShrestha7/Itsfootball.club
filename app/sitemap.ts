@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { FORMAT_PAGES } from '@/lib/tool-pages';
-import { GUIDES } from '@/lib/guides';
+import { GUIDES, GUIDES_LAST_UPDATED, guideUpdated } from '@/lib/guides';
 import { newsPath } from '@/lib/slugs';
 import { CHECKED_COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
@@ -18,12 +18,13 @@ export const dynamic = 'force-dynamic';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
   const [data, grounds, groundClubs] = await Promise.all([listSitemapData(), listGrounds(), clubsWithHomeGrounds()]);
-  const { matches, events, news, teams, shopClubIds, galleryClubIds, teamCounts } = data;
+  const { matches, events, news, teams, shopClubIds, galleryClubIds, sponsorClubIds, teamCounts } = data;
   // Tournament-only clubs have no club pages, only their public tournament page (added below)
   const eventSlugById = new Map(data.clubs.filter(isEventClub).map(c => [c.id, c.slug]));
   const clubs = data.clubs.filter(c => !isEventClub(c));
   const tournaments = data.tournaments.filter(t => !eventSlugById.has(t.club_id));
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
+  const tournamentClubIds = new Set(tournaments.map(t => t.club_id));
   const url = (path: string) => `${SITE_URL}${path}`;
   const date = (...values: (string | null | undefined)[]) => {
     const t = values.map(v => (v ? Date.parse(v) : NaN)).filter(n => !isNaN(n) && n <= now);
@@ -49,8 +50,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/tools/equal-playing-time-calculator'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
     { url: url('/tools/season-fee-calculator'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
     ...FORMAT_PAGES.map(t => ({ url: url(t.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
-    { url: url('/guides'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
-    ...GUIDES.map(g => ({ url: url(g.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
+    { url: url('/guides'), lastModified: new Date(GUIDES_LAST_UPDATED), changeFrequency: 'monthly', priority: 0.6 },
+    ...GUIDES.map(g => ({ url: url(g.path), lastModified: new Date(guideUpdated(g)), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/compare'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
     { url: url('/best-free-football-club-website-builders-australia'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
     ...CHECKED_COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.7 })),
@@ -62,11 +63,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const lastModified = date(club.updated_at);
     entries.push(
       { url: url(`/${club.slug}`), lastModified, changeFrequency: 'daily', priority: 0.9 },
-      { url: url(`/${club.slug}/member`), lastModified, changeFrequency: 'monthly', priority: 0.5 },
-      { url: url(`/${club.slug}/tournaments`), lastModified, changeFrequency: 'weekly', priority: 0.6 },
       { url: url(`/${club.slug}/about`), lastModified, changeFrequency: 'monthly', priority: 0.5 },
-      { url: url(`/${club.slug}/sponsor`), changeFrequency: 'monthly', priority: 0.4 },
     );
+    // Sub-pages only when they have something on them: an empty list is a thin page to Google
+    if (tournamentClubIds.has(club.id)) entries.push({ url: url(`/${club.slug}/tournaments`), lastModified, changeFrequency: 'weekly', priority: 0.6 });
+    if (sponsorClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/sponsor`), changeFrequency: 'monthly', priority: 0.4 });
     const clubTeams = teams.filter(t => t.club_id === club.id);
     if (clubTeams.length) entries.push({ url: url(`/${club.slug}/teams`), changeFrequency: 'weekly', priority: 0.6 });
     for (const t of clubTeams) entries.push({ url: url(`/${club.slug}/teams/${t.slug}`), changeFrequency: 'weekly', priority: 0.6 });
