@@ -336,7 +336,7 @@ export default function MyClubsPage() {
                               href={`/${club.slug}`}
                               className="btn btn-secondary touch-target"
                               style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
-                              title="Public Clubhouse View"
+                              title="View the public club site"
                             >
                               <ExternalLink size={13} />
                               <span>Public</span>
@@ -495,7 +495,7 @@ export default function MyClubsPage() {
                                 href={`/${club.slug}`}
                                 className="btn btn-secondary touch-target"
                                 style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
-                                title="Public Clubhouse View"
+                                title="View the public club site"
                               >
                                 <ExternalLink size={13} />
                                 <span>Public</span>
