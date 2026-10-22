@@ -13,6 +13,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen } from 'lucide-react';
+import { matchPath } from '@/lib/slugs';
 
 interface ClubNavbarProps {
   club: Club;
@@ -254,7 +255,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
           {/* Live match: otherwise the match centre is just the Fixtures link below, so it isn't listed twice */}
           {liveMatch && (
-            <Link href={`/${club.slug}/match/${liveMatch.id}`} aria-label="Live match: open the match centre" style={{ display: 'flex', alignItems: 'center' }}>
+            <Link href={matchPath(club.slug, liveMatch)} aria-label="Live match: open the match centre" style={{ display: 'flex', alignItems: 'center' }}>
               <span className="badge badge-live" style={{ padding: '0.2rem 0.5rem' }}>
                 <span className="pulse-dot" /> LIVE
               </span>
@@ -471,7 +472,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               {/* Action Buttons: Match Centre & Member Pass */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 <Link
-                  href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
+                  href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}#fixtures`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-sm"
                   style={{

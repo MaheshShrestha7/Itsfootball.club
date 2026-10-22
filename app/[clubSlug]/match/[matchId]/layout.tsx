@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { findMatchById } from '@/lib/supabase/club-lookup';
+import { findClubMatch } from '@/lib/supabase/club-lookup';
+import { matchPath } from '@/lib/slugs';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { tournamentMatchLabel } from '@/lib/tournament-engine';
 import { TIME_ZONE } from '@/lib/email/format';
@@ -11,10 +12,11 @@ export async function generateMetadata({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }): Promise<Metadata> {
   const { clubSlug, matchId } = await params;
-  const match = await findMatchById(matchId);
+  const match = await findClubMatch(clubSlug, matchId);
 
   return clubPageMetadata(clubSlug, club => {
-    const path = `/${club.slug}/match/${matchId}`;
+    // The id and any old slug redirect here (app/[clubSlug]/layout.tsx), so the canonical is the current slug
+    const path = match && match.club_id === club.id ? matchPath(club.slug, match) : `/${club.slug}/match/${matchId}`;
     if (!match || match.club_id !== club.id) {
       return pageMetadata({
         title: fitTitle('Match not found', clubName(club)),

@@ -1,10 +1,10 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { clubExists } from '@/lib/supabase/server-data';
 import { SITE_NAME, clubImage, clubName, clubPageMetadata, clubPageTitle, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
-import { findClubBySlug, matchMissing, newsMissing } from '@/lib/supabase/club-lookup';
+import { findClubBySlug, newsMissing, resolveMatchParam } from '@/lib/supabase/club-lookup';
 import { decodeSlugParam } from '@/lib/slugs';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import ClubLayoutClient from './ClubLayoutClient';
@@ -32,13 +32,20 @@ export async function generateMetadata({ params }: { params: Promise<{ clubSlug:
   }));
 }
 
-/** /{club}/match/{id} or /{club}/news/{slug} whose match or article Supabase says doesn't exist */
-async function subPageMissing(clubSlug: string, pathname: string): Promise<boolean> {
+/**
+ * /{club}/match/{param} or /{club}/news/{slug}: 'missing' when Supabase says the match or article doesn't
+ * exist, or the current slug when a match was asked for by its id or a slug it had before a reschedule.
+ */
+async function checkSubPage(clubSlug: string, pathname: string): Promise<'missing' | { matchSlug: string } | null> {
   const [, , section, id, ...rest] = pathname.split('/');
-  if (!id || rest.length) return false;
-  if (section === 'match') return matchMissing(clubSlug, id);
-  if (section === 'news') return newsMissing(clubSlug, decodeSlugParam(id));
-  return false;
+  if (!id || rest.length) return null;
+  if (section === 'match') {
+    const found = await resolveMatchParam(clubSlug, id);
+    if (found === 'missing') return 'missing';
+    return found?.slug && found.slug !== id ? { matchSlug: found.slug } : null;
+  }
+  if (section === 'news') return (await newsMissing(clubSlug, decodeSlugParam(id))) ? 'missing' : null;
+  return null;
 }
 
 export default async function ClubLayout({
@@ -63,7 +70,8 @@ export default async function ClubLayout({
   // Same for a deleted match or news article. Checked here rather than in their own layouts: those render
   // inside ClubLayoutClient, which shows a loading shell on the server, so a notFound() there never
   // reaches the status code and the page went out as a 200 "not found".
-  if (await subPageMissing(clubSlug, (await headers()).get('x-pathname') || '')) notFound();
+  const subPage = await checkSubPage(clubSlug, (await headers()).get('x-pathname') || '');
+  if (subPage === 'missing') notFound();
 
   // JSON-LD sits outside ClubLayoutClient: that shows a loading shell during server rendering (club data
   // loads in the browser), which would otherwise keep the structured data out of the HTML crawlers read.
@@ -72,6 +80,9 @@ export default async function ClubLayout({
   const lookup = await findClubBySlug(clubSlug);
   // A tournament-only club has no club site: everything under it goes to its tournament page
   if (isEventClub(lookup)) redirect(tournamentPagePath(lookup!.slug));
+  // One URL per match for search engines and shared links: the id and old slugs move to the readable slug.
+  // The path keeps the club slug, which a club's own domain passes straight through (middleware.ts).
+  if (subPage?.matchSlug) permanentRedirect(`/${lookup?.slug || clubSlug}/match/${subPage.matchSlug}`);
   const fallback = lookup ? { name: lookup.name, motto: lookup.motto || '' } : undefined;
 
   return (

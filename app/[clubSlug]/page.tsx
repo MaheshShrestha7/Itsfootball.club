@@ -49,7 +49,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
-import { SITE_URL, newsPath } from '@/lib/slugs';
+import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   match: 'Match',
@@ -287,7 +287,7 @@ export default function ClubPublicPage({
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
             subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
             ctaLabel: item.cta_label || (isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups'),
-            ctaLink: item.cta_link || (matchItem ? `/${club.slug}/match/${matchItem.id}` : `/${club.slug}`),
+            ctaLink: item.cta_link || (matchItem ? matchPath(club.slug, matchItem) : `/${club.slug}`),
             targetMatch: matchItem,
           };
         }
@@ -599,7 +599,7 @@ export default function ClubPublicPage({
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
                           <Link
-                            href={activeSlideMatch ? `/${club.slug}/match/${activeSlideMatch.id}` : `/${club.slug}`}
+                            href={activeSlideMatch ? matchPath(club.slug, activeSlideMatch) : `/${club.slug}`}
                             className="btn btn-primary"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                           >
@@ -964,7 +964,7 @@ export default function ClubPublicPage({
                             Venue: <strong className="text-primary">{activeSlideMatch.venue}</strong>
                           </div>
                           <Link
-                            href={`/${club.slug}/match/${activeSlideMatch.id}`}
+                            href={matchPath(club.slug, activeSlideMatch)}
                             className="btn btn-primary btn-sm touch-target"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                           >
@@ -1010,7 +1010,7 @@ export default function ClubPublicPage({
                           Kickoff: <LocalTime value={activeSlideMatch.match_date} /> at <LocalTime value={activeSlideMatch.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} /> • {activeSlideMatch.venue}
                         </div>
                         <Link
-                          href={`/${club.slug}/match/${activeSlideMatch.id}`}
+                          href={matchPath(club.slug, activeSlideMatch)}
                           className="btn btn-primary btn-sm touch-target"
                           style={{ width: '100%', justifyContent: 'center' }}
                         >
@@ -1784,7 +1784,7 @@ export default function ClubPublicPage({
                   )}
 
                   <Link
-                    href={`/${club.slug}/match/${match.id}`}
+                    href={matchPath(club.slug, match)}
                     className="btn btn-secondary btn-sm touch-target"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
                   >

@@ -1,7 +1,7 @@
 // schema.org JSON-LD builders, rendered server-side from live data (see components/JsonLd.tsx).
 import { AREA_SERVED, SITE_NAME, SITE_URL, SOCIAL_PROFILES } from './seo';
 import { CONTACT_EMAIL, FEE_PHRASE } from './faq';
-import { newsPath } from './slugs';
+import { matchPath, newsPath } from './slugs';
 import { isPlayed } from './public-tournaments';
 import { groundPath, type GroundRow } from './grounds';
 import type {
@@ -393,8 +393,8 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground
 
   return {
     '@type': 'SportsEvent',
-    '@id': abs(`/${club.slug}/match/${match.id}#event`),
-    url: abs(`/${club.slug}/match/${match.id}`),
+    '@id': abs(`${matchPath(club.slug, match)}#event`),
+    url: abs(matchPath(club.slug, match)),
     name: `${match.home_team_name} vs ${match.away_team_name}`,
     description: played && !match.score_hidden
       ? `${isLive ? 'LIVE: ' : ''}${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}${match.competition ? ` (${match.competition})` : ''}`

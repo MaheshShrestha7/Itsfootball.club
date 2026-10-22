@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Share2, Download, X } from 'lucide-react';
 import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
+import { matchPath } from '@/lib/slugs';
 
 // "Share" on a match page (and on each fixture in Admin > Matches): previews the matchday graphic as a
 // story or a post, then hands it to the phone's share sheet (Instagram, Facebook, WhatsApp...) or
@@ -60,7 +61,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const share = async () => {
     if (!image) return;
     const file = new File([image.blob], fileName, { type: 'image/png' });
-    const link = `${window.location.origin}/${club.slug}/match/${match.id}`;
+    const link = `${window.location.origin}${matchPath(club.slug, match)}`;
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: `${match.home_team_name} vs ${match.away_team_name}`, text: link });

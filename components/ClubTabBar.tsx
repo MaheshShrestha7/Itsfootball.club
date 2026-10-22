@@ -7,6 +7,7 @@ import { Home, CalendarDays, Radio, LayoutGrid, CreditCard, UserPlus, Shield } f
 import type { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { matchPath } from '@/lib/slugs';
 
 /**
  * Phone tab bar for the club site (shown under 769px, and at any width in the installed app, by
@@ -26,7 +27,7 @@ export default function ClubTabBar({ club }: { club: Club }) {
   const tabs = [
     { label: 'Home', href: base, icon: Home },
     live
-      ? { label: 'Live', href: `${base}/match/${live.id}`, icon: Radio }
+      ? { label: 'Live', href: matchPath(club.slug, live), icon: Radio }
       : { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
     { label: 'My Club', href: `${base}/app`, icon: LayoutGrid },
     member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard } : { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus },

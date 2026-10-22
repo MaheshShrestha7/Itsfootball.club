@@ -3,7 +3,7 @@ import { SITE_URL } from '@/lib/seo';
 import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { FORMAT_PAGES } from '@/lib/tool-pages';
 import { GUIDES, GUIDES_LAST_UPDATED, guideUpdated } from '@/lib/guides';
-import { newsPath } from '@/lib/slugs';
+import { matchPath, newsPath } from '@/lib/slugs';
 import { CHECKED_COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { groundSitemapEntries } from '@/lib/grounds';
@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const live = m.status === 'live' || m.status === 'halftime';
     const upcoming = !live && !['completed', 'full_time', 'cancelled'].includes(m.status) && (isNaN(kickoff) || kickoff > now - 3 * 3600 * 1000);
     entries.push({
-      url: url(`/${slug}/match/${m.id}`),
+      url: url(matchPath(slug, m)),
       lastModified: date(m.created_at, m.match_date),
       changeFrequency: live ? 'always' : upcoming ? 'hourly' : 'monthly',
       priority: live ? 0.9 : upcoming ? 0.8 : 0.6,

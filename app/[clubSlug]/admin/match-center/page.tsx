@@ -41,6 +41,7 @@ import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { squadForMatch } from '@/lib/teams';
 import { defaultFixture } from '@/lib/fixtures';
+import { matchPath } from '@/lib/slugs';
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -499,7 +500,7 @@ export default function AdminMatchCenterControllerPage({
           </Link>
 
           <Link
-            href={`/${club.slug}/match/${match.id}`}
+            href={matchPath(club.slug, match)}
             target="_blank"
             className="btn btn-secondary btn-sm touch-target"
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(var(--tint-rgb), 0.15)' }}

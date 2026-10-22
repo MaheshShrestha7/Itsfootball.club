@@ -38,6 +38,7 @@ import GettingThere from '@/components/grounds/GettingThere';
 import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
+import { matchForParam } from '@/lib/slugs';
 
 // Only needed once the lineups tab opens
 const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
@@ -67,7 +68,7 @@ export default function MatchCenterPage({
   // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
   const { user, hasClubAdminAccess } = useAuth();
   const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
-  const storedMatch = club ? matches.find(m => m.id === resolvedParams.matchId && m.club_id === club.id) : undefined;
+  const storedMatch = club ? matchForParam(matches.filter(m => m.club_id === club.id), resolvedParams.matchId) : undefined;
   // Saved lineups keep each player's name: shortened for juniors (every name, in a junior team's fixture)
   const juniorFixture = !!storedMatch && isJuniorFixture(storedMatch, clubTeams);
   const match = useMemo(() => {

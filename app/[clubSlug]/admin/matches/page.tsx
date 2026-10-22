@@ -49,6 +49,7 @@ import { useDoorCheckinUrl } from '@/lib/door-code';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
+import { matchPath } from '@/lib/slugs';
 
 const FLYER_PRESETS = [
   {
@@ -1055,7 +1056,7 @@ export default function AdminMatchesPage({
                   {/* Edit / Delete / View Links */}
                   <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                     <Link
-                      href={`/${club.slug}/match/${m.id}`}
+                      href={matchPath(club.slug, m)}
                       target="_blank"
                       className="btn btn-secondary btn-sm"
                       title="View Public Match Page"
