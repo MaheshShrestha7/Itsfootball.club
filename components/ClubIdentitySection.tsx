@@ -48,23 +48,27 @@ function AnimatedCounter({
   duration?: number;
   enabled?: boolean;
 }) {
-  const [displayCount, setDisplayCount] = useState(0);
+  // Starts at the real number, so the server's HTML (what crawlers and no-JS visitors read) shows it
+  const [displayCount, setDisplayCount] = useState(value);
+  const shown = useRef(value);
+  const counted = useRef(false);
 
   useEffect(() => {
-    // Immediate fallback for prefers-reduced-motion or zero values
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Before the tiles scroll into view: park at 0 (off screen, so nobody sees the drop) for the count-up
+    if (!enabled) {
+      if (!reduced && !counted.current) { shown.current = 0; setDisplayCount(0); }
+      return;
+    }
+    if (reduced || value === shown.current) {
+      shown.current = value;
       setDisplayCount(value);
       return;
     }
 
-    if (!enabled || value === 0) {
-      setDisplayCount(value);
-      return;
-    }
-
+    // Counts from what's on screen: 0 the first time, the old number when a refresh changes it
+    const from = shown.current;
+    counted.current = true;
     let startTimestamp: number | null = null;
     let animationFrameId: number;
 
@@ -73,14 +77,10 @@ function AnimatedCounter({
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
       // Snappy cubic ease-out curve
       const easeProgress = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(easeProgress * value);
-      setDisplayCount(current);
+      shown.current = Math.round(from + easeProgress * (value - from));
+      setDisplayCount(shown.current);
 
-      if (progress < 1) {
-        animationFrameId = window.requestAnimationFrame(step);
-      } else {
-        setDisplayCount(value);
-      }
+      if (progress < 1) animationFrameId = window.requestAnimationFrame(step);
     };
 
     animationFrameId = window.requestAnimationFrame(step);

@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton } from '@/components/Skeleton';
 import React, { use, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -50,10 +51,17 @@ export default function ClubLayoutClient({
           <>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{fallback.name}</h1>
             {fallback.motto && <p className="text-muted">{fallback.motto}</p>}
-            <div className="text-muted">Loading...</div>
+            <div role="status" style={{ width: 'min(320px, 80vw)' }}>
+              <span className="sr-only">Loading</span>
+              <Skeleton style={{ height: 12, marginBottom: 8 }} />
+              <Skeleton style={{ height: 12, width: '70%', margin: '0 auto' }} />
+            </div>
           </>
         ) : (
-          <div className="text-muted">Loading...</div>
+          <div role="status" style={{ width: 'min(320px, 80vw)' }}>
+            <span className="sr-only">Loading</span>
+            <Skeleton style={{ height: 12 }} />
+          </div>
         )}
       </div>
     );

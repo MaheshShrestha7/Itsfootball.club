@@ -852,6 +852,9 @@
   stroke-linecap: round;
   animation: linkPulse 3s ease-in-out infinite;
 }
+@media (prefers-reduced-motion: reduce) {
+  .lp-pitch-link { animation: none; }
+}
 @keyframes linkPulse {
   0%, 100% {
     stroke: rgba(52, 211, 153, 0.4);

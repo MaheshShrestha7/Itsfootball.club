@@ -731,7 +731,8 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
                   type="button"
                   disabled={saving}
                   onClick={() => respond(o.value)}
-                  className={status === o.value ? 'btn btn-primary' : 'btn btn-secondary'}
+                  aria-pressed={status === o.value}
+                  className={`answer-pop ${status === o.value ? 'btn btn-primary' : 'btn btn-secondary'}`}
                   style={{ justifyContent: 'center' }}
                 >
                   {o.label}
