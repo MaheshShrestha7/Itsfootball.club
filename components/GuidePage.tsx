@@ -10,7 +10,7 @@ import JsonLd from '@/components/JsonLd';
 import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
-import { GUIDES, GUIDES_HUB, GUIDES_UPDATED, guideByPath } from '@/lib/guides';
+import { GUIDES, GUIDES_HUB, guideByPath, guideUpdated } from '@/lib/guides';
 import { TOOLS_HUB, formatUpdated, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface GuideSource {
@@ -64,10 +64,24 @@ export function GuideTable({ caption, head, rows }: { caption: string; head: str
   );
 }
 
+/** A "start your club here" panel inside a guide, placed where the guide's job meets what a club site does */
+export function GuideJoin({ title, children, button = 'Join itsfootball.club, free' }: { title: string; children: ReactNode; button?: string }) {
+  return (
+    <aside className="glass-panel guide-cta guide-join">
+      <div>
+        <p className="guide-join-title">{title}</p>
+        <p>{children}</p>
+      </div>
+      <Link href="/create-club" className="btn btn-primary">{button} <ArrowRight size={16} aria-hidden="true" /></Link>
+    </aside>
+  );
+}
+
 export default function GuidePage(p: GuidePageProps) {
   const url = `${SITE_URL}${p.path}`;
   const guide = guideByPath(p.path);
   const others = GUIDES.filter(g => g.path !== p.path);
+  const updated = guideUpdated(guide);
   const schema = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -79,19 +93,14 @@ export default function GuidePage(p: GuidePageProps) {
         url,
         mainEntityOfPage: url,
         inLanguage: 'en-AU',
-        datePublished: GUIDES_UPDATED,
-        dateModified: GUIDES_UPDATED,
+        datePublished: updated,
+        dateModified: updated,
         author: {
           '@type': 'Person',
           name: 'Mahesh Shrestha',
           jobTitle: 'Founder',
           url: `${SITE_URL}/about`,
           sameAs: 'https://www.linkedin.com/in/maheshshrestha',
-        },
-        reviewedBy: {
-          '@type': 'Organization',
-          name: 'Sydney Grassroots Technical Review Panel',
-          url: `${SITE_URL}/about`,
         },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
@@ -149,11 +158,7 @@ export default function GuidePage(p: GuidePageProps) {
             </span>
             <span style={{ opacity: 0.35 }}>•</span>
             <span>
-              <strong>Reviewed by:</strong> Sydney Grassroots Technical Review Panel
-            </span>
-            <span style={{ opacity: 0.35 }}>•</span>
-            <span>
-              <strong>Verified:</strong> <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time>
+              <strong>Verified:</strong> <time dateTime={updated}>{formatUpdated(updated)}</time>
             </span>
             {p.sources.length > 0 && (
               <>

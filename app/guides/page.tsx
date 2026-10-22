@@ -8,7 +8,7 @@ import JsonLd from '@/components/JsonLd';
 import { h2Style, bodyStyle, linkStyle } from '@/components/ToolLandingPage';
 import { SITE_URL, pageMetadata } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
-import { GUIDES, GUIDES_HUB, GUIDES_UPDATED } from '@/lib/guides';
+import { GUIDES, GUIDES_HUB, GUIDES_LAST_UPDATED } from '@/lib/guides';
 import { TOOLS_HUB, formatUpdated, toolOgImage } from '@/lib/tool-pages';
 
 const TITLE = 'Grassroots Football Guides: Junior Rules, Game Time, Fixtures & Fees';
@@ -27,7 +27,7 @@ const schema = {
       name: H1,
       description: DESCRIPTION,
       inLanguage: 'en-AU',
-      dateModified: GUIDES_UPDATED,
+      dateModified: GUIDES_LAST_UPDATED,
       isPartOf: { '@id': WEBSITE_ID },
       publisher: { '@id': ORGANIZATION_ID },
       mainEntity: {
@@ -60,7 +60,7 @@ export default function GuidesIndexPage() {
             Short answers to the questions that come up every season, checked against Football Australia, state federations
             and the Reserve Bank, with the numbers worked out. Each one ends in a free tool that does the job for you.
           </p>
-          <p className="tool-updated">Updated <time dateTime={GUIDES_UPDATED}>{formatUpdated(GUIDES_UPDATED)}</time></p>
+          <p className="tool-updated">Updated <time dateTime={GUIDES_LAST_UPDATED}>{formatUpdated(GUIDES_LAST_UPDATED)}</time></p>
         </header>
 
         {/* Featured Guide Banner */}
