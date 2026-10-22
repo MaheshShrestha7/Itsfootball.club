@@ -128,7 +128,9 @@ export default async function GroundPage({ params }: Params) {
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>SOCCER GROUND · {g.suburb.toUpperCase()} {g.state}</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{g.name}, {g.suburb}</h1>
           <p style={{ ...bodyStyle, marginTop: '0.4rem' }}>Parking, pitches, toilets, canteen and wet weather</p>
-          <p className="tool-updated">Facts last checked <time dateTime={g.facts_checked_at}>{dateLong(g.facts_checked_at)}</time></p>
+          {factCount(g) > 0 && (
+            <p className="tool-updated">Facts last checked <time dateTime={g.facts_checked_at}>{dateLong(g.facts_checked_at)}</time></p>
+          )}
         </header>
 
         <section className="glass-panel guide-answer" aria-labelledby="answer">

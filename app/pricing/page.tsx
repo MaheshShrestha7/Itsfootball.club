@@ -8,17 +8,25 @@ import { fitDescription, pageMetadata, SITE_NAME, SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
 import { CONTACT_EMAIL, FEE_PHRASE } from '@/lib/faq';
 import { bookingFeeText } from '@/lib/finance';
+import { COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
+import CellView from '@/app/vs/CellView';
 
 const PATH = '/pricing';
+
+// A few rows of the sourced /compare matrix, so prices here always match the comparison pages
+const PRICING_SLUGS = ['pitchero', 'spond', 'teamapp'] as const;
+const PRICING_COLUMNS = PRICING_SLUGS.map(slug => ({ ...competitorBySlug(slug)!, slug }));
+const PRICING_LABELS = ['Price for the club', 'Ads', 'Public club website', 'Fans need an app?'];
+const PRICING_ROWS = COMPARE_ROWS.filter(r => PRICING_LABELS.includes(r.label));
 const TITLE = 'Free Football Club Website & Match Centre Pricing | itsfootball.club';
 const DESCRIPTION =
-  'itsfootball.club is 100% free for football clubs. Zero monthly subscriptions, zero ads, unlimited teams, custom domains and live match centre. Every feature included.';
+  'itsfootball.club is free for football clubs: no monthly subscription, no third-party ads, unlimited teams, custom domains and a live match centre. Every feature included.';
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,
   description: fitDescription(
     DESCRIPTION,
-    'Clubs keep 100% of registrations and player fees.',
+    'Card payers pay a booking fee, so the club gets its full price.',
     'Create your club website free today.'
   ),
   path: PATH,
@@ -31,7 +39,7 @@ const INCLUDED_FEATURES = [
   { title: 'Digital Member Passes with QR Terminal', desc: 'Photo-backed dynamic member cards with instant phone camera QR scanning for attendance and turnstiles.' },
   { title: 'Tournament Maker & Bracket Engine', desc: 'Create group stages, round robins and single-elimination knockout cup draws with automated table standings.' },
   { title: 'Online Club Merchandise Shop', desc: 'Sell jerseys, scarves and gear online directly from your club dashboard with size variants and inventory control.' },
-  { title: 'Sponsor Showcase & Click Analytics', desc: 'High-visibility sponsor tiers and click tracking for local businesses with zero competing commercial network ads.' },
+  { title: 'Sponsor Showcase & Click Analytics', desc: 'High-visibility sponsor tiers and click tracking for local businesses with no third-party ad networks.' },
   { title: 'Unlimited Teams, Players & Admins', desc: 'Men, Women, Juniors, Reserves, Over 35s and committee roles under a single club management portal.' },
   { title: 'Club News & Photo Gallery', desc: 'Publish match reports, club notices and high-res photo albums with automatic SEO article markup.' },
   { title: 'Direct Stripe Payments & Ledger', desc: 'Collect season registrations and dues straight into your club Stripe account with downloadable CSV accounting.' },
@@ -40,7 +48,7 @@ const INCLUDED_FEATURES = [
 const PRICING_FAQS = [
   {
     q: 'Is itsfootball.club really free for clubs?',
-    a: 'Yes. itsfootball.club charges zero subscription fees, zero setup costs, and zero monthly hosting fees. Every feature—from the public club website to the live match centre and tournament generator—is unlocked for all clubs from day one.',
+    a: 'Yes. itsfootball.club charges no subscription fees, no setup costs and no monthly hosting fees. Every feature—from the public club website to the live match centre and tournament generator—is unlocked for all clubs from day one.',
   },
   {
     q: 'Are there any limits on teams, players or members?',
@@ -48,7 +56,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'How does itsfootball.club make money without charging clubs?',
-    a: `When a club chooses to collect player registration fees, ticket sales or shop orders via online card payments, a small transparent booking fee (${bookingFeeText()}) is added to the payer's checkout. The club receives 100% of its requested price directly into its own Stripe account (less standard Stripe processing). There are zero fees on anything else: browsing, live scores, availability, passes, or free events.`,
+    a: `When a club chooses to collect player registration fees, ticket sales or shop orders via online card payments, a small transparent booking fee (${bookingFeeText()}) is added to the payer's checkout. The club receives 100% of its requested price directly into its own Stripe account (less standard Stripe processing). There is no fee on anything else: browsing, live scores, availability, passes, or free events.`,
   },
   {
     q: 'Do supporters, players or parents need to install an app?',
@@ -60,7 +68,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'How does it compare with Pitchero or Spond?',
-    a: 'Pitchero charges £38 to £99 a month to remove ads, unlock extra teams, and get custom domains. Spond requires a paid monthly subscription for club websites after a trial, and features sponsored partner ads in-app. itsfootball.club gives your whole club an ad-free public website, live scores, and digital passes completely free.',
+    a: `Pitchero is free for one team, with paid plans at £38 or £99 a month; its Free and Standard plans show ads. Spond’s club website is A$22 a month after a free trial, and the Spond app shows brand partner ads. itsfootball.club gives your whole club a public website with no third-party ads, live scores and digital passes, with no subscription; card payers pay ${FEE_PHRASE}. Sources and dates are on the comparison pages.`,
   },
 ];
 
@@ -87,7 +95,7 @@ export default function PricingPage() {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'AUD',
-          description: `100% free for community football and soccer clubs. Online card payments carry ${FEE_PHRASE}, paid by the payer.`,
+          description: `Free for community football and soccer clubs. Online card payments carry ${FEE_PHRASE}, paid by the payer.`,
         },
       },
       {
@@ -159,7 +167,7 @@ export default function PricingPage() {
                 <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 700 }}>/ month</span>
               </div>
               <p style={{ margin: '0.35rem 0 1rem 0', fontSize: '0.9rem', color: 'var(--c-green)', fontWeight: 700 }}>
-                Forever free · No credit card required
+                Free for clubs · No credit card required
               </p>
               <Link href="/create-club" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', padding: '0.85rem 1.6rem', fontSize: '1.05rem', fontWeight: 800 }}>
                 <span>Create Your Club Free</span>
@@ -236,7 +244,7 @@ export default function PricingPage() {
         <section style={{ marginBottom: '4rem' }}>
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: '20px' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 900, marginBottom: '1.25rem', textAlign: 'center' }}>
-              How We Compare with Legacy Club Software
+              How We Compare with Other Club Software
             </h2>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
@@ -244,40 +252,23 @@ export default function PricingPage() {
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '0.75rem 1rem' }}>Feature</th>
                     <th style={{ padding: '0.75rem 1rem', color: 'var(--c-amber)', fontWeight: 800 }}>itsfootball.club</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Pitchero</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Spond</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Stack Team App</th>
+                    {PRICING_COLUMNS.map(c => (
+                      <th key={c.slug} style={{ padding: '0.75rem 1rem' }}>{c.name}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Monthly Subscription</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--c-green)', fontWeight: 800 }}>$0 free forever</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>£38–£99 / month</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Paid website add-on</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>$5–$10/mo per team</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Third-Party Ads</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--c-green)', fontWeight: 800 }}>Zero ads, ever</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Commercial banners on free</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>In-app partner ads</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Banner &amp; video popups</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Public Live Match Centre</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--c-green)', fontWeight: 800 }}>Open in any browser</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Nudges to native app</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>App only</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>App only</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Teams &amp; Squads Included</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--c-green)', fontWeight: 800 }}>Unlimited teams</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>1 team on free plan</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Chat groups</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>Charged per team</td>
-                  </tr>
+                  {PRICING_ROWS.map((r, i) => (
+                    <tr key={r.label} style={i < PRICING_ROWS.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : undefined}>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{r.label}</td>
+                      <td style={{ padding: '0.85rem 1rem' }}><CellView cell={r.us} /></td>
+                      {PRICING_COLUMNS.map(c => (
+                        <td key={c.slug} style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>
+                          <CellView cell={r.them[c.slug]} sources={c.sources} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

@@ -4,7 +4,7 @@ import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { FORMAT_PAGES } from '@/lib/tool-pages';
 import { GUIDES } from '@/lib/guides';
 import { newsPath } from '@/lib/slugs';
-import { COMPETITORS } from '@/lib/competitors';
+import { CHECKED_COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { groundSitemapEntries } from '@/lib/grounds';
 import { clubsWithHomeGrounds, groundUse, listGrounds } from '@/lib/supabase/grounds-lookup';
@@ -53,9 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...GUIDES.map(g => ({ url: url(g.path), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: url('/compare'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
     { url: url('/best-free-football-club-website-builders-australia'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.7 },
-    ...COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.7 })),
-    { url: url('/vs'), lastModified: staticDate, changeFrequency: 'monthly', priority: 0.6 },
-    ...COMPETITORS.map(c => ({ url: url(`/vs/${c.slug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.5 })),
+    ...CHECKED_COMPETITORS.map(c => ({ url: url(`/compare/${c.alternativeSlug}`), lastModified: staticDate, changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: url('/privacy'), lastModified: staticDate, changeFrequency: 'yearly', priority: 0.2 },
     { url: url('/terms'), lastModified: staticDate, changeFrequency: 'yearly', priority: 0.2 },
   ];
