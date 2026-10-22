@@ -7,6 +7,7 @@ import { Calendar, MapPin, Edit3, ArrowRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LiveMinute from '@/components/LiveMinute';
 import { compareTournamentMatches } from '@/lib/tournament-engine';
+import { matchPath } from '@/lib/slugs';
 
 interface TournamentMatchesListProps {
   matches: Match[];
@@ -384,7 +385,7 @@ export default function TournamentMatchesList({
                   )}
 
                   {linkToMatch && <Link
-                    href={`/${clubSlug}/match/${match.id}`}
+                    href={matchPath(clubSlug, match)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

@@ -22,6 +22,7 @@ import {
   Camera
 } from 'lucide-react';
 import { DATE_LOCALE } from '@/lib/dates';
+import { matchPath } from '@/lib/slugs';
 
 export default function MatchDoorCheckinPage({
   params,
@@ -149,7 +150,7 @@ export default function MatchDoorCheckinPage({
         {/* Navigation Breadcrumb */}
         <div className="section-head">
           <Link
-            href={`/${club.slug}/match/${match.id}`}
+            href={matchPath(club.slug, match)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -258,7 +259,7 @@ export default function MatchDoorCheckinPage({
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', margin: '0 auto 1.75rem auto' }}>
               Door QR code self-check-in has not been activated by match stewards for this fixture. Please present your pass or ticket directly at the turnstiles.
             </p>
-            <Link href={`/${club.slug}/match/${match.id}`} className="btn btn-secondary">
+            <Link href={matchPath(club.slug, match)} className="btn btn-secondary">
               Go to Match Centre
             </Link>
           </div>
@@ -339,7 +340,7 @@ export default function MatchDoorCheckinPage({
               >
                 Check In Another Attendee
               </button>
-              <Link href={`/${club.slug}/match/${match.id}`} className="btn btn-primary btn-sm">
+              <Link href={matchPath(club.slug, match)} className="btn btn-primary btn-sm">
                 Enter Match Centre
               </Link>
             </div>

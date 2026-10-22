@@ -27,6 +27,7 @@ import {
   Lock,
   Search,
 } from 'lucide-react';
+import { matchPath } from '@/lib/slugs';
 
 export default function MyClubsPage() {
   const { clubs, matches, syncStatus } = useClub();
@@ -342,7 +343,7 @@ export default function MyClubsPage() {
                               <span>Public</span>
                             </Link>
                             <Link
-                              href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}/admin/match-center`}
+                              href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}/admin/match-center`}
                               className="btn btn-secondary touch-target"
                               style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
                               title="Live Match Centre"
@@ -501,7 +502,7 @@ export default function MyClubsPage() {
                                 <span>Public</span>
                               </Link>
                               <Link
-                                href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`}
+                                href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}#fixtures`}
                                 className="btn btn-secondary touch-target"
                                 style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', justifyContent: 'center', textAlign: 'center' }}
                                 title="Live Match Centre"

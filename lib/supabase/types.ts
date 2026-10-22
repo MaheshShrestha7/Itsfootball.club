@@ -292,6 +292,11 @@ export interface Match {
   ground_id?: string | null;
   /** Which pitch at that ground, e.g. 'Pitch 2' */
   pitch_label?: string | null;
+  /** Its readable URL (set by a database trigger; missing until migration 20261117_match_slugs.sql runs).
+   *  Never written by the app, so not in TABLE_COLUMNS. */
+  slug?: string | null;
+  /** Slugs it had before its teams or date changed, which still lead to it */
+  previous_slugs?: string[];
   created_at?: string;
 }
 

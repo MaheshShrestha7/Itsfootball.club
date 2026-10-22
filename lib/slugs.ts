@@ -9,6 +9,19 @@ const SITE_HOST = new URL(SITE_URL).host;
 /** A club news article's own page */
 export const newsPath = (clubSlug: string, articleSlug: string) => `/${clubSlug}/news/${encodeURIComponent(articleSlug)}`;
 
+/** A match's own page: its readable slug ('riverside-fc-vs-parramatta-city-2026-10-16') once migration
+ *  20261117_match_slugs.sql has given it one, else its id. An id link still works: it redirects to the slug. */
+export const matchPath = (clubSlug: string, m: { id: string; slug?: string | null }) => `/${clubSlug}/match/${m.slug || m.id}`;
+
+/** The match a /match/{param} URL names: by id, current slug, or a slug it had before a reschedule */
+export function matchForParam<T extends { id: string; slug?: string | null; previous_slugs?: string[] | null }>(
+  matches: T[],
+  param: string
+): T | undefined {
+  const p = decodeSlugParam(param).toLowerCase();
+  return matches.find(m => m.id === param) || matches.find(m => m.slug === p) || matches.find(m => m.previous_slugs?.includes(p));
+}
+
 /** A route param back to the slug it was built from; a malformed "%" sequence is left as typed instead of throwing */
 export function decodeSlugParam(param: string): string {
   try {

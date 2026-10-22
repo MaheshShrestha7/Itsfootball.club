@@ -15,6 +15,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
 import { publicScoreHidden } from '@/lib/teams';
 import { clubPlaysIn } from '@/lib/fixtures';
+import { matchPath } from '@/lib/slugs';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -219,7 +220,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       </div>
 
       {live && (
-        <Link href={`${base}/match/${live.id}`} className="glass-panel app-live">
+        <Link href={matchPath(club.slug, live)} className="glass-panel app-live">
           <span className="badge badge-live">LIVE</span>
           <strong>
             {publicScoreHidden(live, clubTeams)
@@ -237,7 +238,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {upcoming.map(item => (
             <div key={item.id} className="glass-panel" style={{ padding: '0.85rem 1rem' }}>
-              <Link href={item.kind === 'match' ? `${base}/match/${item.id}` : `${base}/events/${item.id}`} style={{ display: 'block', color: 'inherit' }}>
+              <Link href={item.kind === 'match' ? matchPath(club.slug, item) : `${base}/events/${item.id}`} style={{ display: 'block', color: 'inherit' }}>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.title}</div>
                 <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? ` · ${item.where}` : ''}</div>
               </Link>

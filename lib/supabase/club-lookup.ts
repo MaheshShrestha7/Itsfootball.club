@@ -79,36 +79,75 @@ export interface MatchMetadataRow {
   tournament_round?: number | null;
   /** Its team hides scores publicly (junior grassroots rules): metadata must not give the score away */
   score_hidden?: boolean;
+  /** Its readable URL (see matchPath), once migration 20261117_match_slugs.sql has run */
+  slug?: string | null;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** What a match slug can look like (lowercase words and dashes, see match_slug_base in the migration) */
+const MATCH_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/** The rows of a public REST query; null when Supabase couldn't be asked or didn't answer */
+async function publicRows<T>(path: string, revalidate = 30): Promise<T[] | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate } });
+    if (!res.ok) return null;
+    const rows: unknown = await res.json();
+    return Array.isArray(rows) ? (rows as T[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * True only when Supabase answered and the row isn't there, so the page can return a real 404.
  * A failed lookup counts as found: a network blip must never 404 a real match or article.
  */
 async function publicRowMissing(path: string): Promise<boolean> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return false;
-  try {
-    const res = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 30 } });
-    if (!res.ok) return false;
-    const rows: unknown = await res.json();
-    return Array.isArray(rows) && rows.length === 0;
-  } catch {
-    return false;
-  }
+  const rows = await publicRows(path);
+  return rows !== null && rows.length === 0;
 }
 
-/** A match id that isn't this club's (matches are public to everyone by RLS) */
-export async function matchMissing(clubSlug: string, matchId: string): Promise<boolean> {
-  if (!UUID.test(matchId)) return true;
+/** Whether matches have their slug columns yet (migration 20261117_match_slugs.sql). Until then a select
+ *  naming slug fails, so every lookup below leaves it out and match URLs stay on the id. */
+export async function matchSlugsReady(): Promise<boolean> {
+  return (await publicRows('matches?select=slug,previous_slugs&limit=1', 300)) !== null;
+}
+
+/** The REST filter for one of a club's matches named by a /match/{param} URL: its id, its slug or a slug
+ *  it had before a reschedule. null when the param can't name a match. */
+async function matchParamFilter(clubId: string, param: string): Promise<string | null> {
+  if (UUID.test(param)) return `id=eq.${param}&club_id=eq.${clubId}`;
+  const slug = param.toLowerCase();
+  if (slug.length > 120 || !MATCH_SLUG.test(slug) || !(await matchSlugsReady())) return null;
+  return `club_id=eq.${clubId}&or=(slug.eq.${slug},previous_slugs.cs.{${slug}})`;
+}
+
+export type MatchParamResult =
+  /** Supabase answered: no such match in this club */
+  | 'missing'
+  /** Couldn't tell (lookup failed): serve the page as asked */
+  | null
+  | { id: string; slug: string | null };
+
+/** The match a /{club}/match/{param} URL names, so the club layout can 404 a missing one and send an id or
+ *  old slug on to the current slug (matches are public to everyone by RLS) */
+export async function resolveMatchParam(clubSlug: string, param: string): Promise<MatchParamResult> {
   const club = await findClubBySlug(clubSlug);
-  if (!club) return false;
-  return publicRowMissing(`matches?select=id&id=eq.${matchId}&club_id=eq.${club.id}&limit=1`);
+  if (!club) return null;
+  const filter = await matchParamFilter(club.id, param);
+  if (!filter) return 'missing';
+  const ready = await matchSlugsReady();
+  const rows = await publicRows<{ id: string; slug?: string | null }>(`matches?select=${ready ? 'id,slug' : 'id'}&${filter}&limit=2`);
+  if (!rows) return null;
+  // A slug that is one match's current slug and another's old one (can't be made by the trigger, but cheap to settle)
+  const row = rows.find(r => r.slug === param.toLowerCase()) || rows[0];
+  return row ? { id: row.id, slug: row.slug || null } : 'missing';
 }
 
 /** A news slug this club has never used (news is public to everyone by RLS) */
@@ -118,29 +157,20 @@ export async function newsMissing(clubSlug: string, slug: string): Promise<boole
   return publicRowMissing(`news_articles?select=id&club_id=eq.${club.id}&slug=eq.${encodeURIComponent(slug)}&limit=1`);
 }
 
-export async function findMatchById(matchId: string): Promise<MatchMetadataRow | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key || !matchId) return null;
+const MATCH_COLUMNS = 'id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round';
+/** MATCH_COLUMNS plus slug once the column exists */
+const matchColumns = async () => (await matchSlugsReady() ? `${MATCH_COLUMNS},slug` : MATCH_COLUMNS);
 
-  try {
-    const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&id=eq.${encodeURIComponent(matchId)}`,
-      {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        next: { revalidate: 30 },
-      }
-    );
-    if (!res.ok) return null;
-    const rows: MatchMetadataRow[] = await res.json();
-    const row = rows[0];
-    if (!row) return null;
-    return { ...row, score_hidden: matchScoreHidden(row, await hiddenScoreTeams(row.club_id)) };
-  } catch {
-    return null;
-  }
+/** One of a club's matches by the /match/{param} of its URL (id, slug or old slug), for metadata and JSON-LD */
+export async function findClubMatch(clubSlug: string, param: string): Promise<MatchMetadataRow | null> {
+  const club = await findClubBySlug(clubSlug);
+  if (!club || !param) return null;
+  const filter = await matchParamFilter(club.id, param);
+  if (!filter) return null;
+  const rows = await publicRows<MatchMetadataRow>(`matches?select=${await matchColumns()}&${filter}&limit=2`);
+  const row = rows?.find(r => r.slug === param.toLowerCase()) || rows?.[0];
+  if (!row) return null;
+  return { ...row, score_hidden: matchScoreHidden(row, await hiddenScoreTeams(row.club_id)) };
 }
 
 /** A club's live and upcoming match fixtures, for schema.org SportsEvent markup */
@@ -153,7 +183,7 @@ export async function listClubLiveMatches(clubId: string, limit = 5): Promise<Ma
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/matches?select=id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round&club_id=eq.${encodeURIComponent(clubId)}&order=match_date.desc&limit=20`,
+      `${url}/rest/v1/matches?select=${await matchColumns()}&club_id=eq.${encodeURIComponent(clubId)}&order=match_date.desc&limit=20`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },
@@ -418,7 +448,7 @@ async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
 
 export interface SitemapData {
   clubs: { id: string; slug: string; updated_at: string | null; config: { kind?: string } | null }[];
-  matches: { id: string; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
+  matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
   news: { club_id: string; slug: string; published_at: string | null; updated_at: string | null }[];
@@ -433,9 +463,10 @@ export interface SitemapData {
 
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
+  const matchSlug = (await matchSlugsReady()) ? 'slug,' : '';
   const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
-    fetchRows<SitemapData['matches'][number]>('matches?select=id,club_id,status,match_date,created_at&order=match_date.desc,id'),
+    fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at&order=match_date.desc,id`),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
     // Published only: a scheduled article joins the sitemap once its time comes

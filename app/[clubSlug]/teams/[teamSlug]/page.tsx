@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, Users, Lock, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { Match } from '@/lib/supabase/types';
-import { decodeSlugParam } from '@/lib/slugs';
+import { decodeSlugParam, matchPath } from '@/lib/slugs';
 import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, juniorMemberIds, publicMember, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import LocalTime from '@/components/LocalTime';
@@ -15,7 +15,7 @@ function FixtureRow({ match, clubSlug, hideScore }: { match: Match; clubSlug: st
   const played = match.status === 'completed';
   const live = match.status === 'live' || match.status === 'halftime';
   return (
-    <Link href={`/${clubSlug}/match/${match.id}`} className="glass-panel row" style={{ padding: '0.85rem 1rem', justifyContent: 'space-between', color: 'inherit', textDecoration: 'none', gap: '0.75rem' }}>
+    <Link href={matchPath(clubSlug, match)} className="glass-panel row" style={{ padding: '0.85rem 1rem', justifyContent: 'space-between', color: 'inherit', textDecoration: 'none', gap: '0.75rem' }}>
       <div className="min-w-0">
         <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
           {match.is_club_home ? 'vs' : 'at'} {opponent}

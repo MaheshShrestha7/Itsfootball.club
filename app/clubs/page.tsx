@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import { useClub } from '@/lib/club-context';
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { Shield, Search, Radio, CreditCard, Settings, PlusCircle, MapPin, Users } from 'lucide-react';
+import { matchPath } from '@/lib/slugs';
 
 export default function ClubsDirectoryPage() {
   const { clubs: allClubs, matches } = useClub();
@@ -145,7 +146,7 @@ export default function ClubsDirectoryPage() {
                     <Link href={`/${club.slug}`} className="btn btn-primary btn-sm">
                       Public Page
                     </Link>
-                    <Link href={liveMatch ? `/${club.slug}/match/${liveMatch.id}` : `/${club.slug}#fixtures`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Link href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}#fixtures`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Radio size={14} color="var(--c-red)" /> Match Centre
                     </Link>
                     <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
