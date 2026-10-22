@@ -280,9 +280,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                 <Link href="/tools/player-card-maker" style={{ color: 'var(--text-secondary)' }}>Free Player Card Maker</Link>
                 <Link href="/tools/tournament-maker" style={{ color: 'var(--text-secondary)' }}>Free Tournament Maker</Link>
                 <Link href="/tools/season-fee-calculator" style={{ color: 'var(--text-secondary)' }}>Season Fee Calculator</Link>
-                <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Grassroots Guides (11)</Link>
+                <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Grassroots Guides</Link>
                 <Link href="/grounds" style={{ color: 'var(--text-secondary)' }}>Grounds &amp; Rain Status</Link>
-                <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools (20)</Link>
+                <Link href="/tools" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>All Free Tools</Link>
               </div>
             </div>
           )}
