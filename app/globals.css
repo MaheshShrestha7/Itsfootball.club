@@ -2111,6 +2111,32 @@ textarea {
   }
 }
 
+/* Match Centre on phones: headings and extras fold away so the scoreboard sits near the top,
+   the shortcut buttons become one scrolling row, and Log Event stays in reach */
+.mc-phone-only { display: none; }
+@media (max-width: 640px) {
+  .mc-phone-hide { display: none !important; }
+  .mc-phone-only { display: inline; }
+  .mc-header { margin-bottom: 0.75rem !important; gap: 0.6rem !important; }
+  .mc-header .admin-match-center-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .mc-header .admin-match-center-actions > * { width: auto !important; flex: 0 0 auto; }
+  .mc-fixture-bar { margin-bottom: 0.75rem !important; padding: 0.6rem !important; }
+  .mc-tabs { margin-bottom: 0.9rem !important; padding-bottom: 0.5rem !important; flex-wrap: nowrap !important; }
+  .mc-tabs > button { flex: 1 1 0; justify-content: center; padding: 0.5rem 0.4rem !important; font-size: 0.82rem !important; }
+  .mc-log-submit {
+    position: sticky;
+    bottom: calc(var(--tabbar-clear, 0px) + 0.5rem);
+    z-index: 5;
+  }
+  .mc-log-submit > button { width: 100%; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+}
+
 /* View-only admin pages: the action buttons AdminLayoutClient disabled are hidden, view controls stay */
 .admin-view-only button:disabled:not([data-view-ok], [data-view-ok] *) {
   display: none !important; /* beats the buttons' own inline display */

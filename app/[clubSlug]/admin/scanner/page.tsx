@@ -168,9 +168,9 @@ export default function AdminScannerPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY ACCREDITATION</span>
+        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY</span>
         <h1 className="stat-value">
-          QR Scanner Reticle & Gate Check-In
+          Pass Scanner & Check-In
         </h1>
         <p className="text-body">
           Scan members&apos; digital passes to check they&apos;re valid and check people in to events.
@@ -398,7 +398,7 @@ export default function AdminScannerPage({
           <div className="section-head">
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <History size={18} color="var(--club-primary)" />
-              <span>Turnstile Scan Stream</span>
+              <span>Scans This Session</span>
             </h3>
             <span className="text-meta">
               {scanLogs.length} scans this session
