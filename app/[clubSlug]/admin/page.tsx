@@ -3,6 +3,8 @@
 import React, { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import GettingStartedChecklist from '@/components/admin/GettingStartedChecklist';
 import { isPlayerMember } from '@/lib/supabase/types';
 import {
   Users,
@@ -26,6 +28,13 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
 
+/** A dashboard card that links to its admin page, or a plain card when this person can't open that page */
+function KpiCard({ href, allowed, style, children }: { href: string; allowed: boolean; style: React.CSSProperties; children: React.ReactNode }) {
+  return allowed
+    ? <Link href={href} className="glass-panel glass-panel-interactive" style={{ ...style, textDecoration: 'none' }}>{children}</Link>
+    : <div className="glass-panel" style={style}>{children}</div>;
+}
+
 export default function AdminDashboardPage({
   params,
 }: {
@@ -34,6 +43,14 @@ export default function AdminDashboardPage({
   const resolvedParams = use(params);
   const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  const { can, isClubSuperUser } = useAuth();
+  // Shortcuts only for the areas this person's roles cover (a Treasurer has no fixtures or scanner)
+  const canEditFixtures = can(club.id, 'matches', 'edit');
+  const canScan = can(club.id, 'scanner');
+  const canSeasons = can(club.id, 'seasons');
+  const canFixtures = can(club.id, 'matches');
+  const canAnalytics = can(club.id, 'analytics');
+  const canMatchCentre = can(club.id, 'match-center');
 
   useEffect(() => {
     loadClubAnalytics(club.id);
@@ -72,17 +89,25 @@ export default function AdminDashboardPage({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Calendar size={16} />
-            <span>Schedule Matches</span>
-          </Link>
-          <Link href={`/${club.slug}/admin/scanner`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <QrCode size={16} />
-            <span>Launch QR Scanner</span>
-          </Link>
-        </div>
+        {(canEditFixtures || canScan) && (
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {canEditFixtures && (
+              <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Calendar size={16} />
+                <span>Schedule Matches</span>
+              </Link>
+            )}
+            {canScan && (
+              <Link href={`/${club.slug}/admin/scanner`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <QrCode size={16} />
+                <span>Scan Passes</span>
+              </Link>
+            )}
+          </div>
+        )}
       </div>
+
+      {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
 
       {/* KPI Cards Row */}
       <div style={{
@@ -92,7 +117,7 @@ export default function AdminDashboardPage({
         marginBottom: '2.5rem',
       }}>
         {/* KPI 0: Active Season */}
-        <Link href={`/${club.slug}/admin/seasons`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
+        <KpiCard href={`/${club.slug}/admin/seasons`} allowed={canSeasons} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', textTransform: 'uppercase' }}>
               Active Season
@@ -102,17 +127,19 @@ export default function AdminDashboardPage({
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {activeSeason?.name || defaultSeasonLabel()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>Manage campaign timeline</span>
-            <ArrowRight size={12} />
-          </div>
-        </Link>
+          {canSeasons && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span>Manage seasons</span>
+              <ArrowRight size={12} />
+            </div>
+          )}
+        </KpiCard>
 
         {/* KPI 1: Squad Members */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              First Team Squad
+              Players
             </span>
             <div style={{ color: 'var(--club-ink)' }}><Users size={20} /></div>
           </div>
@@ -120,36 +147,36 @@ export default function AdminDashboardPage({
             {squadPlayers.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            {clubMembers.length} total club personnel
+            {clubMembers.length} members in total
           </div>
         </div>
 
         {/* KPI 2: Live Match or Fixtures */}
-        <Link
+        <KpiCard
           href={`/${club.slug}/admin/matches`}
-          className="glass-panel glass-panel-interactive"
-          style={{ padding: '1.5rem', textDecoration: 'none', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}
+          allowed={canFixtures}
+          style={{ padding: '1.5rem', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)', textTransform: 'uppercase' }}>
-              {liveMatch ? 'LIVE MATCH STATUS' : 'SCHEDULED FIXTURES'}
+              {liveMatch ? 'LIVE MATCH' : 'FIXTURES'}
             </span>
             <div style={{ color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)' }}><Radio size={20} /></div>
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} Fixtures`}
+            {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} ${clubMatches.length === 1 ? 'Fixture' : 'Fixtures'}`}
           </div>
           <div style={{ fontSize: '0.75rem', color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}' in progress`) : 'Manage fixtures & schedules'}</span>
-            <ArrowRight size={12} />
+            <span>{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}' in progress`) : canFixtures ? 'Manage fixtures' : 'This season'}</span>
+            {canFixtures && <ArrowRight size={12} />}
           </div>
-        </Link>
+        </KpiCard>
 
-        {/* KPI 3: Member Passes Issued & Turnstile Scans */}
-        <Link href={`/${club.slug}/admin/scanner`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
+        {/* KPI 3: Member Passes Issued & Gate Scans */}
+        <KpiCard href={`/${club.slug}/admin/scanner`} allowed={canScan} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Member Passes & Turnstile
+              Member Passes
             </span>
             <div style={{ color: 'var(--c-amber)' }}><CreditCard size={20} /></div>
           </div>
@@ -157,13 +184,13 @@ export default function AdminDashboardPage({
             {clubMembers.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{analytics.gateScansCount.toLocaleString()} turnstile scans recorded</span>
-            <ArrowRight size={12} />
+            <span>{analytics.gateScansCount.toLocaleString()} {analytics.gateScansCount === 1 ? 'pass scanned' : 'passes scanned'} at the gate</span>
+            {canScan && <ArrowRight size={12} />}
           </div>
-        </Link>
+        </KpiCard>
 
         {/* KPI 4: Live Public Page Visits */}
-        <Link href={`/${club.slug}/admin/analytics`} className="glass-panel glass-panel-interactive" style={{ padding: '1.5rem', textDecoration: 'none' }}>
+        <KpiCard href={`/${club.slug}/admin/analytics`} allowed={canAnalytics} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span className="pulse-dot" style={{ background: '#10B981' }} />
@@ -174,20 +201,23 @@ export default function AdminDashboardPage({
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
             {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>Live analytics stream active</span>
-            <ArrowRight size={12} />
-          </div>
-        </Link>
+          {canAnalytics && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span>See visitor stats</span>
+              <ArrowRight size={12} />
+            </div>
+          )}
+        </KpiCard>
       </div>
 
       {/* Quick Actions Panel */}
       <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>
-          Quick Management Actions
+          Quick Links
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem' }}>
+          {can(club.id, 'match-center') && (
           <Link
             href={`/${club.slug}/admin/match-center`}
             className="glass-panel glass-panel-interactive"
@@ -197,11 +227,13 @@ export default function AdminDashboardPage({
               <Radio size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Match Controller</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Match Centre</div>
               <div className="text-meta">Score & live events</div>
             </div>
           </Link>
+          )}
 
+          {can(club.id, 'branding') && (
           <Link
             href={`/${club.slug}/admin/branding`}
             className="glass-panel glass-panel-interactive"
@@ -212,10 +244,12 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Branding</div>
-              <div className="text-meta">Colors, logo & domain</div>
+              <div className="text-meta">Colours, crest & domain</div>
             </div>
           </Link>
+          )}
 
+          {can(club.id, 'squad') && (
           <Link
             href={`/${club.slug}/admin/squad`}
             className="glass-panel glass-panel-interactive"
@@ -229,7 +263,9 @@ export default function AdminDashboardPage({
               <div className="text-meta">Roster & stats</div>
             </div>
           </Link>
+          )}
 
+          {can(club.id, 'events') && (
           <Link
             href={`/${club.slug}/admin/events`}
             className="glass-panel glass-panel-interactive"
@@ -243,7 +279,9 @@ export default function AdminDashboardPage({
               <div className="text-meta">Trainings & social</div>
             </div>
           </Link>
+          )}
 
+          {can(club.id, 'hero-slider') && (
           <Link
             href={`/${club.slug}/admin/hero-slider`}
             className="glass-panel glass-panel-interactive"
@@ -253,11 +291,13 @@ export default function AdminDashboardPage({
               <Sparkles size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Hero Slider Pins</div>
-              <div className="text-meta">Curate pinned slides</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Homepage Slider</div>
+              <div className="text-meta">Pick the slides</div>
             </div>
           </Link>
+          )}
 
+          {can(club.id, 'tournaments') && (
           <Link
             href={`/${club.slug}/admin/tournaments`}
             className="glass-panel glass-panel-interactive"
@@ -268,9 +308,10 @@ export default function AdminDashboardPage({
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Tournaments & Cups</div>
-              <div className="text-meta">Brackets & Tiesheets</div>
+              <div className="text-meta">Brackets & draws</div>
             </div>
           </Link>
+          )}
         </div>
       </div>
 
@@ -280,12 +321,12 @@ export default function AdminDashboardPage({
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Matchday Command
+              Matchday
             </h3>
             {liveMatch ? (
               <span className="badge badge-live">{liveMatch.status === 'halftime' ? 'LIVE • HT' : <>LIVE • <LiveMinute match={liveMatch} />&apos;</>}</span>
             ) : (
-              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>STANDBY</span>
+              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>NO LIVE MATCH</span>
             )}
           </div>
 
@@ -316,16 +357,20 @@ export default function AdminDashboardPage({
                 </div>
               </div>
 
-              <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary" style={{ width: '100%' }}>
-                Open Live Match Controller &rarr;
-              </Link>
+              {canMatchCentre && (
+                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary" style={{ width: '100%' }}>
+                  Open Match Centre &rarr;
+                </Link>
+              )}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No fixture currently marked as LIVE.</p>
-              <Link href={`/${club.slug}/admin/match-center`} className="btn btn-secondary btn-sm">
-                Initialize Match Centre
-              </Link>
+              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No match is live right now.</p>
+              {canMatchCentre && (
+                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-secondary btn-sm">
+                  Open Match Centre
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -333,7 +378,7 @@ export default function AdminDashboardPage({
         {/* Recent Platform Activities */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
-            Recent Club Activity Feed
+            Recent Activity
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
