@@ -36,13 +36,14 @@ import {
   FileSpreadsheet,
   Lock,
   Gift,
-  Settings
+  Settings,
+  Banknote
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
 import { DATE_LOCALE } from '@/lib/dates';
-import { formatMoney, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
+import { formatMoney, parseMoneyToCents, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
@@ -73,6 +74,7 @@ export default function AdminMembersPage({
     members,
     approveMemberApplication,
     rejectMemberApplication,
+    recordMembershipSignupPayment,
     getClubMemberMessages,
     bulkAddMembers,
     clubTeams,
@@ -99,6 +101,11 @@ export default function AdminMembersPage({
 
   const [waiveModalMember, setWaiveModalMember] = useState<ClubMember | null>(null);
   const [waiveReason, setWaiveReason] = useState('');
+  // Cash or bank payment taken by hand for an application
+  const [payModalMember, setPayModalMember] = useState<ClubMember | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState<'cash' | 'bank_transfer' | 'other'>('cash');
+  const [payNote, setPayNote] = useState('');
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [currency, setCurrency] = useState('AUD');
 
@@ -221,6 +228,38 @@ export default function AdminMembersPage({
     } finally {
       setReviewing(null);
     }
+  };
+
+  const openPayModal = (member: ClubMember, priceCents: number) => {
+    setPayModalMember(member);
+    setPayAmount((priceCents / 100).toFixed(2));
+    setPayMethod('cash');
+    setPayNote('');
+  };
+
+  const handleRecordPayment = async (approve: boolean) => {
+    if (!payModalMember || reviewing) return;
+    const member = payModalMember;
+    const cents = parseMoneyToCents(payAmount);
+    if (cents === null || cents <= 0) return notify('Check the amount', 'Enter the amount paid, e.g. 120 or 120.50');
+    setReviewing(member.id);
+    let recorded = false;
+    let autoApproved = false;
+    try {
+      const res = await recordMembershipSignupPayment(member.id, { amountCents: cents, method: payMethod, note: payNote });
+      if (!res.success) return notify('Payment not recorded', res.message);
+      recorded = true;
+      autoApproved = !!res.autoApproved;
+      setSignupPayments(prev => ({ ...prev, [member.id]: 'paid' }));
+      setPayModalMember(null);
+      if (autoApproved) showToast(`✓ Payment recorded and ${member.full_name} approved (your club approves paid applications automatically).`);
+      else if (!approve) showToast(can(club.id, 'members', 'edit')
+        ? `✓ Payment recorded for ${member.full_name}. You can approve them now.`
+        : `✓ Payment recorded for ${member.full_name}. Someone who manages Members can approve them now.`);
+    } finally {
+      setReviewing(null);
+    }
+    if (recorded && approve && !autoApproved) await handleApprove(member);
   };
 
   // Filter members based on search
@@ -630,7 +669,11 @@ export default function AdminMembersPage({
                               return <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>✓ PAID</span>;
                             }
                             if (isAwaiting) {
-                              return <span className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)' }}>⏳ RECEIPT TO CHECK</span>;
+                              return (
+                                <Link href={`/${resolvedParams.clubSlug}/admin/finance?tab=income`} className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)', textDecoration: 'none' }} title="Check the receipt in Finance -> Income">
+                                  ⏳ RECEIPT TO CHECK
+                                </Link>
+                              );
                             }
                             if (hasFee) {
                               return <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--c-red)' }}>✕ UNPAID ({formatMoney(planPrice, currency)})</span>;
@@ -788,6 +831,22 @@ export default function AdminMembersPage({
                                   <span>Payment Required ({formatMoney(planPrice, currency)})</span>
                                 </button>
                               </div>
+                            )}
+
+                            {!canApprove && can(club.id, 'finance', 'edit') && (
+                              <button
+                                type="button"
+                                // A Treasurer can record it even where Members is view-only for them
+                                data-view-ok
+                                onClick={() => openPayModal(member, planPrice)}
+                                disabled={reviewing === member.id}
+                                className="btn btn-secondary btn-sm"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-green)' }}
+                                title="They paid by cash or bank transfer: record it here, then approve"
+                              >
+                                <Banknote size={14} />
+                                <span>Record Payment</span>
+                              </button>
                             )}
 
                             {allowWaiver && !canApprove && (
@@ -1036,6 +1095,91 @@ export default function AdminMembersPage({
           </div>
         </div>
       )}
+
+      {/* Record Payment Modal */}
+      {payModalMember && (() => {
+        const planPrice = plans.find(p => p.name === payModalMember.membership_tier)?.price_cents ?? 0;
+        const field = {
+          width: '100%',
+          background: 'rgba(var(--shade-rgb), 0.5)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '8px',
+          padding: '0.6rem 0.75rem',
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+        };
+        const label = { display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' };
+        return (
+          <div data-view-ok style={{
+            position: 'fixed',
+            inset: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}>
+            <div className="glass-panel" role="dialog" aria-modal="true" aria-labelledby="members-record-payment-title" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h3 id="members-record-payment-title" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Banknote size={20} color="var(--c-green)" />
+                  <span>Record Payment</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setPayModalMember(null)}
+                  aria-label="Close"
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                <strong className="text-primary">{payModalMember.full_name}</strong> paid for {payModalMember.membership_tier || 'membership'}
+                {planPrice > 0 ? ` (${formatMoney(planPrice, currency)})` : ''} by cash or bank transfer. It is saved in Finance as their sign-up payment and their membership starts today.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.9rem' }}>
+                <div>
+                  <label htmlFor="members-payment-amount" style={label}>Amount paid ({currency})</label>
+                  <input id="members-payment-amount" inputMode="decimal" value={payAmount} onChange={e => setPayAmount(e.target.value)} style={field} />
+                </div>
+                <div>
+                  <label htmlFor="members-payment-method" style={label}>Paid by</label>
+                  <select id="members-payment-method" value={payMethod} onChange={e => setPayMethod(e.target.value as typeof payMethod)} style={field}>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank transfer</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label htmlFor="members-payment-note" style={label}>Note (optional)</label>
+                <input id="members-payment-note" value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="e.g. Paid at training, receipt #104" style={field} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => setPayModalMember(null)} className="btn btn-secondary btn-sm">
+                  Cancel
+                </button>
+                <button type="button" onClick={() => handleRecordPayment(false)} disabled={!!reviewing} className="btn btn-secondary btn-sm">
+                  Record Only
+                </button>
+                {can(club.id, 'members', 'edit') && (
+                  <button type="button" onClick={() => handleRecordPayment(true)} disabled={!!reviewing} className="btn btn-primary btn-sm">
+                    {reviewing ? 'Saving...' : 'Record & Approve'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Bulk Import / Export Modal */}
       <BulkMemberModal
