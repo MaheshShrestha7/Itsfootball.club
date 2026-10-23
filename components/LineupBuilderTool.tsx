@@ -6,7 +6,7 @@
 // code as a club's matchday share cards.
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Download, ImagePlus, Lock, RotateCcw, Share2, X } from 'lucide-react';
+import { ArrowRight, Download, GripVertical, ImagePlus, Lock, RotateCcw, Share2, X } from 'lucide-react';
 import { FORMAT_PRESETS } from '@/components/TacticalPitch';
 import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type CardLook, type MarkerShape } from '@/lib/share-card';
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
@@ -199,6 +199,8 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
   const [canShare, setCanShare] = useState(false);
   const [dragging, setDragging] = useState<number | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
+  /** A sub being dragged off the bench: where the pointer is, and the pitch slot it's over */
+  const [benchDrag, setBenchDrag] = useState<{ i: number; x: number; y: number; over: number | null } | null>(null);
   const press = useRef<{ i: number; x: number; y: number; moved: boolean } | null>(null);
   const pitchRef = useRef<HTMLDivElement>(null);
   const nameRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -249,6 +251,35 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
     state.subs[i] || { name: '', number: String(state.coords.length + i + 1) });
   const setSub = (i: number, patch: Partial<Player>) =>
     update({ subs: subs.map((p, j) => (j === i ? { ...p, ...patch } : p)).concat(state.subs.slice(subs.length)) });
+
+  // A sub dropped on a player swaps them: the sub takes the slot (name and number), the player goes to the bench
+  const swapIn = (sub: number, slot: number) => {
+    const bench = subs[sub];
+    const starter = state.players[slot];
+    update({
+      players: state.players.map((p, j) => (j === slot ? { name: bench.name, number: bench.number } : p)),
+      subs: subs.map((p, j) => (j === sub ? { name: starter.name, number: starter.number } : p)).concat(state.subs.slice(subs.length)),
+      // The armband stays on the pitch only if its wearer does
+      captain: state.captain === slot ? -1 : state.captain,
+    });
+  };
+  const slotAt = (x: number, y: number) => {
+    const el = document.elementFromPoint(x, y)?.closest('[data-slot]');
+    return el ? Number(el.getAttribute('data-slot')) : null;
+  };
+  const onBenchDown = (i: number, e: ReactPointerEvent<HTMLElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setEditing(null);
+    setBenchDrag({ i, x: e.clientX, y: e.clientY, over: null });
+  };
+  const onBenchMove = (e: ReactPointerEvent) => {
+    if (!benchDrag) return;
+    setBenchDrag({ ...benchDrag, x: e.clientX, y: e.clientY, over: slotAt(e.clientX, e.clientY) });
+  };
+  const onBenchUp = () => {
+    if (benchDrag?.over != null) swapIn(benchDrag.i, benchDrag.over);
+    setBenchDrag(null);
+  };
 
   // Dragging a player: the pitch is vertical, so left is across (y) and top runs from their goal down to ours (x)
   const move = (i: number, e: ReactPointerEvent) => {
@@ -309,7 +340,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
   };
 
   const size = FORMATS.find(f => f.key === state.format)!;
-  const fileName = `${(state.team.trim() || 'lineup').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lineup'}-starting-${size.word.toLowerCase()}.png`;
+  const fileName = `${(state.team.trim() || 'lineup').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lineup'}-${state.layout === 'list' ? 'matchday-squad' : `starting-${size.word.toLowerCase()}`}.png`;
 
   const render = async () => {
     const lineup: PitchPosition[] = state.coords.map((c, i) => ({
@@ -328,13 +359,13 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       is_club_home: true,
       home_team_name: team,
       away_team_name: state.opponent.trim(),
-      home_formation: state.shape === FREE ? 'Custom' : state.shape,
+      home_formation: state.shape === FREE || state.layout === 'list' ? 'Custom' : state.shape, // the list leaves the formation off
       home_lineup_coords: lineup,
       competition: state.competition.trim(),
       match_date: '',
     } as unknown as Match;
     return drawMatchCard(match, club, state.layout === 'list' ? 'lineup-list' : 'lineup', 'Made at itsfootball.club', {
-      format: state.size, headline: ['STARTING', size.word], keepOrder: true, marker: state.marker,
+      format: state.size, headline: state.layout === 'list' ? ['MATCHDAY', 'SQUAD'] : ['STARTING', size.word], keepOrder: true, marker: state.marker,
       look: state.look,
       subs: subs.map(p => ({ name: p.name.trim(), number: parseInt(p.number, 10) || 0 })).filter(p => p.name),
       sponsors,
@@ -350,7 +381,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       let shared = false;
       if (share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `${state.team.trim() || 'Our'} starting ${size.word === 'XI' ? 'XI' : size.word.toLowerCase()}` });
+          await navigator.share({ files: [file], title: `${state.team.trim() || 'Our'} ${state.layout === 'list' ? 'matchday squad' : `starting ${size.word === 'XI' ? 'XI' : size.word.toLowerCase()}`}` });
           shared = true;
         } catch { /* the share sheet was closed */ }
       }
@@ -404,7 +435,8 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
             return (
               <div
                 key={i}
-                className={`pitch-player-node ${dragging === i ? 'is-dragging' : ''} ${editing === i ? 'is-selected' : ''}`}
+                data-slot={i}
+                className={`pitch-player-node ${dragging === i ? 'is-dragging' : ''} ${editing === i ? 'is-selected' : ''} ${benchDrag?.over === i ? 'is-drop-target' : ''}`}
                 style={{ left: `${c.y}%`, top: `${100 - c.x}%` }}
                 role="button"
                 tabIndex={0}
@@ -489,14 +521,26 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
         {subs.some(p => p.name.trim()) && (
           <div className="lineup-tool-bench" aria-label="Subs">
             <span className="lineup-tool-bench-label">Subs</span>
-            {subs.filter(p => p.name.trim()).map((p, i) => (
-              <span key={i} className="lineup-tool-bench-chip">
-                {p.number && <b>{p.number}</b>}{juniorPublicName(p.name)}
+            {subs.map((p, i) => p.name.trim() && (
+              <span key={i} className={`lineup-tool-bench-chip ${benchDrag?.i === i ? 'is-lifted' : ''}`}
+                role="button" tabIndex={0} aria-label={`${p.name}. Drag onto a player to swap them in.`}
+                onPointerDown={e => onBenchDown(i, e)} onPointerMove={onBenchMove} onPointerUp={onBenchUp}
+                onPointerCancel={() => setBenchDrag(null)}>
+                <GripVertical size={12} aria-hidden="true" />{p.number && <b>{p.number}</b>}{juniorPublicName(p.name)}
               </span>
             ))}
           </div>
         )}
-        <p className="lineup-tool-hint">Tap a player to name them. Drag to move them anywhere.</p>
+        {benchDrag && (
+          <span className="lineup-tool-bench-chip lineup-tool-bench-ghost" style={{ left: Math.min(Math.max(benchDrag.x, 110), window.innerWidth - 110), top: benchDrag.y }} aria-hidden="true">
+            {subs[benchDrag.i].number && <b>{subs[benchDrag.i].number}</b>}{juniorPublicName(subs[benchDrag.i].name)}
+            {benchDrag.over != null && <em>⇄ {juniorPublicName(state.players[benchDrag.over].name) || state.coords[benchDrag.over].position}</em>}
+          </span>
+        )}
+        <p className="lineup-tool-hint">
+          Tap a player to name them. Drag to move them anywhere.
+          {subs.some(p => p.name.trim()) && ' Drag a sub onto a player to swap them in.'}
+        </p>
       </div>
 
       {/* Controls, in three short sections so they read well on a phone */}
@@ -706,7 +750,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
             ))}
           </ol>
         )}
-        <p className="lineup-tool-hint" style={{ textAlign: 'left', marginTop: '0.5rem' }}>Named subs are listed under the lineup on the image.</p>
+        <p className="lineup-tool-hint" style={{ textAlign: 'left', marginTop: '0.5rem' }}>{state.layout === 'list' ? 'Named subs are listed after the starters on the image.' : 'Named subs are listed under the lineup on the image.'} Drag a sub onto a player on the pitch to swap them in.</p>
 
         {/* Stays in reach at the bottom of the screen while scrolling through the players on a phone */}
         <div className="lineup-tool-actions">
