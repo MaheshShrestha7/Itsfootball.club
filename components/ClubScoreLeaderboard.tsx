@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useDialog } from '@/lib/use-escape-to-close';
+import { useFlipReorder } from '@/lib/use-flip-reorder';
 import Link from 'next/link';
 import { Club, ClubMember, ClubScoreProfile, GamificationActivityLog } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -65,6 +66,9 @@ export default function ClubScoreLeaderboard({
       if (filter === 'weekly') return liveWeeklyPoints(b) - liveWeeklyPoints(a);
       return liveStreak(b) - liveStreak(a);
     });
+  // Rows glide to their new rank when points arrive or the sort changes
+  const rowsRef = useRef<HTMLDivElement>(null);
+  useFlipReorder(rowsRef, sortedProfiles.map(p => p.id).join());
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -238,7 +242,7 @@ export default function ClubScoreLeaderboard({
       </div>
 
       {/* Leaderboard Rows */}
-      <div className="stack stack-sm">
+      <div ref={rowsRef} className="stack stack-sm">
         {sortedProfiles.length === 0 && (
           <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             No ClubScore points recorded{season ? ` for ${season}` : ''} yet.
@@ -254,6 +258,7 @@ export default function ClubScoreLeaderboard({
           return (
             <div
               key={profile.id}
+              data-flip-key={profile.id}
               onClick={() => {
                 const logs = activityLogs.filter(l => l.member_id === player.id);
                 setSelectedPlayerModal({ member: player, profile, logs });

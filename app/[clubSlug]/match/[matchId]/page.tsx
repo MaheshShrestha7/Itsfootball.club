@@ -213,6 +213,19 @@ export default function MatchCenterPage({
     if (!goalTimerRef.current) showNextGoal();
   }, [match?.id, match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, isLive, scoreHidden, showNextGoal]);
 
+  // The moment a match someone is watching live ends: a "Full time" stamp lands on the scoreboard, the score
+  // settles, and the match report fades in underneath
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  const [fullTimeMoment, setFullTimeMoment] = useState(false);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = match?.status;
+    if (match?.status !== 'completed' || (prev !== 'live' && prev !== 'halftime')) return;
+    setFullTimeMoment(true);
+    const timer = setTimeout(() => setFullTimeMoment(false), 5000);
+    return () => clearTimeout(timer);
+  }, [match?.status]);
+
   // Cross-tab pulse for the live badge. Goals themselves come from the score above, so a goal logged
   // in another tab isn't celebrated twice (once from the message, again when the score arrives).
   useEffect(() => {
@@ -437,8 +450,10 @@ export default function MatchCenterPage({
           </div>
         </div>
 
-        {/* Stadium-Grade Live Scoreboard Hero with Strobe Wave */}
+        {/* Stadium-Grade Live Scoreboard Hero with Strobe Wave. A fixture card on the club page glides into
+            it (components/MatchGlideLink.tsx), via data-match-header and its view-transition-name. */}
         <div
+          data-match-header={match.id}
           className="glass-panel"
           style={{
             padding: 'clamp(1.5rem, 6vw, 2.5rem) clamp(0.75rem, 4vw, 1.5rem)',
@@ -457,6 +472,7 @@ export default function MatchCenterPage({
             position: 'relative',
             overflow: 'hidden',
             transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
+            viewTransitionName: 'match-card',
           }}
         >
           {/* 1. Floodlight Strobe Wave Animation across Scoreboard */}
@@ -502,6 +518,12 @@ export default function MatchCenterPage({
             >
               <Flame size={18} color="#040609" fill="#040609" />
               <span>GOAL! • {goalAlert.teamName.toUpperCase()}</span>
+            </div>
+          )}
+
+          {fullTimeMoment && (
+            <div className="ft-stamp-wrap" aria-hidden="true">
+              <span className="authorization-stamp ft-stamp">Full time</span>
             </div>
           )}
 
@@ -569,7 +591,8 @@ export default function MatchCenterPage({
             {teamBlock('home')}
 
             {/* Stadium Mechanical Scoreboard Digit Display */}
-            <div data-theme="dark" style={{
+            <div data-theme="dark" className={fullTimeMoment ? 'ft-settle' : undefined} style={{
+              viewTransitionName: 'match-score',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -651,6 +674,7 @@ export default function MatchCenterPage({
 
         {/* Full-time report in plain sentences, from the logged events (none when the team hides scores) */}
         {match.status === 'completed' && !scoreHidden && (
+          <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
           <MatchReport
             source={`Written from the match events ${club.name} logged.`}
             paragraphs={matchReport({
@@ -667,6 +691,7 @@ export default function MatchCenterPage({
               playerOfTheMatch: motmMember?.full_name,
             })}
           />
+          </div>
         )}
 
         {/* Player of the Match & Goal Scorers */}
