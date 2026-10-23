@@ -450,6 +450,24 @@ export function applicationRejected(p: ForGuardian & { brand: EmailBrand; member
   });
 }
 
+/** A club's reply to a contact-form enquiry, sent from the Inbox */
+export function inquiryReply(p: { brand: EmailBrand; senderName: string; reply: string; inquiryType: string; original: string; canReply: boolean }): RenderedEmail {
+  const original = p.original.length > 300 ? `${p.original.slice(0, 300).trim()}...` : p.original;
+  return renderEmail({
+    brand: p.brand,
+    subject: `Re: your message to ${p.brand.name}`,
+    preheader: p.reply.slice(0, 120),
+    heading: `${p.brand.name} replied to your message`,
+    paragraphs: [
+      `Hi ${firstName(p.senderName)}, thanks for getting in touch. Here's the club's reply.`,
+      ...(p.canReply ? ['To write back, just reply to this email.'] : []),
+    ],
+    message: p.reply,
+    details: [['You asked about', p.inquiryType], ['Your message', original]],
+    reason: `You're receiving this because you sent a message to ${p.brand.name} through its website.`,
+  });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Grounds directory
 // ---------------------------------------------------------------------------------------------

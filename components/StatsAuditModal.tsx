@@ -5,6 +5,7 @@ import { useDialog } from '@/lib/use-escape-to-close';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
+import { clubLineupSide } from '@/lib/tournament-engine';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import {
@@ -39,10 +40,15 @@ export default function StatsAuditModal({
   const { auditAndBakeMatchStats, clubScoreRules } = useClub();
   const rules = clubScoreRules[match.club_id] || getDefaultClubScoreRules(match.club_id);
 
-  // Filter home events (club's own events)
+  // The club's own side: away when it played away (its goals and cards are logged on that side)
+  const clubSide = clubLineupSide(match);
+  const opponentScore = clubSide === 'home' ? match.away_score : match.home_score;
+  const isFinished = match.status === 'completed';
+
+  // The club's own events
   const initialAuditEvents: MatchAuditItem[] = useMemo(() => {
     return events
-      .filter(e => e.team_side === 'home' && ['goal', 'penalty', 'yellow_card', 'red_card'].includes(e.event_type))
+      .filter(e => e.team_side === clubSide && ['goal', 'penalty', 'yellow_card', 'red_card'].includes(e.event_type))
       .map(e => {
         const resolvedPlayer = squadPlayers.find(p => p.full_name.toLowerCase() === e.player_name.toLowerCase());
         const resolvedAssist = e.assist_player_name
@@ -53,42 +59,40 @@ export default function StatsAuditModal({
           id: e.id,
           minute: e.minute,
           event_type: e.event_type as 'goal' | 'penalty' | 'yellow_card' | 'red_card',
-          team_side: 'home' as const,
+          team_side: clubSide,
           player_name: e.player_name,
           player_id: resolvedPlayer?.id,
           assist_player_name: e.assist_player_name,
           assist_player_id: resolvedAssist?.id,
         };
       });
-  }, [events, squadPlayers]);
+  }, [events, squadPlayers, clubSide]);
 
   const [auditedEvents, setAuditedEvents] = useState<MatchAuditItem[]>(initialAuditEvents);
 
-  // Clean sheet eligible: GK and defenders if opponent goals scored === 0
-  const isCleanSheetGame = match.away_score === 0;
+  // Who played: the club's lineup on the pitch for this match, plus anyone who scored, assisted or
+  // was booked. Nobody is ticked when there's no lineup, so nothing is credited by guesswork.
+  const playedIds = useMemo(() => {
+    const coords = (clubSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
+    const ids = new Set(coords.map(c => c.member_id).filter((id): id is string => !!id && squadPlayers.some(p => p.id === id)));
+    initialAuditEvents.forEach(e => { if (e.player_id) ids.add(e.player_id); if (e.assist_player_id) ids.add(e.assist_player_id); });
+    return [...ids];
+  }, [match.home_lineup_coords, match.away_lineup_coords, clubSide, squadPlayers, initialAuditEvents]);
+
+  // Clean sheet eligible: GK and defenders, once the match is over and the opponent didn't score
+  const isCleanSheetGame = isFinished && opponentScore === 0;
   const eligibleDefenders = useMemo(() => {
     return squadPlayers.filter(p => p.player_position === 'GK' || p.player_position === 'CB' || p.player_position === 'LB' || p.player_position === 'RB');
   }, [squadPlayers]);
 
-  const [cleanSheetMemberIds, setCleanSheetMemberIds] = useState<string[]>(() => {
-    if (isCleanSheetGame) {
-      // Default to first 4 defenders/gk
-      return eligibleDefenders.slice(0, 5).map(p => p.id);
-    }
-    return [];
-  });
+  // Pre-ticked only for defenders who played
+  const [cleanSheetMemberIds, setCleanSheetMemberIds] = useState<string[]>(() =>
+    isCleanSheetGame ? eligibleDefenders.filter(p => playedIds.includes(p.id)).map(p => p.id) : []);
 
-  // MOTM selection
-  const [motmMemberId, setMotmMemberId] = useState<string>(() => {
-    // Default to first goal scorer or first player
-    const scorer = auditedEvents.find(e => e.event_type === 'goal' && e.player_id);
-    return scorer?.player_id || squadPlayers[0]?.id || '';
-  });
+  // Player of the Match is the coach's call (it's published on the match page), so it starts empty
+  const [motmMemberId, setMotmMemberId] = useState<string>('');
 
-  // Participating appearances (default to starting 11/squad)
-  const [appearanceMemberIds, setAppearanceMemberIds] = useState<string[]>(() => {
-    return squadPlayers.slice(0, 14).map(p => p.id);
-  });
+  const [appearanceMemberIds, setAppearanceMemberIds] = useState<string[]>(() => playedIds);
 
   const auditNotes = '';
   const [isBaking, setIsBaking] = useState<boolean>(false);
@@ -143,8 +147,12 @@ export default function StatsAuditModal({
     setAuditedEvents(prev => prev.filter(e => e.id !== eventId));
   };
 
-  // Commit and Bake into Season Records
+  // Save into the players' season stats
   const handleBakeStats = () => {
+    if (!isFinished) {
+      setAuditError('This match hasn\'t finished yet. Press full time first, then save the stats.');
+      return;
+    }
     setIsBaking(true);
     const payload: MatchAuditPayload = {
       match_id: match.id,
@@ -179,7 +187,7 @@ export default function StatsAuditModal({
       padding: '1.25rem',
       overflowY: 'auto',
     }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Stats audit"
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Save player stats"
         className="glass-panel"
         style={{
           maxWidth: '720px',
@@ -218,8 +226,7 @@ export default function StatsAuditModal({
             </div>
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Post-Match Stats Audit
-                <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>30s Verification</span>
+                Save Player Stats
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
                 {match.home_team_name} {match.home_score} - {match.away_score} {match.away_team_name} • {match.competition}
@@ -263,7 +270,7 @@ export default function StatsAuditModal({
               </div>
 
               <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-                Stats Successfully Baked into Season Records!
+                Player Stats Saved
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '480px' }}>
                 {auditResult.message}
@@ -283,7 +290,7 @@ export default function StatsAuditModal({
                 fontSize: '0.9rem',
               }}>
                 <Flame size={16} />
-                <span>+{auditResult.totalXP} Total ClubScore XP Granted</span>
+                <span>+{auditResult.totalXP} ClubScore points</span>
               </div>
 
               <button
@@ -291,7 +298,7 @@ export default function StatsAuditModal({
                 className="btn btn-primary btn-sm"
                 style={{ marginTop: '1rem', padding: '0.6rem 1.75rem' }}
               >
-                Close Audit Screen
+                Done
               </button>
             </div>
           ) : (
@@ -299,12 +306,12 @@ export default function StatsAuditModal({
               {/* 1. Review Goals & Cards */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Flame size={16} color="var(--c-amber)" /> 1. Verify Recorded Goals & Cards ({auditedEvents.length})
+                  <Flame size={16} color="var(--c-amber)" /> 1. Check Goals & Cards ({auditedEvents.length})
                 </h4>
 
                 {auditedEvents.length === 0 ? (
                   <div style={{ background: 'rgba(var(--tint-rgb), 0.03)', padding: '1rem', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    No home goals or disciplinary cards were logged during this match.
+                    No goals or cards were logged for {clubSide === 'home' ? match.home_team_name : match.away_team_name} in this match.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -384,12 +391,14 @@ export default function StatsAuditModal({
               {/* 2. Clean Sheet Bonus */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldCheck size={16} color="var(--c-green)" /> 2. Clean Sheet Verification (+{rules.points_clean_sheet_gk_def ?? 10} XP)
+                  <ShieldCheck size={16} color="var(--c-green)" /> 2. Clean Sheet (+{rules.points_clean_sheet_gk_def ?? 10} points)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
-                  {isCleanSheetGame
-                    ? `Opponent scored 0 goals! Select goalkeepers and defenders who earned the Clean Sheet bonus:`
-                    : `Opponent scored ${match.away_score} goal(s). Clean sheet bonus is typically disabled unless adjusted by coach.`}
+                  {!isFinished
+                    ? 'The match hasn\'t finished yet, so there\'s no clean sheet to give.'
+                    : isCleanSheetGame
+                      ? 'The other team didn\'t score. Tick the goalkeepers and defenders who earned the clean sheet:'
+                      : `The other team scored ${opponentScore}, so there's no clean sheet. Tick a player only if the coach wants to give one anyway.`}
                 </p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
@@ -426,24 +435,31 @@ export default function StatsAuditModal({
               {/* 3. Man of the Match (MOTM) */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Star size={16} color="var(--c-amber)" /> 3. Man of the Match Award (+{rules.points_motm ?? 15} XP)
+                  <Star size={16} color="var(--c-amber)" /> 3. Player of the Match (+{rules.points_motm ?? 15} points)
                 </h4>
                 <PlayerSearchSelect
                   id="motm-search"
                   players={squadPlayers}
                   value={motmMemberId}
                   onChange={setMotmMemberId}
-                  extraOptions={[{ value: '', label: '-- Select Official MOTM --' }]}
+                  extraOptions={[{ value: '', label: 'No Player of the Match' }]}
                 />
               </div>
 
               {/* 4. Match Appearances Verification */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <User size={16} color="var(--c-blue)" /> 4. Matchday Appearances (+{rules.points_match_appearance ?? 5} XP)
+                  <User size={16} color="var(--c-blue)" /> 4. Who Played (+{rules.points_match_appearance ?? 5} points each)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
-                  Select squad members who played minutes in this fixture ({appearanceMemberIds.length} checked):
+                  {playedIds.length > 0
+                    ? `Ticked from the lineup and the match events. Add anyone else who came on (${appearanceMemberIds.length} ticked):`
+                    : `No lineup was saved for this match, so tick everyone who played (${appearanceMemberIds.length} ticked):`}
+                  {' '}
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem' }}
+                    onClick={() => setAppearanceMemberIds(appearanceMemberIds.length === squadPlayers.length ? [] : squadPlayers.map(p => p.id))}>
+                    {appearanceMemberIds.length === squadPlayers.length ? 'Untick all' : 'Tick all'}
+                  </button>
                 </p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', maxHeight: '140px', overflowY: 'auto' }}>
@@ -487,7 +503,7 @@ export default function StatsAuditModal({
                 color: 'var(--text-secondary)',
                 lineHeight: 1.45,
               }}>
-                ⚡ <strong>Production Guarantee:</strong> Clicking <em>&quot;Bake into Season Records&quot;</em> atomically updates cumulative <code className="text-primary">player_stats</code>, deposits ClubScore fantasy points into player profiles, and records audit entries in the immutable ledger.
+                Saving adds these goals, assists, cards and appearances to each player&apos;s season stats and gives their ClubScore points. You can only save a match once.
               </div>
             </>
           )}
@@ -537,7 +553,7 @@ export default function StatsAuditModal({
               }}
             >
               <Sparkles size={16} />
-              <span>{isBaking ? 'Baking Records...' : 'Bake into Season Records'}</span>
+              <span>{isBaking ? 'Saving...' : 'Save Player Stats'}</span>
             </button>
           </div>
         )}

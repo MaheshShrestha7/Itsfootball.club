@@ -18,3 +18,17 @@ export function fixtureLabel(match: Pick<Match, 'home_team_name' | 'away_team_na
     ? teams
     : `${teams} · ${date.toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })}`;
 }
+
+/**
+ * The match-type word to show beside a fixture, or null when it would mislead: "friendly" is the
+ * type for any game against another club, so a league game ("Sydney Metro League") shows no
+ * "Friendly" tag. Also null when the competition name already says it.
+ */
+export function matchTypeTag(match: Pick<Match, 'match_type' | 'competition'>): string | null {
+  const type = match.match_type;
+  if (!type) return null;
+  const comp = (match.competition || '').toLowerCase();
+  if (type === 'friendly' && comp && !comp.includes('friendly') && comp !== 'premier regional league') return null;
+  const word = type === 'internal' ? 'internal' : type === 'tournament' ? 'tournament' : 'friendly';
+  return comp.includes(word) ? null : word;
+}

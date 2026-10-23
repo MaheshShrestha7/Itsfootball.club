@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { matchTypeTag } from '@/lib/fixture-label';
 import { useAuth } from '@/lib/auth-context';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
@@ -578,9 +579,9 @@ export default function MatchCenterPage({
                 {match.status.toUpperCase()}
               </span>
             )}
-            {match.match_type && (
+            {matchTypeTag(match) && (
               <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--club-ink)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
-                {match.match_type} FIXTURE
+                {matchTypeTag(match)} FIXTURE
               </span>
             )}
             <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>

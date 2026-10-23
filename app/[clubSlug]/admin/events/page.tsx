@@ -126,7 +126,7 @@ export default function AdminEventsPage({
     season: activeSeason?.name || defaultSeasonLabel(),
     start_time: toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
     location: club.stadium_name,
-    max_capacity: 150,
+    max_capacity: 0, // 0 = no limit
     is_public: true,
     door_qr_checkin_enabled: true,
     ticket_price: '',
@@ -144,7 +144,7 @@ export default function AdminEventsPage({
       season: activeSeason?.name || defaultSeasonLabel(),
       start_time: prefill ? `${prefill.date}T${prefill.time || '19:00'}` : toDateTimeLocal(new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()),
       location: club.stadium_name,
-      max_capacity: 150,
+      max_capacity: 0, // 0 = no limit
       is_public: true,
       door_qr_checkin_enabled: true,
       ticket_price: '',
@@ -333,7 +333,7 @@ export default function AdminEventsPage({
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
                   <span className="text-meta">
-                    Checked in: {evt.rsvp_count} / {evt.max_capacity} capacity
+                    Checked in: {evt.rsvp_count}{evt.max_capacity > 0 ? ` / ${evt.max_capacity}` : ''}
                   </span>
                   {(evt.ticket_price_cents ?? 0) > 0 && (
                     <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
@@ -526,9 +526,10 @@ export default function AdminEventsPage({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="events-max-attendees-capacity" className="form-label">Max Attendees / Capacity</label>
+                  <label htmlFor="events-max-attendees-capacity" className="form-label">Max Attendees (0 = no limit)</label>
                   <input id="events-max-attendees-capacity"
                     type="number"
+                    min={0}
                     className="form-input"
                     value={form.max_capacity}
                     onChange={e => setForm({ ...form, max_capacity: Number(e.target.value) })}

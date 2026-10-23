@@ -176,7 +176,7 @@ interface ClubContextType {
   publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
 
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string) => Promise<{ success: boolean; error?: string }>;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string) => Promise<{ success: boolean; error?: string }>;
   inquiries: ContactInquiry[];
   updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
@@ -233,6 +233,8 @@ interface ClubContextType {
     options?: { waiveFee?: boolean; waiverReason?: string }
   ) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
+  /** Re-reads one member from the database (after a server-side change such as a payment approving them) */
+  refreshMemberRow: (memberId: string) => Promise<void>;
   /** Cash or bank payment taken by hand for an application (Finance edit). Under an auto-approve policy it also approves. */
   recordMembershipSignupPayment: (
     memberId: string,
@@ -1802,7 +1804,8 @@ export function ClubProvider({
   // 11. Inquiries
   const submitInquiry = useCallback(async (
     inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
-    honeypot?: string
+    honeypot?: string,
+    about?: string
   ): Promise<{ success: boolean; error?: string }> => {
     const message = sanitizeText(inquiryData.message);
     const name = sanitizeText(inquiryData.sender_name);
@@ -1823,6 +1826,7 @@ export function ClubProvider({
           sender_phone: inquiryData.sender_phone ? sanitizeText(inquiryData.sender_phone) : undefined,
           inquiry_type: inquiryData.inquiry_type,
           message,
+          about: about || undefined,
           website: honeypot,
         }),
       });
@@ -2031,10 +2035,12 @@ export function ClubProvider({
       return { success: false, totalPointsAwarded: 0, message: 'Match fixture not found.' };
     }
     if (targetMatch.is_audited) {
-      return { success: false, totalPointsAwarded: 0, message: 'This match has already been audited; its points were awarded then.' };
+      return { success: false, totalPointsAwarded: 0, message: 'Stats for this match are already saved; its points were awarded then.' };
     }
 
     let totalXP = 0;
+    // The other side (the club can be home or away)
+    const opponent = targetMatch.is_club_home === false ? targetMatch.home_team_name : targetMatch.away_team_name;
     const rules = clubScoreRules[targetMatch.club_id] || getDefaultClubScoreRules(targetMatch.club_id);
     // Stats and points go to the match's season (a fixture without one counts toward the current season)
     const season = targetMatch.season || seasonLabelFor(targetMatch.club_id);
@@ -2048,7 +2054,7 @@ export function ClubProvider({
         memId,
         pts,
         'match_clean_sheet',
-        `Clean Sheet verified vs ${targetMatch.away_team_name}`,
+        `Clean sheet vs ${opponent}`,
         matchId,
         season
       );
@@ -2064,7 +2070,7 @@ export function ClubProvider({
         payload.motm_member_id,
         pts,
         'match_motm',
-        `Official Man of the Match vs ${targetMatch.away_team_name}`,
+        `Player of the Match vs ${opponent}`,
         matchId,
         season
       );
@@ -2079,17 +2085,17 @@ export function ClubProvider({
         if (evt.event_type === 'goal' || evt.event_type === 'penalty') {
           const scorer = members.find(m => m.id === evt.player_id);
           const pts = getGoalPointsForPosition(rules, scorer?.player_position);
-          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Match Goal (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Goal (${evt.minute}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { goals: 1 });
         } else if (evt.event_type === 'yellow_card') {
           const pts = rules.points_yellow_card_penalty ?? -3;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow Card (${evt.minute}') audited`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow card (${evt.minute}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { yellow_cards: 1 });
         } else if (evt.event_type === 'red_card') {
           const pts = rules.points_red_card_penalty ?? -10;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red Card (${evt.minute}') audited`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red card (${evt.minute}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { red_cards: 1 });
         }
@@ -2097,7 +2103,7 @@ export function ClubProvider({
 
       if (evt.assist_player_id) {
         const pts = rules.points_assist ?? 7;
-        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Match Assist (${evt.minute}') verified vs ${targetMatch.away_team_name}`, matchId, season);
+        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Assist (${evt.minute}') vs ${opponent}`, matchId, season);
         totalXP += pts;
         addStats(evt.assist_player_id, { assists: 1 });
       }
@@ -2111,7 +2117,7 @@ export function ClubProvider({
       );
       if (!alreadyAwarded) {
         const pts = rules.points_match_appearance ?? 5;
-        awardClubScorePoints(memId, pts, 'match_appearance', `Match Appearance vs ${targetMatch.away_team_name}`, matchId, season);
+        awardClubScorePoints(memId, pts, 'match_appearance', `Appearance vs ${opponent}`, matchId, season);
         totalXP += pts;
       }
       addStats(memId, { appearances: 1, minutes_played: 90 });
@@ -2133,7 +2139,7 @@ export function ClubProvider({
     return {
       success: true,
       totalPointsAwarded: totalXP,
-      message: `Match stats verified and baked! Awarded ${totalXP} ClubScore XP across the squad (before streak bonuses).`,
+      message: `Player stats saved. ${totalXP} ClubScore points awarded across the squad (before streak bonuses).`,
     };
   }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints, seasonLabelFor]);
 
@@ -2748,6 +2754,11 @@ export function ClubProvider({
     return null;
   }, [applyServerRow]);
 
+  const refreshMemberRow = useCallback(async (memberId: string) => {
+    const { data } = await (getSupabaseClient()?.from('club_members').select('*').eq('id', memberId).maybeSingle() ?? Promise.resolve({ data: null }));
+    if (data) applyServerRow('members', setMembers, data);
+  }, [applyServerRow]);
+
   const recordMembershipSignupPayment = useCallback(async (
     memberId: string,
     payment: { amountCents: number; method: 'cash' | 'bank_transfer' | 'other'; note?: string }
@@ -2903,7 +2914,7 @@ export function ClubProvider({
       sender_name: `${adminName} (Administration)`,
       subject: 'Official Membership Approved & Digital Pass Active',
       category: 'Committee',
-      content: `Welcome ${member.full_name}! Your application for ${member.membership_tier} has been officially approved. Your digital turnstile pass is now active for stadium gate access and team matchdays.`,
+      content: `Welcome ${member.full_name}! Your application for ${member.membership_tier} has been approved. Your member pass is ready in the app: show it at the gate or when you check in.`,
       is_read: false,
       created_at: new Date().toISOString(),
     };
@@ -3463,6 +3474,7 @@ export function ClubProvider({
         approveMemberApplication,
         rejectMemberApplication,
         recordMembershipSignupPayment,
+        refreshMemberRow,
         sendMemberMessage,
         replyToMemberMessage,
         markMemberMessageRead,

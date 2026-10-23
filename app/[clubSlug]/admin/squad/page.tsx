@@ -9,7 +9,7 @@ import { clubTeamsOf, isJuniorMember } from '@/lib/teams';
 import { useAuth } from '@/lib/auth-context';
 import { useAccessRoles } from '@/lib/access-roles';
 import { membershipTermEnd, todayIso } from '@/lib/finance';
-import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
+import { ClubMember, PlayerPosition, PlayerStatus, ClubRole, isPlayerMember } from '@/lib/supabase/types';
 import {
   Users,
   Plus,
@@ -411,6 +411,16 @@ export default function AdminSquadPage({
     }
 
     const fullName = `${firstName} ${lastName}`.trim();
+    const email = form.email.trim().toLowerCase();
+    // Two members can't share an email at a club (it's how sign-in finds their record)
+    if (email && clubMembers.some(m => m.id !== editingMember?.id && (m.email || '').trim().toLowerCase() === email)) {
+      setFormError(`Someone at the club already uses ${email}.`);
+      return;
+    }
+    if (!email && !form.guardian_email.trim() && !form.phone.trim() && !form.guardian_phone.trim()) {
+      setFormError('Add an email or phone number, or a parent or guardian\'s contact, so the club can reach them.');
+      return;
+    }
     const isPlayer = form.roles.includes('Player');
     const isExec = form.roles.includes('Executive Committee');
     const roleString = form.roles.join(', ');
@@ -420,7 +430,7 @@ export default function AdminSquadPage({
       first_name: firstName,
       last_name: lastName,
       full_name: fullName,
-      email: form.email.trim(),
+      email,
       phone: form.phone.trim(),
       role: roleString as ClubRole,
       roles: form.roles,
@@ -544,19 +554,18 @@ export default function AdminSquadPage({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-            <span className="badge badge-primary">SQUAD ROSTER & PLAYERS</span>
+            <span className="badge badge-primary">PEOPLE</span>
             <span className="text-note">
-              Total: {clubMembers.length} Members ({clubMembers.filter(m => {
-                const roles = getMemberRoles(m);
-                return roles.some(r => r.toLowerCase().includes('player')) || Boolean(m.player_position);
-              }).length} Players)
+              {/* Players are people with the Player role (a committee member's leftover position doesn't count) */}
+              Total: {clubMembers.length} {clubMembers.length === 1 ? 'person' : 'people'} ({clubMembers.filter(m => isPlayerMember(m)).length} players)
             </span>
           </div>
           <h1 className="stat-value">
-            Squad & Members Administration
+            Squad & Players
           </h1>
           <p className="text-body">
-            Add and edit your players and members, their roles (Player, Committee, Manager, Club Admin), photos and stats.
+            Everyone at the club: add people one by one or import a spreadsheet, and set their roles, photos and stats. New applications and member passes are in{' '}
+            <Link href={`/${club.slug}/admin/members`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Members</Link>.
           </p>
         </div>
 
@@ -957,13 +966,13 @@ export default function AdminSquadPage({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label htmlFor="squad-email-address" className="form-label row">
-                    <Mail size={13} /> Email Address *
+                    <Mail size={13} /> Email Address
                   </label>
+                  {/* Optional: many juniors have no email (their parent goes in the guardian fields) */}
                   <input id="squad-email-address"
                     type="email"
-                    required
                     className="form-input"
-                    placeholder="player@itsfootball.club"
+                    placeholder="Optional for juniors"
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                   />
@@ -1100,9 +1109,8 @@ export default function AdminSquadPage({
                         type="number"
                         min={1}
                         max={99}
-                        required={form.roles.includes('Player')}
                         className="form-input"
-                        placeholder="e.g. 9"
+                        placeholder="Optional, e.g. 9"
                         value={form.jersey_number}
                         onChange={e => setForm({ ...form, jersey_number: e.target.value === '' ? '' : Number(e.target.value) })}
                         style={{ fontFamily: 'var(--font-heading)', fontWeight: 800 }}

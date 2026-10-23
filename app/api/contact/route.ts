@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
     const rawInquiryType = (body as any).inquiry_type;
     const inquiryType = INQUIRY_TYPES.has(rawInquiryType) ? rawInquiryType : 'General Inquiry';
     const message = sanitizeText((body as any).message);
+    // Sent from an event page: which event it's about, kept at the top of the message for the Inbox
+    const about = sanitizeText((body as any).about).replace(/\s+/g, ' ').slice(0, 200);
 
     if (!clubId || !name || !email || !message) {
       return NextResponse.json(
@@ -94,7 +96,7 @@ export async function POST(req: NextRequest) {
       sender_email: email,
       sender_phone: phone,
       inquiry_type: inquiryType,
-      message,
+      message: about ? `About: ${about}\n\n${message}` : message,
       status: 'unread',
     });
 

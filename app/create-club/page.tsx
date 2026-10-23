@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
@@ -29,7 +30,8 @@ import {
 
 export default function CreateClubPage() {
   const router = useRouter();
-  const { clubs, createClub } = useClub();
+  const { clubs, createClub, saveNow } = useClub();
+  const [launching, setLaunching] = useState(false);
   const { user, isAuthenticated, isLoading: authLoading, assignClubRole } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
@@ -38,13 +40,16 @@ export default function CreateClubPage() {
 
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
+  // The slug message waits until the admin has typed a name or slug
+  const [slugTouched, setSlugTouched] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     short_name: '',
     slug: '',
     motto: '',
-    founded_year: 2025,
+    // Blank until the admin types it (a pre-filled year reads as their club's)
+    founded_year: '' as number | '',
     primary_color: '#059669', // Emerald
     secondary_color: '#090D16', // Obsidian
     accent_color: '#F59E0B', // Gold
@@ -53,7 +58,7 @@ export default function CreateClubPage() {
     stadium_name: '',
     stadium_address: '',
     stadium_capacity: 7500,
-    stadium_pitch_type: 'Hybrid Grass (FIFA Pro Quality)',
+    stadium_pitch_type: 'Natural Grass',
     stadium_parking_info: '',
     contact_email: '',
     contact_phone: '',
@@ -65,12 +70,18 @@ export default function CreateClubPage() {
     const name = (params.get('name') || '').trim().slice(0, 60);
     const palette = params.has('palette') ? FOOTBALL_COLOR_PALETTES[Number(params.get('palette'))] : undefined;
     if (!name && !palette) return;
+    if (name) setSlugTouched(true);
     setFormData(prev => ({
       ...prev,
       ...(name && { name, slug: validateClubSlug(name, []).cleanSlug }),
       ...(palette && { primary_color: palette.primary, secondary_color: palette.secondary, accent_color: palette.accent }),
     }));
   }, []);
+
+  // The club's contact email starts as the signed-in admin's
+  useEffect(() => {
+    if (user?.email) setFormData(prev => prev.contact_email ? prev : { ...prev, contact_email: user.email });
+  }, [user?.email]);
 
   // Real-time slug validation
   const slugValidation = useMemo(() => {
@@ -85,6 +96,7 @@ export default function CreateClubPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setStepError(null);
+    if (name === 'name' || name === 'slug') setSlugTouched(true);
 
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
@@ -121,6 +133,7 @@ export default function CreateClubPage() {
       return false;
     }
     if (!slugValidation.valid) {
+      setSlugTouched(true);
       setStepError(slugValidation.error || 'Please enter a valid unique URL slug.');
       return false;
     }
@@ -144,6 +157,20 @@ export default function CreateClubPage() {
     }
     setStepError(null);
     return true;
+  };
+
+  // The new club is saved in the background a moment after it's created: wait until the server has it
+  const waitForClubSaved = async (clubId: string) => {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      await saveNow();
+      const { data } = await client.from('clubs').select('id').eq('id', clubId).maybeSingle();
+      if (data) return true;
+    }
+    return false;
   };
 
   const handleNext = (currentStep: number) => {
@@ -174,10 +201,14 @@ export default function CreateClubPage() {
     setStepError(null);
     const newClub = createClub({
       ...formData,
+      founded_year: formData.founded_year === '' ? undefined : Number(formData.founded_year),
       owner_id: user.id,
     });
     assignClubRole(newClub.id, 'owner');
-    router.push('/my-clubs');
+    // Straight into the new club's admin, where the getting-started list waits. The admin pages
+    // load the club from the server, so save it first (My Clubs works from this browser if that's slow).
+    setLaunching(true);
+    router.push((await waitForClubSaved(newClub.id)) ? `/${newClub.slug}/admin` : '/my-clubs');
   };
 
   // 1. Still resolving the current session: avoid flashing the sign-in checkpoint
@@ -278,7 +309,8 @@ export default function CreateClubPage() {
           </div>
         </main>
 
-        <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} redirectTo="" />
+        {/* Most people here are new, so the popup opens on Create account */}
+        <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} redirectTo="" defaultMode="signup" />
 
         <Footer />
       </div>
@@ -293,13 +325,13 @@ export default function CreateClubPage() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.6rem' }}>
-            <Sparkles size={14} /> CLUB ONBOARDING WIZARD • REAL-WORLD READY
+            <Sparkles size={14} /> SET UP YOUR CLUB
           </div>
           <h1 style={{ fontSize: '2.4rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-            Launch & Configure Your Football Club
+            Set Up Your Football Club
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto' }}>
-            Set up your club identity, drag-and-drop official crest and banner assets, apply WCAG-compliant colors, and link to your custom domain.
+            Four quick steps: your club&apos;s name and web address, colours and crest, home ground, and contact details. You can change any of it later.
           </p>
         </div>
 
@@ -318,7 +350,7 @@ export default function CreateClubPage() {
             STEP {step} OF 4
           </span>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            {step === 1 ? 'Identity & Slug' : step === 2 ? 'Branding & Assets' : step === 3 ? 'Home Ground' : 'Domain & Launch'}
+            {step === 1 ? 'Name & Web Address' : step === 2 ? 'Colours & Crest' : step === 3 ? 'Home Ground' : 'Contact & Launch'}
           </span>
         </div>
 
@@ -332,10 +364,10 @@ export default function CreateClubPage() {
           flexWrap: 'wrap',
         }}>
           {[
-            { num: 1, label: 'Identity & Slug' },
-            { num: 2, label: 'Branding & Assets' },
+            { num: 1, label: 'Name & Web Address' },
+            { num: 2, label: 'Colours & Crest' },
             { num: 3, label: 'Home Ground' },
-            { num: 4, label: 'Domain & Launch' },
+            { num: 4, label: 'Contact & Launch' },
           ].map(s => (
             <div
               key={s.num}
@@ -407,10 +439,10 @@ export default function CreateClubPage() {
             {step === 1 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  1. Club Identity & Official Registry
+                  1. Club Name & Web Address
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                  Define your official football club name, registered short acronym, and inspiring club motto.
+                  Your club&apos;s full name, a short name for scoreboards, and the web address people will visit.
                 </p>
 
                 <div className="form-row-2-1">
@@ -444,7 +476,7 @@ export default function CreateClubPage() {
 
                 <div className="form-row-2-1">
                   <div className="form-group">
-                    <label className="form-label">Public URL Slug *</label>
+                    <label className="form-label">Web Address *</label>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <span style={{
                         background: 'rgba(var(--tint-rgb), 0.05)',
@@ -472,7 +504,9 @@ export default function CreateClubPage() {
 
                     {/* Real-time inline slug feedback */}
                     <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {slugValidation.valid ? (
+                      {!slugTouched ? (
+                        <span style={{ color: 'var(--text-muted)' }}>Filled in from the club name. Letters, numbers and dashes only.</span>
+                      ) : slugValidation.valid ? (
                         <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
                           <CheckCircle2 size={13} />
                           URL is available: itsfootball.club/{slugValidation.cleanSlug}
@@ -493,6 +527,9 @@ export default function CreateClubPage() {
                       name="founded_year"
                       className="form-input"
                       value={formData.founded_year}
+                      placeholder="e.g. 1987"
+                      min={1850}
+                      max={new Date().getFullYear()}
                       onChange={handleChange}
                     />
                   </div>
@@ -504,7 +541,7 @@ export default function CreateClubPage() {
                     type="text"
                     name="motto"
                     className="form-input"
-                    placeholder="e.g. Victory Through Precision"
+                    placeholder="e.g. Together on the river"
                     value={formData.motto}
                     onChange={handleChange}
                   />
@@ -517,7 +554,7 @@ export default function CreateClubPage() {
                     className="btn btn-primary"
                     disabled={!slugValidation.valid}
                   >
-                    <span>Continue to Branding</span>
+                    <span>Continue to Colours &amp; Crest</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -528,10 +565,10 @@ export default function CreateClubPage() {
             {step === 2 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  2. Dynamic Visual Branding & Official Kit Design
+                  2. Colours, Crest & Kit
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Upload official club crest and home ground hero banner, select WCAG-tested team colors, and customize the matchday kit.
+                  Pick your club colours, add your crest and a banner photo, and choose a kit. We check the colours stay easy to read.
                 </p>
 
                 {/* Color Preset Quick Pickers */}
@@ -719,7 +756,7 @@ export default function CreateClubPage() {
                     <ArrowLeft size={16} /> Back
                   </button>
                   <button type="button" onClick={() => handleNext(2)} className="btn btn-primary">
-                    <span>Continue to Ground Details</span>
+                    <span>Continue to Home Ground</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -730,10 +767,10 @@ export default function CreateClubPage() {
             {step === 3 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  3. Home Ground & Matchday Venue
+                  3. Home Ground
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                  Provide fans and visiting teams with venue directions and surface specs.
+                  Where you play home games, so fans and visiting teams can find you.
                 </p>
 
                 <div className="form-group">
@@ -755,7 +792,7 @@ export default function CreateClubPage() {
                     type="text"
                     name="stadium_address"
                     className="form-input"
-                    placeholder="e.g. 88 Olympic Boulevard, Metro City"
+                    placeholder="e.g. 12 River Road, Parramatta NSW 2150"
                     value={formData.stadium_address}
                     onChange={handleChange}
                   />
@@ -771,8 +808,8 @@ export default function CreateClubPage() {
                       onChange={handleChange}
                     >
                       <option value="Natural Grass">Natural Grass</option>
-                      <option value="Hybrid Grass (FIFA Pro Quality)">Hybrid Grass (FIFA Pro Quality)</option>
-                      <option value="3G / 4G All-Weather Turf">3G / 4G All-Weather Synthetic Turf</option>
+                      <option value="Hybrid Grass (FIFA Pro Quality)">Hybrid grass</option>
+                      <option value="3G / 4G All-Weather Turf">Synthetic turf</option>
                     </select>
                   </div>
 
@@ -794,7 +831,7 @@ export default function CreateClubPage() {
                     <ArrowLeft size={16} /> Back
                   </button>
                   <button type="button" onClick={() => handleNext(3)} className="btn btn-primary">
-                    <span>Continue to Domain & Launch</span>
+                    <span>Continue to Contact &amp; Launch</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -805,7 +842,7 @@ export default function CreateClubPage() {
             {step === 4 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  4. Custom Domain & Launch Setup
+                  4. Contact Details & Launch
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
                   Your contact details, then launch. Your club lives at itsfootball.club/your-club, or your own domain later.
@@ -819,7 +856,7 @@ export default function CreateClubPage() {
 
                 <div className="form-row-2">
                   <div className="form-group">
-                    <label htmlFor="create-club-club-secretariat-email" className="form-label">Club Secretariat Email *</label>
+                    <label htmlFor="create-club-club-secretariat-email" className="form-label">Club Contact Email *</label>
                     <input autoComplete="email" id="create-club-club-secretariat-email"
                       type="email"
                       name="contact_email"
@@ -844,10 +881,10 @@ export default function CreateClubPage() {
 
                 <div className="glass-panel" style={{ padding: '1.25rem', marginTop: '1.5rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--c-green)', fontWeight: 800, marginBottom: '0.4rem' }}>
-                    <CheckCircle2 size={18} /> Ready to Initialize Tenant
+                    <CheckCircle2 size={18} /> Ready to Launch
                   </div>
                   <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-                    Your dedicated club portal, match centre, virtual passes, and admin portal will be immediately activated at <strong>/{formData.slug}</strong>.
+                    Your club website, match centre, member passes and admin pages go live straight away at <strong>itsfootball.club/{formData.slug}</strong>. Next we&apos;ll show you what to set up first.
                   </p>
                 </div>
 
@@ -860,9 +897,9 @@ export default function CreateClubPage() {
                   <button type="button" onClick={() => setStep(3)} className="btn btn-secondary">
                     <ArrowLeft size={16} /> Back
                   </button>
-                  <button type="submit" className="btn btn-primary btn-lg row">
+                  <button type="submit" disabled={launching} className="btn btn-primary btn-lg row">
                     <Sparkles size={18} />
-                    <span>Launch & Enter Club</span>
+                    <span>{launching ? 'Launching...' : 'Launch My Club'}</span>
                   </button>
                 </div>
               </div>

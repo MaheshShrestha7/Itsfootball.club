@@ -14,6 +14,17 @@ interface Conversation {
   messages: MemberMessage[];
   latest?: MemberMessage;
   unread: number;
+  /** Set when the member side of the conversation is the junior's parent or guardian, not the member */
+  guardian?: string;
+}
+
+/** A junior's parent or guardian writes from the guardian portal: their email, not the child's */
+function fromGuardian(m: MemberMessage, member?: ClubMember): boolean {
+  if (m.sender_type !== 'member') return false;
+  const sender = (m.sender_email || '').trim().toLowerCase();
+  const guardianEmail = (member?.guardian_email || '').trim().toLowerCase();
+  if (sender && guardianEmail && sender === guardianEmail) return true;
+  return /\(parent of /i.test(m.sender_name || '');
 }
 
 /**
@@ -42,6 +53,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
       const messages = [...msgs].sort((a, b) => a.created_at.localeCompare(b.created_at));
       const member = members.find(m => m.id === memberId);
       const fromMember = messages.find(m => m.sender_type === 'member');
+      const lastFromGuardian = [...messages].reverse().find(m => fromGuardian(m, member));
       return {
         memberId,
         member,
@@ -49,6 +61,9 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
         messages,
         latest: messages[messages.length - 1],
         unread: messages.filter(m => m.sender_type === 'member' && !m.is_read).length,
+        guardian: lastFromGuardian
+          ? (member?.guardian_name?.trim() || lastFromGuardian.sender_name.replace(/\s*\(parent of .*\)$/i, '') || 'Parent / guardian')
+          : undefined,
       };
     });
     // Newest conversation first; a new, empty one goes on top
@@ -127,6 +142,9 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
                 <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{c.name}</span>
+                {c.guardian && (
+                  <span className="badge" style={{ fontSize: '0.62rem', marginRight: 'auto' }} title={`Sent by ${c.guardian}, their parent or guardian`}>FROM PARENT</span>
+                )}
                 {c.unread > 0
                   ? <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{c.unread} NEW</span>
                   : <span className="text-meta">{c.latest ? new Date(c.latest.created_at).toLocaleDateString(DATE_LOCALE) : 'New'}</span>}
@@ -149,7 +167,11 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
           <>
             <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{selected.name}</h3>
-              {selected.member?.email && (
+              {selected.guardian ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                  Messages from {selected.guardian}, their parent or guardian{selected.member?.guardian_email ? ` (${selected.member.guardian_email})` : ''}. Your replies go to them.
+                </div>
+              ) : selected.member?.email && (
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>{selected.member.email}</div>
               )}
             </div>

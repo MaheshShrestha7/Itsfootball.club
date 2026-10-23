@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
+import { openReceipt } from '@/lib/receipts';
 import { useAuth } from '@/lib/auth-context';
 import { ClubMember, isPlayerMember, MembershipPlan } from '@/lib/supabase/types';
 import {
@@ -37,9 +38,9 @@ import {
   Lock,
   Gift,
   Settings,
-  Banknote
+  Banknote,
+  FileText
 } from 'lucide-react';
-import BulkMemberModal from '@/components/BulkMemberModal';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
 import { DATE_LOCALE } from '@/lib/dates';
@@ -75,8 +76,8 @@ export default function AdminMembersPage({
     approveMemberApplication,
     rejectMemberApplication,
     recordMembershipSignupPayment,
+    refreshMemberRow,
     getClubMemberMessages,
-    bulkAddMembers,
     clubTeams,
     getActiveSeason,
   } = useClub();
@@ -94,7 +95,6 @@ export default function AdminMembersPage({
     if (searchParams.get('tab') === 'messages') router.replace(`/${resolvedParams.clubSlug}/admin/inquiries`);
   }, [searchParams, router, resolvedParams.clubSlug]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -120,11 +120,41 @@ export default function AdminMembersPage({
 
   // Sign-up payment status per member (paid by card, or a bank receipt waiting in Finance)
   const [signupPayments, setSignupPayments] = useState<Record<string, string>>({});
+  // Bank receipts waiting to be checked, so the card can show and verify them without going to Finance
+  const [receiptsToCheck, setReceiptsToCheck] = useState<Record<string, { id: string; hasReceipt: boolean }>>({});
   useEffect(() => {
-    getSupabaseClient()?.from('payments').select('member_id, status')
+    getSupabaseClient()?.from('payments').select('id, member_id, status, receipt_key')
       .eq('club_id', club.id).eq('kind', 'membership_signup').in('status', ['paid', 'awaiting_review'])
-      .then(({ data }) => setSignupPayments(Object.fromEntries((data || []).map(p => [p.member_id, p.status]))));
+      .then(({ data }) => {
+        const rows = data || [];
+        // A paid row wins over an older receipt still waiting
+        setSignupPayments(Object.fromEntries([...rows].sort((a, b) => (a.status === 'paid' ? 1 : 0) - (b.status === 'paid' ? 1 : 0)).map(p => [p.member_id, p.status])));
+        setReceiptsToCheck(Object.fromEntries(rows.filter(p => p.status === 'awaiting_review').map(p => [p.member_id, { id: p.id, hasReceipt: !!p.receipt_key }])));
+      });
   }, [club.id]);
+
+  const verifyReceipt = async (member: ClubMember) => {
+    const pending = receiptsToCheck[member.id];
+    const client = getSupabaseClient();
+    if (!pending || !client || reviewing) return;
+    setReviewing(member.id);
+    try {
+      const { error } = await client.rpc('fulfil_payment', { p_payment_id: pending.id });
+      if (error) return notify('Payment not verified', error.message);
+      setSignupPayments(prev => ({ ...prev, [member.id]: 'paid' }));
+      setReceiptsToCheck(prev => { const next = { ...prev }; delete next[member.id]; return next; });
+      // Under an auto-approve policy the payment approved them too
+      const { data: fresh } = await client.from('club_members').select('membership_status').eq('id', member.id).maybeSingle();
+      showToast(fresh?.membership_status === 'approved'
+        ? `✓ Payment verified and ${member.full_name} approved.`
+        : can(club.id, 'members', 'edit')
+          ? `✓ Payment verified for ${member.full_name}. You can approve them now.`
+          : `✓ Payment verified for ${member.full_name}. Someone who manages Members can approve them now.`);
+      if (fresh?.membership_status === 'approved') await refreshMemberRow(member.id);
+    } finally {
+      setReviewing(null);
+    }
+  };
 
   // Last paid renewal per member (newest first, so the first one seen wins)
   const [lastRenewed, setLastRenewed] = useState<Record<string, string>>({});
@@ -336,9 +366,9 @@ export default function AdminMembersPage({
 
         {/* Actions & Quick KPI stats */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setBulkModalOpen(true)}
+          {/* One place to add and import people: Squad & Players (this page is applications and passes) */}
+          <Link
+            href={`/${resolvedParams.clubSlug}/admin/squad`}
             className="btn btn-secondary"
             style={{
               display: 'flex',
@@ -355,8 +385,8 @@ export default function AdminMembersPage({
             }}
           >
             <FileSpreadsheet size={17} color="var(--c-green)" />
-            <span>Bulk Import / Export</span>
-          </button>
+            <span>Add or Import People</span>
+          </Link>
 
           <div style={{
             background: 'rgba(245, 158, 11, 0.08)',
@@ -833,7 +863,36 @@ export default function AdminMembersPage({
                               </div>
                             )}
 
-                            {!canApprove && can(club.id, 'finance', 'edit') && (
+                            {receiptsToCheck[member.id] && !canApprove && (
+                              <div data-view-ok style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
+                                {receiptsToCheck[member.id].hasReceipt && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openReceipt('payment', receiptsToCheck[member.id].id)}
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                                  >
+                                    <FileText size={14} />
+                                    <span>View Receipt</span>
+                                  </button>
+                                )}
+                                {can(club.id, 'finance', 'edit') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => verifyReceipt(member)}
+                                    disabled={reviewing === member.id}
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-green)' }}
+                                    title="The money is in the bank: mark this payment as paid"
+                                  >
+                                    <CheckCircle2 size={14} />
+                                    <span>{reviewing === member.id ? 'Verifying...' : 'Verify Payment'}</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {!canApprove && !receiptsToCheck[member.id] && can(club.id, 'finance', 'edit') && (
                               <button
                                 type="button"
                                 // A Treasurer can record it even where Members is view-only for them
@@ -877,7 +936,7 @@ export default function AdminMembersPage({
                       })() : isApproved ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '0.5rem', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
-                            <CheckCircle2 size={14} /> Turnstile Pass Active
+                            <CheckCircle2 size={14} /> Pass Active
                           </span>
                           {member.email && member.membership_expires_at && (
                             <button
@@ -1181,15 +1240,7 @@ export default function AdminMembersPage({
         );
       })()}
 
-      {/* Bulk Import / Export Modal */}
-      <BulkMemberModal
-        isOpen={bulkModalOpen}
-        onClose={() => setBulkModalOpen(false)}
-        club={club}
-        allMembers={members}
-        onImportMembers={bulkAddMembers}
-        onSuccessToast={showToast}
-      />
+
     </div>
   );
 }

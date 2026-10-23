@@ -15,7 +15,7 @@ export default function AdminRootRedirect() {
 
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-      Redirecting to Management Control Room...
+      Redirecting to My Clubs...
     </div>
   );
 }

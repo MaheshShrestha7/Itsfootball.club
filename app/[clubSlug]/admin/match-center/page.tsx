@@ -43,6 +43,16 @@ import { squadForMatch } from '@/lib/teams';
 import { defaultFixture } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 
+// What the confirmation line says, in words rather than codes
+const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
+  goal: 'goal', penalty: 'penalty goal', own_goal: 'own goal', yellow_card: 'yellow card', red_card: 'red card',
+  sub: 'substitution', var: 'VAR review', commentary: 'commentary', whistle: 'whistle',
+};
+const PERIOD_LABEL: Partial<Record<MatchPeriod, string>> = {
+  pre_match: 'Back to before kick-off', first_half: 'First half started', halftime: 'Half time',
+  second_half: 'Second half started', extra_time: 'Extra time started', penalties: 'Penalty shootout', full_time: 'Full time',
+};
+
 export default function AdminMatchCenterControllerPage({
   params,
   searchParams,
@@ -87,8 +97,23 @@ export default function AdminMatchCenterControllerPage({
   });
 
   // Opens on the live match, else the club's next fixture, else its latest result (not whatever the database lists first)
-  const defaultMatch = defaultFixture(filteredMatches, tournamentParticipants, club.name) || defaultFixture(clubMatches, tournamentParticipants, club.name);
-  const [selectedMatchId, setSelectedMatchId] = useState<string>(requestedMatchId || defaultMatch?.id || '');
+  const nextOrLive = defaultFixture(filteredMatches, tournamentParticipants, club.name) || defaultFixture(clubMatches, tournamentParticipants, club.name);
+  // A match finished in the last day whose player stats aren't saved yet comes first, so a reload
+  // after full time stays on it instead of jumping to the next fixture
+  const unsavedResult = clubMatches
+    .filter(m => m.status === 'completed' && !m.is_audited && Date.now() - new Date(m.match_date).getTime() < 86400000)
+    .sort((a, b) => b.match_date.localeCompare(a.match_date))[0];
+  const defaultMatch = nextOrLive && (nextOrLive.status === 'live' || nextOrLive.status === 'halftime') ? nextOrLive : unsavedResult || nextOrLive;
+  const [selectedMatchId, setSelectedMatchIdState] = useState<string>(requestedMatchId || defaultMatch?.id || '');
+  // The open fixture goes in the address (?match=), so a reload or a shared link reopens it
+  const setSelectedMatchId = (id: string) => {
+    setSelectedMatchIdState(id);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('match', id);
+      window.history.replaceState(window.history.state, '', url.toString());
+    } catch { /* the selection still works without it */ }
+  };
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || defaultMatch;
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
@@ -119,14 +144,20 @@ export default function AdminMatchCenterControllerPage({
   const [fixtureSeason, setFixtureSeason] = useState(activeSeason?.name || defaultSeasonLabel());
   const [fixtureDate, setFixtureDate] = useState(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
   const [fixtureVenue, setFixtureVenue] = useState(club.stadium_name);
-  const [fixtureIsHome, setFixtureIsHome] = useState(true);
+  const [fixtureIsHome, setFixtureIsHomeState] = useState(true);
+  // Away games aren't at our ground: the venue empties so the other club's ground gets typed in
+  const setFixtureIsHome = (home: boolean) => {
+    setFixtureIsHomeState(home);
+    setFixtureVenue(v => (!home && v === club.stadium_name ? '' : home && !v ? club.stadium_name : v));
+  };
 
   // Match Check-in & Scanner Modal
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
 
   // Quick event form states
   const [eventType, setEventType] = useState<MatchEventType>('goal');
-  const [teamSide, setTeamSide] = useState<'home' | 'away'>('home');
+  // Each fixture starts on the club's own side (away games too), not always the home team
+  const [sidePick, setSidePick] = useState<{ matchId: string; side: 'home' | 'away' } | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [customPlayerName, setCustomPlayerName] = useState('');
   const [selectedSubOffId, setSelectedSubOffId] = useState<string>('');
@@ -136,6 +167,7 @@ export default function AdminMatchCenterControllerPage({
   const now = useNowTick();
   const [minuteOverride, setMinuteOverride] = useState<{ matchId: string; minute: number } | null>(null);
   const eventMinute = match && minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match, now);
+  const teamSide: 'home' | 'away' = match && sidePick?.matchId === match.id ? sidePick.side : match?.is_club_home === false ? 'away' : 'home';
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
@@ -144,8 +176,8 @@ export default function AdminMatchCenterControllerPage({
 
   // Picked players belong to one side's roster, so switching sides clears them
   const chooseSide = (side: 'home' | 'away') => {
-    if (side === teamSide) return;
-    setTeamSide(side);
+    if (side === teamSide || !match) return;
+    setSidePick({ matchId: match.id, side });
     setSelectedPlayerId('');
     setSelectedSubOffId('');
     setSelectedAssistId('');
@@ -273,7 +305,7 @@ export default function AdminMatchCenterControllerPage({
       setMinuteOverride(null);
     }
     updateMatch(match.id, updates);
-    showFeedback(`Match transitioned to ${period.toUpperCase().replace('_', ' ')} (${status.toUpperCase()})`);
+    showFeedback(PERIOD_LABEL[period] || 'Match updated');
   };
 
   // Cup games: a shootout has its own score, kept out of the match score and players' goals
@@ -288,6 +320,7 @@ export default function AdminMatchCenterControllerPage({
   // Final whistle. A cup game finishes the way its tournament page does, so the winner moves on
   // to the next round and the tournament completes once every game has a result.
   const handleFullTime = () => {
+    setSelectedMatchId(match.id);
     if (isCupGame) {
       const level = match.home_score === match.away_score;
       const pens = match.home_penalty_score != null && match.away_penalty_score != null
@@ -398,7 +431,7 @@ export default function AdminMatchCenterControllerPage({
       detail_text: detail || undefined,
     });
 
-    showFeedback(`Logged ${eventType.toUpperCase()} for ${resolvedPlayerName} (${minute}')`);
+    showFeedback(`Logged ${EVENT_LABEL[eventType] || eventType} for ${resolvedPlayerName} (${minute}')`);
     setEventDetail('');
     setAssistName('');
     setSelectedAssistId('');
@@ -426,8 +459,8 @@ export default function AdminMatchCenterControllerPage({
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{
+      {/* Header (trimmed on phones so the scoreboard is near the top) */}
+      <div className="mc-header" style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
@@ -436,13 +469,13 @@ export default function AdminMatchCenterControllerPage({
         marginBottom: '1.75rem',
       }}>
         <div style={{ minWidth: 0, maxWidth: '100%' }}>
-          <span className="badge badge-live" style={{ marginBottom: '0.4rem' }}>
-            <span className="pulse-dot" /> MATCHDAY COMMAND CENTER
+          <span className="badge badge-live mc-phone-hide" style={{ marginBottom: '0.4rem' }}>
+            <span className="pulse-dot" /> MATCHDAY
           </span>
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.25 }}>
-            Live Match-Day Reporting & Tactical Hub
+            Match Centre
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
+          <p className="mc-phone-hide" style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
             Update the live score, added time, substitutions and team formation while a match is on.
           </p>
         </div>
@@ -465,7 +498,7 @@ export default function AdminMatchCenterControllerPage({
             title="Scan pass QR code via camera or enter token to check in attendees"
           >
             <QrCode size={15} />
-            <span>Turnstile Check-In ({match.checkin_count || 0})</span>
+            <span>Door Check-In ({match.checkin_count || 0})</span>
           </button>
 
           <button
@@ -487,7 +520,7 @@ export default function AdminMatchCenterControllerPage({
             }}
           >
             <ShieldCheck size={15} />
-            <span>{match.is_audited ? 'Stats Audited ✓' : 'Audit & Finalize'}</span>
+            <span>{match.is_audited ? 'Stats Saved ✓' : 'Save Player Stats'}</span>
           </button>
 
           <Link
@@ -532,11 +565,11 @@ export default function AdminMatchCenterControllerPage({
       )}
 
       {/* Fixture Selector Dropdown & Season Controls */}
-      <div className="glass-panel" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
+      <div className="glass-panel mc-fixture-bar" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
             {/* Season Filter Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 'min(160px, 100%)' }}>
+            <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 'min(160px, 100%)' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                 <CalendarDays size={14} color="var(--club-primary)" /> Season:
               </span>
@@ -574,7 +607,7 @@ export default function AdminMatchCenterControllerPage({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
+          <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
             <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <CalendarDays size={12} /> {match.season}
             </span>
@@ -599,7 +632,7 @@ export default function AdminMatchCenterControllerPage({
       </div>
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
-      <div className="scroll-pill-strip" style={{
+      <div className="scroll-pill-strip mc-tabs" style={{
         display: 'flex',
         flexWrap: 'wrap',
         gap: '0.5rem',
@@ -609,9 +642,9 @@ export default function AdminMatchCenterControllerPage({
         maxWidth: '100%',
       }}>
         {[
-          { id: 'events', label: 'Score & Event Console', icon: Radio },
-          { id: 'tactics', label: 'Tactical Pitch & Free-Form Lineups', icon: Move },
-          { id: 'clock', label: 'Match Clock & Stoppage Board', icon: Timer },
+          { id: 'events', label: 'Score & Events', short: 'Score', icon: Radio },
+          { id: 'tactics', label: 'Lineup & Formation', short: 'Lineup', icon: Move },
+          { id: 'clock', label: 'Clock & Added Time', short: 'Clock', icon: Timer },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = adminTab === tab.id;
@@ -635,7 +668,8 @@ export default function AdminMatchCenterControllerPage({
               }}
             >
               <Icon size={16} color={isActive ? club.primary_color : 'currentColor'} />
-              <span>{tab.label}</span>
+              <span className="mc-phone-hide">{tab.label}</span>
+              <span className="mc-phone-only">{tab.short}</span>
             </button>
           );
         })}
@@ -734,7 +768,7 @@ export default function AdminMatchCenterControllerPage({
                   2nd Half
                 </button>
                 <button
-                  onClick={() => handlePeriodTransition('full_time', 'completed', 90)}
+                  onClick={handleFullTime}
                   className="btn btn-sm"
                   style={{ background: match.status === 'completed' ? '#1D4ED8' : 'rgba(var(--tint-rgb), 0.06)', color: match.status === 'completed' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                 >
@@ -913,7 +947,7 @@ export default function AdminMatchCenterControllerPage({
                 )}
 
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Radio size={18} color="var(--c-green)" /> Broadcast Live Match Event
+                  <Radio size={18} color="var(--c-green)" /> Log a Match Event
                 </h3>
 
                 <form onSubmit={handleLogEvent}>
@@ -1113,10 +1147,11 @@ export default function AdminMatchCenterControllerPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                  {/* Stays in reach on phones while the form scrolls */}
+                  <div className="mc-log-submit" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                     <button type="submit" className="btn btn-primary touch-target" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: club.primary_color, minWidth: 'min(180px, 100%)' }}>
                       <Send size={16} />
-                      <span>Broadcast Event Live</span>
+                      <span>Log Event</span>
                     </button>
                   </div>
                 </form>
@@ -1377,7 +1412,7 @@ export default function AdminMatchCenterControllerPage({
                 className="btn btn-primary"
                 style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: '#3B82F6' }}
               >
-                <span>Full Time (Final Whistle & Audit)</span>
+                <span>Full Time &amp; Save Player Stats</span>
                 <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.2)', color: 'var(--text-primary)' }}>FT</span>
               </button>
             </div>
@@ -1386,16 +1421,20 @@ export default function AdminMatchCenterControllerPage({
       )}
 
       {/* Post-Match Stats Audit Modal */}
-      <StatsAuditModal
-        match={match}
-        events={events}
-        squadPlayers={attendingSquadPlayers}
-        isOpen={isAuditModalOpen}
-        onClose={() => setIsAuditModalOpen(false)}
-        onAuditCompleted={() => {
-          showFeedback('Match stats successfully verified and baked into season records!');
-        }}
-      />
+      {/* Mounted per match, so its ticks start from this fixture (not the one open before) */}
+      {isAuditModalOpen && (
+        <StatsAuditModal
+          key={match.id}
+          match={match}
+          events={events}
+          squadPlayers={attendingSquadPlayers}
+          isOpen
+          onClose={() => setIsAuditModalOpen(false)}
+          onAuditCompleted={() => {
+            showFeedback('Player stats saved to the season.');
+          }}
+        />
+      )}
 
       {/* Matchday Turnstile Gate Check-In & Scanner Modal */}
       <QRScannerModal

@@ -208,7 +208,7 @@ export default function AdminMatchesPage({
       match_time: prefill?.time || '15:00',
       venue: club.stadium_name || 'Home Ground',
       match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
-      description: 'Official club fixture. Gates open 60 minutes prior to kickoff.',
+      description: '',
       competition: 'Club Friendly',
       season: activeSeason?.name || defaultSeasonLabel(),
       status: 'upcoming',
@@ -310,8 +310,12 @@ export default function AdminMatchesPage({
     // Sanitize user inputs
     const cleanTitle = form.title.replace(/<[^>]*>?/gm, '').trim();
     const cleanOpponent = form.opponent_name.replace(/<[^>]*>?/gm, '').trim();
-    const cleanOpponentShort = form.opponent_short_name.replace(/<[^>]*>?/gm, '').trim().toUpperCase().slice(0, 8);
-    const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim() || club.stadium_name;
+    // Left blank: the opponent's initials ("Lakeside Lions" is LL)
+    const cleanOpponentShort = (form.opponent_short_name.replace(/<[^>]*>?/gm, '').trim()
+      || cleanOpponent.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 4)
+      || cleanOpponent.slice(0, 3)).toUpperCase().slice(0, 8);
+    // An empty venue falls back to the home ground only for home games
+    const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim() || (form.is_club_home ? club.stadium_name : '');
     const cleanDescription = form.description.replace(/<[^>]*>?/gm, '').trim();
     const cleanCompetition = form.competition.replace(/<[^>]*>?/gm, '').trim() || (form.match_type === 'internal' ? 'Intra-Squad Match' : form.match_type === 'tournament' ? 'Cup Tournament' : 'Club Friendly');
 
@@ -627,7 +631,7 @@ export default function AdminMatchesPage({
             <QrCode size={18} />
           </div>
           <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-blue)' }}>{qrEnabledCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Gate turnstiles enabled</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Fixtures with door check-in on</div>
         </div>
       </div>
 
@@ -952,7 +956,7 @@ export default function AdminMatchesPage({
                     <button
                       type="button"
                       onClick={() => setQrModalMatch(m)}
-                      title="View Door Turnstile QR Code & Kiosk"
+                      title="Show the door check-in QR code"
                       style={{
                         padding: '0.4rem 0.6rem',
                         borderRadius: 'var(--radius-sm)',
@@ -1217,7 +1221,7 @@ export default function AdminMatchesPage({
                       {type === 'internal' && <Users size={15} color="var(--club-primary)" />}
                       {type === 'friendly' && <Shield size={15} color="var(--c-blue)" />}
                       {type === 'tournament' && <Trophy size={15} color="var(--c-amber)" />}
-                      <span>{type}</span>
+                      <span>{type === 'friendly' ? 'League / Friendly' : type}</span>
                     </button>
                   ))}
                 </div>
@@ -1349,17 +1353,16 @@ export default function AdminMatchesPage({
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="form-opponent-short">
-                    Short Name *
+                    Short Name
                   </label>
                   <input
                     id="form-opponent-short"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. ROV"
+                    placeholder="Optional, e.g. ROV"
                     maxLength={8}
                     value={form.opponent_short_name}
                     onChange={e => setForm({ ...form, opponent_short_name: e.target.value.toUpperCase() })}
-                    required
                     style={{ textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}
                   />
                 </div>
@@ -1370,16 +1373,22 @@ export default function AdminMatchesPage({
                   </label>
                   <select id="matches-venue-side"
                     value={form.is_club_home ? 'home' : 'away'}
-                    onChange={e => setForm({
-                      ...form,
-                      is_club_home: e.target.value === 'home',
-                      // A new away fixture isn't at the home ground the picker started on
-                      ...(!editingMatchId && e.target.value === 'away' ? { ground_id: '', pitch_label: '' } : {}),
-                    })}
+                    onChange={e => {
+                      const home = e.target.value === 'home';
+                      const homeVenue = club.stadium_name || 'Home Ground';
+                      setForm({
+                        ...form,
+                        is_club_home: home,
+                        // A new away fixture isn't at the home ground the picker started on
+                        ...(!editingMatchId && !home ? { ground_id: '', pitch_label: '' } : {}),
+                        // Away games are at the other club's ground: clear our ground so it gets typed in
+                        venue: !home && form.venue === homeVenue ? '' : home && !form.venue ? homeVenue : form.venue,
+                      });
+                    }}
                     className="form-input"
                   >
-                    <option value="home">Home (Fortress)</option>
-                    <option value="away">Away Fixture</option>
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
                   </select>
                 </div>
               </div>
@@ -1422,7 +1431,7 @@ export default function AdminMatchesPage({
                     id="form-venue"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Riverside Park Stadium"
+                    placeholder={form.is_club_home ? 'e.g. Riverside Park' : 'The other club\'s ground'}
                     value={form.venue}
                     onChange={e => setForm({ ...form, venue: e.target.value })}
                     required
@@ -1646,7 +1655,7 @@ export default function AdminMatchesPage({
                         Enable Door QR Code self-check-in
                       </label>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
-                        Generates a turnstile gate QR code. Supporters and members arriving at the entrance can scan with their phone camera to self-check-in.
+                        Makes a QR code to print for the entrance. People arriving scan it with their phone camera to check themselves in.
                       </p>
                     </div>
                   </div>
@@ -1747,7 +1756,7 @@ export default function AdminMatchesPage({
 
             {/* Printable Poster Content */}
             <div style={{ textTransform: 'uppercase', fontWeight: 900, color: club.primary_color || 'var(--c-green)', letterSpacing: '0.1em', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-              {club.name} • Official Turnstile Check-In
+              {club.name} • Check In Here
             </div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: '0.5rem' }}>
               {printPosterMatch.title || `${printPosterMatch.home_team_name} vs ${printPosterMatch.away_team_name}`}

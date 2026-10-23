@@ -286,10 +286,10 @@ export default function CameraQRScanner({
           }}>
             <RefreshCw size={32} color="var(--c-green)" className="animate-spin" />
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Initializing Stadium Camera Stream...
+              Starting the camera...
             </span>
             <span className="text-meta">
-              Requesting hardware optical sensor
+              Allow camera access if your phone asks
             </span>
           </div>
         )}
@@ -311,10 +311,10 @@ export default function CameraQRScanner({
           }}>
             <AlertCircle size={36} color="var(--c-red)" />
             <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {cameraState === 'permission_denied' ? 'Camera Access Denied' : 'Optical Sensor Unavailable'}
+              {cameraState === 'permission_denied' ? 'Camera Access Denied' : 'Camera Unavailable'}
             </span>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-              {errorMessage || 'Unable to access device camera. Please check browser permissions or enter pass token manually.'}
+              {errorMessage || 'We couldn\'t open the camera. Check your browser lets this site use it, or type the pass code instead.'}
             </p>
             <button
               type="button"

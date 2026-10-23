@@ -114,7 +114,7 @@ export default function AdminAnalyticsPage({
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.gateScansCount.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem' }}>Turnstile accreditations</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem' }}>Member passes scanned</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.5rem' }}>

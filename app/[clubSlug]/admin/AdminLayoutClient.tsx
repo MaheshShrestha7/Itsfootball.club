@@ -149,6 +149,12 @@ export default function AdminLayout({
 
   const liveMatch = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const userRole = user ? getUserRoleForClub(club.id) : null;
+  // An account made from a magic link has no name of its own (it falls back to the start of the
+  // email): the club's member record usually has the real one
+  const memberName = user ? members.find(m => m.club_id === club.id
+    && (m.user_id === user.id || (!!m.email && m.email.toLowerCase() === user.email?.toLowerCase())))?.full_name : undefined;
+  const accountEmailName = user?.email?.split('@')[0];
+  const displayName = (user && user.full_name && user.full_name !== accountEmailName ? user.full_name : memberName || user?.full_name) || '';
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
   // The Inbox covers both the public contact form and signed-in members' messages
   const unreadEnquiries = inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length;
@@ -447,7 +453,7 @@ export default function AdminLayout({
                 {club.name}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--club-ink)', fontWeight: 700 }}>
-                Management Control Room
+                Club Admin
               </div>
             </div>
           )}
@@ -648,21 +654,21 @@ export default function AdminLayout({
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <div title={rail ? user.full_name : undefined} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+            <div title={rail ? displayName : undefined} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
               {user.avatar_url ? (
                 <img loading="eager" decoding="async" width={32} height={32}
                   src={user.avatar_url}
-                  alt={`${user.full_name} photo`}
+                  alt={`${displayName} photo`}
                   style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #10B981' }}
                 />
               ) : (
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem' }}>
-                  {user.full_name.substring(0, 2).toUpperCase()}
+                  {displayName.substring(0, 2).toUpperCase()}
                 </div>
               )}
               {!rail && <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  {user.full_name}
+                  {displayName}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--c-green)', fontWeight: 700, textTransform: 'uppercase' }}>
                   {roleLabel}

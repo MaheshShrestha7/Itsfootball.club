@@ -102,13 +102,28 @@ export default function AdminSeasonsPage({
     };
   };
 
+  // Australian community football mostly plays a winter season (March to September), named by its
+  // year; summer competitions run October to March across two years
+  const applySeasonPreset = (kind: 'winter' | 'summer') => {
+    const now = new Date();
+    if (kind === 'winter') {
+      // From October the next winter season is the one being set up
+      const year = now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear();
+      setFormName(String(year));
+      setFormStartDate(`${year}-03-01`);
+      setFormEndDate(`${year}-09-30`);
+    } else {
+      const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      setFormName(`${year}/${String((year + 1) % 100).padStart(2, '0')}`);
+      setFormStartDate(`${year}-10-01`);
+      setFormEndDate(`${year + 1}-03-31`);
+    }
+  };
+
   // Open modal for Create
   const handleOpenCreate = () => {
     setEditingSeason(null);
-    const nowYear = new Date().getFullYear();
-    setFormName(`${nowYear}/${(nowYear + 1).toString().slice(2)}`);
-    setFormStartDate(`${nowYear}-08-01`);
-    setFormEndDate(`${nowYear + 1}-05-31`);
+    applySeasonPreset('winter');
     setFormStatus('active');
     setFormIsCurrent(clubSeasons.length === 0);
     setFormNotes('');
@@ -593,14 +608,20 @@ export default function AdminSeasonsPage({
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. 2026/27 or 2026/2027"
+                  placeholder="e.g. 2027 or 2026/27"
                   maxLength={64}
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Standard football seasons use &quot;YYYY/YY&quot; format (e.g. 2026/27).
+                  Winter seasons are usually named by the year (2027). Summer seasons span two years (2026/27).
                 </span>
+                {!editingSeason && (
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => applySeasonPreset('winter')}>Winter (Mar to Sep)</button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => applySeasonPreset('summer')}>Summer (Oct to Mar)</button>
+                  </div>
+                )}
               </div>
 
               <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>

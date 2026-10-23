@@ -826,7 +826,7 @@ export default function AdminHeroSliderPage({
                           {evt.title}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {evt.location} • {evt.rsvp_count}/{evt.max_capacity} checked in
+                          {evt.location} • {evt.rsvp_count}{evt.max_capacity > 0 ? `/${evt.max_capacity}` : ''} checked in
                         </p>
                       </div>
 

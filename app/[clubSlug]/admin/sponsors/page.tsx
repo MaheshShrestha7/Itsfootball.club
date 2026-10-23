@@ -65,8 +65,9 @@ export default function AdminSponsorsPage({
     scope: 'club' as 'club' | 'event',
     event_id: '',
     name: '',
-    logo_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
-    website_url: 'https://example.com',
+    // No stock photo or placeholder site: a sponsor without a logo shows its initials
+    logo_url: '',
+    website_url: '',
     tier: 'gold' as SponsorTier,
     size_scale: 'auto' as SponsorSizeScale,
     display_order: clubWideSponsors.length + 1,
@@ -111,7 +112,7 @@ export default function AdminSponsorsPage({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.logo_url) return;
+    if (!form.name) return;
     if (form.scope === 'event' && !form.event_id) return;
 
     const { scope, ...rest } = form;

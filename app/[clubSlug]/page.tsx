@@ -5,6 +5,7 @@ import React, { useState, useEffect, use, useMemo } from 'react';
 import { fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { matchTypeTag } from '@/lib/fixture-label';
 import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
@@ -1084,11 +1085,11 @@ export default function ClubPublicPage({
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
                             <span className="text-muted">Checked In</span>
-                            <strong className="text-primary">{activeSlideEvent.rsvp_count} / {activeSlideEvent.max_capacity} checked in</strong>
+                            <strong className="text-primary">{activeSlideEvent.rsvp_count}{activeSlideEvent.max_capacity > 0 ? ` / ${activeSlideEvent.max_capacity}` : ''} checked in</strong>
                           </div>
                           <div style={{ width: '100%', height: '6px', background: 'rgba(var(--tint-rgb), 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{
-                              width: `${Math.min(100, Math.round((activeSlideEvent.rsvp_count / activeSlideEvent.max_capacity) * 100))}%`,
+                              width: `${activeSlideEvent.max_capacity > 0 ? Math.min(100, Math.round((activeSlideEvent.rsvp_count / activeSlideEvent.max_capacity) * 100)) : 0}%`,
                               height: '100%',
                               background: 'linear-gradient(90deg, #10B981, #F59E0B)',
                             }} />
@@ -1648,7 +1649,7 @@ export default function ClubPublicPage({
               const hideScore = publicScoreHidden(match, clubTeams);
               const competitionLabel = match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition;
               // The match type badge, unless the competition label already says it ("Friendly" + "FRIENDLY")
-              const showTypeBadge = !!match.match_type && !(competitionLabel || '').toLowerCase().includes(match.match_type.toLowerCase());
+              const typeTag = matchTypeTag({ match_type: match.match_type, competition: competitionLabel });
               return (
               // data-glide-card: opening the match glides this card into the match page's scoreboard (MatchGlideLink)
               <div key={match.id} data-glide-card className="glass-panel glass-panel-interactive fixture-card">
@@ -1663,9 +1664,9 @@ export default function ClubPublicPage({
                         POSTPONED
                       </span>
                     )}
-                    {showTypeBadge && (
+                    {typeTag && (
                       <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                        {match.match_type}
+                        {typeTag}
                       </span>
                     )}
                     {match.season && (
@@ -1824,7 +1825,7 @@ export default function ClubPublicPage({
                       {evt.category.toUpperCase()}
                     </span>
                     <span className="text-meta">
-                      Checked in: {evt.rsvp_count} / {evt.max_capacity}
+                      Checked in: {evt.rsvp_count}{evt.max_capacity > 0 ? ` / ${evt.max_capacity}` : ''}
                     </span>
                   </div>
 

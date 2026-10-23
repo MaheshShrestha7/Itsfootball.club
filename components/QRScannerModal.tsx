@@ -52,8 +52,6 @@ export default function QRScannerModal({
     member?: ClubMember;
     attendeeName?: string;
     timestamp?: string;
-    gate?: string;
-    turnstile?: string;
   }>({ status: 'idle', message: '' });
 
   const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
@@ -140,8 +138,6 @@ export default function QRScannerModal({
         message: res.message,
         attendeeName: res.attendeeName,
         timestamp: currentTimeStr,
-        gate: 'Stadium Main Entrance',
-        turnstile: 'Gate Turnstile 01',
       });
     } else if (mode === 'event_checkin' && targetEvent) {
       const res = await publicEventCheckin(targetEvent.id, { token });
@@ -159,8 +155,6 @@ export default function QRScannerModal({
         message: res.message,
         attendeeName: res.attendeeName,
         timestamp: currentTimeStr,
-        gate: 'Gate B',
-        turnstile: 'Turnstile 04',
       });
     } else {
       // Checked on the server: only club admins have other members' pass tokens locally
@@ -179,18 +173,14 @@ export default function QRScannerModal({
           message: res.message,
           member: res.member,
           timestamp: currentTimeStr,
-          gate: 'North Gate A',
-          turnstile: 'Turnstile 12',
         });
       } else {
         playTurnstileAudio('deny');
         setScanResult({
           status: res.member ? 'warning' : 'error',
-          message: res.message || 'Unknown barcode token. Pass rejected by turnstile controller.',
+          message: res.message || 'This code isn\'t a pass we recognise.',
           member: res.member,
           timestamp: currentTimeStr,
-          gate: 'North Gate A',
-          turnstile: 'Turnstile 12',
         });
       }
     }
@@ -234,8 +224,8 @@ export default function QRScannerModal({
                 {mode === 'match_checkin'
                   ? 'Matchday Gate Check-In'
                   : mode === 'event_checkin'
-                  ? 'Turnstile Gate Check-In'
-                  : 'Matchday Turnstile Scanner'}
+                  ? 'Event Check-In'
+                  : 'Pass Scanner'}
               </h3>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
@@ -262,7 +252,7 @@ export default function QRScannerModal({
                 color: audioEnabled ? 'var(--c-green)' : 'var(--text-muted)',
                 cursor: 'pointer',
               }}
-              title={audioEnabled ? 'Mute turnstile chime' : 'Enable turnstile chime'}
+              title={audioEnabled ? 'Mute the scan sound' : 'Turn on the scan sound'}
             >
               {audioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
             </button>
@@ -404,19 +394,19 @@ export default function QRScannerModal({
               {scanResult.status === 'success' && (
                 <div className="authorization-stamp stamp-granted">
                   <CheckCircle2 size={20} color="var(--c-green)" strokeWidth={3} />
-                  <span>★ ACCESS GRANTED • GATE UNLOCKED ★</span>
+                  <span>★ PASS OK • LET THEM IN ★</span>
                 </div>
               )}
               {scanResult.status === 'warning' && (
                 <div className="authorization-stamp stamp-warning">
                   <AlertTriangle size={20} color="var(--c-amber)" strokeWidth={3} />
-                  <span>⚠ ACCESS RESTRICTED • MANUAL CHECK ⚠</span>
+                  <span>⚠ CHECK BY HAND ⚠</span>
                 </div>
               )}
               {scanResult.status === 'error' && (
                 <div className="authorization-stamp stamp-denied">
                   <XCircle size={20} color="var(--c-red)" strokeWidth={3} />
-                  <span>✖ ACCESS DENIED • TURNSTILE LOCKED ✖</span>
+                  <span>✖ NOT A VALID PASS ✖</span>
                 </div>
               )}
             </div>
@@ -445,10 +435,10 @@ export default function QRScannerModal({
                     <div style={{ fontSize: '0.8rem', color: 'var(--c-green)', fontWeight: 700 }}>
                       {scanResult.member.is_executive
                         ? scanResult.member.executive_title
-                        : `${scanResult.member.membership_tier} Accreditation`}{scanResult.member.jersey_number ? ` • #${scanResult.member.jersey_number}` : ''}
+                        : `${scanResult.member.membership_tier} Member`}{scanResult.member.jersey_number ? ` • #${scanResult.member.jersey_number}` : ''}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      Pass Expiry: {scanResult.member.membership_expires_at}
+                      Pass expires: {scanResult.member.membership_expires_at ? new Date(scanResult.member.membership_expires_at).toLocaleDateString(DATE_LOCALE) : 'no expiry'}
                     </div>
                   </div>
                 </div>
@@ -474,27 +464,8 @@ export default function QRScannerModal({
                 </div>
               ) : null}
 
-              {/* Stadium Turnstile Gate Telemetry */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '0.5rem',
-                borderTop: '1px solid rgba(var(--tint-rgb), 0.08)',
-                paddingTop: '0.75rem',
-                fontSize: '0.72rem',
-              }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block' }}>Turnstile Gate</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.gate || 'Gate A'}</span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block' }}>Turnstile Unit</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.turnstile || 'Unit 04'}</span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block' }}>Timestamp</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{scanResult.timestamp || 'Just now'}</span>
-                </div>
+              <div style={{ borderTop: '1px solid rgba(var(--tint-rgb), 0.08)', paddingTop: '0.75rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Scanned {scanResult.timestamp ? `at ${scanResult.timestamp}` : 'just now'}
               </div>
             </div>
           </div>
@@ -503,7 +474,7 @@ export default function QRScannerModal({
         {/* Footer actions */}
         <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span className="text-meta">
-            Turnstile Controller • itsfootball.club Gate Protocol
+            Passes are checked against your club&apos;s members.
           </span>
           <button onClick={onClose} className="btn btn-secondary btn-sm">
             Close Scanner
