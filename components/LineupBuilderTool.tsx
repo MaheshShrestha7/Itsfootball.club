@@ -340,7 +340,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
   };
 
   const size = FORMATS.find(f => f.key === state.format)!;
-  const fileName = `${(state.team.trim() || 'lineup').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lineup'}-starting-${size.word.toLowerCase()}.png`;
+  const fileName = `${(state.team.trim() || 'lineup').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lineup'}-${state.layout === 'list' ? 'matchday-squad' : `starting-${size.word.toLowerCase()}`}.png`;
 
   const render = async () => {
     const lineup: PitchPosition[] = state.coords.map((c, i) => ({
@@ -359,7 +359,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       is_club_home: true,
       home_team_name: team,
       away_team_name: state.opponent.trim(),
-      home_formation: state.shape === FREE ? 'Custom' : state.shape,
+      home_formation: state.shape === FREE || state.layout === 'list' ? 'Custom' : state.shape, // the list leaves the formation off
       home_lineup_coords: lineup,
       competition: state.competition.trim(),
       match_date: '',
@@ -381,7 +381,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
       let shared = false;
       if (share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `${state.team.trim() || 'Our'} starting ${size.word === 'XI' ? 'XI' : size.word.toLowerCase()}` });
+          await navigator.share({ files: [file], title: `${state.team.trim() || 'Our'} ${state.layout === 'list' ? 'matchday squad' : `starting ${size.word === 'XI' ? 'XI' : size.word.toLowerCase()}`}` });
           shared = true;
         } catch { /* the share sheet was closed */ }
       }
@@ -532,7 +532,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
           </div>
         )}
         {benchDrag && (
-          <span className="lineup-tool-bench-chip lineup-tool-bench-ghost" style={{ left: benchDrag.x, top: benchDrag.y }} aria-hidden="true">
+          <span className="lineup-tool-bench-chip lineup-tool-bench-ghost" style={{ left: Math.min(Math.max(benchDrag.x, 110), window.innerWidth - 110), top: benchDrag.y }} aria-hidden="true">
             {subs[benchDrag.i].number && <b>{subs[benchDrag.i].number}</b>}{juniorPublicName(subs[benchDrag.i].name)}
             {benchDrag.over != null && <em>⇄ {juniorPublicName(state.players[benchDrag.over].name) || state.coords[benchDrag.over].position}</em>}
           </span>
@@ -750,7 +750,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
             ))}
           </ol>
         )}
-        <p className="lineup-tool-hint" style={{ textAlign: 'left', marginTop: '0.5rem' }}>Named subs are listed under the lineup on the image.</p>
+        <p className="lineup-tool-hint" style={{ textAlign: 'left', marginTop: '0.5rem' }}>{state.layout === 'list' ? 'Named subs are listed after the starters on the image.' : 'Named subs are listed under the lineup on the image.'} Drag a sub onto a player on the pitch to swap them in.</p>
 
         {/* Stays in reach at the bottom of the screen while scrolling through the players on a phone */}
         <div className="lineup-tool-actions">
