@@ -698,7 +698,9 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
     // The subs and the sponsors' logos (the free lineup builder) sit at the bottom, above the watermark,
     // and the pitch or list shrinks to make room for them
-    const subs = (opts.subs || []).filter(s => s.name.trim());
+    // On the list the subs simply carry on down it, after the starters; on the pitch they get a panel of their own
+    const subs = kind === 'lineup-list' ? [] : (opts.subs || []).filter(s => s.name.trim());
+    const listSubs = kind === 'lineup-list' ? (opts.subs || []).filter(s => s.name.trim()) : [];
     const sponsorImgs = (await Promise.all((opts.sponsors || []).slice(0, 6).map(loadImage))).filter((i): i is HTMLImageElement => !!i);
     const sponsorH = sponsorImgs.length ? by(170, 118, 118) : 0;
     let subLines: string[] = [];
@@ -896,27 +898,42 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       after = top + pitchH;
     } else {
       const top = story ? 670 : 470;
-      const rowH = hasExtras ? Math.min(story ? 74 : 64, Math.floor((floor - top - 48) / Math.max(1, xi.length))) : story ? 74 : 64;
-      glass(ctx, M, top, W - M * 2, rowH * xi.length + 48);
+      const rows = [...xi.map(p => ({ number: p.number, name: `${p.name}${p.is_captain ? ' (C)' : ''}` })), ...listSubs.map(p => ({ number: p.number, name: p.name }))];
+      const bottom = hasExtras || listSubs.length ? floor : H;
+      const fitRows = (n: number) => Math.min(story ? 74 : 64, Math.floor((bottom - top - 48) / Math.max(1, n)));
+      // A long squad goes into two columns rather than shrinking each row past reading
+      const cols = rows.length > 8 && fitRows(rows.length) < (story ? 58 : 50) ? 2 : 1;
+      const perCol = Math.ceil(rows.length / cols);
+      const rowH = hasExtras || listSubs.length ? fitRows(perCol) : story ? 74 : 64;
+      const colW = (W - M * 2) / cols;
+      glass(ctx, M, top, W - M * 2, rowH * perCol + 48);
+      if (cols === 2) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+        ctx.fillRect(W / 2 - 1, top + 32, 2, rowH * perCol - 16);
+      }
       ctx.textAlign = 'left';
-      xi.forEach((p, i) => {
+      rows.forEach((p, n) => {
+        const col = Math.floor(n / perCol);
+        const i = n % perCol;
+        const x0 = M + colW * col;
         const y = top + 24 + rowH * i + rowH / 2;
         if (i > 0) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-          ctx.fillRect(M + 40, y - rowH / 2, W - M * 2 - 80, 2);
+          ctx.fillRect(x0 + (cols === 2 ? 28 : 40), y - rowH / 2, colW - (cols === 2 ? 56 : 80), 2);
         }
         ctx.fillStyle = ink;
         ctx.font = `900 ${Math.min(story ? 44 : 38, Math.round(rowH * 0.7))}px ${heading}`;
         ctx.textAlign = 'center';
-        if (p.number > 0) ctx.fillText(String(p.number), M + 90, y); // no shirt number: no "0"
+        const numX = cols === 2 ? x0 + 70 : M + 90;
+        if (p.number > 0) ctx.fillText(String(p.number), numX, y); // no shirt number: no "0"
         ctx.textAlign = 'left';
         ctx.fillStyle = INK;
-        const name = `${p.name}${p.is_captain ? ' (C)' : ''}`;
-        fit(ctx, name, 700, Math.min(story ? 42 : 36, Math.round(rowH * 0.66)), W - M * 2 - 220, body);
-        ctx.fillText(name, M + 160, y);
+        const nameX = cols === 2 ? x0 + 128 : M + 160;
+        fit(ctx, p.name, 700, Math.min(story ? 42 : 36, Math.round(rowH * 0.66)), cols === 2 ? colW - 128 - 32 : W - M * 2 - 220, body);
+        ctx.fillText(ellipsize(ctx, p.name, cols === 2 ? colW - 128 - 32 : W - M * 2 - 220), nameX, y);
       });
       ctx.textAlign = 'center';
-      after = top + rowH * xi.length + 48;
+      after = top + rowH * perCol + 48;
     }
     if (hasExtras) {
       let y = floor + extrasGap;
