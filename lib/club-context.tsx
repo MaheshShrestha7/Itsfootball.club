@@ -233,6 +233,11 @@ interface ClubContextType {
     options?: { waiveFee?: boolean; waiverReason?: string }
   ) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
+  /** Cash or bank payment taken by hand for an application (Finance edit). Under an auto-approve policy it also approves. */
+  recordMembershipSignupPayment: (
+    memberId: string,
+    payment: { amountCents: number; method: 'cash' | 'bank_transfer' | 'other'; note?: string }
+  ) => Promise<{ success: boolean; autoApproved?: boolean; message: string }>;
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
   markMemberMessageRead: (messageId: string) => void;
@@ -2743,6 +2748,44 @@ export function ClubProvider({
     return null;
   }, [applyServerRow]);
 
+  const recordMembershipSignupPayment = useCallback(async (
+    memberId: string,
+    payment: { amountCents: number; method: 'cash' | 'bank_transfer' | 'other'; note?: string }
+  ): Promise<{ success: boolean; autoApproved?: boolean; message: string }> => {
+    const member = members.find(m => m.id === memberId);
+    const client = getSupabaseClient();
+    if (!member || !client) return { success: false, message: 'Member record not found.' };
+    const { data: plan } = await client.from('membership_plans').select('id, name')
+      .eq('club_id', member.club_id).eq('name', member.membership_tier).maybeSingle();
+    const { data: settings } = await client.from('club_payment_settings').select('currency')
+      .eq('club_id', member.club_id).maybeSingle();
+
+    const { data: row, error } = await client.from('payments').insert({
+      club_id: member.club_id,
+      kind: 'membership_signup',
+      category: 'membership',
+      member_id: member.id,
+      plan_id: plan?.id ?? null,
+      description: `${plan?.name || member.membership_tier || 'Membership'} (${member.full_name})${payment.note?.trim() ? ` - ${payment.note.trim()}` : ''}`,
+      amount_cents: payment.amountCents,
+      currency: settings?.currency || 'AUD',
+      method: payment.method,
+      status: 'pending',
+      payer_name: member.full_name,
+      payer_email: member.email || null,
+    }).select('id').single();
+    if (error || !row) return { success: false, message: error?.message || 'Could not save the payment.' };
+
+    // Fulfilment marks it paid and starts the membership term (and approves under auto-approve)
+    const { error: fulfilError } = await client.rpc('fulfil_payment', { p_payment_id: row.id });
+    if (fulfilError) return { success: false, message: `The payment was saved but not confirmed: ${fulfilError.message}. Finish it in Finance -> Income.` };
+
+    const { data: fresh } = await client.from('club_members').select('*').eq('id', member.id).maybeSingle();
+    if (fresh) applyServerRow('members', setMembers, fresh);
+    const autoApproved = fresh?.membership_status === 'approved';
+    return { success: true, autoApproved, message: autoApproved ? 'Payment recorded and application approved.' : 'Payment recorded.' };
+  }, [members, applyServerRow]);
+
   const approveMemberApplication = useCallback(async (
     memberId: string,
     adminName: string = 'Club Committee',
@@ -3419,6 +3462,7 @@ export function ClubProvider({
         applyForMembership,
         approveMemberApplication,
         rejectMemberApplication,
+        recordMembershipSignupPayment,
         sendMemberMessage,
         replyToMemberMessage,
         markMemberMessageRead,

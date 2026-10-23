@@ -303,9 +303,12 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
   const memberName = (id?: string | null) => members.find(m => m.id === id)?.full_name;
 
   const verify = async (p: Payment) => {
-    const { error } = await db!.rpc('fulfil_payment', { p_payment_id: p.id });
+    const { data, error } = await db!.rpc('fulfil_payment', { p_payment_id: p.id });
     if (error) return flash('error', error.message);
-    flash('ok', p.kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
+    // fulfil_payment files a renewal for a still-pending applicant as their sign-up
+    const kind = (data as Payment | null)?.kind || p.kind;
+    flash('ok', kind === 'membership_signup' ? 'Payment verified. The application can now be approved in Members.'
+      : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
     load();
   };
   const reject = async (p: Payment) => {
@@ -324,9 +327,11 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     const isMembership = form.type === 'membership';
     if (isMembership && (!form.member_id || !form.plan_id)) return flash('error', 'Choose the member and plan.');
     const plan = plans.find(p => p.id === form.plan_id);
+    // Paying for an application that is still pending is the sign-up payment, not a renewal
+    const isSignup = isMembership && members.find(m => m.id === form.member_id)?.membership_status === 'pending';
     const { data, error } = await db!.from('payments').insert({
       club_id: club.id,
-      kind: isMembership ? 'membership_renewal' : 'income_other',
+      kind: isMembership ? (isSignup ? 'membership_signup' : 'membership_renewal') : 'income_other',
       category: isMembership ? 'membership' : form.category,
       member_id: isMembership ? form.member_id : null,
       plan_id: isMembership ? form.plan_id : null,
@@ -344,7 +349,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
       const res = await db!.rpc('fulfil_payment', { p_payment_id: data.id });
       if (res.error) return flash('error', res.error.message);
     }
-    flash('ok', 'Income recorded.');
+    flash('ok', isSignup ? 'Payment recorded. The application can now be approved in Members.' : 'Income recorded.');
     setForm(blank);
     setAdding(false);
     load();
@@ -450,7 +455,8 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                 </td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {p.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} /> Receipt</button>}
-                  {p.status === 'awaiting_review' && (
+                  {/* A pending cash or bank payment (e.g. one whose fulfilment failed) can be finished here too */}
+                  {(p.status === 'awaiting_review' || (p.status === 'pending' && p.method !== 'stripe')) && (
                     <>
                       <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> Verify</button>
                       <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => reject(p)}><XCircle size={14} /> Reject</button>
