@@ -5,6 +5,7 @@ import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
+import { DATE_LOCALE } from '@/lib/dates';
 import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import SponsorLogo from '@/components/SponsorLogo';
@@ -178,7 +179,7 @@ export default function EventDetailsPage({
             onClick={() => setContactModalOpen(true)}
             className="btn btn-primary row"
           >
-            <span>{(event.ticket_price_cents ?? 0) > 0 ? 'Ask about this event' : 'RSVP / Inquire for Event'}</span>
+            <span>Ask about this event</span>
           </button>
           </div>
           </div>
@@ -250,6 +251,7 @@ export default function EventDetailsPage({
         isOpen={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
         defaultType="General Inquiry"
+        about={`${event.title}, ${new Date(event.start_time).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}`}
       />
     </div>
   );

@@ -1,14 +1,30 @@
 'use client';
 
-import React, { use, useMemo, useState } from 'react';
+import React, { use, useEffect, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { ContactInquiry } from '@/lib/supabase/types';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import MemberMessagesPanel from '@/components/MemberMessagesPanel';
-import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox } from 'lucide-react';
+import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox, Send, CalendarDays } from 'lucide-react';
 import { DATE_LOCALE } from '@/lib/dates';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
+
+interface InquiryReply {
+  id: string;
+  inquiry_id: string;
+  body: string;
+  sent_by_name?: string | null;
+  emailed: boolean;
+  created_at: string;
+}
+
+/** Enquiries sent from an event page start with "About: <event>" (see /api/contact) */
+function splitAbout(message: string): { about: string | null; text: string } {
+  const m = /^About: (.+)\n\n/.exec(message);
+  return m ? { about: m[1], text: message.slice(m[0].length) } : { about: null, text: message };
+}
 
 type Filter = 'all' | ContactInquiry['status'];
 
@@ -41,6 +57,58 @@ export default function AdminInquiriesPage({
   );
 
   const filters: Filter[] = ['all', 'unread', 'read', 'replied', 'archived'];
+
+  // Reply history (migration 20261119). Without the table the list is just empty and the mail app still works.
+  const [replies, setReplies] = useState<InquiryReply[]>([]);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replySending, setReplySending] = useState(false);
+  const [replyNote, setReplyNote] = useState<{ id: string; ok: boolean; text: string } | null>(null);
+  const [unsentBody, setUnsentBody] = useState<{ id: string; body: string } | null>(null);
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !club?.id) return;
+    client.from('contact_inquiry_replies').select('id, inquiry_id, body, sent_by_name, emailed, created_at')
+      .eq('club_id', club.id).order('created_at', { ascending: true })
+      .then(({ data }) => setReplies((data as InquiryReply[]) || []));
+  }, [club?.id]);
+
+  const adminName = user?.full_name || `${club.name} Committee`;
+  const mailtoFor = (item: ContactInquiry, body?: string) =>
+    `mailto:${item.sender_email}?subject=${encodeURIComponent(`Re: your message to ${club.name}`)}${body ? `&body=${encodeURIComponent(body)}` : ''}`;
+
+  const sendReply = async (item: ContactInquiry) => {
+    const text = replyText.trim();
+    if (!text) return;
+    setReplySending(true);
+    setReplyNote(null);
+    setUnsentBody(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/admin/inquiries/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, inquiryId: item.id, body: text, senderName: adminName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.reply) {
+        setReplyNote({ id: item.id, ok: false, text: data.error || 'The reply could not be sent. Try again, or use your mail app.' });
+        return;
+      }
+      setReplies(prev => [...prev, data.reply]);
+      updateInquiryStatus(item.id, 'replied');
+      setReplyText('');
+      setReplyingTo(null);
+      setReplyNote(data.emailed
+        ? { id: item.id, ok: true, text: `Reply emailed to ${item.sender_email}.` }
+        : { id: item.id, ok: false, text: `Reply saved, but email isn't set up for your club yet, so it wasn't sent. Send it from your mail app:` });
+      if (!data.emailed) setUnsentBody({ id: item.id, body: text });
+    } catch {
+      setReplyNote({ id: item.id, ok: false, text: 'The reply could not be sent. Try again, or use your mail app.' });
+    } finally {
+      setReplySending(false);
+    }
+  };
 
   return (
     <div>
@@ -85,7 +153,7 @@ export default function AdminInquiriesPage({
       </div>
 
       {tab === 'members' ? (
-        <MemberMessagesPanel club={club} adminName={user?.full_name || `${club.name} Committee`} startMemberId={startMemberId} />
+        <MemberMessagesPanel club={club} adminName={adminName} startMemberId={startMemberId} />
       ) : (
       <>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
@@ -124,9 +192,21 @@ export default function AdminInquiriesPage({
                 <span className="badge" style={{ textTransform: 'uppercase', alignSelf: 'flex-start' }}>{item.status}</span>
               </div>
 
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: '0.5rem 0 1rem' }}>
-                {item.message}
-              </p>
+              {(() => {
+                const { about, text } = splitAbout(item.message);
+                return (
+                  <>
+                    {about && (
+                      <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
+                        <CalendarDays size={12} /> About: {about}
+                      </span>
+                    )}
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: '0.5rem 0 1rem' }}>
+                      {text}
+                    </p>
+                  </>
+                );
+              })()}
 
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}><Mail size={13} />{item.sender_email}</span>
@@ -135,13 +215,67 @@ export default function AdminInquiriesPage({
                 )}
               </div>
 
+              {replies.some(r => r.inquiry_id === item.id) && (
+                <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
+                  {replies.filter(r => r.inquiry_id === item.id).map(r => (
+                    <div key={r.id} style={{ marginLeft: '1rem', padding: '0.7rem 0.9rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                        Reply from {r.sent_by_name || club.name} · {new Date(r.created_at).toLocaleString(DATE_LOCALE)} · {r.emailed ? 'Emailed' : 'Not emailed'}
+                      </div>
+                      <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{r.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {replyNote?.id === item.id && (
+                <div role="status" style={{ marginBottom: '0.75rem', padding: '0.6rem 0.85rem', borderRadius: '8px', fontSize: '0.82rem', border: `1px solid ${replyNote.ok ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.5)'}`, background: replyNote.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
+                  {replyNote.text}
+                  {unsentBody?.id === item.id && (
+                    <> <a href={mailtoFor(item, unsentBody.body)} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Open in mail app</a></>
+                  )}
+                </div>
+              )}
+
+              {replyingTo === item.id && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <label htmlFor={`reply-${item.id}`} className="form-label">Reply to {item.sender_name}</label>
+                  <textarea
+                    id={`reply-${item.id}`}
+                    rows={4}
+                    className="form-textarea"
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Write your reply. It's emailed to them and saved here."
+                    maxLength={4000}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn-primary btn-sm" disabled={replySending || !replyText.trim()} onClick={() => sendReply(item)}>
+                      <Send size={14} /> {replySending ? 'Sending...' : 'Send Reply'}
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setReplyingTo(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {replyingTo !== item.id && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => { setReplyingTo(item.id); setReplyText(''); setReplyNote(null); }}
+                  >
+                    <Reply size={14} /> Reply
+                  </button>
+                )}
                 <a
-                  href={`mailto:${item.sender_email}?subject=${encodeURIComponent(`Re: ${item.inquiry_type}`)}`}
-                  className="btn btn-primary btn-sm"
+                  href={mailtoFor(item)}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => updateInquiryStatus(item.id, 'replied')}
                 >
-                  <Reply size={14} /> Reply by email
+                  <Mail size={14} /> Use mail app
                 </a>
                 {item.status === 'unread' && (
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => updateInquiryStatus(item.id, 'read')}>

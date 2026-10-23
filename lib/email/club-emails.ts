@@ -9,7 +9,8 @@ import type { ClubBrandRow } from './club-brand';
 export type EmailKind =
   | 'availability' | 'event' | 'renewal'
   | 'notice_match' | 'notice_event' | 'notice_news' | 'notice_renewal'
-  | 'member_applied' | 'member_approved' | 'member_rejected';
+  | 'member_applied' | 'member_approved' | 'member_rejected'
+  | 'inquiry_reply';
 
 export interface ClubEmail {
   /** Unique name of this email; a key already in email_log is never sent again */
@@ -22,6 +23,8 @@ export interface ClubEmail {
   email: RenderedEmail;
   /** One-click unsubscribe URL for the List-Unsubscribe header */
   oneClickUnsubscribe?: string | null;
+  /** Where the recipient's reply goes, e.g. the club's contact email */
+  replyTo?: string;
 }
 
 export interface SendReport {
@@ -101,6 +104,7 @@ export async function sendClubEmails(db: SupabaseClient, emails: ClubEmail[]): P
       to: e.to,
       ...e.email,
       fromName: e.fromName,
+      replyTo: e.replyTo,
       headers: e.oneClickUnsubscribe ? unsubscribeHeaders(e.oneClickUnsubscribe) : undefined,
     })));
     if (result.ok) {

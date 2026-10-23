@@ -11,9 +11,11 @@ interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultType?: InquiryType;
+  /** What the message is about, e.g. the event page it was sent from. Shown in the club's Inbox. */
+  about?: string;
 }
 
-export default function ContactModal({ club, isOpen, onClose, defaultType = 'General Inquiry' }: ContactModalProps) {
+export default function ContactModal({ club, isOpen, onClose, defaultType = 'General Inquiry', about }: ContactModalProps) {
   const { submitInquiry } = useClub();
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
@@ -54,7 +56,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       sender_phone: senderPhone,
       inquiry_type: inquiryType,
       message,
-    }, website);
+    }, website, about);
     setSending(false);
 
     if (!result.success) {
@@ -105,7 +107,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                 Contact {club.name}
               </h3>
               <p className="text-meta">
-                Official inquiries, trials, sponsorships & club office
+                {about ? `About: ${about}` : 'Questions, trials, sponsorship and anything else'}
               </p>
             </div>
           </div>
@@ -147,13 +149,13 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               <CheckCircle2 size={36} color="var(--c-green)" />
             </div>
             <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-              Message Received!
+              Message Sent
             </h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
-              Thank you for reaching out to <strong>{club.name}</strong>. Our administrative secretariat will review your inquiry and reply to <strong>{senderEmail}</strong> promptly.
+              Thanks for getting in touch with <strong>{club.name}</strong>. The committee will read your message and reply to <strong>{senderEmail}</strong>.
             </p>
             <button onClick={handleResetAndClose} className="btn btn-primary">
-              Return to Club Page
+              Close
             </button>
           </div>
         ) : (
@@ -211,17 +213,17 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               </div>
 
               <div className="form-group">
-                <label htmlFor="contactmodal-inquiry-purpose" className="form-label">Inquiry Purpose</label>
+                <label htmlFor="contactmodal-inquiry-purpose" className="form-label">What&apos;s it about?</label>
                 <select id="contactmodal-inquiry-purpose"
                   className="form-select"
                   value={inquiryType}
                   onChange={e => setInquiryType(e.target.value as InquiryType)}
                 >
-                  <option value="General Inquiry">General Inquiry</option>
-                  <option value="Player Trial">Player Trial / Assessment</option>
-                  <option value="Sponsorship">Sponsorship & Partnership</option>
-                  <option value="Youth Academy">Youth Academy Enrollment</option>
-                  <option value="Media Request">Press & Media Accreditation</option>
+                  <option value="General Inquiry">General question</option>
+                  <option value="Player Trial">Playing for the club / trial</option>
+                  <option value="Sponsorship">Sponsorship</option>
+                  <option value="Youth Academy">Juniors / kids&apos; football</option>
+                  <option value="Media Request">Media / press</option>
                 </select>
                 {inquiryType === 'Sponsorship' && (
                   <a href={`/${club.slug}/sponsor`} style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--club-ink)', fontWeight: 700 }}>
@@ -232,12 +234,12 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             </div>
 
             <div className="form-group">
-              <label htmlFor="contactmodal-detailed-message" className="form-label">Detailed Message *</label>
+              <label htmlFor="contactmodal-detailed-message" className="form-label">Your Message *</label>
               <textarea id="contactmodal-detailed-message"
                 required
                 rows={4}
                 className="form-textarea"
-                placeholder="Share background, trial history, or details regarding your inquiry..."
+                placeholder="How can the club help?"
                 value={message}
                 onChange={e => setMessage(e.target.value)}
               />
