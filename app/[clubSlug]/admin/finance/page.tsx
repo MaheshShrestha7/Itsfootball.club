@@ -16,8 +16,9 @@ import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
 import { PUBLIC_PAYMENT_SETTINGS } from '@/lib/supabase/types';
-import { confirmAction, notify } from '@/components/ConfirmDialog';
+import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
+import { openReceipt } from '@/lib/receipts';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'settings';
 const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'settings'];
@@ -32,16 +33,6 @@ const STATUS_COLOR: Record<string, string> = {
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const cell: React.CSSProperties = { padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left', verticalAlign: 'top' };
-
-// Receipts are private: ask the API for a short-lived link, then open it
-async function openReceipt(type: 'payment' | 'expense', id: string) {
-  const win = window.open('', '_blank'); // opened synchronously so pop-up blockers allow it
-  const token = await getAccessToken();
-  const res = await fetch(`/api/payments/receipt?type=${type}&id=${id}`, { headers: { Authorization: `Bearer ${token}` } });
-  const json = await res.json().catch(() => ({}));
-  if (res.ok && json.url && win) win.location.href = json.url;
-  else { win?.close(); await notify(json.error || 'Could not open the receipt.'); }
-}
 
 export default function FinancePage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);

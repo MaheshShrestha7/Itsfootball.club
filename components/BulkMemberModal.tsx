@@ -259,7 +259,10 @@ export default function BulkMemberModal({
       'Emergency Contact',
       'Executive Title',
       'Executive Order',
-      'Application Notes'
+      'Application Notes',
+      'Guardian Name',
+      'Guardian Email',
+      'Guardian Phone'
     ];
 
     const rows = filteredExportMembers.map(m => [
@@ -282,7 +285,10 @@ export default function BulkMemberModal({
       sanitizeCsvCell(m.emergency_contact || ''),
       sanitizeCsvCell(m.executive_title || ''),
       sanitizeCsvCell(m.executive_order || ''),
-      sanitizeCsvCell(m.application_notes || '')
+      sanitizeCsvCell(m.application_notes || ''),
+      sanitizeCsvCell(m.guardian_name || ''),
+      sanitizeCsvCell(m.guardian_email || ''),
+      sanitizeCsvCell(m.guardian_phone || '')
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
@@ -312,14 +318,18 @@ export default function BulkMemberModal({
       'Date of Birth',
       'Nationality',
       'Preferred Foot',
-      'Emergency Contact'
+      'Emergency Contact',
+      'Guardian Name',
+      'Guardian Email',
+      'Guardian Phone'
     ];
 
+    // Email is optional (many juniors have none): a junior's parent goes in the guardian columns
     const sampleRows = [
-      ['Marcus Vance', 'marcus.vance@example.com', '+61 400 123 456', 'Player', 'ST', '9', 'approved', 'Full Senior Member', '1998-05-14', 'Australia', 'Right', 'Sarah Vance (+61 400 999 888)'],
-      ['Elena Rossi', 'elena.rossi@example.com', '+61 411 234 567', 'Player', 'CM', '8', 'approved', 'Full Senior Member', '2001-08-22', 'Italy', 'Both', 'Marco Rossi (+61 411 777 666)'],
-      ['David Chen', 'david.chen@example.com', '+61 422 345 678', 'Executive Committee', 'SUB', '', 'approved', 'Executive Committee Pass', '1985-11-30', 'Australia', 'Right', 'Linda Chen (+61 422 555 444)'],
-      ['Liam Gallagher', 'liam.g@example.com', '+61 433 456 789', 'Player', 'GK', '1', 'pending', 'Full Senior Member', '2003-02-17', 'Scotland', 'Left', 'Paul Gallagher (+61 433 111 222)']
+      ['Marcus Vance', 'marcus.vance@example.com', '+61 400 123 456', 'Player', 'ST', '9', 'approved', 'Full Senior Member', '1998-05-14', 'Australia', 'Right', 'Sarah Vance (+61 400 999 888)', '', '', ''],
+      ['Elena Rossi', 'elena.rossi@example.com', '+61 411 234 567', 'Player', 'CM', '8', 'approved', 'Full Senior Member', '2001-08-22', 'Italy', 'Both', 'Marco Rossi (+61 411 777 666)', '', '', ''],
+      ['David Chen', 'david.chen@example.com', '+61 422 345 678', 'Executive Committee', 'SUB', '', 'approved', 'Executive Committee Pass', '1985-11-30', 'Australia', 'Right', 'Linda Chen (+61 422 555 444)', '', '', ''],
+      ['Mia Gallagher', '', '', 'Player', 'GK', '1', 'approved', 'Junior Player (U18)', '2015-02-17', 'Australia', 'Left', '', 'Paul Gallagher', 'paul.gallagher@example.com', '+61 433 111 222']
     ];
 
     const csvContent = [
@@ -338,6 +348,20 @@ export default function BulkMemberModal({
     URL.revokeObjectURL(url);
   };
 
+  // Email is optional, so a junior without one can be imported (their guardian's details go in the
+  // guardian columns). Without an email there is nothing to match an existing member on, so a
+  // same-name member already at the club is flagged instead of quietly added twice.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const checkContact = (fullName: string, email: string, guardianEmail: string, dob: string | undefined, errors: string[]) => {
+    if (email && !EMAIL_RE.test(email)) errors.push('Email address doesn\'t look right.');
+    if (guardianEmail && !EMAIL_RE.test(guardianEmail)) errors.push('Guardian email doesn\'t look right.');
+    if (!email && fullName) {
+      const name = fullName.trim().toLowerCase();
+      const same = clubMembers.find(m => m.full_name.trim().toLowerCase() === name && (!dob || !m.date_of_birth || m.date_of_birth === dob));
+      if (same) errors.push(`${same.full_name} is already at the club. Add an email to update them, or change the name if it's someone else.`);
+    }
+  };
+
   // Parse Raw Content (CSV or JSON string)
   const processRawData = (text: string) => {
     const trimmed = text.trim();
@@ -347,7 +371,7 @@ export default function BulkMemberModal({
     }
 
     const existingEmails = new Set(
-      clubMembers.map(m => m.email.trim().toLowerCase())
+      clubMembers.map(m => (m.email || '').trim().toLowerCase()).filter(Boolean)
     );
 
     // 1. Try parsing JSON
@@ -360,10 +384,11 @@ export default function BulkMemberModal({
           const email = String(item.email || '').trim().toLowerCase();
           const fullName = String(item.full_name || item.name || `${item.first_name || ''} ${item.last_name || ''}`).trim();
 
+          const guardianEmail = String(item.guardian_email || '').trim().toLowerCase();
           if (!fullName) errors.push('Full Name is required.');
-          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email address is required.');
+          checkContact(fullName, email, guardianEmail, item.date_of_birth ? String(item.date_of_birth) : undefined, errors);
 
-          const isDuplicate = existingEmails.has(email);
+          const isDuplicate = !!email && existingEmails.has(email);
           const isValid = errors.length === 0;
 
           const memberData: Partial<Omit<ClubMember, 'id' | 'created_at'>> = pruneUndefined({
@@ -409,6 +434,9 @@ export default function BulkMemberModal({
             executive_title: item.executive_title || undefined,
             emergency_contact: item.emergency_contact || undefined,
             application_notes: item.application_notes || undefined,
+            guardian_name: item.guardian_name ? String(item.guardian_name) : undefined,
+            guardian_email: guardianEmail || undefined,
+            guardian_phone: item.guardian_phone ? String(item.guardian_phone) : undefined,
           });
 
           return {
@@ -458,10 +486,11 @@ export default function BulkMemberModal({
       );
       const email = (rawObj['email'] || rawObj['emailaddress'] || '').trim().toLowerCase();
 
+      const guardianEmail = (rawObj['guardianemail'] || rawObj['parentemail'] || '').trim().toLowerCase();
       if (!fullName) errors.push('Full name is required.');
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email address is required.');
+      checkContact(fullName, email, guardianEmail, rawObj['dateofbirth'] || rawObj['dob'] || undefined, errors);
 
-      const isDuplicate = existingEmails.has(email);
+      const isDuplicate = !!email && existingEmails.has(email);
       const roleCol = rawObj['role'];
       const positionCol = rawObj['position'] || rawObj['playerposition'];
       const statusCol = rawObj['status'] || rawObj['playerstatus'];
@@ -497,6 +526,9 @@ export default function BulkMemberModal({
         executive_title: rawObj['executivetitle'] || undefined,
         emergency_contact: rawObj['emergencycontact'] || undefined,
         application_notes: rawObj['applicationnotes'] || rawObj['notes'] || undefined,
+        guardian_name: rawObj['guardianname'] || rawObj['parentname'] || undefined,
+        guardian_email: guardianEmail || undefined,
+        guardian_phone: rawObj['guardianphone'] || rawObj['parentphone'] || undefined,
       });
 
       // Computed after memberData so numeric-field validation (jersey/height/weight)
@@ -917,7 +949,7 @@ export default function BulkMemberModal({
                   <textarea aria-label="Paste CSV or JSON roster"
                     className="form-input"
                     rows={6}
-                    placeholder="Paste CSV text with headers (e.g. Full Name, Email, Role, Position, Jersey Number)..."
+                    placeholder="Paste CSV text with headers (e.g. Full Name, Email, Role, Position, Jersey Number, Guardian Name, Guardian Email)..."
                     value={pastedText}
                     onChange={e => {
                       setPastedText(e.target.value);
