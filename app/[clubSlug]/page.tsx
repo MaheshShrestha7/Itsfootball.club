@@ -8,6 +8,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
+import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { clubPlaysIn, latestFirst, soonestFirst } from '@/lib/fixtures';
@@ -1649,10 +1650,8 @@ export default function ClubPublicPage({
               // The match type badge, unless the competition label already says it ("Friendly" + "FRIENDLY")
               const showTypeBadge = !!match.match_type && !(competitionLabel || '').toLowerCase().includes(match.match_type.toLowerCase());
               return (
-              <div
-                key={match.id}
-                className="glass-panel glass-panel-interactive fixture-card"
-              >
+              // data-glide-card: opening the match glides this card into the match page's scoreboard (MatchGlideLink)
+              <div key={match.id} data-glide-card className="glass-panel glass-panel-interactive fixture-card">
                 {/* Competition & Date */}
                 <div className="fixture-meta">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'inherit' }}>
@@ -1700,7 +1699,7 @@ export default function ClubPublicPage({
                     {match.home_team_name}
                   </div>
 
-                  <div style={{
+                  <div data-glide-score style={{
                     padding: '0.35rem 0.85rem',
                     background: match.status === 'completed' ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--shade-rgb), 0.4)',
                     borderRadius: '8px',
@@ -1769,14 +1768,15 @@ export default function ClubPublicPage({
                     </Link>
                   )}
 
-                  <Link
+                  <MatchGlideLink
+                    matchId={match.id}
                     href={matchPath(club.slug, match)}
                     className="btn btn-secondary btn-sm touch-target"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
                   >
                     <span>{match.status === 'completed' ? 'Match Report' : 'Match Centre'}</span>
                     <ChevronRight size={14} />
-                  </Link>
+                  </MatchGlideLink>
                 </div>
               </div>
               );

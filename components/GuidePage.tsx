@@ -127,6 +127,7 @@ export default function GuidePage(p: GuidePageProps) {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <JsonLd data={schema} />
       <PlatformNavbar />
+      <div className="guide-progress" aria-hidden="true" />
 
       <main className="container" style={{ padding: '3rem 1rem', flex: 1, maxWidth: '860px' }}>
         <nav aria-label="Breadcrumb" className="tool-breadcrumb">

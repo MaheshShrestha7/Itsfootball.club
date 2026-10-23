@@ -134,7 +134,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
 
   // Handle cursor / touch pointer move for 3D tilt and specular glare
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
+    if (!cardRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -294,6 +294,14 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
           background: `linear-gradient(${mirrored ? 220 : 140}deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
             linear-gradient(${115 + tilt.rotY * 2}deg, transparent 30%, rgba(255, 255, 255, ${tilt.isHovered ? 0.22 : 0.14}) 45%, transparent 60%)`,
         }}
+      />
+      {/* A sweep of light in the club colour when the pass appears and each time it flips, like a real card
+          catching the light at the gate. Keyed by the flip, so it replays. */}
+      <div
+        key={`shine-${isFlipped}`}
+        aria-hidden="true"
+        className="pass-shine"
+        style={{ '--shine': `rgba(${primary.rgbString}, 0.35)` } as React.CSSProperties}
       />
       {/* Light that follows the pointer */}
       <div
