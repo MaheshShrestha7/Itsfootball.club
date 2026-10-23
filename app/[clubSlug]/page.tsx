@@ -1371,9 +1371,11 @@ export default function ClubPublicPage({
                     Official Club Sponsors
                   </h3>
                 </div>
-                <button
-                  onClick={() => setContactModalOpen(true)}
+                <Link
+                  href={`/${club.slug}/sponsor`}
                   style={{
+                    display: 'inline-block',
+                    textDecoration: 'none',
                     background: 'rgba(var(--tint-rgb), 0.05)',
                     border: '1px solid var(--border-subtle)',
                     padding: '0.5rem 1rem',
@@ -1386,7 +1388,7 @@ export default function ClubPublicPage({
                   }}
                 >
                   Become a Club Sponsor &rarr;
-                </button>
+                </Link>
               </div>
 
               <div style={{
