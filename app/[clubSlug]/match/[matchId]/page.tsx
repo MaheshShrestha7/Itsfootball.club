@@ -213,8 +213,8 @@ export default function MatchCenterPage({
     if (!goalTimerRef.current) showNextGoal();
   }, [match?.id, match?.home_score, match?.away_score, match?.home_team_name, match?.away_team_name, isLive, scoreHidden, showNextGoal]);
 
-  // The moment a match someone is watching live ends: a "Full time" stamp lands on the scoreboard, the score
-  // settles, and the match report fades in underneath
+  // The moment a match someone is watching live ends: the full-time whistle and board, the score settles,
+  // and the match report fades in underneath
   const prevStatusRef = useRef<string | undefined>(undefined);
   const [fullTimeMoment, setFullTimeMoment] = useState(false);
   useEffect(() => {
@@ -521,9 +521,30 @@ export default function MatchCenterPage({
             </div>
           )}
 
+          {/* Full-time board: the referee's whistle goes three times, then a TV-style full-time graphic wipes in */}
           {fullTimeMoment && (
-            <div className="ft-stamp-wrap" aria-hidden="true">
-              <span className="authorization-stamp ft-stamp">Full time</span>
+            <div className="ft-board" aria-hidden="true">
+              <span className="ft-board-tag">
+                <span className="ft-whistle">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="14" r="5.5" />
+                    <path d="M13 10.2 21.5 7v4.6l-6.8 1.6" />
+                    <circle cx="9" cy="14" r="1.3" fill="currentColor" />
+                  </svg>
+                  <i /><i /><i />
+                </span>
+                FT
+              </span>
+              <span className="ft-board-body">
+                <span className="ft-board-title">Full-time</span>
+                {!scoreHidden && (
+                  <span className="ft-board-score">
+                    <span><span className="team-name-full">{match.home_team_name}</span><span className="team-name-short">{homeShort}</span></span>
+                    <b>{match.home_score ?? 0}–{match.away_score ?? 0}</b>
+                    <span><span className="team-name-full">{match.away_team_name}</span><span className="team-name-short">{awayShort}</span></span>
+                  </span>
+                )}
+              </span>
             </div>
           )}
 

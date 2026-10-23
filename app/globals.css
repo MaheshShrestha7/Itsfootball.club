@@ -1452,34 +1452,92 @@ textarea {
   }
 }
 
-/* Full-time moment on the public match page: a match being watched live has just ended */
-.ft-stamp-wrap {
+/* Full-time moment on the public match page: a match being watched live has just ended. The referee's
+   whistle goes three times, then a broadcast-style full-time board wipes in, holds, and wipes away. */
+.ft-board {
   position: absolute;
-  inset: 0;
+  top: 1.25rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 30;
+  display: flex;
+  align-items: stretch;
+  max-width: calc(100% - 2rem);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgb(var(--dk-4-6-9));
+  border: 1px solid rgba(var(--club-primary-rgb), 0.45);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6), 0 0 26px rgba(var(--club-primary-rgb), 0.25);
+  pointer-events: none;
+  animation: ftBoardOut 0.45s cubic-bezier(0.4, 0, 1, 1) 4.4s forwards;
+}
+.ft-board-tag {
   display: flex;
   align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+  background: var(--club-primary);
+  color: var(--club-primary-contrast, #040609);
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+.ft-whistle { position: relative; display: grid; place-items: center; }
+.ft-whistle svg { animation: ftWhistle 0.3s ease-in-out 3; transform-origin: 30% 70%; }
+/* One ring per blast: short, short, long */
+.ft-whistle i {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0;
+  animation: ftBlast 0.5s ease-out both;
+}
+.ft-whistle i:nth-of-type(2) { animation-delay: 0.3s; }
+.ft-whistle i:nth-of-type(3) { animation-delay: 0.6s; animation-duration: 0.9s; }
+.ft-board-body {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  z-index: 30;
-  pointer-events: none;
-  animation: ftFadeOut 0.6s ease 4.2s forwards;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.4rem 1rem 0.45rem 0.85rem;
+  clip-path: inset(0 100% 0 0);
+  animation: ftWipe 0.5s cubic-bezier(0.2, 0, 0, 1) 0.95s forwards;
 }
-.authorization-stamp.ft-stamp {
-  color: var(--c-amber);
-  border-color: currentColor;
-  background: rgba(var(--dk-4-6-9), 0.88);
-  font-size: clamp(1.3rem, 5vw, 2rem);
-  text-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
-  box-shadow: 0 0 40px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(245, 158, 11, 0.2);
+.ft-board-title {
+  color: var(--club-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
-.ft-settle { animation: ftSettle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s; }
-.ft-report-in { animation: ftReportIn 0.7s ease 0.9s both; }
-@keyframes ftFadeOut { to { opacity: 0; } }
+.ft-board-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+.ft-board-score > span { overflow: hidden; text-overflow: ellipsis; max-width: 9rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.ft-board-score b { font-family: var(--font-mono); font-size: 1.05rem; color: var(--c-amber); }
+.ft-settle { animation: ftSettle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.95s; }
+.ft-report-in { animation: ftReportIn 0.7s ease 1.4s both; }
+@keyframes ftWhistle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg) scale(1.1); } 75% { transform: rotate(10deg) scale(1.1); } }
+@keyframes ftBlast { 0% { opacity: 0.9; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.9); } }
+@keyframes ftWipe { to { clip-path: inset(0 0 0 0); } }
+@keyframes ftBoardOut { to { opacity: 0; transform: translateY(-10px); } }
 @keyframes ftSettle { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
 @keyframes ftReportIn { from { opacity: 0; transform: translateY(14px); } }
 @media (prefers-reduced-motion: reduce) {
-  .authorization-stamp.ft-stamp, .ft-settle, .ft-report-in { animation: none; }
-  .ft-stamp-wrap { animation: ftFadeOut 0.3s ease 3s forwards; }
+  .ft-whistle svg, .ft-whistle i, .ft-settle, .ft-report-in { animation: none; }
+  .ft-board-body { clip-path: none; animation: none; }
+  .ft-board { animation: ftFadeOut 0.3s ease 3.5s forwards; }
 }
+@keyframes ftFadeOut { to { opacity: 0; } }
 
 @keyframes stampShake {
   0%, 100% { transform: scale(1) rotate(-7deg) translateX(0); }
