@@ -22,8 +22,9 @@ export default function AdminCommitteePage({
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
   const executiveMembers = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
 
-  const [selectedMemberId, setSelectedMemberId] = useState(clubMembers[0]?.id || '');
-  const [title, setTitle] = useState('Vice-President');
+  // Nobody and no title picked until the admin chooses (a pre-filled name is easy to appoint by mistake)
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [title, setTitle] = useState('');
   const [bio, setBio] = useState('');
   const [order, setOrder] = useState(executiveMembers.length + 1);
   const [selectedSeason, setSelectedSeason] = useState(activeSeason?.name || defaultSeasonLabel());
@@ -34,7 +35,7 @@ export default function AdminCommitteePage({
 
   // Members load from Supabase after first render, so pick defaults from current data on open
   const openAppointForm = () => {
-    if (!clubMembers.some(m => m.id === selectedMemberId)) setSelectedMemberId(clubMembers[0]?.id || '');
+    if (!clubMembers.some(m => m.id === selectedMemberId)) setSelectedMemberId('');
     setOrder(executiveMembers.length + 1);
     setShowAppointForm(true);
   };

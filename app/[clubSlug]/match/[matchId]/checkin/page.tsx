@@ -5,6 +5,7 @@ import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { useClub } from '@/lib/club-context';
+import { matchTypeTag } from '@/lib/fixture-label';
 import CameraQRScanner from '@/components/CameraQRScanner';
 import {
   Shield,
@@ -216,7 +217,7 @@ export default function MatchDoorCheckinPage({
               </div>
               <div>
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {match.competition} {match.match_type ? `• ${match.match_type.toUpperCase()}` : ''}
+                  {match.competition} {matchTypeTag(match) ? `• ${matchTypeTag(match)!.toUpperCase()}` : ''}
                 </span>
                 <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                   {match.title || `${match.home_team_name} vs ${match.away_team_name}`}
