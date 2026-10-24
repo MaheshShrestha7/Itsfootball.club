@@ -137,7 +137,7 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '720px', marginTop: '0.2rem' }}>
           Decide what each role can do in this admin area, and add your own roles. Give someone a role on the{' '}
-          <Link href={`/${club.slug}/admin/squad`}>Squad &amp; Players</Link> page. Someone with several roles gets the
+          <Link href={`/${club.slug}/admin/people`}>People</Link> page. Someone with several roles gets the
           highest level any of them gives.
         </p>
       </div>

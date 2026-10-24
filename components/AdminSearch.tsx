@@ -33,7 +33,7 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
         id: m.id,
         label: m.full_name,
         sublabel: `Player${m.jersey_number ? ` • #${m.jersey_number}` : ''}${m.player_position ? ` • ${m.player_position}` : ''}`,
-        href: `/${clubSlug}/admin/squad`,
+        href: `/${clubSlug}/admin/people?person=${m.id}`,
         icon: Users,
       }));
 

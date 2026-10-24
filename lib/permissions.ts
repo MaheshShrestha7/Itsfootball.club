@@ -31,9 +31,9 @@ export const ACCESS_AREAS: AccessArea[] = [
   { key: 'matches', label: 'Fixtures & Results', group: 'Fixtures & Events' },
   { key: 'tournaments', label: 'Tournaments & Cups', group: 'Fixtures & Events' },
   { key: 'events', label: 'Events & Training', group: 'Fixtures & Events' },
-  { key: 'squad', label: 'Squad & Players (incl. contact details)', group: 'Players & Teams' },
+  { key: 'squad', label: 'People: everyone, incl. contact details (was Squad & Players)', group: 'Players & Teams' },
   { key: 'teams', label: 'Club Teams and Tournament Sides', group: 'Players & Teams' },
-  { key: 'members', label: 'Members', group: 'Players & Teams' },
+  { key: 'members', label: 'People: applications & member passes', group: 'Players & Teams' },
   { key: 'committee', label: 'Committee', group: 'Players & Teams' },
   { key: 'finance', label: 'Finance', group: 'Money' },
   { key: 'shop', label: 'Club Shop (products; edit also hands out orders)', group: 'Money' },
@@ -62,6 +62,19 @@ export function levelAtLeast(have: string | null | undefined, need: AccessLevel 
 /** The area an admin URL belongs to: '/club/admin/lineup/draft' -> 'lineup'. The dashboard has none. */
 export function areaFromPath(pathname: string): string | null {
   return pathname.match(/\/admin\/([^/?#]+)/)?.[1] ?? null;
+}
+
+/** People page tabs (?tab=) that show applications and passes; the rest of the page is the squad */
+export const PEOPLE_MEMBER_TABS = ['applications', 'passes', 'rejected'] as const;
+
+/**
+ * The access area of the page showing: the People page is the squad's (Squad & Players) until it
+ * shows applications or passes, which are the Members area's.
+ */
+export function areaFromLocation(pathname: string, tab: string | null): string | null {
+  const area = areaFromPath(pathname);
+  if (area !== 'people') return area;
+  return (PEOPLE_MEMBER_TABS as readonly string[]).includes(tab || '') ? 'members' : 'squad';
 }
 
 /** Sent with the target hash ('#tournament-sides' or '') when an admin menu item is clicked; pages with hash tabs listen */

@@ -251,7 +251,7 @@ export default function AdminDashboardPage({
 
           {can(club.id, 'squad') && (
           <Link
-            href={`/${club.slug}/admin/squad`}
+            href={`/${club.slug}/admin/people`}
             className="glass-panel glass-panel-interactive"
             style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
@@ -259,8 +259,8 @@ export default function AdminDashboardPage({
               <Users size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Squad & Players</div>
-              <div className="text-meta">Roster & stats</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>People</div>
+              <div className="text-meta">Players, members & stats</div>
             </div>
           </Link>
           )}

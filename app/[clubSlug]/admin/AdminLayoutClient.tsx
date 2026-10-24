@@ -23,7 +23,6 @@ import {
   Shield,
   ArrowLeft,
   LogOut,
-  UserCheck,
   Trophy,
   Layers,
   Sparkles,
@@ -46,7 +45,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
 import AdminSearch from '@/components/AdminSearch';
 import SupportModal from '@/components/SupportModal';
-import { areaFromPath, ADMIN_HASH_EVENT } from '@/lib/permissions';
+import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { CALENDAR_AREAS } from '@/lib/admin-calendar';
 import { useClubAppIcons } from '@/lib/app-icons';
 import { clubTeamsOf } from '@/lib/teams';
@@ -241,20 +240,20 @@ export default function AdminLayout({
       // The squad, the club's teams, its members and the committee
       title: 'Players & Teams',
       items: [
-        { area: 'squad', label: 'Squad & Players', href: `/${club.slug}/admin/squad`, icon: Users },
-        { area: 'teams', label: 'Club Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
-        {
-          label: 'Members',
-          area: 'members',
-          href: `/${club.slug}/admin/members`,
-          icon: UserCheck,
-          badge: pendingMembersCount > 0 ? `${pendingMembersCount} PENDING` : undefined,
+        // Everyone at the club (the squad), with applications and passes on their own tabs (Members area)
+        ...(can(club.id, 'squad') || can(club.id, 'members') ? [{
+          label: 'People',
+          href: can(club.id, 'squad') ? `/${club.slug}/admin/people` : `/${club.slug}/admin/people?tab=applications`,
+          icon: Users,
+          badge: pendingMembersCount > 0 && can(club.id, 'members') ? `${pendingMembersCount} PENDING` : undefined,
           children: [
-            { label: 'Applications', href: `/${club.slug}/admin/members` },
-            { label: 'Active', href: `/${club.slug}/admin/members?tab=active` },
-            { label: 'Rejected', href: `/${club.slug}/admin/members?tab=rejected` },
+            { area: 'squad', label: 'Everyone', href: `/${club.slug}/admin/people` },
+            { area: 'members', label: 'Applications', href: `/${club.slug}/admin/people?tab=applications`, badge: pendingMembersCount > 0 ? `${pendingMembersCount}` : undefined },
+            { area: 'members', label: 'Member Passes', href: `/${club.slug}/admin/people?tab=passes` },
+            { area: 'members', label: 'Rejected', href: `/${club.slug}/admin/people?tab=rejected` },
           ],
-        },
+        }] : []),
+        { area: 'teams', label: 'Club Teams', href: `/${club.slug}/admin/teams`, icon: Shield },
         { area: 'committee', label: 'Committee', href: `/${club.slug}/admin/committee`, icon: Award },
       ],
     },
@@ -331,8 +330,10 @@ export default function AdminLayout({
     }))
     .filter(section => section.items.length > 0);
 
+  // The page's tab (?tab=income), kept in the URL by lib/use-url-tab
+  const currentTab = useSearchParams().get('tab');
   // The page's area: someone whose roles don't cover it gets a notice instead of the page
-  const currentArea = areaFromPath(pathname);
+  const currentArea = areaFromLocation(pathname, currentTab);
   // Shop orders have their own area, so a role may hand them out without editing the shop
   const canViewPage = !currentArea || can(club.id, currentArea) || (currentArea === 'shop' && can(club.id, 'shop-orders'))
     // The calendar isn't an area of its own: it shows the fixtures, tournaments and events a role already sees
@@ -382,8 +383,6 @@ export default function AdminLayout({
     setLocationHash(hash);
     window.dispatchEvent(new CustomEvent(ADMIN_HASH_EVENT, { detail: hash }));
   };
-  // The page's tab (?tab=income), kept in the URL by lib/use-url-tab
-  const currentTab = useSearchParams().get('tab');
 
   // How well a menu link matches the current page: 3 its tab or section is showing, 2 its page,
   // 1 a page inside it (a single tournament), 0 not at all
