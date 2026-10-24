@@ -6,7 +6,7 @@ import { Match } from '@/lib/supabase/types';
 import { Calendar, MapPin, Edit3, ArrowRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LiveMinute from '@/components/LiveMinute';
-import { compareTournamentMatches } from '@/lib/tournament-engine';
+import { compareTournamentMatches, fixtureWhenLabel } from '@/lib/tournament-engine';
 import { matchPath } from '@/lib/slugs';
 
 interface TournamentMatchesListProps {
@@ -199,8 +199,8 @@ export default function TournamentMatchesList({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
                   <Calendar size={13} />
-                  <span>{match.match_date ? match.match_date.slice(0, 10) : 'TBD'}</span>
-                  {match.match_time && <span>• {match.match_time}</span>}
+                  <span>{fixtureWhenLabel(match)}</span>
+                  {match.pitch_label && <span>• {match.pitch_label}</span>}
                 </div>
 
                 <div className="row">

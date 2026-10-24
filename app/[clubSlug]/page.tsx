@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { matchTypeTag } from '@/lib/fixture-label';
 import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
-import ClubScoreLeaderboard from '@/components/ClubScoreLeaderboard';
+import ClubContactSection from '@/components/ClubContactSection';
 import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import PlayerAvatar from '@/components/PlayerAvatar';
@@ -41,7 +41,6 @@ import {
   Pause,
   Newspaper,
   Image as ImageIcon,
-  QrCode,
   X,
   CalendarPlus
 } from 'lucide-react';
@@ -49,7 +48,6 @@ import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
-import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 
@@ -98,7 +96,6 @@ export default function ClubPublicPage({
     sponsors,
     news,
     gallery,
-    clubScoreProfiles,
     seasons,
     getActiveSeason,
     clubTeams,
@@ -128,14 +125,11 @@ export default function ClubPublicPage({
 
   // Tab & Filter states
   const [squadFilter, setSquadFilter] = useState<'ALL' | 'GK' | 'DEF' | 'MID' | 'FWD'>('ALL');
-  const [rosterOpen, setRosterOpen] = useState(false);
-  useEscapeToClose(rosterOpen, setRosterOpen);
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   // Clubs with several teams: '' = the main team, 'ALL' = every team, else a team id
   const [fixturesTeamFilter, setFixturesTeamFilter] = useState<string>('');
   const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
-  const [leaderboardMode, setLeaderboardMode] = useState<'clubscore' | 'traditional'>('clubscore');
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // Hero Slider states
@@ -159,7 +153,7 @@ export default function ClubPublicPage({
   const mainTeam = defaultTeamOf(clubTeams, clubId);
   const mainSquadIds = multiTeam && mainTeam ? new Set(teamMemberIds(clubTeamMembers, mainTeam.id)) : null;
   // Junior players stay out of the public squad, rankings and leaderboards
-  const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers);
+  const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club?.junior_includes_u18 !== false });
   const publicMembers = clubMembers.filter(m => !juniorIds.has(m.id));
   const squadPlayers = publicMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
   // 99 is "no order set"; 0 is a real position (e.g. the President first)
@@ -211,19 +205,16 @@ export default function ClubPublicPage({
     return true;
   });
 
-  // Players ranked by ClubScore XP (goals, assists, clean sheets, MOTM, appearances... as the club's
-  // rules weigh them): this season's points, else their latest season's. Ties go to goals, then assists.
+  // Players ranked on the pitch this season: goals, then assists, Player of the Match, appearances.
+  // Not ClubScore XP: its sign-up and attendance points put brand-new members above people who played.
   const currentSeasonName = activeSeason?.name || defaultSeasonLabel();
-  const xpByMember = new Map<string, number>();
-  [...clubScoreProfiles]
-    .filter(p => p.club_id === clubId)
-    .sort((a, b) => Number(a.season === currentSeasonName) - Number(b.season === currentSeasonName) || String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
-    .forEach(p => xpByMember.set(p.member_id, p.total_points)); // later (preferred) profiles overwrite earlier ones
-  const statFor = (memberId: string) => playerStats.find(st => st.member_id === memberId);
+  const statFor = (memberId: string) =>
+    playerStats.find(st => st.member_id === memberId && st.season === currentSeasonName);
   const rankedSquad = [...filteredSquad].sort((a, b) =>
-    (xpByMember.get(b.id) ?? 0) - (xpByMember.get(a.id) ?? 0) ||
     (statFor(b.id)?.goals ?? 0) - (statFor(a.id)?.goals ?? 0) ||
     (statFor(b.id)?.assists ?? 0) - (statFor(a.id)?.assists ?? 0) ||
+    (statFor(b.id)?.motm_awards ?? 0) - (statFor(a.id)?.motm_awards ?? 0) ||
+    (statFor(b.id)?.appearances ?? 0) - (statFor(a.id)?.appearances ?? 0) ||
     a.full_name.localeCompare(b.full_name)
   );
   const topPlayers = rankedSquad.slice(0, 5);
@@ -1526,6 +1517,9 @@ export default function ClubPublicPage({
                 <a href={`/${club.slug}/calendar.ics`} download style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   or download .ics
                 </a>
+                <Link href={`/${club.slug}/fixtures`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-ink)' }}>
+                  All fixtures &amp; results →
+                </Link>
               </div>
             </div>
 
@@ -1749,26 +1743,6 @@ export default function ClubPublicPage({
                     </Link>
                   )}
 
-                  {match.status === 'upcoming' && match.door_qr_checkin_enabled && (
-                    <Link
-                      href={`/${club.slug}/match/${match.id}/checkin`}
-                      className="btn btn-sm touch-target"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem',
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid #3B82F6',
-                        color: 'var(--c-blue)',
-                        fontSize: '0.78rem',
-                        padding: '0.4rem 0.75rem',
-                      }}
-                    >
-                      <QrCode size={13} />
-                      <span>Door Check-In</span>
-                    </Link>
-                  )}
 
                   <MatchGlideLink
                     matchId={match.id}
@@ -1795,9 +1769,8 @@ export default function ClubPublicPage({
               <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>CLUB CALENDAR</span>
               <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Upcoming Events & Trainings</h2>
             </div>
-            <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm">
-              <CreditCard size={14} color="var(--club-primary)" />
-              <span>Get Digital Check-In Pass</span>
+            <Link href={`/${club.slug}/events`} className="btn btn-secondary btn-sm">
+              <span>All events &amp; tickets</span>
             </Link>
           </div>
 
@@ -1824,9 +1797,6 @@ export default function ClubPublicPage({
                       color: evt.category === 'training' ? 'var(--c-green)' : evt.category === 'social' ? 'var(--c-amber)' : 'var(--c-blue)',
                     }}>
                       {evt.category.toUpperCase()}
-                    </span>
-                    <span className="text-meta">
-                      Checked in: {evt.rsvp_count}{evt.max_capacity > 0 ? ` / ${evt.max_capacity}` : ''}
                     </span>
                   </div>
 
@@ -2034,7 +2004,7 @@ export default function ClubPublicPage({
             <div>
               <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Top Players</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                Ranked by ClubScore XP for {currentSeasonName}: goals, assists, clean sheets, MOTM and appearances.
+                {currentSeasonName}: ranked by goals, then assists, Player of the Match and appearances.
               </p>
             </div>
 
@@ -2042,7 +2012,7 @@ export default function ClubPublicPage({
             {positionPills}
           </div>
 
-          {/* Top five by XP */}
+          {/* Top five this season */}
           {topPlayers.length === 0 && (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No players in this position yet.</p>
           )}
@@ -2082,7 +2052,6 @@ export default function ClubPublicPage({
                     </div>
                     <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
                       <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
-                      <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
                       {player.player_position && (
@@ -2126,12 +2095,11 @@ export default function ClubPublicPage({
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {player.nationality ? <span>Nationality: <strong className="text-secondary">{player.nationality}</strong></span> : <span />}
-                      <Link href={`/${club.slug}/member`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>
-                        View Pass &rarr;
-                      </Link>
-                    </div>
+                    {player.nationality && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Nationality: <strong className="text-secondary">{player.nationality}</strong>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -2140,83 +2108,19 @@ export default function ClubPublicPage({
 
           {rankedSquad.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3.5rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setRosterOpen(true)}>
+              <Link href={`/${club.slug}/squad`} className="btn btn-secondary">
                 <Users size={16} />
                 <span>View full squad ({rankedSquad.length})</span>
-              </button>
+              </Link>
             </div>
           )}
 
-          {/* Leaderboard View Switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              display: 'inline-flex',
-              background: 'rgba(var(--shade-rgb), 0.4)',
-              padding: '0.35rem',
-              borderRadius: '12px',
-              border: '1px solid var(--border-subtle)',
-              gap: '0.4rem'
-            }}>
-              <button
-                onClick={() => setLeaderboardMode('clubscore')}
-                style={{
-                  padding: '0.55rem 1.25rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: leaderboardMode === 'clubscore' ? 'var(--club-primary)' : 'transparent',
-                  color: leaderboardMode === 'clubscore' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <Trophy size={16} color={leaderboardMode === 'clubscore' ? '#FFFFFF' : '#F59E0B'} />
-                <span>ClubScore Fantasy League</span>
-              </button>
-
-              <button
-                onClick={() => setLeaderboardMode('traditional')}
-                style={{
-                  padding: '0.55rem 1.25rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: leaderboardMode === 'traditional' ? 'var(--club-primary)' : 'transparent',
-                  color: leaderboardMode === 'traditional' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <Award size={16} />
-                <span>Traditional Match Stats</span>
-              </button>
-            </div>
-          </div>
-
-          {leaderboardMode === 'clubscore' ? (
-            <div id="leaderboard">
-              {/* Players only: supporters earn sign-up points too, but don't belong in the standings */}
-              <ClubScoreLeaderboard
-                club={club}
-                members={publicMembers.filter(isPlayerMember)}
-                profiles={clubScoreProfiles}
-              />
-            </div>
-          ) : (
-            /* Golden Boot & Playmaker Leaderboard */
+          {/* Golden Boot & Playmaker: the one leaderboard on the page (ClubScore stays on members' own pages) */}
             <div id="leaderboard" className="glass-panel" style={{ padding: '2rem' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Trophy size={20} color="var(--c-amber)" /> Traditional Club Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
+                    <Trophy size={20} color="var(--c-amber)" /> Season Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
                   </h3>
                   <span className="text-note">Top individual season performances</span>
                 </div>
@@ -2292,7 +2196,6 @@ export default function ClubPublicPage({
                 ))}
               </div>
             </div>
-          )}
         </div>
       </section>
 
@@ -2393,6 +2296,13 @@ export default function ClubPublicPage({
         </div>
       </section>
 
+      {/* 4.85 GET IN TOUCH: a contact form anyone can find (the Sponsor page and #contact links point here) */}
+      <div className="club-reveal" style={{ padding: '3.5rem 0' }}>
+        <div className="container" style={{ maxWidth: '860px' }}>
+          <ClubContactSection club={club} heading={`Get in touch with ${club.name}`} />
+        </div>
+      </div>
+
       {/* 4.9 CONTACT MODAL */}
       <ContactModal
         club={club}
@@ -2400,85 +2310,6 @@ export default function ClubPublicPage({
         onClose={() => setContactModalOpen(false)}
       />
 
-      {rosterOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="full-squad-title"
-          onClick={e => { if (e.target === e.currentTarget) setRosterOpen(false); }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 999,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div className="glass-panel" style={{
-            width: '100%',
-            maxWidth: '760px',
-            maxHeight: '88vh',
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-medium)',
-            borderRadius: 'var(--radius-xl)',
-            overflow: 'hidden',
-          }}>
-            <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <h3 id="full-squad-title" style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-                  Full Squad ({rankedSquad.length})
-                </h3>
-                <button type="button" onClick={() => setRosterOpen(false)} className="btn btn-secondary btn-sm" aria-label="Close full squad">
-                  <X size={16} />
-                </button>
-              </div>
-              {positionPills}
-            </div>
-
-            <ol style={{ listStyle: 'none', overflowY: 'auto', padding: '0.75rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {rankedSquad.length === 0 && (
-                <li style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>No players in this position yet.</li>
-              )}
-              {rankedSquad.map((player, rank) => {
-                const stat = statFor(player.id);
-                return (
-                  <li
-                    key={player.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'auto auto 1fr auto',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '10px',
-                      background: 'rgba(var(--tint-rgb), 0.03)',
-                    }}
-                  >
-                    <span style={{ width: '1.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--text-muted)' }}>{rank + 1}</span>
-                    <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={38} />
-                    <div className="min-w-0">
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {player.jersey_number ? <span style={{ color: 'var(--club-ink)', fontWeight: 900 }}>#{player.jersey_number} </span> : null}
-                        {player.full_name}
-                      </div>
-                      <div className="text-meta">
-                        {player.player_position || 'Squad'} · {countOf(stat?.appearances, 'app')} · {countOf(stat?.goals, 'goal')} · {countOf(stat?.assists, 'assist')} · {countOf(stat?.clean_sheets, 'clean sheet')}
-                      </div>
-                    </div>
-                    <span className="badge badge-gold">{xpByMember.get(player.id) ?? 0} XP</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        </div>
-      )}
 
     </main>
   );

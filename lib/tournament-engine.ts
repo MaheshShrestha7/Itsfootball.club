@@ -12,6 +12,7 @@ import {
 } from './supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
+import { DATE_LOCALE } from './dates';
 
 // Human-readable stage titles
 export const STAGE_TITLES: Record<string, string> = {
@@ -53,6 +54,56 @@ export function compareTournamentMatches(a: Match, b: Match): number {
 
 export interface TiesheetOptions {
   shuffle?: boolean;
+  /** Minutes per match slot (game plus changeover). Set: matches on the same day get their own
+   *  kick-offs, filling the pitches round by round, instead of all sharing the day's start time. */
+  matchMinutes?: number;
+  /** Pitches played on at once (default 1) */
+  pitches?: number;
+}
+
+/**
+ * Kick-offs within each day: a round's matches fill the pitches in order (Pitch 1, Pitch 2, then the
+ * next slot), and the next round starts once the previous round's last slot is over. The day starts
+ * at the time its matches already have (the tournament's kick-off). Changes the matches in place.
+ */
+export function spreadKickoffs(matches: Match[], { matchMinutes, pitches = 1 }: { matchMinutes: number; pitches?: number }) {
+  if (!(matchMinutes > 0)) return matches;
+  const lanes = Math.max(1, Math.floor(pitches));
+  const days = new Map<string, Match[]>();
+  for (const m of matches) {
+    if (!m.match_date) continue;
+    days.set(m.match_date, [...(days.get(m.match_date) || []), m]);
+  }
+  for (const day of days.values()) {
+    day.sort(compareTournamentMatches);
+    const [h, min] = (day[0].match_time || '15:00').split(':').map(Number);
+    let cursor = h * 60 + (min || 0);
+    let roundKey: string | null = null;
+    let inRound = 0;
+    for (const m of day) {
+      const key = `${m.tournament_stage}-${m.tournament_round}`;
+      if (key !== roundKey) {
+        cursor += Math.ceil(inRound / lanes) * matchMinutes;
+        roundKey = key;
+        inRound = 0;
+      }
+      const t = Math.min(cursor + Math.floor(inRound / lanes) * matchMinutes, 23 * 60 + 59);
+      m.match_time = `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
+      if (lanes > 1) m.pitch_label = `Pitch ${(inRound % lanes) + 1}`;
+      inRound++;
+    }
+  }
+  return matches;
+}
+
+/** "Sat, 24 Oct · 9:00 am" for a fixture's local date and time (no time zone change: it's the venue's clock) */
+export function fixtureWhenLabel(m: Pick<Match, 'match_date' | 'match_time'>): string {
+  const date = m.match_date?.slice(0, 10);
+  if (!date) return 'TBD';
+  const d = new Date(`${date}T${m.match_time || '12:00'}`);
+  if (isNaN(d.getTime())) return date;
+  const day = d.toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
+  return m.match_time ? `${day} · ${d.toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}` : day;
 }
 
 const DAY = 86400000;
@@ -327,16 +378,17 @@ export function buildTiesheet(
   });
 
   if (participants.length < 2) return { matches: [], participants, tournamentUpdates: {} };
+  const timed = (matches: Match[]) => (options?.matchMinutes ? spreadKickoffs(matches, { matchMinutes: options.matchMinutes, pitches: options.pitches }) : matches);
 
   if (tournament.format === 'knockout') {
     const entries = participants.map(p => ({ name: p.name, logo: p.logo_url || DEFAULT_CREST, source: `Seed #${p.seed}` }));
     const when = scheduler(tournament, knockoutRoundCount(entries.length));
-    return { matches: buildBracket(tournament, entries, when, 0, 1), participants, tournamentUpdates: {} };
+    return { matches: timed(buildBracket(tournament, entries, when, 0, 1)), participants, tournamentUpdates: {} };
   }
 
   if (tournament.format === 'league') {
     const when = scheduler(tournament, roundRobinRounds(participants.length));
-    return { matches: roundRobin(tournament, participants, when, 1), participants, tournamentUpdates: {} };
+    return { matches: timed(roundRobin(tournament, participants, when, 1)), participants, tournamentUpdates: {} };
   }
 
   // Group stage + knockout: deal seeds across groups (A, B, C, A, B, C, ...)
@@ -366,7 +418,7 @@ export function buildTiesheet(
   const tournamentUpdates: Partial<Tournament> = {};
   if (groupCount !== tournament.group_count) tournamentUpdates.group_count = groupCount;
   if (advancing !== tournament.teams_advancing_per_group) tournamentUpdates.teams_advancing_per_group = advancing;
-  return { matches, participants, tournamentUpdates };
+  return { matches: timed(matches), participants, tournamentUpdates };
 }
 
 /**

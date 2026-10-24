@@ -105,6 +105,16 @@ assert.equal(isJuniorMember({ id: 'm2' }, teams, kidRows), false); // coach of a
 assert.equal(isJuniorMember({ id: 'k2' }, teams, kidRows), false);
 assert.equal(isJuniorMember({ id: 'v1', is_junior: true }, teams, []), true); // flag from the public view
 assert.deepEqual([...juniorMemberIds([{ id: 'v1', is_junior: true }, { id: 'm1' }], teams, kidRows)].sort(), ['k1', 'v1']);
+// By age or guardian, not only by team (PUB-B1): a 12-year-old in the First Team is a junior
+const on = { today: new Date(Date.UTC(2026, 9, 24)) };
+assert.equal(isJuniorMember({ id: 'a1', date_of_birth: '2014-05-01' }, teams, [], on), true, 'under 18 by date of birth');
+assert.equal(isJuniorMember({ id: 'a2', date_of_birth: '2000-05-01' }, teams, [], on), false, 'adult');
+assert.equal(isJuniorMember({ id: 'a3', date_of_birth: '2009-01-01' }, teams, [], on), true, '17: junior while U18 counts');
+assert.equal(isJuniorMember({ id: 'a3', date_of_birth: '2009-01-01' }, teams, [], { ...on, includeU18: false }), false, '17: not when U18 is off');
+assert.equal(isJuniorMember({ id: 'a4', date_of_birth: '2010-01-01' }, teams, [], { ...on, includeU18: false }), true, '16: junior either way');
+assert.equal(isJuniorMember({ id: 'a5', guardian_email: 'gina@example.com' }, teams, [], on), true, 'no date of birth, guardian on file');
+assert.equal(isJuniorMember({ id: 'a6', date_of_birth: '2000-05-01', guardian_email: 'x@example.com' }, teams, [], on), false, 'an adult with a contact on file');
+assert.deepEqual([...juniorMemberIds([{ id: 'a1', date_of_birth: '2014-05-01' }, { id: 'a2', date_of_birth: '2000-05-01' }], teams, [], on)], ['a1']);
 const kid = { id: 'k1', full_name: 'Sam Taylor', photo_url: 'p.jpg', nationality: 'NZ' };
 assert.deepEqual(publicMember(kid, new Set(['k1'])), { ...kid, full_name: 'Sam T.', photo_url: undefined, nationality: undefined });
 assert.equal(publicMember({ ...kid, photo_consent: true }, new Set(['k1'])).photo_url, 'p.jpg');

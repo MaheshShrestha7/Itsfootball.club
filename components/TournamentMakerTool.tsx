@@ -43,6 +43,9 @@ interface Draft {
   advancing: number;
   thirdPlace: boolean;
   teams: string;
+  /** Minutes per match slot (game plus changeover) and pitches in use: gives each match its own kick-off */
+  matchMinutes: number;
+  pitches: number;
   /** Publish once the visitor has signed in */
   pendingPublish?: boolean;
 }
@@ -58,7 +61,7 @@ const slugify = (s: string) => s.toLowerCase().trim().replace(/[\s_]+/g, '-').re
 
 const EMPTY: Draft = {
   name: '', slug: '', slugEdited: false, start: '', multiDay: false, end: '', venue: '', organiser: '', teamSize: '6-a-side', about: '',
-  format: 'group_knockout', groupCount: 2, advancing: 2, thirdPlace: false, teams: '',
+  format: 'group_knockout', groupCount: 2, advancing: 2, thirdPlace: false, teams: '', matchMinutes: 20, pitches: 1,
 };
 
 function loadDraft(format?: TournamentFormat): Draft {
@@ -82,7 +85,7 @@ interface Props {
 
 export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
   const router = useRouter();
-  const { clubs, createClub, createTournament } = useClub();
+  const { clubs, createClub, createTournament, waitForClubSaved } = useClub();
   const { user, isLoading: authLoading, assignClubRole } = useAuth();
   const [draft, setDraft] = useState<Draft>(() => (defaultFormat ? { ...EMPTY, format: defaultFormat } : EMPTY));
   const [loaded, setLoaded] = useState(false);
@@ -121,6 +124,7 @@ export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
   const groupOptions = Math.max(1, Math.min(GROUP_LETTERS.length, Math.floor(teamNames.length / 2)));
 
   // The tournament as it would be published, and its draw
+  const schedule = useMemo(() => ({ matchMinutes: draft.matchMinutes, pitches: draft.pitches }), [draft.matchMinutes, draft.pitches]);
   const built = useMemo(() => {
     const start = draft.start ? new Date(draft.start) : null;
     const startIso = start && !isNaN(start.getTime()) ? start.toISOString() : new Date().toISOString();
@@ -140,9 +144,9 @@ export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
     const participants: TournamentParticipant[] = teamNames.map((name, i) => ({
       id: `team-${i}`, tournament_id: 'preview', team_type: 'external', name, short_name: teamCode(name), logo_url: '',
     }));
-    const sheet = buildTiesheet(tournament, participants);
+    const sheet = buildTiesheet(tournament, participants, schedule);
     return { tournament: { ...tournament, ...sheet.tournamentUpdates }, participants: sheet.participants, matches: sheet.matches };
-  }, [draft, teamNames]);
+  }, [draft, teamNames, schedule]);
 
   const rules = effectiveGroupRules(built.tournament, teamNames.length);
   const showTable = draft.format !== 'knockout';
@@ -206,13 +210,17 @@ export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
           has_third_place_match: t.has_third_place_match, start_date: t.start_date, end_date: t.end_date,
           venue: t.venue, description: t.description?.slice(0, 500),
         },
-        teamNames.map(n => ({ team_type: 'external' as const, name: n, short_name: teamCode(n), logo_url: '' }))
+        teamNames.map(n => ({ team_type: 'external' as const, name: n, short_name: teamCode(n), logo_url: '' })),
+        schedule
       );
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch {
         // nothing to clear
       }
+      // The tournament's page checks on the server that it exists: going there before the background
+      // save lands showed a 404 right after Publish
+      await waitForClubSaved(club.id);
       router.push(tournamentManagePath(slug));
     } finally {
       publishingRef.current = false;
@@ -259,6 +267,21 @@ export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
                 <option value="one">One day</option>
                 <option value="multi">Over several days or weeks</option>
               </select>
+            </div>
+          </div>
+          {/* Each match gets its own kick-off and pitch, instead of every match at the start time */}
+          <div className="lineup-tool-row">
+            <div className="form-group">
+              <label className="form-label" htmlFor="tm-slot">Minutes per match</label>
+              <input id="tm-slot" type="number" inputMode="numeric" min={5} max={180} className="form-input" value={draft.matchMinutes}
+                onChange={e => update({ matchMinutes: Math.max(0, Math.min(180, Number(e.target.value) || 0)) })} />
+              <span className="text-meta">Game plus changeover</span>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="tm-pitches">Pitches</label>
+              <input id="tm-pitches" type="number" inputMode="numeric" min={1} max={12} className="form-input" value={draft.pitches}
+                onChange={e => update({ pitches: Math.max(1, Math.min(12, Number(e.target.value) || 1)) })} />
+              <span className="text-meta">Played at the same time</span>
             </div>
           </div>
           {draft.multiDay && (

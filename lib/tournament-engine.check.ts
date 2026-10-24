@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -183,5 +183,26 @@ assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'final
 assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: 'quarter_final' }), 'Quarter-Final');
 assert.equal(tournamentMatchLabel({ tournament_id: 't', tournament_stage: null, tournament_round: null }), null);
 assert.equal(tournamentMatchLabel({ tournament_id: null, tournament_stage: 'final' }), null);
+
+// One-day tournament: kick-offs spread over pitches, round by round (PUB-B7 / N3)
+{
+  const day = new Date(2026, 9, 24, 9, 0).toISOString();
+  const t: Tournament = { id: 't-day', club_id: 'c', name: 'Gala', slug: 'gala', season: '2026', format: 'knockout', status: 'draft',
+    points_win: 3, points_draw: 1, points_loss: 0, has_third_place_match: false, start_date: day, end_date: day };
+  const parts: TournamentParticipant[] = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}`, tournament_id: 't-day', team_type: 'external', name: `Side ${i + 1}`, short_name: `S${i + 1}`, logo_url: '' }));
+  const same = buildTiesheet(t, parts).matches;
+  assert.ok(same.every(m => m.match_time === '09:00'), 'no match length: everyone at the start (as before)');
+  const ms = buildTiesheet(t, parts, { matchMinutes: 20, pitches: 2 }).matches.sort(compareTournamentMatches);
+  const qf = ms.filter(m => m.tournament_stage === 'quarter_final');
+  assert.deepEqual(qf.map(m => `${m.match_time} ${m.pitch_label}`), ['09:00 Pitch 1', '09:00 Pitch 2', '09:20 Pitch 1', '09:20 Pitch 2']);
+  assert.deepEqual(ms.filter(m => m.tournament_stage === 'semi_final').map(m => m.match_time), ['09:40', '09:40'], 'semis after the quarters');
+  assert.equal(ms.find(m => m.tournament_stage === 'final')!.match_time, '10:00');
+  const one = buildTiesheet(t, parts, { matchMinutes: 15 }).matches.sort(compareTournamentMatches);
+  assert.deepEqual(one.map(m => m.match_time), ['09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30'], 'one pitch: one after another');
+  assert.ok(one.every(m => !m.pitch_label), 'no pitch labels with one pitch');
+}
+assert.equal(fixtureWhenLabel({ match_date: '2026-10-24', match_time: '09:00' }), 'Sat, 24 Oct · 9:00 am');
+assert.equal(fixtureWhenLabel({ match_date: '2026-10-24', match_time: '' }), 'Sat, 24 Oct');
+assert.equal(fixtureWhenLabel({ match_date: '', match_time: '' }), 'TBD');
 
 console.log('tournament engine: all formats OK');

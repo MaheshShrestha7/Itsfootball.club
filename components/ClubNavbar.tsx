@@ -283,7 +283,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           </Link>
           )}
 
-          <Link href={`/${club.slug}#fixtures`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}/fixtures`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Fixtures
           </Link>
           <Link
@@ -311,11 +311,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               Teams
             </Link>
           ) : (
-            <Link href={`/${club.slug}#squad`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+            <Link href={`/${club.slug}/squad`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
               Squad
             </Link>
           )}
-          <Link href={`/${club.slug}#events`} data-nav-drop="4" hidden={dropped(4)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
+          <Link href={`/${club.slug}/events`} data-nav-drop="4" hidden={dropped(4)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
             Events
           </Link>
           <Link href={`/${club.slug}#news`} data-nav-drop="3" hidden={dropped(3)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
@@ -475,7 +475,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               {/* Action Buttons: Match Centre & Member Pass */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 <Link
-                  href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}#fixtures`}
+                  href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}/fixtures`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-sm"
                   style={{
@@ -536,7 +536,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 </Link>
 
                 <Link
-                  href={`/${club.slug}#fixtures`}
+                  href={`/${club.slug}/fixtures`}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
                 >
@@ -565,7 +565,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 )}
 
                 <Link
-                  href={`/${club.slug}#squad`}
+                  href={`/${club.slug}/squad`}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
                 >
@@ -585,7 +585,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 )}
 
                 <Link
-                  href={`/${club.slug}#events`}
+                  href={`/${club.slug}/events`}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
                 >

@@ -83,6 +83,12 @@ export default function TournamentScoreModal({
   };
 
   const isLevelScore = Number(homeScore) === Number(awayScore);
+  // Typing a score on a match still marked Upcoming means it's been played: without this the score
+  // was quietly not saved (the match stayed upcoming and showed "-")
+  const scoreTyped = (set: (n: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    set(Math.max(0, parseInt(e.target.value, 10) || 0));
+    if (status === 'upcoming') setStatus('completed');
+  };
 
   return (
     <div
@@ -227,7 +233,7 @@ export default function TournamentScoreModal({
                 min="0"
                 max="99"
                 value={homeScore}
-                onChange={e => setHomeScore(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                onChange={scoreTyped(setHomeScore)}
                 style={{
                   width: '64px',
                   height: '52px',
@@ -263,7 +269,7 @@ export default function TournamentScoreModal({
                 min="0"
                 max="99"
                 value={awayScore}
-                onChange={e => setAwayScore(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                onChange={scoreTyped(setAwayScore)}
                 style={{
                   width: '64px',
                   height: '52px',

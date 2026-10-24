@@ -20,6 +20,8 @@ export default function SponsorMarquee({ sponsors, placement, title = 'Matchday 
   const ordered = sortSponsorsByTier(sponsors);
   // Slow the loop down as the list grows so each logo stays on screen long enough to read
   const duration = `${Math.max(18, ordered.length * 5)}s`;
+  // A few logos sit still in one row: scrolling them needs a second copy, so one sponsor showed twice
+  const still = ordered.length < 4;
 
   const renderRow = (copy: boolean) => (
     <div className="sponsor-marquee-row" aria-hidden={copy || undefined} inert={copy || undefined}>
@@ -40,12 +42,12 @@ export default function SponsorMarquee({ sponsors, placement, title = 'Matchday 
   );
 
   return (
-    <section className="glass-panel sponsor-marquee" aria-label={title}>
+    <section className={`glass-panel sponsor-marquee${still ? ' is-static' : ''}`} aria-label={title}>
       <div className="sponsor-marquee-title">{title}</div>
       <div className="sponsor-marquee-viewport">
         <div className="sponsor-marquee-track" style={{ animationDuration: duration }}>
           {renderRow(false)}
-          {renderRow(true)}
+          {!still && renderRow(true)}
         </div>
       </div>
     </section>

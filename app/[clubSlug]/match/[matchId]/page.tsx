@@ -28,7 +28,6 @@ import {
   Volume2,
   VolumeX,
   Sparkles,
-  QrCode,
   Calendar,
   Wifi,
   Star,
@@ -66,7 +65,7 @@ export default function MatchCenterPage({
   const club = selectClubBySlug(resolvedParams.clubSlug);
 
   // Junior players are shown as "Sam T.", without a photo unless a guardian allowed it
-  const juniorIds = useMemo(() => juniorMemberIds(allMembers, clubTeams, clubTeamMembers), [allMembers, clubTeams, clubTeamMembers]);
+  const juniorIds = useMemo(() => juniorMemberIds(allMembers, clubTeams, clubTeamMembers, { includeU18: club?.junior_includes_u18 !== false }), [allMembers, clubTeams, clubTeamMembers]);
   const members = useMemo(() => allMembers.map(m => publicMember(m, juniorIds)), [allMembers, juniorIds]);
   // Photos for the share graphic's lineup pitch (juniors without photo consent have none)
   const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, m.photo_url])), [members]);
@@ -286,8 +285,6 @@ export default function MatchCenterPage({
   const homeShort = sideShortName(match, 'home', club.short_name, tournamentParticipants);
   const awayShort = sideShortName(match, 'away', club.short_name, tournamentParticipants);
   const titleIsTeams = match.title === `${match.home_team_name} vs ${match.away_team_name}`;
-  // Door check-in is for arriving spectators, so it goes once the match is over
-  const checkInOpen = match.door_qr_checkin_enabled && ['upcoming', 'live', 'halftime'].includes(match.status);
 
   // Lineups for each side that fields the club's own players: the club's side in a league fixture,
   // both internal teams in a tournament. Tournament teams without availability use their roster.
@@ -403,26 +400,7 @@ export default function MatchCenterPage({
               <span>LIVE FEED SYNCED</span>
             </div>}
 
-            {checkInOpen && (
-              <Link
-                href={`/${club.slug}/match/${match.id}/checkin`}
-                className="btn btn-sm scroll-pill-item touch-target"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid #3B82F6',
-                  color: 'var(--c-blue)',
-                  minHeight: '44px',
-                  fontWeight: 700
-                }}
-                title="Check in at the entrance"
-              >
-                <QrCode size={14} />
-                <span>Door Check-In</span>
-              </Link>
-            )}
+            {/* No Door Check-In button for the public: the QR code at the entrance opens self check-in */}
 
             <button
               type="button"
@@ -590,7 +568,7 @@ export default function MatchCenterPage({
               {match.match_time && (
                 <>
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />
-                  {match.match_time}
+                  <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </>
               )}
             </span>
@@ -632,7 +610,19 @@ export default function MatchCenterPage({
                 alignItems: 'center',
                 gap: 'clamp(0.4rem, 1.5vw, 0.75rem)',
               }}>
-                {scoreHidden ? (
+                {match.status === 'upcoming' ? (
+                  /* Before kick-off a 0 : 0 board says nothing: show when it starts (date and venue sit above) */
+                  <span style={{
+                    color: 'var(--text-primary)',
+                    fontSize: 'clamp(1.3rem, 5vw, 2rem)',
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    fontFamily: 'var(--font-heading)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
+                  </span>
+                ) : scoreHidden ? (
                   <span style={{
                     color: 'var(--text-secondary)',
                     fontSize: 'clamp(1.1rem, 4vw, 1.6rem)',
@@ -683,7 +673,7 @@ export default function MatchCenterPage({
                 marginTop: '8px',
                 textAlign: 'center',
               }}>
-                {periodLabel(match.period)}
+                {match.status === 'upcoming' ? 'Kick-off' : periodLabel(match.period)}
               </div>
             </div>
 

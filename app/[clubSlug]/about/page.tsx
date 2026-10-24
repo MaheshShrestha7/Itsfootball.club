@@ -2,12 +2,13 @@
 
 import React, { use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, MapPin, Mail, Phone, Award } from 'lucide-react';
+import { ArrowLeft, BookOpen, MapPin, Award } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { isArticleEmpty } from '@/lib/article-text';
 import { DEFAULT_CREST } from '@/lib/crest';
 import ArticleBody from '@/components/ArticleBody';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import ClubContactSection from '@/components/ClubContactSection';
 
 /** The club's About page: its story (written on the Branding page), home ground, contacts and committee */
 export default function AboutPage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -81,23 +82,8 @@ export default function AboutPage({ params }: { params: Promise<{ clubSlug: stri
             </section>
           )}
 
-          {(club.contact_email || club.contact_phone) && (
-            <section aria-labelledby="about-contact">
-              <h2 id="about-contact" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>Get in touch</h2>
-              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem 2rem' }}>
-                {club.contact_email && (
-                  <a href={`mailto:${club.contact_email}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 600, overflowWrap: 'anywhere' }}>
-                    <Mail size={18} color="var(--club-primary)" className="shrink-0" /> {club.contact_email}
-                  </a>
-                )}
-                {club.contact_phone && (
-                  <a href={`tel:${club.contact_phone.replace(/[^\d+]/g, '')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                    <Phone size={18} color="var(--club-primary)" className="shrink-0" /> {club.contact_phone}
-                  </a>
-                )}
-              </div>
-            </section>
-          )}
+          {/* Email, phone and the contact form (always: the form works without either) */}
+          <ClubContactSection club={club} />
 
           {committee.length > 0 && (
             <section aria-labelledby="about-committee">

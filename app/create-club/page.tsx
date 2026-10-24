@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken } from '@/lib/supabase/client';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import WizardGroundSearch, { type WizardGround } from '@/components/grounds/WizardGroundSearch';
@@ -31,7 +31,7 @@ import {
 
 export default function CreateClubPage() {
   const router = useRouter();
-  const { clubs, createClub, saveNow } = useClub();
+  const { clubs, createClub, waitForClubSaved } = useClub();
   const [launching, setLaunching] = useState(false);
   const { user, isAuthenticated, isLoading: authLoading, assignClubRole } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -172,20 +172,6 @@ export default function CreateClubPage() {
     }
     setStepError(null);
     return true;
-  };
-
-  // The new club is saved in the background a moment after it's created: wait until the server has it
-  const waitForClubSaved = async (clubId: string) => {
-    const client = getSupabaseClient();
-    if (!client) return false;
-    const deadline = Date.now() + 15000;
-    while (Date.now() < deadline) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      await saveNow();
-      const { data } = await client.from('clubs').select('id').eq('id', clubId).maybeSingle();
-      if (data) return true;
-    }
-    return false;
   };
 
   const handleNext = (currentStep: number) => {

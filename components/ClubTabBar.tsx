@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, CalendarDays, Radio, LayoutGrid, CreditCard, UserPlus, Shield, Users } from 'lucide-react';
@@ -20,8 +19,6 @@ export default function ClubTabBar({ club }: { club: Club }) {
   const { matches, members } = useClub();
   const { user, hasClubAdminAccess } = useAuth();
   const base = `/${club.slug}`;
-  const onHome = pathname === base;
-  const fixturesInView = useSectionInView(onHome ? 'fixtures' : null);
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const member = !!user && members.some(m => m.club_id === club.id && m.user_id === user.id);
   // A parent's family page (their children's passes) instead of Join
@@ -31,7 +28,7 @@ export default function ClubTabBar({ club }: { club: Club }) {
     { label: 'Home', href: base, icon: Home },
     live
       ? { label: 'Live', href: matchPath(club.slug, live), icon: Radio }
-      : { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
+      : { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
     { label: 'My Club', href: `${base}/app`, icon: LayoutGrid },
     member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard }
       : parent ? { label: 'Family', href: `${base}/member`, icon: Users }
@@ -39,14 +36,8 @@ export default function ClubTabBar({ club }: { club: Club }) {
     ...(user && hasClubAdminAccess(club.id) ? [{ label: 'Admin', href: `${base}/admin`, icon: Shield }] : []),
   ];
 
-  // A tab stays lit on the pages under it (Admin on every admin tool). Fixtures is a section of the
-  // home page (its link carries #fixtures, which the pathname never does), so on the home page it's
-  // lit while that section is in view, and Home the rest of the time.
-  const isActive = (href: string) => {
-    if (href === `${base}#fixtures`) return onHome && fixturesInView;
-    if (href === base) return onHome && !fixturesInView;
-    return pathname === href || pathname.startsWith(`${href}/`);
-  };
+  // A tab stays lit on the pages under it (Admin on every admin tool); Home only on the home page itself
+  const isActive = (href: string) => (href === base ? pathname === base : pathname === href || pathname.startsWith(`${href}/`));
 
   return (
     <>
@@ -64,40 +55,4 @@ export default function ClubTabBar({ club }: { club: Club }) {
       </nav>
     </>
   );
-}
-
-/** Whether the element with this id crosses a band a third of the way down the screen, where a section
- *  lands after a jump to it (under the top bar). The section can render after this mounts (club data
- *  loads in the browser), so it waits for the element to appear. */
-function useSectionInView(id: string | null) {
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    setInView(false);
-    if (!id) return;
-    let io: IntersectionObserver | null = null;
-    const watch = (el: Element) => {
-      io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: '-30% 0px -60% 0px' });
-      io.observe(el);
-    };
-    const found = document.getElementById(id);
-    if (found) {
-      watch(found);
-      return () => io?.disconnect();
-    }
-    const mo = new MutationObserver(() => {
-      const el = document.getElementById(id);
-      if (el) {
-        mo.disconnect();
-        watch(el);
-      }
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      mo.disconnect();
-      io?.disconnect();
-    };
-  }, [id]);
-
-  return inView;
 }

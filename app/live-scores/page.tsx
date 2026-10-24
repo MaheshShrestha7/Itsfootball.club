@@ -19,7 +19,7 @@ const QUESTIONS = [
   { q: 'Can parents follow the game without downloading anything?', a: "Yes. Share the match link and anyone can open it in their phone's browser and watch the score update live." },
   { q: 'Can we hide scores for junior teams?', a: 'Yes. Each team has a hide scores setting that keeps goals and the score off the public match page and share graphics, while the lineup and other events still show.' },
   { q: 'Can more than one person run the match centre?', a: 'Yes. The club owner can give any squad member the Club Admin role, so whoever is at the ground can record the match.' },
-  { q: 'Does the result update our fixtures and stats?', a: "Yes. When the match is recorded, the result, goal scorers and player stats update the club's fixtures and leaderboard automatically." },
+  { q: 'Does the result update our fixtures and stats?', a: "Yes. The result and goal scorers show on the club's fixtures as you go. At full time, one tap on Save stats now adds each player's goals, assists, cards and minutes to the leaderboard, and you can fix them afterwards." },
 ];
 
 const faqSchema = {
@@ -34,7 +34,7 @@ const MATCHDAY_STEPS = [
   { name: 'Open Match Centre at the ground', text: "It's in your club admin and runs on any phone." },
   { name: 'Tap in what happens', text: 'Goals, penalties, own goals, cards, subs and the whistle, each with the minute.' },
   { name: 'Supporters watch it live', text: 'The match page updates by itself. No refreshing, no app.' },
-  { name: 'Full time does the rest', text: 'The result, scorers and player stats flow into your fixtures and leaderboard.' },
+  { name: 'Full time: save the stats', text: 'The result is on your fixtures straight away. One tap saves player stats to the leaderboard.' },
 ];
 const howTo = howToSchema('How to run live scores for a community football match', '/live-scores', MATCHDAY_STEPS);
 

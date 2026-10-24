@@ -4,42 +4,10 @@ import React, { use, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Users, Lock, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
-import type { Match } from '@/lib/supabase/types';
-import { decodeSlugParam, matchPath } from '@/lib/slugs';
+import { decodeSlugParam } from '@/lib/slugs';
 import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, juniorMemberIds, publicMember, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import LocalTime from '@/components/LocalTime';
-
-function FixtureRow({ match, clubSlug, hideScore }: { match: Match; clubSlug: string; hideScore: boolean }) {
-  const opponent = match.opponent_name || (match.is_club_home ? match.away_team_name : match.home_team_name);
-  const played = match.status === 'completed';
-  const live = match.status === 'live' || match.status === 'halftime';
-  return (
-    <Link href={matchPath(clubSlug, match)} className="glass-panel row" style={{ padding: '0.85rem 1rem', justifyContent: 'space-between', color: 'inherit', textDecoration: 'none', gap: '0.75rem' }}>
-      <div className="min-w-0">
-        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-          {match.is_club_home ? 'vs' : 'at'} {opponent}
-        </div>
-        <div className="text-meta">
-          <LocalTime value={match.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} />
-          {match.match_time ? ` · ${match.match_time}` : ''}
-          {match.competition ? ` · ${match.competition}` : ''}
-        </div>
-      </div>
-      <div className="shrink-0" style={{ fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-        {live ? (
-          <span className="badge badge-live"><span className="pulse-dot" /> LIVE</span>
-        ) : played && !hideScore ? (
-          `${match.home_score} - ${match.away_score}`
-        ) : played ? (
-          <span className="text-meta">Played</span>
-        ) : match.status === 'postponed' || match.status === 'cancelled' ? (
-          <span className="text-meta" style={{ textTransform: 'capitalize' }}>{match.status}</span>
-        ) : null}
-      </div>
-    </Link>
-  );
-}
+import FixtureRow from '@/components/FixtureRow';
 
 export default function TeamPage({ params }: { params: Promise<{ clubSlug: string; teamSlug: string }> }) {
   const { clubSlug, teamSlug } = use(params);
@@ -54,7 +22,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
   // A junior playing up for this team is shown as "Sam T.", without a photo unless a guardian allowed it
   const memberById = useMemo(() => {
     const clubMembers = members.filter(m => m.club_id === club?.id && (m.membership_status || 'approved') === 'approved');
-    const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers);
+    const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false });
     return new Map(clubMembers.map(m => [m.id, publicMember(m, juniorIds)]));
   }, [members, club, clubTeams, clubTeamMembers]);
 

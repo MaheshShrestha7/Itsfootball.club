@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { defaultSeasonLabel } from '@/lib/season';
-import { countsTowardClubRecord } from '@/lib/supabase/types';
+import { countsTowardClubRecord, isPlayerMember } from '@/lib/supabase/types';
 import { hiddenScoreTeams, matchScoreHidden } from '@/lib/supabase/club-lookup';
 
 // Only what the response uses (never owner_id, email_settings and the like)
@@ -94,17 +94,12 @@ export async function GET(
     // 2. Approved members (public-safe view: personal details are not exposed)
     const { data: members, error: membersError } = await supabase
       .from('club_members_public')
-      .select('id, role, player_position, status')
+      .select('id, role, roles, player_position, status')
       .eq('club_id', clubId);
 
     const totalMembers = members ? members.length : 0;
-    const totalPlayers = members
-      ? members.filter(
-          m =>
-            (m.role && (m.role.toLowerCase() === 'player' || m.role.toLowerCase().includes('player'))) ||
-            Boolean(m.player_position)
-        ).length
-      : 0;
+    // Players by role (roles labels, else the role text), never by a position a supporter happens to have
+    const totalPlayers = members ? members.filter(isPlayerMember).length : 0;
 
     // 3. Query raw Matches table
     const { data: matches, error: matchesError } = await supabase

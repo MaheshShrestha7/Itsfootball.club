@@ -1142,6 +1142,11 @@ textarea {
   to { transform: translateX(-50%); }
 }
 
+/* Fewer than four sponsors: one still, centred row (as for reduced motion below) */
+.sponsor-marquee.is-static .sponsor-marquee-viewport { -webkit-mask-image: none; mask-image: none; }
+.sponsor-marquee.is-static .sponsor-marquee-track { animation: none; width: auto; }
+.sponsor-marquee.is-static .sponsor-marquee-row { flex-wrap: wrap; justify-content: center; padding: 0 1rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .sponsor-marquee-track {
     animation: none;
@@ -2681,18 +2686,6 @@ dialog.confirm-dialog::backdrop {
 @keyframes rte-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
 
-/* ClubScore standings rows (components/ClubScoreLeaderboard.tsx) */
-.cs-row { padding: 0.9rem 1.25rem; }
-.cs-points { font-size: 1.45rem; }
-@media (max-width: 560px) {
-  .cs-row { padding: 0.75rem 0.8rem; }
-  .cs-left { gap: 0.6rem !important; }
-  .cs-avatar { display: none; }
-  .cs-rank { width: 26px !important; height: 26px !important; font-size: 0.75rem !important; }
-  .cs-points { font-size: 1.1rem; }
-  .cs-caption, .cs-chevron { display: none; }
-}
-
 /* ==============================================================================
    Club app: phone tab bar (components/ClubTabBar.tsx) and the My Club home (/[club]/app)
    ============================================================================== */
@@ -3756,6 +3749,10 @@ dialog.confirm-dialog::backdrop {
 .events-list-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: inherit; text-decoration: none; }
 .events-list-cta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; flex-shrink: 0; }
 @media (max-width: 560px) { .events-list-item { flex-direction: column; align-items: stretch; } .events-list-cta { flex-direction: row; align-items: center; justify-content: space-between; } }
+
+/* /club/fixtures team filter: chips that wrap (scroll sideways on phones instead of wrapping into many rows) */
+.fixtures-team-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+@media (max-width: 560px) { .fixtures-team-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; } .fixtures-team-chips > * { flex: 0 0 auto; } }
 
 /* Join steps */
 .auth-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; list-style: none; padding: 0; }

@@ -53,8 +53,7 @@ import {
   clubLineupSide,
   computeStandings,
   resolveTournament,
-  upgradeLegacyMatches
-} from './tournament-engine';
+  upgradeLegacyMatches, type TiesheetOptions } from './tournament-engine';
 import { getAccessToken, getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
@@ -117,6 +116,8 @@ interface ClubContextType {
   /** Saves pending changes now and resolves once they've reached Supabase (e.g. before navigating) */
   /** Saves now; true once everything is in the database (false on an error, or while changes wait for a sign-in) */
   saveNow: () => Promise<boolean>;
+  /** Saves now and waits (up to 15s) until the server has a club just created here, before navigating to its pages */
+  waitForClubSaved: (clubId: string) => Promise<boolean>;
 
   // Selection
   selectClubBySlug: (slug: string) => Club | null;
@@ -273,7 +274,7 @@ interface ClubContextType {
   createInternalTeam: (teamData: Omit<InternalTeam, 'id' | 'created_at' | 'updated_at'>) => InternalTeam;
   updateInternalTeam: (teamId: string, updates: Partial<InternalTeam>) => void;
   deleteInternalTeam: (teamId: string) => void;
-  createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => Tournament;
+  createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[], options?: TiesheetOptions) => Tournament;
   updateTournament: (tournamentId: string, updates: Partial<Tournament>) => void;
   /** Edit a tournament; pass participantInputs to replace the teams and rebuild the tiesheet */
   saveTournament: (tournamentId: string, updates: Partial<Tournament>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => void;
@@ -883,6 +884,21 @@ export function ClubProvider({
       if (saved !== null) return saved;
     }
   }, [runFlush]);
+
+  // A new club is saved in the background a moment after it's created; its pages (server-checked)
+  // 404 until the server has it. Used by the create-club wizard and the free Tournament Maker.
+  const waitForClubSaved = useCallback(async (clubId: string) => {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      await saveNow();
+      const { data } = await client.from('clubs').select('id').eq('id', clubId).maybeSingle();
+      if (data) return true;
+    }
+    return false;
+  }, [saveNow]);
 
   const retrySync = useCallback(() => {
     syncRef.current?.clearFailures();
@@ -3318,7 +3334,7 @@ export function ClubProvider({
   const applyTiesheet = useCallback((
     tournament: Tournament,
     participants: TournamentParticipant[],
-    options?: { shuffle?: boolean }
+    options?: TiesheetOptions
   ) => {
     const res = buildTiesheet(tournament, participants, options);
     const keptParticipants = new Set(res.participants.map(p => p.id));
@@ -3342,7 +3358,8 @@ export function ClubProvider({
 
   const createTournament = useCallback((
     tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
-    participantInputs: Omit<TournamentParticipant, 'id' | 'tournament_id'>[] = []
+    participantInputs: Omit<TournamentParticipant, 'id' | 'tournament_id'>[] = [],
+    options?: TiesheetOptions
   ) => {
     const tournId = newId();
     const newTournament: Tournament = {
@@ -3353,7 +3370,7 @@ export function ClubProvider({
     };
     setTournaments(prev => [newTournament, ...prev]);
     // Built from the new objects directly: state isn't updated until the next render
-    applyTiesheet(newTournament, participantInputs.map(p => ({ ...p, id: newId(), tournament_id: tournId })));
+    applyTiesheet(newTournament, participantInputs.map(p => ({ ...p, id: newId(), tournament_id: tournId })), options);
     return newTournament;
   }, [applyTiesheet]);
 
@@ -3520,6 +3537,7 @@ export function ClubProvider({
         retrySync,
         reloadFromServer,
         saveNow,
+        waitForClubSaved,
         activeClub,
         members,
         playerStats,

@@ -110,7 +110,7 @@ export default function AdminMatchesPage({
     return byMatch;
   }, [matchEvents, clubMatches, clubTeams]);
   // The share graphic is public: lineup names and photos follow the match page's junior rules
-  const juniorIds = useMemo(() => juniorMemberIds(members, clubTeams, clubTeamMembers), [members, clubTeams, clubTeamMembers]);
+  const juniorIds = useMemo(() => juniorMemberIds(members, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false }), [members, clubTeams, clubTeamMembers]);
   const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, publicMember(m, juniorIds).photo_url])), [members, juniorIds]);
   const publicMatches = useMemo(() => new Map(clubMatches.map(m => {
     const juniorFixture = isJuniorFixture(m, clubTeams);

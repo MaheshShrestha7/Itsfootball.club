@@ -189,12 +189,27 @@ export function isJuniorFixture(
  * Whether a member plays for an active junior team. Visitors can't see junior squads, so for them
  * the public member view's is_junior flag says it; signed-in admins work it out from the squads.
  */
+// A junior (shown as "Sam T.", kept off public lists): plays in a junior team, or is under 18 by
+// date of birth (under 17 when the club doesn't count U18 teams as junior), or has no date of birth
+// but a parent / guardian on file. Same rule as member_is_junior() (migration 20261125).
+type JuniorCandidate = { id: string; is_junior?: boolean | null; date_of_birth?: string | null; guardian_email?: string | null; guardian_name?: string | null };
+export interface JuniorOptions { includeU18?: boolean; today?: Date }
+
+function juniorByAge(member: JuniorCandidate, opts: JuniorOptions = {}): boolean {
+  if (member.date_of_birth) {
+    const age = ageOnDate(member.date_of_birth, opts.today ?? new Date());
+    return age !== null && age < (opts.includeU18 === false ? 17 : 18);
+  }
+  return !!(member.guardian_email?.trim() || member.guardian_name?.trim());
+}
+
 export function isJuniorMember(
-  member: { id: string; is_junior?: boolean | null },
+  member: JuniorCandidate,
   teams: ClubTeam[],
-  rows: ClubTeamMember[]
+  rows: ClubTeamMember[],
+  opts?: JuniorOptions
 ): boolean {
-  if (member.is_junior) return true;
+  if (member.is_junior || juniorByAge(member, opts)) return true;
   return rows.some(r =>
     r.member_id === member.id && r.team_role === 'player' && r.is_active !== false
     && teams.some(t => t.id === r.team_id && t.is_active && t.is_junior)
@@ -203,12 +218,13 @@ export function isJuniorMember(
 
 /** Ids of the club's junior players (see isJuniorMember) */
 export function juniorMemberIds(
-  members: { id: string; is_junior?: boolean | null }[],
+  members: JuniorCandidate[],
   teams: ClubTeam[],
-  rows: ClubTeamMember[]
+  rows: ClubTeamMember[],
+  opts?: JuniorOptions
 ): Set<string> {
   const juniorTeams = new Set(teams.filter(t => t.is_active && t.is_junior).map(t => t.id));
-  const ids = new Set(members.filter(m => m.is_junior).map(m => m.id));
+  const ids = new Set(members.filter(m => m.is_junior || juniorByAge(m, opts)).map(m => m.id));
   for (const r of rows) {
     if (r.team_role === 'player' && r.is_active !== false && juniorTeams.has(r.team_id)) ids.add(r.member_id);
   }

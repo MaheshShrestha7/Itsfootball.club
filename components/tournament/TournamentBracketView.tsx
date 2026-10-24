@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Match } from '@/lib/supabase/types';
-import { STAGE_TITLES } from '@/lib/tournament-engine';
+import { STAGE_TITLES, fixtureWhenLabel } from '@/lib/tournament-engine';
 import { Trophy, Edit3, Award } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LiveMinute from '@/components/LiveMinute';
@@ -241,7 +241,7 @@ export default function TournamentBracketView({
                             )}
                             {!isLive && !isCompleted && (
                               <span className="text-secondary">
-                                {match.match_date ? `${match.match_date.slice(5, 10)}${match.match_time ? ` ${match.match_time}` : ''}` : 'Upcoming'}
+                                {match.match_date ? `${fixtureWhenLabel(match)}${match.pitch_label ? ` · ${match.pitch_label}` : ''}` : 'Upcoming'}
                               </span>
                             )}
                             {isAdmin && (

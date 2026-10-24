@@ -106,9 +106,8 @@ export default function ClubIdentitySection({
   const clubId = club.id;
   const rawClubMembers = members.filter(m => m.club_id === clubId);
   const rawTotalMembers = rawClubMembers.length;
-  const rawTotalPlayers = rawClubMembers.filter(
-    m => isPlayerMember(m) || Boolean(m.player_position)
-  ).length;
+  // Players by their role only (a supporter with a position set isn't a player), as the server counts
+  const rawTotalPlayers = rawClubMembers.filter(isPlayerMember).length;
 
   const rawClubMatches = matches.filter(m => m.club_id === clubId && countsTowardClubRecord(m));
   const rawPlayedMatches = rawClubMatches.filter(

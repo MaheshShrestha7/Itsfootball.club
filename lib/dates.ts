@@ -5,6 +5,11 @@
  */
 export const DATE_LOCALE = 'en-AU';
 
+/** The time zone pages are first drawn in, before the visitor's own takes over (components/LocalTime).
+ *  Search engines and link previews only ever see this one, so it's where most clubs play.
+ *  ponytail: one zone for every club; store a time zone per club if Perth or Brisbane clubs see the wrong first draw. */
+export const SITE_TIME_ZONE = 'Australia/Sydney';
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) return '—';
   const d = new Date(value);

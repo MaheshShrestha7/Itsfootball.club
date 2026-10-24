@@ -5,7 +5,7 @@ import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import ContactModal from '@/components/ContactModal';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, SITE_TIME_ZONE } from '@/lib/dates';
 import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import SponsorLogo from '@/components/SponsorLogo';
@@ -251,7 +251,7 @@ export default function EventDetailsPage({
         isOpen={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
         defaultType="General Inquiry"
-        about={`${event.title}, ${new Date(event.start_time).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        about={`${event.title}, ${new Date(event.start_time).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: SITE_TIME_ZONE })}`}
       />
     </div>
   );

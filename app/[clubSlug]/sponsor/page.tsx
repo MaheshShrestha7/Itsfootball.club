@@ -2,6 +2,7 @@
 
 import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import ClubContactSection from '@/components/ClubContactSection';
 import { ArrowLeft, CheckCircle2, AlertCircle, Handshake } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -93,9 +94,10 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
         ) : packages === null ? (
           <p className="text-muted">Loading packages…</p>
         ) : packages.length === 0 ? (
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            The club hasn&apos;t published sponsorship packages yet. Get in touch through the contact form on the club page.
-          </div>
+          <>
+            <p className="text-body" style={{ marginBottom: '1rem' }}>The club hasn&apos;t published sponsorship packages yet. Send them a message and they&apos;ll get back to you.</p>
+            <ClubContactSection club={club} defaultType="Sponsorship" heading="Ask about sponsoring" />
+          </>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
