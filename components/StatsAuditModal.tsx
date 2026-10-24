@@ -70,14 +70,19 @@ export default function StatsAuditModal({
 
   const [auditedEvents, setAuditedEvents] = useState<MatchAuditItem[]>(initialAuditEvents);
 
-  // Who played: the club's lineup on the pitch for this match, plus anyone who scored, assisted or
-  // was booked. Nobody is ticked when there's no lineup, so nothing is credited by guesswork.
+  // Who played: the club's lineup on the pitch for this match, subs who came on, plus anyone who
+  // scored, assisted or was booked. Nobody is ticked when there's no lineup, so nothing is credited by guesswork.
   const playedIds = useMemo(() => {
     const coords = (clubSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
     const ids = new Set(coords.map(c => c.member_id).filter((id): id is string => !!id && squadPlayers.some(p => p.id === id)));
     initialAuditEvents.forEach(e => { if (e.player_id) ids.add(e.player_id); if (e.assist_player_id) ids.add(e.assist_player_id); });
+    // Subs who came on
+    events.filter(e => e.event_type === 'sub' && e.team_side === clubSide).forEach(e => {
+      const sub = squadPlayers.find(p => p.full_name.toLowerCase() === (e.player_name || '').trim().toLowerCase());
+      if (sub) ids.add(sub.id);
+    });
     return [...ids];
-  }, [match.home_lineup_coords, match.away_lineup_coords, clubSide, squadPlayers, initialAuditEvents]);
+  }, [match.home_lineup_coords, match.away_lineup_coords, clubSide, squadPlayers, initialAuditEvents, events]);
 
   // Clean sheet eligible: GK and defenders, once the match is over and the opponent didn't score
   const isCleanSheetGame = isFinished && opponentScore === 0;
@@ -100,6 +105,28 @@ export default function StatsAuditModal({
   const [auditError, setAuditError] = useState<string | null>(null);
 
   const dialogRef = useDialog(isOpen, onClose);
+
+  // Minutes from what was recorded: starters (the lineup on the pitch) play the whole match unless
+  // subbed off, a sub plays from the minute they came on. Anyone else ticked gets the appearance only.
+  const minutesByMember = useMemo(() => {
+    const full = match.match_format === '7v7' ? 50 : match.match_format === '9v9' ? 60 : 90;
+    const byName = (name: string) => squadPlayers.find(p => p.full_name.toLowerCase() === name.trim().toLowerCase())?.id;
+    const coords = (clubSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
+    const on = new Map<string, number>();
+    coords.forEach(c => { if (c.member_id) on.set(c.member_id, 0); });
+    const off = new Map<string, number>();
+    events.filter(e => e.event_type === 'sub' && e.team_side === clubSide).forEach(e => {
+      const minute = Math.min(Math.max(e.minute, 0), full);
+      const inId = byName(e.player_name || '');
+      if (inId && !on.has(inId)) on.set(inId, minute);
+      const offName = /,\s*(.+?) OFF\./.exec(e.detail_text || '')?.[1];
+      const offId = offName ? byName(offName) : undefined;
+      if (offId) off.set(offId, minute);
+    });
+    const minutes: Record<string, number> = {};
+    on.forEach((start, id) => { minutes[id] = Math.max(0, (off.get(id) ?? full) - start); });
+    return minutes;
+  }, [match.match_format, match.home_lineup_coords, match.away_lineup_coords, clubSide, events, squadPlayers]);
 
   if (!isOpen) return null;
 
@@ -159,6 +186,7 @@ export default function StatsAuditModal({
       clean_sheet_member_ids: cleanSheetMemberIds,
       motm_member_id: motmMemberId || undefined,
       appearance_member_ids: appearanceMemberIds,
+      minutes_by_member: minutesByMember,
       audited_events: auditedEvents,
       notes: auditNotes,
     };

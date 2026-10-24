@@ -33,7 +33,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
 
   // Only the goals matter here, and the caller may pass a new array on every render (a live match
   // ticks), so the graphic redraws when a goal changes, not on every render
-  const goalsKey = JSON.stringify((events || []).filter(e => e.event_type === 'goal' || e.event_type === 'penalty')
+  const goalsKey = JSON.stringify((events || []).filter(e => e.event_type === 'goal' || e.event_type === 'penalty' || e.event_type === 'own_goal')
     .map(e => [e.team_side, e.player_name, e.minute, e.added_minute || 0, e.event_type]));
   const goals = useMemo(() => JSON.parse(goalsKey).map(([team_side, player_name, minute, added_minute, event_type]: [MatchEvent['team_side'], string, number, number, MatchEvent['event_type']]) =>
     ({ team_side, player_name, minute, added_minute, event_type })) as NonNullable<CardOptions['events']>, [goalsKey]);

@@ -6,7 +6,7 @@ import {
   AGE_GROUPS, ageGroupAge, clubTeamsOf, defaultTeamOf, hasMultipleTeams, isTeamFixture, suggestedFormat,
   squadForMatch, teamMemberIds, teamOfMatch, teamSlug, teamsOfMember, uniqueTeamSlug,
   ageGroupCutoff, ageGroupFit, ageOnDate, isJuniorAgeGroup, isJuniorFixture, isJuniorMember, juniorMemberIds,
-  juniorPublicName, publicMember, safeguardingCheckStatus,
+  juniorPublicName, publicMember, safeguardingCheckStatus, goalScoringSide,
 } from './teams';
 
 const team = (id: string, extra: Partial<ClubTeam> = {}): ClubTeam => ({
@@ -132,5 +132,11 @@ assert.equal(safeguardingCheckStatus({ safeguarding_check_date: '2025-01-01' }, 
 assert.equal(safeguardingCheckStatus({ safeguarding_check_date: '2023-01-01', safeguarding_check_expiry_date: '2026-10-11' }, today), 'expired');
 assert.equal(safeguardingCheckStatus({ safeguarding_check_expiry_date: '2026-11-30' }, today), 'expiring');
 assert.equal(safeguardingCheckStatus({ safeguarding_check_expiry_date: '2027-06-30' }, today), 'valid');
+
+// Goals count for their own side; an own goal is logged on the scorer's side and counts for the other
+assert.equal(goalScoringSide({ event_type: 'goal', team_side: 'away' }), 'away');
+assert.equal(goalScoringSide({ event_type: 'penalty', team_side: 'home' }), 'home');
+assert.equal(goalScoringSide({ event_type: 'own_goal', team_side: 'home' }), 'away');
+assert.equal(goalScoringSide({ event_type: 'yellow_card', team_side: 'home' }), null);
 
 console.log('teams.check: ok');

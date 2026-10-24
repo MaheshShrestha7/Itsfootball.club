@@ -414,8 +414,10 @@ export default function AdminMatchCenterControllerPage({
         showFeedback('Please select the player coming off.', 'error');
         return;
       }
-      const offName = offPlayer ? offPlayer.full_name : 'Player';
+      const offName = offPlayer ? offPlayer.full_name : (!isClubSelected && assist) || 'Player';
       detail = `Substitution: ${resolvedPlayerName} ON, ${offName} OFF. ${detail}`.trim();
+      // The player coming off is in the detail, not an assist
+      assist = '';
     }
 
     // Read the clock now, not at the last re-render
@@ -890,17 +892,23 @@ export default function AdminMatchCenterControllerPage({
                 { key: 'goal-us', label: 'Goal', emoji: '⚽', eventType: 'goal', side: ourSide, accent: '#10B981' },
                 { key: 'goal-opp', label: 'Opponent Goal', emoji: '🥅', eventType: 'goal', side: oppSide, accent: '#EF4444' },
                 { key: 'penalty-us', label: 'Penalty', emoji: '🎯', eventType: 'penalty', side: ourSide, accent: '#10B981' },
+                { key: 'penalty-opp', label: 'Opponent Penalty', emoji: '🎯', eventType: 'penalty', side: oppSide, accent: '#EF4444' },
+                // An own goal is logged on the side of the player who scored it; the goal counts for the other side
+                { key: 'og-opp', label: 'Opponent Own Goal', emoji: '🙃', eventType: 'own_goal', side: oppSide, accent: '#10B981' },
+                { key: 'og-us', label: 'Own Goal (ours)', emoji: '🙃', eventType: 'own_goal', side: ourSide, accent: '#EF4444' },
                 { key: 'yellow-us', label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
                 { key: 'yellow-opp', label: 'Opponent Yellow', emoji: '🟨', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
                 { key: 'red-us', label: 'Red Card', emoji: '🟥', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
                 { key: 'red-opp', label: 'Opponent Red', emoji: '🟥', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
                 { key: 'sub-us', label: 'Substitution', emoji: '🔄', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
+                { key: 'sub-opp', label: 'Opponent Sub', emoji: '🔄', eventType: 'sub', side: oppSide, accent: '#3B82F6' },
               ];
             } else {
               // Both sides are the club's own teams (or both outside teams): the same actions for each, named per team
               const perSide: Omit<QuickAction, 'key' | 'side' | 'team'>[] = [
                 { label: 'Goal', emoji: '⚽', eventType: 'goal', accent: '#10B981' },
                 { label: 'Penalty', emoji: '🎯', eventType: 'penalty', accent: '#10B981' },
+                { label: 'Own Goal', emoji: '🙃', eventType: 'own_goal', accent: '#EF4444' },
                 { label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', accent: '#F59E0B' },
                 { label: 'Red Card', emoji: '🟥', eventType: 'red_card', accent: '#EF4444' },
                 { label: 'Substitution', emoji: '🔄', eventType: 'sub', accent: '#3B82F6' },
@@ -911,7 +919,7 @@ export default function AdminMatchCenterControllerPage({
             }
 
             // Shootout kicks go in the shootout score below, not the match score or players' goals
-            if (inShootout) quickActions = quickActions.filter(a => a.eventType !== 'goal' && a.eventType !== 'penalty');
+            if (inShootout) quickActions = quickActions.filter(a => a.eventType !== 'goal' && a.eventType !== 'penalty' && a.eventType !== 'own_goal');
 
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
               { key: 'var', label: 'VAR Review', emoji: '🖥️', eventType: 'var' },
@@ -1099,7 +1107,7 @@ export default function AdminMatchCenterControllerPage({
                       </div>
                     ) : (
                       <div className="form-group">
-                        <label className="form-label">Assist / Involved Secondary (Optional)</label>
+                        <label className="form-label">{eventType === 'sub' ? 'Player Coming OFF (optional)' : 'Assist / Involved Secondary (Optional)'}</label>
                         {isClubSelected ? (
                           <>
                             <PlayerSearchSelect
@@ -1225,7 +1233,7 @@ export default function AdminMatchCenterControllerPage({
                     </div>
 
                     <button data-needs-full
-                      onClick={() => handleDeleteEvent(evt.id, `${evt.event_type} (${evt.minute}')`)}
+                      onClick={() => handleDeleteEvent(evt.id, `${EVENT_LABEL[evt.event_type] || evt.event_type} (${evt.minute}')`)}
                       className="btn btn-secondary btn-sm touch-target"
                       style={{ padding: '0.35rem 0.65rem', color: 'var(--c-red)', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
                       title="Delete event and revert score if goal"

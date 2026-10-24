@@ -625,6 +625,8 @@ export interface MatchAuditPayload {
   clean_sheet_member_ids: string[];
   motm_member_id?: string;
   appearance_member_ids: string[];
+  /** Minutes each player was on the pitch, where the lineup and subs recorded it */
+  minutes_by_member?: Record<string, number>;
   audited_events: MatchAuditItem[];
   notes?: string;
 }

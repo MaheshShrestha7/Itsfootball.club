@@ -157,6 +157,12 @@ export function publicScoreHidden(
 /** Match events that reveal the score (left out where a team hides its scores) */
 export const GOAL_EVENT_TYPES = ['goal', 'penalty', 'own_goal'];
 
+/** The side a goal event counts for: its own side, or the other side for an own goal (logged on the scorer's side). Null if not a goal. */
+export function goalScoringSide(e: { event_type: string; team_side: 'home' | 'away' }): 'home' | 'away' | null {
+  if (e.event_type === 'own_goal') return e.team_side === 'home' ? 'away' : 'home';
+  return e.event_type === 'goal' || e.event_type === 'penalty' ? e.team_side : null;
+}
+
 /** Whether an age group counts as junior: up to U17, and U18 too unless the club turned that off */
 export function isJuniorAgeGroup(ageGroup: string | null | undefined, includeU18 = true): boolean {
   const age = ageGroupAge(ageGroup);
