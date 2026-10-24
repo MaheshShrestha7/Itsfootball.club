@@ -31,7 +31,7 @@ import {
   FileText
 } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { sendRenewalEmail } from '@/components/admin/renewalEmail';
+import { canSendRenewal, sendRenewalEmail } from '@/components/admin/renewalEmail';
 import { ageGroupCutoff, ageGroupFit, suggestJuniorTeam } from '@/lib/teams';
 import { DATE_LOCALE } from '@/lib/dates';
 import { formatMoney, parseMoneyToCents, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
@@ -868,7 +868,7 @@ export default function MembersWorkspace({
                           <span style={{ color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
                             <CheckCircle2 size={14} /> Pass Active
                           </span>
-                          {member.email && member.membership_expires_at && (
+                          {canSendRenewal(member) && (
                             <button
                               type="button"
                               onClick={() => sendRenewal(member)}

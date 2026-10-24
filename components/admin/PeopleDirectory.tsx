@@ -17,7 +17,7 @@ import type { ClubMember, PlayerStats } from '@/lib/supabase/types';
 import type { SquadActions } from './SquadWorkspace';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SquadRoster from '@/components/SquadRoster';
-import { sendRenewalEmail } from './renewalEmail';
+import { canSendRenewal, sendRenewalEmail } from './renewalEmail';
 import {
   Search, Plus, FileSpreadsheet, X, ChevronLeft, ChevronRight, Phone, Mail, Edit2, Activity, Trash2,
   MessageSquare, List, LayoutGrid, Clock, AlertTriangle, CheckCircle2,
@@ -607,7 +607,7 @@ function PersonPanel({
                   <button type="button" data-view-ok className="btn btn-primary btn-sm" onClick={() => onReview(m.id)}>Open application</button>
                 ) : (
                   <>
-                    {m.email && m.membership_expires_at && (
+                    {canSendRenewal(m) && (
                       <button type="button" className="btn btn-secondary btn-sm" onClick={renewal} disabled={sending || sent}>
                         {sent ? '✓ Renewal email sent' : sending ? 'Sending…' : 'Send renewal email'}
                       </button>

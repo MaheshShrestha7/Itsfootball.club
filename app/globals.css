@@ -3800,12 +3800,24 @@ dialog.confirm-dialog::backdrop {
     .club-reveal > .container {
       animation: clubReveal linear both;
       animation-timeline: view();
-      animation-range: entry 0% entry 45%;
+      /* Done within the first 120px of scroll: a tall section must not sit as an empty band */
+      animation-range: entry 0px entry 120px;
     }
   }
 }
 @keyframes clubReveal {
-  from { opacity: 0; translate: 0 24px; }
+  from { opacity: 0; translate: 0 16px; }
+}
+
+/* Club home: one spacing rhythm for its sections */
+.club-section { padding: clamp(2.5rem, 5vw, 3.5rem) 0; }
+
+/* Club home card rows: few cards sit centred, never in a half-empty grid; a short last row centres too */
+.club-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; }
+.club-cards > * { flex: 1 1 260px; max-width: 340px; }
+.club-cards-sm > * { flex-basis: 220px; max-width: 280px; }
+@media (max-width: 600px) {
+  .club-cards > * { max-width: none; }
 }
 
 /* Sliding tab pill (club home Upcoming / Results) */

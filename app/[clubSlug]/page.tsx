@@ -1353,7 +1353,7 @@ export default function ClubPublicPage({
         const sortedSponsors = sortSponsorsByTier(clubSponsors);
 
         return (
-          <section style={{ padding: '3rem 0', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
+          <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
             <div className="container">
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
                 <div>
@@ -1499,7 +1499,7 @@ export default function ClubPublicPage({
       })()}
 
       {/* 4.3 FIXTURES & RESULTS */}
-      <section id="fixtures" className="club-reveal" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="fixtures" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
             <div>
@@ -1635,9 +1635,12 @@ export default function ClubPublicPage({
 
           <div className="stack">
             {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).length === 0 && (
-              <p className="text-meta" style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                {fixturesTab === 'upcoming' ? 'No upcoming fixtures yet. Check back soon.' : 'No results yet this season.'}
-              </p>
+              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0.5rem 1rem', textAlign: 'center' }}>
+                <span className="text-meta">{fixturesTab === 'upcoming' ? 'No upcoming fixtures yet. Check back soon.' : 'No results yet this season.'}</span>
+                {fixturesTab === 'upcoming' && pastMatches.some(inFixturesTeam) && (
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setFixturesTab('results')}>See latest results</button>
+                )}
+              </div>
             )}
             {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).map(match => {
               const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
@@ -1762,7 +1765,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.4 SCHEDULED SOCIAL EVENTS */}
-      <section id="events" className="club-reveal" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="events" className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
             <div>
@@ -1774,10 +1777,10 @@ export default function ClubPublicPage({
             </Link>
           </div>
 
-          <div className="grid-responsive-3">
-            {upcomingEvents.length === 0 && (
-              <p className="text-meta">No upcoming events right now. Check back soon.</p>
-            )}
+          {upcomingEvents.length === 0 && (
+            <p className="text-meta glass-panel" style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>No upcoming events right now. Check back soon.</p>
+          )}
+          <div className="club-cards">
             {upcomingEvents.map(evt => (
               <div key={evt.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
@@ -1835,7 +1838,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.5 LATEST NEWS SHOWCASE & VIDEO */}
-      <section id="news" className="club-reveal" style={{ padding: '4.5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="news" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ marginBottom: '2.5rem' }}>
             <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MEDIA & DISPATCHES</span>
@@ -1938,7 +1941,7 @@ export default function ClubPublicPage({
 
       {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE: left out until the club lists someone */}
       {executiveStaff.length > 0 && (
-      <section className="club-reveal" style={{ padding: '4.5rem 0', background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1955,7 +1958,7 @@ export default function ClubPublicPage({
             </p>
           </div>
 
-          <div className="grid-responsive-4">
+          <div className="club-cards club-cards-sm">
             {executiveStaff.map(exec => (
               <div key={exec.id} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <PlayerAvatar
@@ -1990,7 +1993,7 @@ export default function ClubPublicPage({
       )}
 
       {/* 4.7 PLAYERS (SQUAD ROSTER) & LEADERBOARD */}
-      <section id="squad" className="club-reveal" style={{ padding: '5rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section id="squad" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           {/* Section Header & Position Filters */}
           <div style={{
@@ -2016,7 +2019,7 @@ export default function ClubPublicPage({
           {topPlayers.length === 0 && (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No players in this position yet.</p>
           )}
-          <div className="grid-responsive-3 top-players" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
+          <div className="club-cards top-players" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
             {topPlayers.map((player, rank) => {
               const stat = statFor(player.id);
               const hasStats = !!(stat?.appearances || stat?.goals || stat?.assists || stat?.motm_awards);
@@ -2116,7 +2119,7 @@ export default function ClubPublicPage({
           )}
 
           {/* Golden Boot & Playmaker: the one leaderboard on the page (ClubScore stays on members' own pages) */}
-            <div id="leaderboard" className="glass-panel" style={{ padding: '2rem' }}>
+            <div id="leaderboard" className="glass-panel" style={{ padding: 'clamp(1rem, 4vw, 2rem)' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2126,7 +2129,7 @@ export default function ClubPublicPage({
                 </div>
 
                 {/* Leaderboard Metric Selector */}
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {(['goals', 'assists', 'appearances'] as const).map(tab => (
                     <button
                       key={tab}
@@ -2157,14 +2160,16 @@ export default function ClubPublicPage({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      gap: '0.75rem',
                       padding: '0.75rem 1rem',
                       background: 'rgba(var(--shade-rgb), 0.25)',
                       borderRadius: '8px',
                       border: '1px solid var(--border-subtle)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
                       <div style={{
+                        flexShrink: 0,
                         width: '28px',
                         height: '28px',
                         borderRadius: '50%',
@@ -2181,16 +2186,19 @@ export default function ClubPublicPage({
 
                       <PlayerAvatar photoUrl={item.player?.photo_url} name={item.player?.full_name || 'Player'} size={36} style={{ borderRadius: '8px' }} />
 
-                      <div>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{item.player?.full_name}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>{item.player?.full_name}</div>
                         <div className="text-meta">
-                          #{item.player?.jersey_number} • {item.player?.player_position}
+                          {[item.player?.jersey_number != null && `#${item.player.jersey_number}`, item.player?.player_position].filter(Boolean).join(' • ')}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-ink)' }}>
-                      {leaderboardTab === 'goals' ? `${item.stat.goals} Goals` : leaderboardTab === 'assists' ? `${item.stat.assists} Assists` : `${item.stat.appearances} Apps`}
+                    <div style={{ flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-ink)' }}>
+                      {leaderboardTab === 'goals' ? item.stat.goals : leaderboardTab === 'assists' ? item.stat.assists : item.stat.appearances}
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginLeft: '0.3rem' }}>
+                        {leaderboardTab === 'goals' ? 'goals' : leaderboardTab === 'assists' ? 'assists' : 'apps'}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -2200,12 +2208,12 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.8 HOME GROUND DETAILS & MAP */}
-      <section id="stadium" className="club-reveal" style={{ padding: '5rem 0', background: 'rgba(var(--tint-rgb), 0.015)' }}>
+      <section id="stadium" className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.015)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-            gap: '3rem',
+            gap: 'clamp(1.5rem, 4vw, 3rem)',
             alignItems: 'center',
           }}>
             <div>
@@ -2297,7 +2305,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.85 GET IN TOUCH: a contact form anyone can find (the Sponsor page and #contact links point here) */}
-      <div className="club-reveal" style={{ padding: '3.5rem 0' }}>
+      <div className="club-reveal club-section">
         <div className="container" style={{ maxWidth: '860px' }}>
           <ClubContactSection club={club} heading={`Get in touch with ${club.name}`} />
         </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -13,7 +14,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { useMyChildren } from '@/lib/use-my-children';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
-import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 
 interface ClubNavbarProps {
@@ -104,7 +105,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       // clientWidth includes the container's side padding, which the links can't use
       const rowStyle = getComputedStyle(row);
       const rowWidth = row.clientWidth - (parseFloat(rowStyle.paddingLeft) || 0) - (parseFloat(rowStyle.paddingRight) || 0);
-      const room = rowWidth - brandMin - sideW - 32;
+      // Less the two 1.25rem gaps between crest, links and controls, and a little spare
+      const room = rowWidth - brandMin - sideW - 56;
       const menuButton = 48;
 
       let drop = 0;
@@ -129,6 +131,38 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   }, [club.name, club.short_name]);
   const dropped = (n: number) => navFits && dropCount >= n;
 
+  // The page they're on, without the slug (a club's own domain serves its pages at the root)
+  const pathname = usePathname() || '';
+  const here = pathname.startsWith(`/${club.slug}`) ? pathname.slice(club.slug.length + 1) || '/' : pathname;
+  const isHere = (path: string) => (path === '/' ? here === '/' : here === path || here.startsWith(`${path}/`));
+  const teamsLink = multiTeam ? { path: '/teams', label: 'Teams' } : { path: '/squad', label: 'Squad' };
+  // One look for every link in the bar; data-nav-drop: which give way first when space runs out (1 first)
+  const barLink = (path: string, label: string, drop?: number) => (
+    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} className="club-nav-link" aria-current={isHere(path) ? 'page' : undefined}
+      data-nav-drop={drop} hidden={drop ? dropped(drop) : undefined}>
+      {label}
+    </Link>
+  );
+  // The menu, in three groups; links the visitor can't use (no shop yet, sponsor pitch once signed in) left out
+  const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
+    { title: 'Matchday', links: [
+      { path: '/fixtures', label: 'Fixtures & Results', icon: Calendar },
+      { path: '/tournaments', label: 'Tournaments & Cups', icon: Trophy },
+      { path: '/events', label: 'Events & Trainings', icon: CalendarDays },
+    ] },
+    { title: 'The club', links: [
+      { path: '/', label: 'Club home', icon: Shield },
+      { path: '/about', label: 'About the Club', icon: BookOpen },
+      { path: teamsLink.path, label: multiTeam ? 'Our Teams' : 'Squad & Stats', icon: Users },
+      { path: '#news', label: 'Latest News', icon: Newspaper },
+      { path: '/gallery', label: 'Gallery & Videos', icon: Images },
+    ] },
+    { title: 'Support the club', links: [
+      ...(hasShop ? [{ path: '/shop', label: 'Club Shop', icon: ShoppingBag }] : []),
+      ...(!isAuthenticated ? [{ path: '/sponsor', label: 'Become a Sponsor', icon: Handshake }] : []),
+    ] },
+  ];
+
   return (
     <header data-nav-fits={navFits ? undefined : 'false'} data-nav-drop={navFits && dropCount ? dropCount : undefined} style={{
       position: 'sticky',
@@ -147,7 +181,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         height: '74px',
-        gap: '0.5rem',
+        gap: '1.25rem',
       }}>
         {/* Club Crest & Title */}
         <Link
@@ -226,37 +260,15 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               }}>
                 {club.name}
               </span>
-              <span className="badge club-nav-badge" style={{ backgroundColor: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', fontSize: '0.7rem', flexShrink: 0 }}>
-                {club.short_name}
-              </span>
             </div>
-            {club.motto && (
-              <div style={{
-                fontSize: '0.7rem',
-                color: 'var(--text-muted)',
-                fontStyle: 'italic',
-                marginTop: '1px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '220px',
-              }}>
-                &ldquo;{club.motto}&rdquo;
-              </div>
-            )}
           </div>
         </Link>
 
         {/* Desktop Links */}
         <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
-          <Link href={`/${club.slug}`} style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
-            Club
-          </Link>
-          <Link href={`/${club.slug}/about`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            About
-          </Link>
+          {barLink('/', 'Club')}
 
-          {/* Live match: otherwise the match centre is just the Fixtures link below, so it isn't listed twice */}
+          {/* Live match: otherwise the match centre is just the Fixtures link, so it isn't listed twice */}
           {liveMatch && (
             <Link href={matchPath(club.slug, liveMatch)} aria-label="Live match: open the match centre" style={{ display: 'flex', alignItems: 'center' }}>
               <span className="badge badge-live" style={{ padding: '0.2rem 0.5rem' }}>
@@ -265,72 +277,16 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             </Link>
           )}
 
-          {/* Join the Club, for anyone who isn't a member here (members reach their pass from their avatar) */}
-          {!isClubMember && !isParent && (
-          <Link
-            href={`/${club.slug}/member?join=1`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-            }}
-          >
-            <UserPlus size={16} color="var(--club-primary)" />
-            <span>Join the Club</span>
-          </Link>
-          )}
-
-          <Link href={`/${club.slug}/fixtures`} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            Fixtures
-          </Link>
-          <Link
-            href={`/${club.slug}/tournaments`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-            }}
-          >
-            <Trophy size={15} color="var(--c-amber)" />
-            <span>Tournaments</span>
-          </Link>
-          {hasShop && (
-            <Link href={`/${club.slug}/shop`} data-nav-drop="6" hidden={dropped(6)} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
-              <ShoppingBag size={15} color="var(--club-primary)" />
-              <span>Shop</span>
-            </Link>
-          )}
-          {multiTeam ? (
-            <Link href={`/${club.slug}/teams`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-              Teams
-            </Link>
-          ) : (
-            <Link href={`/${club.slug}/squad`} data-nav-drop="5" hidden={dropped(5)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-              Squad
-            </Link>
-          )}
-          <Link href={`/${club.slug}/events`} data-nav-drop="4" hidden={dropped(4)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            Events
-          </Link>
-          <Link href={`/${club.slug}#news`} data-nav-drop="3" hidden={dropped(3)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            News
-          </Link>
-          <Link href={`/${club.slug}/gallery`} data-nav-drop="2" hidden={dropped(2)} style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>
-            Gallery & Videos
-          </Link>
+          {barLink('/fixtures', 'Fixtures')}
+          {barLink(teamsLink.path, teamsLink.label, 8)}
+          {barLink('/events', 'Events', 7)}
+          {barLink('/tournaments', 'Tournaments', 6)}
+          {barLink('#news', 'News', 5)}
+          {hasShop && barLink('/shop', 'Shop', 4)}
+          {barLink('/about', 'About', 3)}
+          {barLink('/gallery', 'Gallery', 2)}
           {/* Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar */}
-          {!isAuthenticated && (
-          <Link href={`/${club.slug}/sponsor`} data-nav-drop="1" hidden={dropped(1)} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
-            <Handshake size={15} color="var(--club-primary)" />
-            <span>Become a Sponsor</span>
-          </Link>
-          )}
+          {!isAuthenticated && barLink('/sponsor', 'Sponsor', 1)}
 
           {/* Admin Portal Gateway */}
           {isAdmin && (
@@ -353,8 +309,16 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           )}
 
           {/* Auth Identity Controls */}
+          {/* Join the Club, for anyone who isn't a member here (members reach their pass from their avatar) */}
+          {!isClubMember && !isParent && (
+            <Link href={`/${club.slug}/member?join=1`} className="btn btn-primary btn-sm row" style={{ marginLeft: '0.25rem' }}>
+              <UserPlus size={14} />
+              <span>Join</span>
+            </Link>
+          )}
+
           {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Link
                 href={`/${club.slug}/member`}
                 aria-label={`${user.full_name}${userRole ? ` (${userRole})` : ''}: my member pass`}
@@ -404,7 +368,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {/* Members sign in on the club's member page (emailed link), not with a platform account */}
               <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm row">
                 <User size={14} />
@@ -414,7 +378,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           )}
         </nav>
 
-        <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem', flexShrink: 0 }}>
+        <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
         <PushToggle clubId={club.id} clubName={club.name} />
         <ThemeToggle />
         {/* Mobile menu trigger */}
@@ -506,10 +470,23 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 </Link>
               </div>
 
-              {/* Clubhouse Section Navigation Links */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {/* Section links, grouped */}
+              {menuGroups.filter(g => g.links.length).map(group => (
+                <div key={group.title} style={{ marginBottom: '1rem' }}>
+                  <div className="club-menu-heading">{group.title}</div>
+                  {group.links.map(({ path, label, icon: Icon }) => (
+                    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} onClick={() => setMobileMenuOpen(false)}
+                      className="club-menu-link" aria-current={isHere(path) ? 'page' : undefined}>
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              ))}
+
+              {isAdmin && (
                 <Link
-                  href={`/${club.slug}`}
+                  href={`/${club.slug}/admin`}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
                     display: 'flex',
@@ -517,133 +494,16 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     gap: '0.75rem',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    color: 'var(--text-primary)',
+                    color: 'var(--club-ink)',
+                    background: 'rgba(var(--club-primary-rgb), 0.1)',
+                    border: '1px solid rgba(var(--club-primary-rgb), 0.3)',
                     fontWeight: 700,
-                    background: 'rgba(var(--tint-rgb), 0.04)',
                   }}
                 >
-                  <Shield size={16} color={club.primary_color} />
-                  <span>Club home</span>
+                  <Settings size={16} />
+                  <span>Club Admin</span>
                 </Link>
-
-                <Link
-                  href={`/${club.slug}/about`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <BookOpen size={16} />
-                  <span>About the Club</span>
-                </Link>
-
-                <Link
-                  href={`/${club.slug}/fixtures`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Calendar size={16} />
-                  <span>Fixtures & Results</span>
-                </Link>
-
-                <Link
-                  href={`/${club.slug}/tournaments`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Trophy size={16} color="var(--c-amber)" />
-                  <span>Tournaments & Cups</span>
-                </Link>
-
-                {hasShop && (
-                  <Link
-                    href={`/${club.slug}/shop`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                  >
-                    <ShoppingBag size={16} color="var(--club-primary)" />
-                    <span>Club Shop</span>
-                  </Link>
-                )}
-
-                <Link
-                  href={`/${club.slug}/squad`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Users size={16} />
-                  <span>First Team Squad & Stats</span>
-                </Link>
-
-                {multiTeam && (
-                  <Link
-                    href={`/${club.slug}/teams`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                  >
-                    <Shield size={16} />
-                    <span>Our Teams</span>
-                  </Link>
-                )}
-
-                <Link
-                  href={`/${club.slug}/events`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Trophy size={16} />
-                  <span>Events & Trainings</span>
-                </Link>
-
-                <Link
-                  href={`/${club.slug}#news`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Radio size={16} />
-                  <span>Latest News</span>
-                </Link>
-
-                <Link
-                  href={`/${club.slug}/gallery`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Images size={16} />
-                  <span>Gallery & Videos</span>
-                </Link>
-
-                {!isAuthenticated && (
-                <Link
-                  href={`/${club.slug}/sponsor`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}
-                >
-                  <Handshake size={16} color="var(--club-primary)" />
-                  <span>Become a Sponsor</span>
-                </Link>
-                )}
-
-                {isAdmin && (
-                  <Link
-                    href={`/${club.slug}/admin`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      color: 'var(--club-ink)',
-                      background: 'rgba(var(--club-primary-rgb), 0.1)',
-                      border: '1px solid rgba(var(--club-primary-rgb), 0.3)',
-                      fontWeight: 700,
-                      marginTop: '0.5rem',
-                    }}
-                  >
-                    <Settings size={16} />
-                    <span>Club Admin</span>
-                  </Link>
-                )}
-              </div>
+              )}
             </div>
 
             {/* Mobile Auth Button */}
@@ -689,7 +549,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             </div>
           </div>
         </div>,
-        document.body
+        // Inside the club's theme wrapper, so the menu gets the club's colours (--club-primary)
+        document.querySelector('.club-theme-root') || document.body
       )}
 
       <style jsx>{`
@@ -724,11 +585,44 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             display: none !important;
           }
         }
-        /* Phones and tablets: the crest already carries the club, so the short-name badge gives its room to the name */
-        @media (max-width: 899px) {
-          .club-nav-badge {
-            display: none !important;
-          }
+        .desktop-nav > :global(.club-nav-link) {
+          color: var(--text-secondary);
+          font-weight: 600;
+          font-size: 0.9rem;
+          padding: 0.35rem 0;
+          border-bottom: 2px solid transparent;
+        }
+        .desktop-nav > :global(.club-nav-link:hover) {
+          color: var(--text-primary);
+        }
+        .desktop-nav > :global(.club-nav-link[aria-current='page']) {
+          color: var(--text-primary);
+          border-bottom-color: var(--club-primary);
+        }
+        :global(.club-menu-heading) {
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          padding: 0 0.85rem 0.35rem;
+        }
+        :global(.club-menu-link) {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.6rem 0.85rem;
+          min-height: 44px;
+          border-radius: 8px;
+          color: var(--text-secondary);
+          font-weight: 600;
+        }
+        :global(.club-menu-link[aria-current='page']) {
+          color: var(--text-primary);
+          background: rgba(var(--tint-rgb), 0.06);
+        }
+        :global(.club-menu-link[aria-current='page'] svg) {
+          color: var(--club-primary);
         }
         @media (max-width: 480px) {
           .hide-on-mobile-xs {

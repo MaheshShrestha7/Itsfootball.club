@@ -101,7 +101,7 @@ export default function ClubLayoutClient({
         {children}
       </div>
       {/* Admin pages get a slim footer: the public sponsors block and site links only made them longer */}
-      <Footer club={club} sponsors={clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
+      <Footer club={club} sponsors={pathname === `/${club.slug}` || pathname === '/' ? undefined : clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
       <ClubTabBar club={club} />
     </div>
   );

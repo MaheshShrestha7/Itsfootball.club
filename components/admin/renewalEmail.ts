@@ -2,11 +2,20 @@ import { getAccessToken } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import type { ClubMember } from '@/lib/supabase/types';
 import { DATE_LOCALE } from '@/lib/dates';
+import { memberRecipient } from '@/lib/email/recipient';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return '—';
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
   return isNaN(d.getTime()) ? value : d.toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+/** Who can get one: an expiry date, and an address (a junior's notice goes to their parent / guardian) */
+export const canSendRenewal = (member: ClubMember) => !!member.membership_expires_at && !!memberRecipient(member);
+
+const recipientLabel = (member: ClubMember) => {
+  const r = memberRecipient(member);
+  return r?.childName ? `${r.name || 'their parent / guardian'} (${r.to})` : r?.to;
 };
 
 /**
@@ -16,7 +25,7 @@ const formatDate = (value: string | null | undefined) => {
 export async function sendRenewalEmail(club: { id: string; name: string }, member: ClubMember, onSending?: (sending: boolean) => void): Promise<boolean> {
   const ok = await confirmAction({
     title: `Send a renewal email to ${member.full_name}?`,
-    message: `It goes to ${member.email} with their expiry date (${formatDate(member.membership_expires_at)}) and a link to renew.`,
+    message: `It goes to ${recipientLabel(member)} with their expiry date (${formatDate(member.membership_expires_at)}) and a link to renew.`,
     confirmLabel: 'Send email',
   });
   if (!ok) return false;
