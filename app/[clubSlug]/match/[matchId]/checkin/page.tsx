@@ -167,7 +167,7 @@ export default function MatchDoorCheckinPage({
 
           <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid #10B981' }}>
             <QrCode size={12} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-            TURNSTILE GATE CHECK-IN
+            MATCH CHECK-IN
           </span>
         </div>
 
@@ -258,7 +258,7 @@ export default function MatchDoorCheckinPage({
               Door Self Check-In Closed
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', margin: '0 auto 1.75rem auto' }}>
-              Door QR code self-check-in has not been activated by match stewards for this fixture. Please present your pass or ticket directly at the turnstiles.
+              Self check-in isn&apos;t open for this match. Show your member pass or ticket at the entrance instead.
             </p>
             <Link href={matchPath(club.slug, match)} className="btn btn-secondary">
               Go to Match Centre
@@ -314,10 +314,6 @@ export default function MatchDoorCheckinPage({
                 fontSize: '0.85rem'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
-                <span className="text-muted">Turnstile Gate:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Main Entrance / Turnstile 2</span>
-              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)' }}>
                 <span className="text-muted">Timestamp:</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{result.checkedInAt}</span>

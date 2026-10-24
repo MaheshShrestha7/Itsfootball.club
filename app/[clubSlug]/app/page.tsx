@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Radio, ClipboardCheck, Layers, QrCode, CalendarDays, Trophy, Calendar, Flag, Users, Shield, UserCheck, Award,
   BellRing, Flame, Wallet, ShoppingBag, DollarSign, Palette, Sparkles, FileText, Images, BarChart3, Mail, KeyRound,
-  LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download, BookOpen,
+  LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download, BookOpen, CalendarPlus, Ticket,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +15,9 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
 import { publicScoreHidden } from '@/lib/teams';
 import { clubPlaysIn } from '@/lib/fixtures';
-import { matchPath } from '@/lib/slugs';
+import { matchPath, SITE_URL } from '@/lib/slugs';
+import { formatMoney } from '@/lib/finance';
+import { useShopOpen } from '@/lib/use-shop-open';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -108,10 +110,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     const ms = matches
       // Not other clubs' games in a cup the club hosts: members aren't asked In/Out for those
       .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000 && clubPlaysIn(m, tournamentParticipants, club.name))
-      .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue }));
+      .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m, price: 0 }));
     const es = events
       .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now)
-      .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location }));
+      .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location, match: undefined, price: e.ticket_price_cents ?? 0 }));
     return [...ms, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   })();
 
@@ -166,6 +168,27 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     }
   };
 
+  // Paid events show their price and a ticket link instead of In/Maybe/Out (In reserves nothing)
+  const [currency, setCurrency] = useState('AUD');
+  const hasPaidEvent = upcoming.some(u => u.price > 0);
+  useEffect(() => {
+    if (!hasPaidEvent) return;
+    getSupabaseClient()?.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => data?.currency && setCurrency(data.currency));
+  }, [club.id, hasPaidEvent]);
+  const shopOpen = useShopOpen(club.id);
+
+  // A player's own fixture: home or away, and whether the published line-up has them in it
+  const myMatchNote = (m: (typeof matches)[number]) => {
+    const lineup = [...(m.home_lineup_coords || []), ...(m.away_lineup_coords || [])];
+    const picked = !!me && lineup.some(p => p.member_id === me.id);
+    return {
+      venue: m.match_type === 'internal' ? null : m.is_club_home ? 'Home' : 'Away',
+      lineup: picked ? 'You’re in the starting line-up' : lineup.length ? 'Line-up announced' : 'Team not picked yet',
+      picked,
+    };
+  };
+
   // Install: Android/desktop Chrome offer a prompt; iPhone needs Share -> Add to Home Screen
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [standalone, setStandalone] = useState(true);
@@ -185,7 +208,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'My pass', href: `${base}/member`, icon: CreditCard },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
         { label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy },
-        { label: 'Shop', href: `${base}/shop`, icon: ShoppingBag },
+        ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         { label: 'Gallery', href: `${base}/gallery`, icon: Images },
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
@@ -194,13 +217,13 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
         { label: 'News', href: `${base}#news`, icon: Newspaper },
-        { label: 'Shop', href: `${base}/shop`, icon: ShoppingBag },
+        ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         { label: 'Gallery', href: `${base}/gallery`, icon: Images },
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ];
 
-  const canAnswer = (item: { kind: 'match' | 'event'; id: string }) =>
-    item.kind === 'match' ? player && (squadMatchIds === 'all' || !!squadMatchIds?.has(item.id)) : approved;
+  const canAnswer = (item: { kind: 'match' | 'event'; id: string; price: number }) =>
+    item.kind === 'match' ? player && (squadMatchIds === 'all' || !!squadMatchIds?.has(item.id)) : approved && item.price === 0;
 
   return (
     <div className="container app-home" style={{ padding: '1.25rem 1rem 2rem', maxWidth: '760px', margin: '0 auto' }}>
@@ -241,7 +264,24 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
               <Link href={item.kind === 'match' ? matchPath(club.slug, item) : `${base}/events/${item.id}`} style={{ display: 'block', color: 'inherit' }}>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.title}</div>
                 <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? ` · ${item.where}` : ''}</div>
+                {item.match && canAnswer(item) && (() => {
+                  const note = myMatchNote(item.match);
+                  return (
+                    <div className="row" style={{ gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                      {note.venue && <span className="badge" style={{ fontSize: '0.68rem' }}>{note.venue}</span>}
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: note.picked ? 'var(--c-green)' : 'var(--text-secondary)' }}>{note.lineup}</span>
+                    </div>
+                  );
+                })()}
               </Link>
+              {item.price > 0 && (
+                <div className="row" style={{ gap: '0.6rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(item.price, currency)}</strong>
+                  <Link href={`${base}/events/${item.id}`} className="btn btn-primary btn-sm">
+                    <Ticket size={15} /> Get ticket
+                  </Link>
+                </div>
+              )}
               {canAnswer(item) && (
                 <div role="group" aria-label={`Are you available for ${item.title}?`} className="app-answers">
                   {ANSWERS.map(a => {
@@ -266,6 +306,15 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
           ))}
         </div>
         {answerError && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', marginTop: '0.5rem' }}>{answerError}</p>}
+        {/* webcal:// subscribes the phone's calendar (kept up to date); Android and desktop may need the file */}
+        <div className="row" style={{ gap: '1rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+          <a href={`${SITE_URL.replace(/^https?:/, 'webcal:')}/${club.slug}/calendar.ics`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-ink)' }}>
+            <CalendarPlus size={15} aria-hidden="true" /> Add fixtures &amp; events to my calendar
+          </a>
+          <a href={`/${club.slug}/calendar.ics`} download style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            or download .ics
+          </a>
+        </div>
       </section>
 
       {staff && tools.length > 0 && (

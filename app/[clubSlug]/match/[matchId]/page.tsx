@@ -417,7 +417,7 @@ export default function MatchCenterPage({
                   minHeight: '44px',
                   fontWeight: 700
                 }}
-                title="Door Turnstile Self-Check-in Station"
+                title="Check in at the entrance"
               >
                 <QrCode size={14} />
                 <span>Door Check-In</span>

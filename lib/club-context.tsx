@@ -2788,6 +2788,11 @@ export function ClubProvider({
           error: error.message,
         };
       }
+      // Only a signed-in applicant (a parent adding a child) can read the row back. A visitor's row
+      // stays out of the app's state: it would sit in this browser's storage with their contact
+      // details, and the next load, not finding it on the server, would upload it again (409)
+      const { data: { session } } = await client.auth.getSession();
+      const keep = (row: ClubMember) => { if (session) applyServerRow('members', setMembers, row); };
       // A club can approve free supporter passes straight away (Finance -> Settings, migration
       // 20261120). The database decides: only an adult supporter on an active $0 plan qualifies.
       let autoApproved = false;
@@ -2803,7 +2808,7 @@ export function ClubProvider({
           reviewed_by: 'Automatic (free supporter plan)',
           membership_starts_at: todayIso(),
         };
-        applyServerRow('members', setMembers, approved);
+        keep(approved);
         void fetch('/api/members/application-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2815,7 +2820,7 @@ export function ClubProvider({
           message: 'You are in! Your free supporter pass is active. Sign in with your email to see it.',
         };
       }
-      applyServerRow('members', setMembers, newMem);
+      keep(newMem);
       // Not awaited: the application is in either way, the email is a courtesy
       void sendApplicationEmail(clubId, newMem.id, 'applied');
     } else {

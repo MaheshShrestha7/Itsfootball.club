@@ -111,6 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [uiRoles, setUiRoles] = useState<Record<string, ClubRole>>({});
   const [access, setAccess] = useState<Record<string, ClubAccess>>({});
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  // The name a club has on file for this account, for accounts made without one (sign-in links)
+  const [memberName, setMemberName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadRoles = useCallback(async (userId: string) => {
@@ -121,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [owned, memberships, perms, platformAdminRes] = await Promise.all([
       client.from('clubs').select('id').eq('owner_id', userId),
       client.rpc('claim_my_memberships').then(() =>
-        client.from('club_members').select('club_id, role, roles').eq('user_id', userId)
+        client.from('club_members').select('club_id, role, roles, full_name').eq('user_id', userId)
       ),
       client.rpc('my_club_permissions'),
       client.rpc('is_platform_admin').then(({ data }) => Boolean(data), () => false),
@@ -130,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsPlatformAdmin(Boolean(platformAdminRes));
 
     const roles: Record<string, ClubRole> = {};
+    setMemberName(((memberships.data || []) as { full_name?: string | null }[]).find(r => r.full_name?.trim())?.full_name?.trim() || null);
     // Squad roles are labels ('Player, Club Admin'), so map them to a permission level
     ((memberships.data || []) as { club_id: string; role: string; roles: unknown }[]).forEach(row => {
       roles[row.club_id] = toClubRole(row.role, Array.isArray(row.roles) ? row.roles : null);
@@ -174,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!user) {
         rolesFor = null;
         setAuthUser(null);
+        setMemberName(null);
         setDbRoles({});
         setUiRoles({});
         setAccess({});
@@ -294,12 +298,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       id: authUser.id,
       email: authUser.email || '',
-      full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Member',
+      // The account's own name, else the club's record of them, before falling back to the email ('sam.player')
+      full_name: authUser.user_metadata?.full_name || memberName || authUser.email?.split('@')[0] || 'Member',
       avatar_url: authUser.user_metadata?.avatar_url,
       club_roles: clubRoles,
       created_at: authUser.created_at,
     };
-  }, [authUser, clubRoles]);
+  }, [authUser, clubRoles, memberName]);
 
   const getUserRoleForClub = useCallback(
     (clubId: string): ClubRole | null => (user ? user.club_roles[clubId] || null : null),

@@ -21,7 +21,6 @@ import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
-import QRScannerModal from '@/components/QRScannerModal';
 import {
   Shield,
   CreditCard,
@@ -30,7 +29,6 @@ import {
   Calendar,
   CheckCircle2,
   ArrowLeft,
-  QrCode,
   Sparkles,
   Users,
   Award,
@@ -196,6 +194,24 @@ export default function MemberPortalPage({
   const signInShake = useShake<HTMLFormElement>(loginError);
   const joinShake = useShake<HTMLFormElement>(signupError);
   const [submittedApplication, setSubmittedApplication] = useState<ClubMember | null>(null);
+  // The "Application sent" screen (with its Pay step) survives a reload in this tab. Only what the
+  // screen shows is kept, in sessionStorage, so it's gone when the tab closes on a shared device.
+  const sentKey = `applied:${club.id}`;
+  const skipFirstSave = useRef(true);
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(sentKey);
+      if (saved) { setSubmittedApplication(JSON.parse(saved)); setGatewayTab('signup'); }
+    } catch { /* storage unavailable */ }
+  }, [sentKey]);
+  useEffect(() => {
+    if (skipFirstSave.current) { skipFirstSave.current = false; return; }
+    try {
+      if (!submittedApplication) return sessionStorage.removeItem(sentKey);
+      const { id, full_name, email, guardian_email, membership_tier, membership_status } = submittedApplication;
+      sessionStorage.setItem(sentKey, JSON.stringify({ id, full_name, email, guardian_email, membership_tier, membership_status }));
+    } catch { /* storage unavailable */ }
+  }, [submittedApplication, sentKey]);
   // Signed in, not a member yet: their own application, and whether they're filling it in again
   const [myApplication, setMyApplication] = useState<MyApplication | null>(null);
   const [reapplying, setReapplying] = useState(false);
@@ -242,7 +258,6 @@ export default function MemberPortalPage({
   // Season shown on the Season Stats tab ('' = the club's active season)
   const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
-  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Messaging Form State
   const [messageSubject, setMessageSubject] = useState('');
@@ -969,7 +984,12 @@ export default function MemberPortalPage({
 
                         <ol className="auth-next" aria-label="What happens next">
                           <li className="is-done"><strong>Application sent</strong><span>Just now</span></li>
-                          <li className="is-now"><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
+                          {/* Approval waits for the fee, so paying is the next step when there is one */}
+                          {(() => {
+                            const fee = plans.find(p => p.name === submittedApplication.membership_tier)?.price_cents || 0;
+                            return fee > 0 ? <li className="is-now"><strong>Pay {formatMoney(fee, currency)}</strong><span>Below, now or later by signing in. The committee approves once it&apos;s paid</span></li> : null;
+                          })()}
+                          <li className={plans.find(p => p.name === submittedApplication.membership_tier)?.price_cents ? '' : 'is-now'}><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
                           <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>Then sign in here for your member pass</span></li>
                         </ol>
                       </>
@@ -1389,16 +1409,6 @@ export default function MemberPortalPage({
               <div className="row row-loose">
                 <button
                   type="button"
-                  onClick={() => setScannerOpen(true)}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid rgba(16, 185, 129, 0.4)' }}
-                >
-                  <QrCode size={15} color="var(--club-primary)" />
-                  <span>Gate Scanner</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={handleLogout}
                   className="btn btn-secondary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}
@@ -1489,7 +1499,7 @@ export default function MemberPortalPage({
                 }}
               >
                 <CreditCard size={17} color={activeClubhouseTab === 'pass' ? 'var(--club-primary)' : undefined} />
-                <span>Virtual Member Pass</span>
+                <span>Member Pass</span>
               </button>
 
               <button
@@ -1510,7 +1520,7 @@ export default function MemberPortalPage({
                 }}
               >
                 <Activity size={17} color={activeClubhouseTab === 'stats' ? 'var(--club-primary)' : undefined} />
-                <span>Season Stats (Club &amp; Own)</span>
+                <span>Season Stats</span>
               </button>
 
               <button
@@ -1531,7 +1541,7 @@ export default function MemberPortalPage({
                 }}
               >
                 <MessageSquare size={17} color={activeClubhouseTab === 'messages' ? 'var(--club-primary)' : undefined} />
-                <span>Contact Admin Messages</span>
+                <span>Messages</span>
                 {memberMessagesList.length > 0 && (
                   <span style={{
                     background: 'var(--club-primary)',
@@ -1586,8 +1596,8 @@ export default function MemberPortalPage({
             {/* SUB-TAB 2: SEASON STATS (CLUB'S & OWN) */}
             {activeClubhouseTab === 'stats' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-                {/* Season picker: starts on the club's active season */}
-                <div className="row" style={{ justifyContent: 'flex-end', marginBottom: '-1.25rem' }}>
+                {/* Season picker: starts on the club's active season. Then the member's own numbers, the club's, and points (order) */}
+                <div className="row" style={{ justifyContent: 'flex-end', marginBottom: '-1.25rem', order: -2 }}>
                   <label htmlFor="member-stats-season" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</label>
                   <select
                     id="member-stats-season"
@@ -1619,7 +1629,7 @@ export default function MemberPortalPage({
                       <span className="badge badge-gold" style={{ marginBottom: '0.35rem' }}>SEASON {selectedSeason}</span>
                       <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Trophy size={22} color="var(--c-amber)" />
-                        <span>{club.name} — Club Season Statistics</span>
+                        <span>{club.name} this season</span>
                       </h3>
                     </div>
 
@@ -1687,7 +1697,7 @@ export default function MemberPortalPage({
                       <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, color: 'var(--c-blue)' }}>
                         {clubSeasonStats.cleanSheets}
                       </div>
-                      <div className="text-meta">Shutouts Kept</div>
+                      <div className="text-meta">No goals conceded</div>
                     </div>
 
                     <div className="stat-tile">
@@ -1700,12 +1710,12 @@ export default function MemberPortalPage({
                   </div>
                 </div>
 
-                {/* 2. Personal Performance Dashboard */}
-                <div className="glass-panel" style={{ padding: '2rem' }}>
+                {/* 2. Personal Performance Dashboard (shown first) */}
+                <div className="glass-panel" style={{ padding: '2rem', order: -1 }}>
                   <div className="section-head">
                     <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Activity size={20} color="var(--club-primary)" />
-                      <span>{activeMember.full_name} — Personal Season Performance</span>
+                      <span>Your season</span>
                     </h3>
                     <span className="badge badge-primary">{activeMember.membership_tier}</span>
                   </div>
@@ -1767,8 +1777,8 @@ export default function MemberPortalPage({
                 {/* 3. ClubScore Gamification Progress */}
                 {!currentClubScore && clubScoreBreakdown.length === 0 && (
                   <div className="glass-panel" style={{ padding: '1.5rem 2rem' }}>
-                    <span className="badge badge-gold row row-tight" style={{ marginBottom: '0.5rem' }}>
-                      <Zap size={12} fill="#F59E0B" /> CLUBSCORE FANTASY
+                    <span className="badge badge-gold row row-tight" style={{ marginBottom: '0.5rem', display: 'inline-flex' }}>
+                      <Zap size={12} fill="#F59E0B" /> CLUBSCORE POINTS
                     </span>
                     <p className="text-note" style={{ margin: 0 }}>No ClubScore points in {selectedSeason} yet.</p>
                   </div>
@@ -1779,14 +1789,14 @@ export default function MemberPortalPage({
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
                           <span className="badge badge-gold row row-tight">
-                            <Zap size={12} fill="#F59E0B" /> CLUBSCORE FANTASY
+                            <Zap size={12} fill="#F59E0B" /> CLUBSCORE POINTS
                           </span>
                           <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)' }}>
                             {selectedSeason}
                           </span>
                         </div>
                         <h4 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                          Level &amp; Attendance Streak Hub
+                          Your points this season
                         </h4>
                       </div>
 
@@ -1810,7 +1820,7 @@ export default function MemberPortalPage({
                     <div style={{ marginBottom: '1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Total XP Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{seasonClubScoreTotal} PTS</strong>
+                          Points: <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{seasonClubScoreTotal} PTS</strong>
                         </span>
                         {currentClubScore && selectedSeason === activeSeasonName && (
                           <span className="text-meta">
@@ -1823,7 +1833,7 @@ export default function MemberPortalPage({
                         <div
                           style={{
                             height: '100%',
-                            width: `${Math.min(100, Math.max(15, (seasonClubScoreTotal / 500) * 100))}%`,
+                            width: `${Math.min(100, Math.max(0, (seasonClubScoreTotal / 500) * 100))}%`,
                             background: 'linear-gradient(90deg, var(--club-primary) 0%, #F59E0B 100%)',
                             borderRadius: '6px',
                             transition: 'width 0.5s ease',
@@ -1903,7 +1913,7 @@ export default function MemberPortalPage({
                         className="form-select"
                       >
                         <option value="General">General Inquiry</option>
-                        <option value="Ticket / Pass">Virtual Pass &amp; Turnstile Issue</option>
+                        <option value="Ticket / Pass">Member pass or ticket</option>
                         <option value="Availability">Matchday Availability</option>
                         <option value="Medical">Medical / Fitness Status</option>
                         <option value="Kit & Gear">Kit &amp; Gear Sizing</option>
@@ -2017,14 +2027,6 @@ export default function MemberPortalPage({
           </div>
         )}
       </div>
-
-      {/* QR Scanner Reticle Modal */}
-      <QRScannerModal
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        mode="verify_pass"
-        clubId={club.id}
-      />
     </div>
   );
 }
