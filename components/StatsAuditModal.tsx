@@ -101,6 +101,8 @@ export default function StatsAuditModal({
 
   const auditNotes = '';
   const [isBaking, setIsBaking] = useState<boolean>(false);
+  // Full time opens on a one-tap summary; the per-player checks open on request
+  const [showDetails, setShowDetails] = useState<boolean>(false);
   const [auditResult, setAuditResult] = useState<{ totalXP: number; message: string } | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
 
@@ -331,6 +333,58 @@ export default function StatsAuditModal({
             </div>
           ) : (
             <>
+              {/* Summary: what will be saved, from the lineup and the logged events */}
+              {(() => {
+                const goals = auditedEvents.filter(e => (e.event_type === 'goal' || e.event_type === 'penalty') && e.player_id);
+                const assists = auditedEvents.filter(e => e.assist_player_id).length;
+                const cards = auditedEvents.filter(e => e.event_type.includes('card') && e.player_id).length;
+                const unlinked = auditedEvents.filter(e => !e.player_id).length;
+                const tile = (n: number, label: string) => (
+                  <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '0.65rem 0.4rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>{n}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{label}</div>
+                  </div>
+                );
+                return (
+                  <div data-stats-summary style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Built from the lineup and what you logged. You can fix anything later from the Match Centre.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.5rem' }}>
+                      {tile(appearanceMemberIds.length, 'played')}
+                      {tile(goals.length, goals.length === 1 ? 'goal' : 'goals')}
+                      {tile(assists, assists === 1 ? 'assist' : 'assists')}
+                      {tile(cards, cards === 1 ? 'card' : 'cards')}
+                    </div>
+                    {goals.length > 0 && (
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '10px', padding: '0.5rem 0.75rem' }}>
+                        Scorers: {goals.map(e => `${e.player_name} ${e.minute}'`).join(', ')}
+                      </div>
+                    )}
+                    {(unlinked > 0 || appearanceMemberIds.length === 0) && (
+                      <div role="status" style={{ fontSize: '0.8rem', color: 'var(--c-amber)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '0.5rem 0.75rem' }}>
+                        {appearanceMemberIds.length === 0
+                          ? 'No lineup was saved, so nobody is ticked as playing yet. Check each player first.'
+                          : `${unlinked} goal or card isn't linked to a player yet. Check each player first to link it.`}
+                      </div>
+                    )}
+                    <div>
+                      <label htmlFor="motm-search" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                        <Star size={15} color="var(--c-amber)" /> Player of the Match (+{rules.points_motm ?? 15} points)
+                      </label>
+                      <PlayerSearchSelect
+                        id="motm-search"
+                        players={squadPlayers}
+                        value={motmMemberId}
+                        onChange={setMotmMemberId}
+                        extraOptions={[{ value: '', label: 'No Player of the Match' }]}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {showDetails && (<>
               {/* 1. Review Goals & Cards */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -460,24 +514,10 @@ export default function StatsAuditModal({
                 </div>
               </div>
 
-              {/* 3. Man of the Match (MOTM) */}
-              <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Star size={16} color="var(--c-amber)" /> 3. Player of the Match (+{rules.points_motm ?? 15} points)
-                </h4>
-                <PlayerSearchSelect
-                  id="motm-search"
-                  players={squadPlayers}
-                  value={motmMemberId}
-                  onChange={setMotmMemberId}
-                  extraOptions={[{ value: '', label: 'No Player of the Match' }]}
-                />
-              </div>
-
               {/* 4. Match Appearances Verification */}
               <div>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <User size={16} color="var(--c-blue)" /> 4. Who Played (+{rules.points_match_appearance ?? 5} points each)
+                  <User size={16} color="var(--c-blue)" /> 3. Who Played (+{rules.points_match_appearance ?? 5} points each)
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                   {playedIds.length > 0
@@ -521,6 +561,8 @@ export default function StatsAuditModal({
                 </div>
               </div>
 
+              </>)}
+
               {/* Notice */}
               <div style={{
                 background: 'rgba(245, 158, 11, 0.08)',
@@ -531,7 +573,7 @@ export default function StatsAuditModal({
                 color: 'var(--text-secondary)',
                 lineHeight: 1.45,
               }}>
-                Saving adds these goals, assists, cards and appearances to each player&apos;s season stats and gives their ClubScore points. You can only save a match once.
+                Saving adds these goals, assists, cards and appearances to each player&apos;s season stats and gives their ClubScore points. If something&apos;s wrong later, open Stats Saved in the Match Centre to fix it.
               </div>
             </>
           )}
@@ -557,11 +599,11 @@ export default function StatsAuditModal({
           }}>
             <button
               type="button"
-              onClick={onClose}
-              className="btn btn-secondary btn-sm"
+              onClick={() => (showDetails ? onClose() : setShowDetails(true))}
+              className="btn btn-secondary btn-sm touch-target"
               style={{ padding: '0.55rem 1.1rem' }}
             >
-              Cancel
+              {showDetails ? 'Cancel' : 'Check each player first'}
             </button>
 
             <button
@@ -581,7 +623,7 @@ export default function StatsAuditModal({
               }}
             >
               <Sparkles size={16} />
-              <span>{isBaking ? 'Saving...' : 'Save Player Stats'}</span>
+              <span>{isBaking ? 'Saving...' : showDetails ? 'Save Player Stats' : 'Save stats now'}</span>
             </button>
           </div>
         )}

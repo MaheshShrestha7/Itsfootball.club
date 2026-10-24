@@ -32,6 +32,7 @@ import {
   QrCode
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
+import StatsFixModal from '@/components/StatsFixModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { fixtureLabel } from '@/lib/fixture-label';
@@ -171,6 +172,7 @@ export default function AdminMatchCenterControllerPage({
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+  const [isFixModalOpen, setIsFixModalOpen] = useState<boolean>(false);
   // Format switched on the tactics pitch but not saved yet (keyed by match, so it never leaks to another fixture)
   const [pitchFormat, setPitchFormat] = useState<{ matchId: string; format: MatchFormat } | null>(null);
 
@@ -505,7 +507,8 @@ export default function AdminMatchCenterControllerPage({
 
           <button
             type="button"
-            onClick={() => setIsAuditModalOpen(true)}
+            onClick={() => (match.is_audited ? setIsFixModalOpen(true) : setIsAuditModalOpen(true))}
+            title={match.is_audited ? 'Stats are saved: open them to fix a mistake' : undefined}
             className="btn btn-sm touch-target"
             style={{
               display: 'inline-flex',
@@ -522,7 +525,7 @@ export default function AdminMatchCenterControllerPage({
             }}
           >
             <ShieldCheck size={15} />
-            <span>{match.is_audited ? 'Stats Saved ✓' : 'Save Player Stats'}</span>
+            <span>{match.is_audited ? 'Stats Saved ✓ · Fix' : 'Save Player Stats'}</span>
           </button>
 
           <Link
@@ -1441,6 +1444,17 @@ export default function AdminMatchCenterControllerPage({
           onAuditCompleted={() => {
             showFeedback('Player stats saved to the season.');
           }}
+        />
+      )}
+
+      {/* Fix saved stats: season totals and points move by the difference */}
+      {isFixModalOpen && match.is_audited && (
+        <StatsFixModal
+          key={match.id}
+          match={match}
+          players={squadPlayers}
+          onClose={() => setIsFixModalOpen(false)}
+          onFixed={msg => showFeedback(msg)}
         />
       )}
 
