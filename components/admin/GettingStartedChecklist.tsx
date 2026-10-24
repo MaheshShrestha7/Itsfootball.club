@@ -65,7 +65,7 @@ export default function GettingStartedChecklist({ clubId, clubSlug }: { clubId: 
     {
       label: 'Add your players',
       hint: 'One by one, by CSV, or share your join link.',
-      href: `/${clubSlug}/admin/members`,
+      href: `/${clubSlug}/admin/people`,
       done: members.some(m => m.club_id === clubId && isPlayerMember(m)),
     },
     {

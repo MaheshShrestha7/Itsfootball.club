@@ -450,7 +450,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                   {/* A pending cash or bank payment (e.g. one whose fulfilment failed) can be finished here too */}
                   {/* The same application's card in Members: verify and approve there in one go */}
                   {p.kind === 'membership_signup' && p.member_id && members.find(m => m.id === p.member_id)?.membership_status === 'pending' && (
-                    <Link data-view-ok href={`/${club.slug}/admin/members?member=${p.member_id}`} className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Open this application in Members">
+                    <Link data-view-ok href={`/${club.slug}/admin/people?tab=applications&member=${p.member_id}`} className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Open this application in People">
                       <UserCheck size={14} /> Application
                     </Link>
                   )}

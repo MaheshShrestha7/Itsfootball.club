@@ -2,7 +2,7 @@
 // Run (from the repo root): npx esbuild lib/permissions.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACCESS_AREAS, areaFromPath, levelAtLeast, memberLabels } from './permissions';
+import { ACCESS_AREAS, areaFromLocation, areaFromPath, levelAtLeast, memberLabels } from './permissions';
 
 assert.ok(levelAtLeast('full', 'edit'));
 assert.ok(levelAtLeast('edit', 'edit'));
@@ -15,6 +15,11 @@ assert.equal(areaFromPath('/fc-united/admin'), null);
 assert.equal(areaFromPath('/fc-united/admin/finance'), 'finance');
 assert.equal(areaFromPath('/fc-united/admin/lineup/draft'), 'lineup');
 assert.equal(areaFromPath('/fc-united/admin/tournaments/abc'), 'tournaments');
+// The People page is the squad's, except its applications and passes tabs
+assert.equal(areaFromLocation('/fc-united/admin/people', null), 'squad');
+assert.equal(areaFromLocation('/fc-united/admin/people', 'applications'), 'members');
+assert.equal(areaFromLocation('/fc-united/admin/people', 'rejected'), 'members');
+assert.equal(areaFromLocation('/fc-united/admin/finance', 'income'), 'finance');
 
 assert.deepEqual(memberLabels('Player, treasurer', ['Treasurer', 'Secretary']), ['Treasurer', 'Secretary', 'Player']);
 assert.deepEqual(memberLabels(null, null), []);

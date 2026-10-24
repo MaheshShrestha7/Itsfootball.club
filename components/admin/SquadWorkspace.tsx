@@ -1,0 +1,1233 @@
+'use client';
+
+import { getAccessToken } from '@/lib/supabase/client';
+import React, { useState, useRef } from 'react';
+import Link from 'next/link';
+import { secureToken } from '@/lib/ids';
+import { useClub } from '@/lib/club-context';
+import { isJuniorMember } from '@/lib/teams';
+import { useAuth } from '@/lib/auth-context';
+import { useAccessRoles } from '@/lib/access-roles';
+import { membershipTermEnd, todayIso } from '@/lib/finance';
+import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
+import {
+  CheckCircle2,
+  X,
+  Shield,
+  Upload,
+  Cloud,
+  Phone,
+  Mail,
+  User,
+  Hash,
+  AlertCircle,
+  Loader2,
+  Briefcase,
+  Award,
+} from 'lucide-react';
+import BulkMemberModal from '@/components/BulkMemberModal';
+import { confirmAction } from '@/components/ConfirmDialog';
+
+const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = [
+  { value: 'GK', label: 'GK', desc: 'Goalkeeper' },
+  { value: 'CB', label: 'CB', desc: 'Center Back' },
+  { value: 'LB', label: 'LB', desc: 'Left Back' },
+  { value: 'RB', label: 'RB', desc: 'Right Back' },
+  { value: 'CDM', label: 'CDM', desc: 'Defensive Mid' },
+  { value: 'CM', label: 'CM', desc: 'Central Mid' },
+  { value: 'CAM', label: 'CAM', desc: 'Attacking Mid' },
+  { value: 'LW', label: 'LW', desc: 'Left Winger' },
+  { value: 'RW', label: 'RW', desc: 'Right Winger' },
+  { value: 'ST', label: 'ST', desc: 'Striker / Forward' },
+  { value: 'SUB', label: 'SUB', desc: 'Substitute / Utility' },
+];
+
+// Squad labels that give no admin access
+const BASE_ROLES = [
+  { id: 'Player', label: 'Player', icon: Shield, desc: 'First Team & Squad Athlete', access: false },
+  { id: 'Executive Committee', label: 'Executive Committee', icon: Award, desc: 'Governance & Board Post', access: false },
+];
+// Shown when the club's access roles can't be loaded (no database connected)
+const FALLBACK_ACCESS_ROLES = [
+  { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Head Coach & Technical Staff', access: true },
+  { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Platform Administrator', access: true },
+];
+
+const EMPTY_SAFEGUARDING = {
+  date_of_birth: '',
+  guardian_name: '',
+  guardian_email: '',
+  guardian_phone: '',
+  photo_consent: '' as '' | 'yes' | 'no',
+  safeguarding_check_type: '',
+  safeguarding_check_date: '',
+  safeguarding_check_expiry_date: '',
+};
+
+/**
+ * Junior & safeguarding fields to save (never shown publicly). A field goes in when it has a value,
+ * or when it is being emptied (emptied dates save as NULL), so untouched blanks are left out.
+ * Photo consent goes in only once chosen: "not asked yet" stays as it is.
+ */
+function safeguardingFields(form: typeof EMPTY_SAFEGUARDING, editing: ClubMember | null): Partial<ClubMember> {
+  const out: Partial<ClubMember> = {};
+  const text = (v: string) => v.replace(/[<>]/g, '').trim();
+  const values = {
+    date_of_birth: form.date_of_birth,
+    guardian_name: text(form.guardian_name),
+    guardian_email: text(form.guardian_email).toLowerCase(),
+    guardian_phone: text(form.guardian_phone),
+    safeguarding_check_type: text(form.safeguarding_check_type),
+    safeguarding_check_date: form.safeguarding_check_date,
+    safeguarding_check_expiry_date: form.safeguarding_check_expiry_date,
+  };
+  for (const key of Object.keys(values) as (keyof typeof values)[]) {
+    if (values[key] || editing?.[key]) out[key] = values[key];
+  }
+  if (form.photo_consent) out.photo_consent = form.photo_consent === 'yes';
+  return out;
+}
+
+/** What the People page's directory can do with the squad: open the add, edit, stats and import screens below */
+export interface SquadActions {
+  members: ClubMember[];
+  getMemberRoles: (member: ClubMember) => string[];
+  openAdd: () => void;
+  openEdit: (member: ClubMember) => void;
+  openStats: (member: ClubMember) => void;
+  openBulk: () => void;
+  /** Asks first; resolves true once removed */
+  remove: (memberId: string, memberName: string) => Promise<boolean>;
+}
+
+/**
+ * Adding, editing and importing people, and their stats (the old Squad & Players page). The People
+ * page shows the list itself and opens these screens through `children`.
+ */
+export default function SquadWorkspace({
+  clubSlug,
+  children,
+}: {
+  clubSlug: string;
+  children: (actions: SquadActions) => React.ReactNode;
+}) {
+  const { clubs, selectClubBySlug, members, addMember, bulkAddMembers, updateMember, deleteMember, playerStats, updatePlayerStats, clubTeams, clubTeamMembers } = useClub();
+  const club = selectClubBySlug(clubSlug) || clubs[0];
+
+  // Access roles (Roles & Permissions page) are labels too; only the Owner / a Club Admin hands them out
+  const { isClubSuperUser } = useAuth();
+  const canAssignAccess = isClubSuperUser(club.id);
+  const { roles: accessRoles } = useAccessRoles(club.id);
+  const AVAILABLE_ROLES = [
+    ...BASE_ROLES,
+    ...(accessRoles.length
+      ? accessRoles.map(r => ({ id: r.name, label: r.name, icon: r.is_super ? User : Briefcase, desc: r.description || 'Admin access role', access: true }))
+      : FALLBACK_ACCESS_ROLES),
+  ];
+
+  const clubMembers = members.filter(m => m.club_id === club.id);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<ClubMember | null>(null);
+
+  // Form State with Multi-Role support
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    roles: ['Player'] as string[],
+    player_position: 'ST' as PlayerPosition,
+    secondary_positions: [] as PlayerPosition[],
+    // Empty until chosen, so the required field asks for a number instead of quietly using a default
+    jersey_number: '' as number | '',
+    status: 'active' as PlayerStatus,
+    photo_url: '',
+    nationality: '',
+    is_executive: false,
+    executive_title: '',
+    ...EMPTY_SAFEGUARDING,
+  });
+
+  // Photo Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [manualUrlOpen, setManualUrlOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const [statsForm, setStatsForm] = useState({
+    appearances: 0,
+    goals: 0,
+    assists: 0,
+    clean_sheets: 0,
+    yellow_cards: 0,
+    red_cards: 0,
+    motm_awards: 0,
+    minutes_played: 0,
+  });
+
+  const handleOpenAdd = () => {
+    setEditingMember(null);
+    setForm({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      roles: ['Player'],
+      player_position: 'ST',
+      secondary_positions: [],
+      jersey_number: '',
+      status: 'active',
+      photo_url: '',
+      nationality: '',
+      is_executive: false,
+      executive_title: '',
+      ...EMPTY_SAFEGUARDING,
+    });
+    setUploadError(null);
+    setFormError(null);
+    setManualUrlOpen(false);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (m: ClubMember) => {
+    setEditingMember(m);
+    
+    // Parse first name and last name
+    const parts = (m.full_name || '').split(' ');
+    const firstName = m.first_name || parts[0] || '';
+    const lastName = m.last_name || parts.slice(1).join(' ') || '';
+
+    // Extract all member roles
+    let memberRoles: string[] = [];
+    if (Array.isArray(m.roles) && m.roles.length > 0) {
+      memberRoles = [...m.roles];
+    } else if (m.role) {
+      memberRoles = m.role.split(',').map((r: string) => r.trim()).filter(Boolean);
+    }
+
+    // Normalize roles into standard taxonomy
+    const normalizedRoles: string[] = [];
+    memberRoles.forEach(r => {
+      const lower = r.toLowerCase();
+      // A label that is one of the options (incl. the club's own access roles) stays as it is
+      const known = AVAILABLE_ROLES.find(o => o.id.toLowerCase() === lower);
+      if (known) {
+        if (!normalizedRoles.includes(known.id)) normalizedRoles.push(known.id);
+      }
+      else if (lower === 'player' && !normalizedRoles.includes('Player')) normalizedRoles.push('Player');
+      else if ((lower.includes('executive') || m.is_executive) && !normalizedRoles.includes('Executive Committee')) normalizedRoles.push('Executive Committee');
+      else if ((lower.includes('manager') || lower.includes('coach') || lower.includes('staff')) && !normalizedRoles.includes('Manager')) normalizedRoles.push('Manager');
+      else if ((lower.includes('admin') || lower.includes('owner')) && !normalizedRoles.includes('Club Admin')) normalizedRoles.push('Club Admin');
+      else if (!normalizedRoles.includes(r)) normalizedRoles.push(r);
+    });
+
+    if (m.is_executive && !normalizedRoles.includes('Executive Committee')) {
+      normalizedRoles.push('Executive Committee');
+    }
+
+    if (normalizedRoles.length === 0) {
+      normalizedRoles.push('Player');
+    }
+
+    setForm({
+      first_name: firstName,
+      last_name: lastName,
+      email: m.email || '',
+      phone: m.phone || '',
+      roles: normalizedRoles,
+      player_position: m.player_position || 'ST',
+      secondary_positions: m.secondary_positions || [],
+      jersey_number: m.jersey_number || '',
+      status: (m.status === 'inactive' ? 'inactive' : 'active') as PlayerStatus,
+      photo_url: m.photo_url || '',
+      nationality: m.nationality || '',
+      is_executive: normalizedRoles.includes('Executive Committee') || Boolean(m.is_executive),
+      executive_title: m.executive_title || '',
+      date_of_birth: m.date_of_birth || '',
+      guardian_name: m.guardian_name || '',
+      guardian_email: m.guardian_email || '',
+      guardian_phone: m.guardian_phone || '',
+      photo_consent: m.photo_consent === true ? 'yes' : m.photo_consent === false ? 'no' : '',
+      safeguarding_check_type: m.safeguarding_check_type || '',
+      safeguarding_check_date: m.safeguarding_check_date || '',
+      safeguarding_check_expiry_date: m.safeguarding_check_expiry_date || '',
+    });
+    setUploadError(null);
+    setFormError(null);
+    setManualUrlOpen(false);
+    setModalOpen(true);
+  };
+
+  const handleOpenStats = (m: ClubMember) => {
+    setEditingMember(m);
+    const existing = playerStats.find(s => s.member_id === m.id);
+    setStatsForm({
+      appearances: existing?.appearances || 0,
+      goals: existing?.goals || 0,
+      assists: existing?.assists || 0,
+      clean_sheets: existing?.clean_sheets || 0,
+      yellow_cards: existing?.yellow_cards || 0,
+      red_cards: existing?.red_cards || 0,
+      motm_awards: existing?.motm_awards || 0,
+      minutes_played: existing?.minutes_played || 0,
+    });
+    setStatsModalOpen(true);
+  };
+
+  // Cloudflare R2 Direct Photo Uploader
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+
+    // Validate size (5 MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File size exceeds maximum 5 MB limit');
+      return;
+    }
+
+    // Validate MIME
+    const validMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validMimes.includes(file.type)) {
+      setUploadError('Please select a valid image file (JPEG, PNG, WebP, GIF)');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'members');
+      formData.append('clubId', club.id);
+
+      const token = await getAccessToken();
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'The photo could not be uploaded. Please try again.');
+      }
+
+      setForm(prev => ({ ...prev, photo_url: json.url }));
+    } catch (err: any) {
+      console.error('[Squad Admin] Photo upload error:', err);
+      setUploadError(err.message || 'The photo could not be uploaded. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Toggle Multiple Roles
+  const handleToggleRole = (roleId: string) => {
+    if (AVAILABLE_ROLES.some(r => r.id === roleId && r.access) && !canAssignAccess) return;
+    setForm(prev => {
+      let newRoles: string[];
+      if (prev.roles.includes(roleId)) {
+        if (prev.roles.length === 1) {
+          setUploadError('A member must have at least one role assigned.');
+          setTimeout(() => setUploadError(null), 3000);
+          return prev;
+        }
+        newRoles = prev.roles.filter(r => r !== roleId);
+      } else {
+        newRoles = [...prev.roles, roleId];
+      }
+
+      return {
+        ...prev,
+        roles: newRoles,
+        is_executive: newRoles.includes('Executive Committee'),
+      };
+    });
+  };
+
+  // Toggle Secondary Positions (Capped at 5)
+  const handleToggleSecondaryPosition = (pos: PlayerPosition) => {
+    if (form.secondary_positions.includes(pos)) {
+      setForm(prev => ({
+        ...prev,
+        secondary_positions: prev.secondary_positions.filter(p => p !== pos),
+      }));
+    } else {
+      if (form.secondary_positions.length >= 5) {
+        setUploadError('Maximum 5 secondary positions allowed');
+        setTimeout(() => setUploadError(null), 3000);
+        return;
+      }
+      setForm(prev => ({
+        ...prev,
+        secondary_positions: [...prev.secondary_positions, pos],
+      }));
+    }
+  };
+
+  // Primary position selection automatically removes from secondary positions
+  const handlePrimaryPositionChange = (pos: PlayerPosition) => {
+    setForm(prev => ({
+      ...prev,
+      player_position: pos,
+      secondary_positions: prev.secondary_positions.filter(p => p !== pos),
+    }));
+  };
+
+  // Form Save
+  const handleSaveMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
+    if (!firstName || !lastName) {
+      setFormError('Both First Name and Last Name are required.');
+      return;
+    }
+
+    if (form.roles.length === 0) {
+      setFormError('Please select at least one member role.');
+      return;
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    const email = form.email.trim().toLowerCase();
+    // Two members can't share an email at a club (it's how sign-in finds their record)
+    if (email && clubMembers.some(m => m.id !== editingMember?.id && (m.email || '').trim().toLowerCase() === email)) {
+      setFormError(`Someone at the club already uses ${email}.`);
+      return;
+    }
+    if (!email && !form.guardian_email.trim() && !form.phone.trim() && !form.guardian_phone.trim()) {
+      setFormError('Add an email or phone number, or a parent or guardian\'s contact, so the club can reach them.');
+      return;
+    }
+    const isPlayer = form.roles.includes('Player');
+    const isExec = form.roles.includes('Executive Committee');
+    const roleString = form.roles.join(', ');
+
+    const memberPayload = {
+      club_id: club.id,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      email,
+      phone: form.phone.trim(),
+      role: roleString as ClubRole,
+      roles: form.roles,
+      player_position: isPlayer ? form.player_position : undefined,
+      secondary_positions: isPlayer ? form.secondary_positions : [],
+      jersey_number: isPlayer ? Number(form.jersey_number) || undefined : undefined,
+      status: form.status,
+      // No photo = no photo: avatars fall back to the player's initials (a shared stock image made every player look identical)
+      photo_url: form.photo_url || undefined,
+      nationality: form.nationality.trim(),
+      membership_tier: isPlayer ? 'Senior Player' : isExec ? 'Executive Board' : 'Club Staff',
+      is_executive: isExec,
+      executive_title: isExec ? form.executive_title || 'Committee Member' : undefined,
+      ...safeguardingFields(form, editingMember),
+    };
+
+    if (editingMember) {
+      updateMember(editingMember.id, memberPayload);
+    } else {
+      // Only a new member gets an expiry; editing someone keeps theirs (the club's renewal method decides it)
+      addMember({
+        ...memberPayload,
+        membership_expires_at: membershipTermEnd(todayIso(), club),
+        qr_code_token: secureToken('pass'),
+      });
+    }
+
+    setFeedback(editingMember ? `Updated ${fullName}` : `Registered ${fullName} successfully`);
+    setTimeout(() => setFeedback(null), 3500);
+    setModalOpen(false);
+  };
+
+  /** Resolves true once removed, false if the admin cancelled */
+  const handleDeleteMember = async (memberId: string, memberName: string) => {
+    if (!(await confirmAction({ title: `Remove ${memberName}?`, message: 'They will be removed from the club registry.', confirmLabel: 'Remove member', danger: true }))) return false;
+
+    deleteMember(memberId);
+
+    setFeedback(`Removed ${memberName}`);
+    setTimeout(() => setFeedback(null), 3000);
+    return true;
+  };
+
+  const handleSaveStats = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    updatePlayerStats(editingMember.id, statsForm);
+    setStatsModalOpen(false);
+    setFeedback(`Updated stats for ${editingMember.full_name}`);
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  // Helper to extract member roles for table rendering
+  const getMemberRoles = (member: ClubMember): string[] => {
+    if (Array.isArray(member.roles) && member.roles.length > 0) {
+      return member.roles;
+    }
+    if (member.role) {
+      return member.role.split(',').map((r: string) => r.trim()).filter(Boolean);
+    }
+    return ['Player'];
+  };
+
+  return (
+    <div>
+      {/* Success Feedback Alert */}
+      {feedback && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          padding: '0.85rem 1.25rem',
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '1px solid #10B981',
+          borderRadius: 'var(--radius-md)',
+          color: 'var(--c-green)',
+          fontWeight: 700,
+          marginBottom: '1.5rem',
+        }}>
+          <CheckCircle2 size={18} />
+          <span>{feedback}</span>
+        </div>
+      )}
+
+      {children({
+        members: clubMembers,
+        getMemberRoles,
+        openAdd: handleOpenAdd,
+        openEdit: handleOpenEdit,
+        openStats: handleOpenStats,
+        openBulk: () => setBulkModalOpen(true),
+        remove: handleDeleteMember,
+      })}
+
+      {/* Member Details Add / Edit Modal */}
+      {modalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1100, // above the People page's person panel
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          overflowY: 'auto',
+        }}>
+          <div className="glass-panel" style={{
+            width: '100%',
+            maxWidth: 'min(680px, calc(100vw - 2rem))',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-xl)',
+            padding: 'clamp(1rem, 3vw, 2rem)',
+            margin: 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  {editingMember ? 'Edit Club Member' : 'Register New Club Member'}
+                </h3>
+                <span className="text-note">
+                  Details, roles and photo
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {formError && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1rem',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid #EF4444',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--c-red)',
+                fontSize: '0.85rem',
+                marginBottom: '1.25rem',
+              }}>
+                <AlertCircle size={16} />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveMember}>
+              {/* 1. CLOUDFLARE R2 PHOTO UPLOAD ZONE */}
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Member Photo</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Cloud size={12} /> Stored securely
+                  </span>
+                </label>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1.25rem',
+                  padding: '1rem',
+                  background: 'rgba(var(--shade-rgb), 0.3)',
+                  border: '1px dashed var(--border-medium)',
+                  borderRadius: 'var(--radius-lg)',
+                }}>
+                  {/* Avatar Preview */}
+                  <div style={{ position: 'relative', width: '74px', height: '74px', flexShrink: 0 }}>
+                    {form.photo_url ? (
+                      <img loading="eager" decoding="async"
+                        src={form.photo_url}
+                        alt="Preview"
+                        style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover', border: '2px solid var(--club-primary)' }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '12px',
+                        background: 'rgba(var(--tint-rgb), 0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid var(--border-subtle)'
+                      }}>
+                        <User size={32} color="var(--text-muted)" />
+                      </div>
+                    )}
+                    {uploadingPhoto && (
+                      <div data-theme="dark" style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Loader2 size={24} className="animate-spin" color="var(--club-primary)" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Actions & Controls */}
+                  <div style={{ flex: 1 }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handlePhotoFileChange}
+                      style={{ display: 'none' }}
+                      id="member-photo-upload"
+                    />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                      <label
+                        htmlFor="member-photo-upload"
+                        className="btn btn-secondary btn-sm"
+                        style={{ cursor: uploadingPhoto ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                      >
+                        <Upload size={14} />
+                        <span>{form.photo_url ? 'Replace Photo' : 'Upload Photo'}</span>
+                      </label>
+
+                      {form.photo_url && (
+                        <button
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, photo_url: '' }))}
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: 'var(--c-red)' }}
+                        >
+                          Remove
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setManualUrlOpen(!manualUrlOpen)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {manualUrlOpen ? 'Hide URL field' : 'Enter image URL manually'}
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                      JPEG, PNG, WebP or GIF up to 5 MB. Resized automatically and stored securely.
+                    </div>
+
+                    {uploadError && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--c-red)', marginTop: '0.35rem', fontWeight: 600 }}>
+                        {uploadError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {manualUrlOpen && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <input aria-label="Photo URL"
+                      type="url"
+                      className="form-input"
+                      placeholder="https://..."
+                      value={form.photo_url}
+                      onChange={e => setForm({ ...form, photo_url: e.target.value })}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. FIRST NAME & LAST NAME */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="squad-first-name" className="form-label">First Name *</label>
+                  <input id="squad-first-name"
+                    type="text"
+                    required
+                    className="form-input"
+                    placeholder="e.g. Lucas"
+                    value={form.first_name}
+                    onChange={e => setForm({ ...form, first_name: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-last-name" className="form-label">Last Name *</label>
+                  <input id="squad-last-name"
+                    type="text"
+                    required
+                    className="form-input"
+                    placeholder="e.g. Vazquez"
+                    value={form.last_name}
+                    onChange={e => setForm({ ...form, last_name: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* 3. EMAIL & PHONE NUMBER */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label htmlFor="squad-email-address" className="form-label row">
+                    <Mail size={13} /> Email Address
+                  </label>
+                  {/* Optional: many juniors have no email (their parent goes in the guardian fields) */}
+                  <input id="squad-email-address"
+                    type="email"
+                    className="form-input"
+                    placeholder="Optional for juniors"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-phone-number" className="form-label row">
+                    <Phone size={13} /> Phone Number
+                  </label>
+                  <input id="squad-phone-number"
+                    type="tel"
+                    className="form-input"
+                    placeholder="e.g. 0400 000 000"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* 4. MULTI-ROLE SELECTION (Player, Executive Committee, and the club's access roles) */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Member Roles * (A member can have multiple roles)</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)' }}>
+                    {form.roles.length} {form.roles.length === 1 ? 'role' : 'roles'} selected
+                  </span>
+                </label>
+                <p className="text-meta" style={{ marginBottom: '0.6rem' }}>
+                  {canAssignAccess
+                    ? <>Access roles decide what someone can do in this admin area. <Link href={`/${club.slug}/admin/roles`}>Manage roles</Link></>
+                    : 'Only the club Owner or a Club Admin can give or remove access roles.'}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.65rem' }}>
+                  {AVAILABLE_ROLES.map(r => {
+                    const Icon = r.icon;
+                    const isSelected = form.roles.includes(r.id);
+                    const locked = r.access && !canAssignAccess;
+
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => handleToggleRole(r.id)}
+                        disabled={locked}
+                        aria-pressed={isSelected}
+                        style={{
+                          opacity: locked ? 0.55 : 1,
+                          position: 'relative',
+                          padding: '0.85rem 0.65rem',
+                          borderRadius: 'var(--radius-md)',
+                          border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
+                          background: isSelected ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--tint-rgb), 0.03)',
+                          cursor: locked ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {isSelected && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '6px',
+                            right: '6px',
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            background: 'var(--club-primary)',
+                            color: 'var(--club-primary-contrast, #090D16)',
+                            fontSize: '0.7rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 900,
+                          }}>
+                            ✓
+                          </span>
+                        )}
+                        <Icon size={20} color={isSelected ? 'var(--club-primary)' : 'var(--text-muted)'} />
+                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                          {r.label}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>
+                          {r.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5. CONDITIONAL PLAYER SECTION (Primary Position, Secondary Positions up to 5, Jersey Number) */}
+              {form.roles.includes('Player') && (
+                <div style={{
+                  padding: '1.25rem',
+                  background: 'rgba(var(--shade-rgb), 0.35)',
+                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
+                  borderRadius: 'var(--radius-lg)',
+                  marginBottom: '1.25rem',
+                }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Shield size={14} /> Player Positioning & Kit Specifications
+                  </div>
+
+                  <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
+                    {/* Primary Position */}
+                    <div className="form-group">
+                      <label htmlFor="squad-primary-position" className="form-label">
+                        Primary Position *
+                      </label>
+                      <select id="squad-primary-position"
+                        className="form-select"
+                        value={form.player_position}
+                        onChange={e => handlePrimaryPositionChange(e.target.value as PlayerPosition)}
+                        style={{ fontWeight: 700 }}
+                      >
+                        {ALL_POSITIONS.map(pos => (
+                          <option key={pos.value} value={pos.value}>
+                            {pos.value} — {pos.desc}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Jersey Number */}
+                    <div className="form-group">
+                      <label htmlFor="squad-jersey-number" className="form-label row row-tight">
+                        <Hash size={13} /> Jersey Number
+                      </label>
+                      <input id="squad-jersey-number"
+                        type="number"
+                        min={1}
+                        max={99}
+                        className="form-input"
+                        placeholder="Optional, e.g. 9"
+                        value={form.jersey_number}
+                        onChange={e => setForm({ ...form, jersey_number: e.target.value === '' ? '' : Number(e.target.value) })}
+                        style={{ fontFamily: 'var(--font-heading)', fontWeight: 800 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Secondary Positions (Multi-select up to 5) */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label className="form-label m-0">
+                        Secondary Positions (Option to select up to 5)
+                      </label>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: form.secondary_positions.length === 5 ? 'var(--c-amber)' : 'var(--text-muted)',
+                      }}>
+                        {form.secondary_positions.length} / 5 selected
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                      {ALL_POSITIONS.filter(p => p.value !== form.player_position).map(pos => {
+                        const isSelected = form.secondary_positions.includes(pos.value);
+                        const isMaxReached = form.secondary_positions.length >= 5 && !isSelected;
+
+                        return (
+                          <button
+                            key={pos.value}
+                            type="button"
+                            disabled={isMaxReached}
+                            onClick={() => handleToggleSecondaryPosition(pos.value)}
+                            title={pos.desc}
+                            style={{
+                              padding: '0.35rem 0.65rem',
+                              borderRadius: 'var(--radius-sm)',
+                              border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
+                              background: isSelected ? 'var(--club-primary)' : isMaxReached ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+                              color: isSelected ? 'var(--club-primary-contrast, #090D16)' : isMaxReached ? 'var(--text-muted)' : 'var(--text-secondary)',
+                              fontWeight: isSelected ? 800 : 500,
+                              fontSize: '0.75rem',
+                              cursor: isMaxReached ? 'not-allowed' : 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              opacity: isMaxReached ? 0.45 : 1,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span>{pos.value}</span>
+                            {isSelected && <X size={12} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
+                      Primary position ({form.player_position}) is automatically excluded from secondary selections.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. CONDITIONAL EXECUTIVE COMMITTEE TITLE (If Executive Committee is selected) */}
+              {form.roles.includes('Executive Committee') && (
+                <div className="form-group" style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
+                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ color: 'var(--c-amber)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Award size={14} /> Executive Committee Title / Post
+                  </label>
+                  <input id="squad-executive-committee-title-post"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Club President, Vice President, Honorary Secretary, Treasurer"
+                    value={form.executive_title}
+                    onChange={e => setForm({ ...form, executive_title: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {/* JUNIOR & SAFEGUARDING: guardian and photo consent for juniors, background check for staff */}
+              <details className="form-group" style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}
+                open={editingMember ? isJuniorMember(editingMember, clubTeams, clubTeamMembers) || !!form.safeguarding_check_type : false}>
+                <summary data-view-ok style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                  Junior &amp; safeguarding
+                  {editingMember && isJuniorMember(editingMember, clubTeams, clubTeamMembers) && <span className="badge" style={{ marginLeft: 8, background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6' }}>Junior</span>}
+                </summary>
+                <p className="text-note" style={{ margin: '0.5rem 0 0.85rem 0' }}>Private to the club&apos;s admins. Juniors are shown publicly as first name and initial, with no photo unless a guardian allows it.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-dob" className="form-label">Date of birth</label>
+                    <input id="squad-dob" type="date" className="form-input" value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-photo-consent" className="form-label">Photo consent</label>
+                    <select id="squad-photo-consent" className="form-input" value={form.photo_consent} onChange={e => setForm({ ...form, photo_consent: e.target.value as '' | 'yes' | 'no' })}>
+                      {!form.photo_consent && <option value="">Not asked yet</option>}
+                      <option value="yes">Yes, photos can be shown publicly</option>
+                      <option value="no">No public photos</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-name" className="form-label">Parent / guardian</label>
+                    <input id="squad-guardian-name" className="form-input" maxLength={255} value={form.guardian_name} onChange={e => setForm({ ...form, guardian_name: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-email" className="form-label">Guardian email</label>
+                    <input id="squad-guardian-email" type="email" className="form-input" maxLength={255} value={form.guardian_email} onChange={e => setForm({ ...form, guardian_email: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-guardian-phone" className="form-label">Guardian phone</label>
+                    <input id="squad-guardian-phone" type="tel" className="form-input" maxLength={64} value={form.guardian_phone} onChange={e => setForm({ ...form, guardian_phone: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '0.75rem', marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-type" className="form-label">Safeguarding check</label>
+                    <input id="squad-check-type" className="form-input" maxLength={64} placeholder="e.g. DBS, WWCC" value={form.safeguarding_check_type} onChange={e => setForm({ ...form, safeguarding_check_type: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-date" className="form-label">Checked on</label>
+                    <input id="squad-check-date" type="date" className="form-input" value={form.safeguarding_check_date} onChange={e => setForm({ ...form, safeguarding_check_date: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="squad-check-expiry" className="form-label">Expires on</label>
+                    <input id="squad-check-expiry" type="date" className="form-input" value={form.safeguarding_check_expiry_date} onChange={e => setForm({ ...form, safeguarding_check_expiry_date: e.target.value })} />
+                  </div>
+                </div>
+                <p className="text-note" style={{ margin: '0.5rem 0 0 0' }}>Staff of a junior team need a valid check. You&apos;ll see a warning on the Teams page when one lapses.</p>
+              </details>
+
+              {/* 7. MEMBER STATUS (ACTIVE / INACTIVE) */}
+              <div className="form-group" style={{ marginBottom: '1.75rem' }}>
+                <label className="form-label">Member Status *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, status: 'active' as PlayerStatus }))}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: form.status === 'active' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                      background: form.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      color: form.status === 'active' ? 'var(--c-green)' : 'var(--text-muted)',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'active' ? '#10B981' : 'var(--text-muted)' }} />
+                    <span>Active (Eligible & Enrolled)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, status: 'inactive' as PlayerStatus }))}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: form.status === 'inactive' ? '1px solid #EF4444' : '1px solid var(--border-subtle)',
+                      background: form.status === 'inactive' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      color: form.status === 'inactive' ? 'var(--c-red)' : 'var(--text-muted)',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'inactive' ? '#EF4444' : 'var(--text-muted)' }} />
+                    <span>Inactive (Suspended / Lapsed)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.65rem 1.25rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingPhoto}
+                  className="btn btn-primary"
+                  style={{ padding: '0.65rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  {uploadingPhoto ? <Loader2 size={16} className="animate-spin" /> : null}
+                  <span>{editingMember ? 'Update Member' : 'Save Member'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Edit Modal */}
+      {statsModalOpen && editingMember && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          zIndex: 1100, // above the People page's person panel
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+        }}>
+          <div className="glass-panel" style={{
+            margin: 'auto',
+            width: '100%',
+            maxWidth: 'min(480px, calc(100vw - 2rem))',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-xl)',
+            padding: 'clamp(1.2rem, 3vw, 2rem)',
+          }}>
+            <div className="section-head">
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Update Player Stats
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--club-ink)' }}>{editingMember.full_name}</span>
+              </div>
+              <button onClick={() => setStatsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStats}>
+              <div className="form-row-2" style={{ gap: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="squad-appearances" className="form-label">Appearances</label>
+                  <input id="squad-appearances"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.appearances}
+                    onChange={e => setStatsForm({ ...statsForm, appearances: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-minutes-played" className="form-label">Minutes Played</label>
+                  <input id="squad-minutes-played"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.minutes_played}
+                    onChange={e => setStatsForm({ ...statsForm, minutes_played: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-goals-scored" className="form-label">Goals Scored</label>
+                  <input id="squad-goals-scored"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.goals}
+                    onChange={e => setStatsForm({ ...statsForm, goals: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-assists" className="form-label">Assists</label>
+                  <input id="squad-assists"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.assists}
+                    onChange={e => setStatsForm({ ...statsForm, assists: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-clean-sheets" className="form-label">Clean Sheets</label>
+                  <input id="squad-clean-sheets"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.clean_sheets}
+                    onChange={e => setStatsForm({ ...statsForm, clean_sheets: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-yellow-cards" className="form-label">Yellow Cards</label>
+                  <input id="squad-yellow-cards"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.yellow_cards}
+                    onChange={e => setStatsForm({ ...statsForm, yellow_cards: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-red-cards" className="form-label">Red Cards</label>
+                  <input id="squad-red-cards"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.red_cards}
+                    onChange={e => setStatsForm({ ...statsForm, red_cards: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="squad-motm-awards" className="form-label">MOTM Awards</label>
+                  <input id="squad-motm-awards"
+                    type="number"
+                    className="form-input"
+                    value={statsForm.motm_awards}
+                    onChange={e => setStatsForm({ ...statsForm, motm_awards: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setStatsModalOpen(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Stats
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import / Export Modal */}
+      <BulkMemberModal
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        club={club}
+        allMembers={members}
+        onImportMembers={bulkAddMembers}
+        onSuccessToast={msg => {
+          setFeedback(msg);
+          setTimeout(() => setFeedback(null), 4000);
+        }}
+      />
+    </div>
+  );
+}
