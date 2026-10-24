@@ -46,6 +46,7 @@ import {
 } from './supabase/types';
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import { addSeasonStats, type StatsDelta } from './player-stats';
+import { isEmptyLine, lineDelta, linesFromAudit, pointChanges, emptyLine, type MatchStatLine } from './match-stats';
 import { inSeason } from './member-season-stats';
 import {
   buildTiesheet,
@@ -208,6 +209,10 @@ interface ClubContextType {
 
   // Post-Match Stats Audit & Leaderboard Baking
   auditAndBakeMatchStats: (matchId: string, payload: MatchAuditPayload) => { success: boolean; totalPointsAwarded: number; message: string };
+  /** What each player got from a saved match (null: saved before per-match stats were kept, or not loadable) */
+  loadMatchStatLines: (matchId: string) => Promise<MatchStatLine[] | null>;
+  /** Moves season totals and ClubScore points from `before` to `after` and stores `after`. undo: the match can be saved again. */
+  fixMatchStats: (matchId: string, before: MatchStatLine[], after: MatchStatLine[], adminName: string, options?: { undo?: boolean }) => Promise<{ success: boolean; message: string; changed: number }>;
 
   // Live Analytics & Operations Tracking
   analyticsEvents: ClubAnalytics[];
@@ -2116,9 +2121,10 @@ export function ClubProvider({
     // 4. Record appearance for squad participants. Appearance points are once per match: players
     // who already got them at the turnstile only get the stat (the database enforces this too).
     payload.appearance_member_ids.forEach((memId: string) => {
-      const alreadyAwarded = activityLogs.some(
-        l => l.member_id === memId && l.event_type === 'match_appearance' && l.reference_id === matchId
-      );
+      // Net of any stats fix that took the appearance away (migration 20261121)
+      const alreadyAwarded = activityLogs
+        .filter(l => l.member_id === memId && l.event_type === 'match_appearance' && l.reference_id === matchId)
+        .reduce((n, l) => n + (l.final_points ?? l.points_awarded ?? 0), 0) > 0;
       if (!alreadyAwarded) {
         const pts = rules.points_match_appearance ?? 5;
         awardClubScorePoints(memId, pts, 'match_appearance', `Appearance vs ${opponent}`, matchId, season);
@@ -2127,7 +2133,14 @@ export function ClubProvider({
       addStats(memId, { appearances: 1, minutes_played: payload.minutes_by_member?.[memId] ?? 0 });
     });
 
-    // 5. Mark match fixture as audited
+    // 5. What each player got from this match, so the stats can be fixed later (migration 20261121;
+    // before it, nothing is kept and the save works as it always did)
+    const lines = linesFromAudit(payload);
+    void getSupabaseClient()?.from('match_player_stats')
+      .upsert(lines.map(l => ({ ...l, club_id: targetMatch.club_id, match_id: matchId, season })), { onConflict: 'match_id,member_id' })
+      .then(({ error }) => { if (error && !/match_player_stats/.test(error.message)) console.warn('[stats] per-match rows not saved:', error.message); });
+
+    // 6. Mark match fixture as audited
     setMatches(prev =>
       prev.map(m =>
         m.id === matchId
@@ -2146,6 +2159,72 @@ export function ClubProvider({
       message: `Player stats saved. ${totalXP} ClubScore points awarded across the squad (before streak bonuses).`,
     };
   }, [matches, members, activityLogs, clubScoreRules, awardClubScorePoints, seasonLabelFor]);
+
+  const loadMatchStatLines = useCallback(async (matchId: string): Promise<MatchStatLine[] | null> => {
+    const client = getSupabaseClient();
+    if (!client) return null;
+    const { data, error } = await client.from('match_player_stats')
+      .select('member_id, played, minutes, goals, assists, yellow_cards, red_cards, clean_sheet, motm')
+      .eq('match_id', matchId);
+    if (error || !data || data.length === 0) return null;
+    return data as MatchStatLine[];
+  }, []);
+
+  const fixMatchStats = useCallback(async (
+    matchId: string,
+    before: MatchStatLine[],
+    after: MatchStatLine[],
+    adminName: string,
+    options?: { undo?: boolean }
+  ): Promise<{ success: boolean; message: string; changed: number }> => {
+    const client = getSupabaseClient();
+    const targetMatch = matches.find(m => m.id === matchId);
+    if (!client || !targetMatch) return { success: false, message: 'Match not found.', changed: 0 };
+    const season = targetMatch.season || seasonLabelFor(targetMatch.club_id);
+    const opponent = targetMatch.is_club_home === false ? targetMatch.home_team_name : targetMatch.away_team_name;
+    const rules = clubScoreRules[targetMatch.club_id] || getDefaultClubScoreRules(targetMatch.club_id);
+    const old = new Map(before.map(l => [l.member_id, l]));
+    const next = new Map(after.map(l => [l.member_id, l]));
+    const ids = [...new Set([...old.keys(), ...next.keys()])];
+    const changes = ids
+      .map(id => ({ id, from: old.get(id) || emptyLine(id), to: next.get(id) || emptyLine(id) }))
+      .filter(c => Object.keys(lineDelta(c.from, c.to)).length > 0);
+    if (changes.length === 0 && !options?.undo) return { success: true, message: 'Nothing changed.', changed: 0 };
+
+    // The per-match rows first: if they can't be saved, nothing else moves
+    const keep = changes.filter(c => !isEmptyLine(c.to));
+    const drop = changes.filter(c => isEmptyLine(c.to)).map(c => c.id);
+    if (keep.length) {
+      const { error } = await client.from('match_player_stats').upsert(
+        keep.map(c => ({ ...c.to, club_id: targetMatch.club_id, match_id: matchId, season, updated_by_name: adminName })),
+        { onConflict: 'match_id,member_id' });
+      if (error) return { success: false, message: `Could not save the fix: ${error.message}`, changed: 0 };
+    }
+    if (drop.length) {
+      const { error } = await client.from('match_player_stats').delete().eq('match_id', matchId).in('member_id', drop);
+      if (error) return { success: false, message: `Could not save the fix: ${error.message}`, changed: 0 };
+    }
+
+    changes.forEach(c => {
+      setPlayerStats(prev => addSeasonStats(prev, { clubId: targetMatch.club_id, memberId: c.id, season }, lineDelta(c.from, c.to)));
+      const position = members.find(m => m.id === c.id)?.player_position;
+      pointChanges(c.from, c.to, rules, position).forEach(p => awardClubScorePoints(
+        c.id, p.points, p.event_type,
+        `Stats fix by ${adminName}: ${p.points > 0 ? '' : 'removed '}${p.what} vs ${opponent}`,
+        matchId, season));
+    });
+
+    if (options?.undo) {
+      setMatches(prev => prev.map(m => (m.id === matchId ? { ...m, is_audited: false, audited_at: undefined } : m)));
+    }
+    return {
+      success: true,
+      changed: changes.length,
+      message: options?.undo
+        ? 'Saved stats taken off this match. You can save them again from the Match Centre.'
+        : `Fixed ${changes.length} player${changes.length === 1 ? '' : 's'}. Season totals and ClubScore points now match.`,
+    };
+  }, [matches, members, clubScoreRules, awardClubScorePoints, seasonLabelFor]);
 
   // 18. Live Analytics & Operations Tracking
   const trackPageView = useCallback((clubId: string, path: string) => {
@@ -3496,6 +3575,8 @@ export function ClubProvider({
         getDraftLineup,
         publishDraftLineup,
         auditAndBakeMatchStats,
+        loadMatchStatLines,
+        fixMatchStats,
         trackPageView,
         recordGateScan,
         getClubAnalytics,
