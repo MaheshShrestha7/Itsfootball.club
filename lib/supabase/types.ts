@@ -90,6 +90,8 @@ export interface Club {
   fiscal_grace_days?: number;
   /** Membership signup payment policy (set through set_membership_payment_policy(); not synced) */
   membership_payment_policy?: MembershipPaymentPolicy;
+  /** Free supporter sign-ups are approved straight away (set through set_auto_approve_free(); 20261120) */
+  auto_approve_free?: boolean;
   /** Home-screen icons drawn from the crest (lib/app-icons.ts) */
   app_icons?: AppIcons | null;
   /** Whether U18 teams count as junior (default true) */

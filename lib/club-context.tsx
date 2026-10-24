@@ -230,7 +230,7 @@ interface ClubContextType {
   approveMemberApplication: (
     memberId: string,
     adminName?: string,
-    options?: { waiveFee?: boolean; waiverReason?: string }
+    options?: { waiveFee?: boolean; waiverReason?: string; teamId?: string }
   ) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   rejectMemberApplication: (memberId: string, reason: string, adminName?: string) => Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }>;
   /** Re-reads one member from the database (after a server-side change such as a payment approving them) */
@@ -2710,6 +2710,33 @@ export function ClubProvider({
           error: error.message,
         };
       }
+      // A club can approve free supporter passes straight away (Finance -> Settings, migration
+      // 20261120). The database decides: only an adult supporter on an active $0 plan qualifies.
+      let autoApproved = false;
+      if (role === 'supporter') {
+        const { data } = await client.rpc('auto_approve_free_application', { p_club_id: clubId, p_member_id: newMem.id });
+        autoApproved = data === true;
+      }
+      if (autoApproved) {
+        const approved: ClubMember = {
+          ...newMem,
+          membership_status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: 'Automatic (free supporter plan)',
+          membership_starts_at: todayIso(),
+        };
+        applyServerRow('members', setMembers, approved);
+        void fetch('/api/members/application-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clubId, memberId: newMem.id, kind: 'approved' }),
+        }).catch(() => undefined);
+        return {
+          success: true,
+          member: approved,
+          message: 'You are in! Your free supporter pass is active. Sign in with your email to see it.',
+        };
+      }
       applyServerRow('members', setMembers, newMem);
       // Not awaited: the application is in either way, the email is a courtesy
       void sendApplicationEmail(clubId, newMem.id, 'applied');
@@ -2744,6 +2771,7 @@ export function ClubProvider({
         fee_waived_at: updated.fee_waived_at ?? null,
         fee_waived_by: updated.fee_waived_by ?? null,
         fee_waiver_reason: updated.fee_waiver_reason ?? null,
+        ...(updated.requested_team_id ? { requested_team_id: updated.requested_team_id } : {}),
         // Only when approving sets a new term (never clears dates a payment set)
         ...(updated.membership_status === 'approved' && updated.membership_starts_at
           ? { membership_starts_at: updated.membership_starts_at, membership_expires_at: updated.membership_expires_at }
@@ -2804,7 +2832,7 @@ export function ClubProvider({
   const approveMemberApplication = useCallback(async (
     memberId: string,
     adminName: string = 'Club Committee',
-    options?: { waiveFee?: boolean; waiverReason?: string }
+    options?: { waiveFee?: boolean; waiverReason?: string; teamId?: string }
   ): Promise<{ success: boolean; member?: ClubMember; message: string; emailed?: boolean }> => {
     const member = members.find(m => m.id === memberId);
     if (!member) {
@@ -2875,6 +2903,8 @@ export function ClubProvider({
       reviewed_at: new Date().toISOString(),
       reviewed_by: adminName,
       qr_code_token: activeToken,
+      // The team the admin picked on the card (e.g. a junior team): the database puts them in it on approval
+      ...(options?.teamId ? { requested_team_id: options.teamId } : {}),
       ...(options?.waiveFee ? {
         fee_waived_at: new Date().toISOString(),
         fee_waived_by: adminName,

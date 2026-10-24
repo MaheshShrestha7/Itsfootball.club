@@ -248,6 +248,32 @@ export function ageGroupFit(dateOfBirth: string | null | undefined, ageGroup: st
   return age < limit ? 'ok' : 'too_old';
 }
 
+/**
+ * The junior team that best fits an under-18 applicant: the youngest active junior age group they
+ * are still young enough for on the cut-off date, else the first active junior team (or none).
+ */
+export function suggestJuniorTeam<T extends { id: string; is_junior?: boolean; is_active?: boolean; age_group?: string | null; sort_order?: number }>(
+  dateOfBirth: string | null | undefined,
+  teams: T[],
+  cutoff: Date
+): T | undefined {
+  const juniors = teams.filter(t => t.is_active && t.is_junior);
+  const age = ageOnDate(dateOfBirth, cutoff);
+  const fits = age === null ? [] : juniors
+    .filter(t => { const limit = ageGroupAge(t.age_group); return limit !== null && age < limit; })
+    .sort((a, b) => (ageGroupAge(a.age_group) ?? 99) - (ageGroupAge(b.age_group) ?? 99));
+  return fits[0] || juniors[0];
+}
+
+/** Match type that a competition name implies (null = no clear hint, keep what the admin picked) */
+export function matchTypeForCompetition(competition: string): 'internal' | 'friendly' | 'tournament' | null {
+  const c = competition.toLowerCase();
+  if (/intra|internal|in-house|training match/.test(c)) return 'internal';
+  if (/\b(cup|tournament|shield|carnival|gala|knockout|plate)\b/.test(c)) return 'tournament';
+  if (/\b(league|friendly|division|premier|championship|comp(etition)?|round)\b/.test(c)) return 'friendly';
+  return null;
+}
+
 export type SafeguardingCheckStatus = 'valid' | 'expiring' | 'expired' | 'missing';
 
 /** A staff member's background check: missing, expired, expiring within 60 days, or valid */

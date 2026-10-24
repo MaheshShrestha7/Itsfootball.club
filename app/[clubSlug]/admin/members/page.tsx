@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
-import { openReceipt } from '@/lib/receipts';
+import { receiptLink } from '@/lib/receipts';
 import { useAuth } from '@/lib/auth-context';
 import { ClubMember, isPlayerMember, MembershipPlan } from '@/lib/supabase/types';
 import {
@@ -42,7 +42,7 @@ import {
   FileText
 } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { ageGroupCutoff, ageGroupFit } from '@/lib/teams';
+import { ageGroupCutoff, ageGroupFit, suggestJuniorTeam } from '@/lib/teams';
 import { DATE_LOCALE } from '@/lib/dates';
 import { formatMoney, parseMoneyToCents, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
 
@@ -95,6 +95,18 @@ export default function AdminMembersPage({
     if (searchParams.get('tab') === 'messages') router.replace(`/${resolvedParams.clubSlug}/admin/inquiries`);
   }, [searchParams, router, resolvedParams.clubSlug]);
   const [searchQuery, setSearchQuery] = useState('');
+  // ?member=<id> (e.g. Finance's Application button): open that member's tab and bring the card into view
+  const focusMemberId = searchParams.get('member');
+  const focusMember = focusMemberId ? clubMembers.find(m => m.id === focusMemberId) : undefined;
+  const focusTab = !focusMember ? null : focusMember.membership_status === 'pending' ? 'pending' : focusMember.membership_status === 'rejected' ? 'rejected' : 'active';
+  useEffect(() => {
+    if (!focusTab || !focusMemberId) return;
+    const show = setTimeout(() => setActiveTab(focusTab), 0);
+    const scroll = setTimeout(() => document.getElementById(`member-card-${focusMemberId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+    return () => { clearTimeout(show); clearTimeout(scroll); };
+    // Once per link (setActiveTab is stable enough; re-running would fight the admin's own tab clicks)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMemberId, focusTab]);
   const [rejectModalMember, setRejectModalMember] = useState<ClubMember | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -121,39 +133,55 @@ export default function AdminMembersPage({
   // Sign-up payment status per member (paid by card, or a bank receipt waiting in Finance)
   const [signupPayments, setSignupPayments] = useState<Record<string, string>>({});
   // Bank receipts waiting to be checked, so the card can show and verify them without going to Finance
-  const [receiptsToCheck, setReceiptsToCheck] = useState<Record<string, { id: string; hasReceipt: boolean }>>({});
+  const [receiptsToCheck, setReceiptsToCheck] = useState<Record<string, { id: string; hasReceipt: boolean; amountCents?: number; reference?: string | null; method?: string }>>({});
+  // Receipt previews open on the card itself (member id -> short-lived link, or an error)
+  const [receiptPreview, setReceiptPreview] = useState<Record<string, { url?: string; error?: string; loading?: boolean; notImage?: boolean }>>({});
+  const toggleReceiptPreview = async (memberId: string, paymentId: string) => {
+    if (receiptPreview[memberId]) {
+      setReceiptPreview(prev => { const next = { ...prev }; delete next[memberId]; return next; });
+      return;
+    }
+    setReceiptPreview(prev => ({ ...prev, [memberId]: { loading: true } }));
+    const link = await receiptLink('payment', paymentId);
+    setReceiptPreview(prev => ({ ...prev, [memberId]: link }));
+  };
   useEffect(() => {
-    getSupabaseClient()?.from('payments').select('id, member_id, status, receipt_key')
+    getSupabaseClient()?.from('payments').select('id, member_id, status, receipt_key, amount_cents, reference, method')
       .eq('club_id', club.id).eq('kind', 'membership_signup').in('status', ['paid', 'awaiting_review'])
       .then(({ data }) => {
         const rows = data || [];
         // A paid row wins over an older receipt still waiting
         setSignupPayments(Object.fromEntries([...rows].sort((a, b) => (a.status === 'paid' ? 1 : 0) - (b.status === 'paid' ? 1 : 0)).map(p => [p.member_id, p.status])));
-        setReceiptsToCheck(Object.fromEntries(rows.filter(p => p.status === 'awaiting_review').map(p => [p.member_id, { id: p.id, hasReceipt: !!p.receipt_key }])));
+        setReceiptsToCheck(Object.fromEntries(rows.filter(p => p.status === 'awaiting_review').map(p => [p.member_id, { id: p.id, hasReceipt: !!p.receipt_key, amountCents: p.amount_cents, reference: p.reference, method: p.method }])));
       });
   }, [club.id]);
 
-  const verifyReceipt = async (member: ClubMember) => {
+  /** Marks the receipt paid. Resolves 'approved' when the club's policy approved them with it, 'paid', or null on failure */
+  const verifyReceipt = async (member: ClubMember, thenApprove = false): Promise<'approved' | 'paid' | null> => {
     const pending = receiptsToCheck[member.id];
     const client = getSupabaseClient();
-    if (!pending || !client || reviewing) return;
+    if (!pending || !client || reviewing) return null;
     setReviewing(member.id);
+    let outcome: 'approved' | 'paid' | null = null;
     try {
       const { error } = await client.rpc('fulfil_payment', { p_payment_id: pending.id });
-      if (error) return notify('Payment not verified', error.message);
+      if (error) { await notify('Payment not verified', error.message); return null; }
       setSignupPayments(prev => ({ ...prev, [member.id]: 'paid' }));
       setReceiptsToCheck(prev => { const next = { ...prev }; delete next[member.id]; return next; });
       // Under an auto-approve policy the payment approved them too
       const { data: fresh } = await client.from('club_members').select('membership_status').eq('id', member.id).maybeSingle();
-      showToast(fresh?.membership_status === 'approved'
+      outcome = fresh?.membership_status === 'approved' ? 'approved' : 'paid';
+      if (outcome === 'approved' || !thenApprove) showToast(outcome === 'approved'
         ? `✓ Payment verified and ${member.full_name} approved.`
         : can(club.id, 'members', 'edit')
           ? `✓ Payment verified for ${member.full_name}. You can approve them now.`
           : `✓ Payment verified for ${member.full_name}. Someone who manages Members can approve them now.`);
-      if (fresh?.membership_status === 'approved') await refreshMemberRow(member.id);
+      if (outcome === 'approved') await refreshMemberRow(member.id);
     } finally {
       setReviewing(null);
     }
+    if (outcome === 'paid' && thenApprove) await handleApprove(member);
+    return outcome;
   };
 
   // Last paid renewal per member (newest first, so the first one seen wins)
@@ -208,11 +236,33 @@ export default function AdminMembersPage({
 
   const [reviewing, setReviewing] = useState<string | null>(null);
 
+  // Under-18 players heading for a team that isn't a junior team: the card suggests one (ADM-N5)
+  const activeTeams = clubTeams.filter(t => t.club_id === club.id && t.is_active);
+  const [teamPick, setTeamPick] = useState<Record<string, string>>({});
+  const juniorCheck = (member: ClubMember) => {
+    if (member.membership_status !== 'pending' || String(member.role).toLowerCase() === 'supporter') return null;
+    const age = member.date_of_birth ? ageOn(member.date_of_birth) : null;
+    const minor = age !== null ? age < 18 : !!member.guardian_email;
+    if (!minor) return null;
+    const target = activeTeams.find(t => t.id === member.requested_team_id) || activeTeams.find(t => t.is_default) || activeTeams[0];
+    if (!target || target.is_junior) return null;
+    const suggested = suggestJuniorTeam(member.date_of_birth, activeTeams, ageGroupCutoff(getActiveSeason(member.club_id)?.start_date));
+    return { age, target, suggested, juniors: activeTeams.filter(t => t.is_junior) };
+  };
+  /** The team picked on the card ('' = keep the team they'd join anyway) */
+  const pickedTeam = (member: ClubMember) => {
+    const check = juniorCheck(member);
+    if (!check) return undefined;
+    const picked = teamPick[member.id] ?? check.suggested?.id ?? '';
+    return picked && picked !== check.target.id ? picked : undefined;
+  };
+
   const handleApprove = async (member: ClubMember) => {
     if (reviewing) return;
     setReviewing(member.id);
     try {
-      const res = await approveMemberApplication(member.id, user?.full_name || 'Club Committee');
+      const teamId = pickedTeam(member);
+      const res = await approveMemberApplication(member.id, user?.full_name || 'Club Committee', teamId ? { teamId } : undefined);
       if (!res.success) return notify('Not approved', res.message);
       showToast(res.emailed
         ? `✓ Approved ${member.full_name}. We've emailed them how to sign in.`
@@ -247,7 +297,7 @@ export default function AdminMembersPage({
       const res = await approveMemberApplication(
         member.id,
         user?.full_name || 'Club Committee',
-        { waiveFee: true, waiverReason: waiveReason.trim() || 'Approved with fee waiver' }
+        { waiveFee: true, waiverReason: waiveReason.trim() || 'Approved with fee waiver', teamId: pickedTeam(member) }
       );
       if (!res.success) return notify('Not approved', res.message);
       showToast(res.emailed
@@ -619,6 +669,7 @@ export default function AdminMembersPage({
                 return (
                   <div
                     key={member.id}
+                    id={`member-card-${member.id}`}
                     className="glass-panel"
                     style={{
                       padding: '1.25rem',
@@ -627,6 +678,7 @@ export default function AdminMembersPage({
                       justifyContent: 'space-between',
                       borderLeft: `4px solid ${isPending ? '#F59E0B' : isApproved ? '#10B981' : '#EF4444'}`,
                       position: 'relative',
+                      ...(member.id === focusMemberId ? { boxShadow: '0 0 0 2px var(--club-primary)' } : {}),
                     }}
                   >
                     <div>
@@ -738,6 +790,32 @@ export default function AdminMembersPage({
                                     <span style={{ color: 'var(--c-amber)' }}>⚠ No date of birth given for a junior team.</span>
                                   )}
                                 </>
+                              );
+                            })()}
+                            {(() => {
+                              const check = juniorCheck(member);
+                              if (!check) return null;
+                              const picked = teamPick[member.id] ?? check.suggested?.id ?? '';
+                              return (
+                                <div data-junior-check style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.6rem 0.7rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                  <span style={{ color: 'var(--c-amber)', fontWeight: 700 }}>
+                                    ⚠ {check.age !== null ? `Age ${check.age}` : 'Under 18 (parent or guardian applied)'}, but would join {check.target.name}, which isn&apos;t a junior team.
+                                  </span>
+                                  {check.juniors.length > 0 ? (
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                      <span>Put them in</span>
+                                      <select className="form-select" style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.8rem' }} value={picked}
+                                        onChange={e => setTeamPick(prev => ({ ...prev, [member.id]: e.target.value }))} aria-label={`Team for ${member.full_name}`}>
+                                        {check.juniors.map(t => <option key={t.id} value={t.id}>{t.name}{t.id === check.suggested?.id ? ' (suggested)' : ''}</option>)}
+                                        <option value={check.target.id}>Keep {check.target.name}</option>
+                                      </select>
+                                    </label>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-secondary)' }}>
+                                      Your club has no junior team yet. <Link href={`/${resolvedParams.clubSlug}/admin/teams`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Add one under Teams</Link> before approving, or approve into {check.target.name}.
+                                    </span>
+                                  )}
+                                </div>
                               );
                             })()}
                             {(member.guardian_name || member.guardian_email || member.guardian_phone) && (
@@ -863,34 +941,80 @@ export default function AdminMembersPage({
                               </div>
                             )}
 
-                            {receiptsToCheck[member.id] && !canApprove && (
-                              <div data-view-ok style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
-                                {receiptsToCheck[member.id].hasReceipt && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openReceipt('payment', receiptsToCheck[member.id].id)}
-                                    className="btn btn-secondary btn-sm"
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                                  >
-                                    <FileText size={14} />
-                                    <span>View Receipt</span>
-                                  </button>
-                                )}
-                                {can(club.id, 'finance', 'edit') && (
-                                  <button
-                                    type="button"
-                                    onClick={() => verifyReceipt(member)}
-                                    disabled={reviewing === member.id}
-                                    className="btn btn-secondary btn-sm"
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-green)' }}
-                                    title="The money is in the bank: mark this payment as paid"
-                                  >
-                                    <CheckCircle2 size={14} />
-                                    <span>{reviewing === member.id ? 'Verifying...' : 'Verify Payment'}</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
+                            {receiptsToCheck[member.id] && !canApprove && (() => {
+                              const receipt = receiptsToCheck[member.id];
+                              const preview = receiptPreview[member.id];
+                              const canBoth = can(club.id, 'finance', 'edit') && can(club.id, 'members', 'edit');
+                              return (
+                                <div data-view-ok data-application-receipt style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '6px', padding: '0.45rem 0.6rem' }}>
+                                    <strong style={{ color: 'var(--c-amber)' }}>Receipt to check:</strong>{' '}
+                                    {receipt.method === 'bank_transfer' ? 'Bank transfer' : receipt.method === 'cash' ? 'Cash' : 'Payment'}
+                                    {typeof receipt.amountCents === 'number' && <> of <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(receipt.amountCents, currency)}</strong></>}
+                                    {receipt.reference && <> · Ref <code>{receipt.reference}</code></>}
+                                    {typeof receipt.amountCents === 'number' && receipt.amountCents !== planPrice && (
+                                      <span style={{ display: 'block', color: 'var(--c-amber)' }}>⚠ The plan costs {formatMoney(planPrice, currency)}: check the amount before verifying.</span>
+                                    )}
+                                  </div>
+                                  {preview && (
+                                    <div style={{ borderRadius: '8px', border: '1px solid var(--border-subtle)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.3)' }}>
+                                      {preview.loading ? (
+                                        <p style={{ margin: 0, padding: '0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Loading receipt…</p>
+                                      ) : preview.error ? (
+                                        <p style={{ margin: 0, padding: '0.75rem', fontSize: '0.78rem', color: 'var(--c-red)' }}>{preview.error}</p>
+                                      ) : preview.notImage ? (
+                                        <p style={{ margin: 0, padding: '0.75rem', fontSize: '0.78rem' }}>This receipt is a document. <a href={preview.url} target="_blank" rel="noopener" style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Open it</a></p>
+                                      ) : (
+                                        <a href={preview.url} target="_blank" rel="noopener" title="Open full size">
+                                          <img src={preview.url} alt={`Receipt from ${member.full_name}`} style={{ display: 'block', width: '100%', maxHeight: 260, objectFit: 'contain' }}
+                                            onError={() => setReceiptPreview(prev => ({ ...prev, [member.id]: { ...prev[member.id], notImage: true } }))} />
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {receipt.hasReceipt && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleReceiptPreview(member.id, receipt.id)}
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                                        aria-expanded={!!preview}
+                                      >
+                                        <FileText size={14} />
+                                        <span>{preview ? 'Hide Receipt' : 'View Receipt'}</span>
+                                      </button>
+                                    )}
+                                    {canBoth && (
+                                      <button
+                                        type="button"
+                                        onClick={() => verifyReceipt(member, true)}
+                                        disabled={reviewing === member.id}
+                                        className="btn btn-primary btn-sm"
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                                        title="The money is in the bank: mark it paid and approve the pass"
+                                      >
+                                        <Check size={14} />
+                                        <span>{reviewing === member.id ? 'Working...' : 'Verify & Approve'}</span>
+                                      </button>
+                                    )}
+                                    {can(club.id, 'finance', 'edit') && (
+                                      <button
+                                        type="button"
+                                        onClick={() => verifyReceipt(member)}
+                                        disabled={reviewing === member.id}
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--c-green)' }}
+                                        title="The money is in the bank: mark this payment as paid"
+                                      >
+                                        <CheckCircle2 size={14} />
+                                        <span>{reviewing === member.id ? 'Verifying...' : canBoth ? 'Verify Only' : 'Verify Payment'}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {!canApprove && !receiptsToCheck[member.id] && can(club.id, 'finance', 'edit') && (
                               <button

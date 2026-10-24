@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
-import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
@@ -285,6 +285,14 @@ export default function AdminMatchesPage({
   useOpenItem(clubMatches, m => { if (canAddMatch && !m.tournament_id) handleOpenEditModal(m); });
 
   // Quick Preset Handlers for Internal Match Type
+  // A cup or league name sets the match type to go with it (an intra-squad game keeps its own setup)
+  const withCompetition = (f: typeof form, competition: string): typeof form => {
+    const hint = matchTypeForCompetition(competition);
+    return f.match_type !== 'internal' && (hint === 'friendly' || hint === 'tournament')
+      ? { ...f, competition, match_type: hint }
+      : { ...f, competition };
+  };
+
   const handleInternalPreset = (presetName: string, shortName: string) => {
     setForm(prev => ({
       ...prev,
@@ -1274,7 +1282,7 @@ export default function AdminMatchesPage({
                     className="form-input"
                     placeholder="e.g. Club Friendly, Championship League, State Cup"
                     value={form.competition}
-                    onChange={e => setForm({ ...form, competition: e.target.value })}
+                    onChange={e => setForm(withCompetition(form, e.target.value))}
                     required
                   />
                   <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
@@ -1282,7 +1290,7 @@ export default function AdminMatchesPage({
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => setForm({ ...form, competition: preset })}
+                        onClick={() => setForm(withCompetition(form, preset))}
                         className="btn btn-secondary btn-sm"
                         style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', height: 'auto' }}
                       >
