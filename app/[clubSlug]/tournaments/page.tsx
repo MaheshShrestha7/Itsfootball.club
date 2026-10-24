@@ -137,7 +137,7 @@ export default function PublicTournamentsPage({
                   <div
                     data-theme="dark" style={{
                       height: '140px',
-                      background: `linear-gradient(rgba(var(--dk-15-23-42), 0.3), rgba(var(--dk-11-17-32), 0.98)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
+                      background: `linear-gradient(rgba(var(--dk-15-23-42), 0.3), rgba(var(--dk-11-17-32), 0.98)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       padding: '1.25rem',

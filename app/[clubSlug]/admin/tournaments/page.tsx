@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Tournament } from '@/lib/supabase/types';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
+import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
+import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { Trophy, Swords, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
@@ -38,6 +40,31 @@ export default function AdminTournamentsPage({
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
 
   const [formTarget, setFormTarget] = useState<Tournament | 'new' | null>(null);
+  // Tournaments, or the club's own sides picked from members (#tournament-sides, linked from the menu)
+  const [tab, setTab] = useState<'list' | 'sides'>('list');
+  useEffect(() => {
+    const show = (hash: string) => {
+      const sides = hash === '#tournament-sides';
+      setTab(sides ? 'sides' : 'list');
+      if (sides) setFormTarget(null); // the form's "create sides" link closes it
+    };
+    const read = () => show(window.location.hash);
+    const fromMenu = (e: Event) => show((e as CustomEvent<string>).detail);
+    read();
+    window.addEventListener('hashchange', read);
+    window.addEventListener(ADMIN_HASH_EVENT, fromMenu);
+    return () => {
+      window.removeEventListener('hashchange', read);
+      window.removeEventListener(ADMIN_HASH_EVENT, fromMenu);
+    };
+  }, []);
+  // Switching tab updates the hash, so the admin menu highlights the matching item
+  const selectTab = (key: 'list' | 'sides') => {
+    setTab(key);
+    const { pathname, search } = window.location;
+    window.history.replaceState(window.history.state, '', `${pathname}${search}${key === 'sides' ? '#tournament-sides' : ''}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  };
   const [feedback, setFeedback] = useState<string | null>(null);
   const handleOpenWizard = () => setFormTarget('new');
 
@@ -133,6 +160,32 @@ export default function AdminTournamentsPage({
         </div>
       )}
 
+      <div data-view-ok role="tablist" className="row" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
+        {([['list', 'Tournaments'], ['sides', 'Tournament Sides']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => selectTab(key)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderBottom: tab === key ? '2px solid var(--club-primary)' : '2px solid transparent',
+              color: tab === key ? 'var(--text-primary)' : 'var(--text-secondary)',
+              padding: '0.6rem 0.9rem',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'sides' ? <InternalTeamsManager clubSlug={club.slug} /> : (
+      <>
+
       {/* KPI Cards */}
       <div
         style={{
@@ -151,8 +204,8 @@ export default function AdminTournamentsPage({
           <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>{activeTournaments} Currently Active</span>
         </div>
 
-        {/* Tournament sides are set up on the Teams page (Tournaments & Cups -> Tournament Sides in the menu) */}
-        <Link href={`/${club.slug}/admin/teams#tournament-sides`} style={{ display: 'block', color: 'inherit', textDecoration: 'none', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
+        {/* Opens the Tournament Sides tab */}
+        <button type="button" onClick={() => selectTab('sides')} style={{ display: 'block', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer', color: 'inherit', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Tournament Sides</span>
             <Shield size={18} color="var(--c-blue)" />
@@ -160,7 +213,7 @@ export default function AdminTournamentsPage({
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>
           {/* Says what's counted: the club's own sides, not the teams entered in a cup ("8 Teams Enrolled") */}
           <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Picked from your members · Manage →</span>
-        </Link>
+        </button>
 
         <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
@@ -237,7 +290,7 @@ export default function AdminTournamentsPage({
                     <div
                       data-theme="dark" style={{
                         height: '110px',
-                        background: `linear-gradient(rgba(var(--dk-15-23-42), 0.4), rgba(var(--dk-15-23-42), 0.95)), url(${tourn.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80'})`,
+                        background: `linear-gradient(rgba(var(--dk-15-23-42), 0.4), rgba(var(--dk-15-23-42), 0.95)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         padding: '1rem',
@@ -415,6 +468,8 @@ export default function AdminTournamentsPage({
             </div>
           )}
       </div>
+      </>
+      )}
 
       {formTarget && (
         <TournamentFormModal

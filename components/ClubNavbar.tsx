@@ -637,7 +637,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     }}
                   >
                     <Settings size={16} />
-                    <span>Club Admin Control Room</span>
+                    <span>Club Admin</span>
                   </Link>
                 )}
               </div>

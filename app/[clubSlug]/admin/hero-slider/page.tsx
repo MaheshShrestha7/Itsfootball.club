@@ -68,7 +68,7 @@ export default function AdminHeroSliderPage({
 
   // Custom Image Banner Form
   const [customImageForm, setCustomImageForm] = useState({
-    image_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+    image_url: '',
     title: `Official Season Pass ${defaultSeasonLabel()}`,
     subtitle: 'Secure guaranteed entry to all home fixtures, VIP member lounge access, and exclusive kit discount.',
     badge: 'MEMBERSHIP SPOTLIGHT',
@@ -159,7 +159,7 @@ export default function AdminHeroSliderPage({
       title: evt.title,
       subtitle: evt.description,
       badge: `PINNED EVENT • ${evt.category.toUpperCase()}`,
-      image_url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+      image_url: '',
       cta_label: 'RSVP / Event Details',
       cta_link: `/${club.slug}#events`,
       is_active: true,
@@ -182,7 +182,7 @@ export default function AdminHeroSliderPage({
       title: `${m.home_team_name} vs ${m.away_team_name}`,
       subtitle: `${m.competition} • ${m.venue}`,
       badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(m)}'` : `FIXTURE • ${m.competition.toUpperCase()}`,
-      image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+      image_url: '',
       cta_label: isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${m.id}`,
       is_active: true,
@@ -204,7 +204,7 @@ export default function AdminHeroSliderPage({
       title: article.title,
       subtitle: article.summary,
       badge: `BREAKING NEWS • ${article.tags[0] || 'FIRST TEAM'}`,
-      image_url: article.cover_image_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+      image_url: article.cover_image_url || '',
       cta_label: 'Read Full Story',
       cta_link: `/${club.slug}#news`,
       is_active: true,

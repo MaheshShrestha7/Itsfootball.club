@@ -10,10 +10,10 @@ import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-conte
 import { useAuth } from '@/lib/auth-context';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
-import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import WizardGroundSearch, { type WizardGround } from '@/components/grounds/WizardGroundSearch';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
+import { DEFAULT_CREST } from '@/lib/crest';
 import {
   Shield,
   Sparkles,
@@ -69,7 +69,7 @@ export default function CreateClubPage() {
     secondary_color: '#090D16', // Obsidian
     accent_color: '#F59E0B', // Gold
     logo_url: '',
-    banner_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+    banner_url: '',
     stadium_name: '',
     stadium_address: '',
     stadium_capacity: 7500,
@@ -590,10 +590,10 @@ export default function CreateClubPage() {
             {step === 2 && (
               <div className="animate-fade-in">
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  2. Colours, Crest & Kit
+                  2. Colours & Crest
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Pick your club colours, add your crest and a banner photo, and choose a kit. We check the colours stay easy to read.
+                  Pick your club colours and add your crest. A banner photo is optional; without one your club colours are used. You can design kits later in Branding.
                 </p>
 
                 {/* Color Preset Quick Pickers */}
@@ -630,7 +630,7 @@ export default function CreateClubPage() {
                   </div>
                 </div>
 
-                {/* Side-by-Side: Palette Inputs & Uploads (Left) + Interactive Jersey Swatch Canvas (Right) */}
+                {/* Colours & uploads (left) + a preview of the colours with the crest (right) */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
@@ -705,37 +705,6 @@ export default function CreateClubPage() {
                       </div>
                     </div>
 
-                    {/* WCAG Contrast Scorecard */}
-                    <div style={{
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      background: 'rgba(var(--shade-rgb), 0.3)',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.78rem',
-                    }}>
-                      <div className="row">
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: formData.primary_color }} />
-                        <span className="text-secondary">
-                          Contrast: <strong>{contrastInfo.ratioFormatted}</strong>
-                        </span>
-                      </div>
-                      <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontWeight: 700,
-                          fontSize: '0.7rem',
-                          background: contrastInfo.isWcagAA ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                          color: contrastInfo.isWcagAA ? 'var(--c-green)' : 'var(--c-amber)',
-                        }}
-                      >
-                        {contrastInfo.isWcagAA ? 'WCAG 2.2 AA PASSED' : 'LARGE TEXT ONLY'}
-                      </span>
-                    </div>
-
                     {/* Drag-and-Drop Image Upload Zones */}
                     <ImageUploadZone
                       label="Official Club Crest / Logo"
@@ -747,7 +716,7 @@ export default function CreateClubPage() {
                     />
 
                     <ImageUploadZone
-                      label="Hero Home Ground Banner"
+                      label="Banner Photo (optional)"
                       recommendedText="Wide 1920x1080px (16:9) home ground or arena photography"
                       currentImageUrl={formData.banner_url}
                       onUploadComplete={(url) => setFormData(prev => ({ ...prev, banner_url: url }))}
@@ -756,23 +725,32 @@ export default function CreateClubPage() {
                     />
                   </div>
 
-                  {/* Right Column: Interactive 2D Vector Jersey Morphing Canvas */}
+                  {/* Right column: how the colours look on the site */}
                   <div>
-                    <KitDesignerPreview
-                      clubName={formData.name || "Your Club"}
-                      shortName={formData.short_name || 'VFC'}
-                      primaryColor={formData.primary_color}
-                      secondaryColor={formData.secondary_color}
-                      accentColor={formData.accent_color}
-                      onColorsChange={({ primary, secondary, accent }) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          primary_color: primary,
-                          secondary_color: secondary,
-                          accent_color: accent,
-                        }));
-                      }}
-                    />
+                    <div style={{
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-subtle)',
+                      background: formData.primary_color,
+                      color: contrastInfo.bestTextColor,
+                    }}>
+                      <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <img src={formData.logo_url || DEFAULT_CREST} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 900, overflowWrap: 'anywhere' }}>{formData.name || 'Your Club'}</div>
+                          <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>{formData.motto || 'Fixtures, results and member passes'}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', height: '10px' }}>
+                        <span style={{ flex: 2, background: formData.secondary_color }} />
+                        <span style={{ flex: 1, background: formData.accent_color }} />
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.78rem', marginTop: '0.6rem', color: contrastInfo.isWcagAA ? 'var(--c-green)' : 'var(--c-amber)' }}>
+                      {contrastInfo.isWcagAA
+                        ? 'Text on your main colour is easy to read.'
+                        : 'Small text on your main colour may be hard to read. Try a darker or lighter shade.'}
+                    </p>
                   </div>
                 </div>
 
@@ -835,7 +813,7 @@ export default function CreateClubPage() {
                       onChange={handleChange}
                     >
                       <option value="Natural Grass">Natural Grass</option>
-                      <option value="Hybrid Grass (FIFA Pro Quality)">Hybrid grass</option>
+                      <option value="Hybrid Grass">Hybrid grass</option>
                       <option value="3G / 4G All-Weather Turf">Synthetic turf</option>
                     </select>
                   </div>

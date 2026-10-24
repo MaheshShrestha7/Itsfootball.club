@@ -2,7 +2,6 @@
 
 import { PageSkeleton } from '@/components/Skeleton';
 import React, { useState, useEffect, use, useMemo } from 'react';
-import { fallbackToBrandImage } from "@/lib/image-fallback";
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { matchTypeTag } from '@/lib/fixture-label';
@@ -286,7 +285,7 @@ export default function ClubPublicPage({
             phoneTabLabel: isLive ? 'Live Match' : 'Fixture',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
             badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinute(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
-            bgImage: item.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+            bgImage: item.image_url || club.banner_url || '',
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
             subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
             ctaLabel: item.cta_label || (isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups'),
@@ -303,7 +302,7 @@ export default function ClubPublicPage({
             phoneTabLabel: article?.tags?.[0] || 'News',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'News',
             badge: item.badge || `BREAKING NEWS • ${article?.tags?.[0] || 'FIRST TEAM'}`,
-            bgImage: item.image_url || article?.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+            bgImage: item.image_url || article?.cover_image_url || club.banner_url || '',
             title: item.title || article?.title || `${club.name} Dispatches`,
             subtitle: item.subtitle || article?.summary || 'Latest match summaries and announcements.',
             ctaLabel: item.cta_label || 'Read Full Story',
@@ -320,7 +319,7 @@ export default function ClubPublicPage({
             phoneTabLabel: evt?.category ? EVENT_TAB_LABELS[evt.category] : 'Event',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
             badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
-            bgImage: evt?.flyer_url || item.image_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+            bgImage: evt?.flyer_url || item.image_url || club.banner_url || '',
             bgIsFlyer: Boolean(evt?.flyer_url),
             title: item.title || evt?.title || `${club.name} Open Event`,
             subtitle: item.subtitle || evt?.description || 'Fan sessions and trial opportunities.',
@@ -337,7 +336,7 @@ export default function ClubPublicPage({
           phoneTabLabel: 'Spotlight',
           tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
           badge: item.badge || 'SPECIAL FEATURE',
-          bgImage: item.image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+          bgImage: item.image_url || club.banner_url || '',
           title: item.title || `${club.name} Feature`,
           subtitle: item.subtitle || club.motto || 'Strength, Passion, and Football Heritage',
           ctaLabel: item.cta_label || 'Explore Feature',
@@ -359,7 +358,7 @@ export default function ClubPublicPage({
           : upcomingMatches[0]
           ? `UPCOMING FIXTURE • ${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? (upcomingMatches[0].match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`
           : 'MATCHDAY HUB',
-        bgImage: (club.slider_images && club.slider_images[0]) || club.banner_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+        bgImage: (club.slider_images && club.slider_images[0]) || club.banner_url || '',
         title: liveMatch
           ? `${liveMatch.home_team_name} vs ${liveMatch.away_team_name}`
           : upcomingMatches[0]
@@ -377,7 +376,7 @@ export default function ClubPublicPage({
         category: 'news',
         tabLabel: 'Latest News',
         badge: `BREAKING NEWS • ${featuredArticle?.tags?.[0] || 'FIRST TEAM'}`,
-        bgImage: featuredArticle?.cover_image_url || club.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+        bgImage: featuredArticle?.cover_image_url || club.banner_url || '',
         title: featuredArticle?.title || `${club.name} First Team Dispatches`,
         subtitle: featuredArticle?.summary || 'Latest match summaries, tactical insights, and club announcements.',
         targetNews: featuredArticle,
@@ -387,7 +386,7 @@ export default function ClubPublicPage({
         category: 'event',
         tabLabel: 'Events & Trials',
         badge: `UPCOMING EVENT • ${nextEvent?.category?.toUpperCase() || 'CALENDAR'}`,
-        bgImage: nextEvent?.flyer_url || club.banner_url || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+        bgImage: nextEvent?.flyer_url || club.banner_url || '',
         bgIsFlyer: Boolean(nextEvent?.flyer_url),
         title: nextEvent?.title || `${club.name} Open Training Session`,
         subtitle: nextEvent?.description || 'Fan sessions, community training camps, and player trial opportunities.',
@@ -398,7 +397,7 @@ export default function ClubPublicPage({
         category: 'stadium',
         tabLabel: 'Home Ground & Fortress',
         badge: `HOME FORTRESS • ${club.stadium_name}`,
-        bgImage: (club.slider_images && club.slider_images[1]) || gallery[0]?.media_url || 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=1600&auto=format&fit=crop&q=80',
+        bgImage: (club.slider_images && club.slider_images[1]) || gallery[0]?.media_url || '',
         title: club.stadium_name,
         subtitle: club.stadium_pitch_type,
       }
@@ -470,7 +469,7 @@ export default function ClubPublicPage({
           justifyContent: 'flex-start',
           background: currentSlide.bgIsFlyer
             ? 'var(--bg-pitch)'
-            : `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), url(${currentSlide.bgImage}) center/cover no-repeat`,
+            : `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), ${currentSlide.bgImage ? `url(${currentSlide.bgImage}) center/cover no-repeat` : 'var(--club-primary)'}`,
           borderBottom: '1px solid var(--border-subtle)',
           padding: '2.5rem 0 2.5rem 0',
           transition: 'background-image 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -1162,10 +1161,12 @@ export default function ClubPublicPage({
                   flexDirection: 'column',
                 }}>
                   <div style={{ height: '220px', position: 'relative' }}>
-                    <img loading="eager" decoding="async"
-                      src={currentSlide.bgImage} onError={fallbackToBrandImage}
+                    <CoverImage
+                      loading="eager"
+                      src={currentSlide.bgImage}
                       alt={currentSlide.title}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      crestUrl={club.logo_url}
+                      style={{ width: '100%', height: '100%' }}
                     />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.95) 0%, transparent 60%)' }} />
                     <div style={{ position: 'absolute', top: '12px', left: '12px' }}>

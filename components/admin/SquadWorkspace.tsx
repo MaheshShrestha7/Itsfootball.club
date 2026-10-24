@@ -44,13 +44,13 @@ const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = 
 
 // Squad labels that give no admin access
 const BASE_ROLES = [
-  { id: 'Player', label: 'Player', icon: Shield, desc: 'First Team & Squad Athlete', access: false },
-  { id: 'Executive Committee', label: 'Executive Committee', icon: Award, desc: 'Governance & Board Post', access: false },
+  { id: 'Player', label: 'Player', icon: Shield, desc: 'Plays for one of the club teams', access: false },
+  { id: 'Executive Committee', label: 'Executive Committee', icon: Award, desc: 'Sits on the club committee', access: false },
 ];
 // Shown when the club's access roles can't be loaded (no database connected)
 const FALLBACK_ACCESS_ROLES = [
-  { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Head Coach & Technical Staff', access: true },
-  { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Platform Administrator', access: true },
+  { id: 'Manager', label: 'Manager', icon: Briefcase, desc: 'Coach or team staff', access: true },
+  { id: 'Club Admin', label: 'Club Admin', icon: User, desc: 'Runs the club admin', access: true },
 ];
 
 const EMPTY_SAFEGUARDING = {

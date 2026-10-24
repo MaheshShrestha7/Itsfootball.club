@@ -11,7 +11,7 @@ export const CONTACT_EMAIL = 'contact@itsfootball.club';
 
 // How a club goes live: shown on the homepage and /create-club, and their HowTo schema
 export const CREATE_CLUB_STEPS = [
-  { name: 'Claim your club', milestone: 'Club identity', text: 'Pick your name and web address, upload your crest and choose your colours. The kit preview updates as you go.' },
+  { name: 'Claim your club', milestone: 'Club identity', text: 'Pick your name and web address, upload your crest and choose your colours. The preview updates as you go.' },
   { name: 'Bring in the squad', milestone: 'Squad setup', text: 'Import members in bulk, add fixtures for the season and appoint your committee.' },
   { name: 'Share the link', milestone: 'Matchday 1', text: 'Post your club address in the group chat. From then on, matchday runs from your phone.' },
 ];

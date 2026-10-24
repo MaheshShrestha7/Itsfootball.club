@@ -157,6 +157,8 @@ export default function AdminMatchCenterControllerPage({
 
   // Quick event form states
   const [eventType, setEventType] = useState<MatchEventType>('goal');
+  // Phones show the six most-used event buttons; the rest open with "More events"
+  const [moreEvents, setMoreEvents] = useState(false);
   // Each fixture starts on the club's own side (away games too), not always the home team
   const [sidePick, setSidePick] = useState<{ matchId: string; side: 'home' | 'away' } | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
@@ -349,7 +351,7 @@ export default function AdminMatchCenterControllerPage({
     setMinuteOverride(null);
   };
 
-  // Pause/resume the live clock in place (injury, VAR check, etc.) without
+  // Pause/resume the live clock in place (injury or stoppage) without
   // leaving the 'live' status/period the way switching to halftime would.
   const handleTogglePause = () => {
     if (match.is_paused) {
@@ -741,7 +743,7 @@ export default function AdminMatchCenterControllerPage({
                         color: match.is_paused ? '#000000' : '#FFFFFF',
                         fontWeight: 800,
                       }}
-                      title={match.is_paused ? 'Resume clock' : 'Pause clock (injury, VAR check, etc.)'}
+                      title={match.is_paused ? 'Resume clock' : 'Pause clock (injury or stoppage)'}
                     >
                       {match.is_paused ? <><Play size={13} /> Resume</> : <><Pause size={13} /> Pause</>}
                     </button>
@@ -924,8 +926,13 @@ export default function AdminMatchCenterControllerPage({
             // Shootout kicks go in the shootout score below, not the match score or players' goals
             if (inShootout) quickActions = quickActions.filter(a => a.eventType !== 'goal' && a.eventType !== 'penalty' && a.eventType !== 'own_goal');
 
+            // The buttons a phone shows before "More events": goals, yellows, a sub and a penalty
+            const PHONE_FIRST = new Set(clubSides.length === 1
+              ? ['goal-us', 'goal-opp', 'penalty-us', 'yellow-us', 'yellow-opp', 'sub-us']
+              : ['goal-home', 'goal-away', 'yellow_card-home', 'yellow_card-away', 'sub-home', 'sub-away']);
+            const foldedCount = quickActions.filter(a => !PHONE_FIRST.has(a.key)).length + 2;
+
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
-              { key: 'var', label: 'VAR Review', emoji: '🖥️', eventType: 'var' },
               { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },
               { key: 'whistle', label: 'Period Whistle', emoji: '📢', eventType: 'whistle' },
             ];
@@ -965,7 +972,7 @@ export default function AdminMatchCenterControllerPage({
                   {/* Quick Action Buttons */}
                   <div className="form-group">
                     <label className="form-label">Event</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 120px), 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div data-more={moreEvents ? 'open' : undefined} className="mc-events" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 120px), 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       {quickActions.map(a => {
                         const isActive = eventType === a.eventType && teamSide === a.side;
                         return (
@@ -973,7 +980,8 @@ export default function AdminMatchCenterControllerPage({
                             key={a.key}
                             type="button"
                             onClick={() => { setEventType(a.eventType); chooseSide(a.side); }}
-                            className="touch-target"
+                            // A folded button stays in view while it's the one picked
+                            className={`touch-target${PHONE_FIRST.has(a.key) || isActive ? '' : ' mc-more'}`}
                             style={{
                               display: 'flex',
                               flexDirection: 'column',
@@ -1003,8 +1011,17 @@ export default function AdminMatchCenterControllerPage({
                       })}
                     </div>
 
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm mc-more-toggle"
+                      aria-expanded={moreEvents}
+                      onClick={() => setMoreEvents(v => !v)}
+                    >
+                      {moreEvents ? 'Fewer events' : `More events (${foldedCount})`}
+                    </button>
+
                     {/* Less-common events */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <div data-more={moreEvents ? 'open' : undefined} className="mc-events mc-more" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                       {otherActions.map(a => {
                         const isActive = eventType === a.eventType;
                         return (
@@ -1366,7 +1383,7 @@ export default function AdminMatchCenterControllerPage({
               >
                 <span className="row">
                   {match.is_paused ? <Play size={16} /> : <Pause size={16} />}
-                  {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury, VAR check, etc.)'}
+                  {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury or stoppage)'}
                 </span>
                 {match.is_paused && <span className="badge" style={{ background: 'rgba(var(--shade-rgb), 0.2)', color: '#000' }}>PAUSED</span>}
               </button>

@@ -9,6 +9,7 @@ import { useOpenItem } from '@/lib/use-open-item';
 import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
 import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import CoverImage from '@/components/CoverImage';
 import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
@@ -63,10 +64,6 @@ const FLYER_PRESETS = [
   {
     name: 'Action Pitch Banner',
     url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Home Fortress Arena',
-    url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80'
   }
 ];
 
@@ -173,7 +170,7 @@ export default function AdminMatchesPage({
     match_date: defaultDate,
     match_time: '15:00',
     venue: club.stadium_name || 'Home Ground',
-    match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+    match_flyer_url: '',
     description: '',
     competition: 'Club Friendly',
     season: activeSeason?.name || defaultSeasonLabel(),
@@ -207,7 +204,7 @@ export default function AdminMatchesPage({
       match_date: prefill?.date || todayIso(new Date(Date.now() + 3 * 86400000)),
       match_time: prefill?.time || '15:00',
       venue: club.stadium_name || 'Home Ground',
-      match_flyer_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+      match_flyer_url: '',
       description: '',
       competition: 'Club Friendly',
       season: activeSeason?.name || defaultSeasonLabel(),
@@ -263,7 +260,7 @@ export default function AdminMatchesPage({
       match_date: parsedDate,
       match_time: parsedTime,
       venue: m.venue || club.stadium_name,
-      match_flyer_url: m.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+      match_flyer_url: m.match_flyer_url || '',
       description: m.description || '',
       competition: m.competition || (m.match_type === 'internal' ? 'Intra-Squad Match' : 'Club Friendly'),
       season: m.season || activeSeason?.name || defaultSeasonLabel(),
@@ -574,7 +571,7 @@ export default function AdminMatchesPage({
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             <Radio size={16} color="var(--c-red)" />
-            <span>Match Command Centre</span>
+            <span>Match Centre</span>
           </Link>
 
           <button
@@ -792,10 +789,11 @@ export default function AdminMatchesPage({
                     border: '1px solid var(--border-subtle)'
                   }}
                 >
-                  <img loading="lazy" decoding="async"
-                    src={m.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80'}
+                  <CoverImage
+                    src={m.match_flyer_url}
                     alt={m.title || 'Match Flyer'}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    crestUrl={club.logo_url}
+                    style={{ width: '100%', height: '100%' }}
                   />
                   <div
                     data-theme="dark" style={{

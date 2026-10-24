@@ -64,7 +64,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     setShortName('');
     setColor('#10B981');
     setLogoUrl(club.logo_url || DEFAULT_CREST);
-    setCoverUrl('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80');
+    setCoverUrl('');
     setCoachName('');
     setCaptainId('');
     setSelectedPlayerIds([]);
@@ -153,7 +153,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
             Internal Teams & Squads
           </h2>
           <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            Configure intra-club rosters (First Team, U-21 Academy, Staff & Legends) to include in tournaments.
+            Sides picked from your members, for club tournaments and in-house matches. Your league teams are under Club Teams.
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
             No Internal Teams Created
           </h3>
           <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem' }}>
-            Build your internal squads to organize intra-club cups and friendly tournament matches.
+            Pick members into sides to run an in-house cup or a friendly tournament.
           </p>
           <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
             <Plus size={15} />

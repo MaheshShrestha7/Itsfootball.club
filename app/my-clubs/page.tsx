@@ -171,7 +171,7 @@ export default function MyClubsPage() {
                   Your Registered Clubs
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', maxWidth: '650px', fontSize: '0.925rem' }}>
-                  Welcome back, <strong>{user.full_name}</strong>. Command matchday reporting, manage member turnstile passes, and customize your official club websites.
+                  Welcome back, <strong>{user.full_name}</strong>. Run match days, manage member passes and update your club website.
                 </p>
               </div>
 
@@ -328,7 +328,7 @@ export default function MyClubsPage() {
                             }}
                           >
                             <Settings size={16} />
-                            <span>Admin Control Room</span>
+                            <span>Club Admin</span>
                           </Link>
 
                           {/* Secondary Fast Action Tiles */}
@@ -488,7 +488,7 @@ export default function MyClubsPage() {
                               }}
                             >
                               {isClubAdmin ? <Settings size={16} /> : <CreditCard size={16} />}
-                              <span>{isClubAdmin ? 'Admin Control Room' : 'My Member Pass'}</span>
+                              <span>{isClubAdmin ? 'Club Admin' : 'My Member Pass'}</span>
                             </Link>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
@@ -647,10 +647,10 @@ export default function MyClubsPage() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, color: 'var(--c-blue)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                      🎟️ Digital Turnstiles
+                      🎟️ Member Passes
                     </div>
                     <div className="text-note">
-                      Issue matchday passes with real-time QR code turnstile check-in.
+                      Every member gets a pass with a QR code to check in at the gate.
                     </div>
                   </div>
                 </div>

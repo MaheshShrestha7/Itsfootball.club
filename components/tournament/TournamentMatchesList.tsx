@@ -340,7 +340,7 @@ export default function TournamentMatchesList({
                   }}
                 >
                   <MapPin size={12} />
-                  <span>{match.venue || 'Stadium Arena'}</span>
+                  <span>{match.venue || 'Venue to be confirmed'}</span>
                 </div>
               </div>
 

@@ -229,8 +229,8 @@ export default function AdminLayout({
         { area: 'matches', label: 'Fixtures & Results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
         {
           area: 'tournaments', label: 'Tournaments & Cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy,
-          // The tournament tab of the Teams page: tournament sides are kept apart from club teams
-          children: [{ area: 'teams', label: 'Tournament Sides', href: `/${club.slug}/admin/teams#tournament-sides` }],
+          // The club's own sides for tournaments, a tab of the Tournaments screen (kept apart from club teams)
+          children: [{ area: 'tournaments', label: 'Tournament Sides', href: `/${club.slug}/admin/tournaments#tournament-sides` }],
         },
         // The club calendar: training sessions, socials and match-day events, with tickets and check-in
         { area: 'events', label: 'Events & Training', href: `/${club.slug}/admin/events`, icon: Calendar },
@@ -368,7 +368,7 @@ export default function AdminLayout({
 
   const allNavItems = navSections.flatMap(s => s.items);
 
-  // The URL hash picks a tab or section on some pages (Teams: #tournament-sides), and a menu item may
+  // The URL hash picks a tab or section on some pages (Tournaments: #tournament-sides), and a menu item may
   // point at it. Next's links don't fire hashchange, so a menu click announces its hash to the open page
   // itself (ADMIN_HASH_EVENT); the page's own tab switches update the URL and fire hashchange.
   const [locationHash, setLocationHash] = useState('');
@@ -749,7 +749,7 @@ export default function AdminLayout({
               </div>
             )}
             <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentNavItem ? (currentChild ? currentChild.label : currentNavItem.label) : 'Control Room'}
+              {currentNavItem ? (currentChild ? currentChild.label : currentNavItem.label) : 'Club Admin'}
             </div>
           </div>
           <Link
@@ -777,7 +777,7 @@ export default function AdminLayout({
               style={{ padding: '1.25rem 1rem' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Control Room</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Club Admin</div>
                 <button
                   type="button"
                   onClick={() => setMobileDrawerOpen(false)}

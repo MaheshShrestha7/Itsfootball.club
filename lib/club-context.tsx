@@ -1124,7 +1124,7 @@ export function ClubProvider({
       motto: sanitizeText(clubData.motto),
       founded_year: clubData.founded_year || new Date().getFullYear(),
       logo_url: clubData.logo_url || DEFAULT_CREST,
-      banner_url: clubData.banner_url || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1600&auto=format&fit=crop&q=80',
+      banner_url: clubData.banner_url || '',
       primary_color: clubData.primary_color || '#10B981',
       secondary_color: clubData.secondary_color || '#0F172A',
       accent_color: clubData.accent_color || '#F59E0B',
@@ -1309,7 +1309,7 @@ export function ClubProvider({
             title: newMatch.title || `${newMatch.home_team_name} vs ${newMatch.away_team_name}`,
             subtitle: `${newMatch.match_type ? newMatch.match_type.toUpperCase() + ' • ' : ''}${newMatch.venue}`,
             badge: `FEATURED MATCH • ${(newMatch.match_type || 'FIXTURE').toUpperCase()}`,
-            image_url: newMatch.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+            image_url: newMatch.match_flyer_url || '',
             cta_label: 'Match Preview & Details',
             cta_link: `/${c.slug}/match/${newMatch.id}`,
             is_active: true,
@@ -1383,7 +1383,7 @@ export function ClubProvider({
                   title: updates.title || targetMatch.title || `${targetMatch.home_team_name} vs ${targetMatch.away_team_name}`,
                   subtitle: `${(updates.match_type || targetMatch.match_type) ? (updates.match_type || targetMatch.match_type)!.toUpperCase() + ' • ' : ''}${updates.venue || targetMatch.venue}`,
                   badge: `FEATURED MATCH • ${(updates.match_type || targetMatch.match_type || 'FIXTURE').toUpperCase()}`,
-                  image_url: updates.match_flyer_url || targetMatch.match_flyer_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop&q=80',
+                  image_url: updates.match_flyer_url || targetMatch.match_flyer_url || '',
                   cta_label: 'Match Preview & Details',
                   cta_link: `/${c.slug}/match/${matchId}`,
                   is_active: true,
@@ -2396,7 +2396,7 @@ export function ClubProvider({
     const totalVisits = clubViews.length;
 
     // Day of week buckets (Mon -> Sun)
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat (Matchday)', 'Sun'];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const weeklyVisits = [0, 0, 0, 0, 0, 0, 0];
 
     // Add real views into corresponding days
@@ -2454,7 +2454,6 @@ export function ClubProvider({
       weeklyDays: days,
       matchCenterFans,
       gateScansCount,
-      avgDuration: '—',
       topSections,
       deviceBreakdown: [
         { name: 'Mobile Phones (Smartphones)', percentage: `${mobilePct}%`, color: '#10B981' },

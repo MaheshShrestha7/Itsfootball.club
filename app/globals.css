@@ -2112,11 +2112,16 @@ textarea {
 }
 
 /* Match Centre on phones: headings and extras fold away so the scoreboard sits near the top,
-   the shortcut buttons become one scrolling row, and Log Event stays in reach */
+   the shortcut buttons become one scrolling row, six event buttons show before "More events",
+   and Log Event stays in reach */
 .mc-phone-only { display: none; }
+.mc-more-toggle { display: none !important; }
 @media (max-width: 640px) {
   .mc-phone-hide { display: none !important; }
   .mc-phone-only { display: inline; }
+  .mc-events:not([data-more="open"]) .mc-more,
+  .mc-events.mc-more:not([data-more="open"]) { display: none !important; }
+  .mc-more-toggle { display: flex !important; width: 100%; justify-content: center; margin-bottom: 0.5rem; }
   .mc-header { margin-bottom: 0.75rem !important; gap: 0.6rem !important; }
   .mc-header .admin-match-center-actions {
     display: flex !important;

@@ -110,7 +110,7 @@ export default function AdminEventsPage({
           title: evt.title,
           subtitle: evt.description,
           badge: `PINNED EVENT • ${evt.category.toUpperCase()}`,
-          image_url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80',
+          image_url: '',
           cta_label: 'RSVP / Event Details',
           cta_link: `/${club.slug}#events`,
           is_active: true,

@@ -78,7 +78,7 @@ export default function TournamentStandingsTable({
             )}
           </div>
           <div className="text-meta">
-            FIFA Rules • 3 PTS Win / 1 PTS Draw
+            3 points for a win, 1 for a draw
           </div>
         </div>
       )}

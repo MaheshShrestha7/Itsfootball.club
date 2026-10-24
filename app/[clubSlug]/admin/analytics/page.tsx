@@ -3,7 +3,7 @@
 import React, { use, useEffect } from 'react';
 import { useClub } from '@/lib/club-context';
 import { useUrlTab } from '@/lib/use-url-tab';
-import { BarChart3, TrendingUp, Users, QrCode, Radio, Eye, Megaphone } from 'lucide-react';
+import { BarChart3, QrCode, Radio, Eye, Megaphone } from 'lucide-react';
 import SponsorHubDashboard from '@/components/SponsorHubDashboard';
 
 const ANALYTICS_VIEWS = ['overview', 'sponsors'] as const;
@@ -72,6 +72,12 @@ export default function AdminAnalyticsPage({
         <SponsorHubDashboard club={club} sponsors={sponsors} />
       ) : (
       <>
+      {analytics.totalVisits === 0 && (
+        <p className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+          No visits recorded yet. These numbers fill in once people start visiting your club&apos;s public pages.
+        </p>
+      )}
+
       {/* KPI Overview */}
       <div style={{
         display: 'grid',
@@ -81,16 +87,13 @@ export default function AdminAnalyticsPage({
       }}>
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>LIVE PUBLIC VISITS</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>PUBLIC VISITS</span>
             <Eye size={18} color="var(--club-primary)" />
           </div>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             {analytics.totalVisits.toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span className="pulse-dot" style={{ background: '#10B981', width: '6px', height: '6px' }} />
-            <span>Active live stream</span>
-          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>Public page views, last 90 days</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -102,7 +105,7 @@ export default function AdminAnalyticsPage({
             {analytics.matchCenterFans.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.75rem', color: analytics.matchCenterFans > 0 ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.35rem' }}>
-            {analytics.matchCenterFans > 0 ? 'Live match in progress' : 'Fixture standby'}
+            {analytics.matchCenterFans > 0 ? 'Live match in progress' : 'Counts during a live match'}
           </div>
         </div>
 
@@ -117,47 +120,32 @@ export default function AdminAnalyticsPage({
           <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.35rem' }}>Member passes scanned</div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>AVG. DURATION</span>
-            <TrendingUp size={18} color="var(--c-blue)" />
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-            {analytics.avgDuration}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>High fan retention</div>
-        </div>
       </div>
 
       {/* Weekly Traffic Bar Chart */}
       <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Weekly Visitor Activity (Surge on Matchday)
+            Visits by day of the week
           </h3>
-          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-            Real-Time Aggregation
-          </span>
         </div>
 
         <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '220px', minWidth: '460px', gap: '1rem', paddingTop: '1rem' }}>
             {trafficData.map((val, idx) => {
-              const heightPct = Math.max(12, Math.round((val / maxTraffic) * 100));
-              const isMatchday = idx === 5;
+              const heightPct = val ? Math.max(12, Math.round((val / maxTraffic) * 100)) : 3;
 
               return (
                 <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isMatchday ? 'var(--c-red)' : 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                     {val.toLocaleString()}
                   </span>
                   <div style={{
                     width: '100%',
                     maxWidth: '48px',
                     height: `${heightPct}%`,
-                    background: isMatchday ? 'linear-gradient(180deg, #EF4444, #991B1B)' : 'linear-gradient(180deg, var(--club-primary), rgba(16, 185, 129, 0.4))',
+                    background: 'linear-gradient(180deg, var(--club-primary), rgba(16, 185, 129, 0.4))',
                     borderRadius: '6px 6px 0 0',
-                    boxShadow: isMatchday ? '0 0 15px rgba(239, 68, 68, 0.4)' : 'none',
                     transition: 'height 0.4s ease',
                   }} />
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.6rem', textAlign: 'center' }}>

@@ -760,7 +760,7 @@ export default function AdminBrandingPage({
               >
                 <option value="Natural Grass">Natural Grass</option>
                 <option value="Natural Hybrid Turf">Natural Hybrid Turf</option>
-                <option value="Hybrid Grass (FIFA Pro Quality)">Hybrid Grass (FIFA Pro Quality)</option>
+                <option value="Hybrid Grass">Hybrid Grass</option>
                 <option value="3G / 4G All-Weather Synthetic">3G / 4G All-Weather Synthetic</option>
               </select>
             </div>
@@ -792,20 +792,20 @@ export default function AdminBrandingPage({
         {/* SECTION 3b: PUBLIC GROUND GUIDE (saved on its own, see HomeGroundPanel) */}
         {club && <HomeGroundPanel club={club} />}
 
-        {/* SECTION 4: SECRETARIAT & OPERATIONS CONTACT DETAILS */}
+        {/* SECTION 4: PUBLIC CONTACT DETAILS */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Mail size={20} color="var(--club-primary)" /> Secretariat & Public Contact Details
+            <Mail size={20} color="var(--club-primary)" /> Club Contact Details
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            These official contact details are published on your public club footer and displayed in inquiry confirmations.
+            Shown in your club site&apos;s footer and in replies to people who contact the club.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
               <label htmlFor="branding-official-secretariat-email" className="form-label row">
                 <Mail size={14} color="var(--club-primary)" />
-                <span>Official Secretariat Email</span>
+                <span>Club Contact Email</span>
               </label>
               <input id="branding-official-secretariat-email"
                 type="email"
@@ -820,7 +820,7 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label row">
                 <Phone size={14} color="var(--club-primary)" />
-                <span>Secretariat Phone / Matchday Hotline</span>
+                <span>Club Contact Phone</span>
               </label>
               <input id="branding-secretariat-phone-matchday-hotline"
                 type="tel"
