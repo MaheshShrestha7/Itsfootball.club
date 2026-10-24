@@ -58,8 +58,8 @@ export default function AdminEventsPage({
   // Tickets sold per event (door list rows created by paid orders); admins read them under RLS
   const [ticketsSold, setTicketsSold] = useState<Record<string, number>>({});
   const [currency, setCurrency] = useState('AUD');
-  // Tickets are sold by card: warn when a paid event goes up while card payments are off
-  const [cardOn, setCardOn] = useState<boolean | null>(null);
+  // Tickets are sold by card or bank transfer: warn when a paid event goes up with neither set up
+  const [canSell, setCanSell] = useState<boolean | null>(null);
   useEffect(() => {
     const client = getSupabaseClient();
     client?.from('event_attendees').select('event_id').eq('club_id', club.id)
@@ -69,10 +69,10 @@ export default function AdminEventsPage({
         (data || []).forEach(a => { sold[a.event_id] = (sold[a.event_id] || 0) + 1; });
         setTicketsSold(sold);
       });
-    client?.from('club_payment_settings').select('currency, stripe_charges_enabled').eq('club_id', club.id).maybeSingle()
+    client?.from('club_payment_settings').select('currency, stripe_charges_enabled, bank_details').eq('club_id', club.id).maybeSingle()
       .then(({ data }) => {
         if (data?.currency) setCurrency(data.currency);
-        setCardOn(Boolean(data?.stripe_charges_enabled));
+        setCanSell(Boolean(data?.stripe_charges_enabled || data?.bank_details?.trim()));
       });
   }, [club.id]);
 
@@ -197,9 +197,9 @@ export default function AdminEventsPage({
     if (!form.title) return;
     const { ticket_price, repeat_weeks, flyer_url, ...fields } = form;
     const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
-    if (ticket_price_cents > 0 && cardOn === false && !(await confirmAction({
-      title: 'Card payments are off',
-      message: 'Nobody can buy tickets for this event until card payments are set up in Finance, Settings. Save it anyway?',
+    if (ticket_price_cents > 0 && canSell === false && !(await confirmAction({
+      title: 'No way to pay yet',
+      message: 'Nobody can buy tickets for this event until card payments or bank details are set up in Finance, Settings. Save it anyway?',
       confirmLabel: 'Save anyway',
     }))) return;
     const start = new Date(form.start_time).getTime();
@@ -613,12 +613,12 @@ export default function AdminEventsPage({
                     aria-describedby="events-ticket-price-hint"
                   />
                   <p id="events-ticket-price-hint" className="text-note" style={{ margin: '0.3rem 0 0' }}>
-                    A price sells tickets by card on the public event page, up to the capacity. Only ticket holders get in.
+                    A price sells tickets on the public event page, up to the capacity: by card, or by bank transfer once the treasurer verifies the receipt in Finance. Only ticket holders get in.
                   </p>
-                  {cardOn === false && Number(form.ticket_price) > 0 && (
+                  {canSell === false && Number(form.ticket_price) > 0 && (
                     <p role="alert" style={{ margin: '0.4rem 0 0', padding: '0.5rem 0.7rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
-                      Card payments aren&apos;t set up yet, so tickets can&apos;t be bought.{' '}
-                      <a href={`/${club.slug}/admin/finance?tab=settings`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Set up card payments</a>
+                      Card payments and bank details aren&apos;t set up yet, so tickets can&apos;t be bought.{' '}
+                      <a href={`/${club.slug}/admin/finance?tab=settings`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Set up payments</a>
                     </p>
                   )}
                 </div>

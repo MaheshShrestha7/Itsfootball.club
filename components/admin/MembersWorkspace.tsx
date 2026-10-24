@@ -615,6 +615,14 @@ export default function MembersWorkspace({
                                 </div>
                               );
                             })()}
+                            {/* A free supporter waiting: the club can let these through without anyone approving */}
+                            {member.membership_status === 'pending' && !club.auto_approve_free && !member.guardian_email && member.role === 'supporter'
+                              && plans.find(p => p.name === member.membership_tier)?.price_cents === 0 && (
+                              <span className="text-meta">
+                                Free supporter passes can be approved automatically.{' '}
+                                <Link href={`/${clubSlug}/admin/finance?tab=settings`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Turn it on in Finance, Settings</Link>
+                              </span>
+                            )}
                             {(member.guardian_name || member.guardian_email || member.guardian_phone) && (
                               <span>Parent / guardian: <strong>{[member.guardian_name, member.guardian_phone, member.guardian_email].filter(Boolean).join(' · ')}</strong></span>
                             )}

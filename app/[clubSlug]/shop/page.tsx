@@ -36,7 +36,9 @@ export default function ShopPage({ params }: { params: Promise<{ clubSlug: strin
   }, [club.id]);
 
   useEffect(() => {
-    if (user) setBuyer(b => ({ name: b.name || user.full_name || '', email: b.email || user.email || '' }));
+    // The real name can land a moment after sign-in (it comes from the club's member record), so a name
+    // filled from the email ('sue.supporter') gives way to it; anything the buyer typed stays
+    if (user) setBuyer(b => ({ name: b.name && b.name !== user.email.split('@')[0] ? b.name : user.full_name || '', email: b.email || user.email || '' }));
   }, [user]);
 
   const product = (id: string) => products?.find(p => p.id === id);

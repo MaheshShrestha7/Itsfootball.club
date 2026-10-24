@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import confetti from 'canvas-confetti';
-import { Club, ClubMember, ClubTeam, Match } from '@/lib/supabase/types';
+import { Club, ClubMember, ClubTeam, Match, isPlayerMember } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import { renderPassImage, savePassImage } from '@/lib/pass-image';
 import { hexToRgb, getRelativeLuminance } from '@/lib/theme-utils';
@@ -480,8 +480,11 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                 <div style={{ ...glassChip, marginBottom: '0.4rem' }}>
                   {member.is_executive && member.executive_title ? member.executive_title : member.membership_tier}
                 </div>
+                {/* A position only means something on a player's pass; supporters' passes say so instead */}
                 <div style={{ fontSize: '0.8rem', color: GLASS_MUTED }}>
-                  Position: <strong style={{ color: GLASS_TEXT }}>{member.player_position || 'Squad Member'}</strong>
+                  {isPlayerMember(member)
+                    ? <>Position: <strong style={{ color: GLASS_TEXT }}>{member.player_position || 'Squad Member'}</strong></>
+                    : <strong style={{ color: GLASS_TEXT }}>{member.is_executive ? 'Committee' : 'Supporter'}</strong>}
                 </div>
               </div>
             </div>
@@ -552,7 +555,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
 
             {/* Matchday */}
             <BackPanel depth={25}>
-              <BackRow label="Next fixture">
+              <BackRow label={isPlayerMember(member) ? 'Next fixture' : 'Next home match'}>
                 {nextMatch ? (
                   <>
                     <strong>{nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>

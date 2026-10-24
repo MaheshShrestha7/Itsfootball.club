@@ -2203,9 +2203,10 @@ export default function ClubPublicPage({
 
           {leaderboardMode === 'clubscore' ? (
             <div id="leaderboard">
+              {/* Players only: supporters earn sign-up points too, but don't belong in the standings */}
               <ClubScoreLeaderboard
                 club={club}
-                members={publicMembers}
+                members={publicMembers.filter(isPlayerMember)}
                 profiles={clubScoreProfiles}
               />
             </div>

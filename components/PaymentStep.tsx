@@ -19,6 +19,10 @@ interface PaymentStepProps {
   extra?: Record<string, string>;
   /** Card only, no bank transfer (shop orders, tickets) */
   cardOnly?: boolean;
+  /** Transfer reference when there's no member or sponsor id to make one from (ticket orders) */
+  reference?: string;
+  /** What happens after a receipt is sent, when it isn't the treasurer confirming a payment */
+  sentNote?: string;
 }
 
 // Pay by card (hosted Stripe Checkout on the club's account) or by bank transfer with a receipt.
@@ -30,7 +34,7 @@ async function authHeaders(base: Record<string, string> = {}) {
   return token ? { ...base, Authorization: `Bearer ${token}` } : base;
 }
 export default function PaymentStep(props: PaymentStepProps) {
-  const { clubId, kind, memberId, sponsorId, planId, packageId, amountCents, label, extra, cardOnly } = props;
+  const { clubId, kind, memberId, sponsorId, planId, packageId, amountCents, label, extra, cardOnly, sentNote } = props;
   const [settings, setSettings] = useState<ClubPaymentSettings | null | undefined>(undefined);
   // Card only: nothing to choose, so go straight to the pay button
   const [method, setMethod] = useState<'card' | 'bank' | null>(cardOnly ? 'card' : null);
@@ -38,7 +42,7 @@ export default function PaymentStep(props: PaymentStepProps) {
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const reference = paymentReference(memberId || sponsorId || '');
+  const reference = props.reference || paymentReference(memberId || sponsorId || '');
   const [payerRef, setPayerRef] = useState(reference);
 
   useEffect(() => {
@@ -99,7 +103,7 @@ export default function PaymentStep(props: PaymentStepProps) {
         <CheckCircle2 size={28} color="var(--c-green)" style={{ marginBottom: '0.5rem' }} />
         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Receipt sent</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.35rem 0 0' }}>
-          The club treasurer will check the transfer and confirm your payment.
+          {sentNote || 'The club treasurer will check the transfer and confirm your payment.'}
         </p>
       </div>
     );

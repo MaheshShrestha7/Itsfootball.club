@@ -299,6 +299,16 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     if (error) return flash('error', error.message);
     // fulfil_payment files a renewal for a still-pending applicant as their sign-up
     const kind = (data as Payment | null)?.kind || p.kind;
+    // A bank-transfer ticket order: verifying issues the tickets (fulfil_payment), then the buyer gets them by email
+    if (kind === 'event_ticket') {
+      const res = await fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
+      }).then(r => r.json()).catch(() => null);
+      flash('ok', res?.sent ? 'Payment verified. Tickets issued and emailed to the buyer.' : 'Payment verified and tickets issued. The email didn\'t send: share the ticket link from the order.');
+      return load();
+    }
     flash('ok', kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
       : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
     load();

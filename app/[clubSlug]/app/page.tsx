@@ -19,6 +19,8 @@ import { matchPath, SITE_URL } from '@/lib/slugs';
 import { formatMoney } from '@/lib/finance';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { useMyChildren } from '@/lib/use-my-children';
+import MyTickets from '@/components/MyTickets';
+import PushToggle from '@/components/PushToggle';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -98,6 +100,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const superUser = !!user && isClubSuperUser(club.id);
   // A parent or guardian: their children here, and the approved ones they answer In/Out for
   const children = useMyChildren(club.id);
+  // A member who doesn't play and has no children playing: the app home is about matches, events and tickets
+  const supporterOnly = approved && !player && children.length === 0;
   const kids = children.filter(c => (c.membership_status || 'approved') === 'approved');
   // A parent with no membership of their own: the name they gave on their child's form, not the email
   const greetName = (user && user.full_name === user.email.split('@')[0] && children.find(c => c.guardian_name?.trim())?.guardian_name) || user?.full_name || '';
@@ -119,7 +123,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000 && clubPlaysIn(m, tournamentParticipants, club.name))
       .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m, price: 0 }));
     const es = events
-      .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now)
+      // A supporter isn't asked about training (players and parents of players are)
+      .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now && !(supporterOnly && e.category === 'training'))
       .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location, match: undefined, price: e.ticket_price_cents ?? 0 }));
     return [...ms, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   })();
@@ -256,6 +261,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     ? [
         { label: 'My pass', href: `${base}/member`, icon: CreditCard },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
+        { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
         { label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy },
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         { label: 'News', href: `${base}#news`, icon: Newspaper },
@@ -268,6 +274,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
           ? { label: 'My family', href: `${base}/member`, icon: Users }
           : { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
+        { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         { label: 'Gallery', href: `${base}/gallery`, icon: Images },
@@ -386,6 +393,11 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
           </a>
         </div>
       </section>
+
+      {/* Live-score alerts without an account (only where the browser can do push) */}
+      <PushToggle clubId={club.id} clubName={club.short_name || club.name} labelled />
+
+      <MyTickets clubId={club.id} clubSlug={club.slug} />
 
       {staff && tools.length > 0 && (
         <section style={{ marginBottom: '1.5rem' }}>

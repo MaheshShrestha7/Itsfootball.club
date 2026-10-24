@@ -25,14 +25,17 @@ export async function POST(req: NextRequest) {
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { row } = prepared.draft;
 
-  // Shop orders and tickets are card only: a receipt per order would be unbounded admin work and storage
-  if (row.kind === 'shop_order' || row.kind === 'event_ticket') {
+  // Shop orders are card only: a receipt per order would be unbounded admin work and storage.
+  // Tickets can be paid by transfer (so clubs without card payments can still sell them); they're
+  // issued when the club verifies the receipt.
+  if (row.kind === 'shop_order') {
     return NextResponse.json({ error: 'This is paid by card.' }, { status: 400 });
   }
 
-  // One receipt waiting per membership / sponsorship is enough
+  // One receipt waiting per membership / sponsorship, or per buyer per event, is enough
   let pending = db.from('payments').select('id').eq('club_id', row.club_id).eq('kind', row.kind).eq('status', 'awaiting_review');
-  pending = row.member_id ? pending.eq('member_id', row.member_id) : pending.eq('sponsor_id', row.sponsor_id!);
+  pending = row.kind === 'event_ticket' ? pending.eq('event_id', row.event_id!).eq('payer_email', row.payer_email!)
+    : row.member_id ? pending.eq('member_id', row.member_id) : pending.eq('sponsor_id', row.sponsor_id!);
   const { data: existing } = await pending.limit(1);
   if (existing?.length) {
     return NextResponse.json({ error: 'A receipt is already waiting for the club to check it.' }, { status: 409 });

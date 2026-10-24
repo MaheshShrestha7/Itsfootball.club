@@ -10,7 +10,7 @@ import { SITE_URL, authReturnUrl, safeNextPath } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
 import { pointsBreakdown, seasonOptions } from '@/lib/member-season-stats';
-import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan } from '@/lib/supabase/types';
+import { ClubMember, MemberMessageCategory, PlayerPosition, MembershipPlan, isPlayerMember } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -717,7 +717,10 @@ export default function MemberPortalPage({
 
   // Back of the member pass: their teams, their next fixture, and renewal when it's offered
   const passTeams = activeMember ? teamsOfMember(clubTeamMembers, clubTeamsOf(clubTeams, club.id), activeMember.id) : [];
-  const passNextMatch = activeMember ? nextFixtureOf(matches, club.id, club.name, passTeams, clubTeams, tournamentParticipants) : undefined;
+  // A supporter's pass shows the next home match (where they'd use it); a player's, their own team's next game
+  const passNextMatch = activeMember
+    ? nextFixtureOf(isPlayerMember(activeMember) ? matches : matches.filter(m => m.is_club_home !== false), club.id, club.name, passTeams, clubTeams, tournamentParticipants)
+    : undefined;
   const canRenew = !!activeMember?.membership_expires_at && plans.some(p => p.price_cents > 0);
   const openRenewal = () => {
     setRenewOpen(true);
@@ -1704,7 +1707,8 @@ export default function MemberPortalPage({
                   </div>
                 </div>
 
-                {/* 2. Personal Performance Dashboard (shown first) */}
+                {/* 2. Personal Performance Dashboard (shown first; players only, a supporter has no appearances or goals) */}
+                {isPlayerMember(activeMember) && (
                 <div className="glass-panel" style={{ padding: '2rem', order: -1 }}>
                   <div className="section-head">
                     <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1767,6 +1771,7 @@ export default function MemberPortalPage({
                     Total Playing Minutes: <strong className="text-primary">{currentStats?.minutes_played || 0} mins</strong>
                   </div>
                 </div>
+                )}
 
                 {/* 3. ClubScore Gamification Progress */}
                 {!currentClubScore && clubScoreBreakdown.length === 0 && (

@@ -1,35 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe, Stripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
-import { formatWhen } from '@/lib/email/format';
-import { sendEmail } from '@/lib/email/send';
-import { ticketsEmail } from '@/lib/email/templates';
+import { emailTickets } from '@/lib/email/tickets';
 import type { Payment } from '@/lib/supabase/types';
-
-/** Emails the buyer the link to their tickets. Stripe retries this webhook, so Resend dedupes by order id. */
-async function emailTickets(db: SupabaseClient, pay: Payment) {
-  if (!pay.payer_email || !pay.event_id) return;
-  const [{ data: club }, { data: event }] = await Promise.all([
-    db.from('clubs').select(CLUB_BRAND_COLUMNS).eq('id', pay.club_id).maybeSingle(),
-    db.from('events').select('title, start_time, location').eq('id', pay.event_id).maybeSingle(),
-  ]);
-  if (!club || !event) return;
-  const quantity = (pay.items || []).reduce((n, i) => n + i.quantity, 0) || 1;
-  const email = ticketsEmail({
-    brand: clubBrand(club as ClubBrandRow),
-    buyerName: pay.payer_name || '',
-    event: event.title,
-    quantity,
-    when: formatWhen(event.start_time),
-    venue: event.location,
-    link: `${clubBaseUrl(club as ClubBrandRow)}/tickets/${pay.id}`,
-  });
-  const sent = await sendEmail({ ...email, to: pay.payer_email, fromName: (club as ClubBrandRow).name, idempotencyKey: `tickets-${pay.id}` });
-  // Logged, not retried: the buyer already landed on the tickets page after paying
-  if (!sent.ok) console.error('Tickets email failed:', pay.id, sent.error);
-}
 
 // Connect webhook: receives events from every club's connected Stripe account.
 // Payments are matched on the Checkout Session id we stored, never on metadata, because a club

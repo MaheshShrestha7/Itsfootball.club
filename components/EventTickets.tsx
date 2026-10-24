@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Ticket, Minus, Plus, AlertCircle } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
-import { formatMoney } from '@/lib/finance';
+import { formatMoney, paymentReference } from '@/lib/finance';
 import { MAX_TICKETS_PER_ORDER, salesOpen } from '@/lib/tickets';
 import type { ClubEvent } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
@@ -16,8 +16,8 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
   const price = event.ticket_price_cents ?? 0;
   const [left, setLeft] = useState<number | null | undefined>(undefined); // null = no limit
   const [currency, setCurrency] = useState('AUD');
-  // Tickets are card only: say so before the buyer fills anything in
-  const [cardOn, setCardOn] = useState<boolean | undefined>(undefined);
+  // How tickets can be paid (card, bank transfer); with neither, say so before the buyer fills anything in
+  const [pay, setPay] = useState<{ card: boolean; bank: boolean } | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
   const [buyer, setBuyer] = useState({ name: '', email: '' });
   const [checkout, setCheckout] = useState(false);
@@ -26,17 +26,19 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
   useEffect(() => {
     setCancelled(new URLSearchParams(window.location.search).get('payment') === 'cancelled');
     const client = getSupabaseClient();
-    if (!client) { setLeft(null); setCardOn(true); return; }
+    if (!client) { setLeft(null); setPay({ card: true, bank: false }); return; }
     client.rpc('tickets_left', { p_event_id: event.id }).then(({ data }) => setLeft(typeof data === 'number' ? data : null));
-    client.from('club_payment_settings').select('currency, stripe_charges_enabled').eq('club_id', event.club_id).maybeSingle()
+    client.from('club_payment_settings').select('currency, stripe_charges_enabled, bank_details').eq('club_id', event.club_id).maybeSingle()
       .then(({ data }) => {
         if (data?.currency) setCurrency(data.currency);
-        setCardOn(Boolean(data?.stripe_charges_enabled));
+        setPay({ card: Boolean(data?.stripe_charges_enabled), bank: Boolean(data?.bank_details?.trim()) });
       });
   }, [event.id, event.club_id]);
 
   useEffect(() => {
-    if (user) setBuyer(b => ({ name: b.name || user.full_name || '', email: b.email || user.email || '' }));
+    // The real name can land a moment after sign-in (it comes from the club's member record), so a name
+    // filled from the email ('sue.supporter') gives way to it; anything the buyer typed stays
+    if (user) setBuyer(b => ({ name: b.name && b.name !== user.email.split('@')[0] ? b.name : user.full_name || '', email: b.email || user.email || '' }));
   }, [user]);
 
   if (!(price > 0)) return null;
@@ -62,16 +64,19 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
 
       {!open ? (
         <p className="text-note" style={{ margin: 0 }}>Ticket sales for this event have closed.</p>
-      ) : cardOn === false ? (
+      ) : pay && !pay.card && !pay.bank ? (
         <p className="text-note" style={{ margin: 0 }}>Tickets aren&apos;t on sale online yet. Contact the club to book.</p>
-      ) : left === undefined || cardOn === undefined ? (
+      ) : left === undefined || pay === undefined ? (
         <p className="text-note" style={{ margin: 0 }}>Checking availability…</p>
       ) : left === 0 ? (
         <p style={{ margin: 0, fontWeight: 700 }}>Sold out</p>
       ) : checkout ? (
         <div className="stack stack-sm">
           <button type="button" className="btn btn-secondary btn-sm touch-target" onClick={() => setCheckout(false)} style={{ alignSelf: 'flex-start' }}>Edit order</button>
-          <PaymentStep clubId={event.club_id} kind="event_ticket" amountCents={price * quantity} label={`${quantity} × ${event.title}`} cardOnly
+          {/* Bank transfer: the reference names the buyer and event so the treasurer can match it */}
+          <PaymentStep clubId={event.club_id} kind="event_ticket" amountCents={price * quantity} label={`${quantity} × ${event.title}`}
+            reference={`${(buyer.name.trim().split(/\s+/).pop() || 'TICKET').toUpperCase().slice(0, 12)} ${paymentReference(event.id).slice(0, 4)}`}
+            sentNote={`Your tickets will be emailed to ${buyer.email} once the club checks your transfer.`}
             extra={{ eventId: event.id, quantity: String(quantity), buyerName: buyer.name, buyerEmail: buyer.email }} />
         </div>
       ) : (
@@ -97,7 +102,11 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
             <label className="form-label" htmlFor="ticket-email">Email *</label>
             <input id="ticket-email" className="form-input" type="email" required autoComplete="email" autoCapitalize="none" spellCheck={false} value={buyer.email} onChange={e => setBuyer({ ...buyer, email: e.target.value })} />
           </div>
-          <p className="text-note" style={{ margin: 0 }}>Your tickets arrive by email and on screen straight after payment.</p>
+          <p className="text-note" style={{ margin: 0 }}>
+            {pay?.card ? 'Pay by card and your tickets arrive by email and on screen straight away.' : ''}
+            {pay?.card && pay?.bank ? ' ' : ''}
+            {pay?.bank ? 'Paying by bank transfer? Your tickets are emailed once the club checks your receipt.' : ''}
+          </p>
           <button type="submit" className="btn btn-primary" style={{ whiteSpace: 'normal' }}>Continue to payment · {formatMoney(price * quantity, currency)}</button>
         </form>
       )}

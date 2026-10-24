@@ -24,7 +24,7 @@ async function call(action: 'status' | 'follow' | 'unfollow', clubId: string, su
  * Bell in the club navbar: follow this club's notifications (match, event and news notices).
  * Only shown where web push works - on iPhone that means the site was added to the Home Screen.
  */
-export default function PushToggle({ clubId, clubName }: { clubId: string; clubName: string }) {
+export default function PushToggle({ clubId, clubName, labelled = false }: { clubId: string; clubName: string; labelled?: boolean }) {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,6 +69,23 @@ export default function PushToggle({ clubId, clubName }: { clubId: string; clubN
   };
 
   const label = following ? `Stop notifications from ${clubName}` : `Get notifications from ${clubName}`;
+  // The app home's "Follow the club" card (only where push works, like the bell): words, same toggle
+  if (labelled) {
+    return (
+      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <span style={{ flex: 1, minWidth: 200, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+          {following
+            ? `You get ${clubName}'s kick-off, goal and full-time alerts, and club news.`
+            : `Get ${clubName}'s kick-off, goal and full-time alerts, and club news. No account needed.`}
+        </span>
+        <button type="button" onClick={toggle} disabled={busy} aria-pressed={following} className={`btn btn-sm ${following ? 'btn-secondary' : 'btn-primary'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          {following ? <BellRing size={16} aria-hidden="true" /> : <Bell size={16} aria-hidden="true" />}
+          {following ? 'Following · turn off' : 'Follow the club'}
+        </button>
+      </div>
+    );
+  }
   return (
     <button
       type="button"

@@ -3751,6 +3751,12 @@ dialog.confirm-dialog::backdrop {
 .family-summary dd { margin: 0.2rem 0 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
 @media (max-width: 640px) { .family-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* /club/events: one row per event, price and button on the right (underneath on phones) */
+.events-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.events-list-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: inherit; text-decoration: none; }
+.events-list-cta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; flex-shrink: 0; }
+@media (max-width: 560px) { .events-list-item { flex-direction: column; align-items: stretch; } .events-list-cta { flex-direction: row; align-items: center; justify-content: space-between; } }
+
 /* Join steps */
 .auth-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; list-style: none; padding: 0; }
 .auth-steps li { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useState, use, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
@@ -43,6 +43,8 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { squadForMatch } from '@/lib/teams';
 import { defaultFixture } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
+import { alertFor, type MatchState } from '@/lib/match-alerts';
+import { getAccessToken } from '@/lib/supabase/client';
 
 // What the confirmation line says, in words rather than codes
 const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
@@ -117,6 +119,25 @@ export default function AdminMatchCenterControllerPage({
   };
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || defaultMatch;
+
+  // Followers' live-score alerts: kick-off, each goal, full time, as this screen sees them happen
+  // (whichever button or event caused it). The first look at a match only records where it stands;
+  // the server sends each alert once even with several admins on the match.
+  const alertSeen = useRef<Record<string, MatchState>>({});
+  useEffect(() => {
+    if (!match) return;
+    const now: MatchState = { status: match.status, home: match.home_score ?? 0, away: match.away_score ?? 0 };
+    const prev = alertSeen.current[match.id];
+    alertSeen.current[match.id] = now;
+    const kind = prev ? alertFor(prev, now) : null;
+    if (!kind) return;
+    void getAccessToken().then(token => fetch('/api/push/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ clubId: club.id, matchId: match.id, kind, home: now.home, away: now.away, minute: getLiveMinute(match) }),
+    })).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match?.id, match?.status, match?.home_score, match?.away_score]);
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const squadPlayers = squadForMatch(members.filter(m => m.club_id === club.id && isPlayerMember(m)), match, clubTeams, clubTeamMembers);
