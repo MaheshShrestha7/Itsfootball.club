@@ -18,6 +18,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
+import ClubShop from '@/components/ClubShop';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 import {
@@ -233,6 +234,14 @@ export default function MemberPortalPage({
     const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
     return next.startsWith(`/${club.slug}/`) ? next : null;
   };
+  // Kept through the emailed sign-in link: where to go next, and which renewal to open
+  const signInReturnSearch = () => {
+    const q = new URLSearchParams();
+    const next = nextPath();
+    if (next) q.set('next', next);
+    if (renewFor) q.set('renew', renewFor);
+    return q.size ? `?${q}` : '';
+  };
   useEffect(() => {
     const next = activeMember && nextPath();
     if (next) router.replace(next);
@@ -259,9 +268,11 @@ export default function MemberPortalPage({
   const [paymentNotice, setPaymentNotice] = useState<'success' | 'cancelled' | null>(null);
   const [renewPlanId, setRenewPlanId] = useState('');
   const [renewOpen, setRenewOpen] = useState(false);
+  // ?renew={memberId} (the renewal email's link): that membership's renewal form opens, however far off its expiry is
+  const [renewFor, setRenewFor] = useState<string | null>(null);
 
   // Authenticated Member Clubhouse State
-  const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages'>('pass');
+  const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages' | 'shop'>('pass');
   // Season shown on the Season Stats tab ('' = the club's active season)
   const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
@@ -369,6 +380,7 @@ export default function MemberPortalPage({
     if (payment === 'success' || payment === 'cancelled') setPaymentNotice(payment);
     // "Join the Club" links open straight on the membership application
     if (search.has('join')) setGatewayTab('signup');
+    setRenewFor(search.get('renew'));
     const client = getSupabaseClient();
     if (!client) return;
     client.from('membership_plans').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')
@@ -503,7 +515,7 @@ export default function MemberPortalPage({
     setSendingLink(true);
     const { error } = await client.auth.signInWithOtp({
       email: loginEmail.trim().toLowerCase(),
-      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member${nextPath() ? `?next=${encodeURIComponent(nextPath()!)}` : ''}`), captchaToken: captchaToken || undefined },
+      options: { emailRedirectTo: authReturnUrl(window.location.origin, `/${club.slug}/member${signInReturnSearch()}`), captchaToken: captchaToken || undefined },
     });
     setSendingLink(false);
     captcha.current?.reset();
@@ -726,6 +738,13 @@ export default function MemberPortalPage({
     setRenewOpen(true);
     requestAnimationFrame(() => document.getElementById('renew-membership')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   };
+  // Arriving from the renewal email: open it once the member and the plans are in
+  const renewLinkOpened = useRef(false);
+  useEffect(() => {
+    if (renewLinkOpened.current || !canRenew || renewFor !== activeMember?.id) return;
+    renewLinkOpened.current = true;
+    openRenewal();
+  }, [canRenew, renewFor, activeMember?.id]);
   const clubScoreBreakdown = pointsBreakdown(memberActivityLogs, {
     season: selectedSeason,
     activeName: activeSeasonName,
@@ -793,7 +812,7 @@ export default function MemberPortalPage({
             {/* A parent or guardian (not a member themselves): their children, instead of the tabs */}
             {!activeMember && childMembers.length > 0 && !addingChild && signedInEmail && (
               <>
-                <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} />
+                <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} />
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>
                   Signed in as {signedInEmail}.{' '}
                   <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
@@ -1421,7 +1440,7 @@ export default function MemberPortalPage({
               const paidPlans = plans.filter(p => p.price_cents > 0);
               if (!activeMember.membership_expires_at || !paidPlans.length) return null;
               const daysLeft = Math.ceil((new Date(activeMember.membership_expires_at).getTime() - Date.now()) / 86400000);
-              if (daysLeft > 30) return null;
+              if (daysLeft > 30 && renewFor !== activeMember.id) return null;
               const plan = paidPlans.find(p => p.id === renewPlanId)
                 || paidPlans.find(p => p.name === activeMember.membership_tier)
                 || paidPlans[0];
@@ -1466,7 +1485,7 @@ export default function MemberPortalPage({
             })()}
 
             {childMembers.length > 0 && signedInEmail && (
-              <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} />
+              <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} />
             )}
 
             {/* Clubhouse Sub-Tabs */}
@@ -1553,27 +1572,32 @@ export default function MemberPortalPage({
                 )}
               </button>
 
-              {/* Not a tab: the shop is its own page, so this links there */}
               {shopOpen && (
-                <Link
-                  href={`/${club.slug}/shop`}
+                <button
+                  type="button"
+                  onClick={() => setActiveClubhouseTab('shop')}
                   style={{
                     padding: '0.65rem 1.25rem',
                     borderRadius: '8px',
-                    border: '1px solid transparent',
-                    color: 'var(--text-secondary)',
+                    border: activeClubhouseTab === 'shop' ? `1px solid ${club.primary_color}` : '1px solid transparent',
+                    background: activeClubhouseTab === 'shop' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                    color: activeClubhouseTab === 'shop' ? 'var(--text-primary)' : 'var(--text-secondary)',
                     fontWeight: 800,
                     fontSize: '0.88rem',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.45rem',
                   }}
                 >
-                  <ShoppingBag size={17} />
+                  <ShoppingBag size={17} color={activeClubhouseTab === 'shop' ? 'var(--club-primary)' : undefined} />
                   <span>Club Shop</span>
-                </Link>
+                </button>
               )}
             </div>
+
+            {/* SUB-TAB: CLUB SHOP (the same shop as /{slug}/shop, kept inside the clubhouse) */}
+            {activeClubhouseTab === 'shop' && shopOpen && <ClubShop club={club} embedded />}
 
             {/* SUB-TAB 1: VIRTUAL PASS */}
             {activeClubhouseTab === 'pass' && (

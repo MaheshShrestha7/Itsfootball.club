@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Users, UserPlus, QrCode, CreditCard, MessageSquare, Send, CheckCircle2, Clock, AlertCircle, HeartPulse, Save } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import PaymentStep from '@/components/PaymentStep';
@@ -27,6 +27,8 @@ interface GuardianPortalProps {
   /** Children whose sign-up fee is paid or waiting for the club to check the receipt */
   signupPaid: Set<string>;
   onAddChild: () => void;
+  /** The child the renewal email was about (?renew=): their renewal opens, however far off their expiry is */
+  renewChildId?: string | null;
 }
 
 type Section = 'pass' | 'renew' | 'messages' | 'details';
@@ -42,7 +44,7 @@ function statusOf(child: ClubMember): { label: string; color: string } {
   return { label: 'Active member', color: 'var(--c-green)' };
 }
 
-export default function GuardianPortal({ club, childMembers, guardianEmail, plans, currency, signupPaid, onAddChild }: GuardianPortalProps) {
+export default function GuardianPortal({ club, childMembers, guardianEmail, plans, currency, signupPaid, onAddChild, renewChildId }: GuardianPortalProps) {
   const { sendMemberMessage, getMemberMessages, markClubMessagesRead, matches, clubTeams, clubTeamMembers, tournamentParticipants, playerStats, getActiveSeason } = useClub();
   const teams = clubTeamsOf(clubTeams, club.id);
   const season = getActiveSeason(club.id)?.name || defaultSeasonLabel();
@@ -69,6 +71,16 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
   const [drafts, setDrafts] = useState<Record<string, { subject: string; content: string }>>({});
   const [sentFor, setSentFor] = useState<string | null>(null);
   const paidPlans = plans.filter(p => p.price_cents > 0);
+
+  // Arriving from a child's renewal email: open that child's renewal once the plans are in
+  const renewLinkOpened = useRef(false);
+  const linkedChild = childMembers.find(c => c.id === renewChildId && c.membership_status === 'approved' && c.membership_expires_at);
+  useEffect(() => {
+    if (renewLinkOpened.current || !linkedChild || !paidPlans.length) return;
+    renewLinkOpened.current = true;
+    setOpen(o => ({ ...o, [linkedChild.id]: 'renew' }));
+    requestAnimationFrame(() => document.querySelector(`[data-guardian-child="${linkedChild.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }, [linkedChild, paidPlans.length]);
   // How the club sees who wrote: the guardian's name from the child's record, else their email
   const guardianLabel = (child: ClubMember) => `${child.guardian_name?.trim() || guardianEmail} (parent of ${child.full_name})`;
 
@@ -124,7 +136,8 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
           const paid = signupPaid.has(child.id);
           const unpaid = pending && !paid && !!signupPlan && signupPlan.price_cents > 0;
           const days = child.membership_expires_at ? daysUntil(child.membership_expires_at) : null;
-          const canRenew = approved && days !== null && days <= 30 && paidPlans.length > 0;
+          const renewDue = approved && days !== null && days <= 30 && paidPlans.length > 0;
+          const canRenew = renewDue || (child.id === linkedChild?.id && paidPlans.length > 0);
           const plan = paidPlans.find(p => p.id === renewPlan[child.id]) || paidPlans.find(p => p.name === child.membership_tier) || paidPlans[0];
           const thread = getMemberMessages(club.id, child.id);
           const draft = drafts[child.id] || { subject: '', content: '' };
@@ -134,7 +147,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
           const nextMatch = approved ? nextFixtureOf(matches, club.id, club.name, childTeams, clubTeams, tournamentParticipants) : undefined;
           const stats = playerStats.find(p => p.member_id === child.id && p.season === season);
           const due = unpaid && signupPlan ? `${formatMoney(signupPlan.price_cents, currency)} joining fee`
-            : canRenew ? `Renewal due${days !== null && days >= 0 ? ` in ${days} day${days === 1 ? '' : 's'}` : ''}` : null;
+            : renewDue ? `Renewal due${days !== null && days >= 0 ? ` in ${days} day${days === 1 ? '' : 's'}` : ''}` : null;
           const d = detailsOf(child);
           const dState = detailState[child.id];
           return (

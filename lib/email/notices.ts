@@ -127,7 +127,8 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
             tier: m.membership_tier || 'Membership',
             expires: formatDay(m.membership_expires_at!),
             expired: m.membership_expires_at! < today,
-            link: `${base}/member`,
+            // Opens this membership's renewal form (also a child's, for their guardian)
+            link: `${base}/member?renew=${m.id}`,
           }),
         })),
       };

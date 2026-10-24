@@ -143,7 +143,7 @@ async function renewalDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
         tier: m.membership_tier || 'Membership',
         expires: formatDay(m.membership_expires_at),
         expired,
-        link: `${clubBaseUrl(club)}/member`,
+        link: `${clubBaseUrl(club)}/member?renew=${m.id}`,
       }),
     }];
   });
