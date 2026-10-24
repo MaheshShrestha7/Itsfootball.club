@@ -107,7 +107,7 @@ export default function MatchCenterPage({
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
   const motmMember = motmLog ? members.find(m => m.id === motmLog.member_id) : undefined;
-  const goalEvents = events.filter(e => e.event_type === 'goal' || e.event_type === 'penalty').slice().sort((a, b) => a.minute - b.minute);
+  const goalEvents = events.filter(e => GOAL_EVENT_TYPES.includes(e.event_type)).slice().sort((a, b) => a.minute - b.minute);
 
   // Each side's color: the club's goes to the club's own side, not simply to "home"
   const clubColor = club?.primary_color || '#10B981';
@@ -774,7 +774,7 @@ export default function MatchCenterPage({
                       <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{evt.minute}&apos;</span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                          {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : ''}
+                          {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : evt.event_type === 'own_goal' ? ' (own goal)' : ''}
                         </span>
                         {evt.assist_player_name && (
                           <span className="text-secondary"> (Assist: {evt.assist_player_name})</span>
@@ -850,7 +850,7 @@ export default function MatchCenterPage({
                 </div>
               ) : (
                 events.map(evt => {
-                  const isGoal = evt.event_type === 'goal' || evt.event_type === 'penalty';
+                  const isGoal = GOAL_EVENT_TYPES.includes(evt.event_type);
                   return (
                   <div
                     key={evt.id}

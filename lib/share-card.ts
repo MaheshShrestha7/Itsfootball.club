@@ -356,13 +356,14 @@ function headline(m: Pick<Match, 'status'>, scored: boolean): [string, string] {
 function scorerLines(events: NonNullable<CardOptions['events']>, side: 'home' | 'away'): string[] {
   const byName = new Map<string, string[]>();
   events
-    .filter(e => e.team_side === side && (e.event_type === 'goal' || e.event_type === 'penalty') && e.player_name)
+    // An own goal is listed under the side it counted for
+    .filter(e => e.player_name && (e.event_type === 'own_goal' ? e.team_side !== side : e.team_side === side && (e.event_type === 'goal' || e.event_type === 'penalty')))
     .sort((a, b) => a.minute - b.minute || (a.added_minute || 0) - (b.added_minute || 0))
     .forEach(e => {
       // A negative minute is a goal with no time given (the free result graphic maker): just "(P)" if a penalty
       const minute = e.minute < 0
         ? (e.event_type === 'penalty' ? '(P)' : '')
-        : `${e.minute}${e.added_minute ? `+${e.added_minute}` : ''}'${e.event_type === 'penalty' ? ' (P)' : ''}`;
+        : `${e.minute}${e.added_minute ? `+${e.added_minute}` : ''}'${e.event_type === 'penalty' ? ' (P)' : e.event_type === 'own_goal' ? ' (OG)' : ''}`;
       byName.set(e.player_name, [...(byName.get(e.player_name) || []), minute]);
     });
   return [...byName].map(([name, minutes]) => {

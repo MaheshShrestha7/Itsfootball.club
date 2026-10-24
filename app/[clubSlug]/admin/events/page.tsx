@@ -58,6 +58,8 @@ export default function AdminEventsPage({
   // Tickets sold per event (door list rows created by paid orders); admins read them under RLS
   const [ticketsSold, setTicketsSold] = useState<Record<string, number>>({});
   const [currency, setCurrency] = useState('AUD');
+  // Tickets are sold by card: warn when a paid event goes up while card payments are off
+  const [cardOn, setCardOn] = useState<boolean | null>(null);
   useEffect(() => {
     const client = getSupabaseClient();
     client?.from('event_attendees').select('event_id').eq('club_id', club.id)
@@ -67,8 +69,11 @@ export default function AdminEventsPage({
         (data || []).forEach(a => { sold[a.event_id] = (sold[a.event_id] || 0) + 1; });
         setTicketsSold(sold);
       });
-    client?.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
-      .then(({ data }) => data?.currency && setCurrency(data.currency));
+    client?.from('club_payment_settings').select('currency, stripe_charges_enabled').eq('club_id', club.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.currency) setCurrency(data.currency);
+        setCardOn(Boolean(data?.stripe_charges_enabled));
+      });
   }, [club.id]);
 
   // Flyers need migration 20261115_event_flyers.sql; until it runs the upload stays hidden so saves keep working
@@ -187,11 +192,16 @@ export default function AdminEventsPage({
   // An event opened from the calendar (?open=<id>): shown in the list, and in the form for people who can edit
   useOpenItem(clubEvents, evt => { if (canAddEvent) handleOpenEdit(evt); });
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
     const { ticket_price, repeat_weeks, flyer_url, ...fields } = form;
     const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
+    if (ticket_price_cents > 0 && cardOn === false && !(await confirmAction({
+      title: 'Card payments are off',
+      message: 'Nobody can buy tickets for this event until card payments are set up in Finance, Settings. Save it anyway?',
+      confirmLabel: 'Save anyway',
+    }))) return;
     const start = new Date(form.start_time).getTime();
 
     // Only sent once the flyer column exists, and only when there is a flyer to set or clear
@@ -303,7 +313,7 @@ export default function AdminEventsPage({
         {filteredEvents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '12px' }}>
             <p className="text-secondary">
-              No events found for season &quot;{seasonFilter}&quot;.
+              {seasonFilter === 'ALL' ? 'No events yet. Use Add New Event to create your first one.' : `No events in the ${seasonFilter} season.`}
             </p>
           </div>
         ) : (
@@ -605,6 +615,12 @@ export default function AdminEventsPage({
                   <p id="events-ticket-price-hint" className="text-note" style={{ margin: '0.3rem 0 0' }}>
                     A price sells tickets by card on the public event page, up to the capacity. Only ticket holders get in.
                   </p>
+                  {cardOn === false && Number(form.ticket_price) > 0 && (
+                    <p role="alert" style={{ margin: '0.4rem 0 0', padding: '0.5rem 0.7rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
+                      Card payments aren&apos;t set up yet, so tickets can&apos;t be bought.{' '}
+                      <a href={`/${club.slug}/admin/finance?tab=settings`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Set up card payments</a>
+                    </p>
+                  )}
                 </div>
 
                 {!editingEventId && (

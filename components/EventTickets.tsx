@@ -16,6 +16,8 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
   const price = event.ticket_price_cents ?? 0;
   const [left, setLeft] = useState<number | null | undefined>(undefined); // null = no limit
   const [currency, setCurrency] = useState('AUD');
+  // Tickets are card only: say so before the buyer fills anything in
+  const [cardOn, setCardOn] = useState<boolean | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
   const [buyer, setBuyer] = useState({ name: '', email: '' });
   const [checkout, setCheckout] = useState(false);
@@ -24,10 +26,13 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
   useEffect(() => {
     setCancelled(new URLSearchParams(window.location.search).get('payment') === 'cancelled');
     const client = getSupabaseClient();
-    if (!client) return setLeft(null);
+    if (!client) { setLeft(null); setCardOn(true); return; }
     client.rpc('tickets_left', { p_event_id: event.id }).then(({ data }) => setLeft(typeof data === 'number' ? data : null));
-    client.from('club_payment_settings').select('currency').eq('club_id', event.club_id).maybeSingle()
-      .then(({ data }) => data?.currency && setCurrency(data.currency));
+    client.from('club_payment_settings').select('currency, stripe_charges_enabled').eq('club_id', event.club_id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.currency) setCurrency(data.currency);
+        setCardOn(Boolean(data?.stripe_charges_enabled));
+      });
   }, [event.id, event.club_id]);
 
   useEffect(() => {
@@ -57,7 +62,9 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
 
       {!open ? (
         <p className="text-note" style={{ margin: 0 }}>Ticket sales for this event have closed.</p>
-      ) : left === undefined ? (
+      ) : cardOn === false ? (
+        <p className="text-note" style={{ margin: 0 }}>Tickets aren&apos;t on sale online yet. Contact the club to book.</p>
+      ) : left === undefined || cardOn === undefined ? (
         <p className="text-note" style={{ margin: 0 }}>Checking availability…</p>
       ) : left === 0 ? (
         <p style={{ margin: 0, fontWeight: 700 }}>Sold out</p>

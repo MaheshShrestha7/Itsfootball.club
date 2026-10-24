@@ -62,7 +62,7 @@ import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } f
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
-import { publicScoreHidden } from './teams';
+import { goalScoringSide, publicScoreHidden } from './teams';
 import { DATE_LOCALE } from '@/lib/dates';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
@@ -1048,13 +1048,14 @@ export function ClubProvider({
             if (prev.some(e => e.id === data.event.id)) return prev;
             return [...prev, data.event];
           });
-          if (data.event.event_type === 'goal' || data.event.event_type === 'penalty') {
+          const scoredFor = goalScoringSide(data.event);
+          if (scoredFor) {
             setMatches(prev => prev.map(m => {
               if (m.id === data.matchId) {
                 return {
                   ...m,
-                  home_score: data.event.team_side === 'home' ? m.home_score + 1 : m.home_score,
-                  away_score: data.event.team_side === 'away' ? m.away_score + 1 : m.away_score,
+                  home_score: scoredFor === 'home' ? m.home_score + 1 : m.home_score,
+                  away_score: scoredFor === 'away' ? m.away_score + 1 : m.away_score,
                 };
               }
               return m;
@@ -1063,13 +1064,14 @@ export function ClubProvider({
         } else if (data.type === 'MATCH_EVENT_DELETED' && data.eventId) {
           setMatchEvents(prev => {
             const target = prev.find(e => e.id === data.eventId);
-            if (target && (target.event_type === 'goal' || target.event_type === 'penalty')) {
+            const scoredFor = target ? goalScoringSide(target) : null;
+            if (target && scoredFor) {
               setMatches(matchesPrev => matchesPrev.map(m => {
                 if (m.id === (data.matchId || target.match_id)) {
                   return {
                     ...m,
-                    home_score: target.team_side === 'home' ? Math.max(0, m.home_score - 1) : m.home_score,
-                    away_score: target.team_side === 'away' ? Math.max(0, m.away_score - 1) : m.away_score,
+                    home_score: scoredFor === 'home' ? Math.max(0, m.home_score - 1) : m.home_score,
+                    away_score: scoredFor === 'away' ? Math.max(0, m.away_score - 1) : m.away_score,
                   };
                 }
                 return m;
@@ -1474,15 +1476,16 @@ export function ClubProvider({
 
     setMatchEvents(prev => [...prev, newEvent]);
 
-    // Update match score if event is a goal
-    if (eventData.event_type === 'goal' || eventData.event_type === 'penalty') {
+    // Update match score if event is a goal (an own goal counts for the other side)
+    const scoringSide = goalScoringSide(eventData);
+    if (scoringSide) {
       setMatches(prev =>
         prev.map(m => {
           if (m.id === eventData.match_id) {
             return {
               ...m,
-              home_score: eventData.team_side === 'home' ? m.home_score + 1 : m.home_score,
-              away_score: eventData.team_side === 'away' ? m.away_score + 1 : m.away_score,
+              home_score: scoringSide === 'home' ? m.home_score + 1 : m.home_score,
+              away_score: scoringSide === 'away' ? m.away_score + 1 : m.away_score,
             };
           }
           return m;
@@ -1503,14 +1506,15 @@ export function ClubProvider({
     queueDelete('matchEvents', [eventId]);
     setMatchEvents(prev => {
       const target = prev.find(e => e.id === eventId);
-      if (target && (target.event_type === 'goal' || target.event_type === 'penalty')) {
+      const scoredFor = target ? goalScoringSide(target) : null;
+      if (target && scoredFor) {
         setMatches(matchesPrev =>
           matchesPrev.map(m => {
             if (m.id === target.match_id) {
               return {
                 ...m,
-                home_score: target.team_side === 'home' ? Math.max(0, m.home_score - 1) : m.home_score,
-                away_score: target.team_side === 'away' ? Math.max(0, m.away_score - 1) : m.away_score,
+                home_score: scoredFor === 'home' ? Math.max(0, m.home_score - 1) : m.home_score,
+                away_score: scoredFor === 'away' ? Math.max(0, m.away_score - 1) : m.away_score,
               };
             }
             return m;
@@ -2120,7 +2124,7 @@ export function ClubProvider({
         awardClubScorePoints(memId, pts, 'match_appearance', `Appearance vs ${opponent}`, matchId, season);
         totalXP += pts;
       }
-      addStats(memId, { appearances: 1, minutes_played: 90 });
+      addStats(memId, { appearances: 1, minutes_played: payload.minutes_by_member?.[memId] ?? 0 });
     });
 
     // 5. Mark match fixture as audited
