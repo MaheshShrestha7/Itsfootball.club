@@ -280,7 +280,7 @@ export default function AdminCommitteePage({
         {filteredExecutiveMembers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2.5rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '10px' }}>
             <p className="text-body">
-              No executive members appointed for season &quot;{seasonFilter}&quot;.
+              {seasonFilter === 'ALL' ? 'No committee members yet. Use Appoint Member to add your first one.' : `No committee members for the ${seasonFilter} season.`}
             </p>
           </div>
         ) : (

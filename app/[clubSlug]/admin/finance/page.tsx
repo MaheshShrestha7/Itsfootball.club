@@ -927,8 +927,9 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
   const [prices, setPrices] = useState<Record<string, string>>({});
   useEffect(() => { setDraft(Object.fromEntries(rows.map(r => [r.id, r]))); setPrices(Object.fromEntries(rows.map(r => [r.id, (r.price_cents / 100).toFixed(2)]))); }, [rows]);
 
+  // A new row starts hidden (not on the public sign-up pages) until it's named, priced and saved as active
   const add = async () => {
-    const { error } = await db!.from(table).insert({ ...blank, club_id: clubId, sort_order: rows.length });
+    const { error } = await db!.from(table).insert({ ...blank, is_active: false, club_id: clubId, sort_order: rows.length });
     if (error) return flash('error', error.message);
     load();
   };
@@ -969,11 +970,14 @@ function PriceList<T extends { id: string; name: string; price_cents: number; is
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
                 <input type="checkbox" checked={row.is_active} onChange={e => set({ is_active: e.target.checked } as Partial<T>)} /> Active
               </label>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => save(r.id)}><Save size={14} /></button>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => save(r.id)}><Save size={14} /> Save</button>
               <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={() => remove(r.id)} aria-label="Delete"><Trash2 size={14} /></button>
               <textarea className="form-textarea" rows={2} style={{ flexBasis: '100%' }} aria-label={textField === 'benefits' ? 'Benefits' : 'Description'}
                 placeholder={textField === 'benefits' ? 'Benefits (logo on kit, website, matchday banner…)' : 'Short description (optional)'}
                 value={(row[textField] as string) || ''} onChange={e => set({ [textField]: e.target.value } as Partial<T>)} />
+              {!r.is_active && (
+                <p className="text-note" style={{ flexBasis: '100%', margin: 0 }}>Hidden from your public pages. Tick Active and Save when it&apos;s ready.</p>
+              )}
             </div>
           );
         })}

@@ -37,6 +37,7 @@ export default function DraftLineupPage() {
     publishDraftLineup,
     clubTeams,
     clubTeamMembers,
+    syncStatus,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -142,6 +143,17 @@ export default function DraftLineupPage() {
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
+
+  // Loaded, but there's no fixture to pick a lineup for yet
+  if (club && !activeMatch && syncStatus.phase !== 'loading') {
+    return (
+      <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem 1.5rem', maxWidth: '560px', margin: '2rem auto' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No fixtures yet</h2>
+        <p className="text-body" style={{ marginBottom: '1.25rem' }}>Schedule a match first, then come back here to pick the lineup.</p>
+        <Link href={`/${club.slug}/admin/matches`} className="btn btn-primary">Schedule a Match</Link>
+      </div>
+    );
+  }
 
   if (!club || !activeMatch) {
     return (
