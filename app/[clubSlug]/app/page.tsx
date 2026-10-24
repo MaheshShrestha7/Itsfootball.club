@@ -18,6 +18,7 @@ import { clubPlaysIn } from '@/lib/fixtures';
 import { matchPath, SITE_URL } from '@/lib/slugs';
 import { formatMoney } from '@/lib/finance';
 import { useShopOpen } from '@/lib/use-shop-open';
+import { useMyChildren } from '@/lib/use-my-children';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -95,12 +96,18 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const player = approved && isPlayerMember(me!);
   const staff = !!user && hasClubAdminAccess(club.id);
   const superUser = !!user && isClubSuperUser(club.id);
+  // A parent or guardian: their children here, and the approved ones they answer In/Out for
+  const children = useMyChildren(club.id);
+  const kids = children.filter(c => (c.membership_status || 'approved') === 'approved');
+  // A parent with no membership of their own: the name they gave on their child's form, not the email
+  const greetName = (user && user.full_name === user.email.split('@')[0] && children.find(c => c.guardian_name?.trim())?.guardian_name) || user?.full_name || '';
 
   // Who they are here, as chips
   const chips = [
     ...(getUserRoleForClub(club.id) === 'owner' ? ['Owner'] : superUser ? ['Club Admin'] : getClubAccess(club.id)?.roleNames || []),
     ...(player ? ['Player'] : approved ? ['Member'] : []),
     ...(me && !approved ? ['Application pending'] : []),
+    ...(children.length ? [`Parent of ${children.map(c => c.full_name.split(' ')[0]).join(', ')}`] : []),
   ];
 
   // Live now, then what's coming up
@@ -148,6 +155,48 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     });
     return () => { cancelled = true; };
   }, [club.id, player, upcomingMatchKey]);
+
+  // Each child's answers and fixtures (family_availability / family_squad_matches); keys are child:item
+  const [kidAnswers, setKidAnswers] = useState<Record<string, Answer>>({});
+  const [kidSquad, setKidSquad] = useState<Set<string> | null>(null);
+  const kidKey = kids.map(k => k.id).join(',');
+  const loadKidAnswers = useCallback(async () => {
+    const db = getSupabaseClient();
+    if (!db || !kidKey) return;
+    const [{ data: given }, { data: squad }] = await Promise.all([
+      db.rpc('family_availability', { p_club_id: club.id }),
+      db.rpc('family_squad_matches', { p_club_id: club.id }),
+    ]);
+    const next: Record<string, Answer> = {};
+    ((given || []) as { member_id: string; match_id: string | null; event_id: string | null; status: string }[]).forEach(r => {
+      if (r.status !== 'pending') next[`${r.member_id}:${r.match_id || r.event_id}`] = r.status as Answer;
+    });
+    setKidAnswers(next);
+    setKidSquad(new Set(((squad || []) as { member_id: string; match_id: string }[]).map(r => `${r.member_id}:${r.match_id}`)));
+  }, [club.id, kidKey]);
+  useEffect(() => { loadKidAnswers(); }, [loadKidAnswers, upcomingMatchKey]);
+  const answerForKid = async (kidId: string, item: { kind: 'match' | 'event'; id: string }, value: Answer) => {
+    const db = getSupabaseClient();
+    if (!db) return;
+    const key = `${kidId}:${item.id}`;
+    setSaving(key);
+    setAnswerError(null);
+    setKidAnswers(a => ({ ...a, [key]: value }));
+    const { error } = await db.rpc('set_child_availability', {
+      p_club_id: club.id, p_member_id: kidId,
+      p_match_id: item.kind === 'match' ? item.id : null,
+      p_event_id: item.kind === 'event' ? item.id : null,
+      p_status: value,
+    });
+    setSaving(null);
+    if (error) {
+      setAnswerError('That answer was not saved. Please try again.');
+      loadKidAnswers();
+    }
+  };
+  // Which children are asked about an item: their own team's matches, and every free event
+  const kidsFor = (item: { kind: 'match' | 'event'; id: string; price: number }) =>
+    item.kind === 'match' ? kids.filter(k => kidSquad?.has(`${k.id}:${item.id}`)) : item.price === 0 ? kids : [];
 
   const answer = async (item: { kind: 'match' | 'event'; id: string }, value: Answer) => {
     const db = getSupabaseClient();
@@ -214,7 +263,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ]
     : [
-        { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
+        // A parent's family page (passes, fees, messages) rather than Join
+        children.length
+          ? { label: 'My family', href: `${base}/member`, icon: Users }
+          : { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
@@ -232,7 +284,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         <img src={club.logo_url || DEFAULT_CREST} alt="" width={52} height={52} style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'cover', border: '2px solid var(--club-primary)' }} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-            {user ? `Hi ${user.full_name.split(' ')[0]}` : `Welcome to ${club.short_name || club.name}`}
+            {user ? `Hi ${greetName.split(' ')[0]}` : `Welcome to ${club.short_name || club.name}`}
           </h1>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.3rem' }}>
             {(chips.length ? chips : [isLoading ? '…' : user ? 'Not a member yet' : 'Visitor']).map(c => (
@@ -274,6 +326,24 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                   );
                 })()}
               </Link>
+              {kidsFor(item).map(kid => (
+                <div key={kid.id} className="app-kid-answer">
+                  <span>{kid.full_name.split(' ')[0]}</span>
+                  <div role="group" aria-label={`Is ${kid.full_name.split(' ')[0]} available for ${item.title}?`} className="app-answers">
+                    {ANSWERS.map(a => {
+                      const A = a.icon;
+                      const on = kidAnswers[`${kid.id}:${item.id}`] === a.value;
+                      return (
+                        <button key={a.value} type="button" aria-pressed={on} disabled={saving === `${kid.id}:${item.id}`}
+                          onClick={() => answerForKid(kid.id, item, a.value)}
+                          style={on ? { background: a.color, borderColor: a.color, color: '#fff' } : undefined}>
+                          <A size={15} /> {a.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
               {item.price > 0 && (
                 <div className="row" style={{ gap: '0.6rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
                   <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(item.price, currency)}</strong>

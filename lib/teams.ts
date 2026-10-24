@@ -5,7 +5,8 @@
 // has one main team (is_default). While a club has only that one team, every screen behaves as
 // it did before teams existed: team pickers, filters and labels only appear once there are two.
 // ==============================================================================
-import type { ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match } from './supabase/types';
+import type { ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
+import { clubPlaysIn, kickoff, soonestFirst } from './fixtures';
 
 export const TEAM_TYPES: { value: ClubTeamType; label: string }[] = [
   { value: 'senior', label: 'First / senior team' },
@@ -307,4 +308,23 @@ export function publicMember<M extends { id: string; full_name: string; photo_ur
     nationality: undefined,
     photo_url: member.photo_consent === true ? member.photo_url : undefined,
   };
+}
+
+/** A member's next fixture (back of their pass): from today, games the club plays in, and with
+ *  their teams known only those teams' games (internal and tournament games count for everyone) */
+export function nextFixtureOf(
+  matches: Match[], clubId: string, clubName: string, memberTeams: Pick<ClubTeam, 'id'>[],
+  clubTeams: ClubTeam[], participants: TournamentParticipant[],
+): Match | undefined {
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const teamIds = new Set(memberTeams.map(t => t.id));
+  return matches
+    .filter(m => m.club_id === clubId && m.status === 'upcoming' && kickoff(m) >= startOfToday)
+    .filter(m => clubPlaysIn(m, participants, clubName))
+    .filter(m => {
+      if (!teamIds.size) return true;
+      const team = teamOfMatch(m, clubTeams);
+      return !team || teamIds.has(team.id);
+    })
+    .sort(soonestFirst)[0];
 }

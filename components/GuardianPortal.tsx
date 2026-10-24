@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Users, UserPlus, QrCode, CreditCard, MessageSquare, Send, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, QrCode, CreditCard, MessageSquare, Send, CheckCircle2, Clock, AlertCircle, HeartPulse, Save } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import PaymentStep from '@/components/PaymentStep';
 import VirtualPassCard from '@/components/VirtualPassCard';
@@ -9,6 +9,9 @@ import PlayerAvatar from '@/components/PlayerAvatar';
 import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
 import type { Club, ClubMember, MembershipPlan } from '@/lib/supabase/types';
 import { DATE_LOCALE } from '@/lib/dates';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { clubTeamsOf, teamsOfMember, nextFixtureOf } from '@/lib/teams';
+import { defaultSeasonLabel } from '@/lib/season';
 
 // A parent or guardian's view of the children they look after at this club (my_children RPC,
 // matched on their confirmed sign-in email = club_members.guardian_email): each child's application
@@ -26,9 +29,11 @@ interface GuardianPortalProps {
   onAddChild: () => void;
 }
 
-type Section = 'pass' | 'renew' | 'messages';
+type Section = 'pass' | 'renew' | 'messages' | 'details';
 
 const daysUntil = (date: string) => Math.ceil((new Date(date).getTime() - Date.now()) / 86400000);
+const longDate = (date: string) => new Date(date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+const fixtureWhen = (date: string) => new Date(date).toLocaleString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 function statusOf(child: ClubMember): { label: string; color: string } {
   if (child.membership_status === 'pending') return { label: 'Waiting for review', color: 'var(--c-amber)' };
@@ -38,7 +43,27 @@ function statusOf(child: ClubMember): { label: string; color: string } {
 }
 
 export default function GuardianPortal({ club, childMembers, guardianEmail, plans, currency, signupPaid, onAddChild }: GuardianPortalProps) {
-  const { sendMemberMessage, getMemberMessages } = useClub();
+  const { sendMemberMessage, getMemberMessages, markClubMessagesRead, matches, clubTeams, clubTeamMembers, tournamentParticipants, playerStats, getActiveSeason } = useClub();
+  const teams = clubTeamsOf(clubTeams, club.id);
+  const season = getActiveSeason(club.id)?.name || defaultSeasonLabel();
+  // Photo consent, emergency contact and medical notes, saved by the server (update_child_details)
+  const [details, setDetails] = useState<Record<string, { photo_consent: boolean | null; emergency_contact: string; medical_notes: string }>>({});
+  const [detailState, setDetailState] = useState<Record<string, string>>({});
+  const detailsOf = (child: ClubMember) => details[child.id] ?? {
+    photo_consent: child.photo_consent ?? null, emergency_contact: child.emergency_contact || '', medical_notes: child.medical_notes || '',
+  };
+  const saveDetails = (child: ClubMember) => async (e: React.FormEvent) => {
+    e.preventDefault();
+    const d = detailsOf(child);
+    const db = getSupabaseClient();
+    if (!db) return;
+    setDetailState(x => ({ ...x, [child.id]: 'saving' }));
+    const { error } = await db.rpc('update_child_details', {
+      p_club_id: club.id, p_member_id: child.id, p_photo_consent: d.photo_consent, p_emergency_contact: d.emergency_contact, p_medical_notes: d.medical_notes,
+    });
+    setDetails(x => ({ ...x, [child.id]: d }));
+    setDetailState(x => ({ ...x, [child.id]: error ? 'Not saved. Please try again.' : 'saved' }));
+  };
   const [open, setOpen] = useState<Record<string, Section | undefined>>({});
   const [renewPlan, setRenewPlan] = useState<Record<string, string>>({});
   const [drafts, setDrafts] = useState<Record<string, { subject: string; content: string }>>({});
@@ -47,7 +72,11 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
   // How the club sees who wrote: the guardian's name from the child's record, else their email
   const guardianLabel = (child: ClubMember) => `${child.guardian_name?.trim() || guardianEmail} (parent of ${child.full_name})`;
 
-  const toggle = (id: string, section: Section) => setOpen(o => ({ ...o, [id]: o[id] === section ? undefined : section }));
+  const toggle = (id: string, section: Section) => {
+    // Opening the messages reads them, so the "new" count clears
+    if (section === 'messages' && open[id] !== 'messages') void markClubMessagesRead(club.id, id);
+    setOpen(o => ({ ...o, [id]: o[id] === section ? undefined : section }));
+  };
 
   const send = (child: ClubMember) => (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +129,14 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
           const thread = getMemberMessages(club.id, child.id);
           const draft = drafts[child.id] || { subject: '', content: '' };
           const unread = thread.filter(m => m.sender_type === 'admin' && !m.is_read).length;
+          // At a glance: team, next game, this season's numbers, and what's owed
+          const childTeams = teamsOfMember(clubTeamMembers, teams, child.id);
+          const nextMatch = approved ? nextFixtureOf(matches, club.id, club.name, childTeams, clubTeams, tournamentParticipants) : undefined;
+          const stats = playerStats.find(p => p.member_id === child.id && p.season === season);
+          const due = unpaid && signupPlan ? `${formatMoney(signupPlan.price_cents, currency)} joining fee`
+            : canRenew ? `Renewal due${days !== null && days >= 0 ? ` in ${days} day${days === 1 ? '' : 's'}` : ''}` : null;
+          const d = detailsOf(child);
+          const dState = detailState[child.id];
           return (
             <article key={child.id} className="glass-panel" data-guardian-child={child.id} style={{ padding: '1.25rem 1.5rem', borderLeft: `4px solid ${status.color}` }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
@@ -109,12 +146,21 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{child.full_name}</h3>
                     <div className="text-note">
                       {child.membership_tier}
-                      {approved && child.membership_expires_at ? ` · ${days !== null && days < 0 ? 'expired' : 'expires'} ${child.membership_expires_at.slice(0, 10)}` : ''}
+                      {approved && child.membership_expires_at ? ` · ${days !== null && days < 0 ? 'expired' : 'expires'} ${longDate(child.membership_expires_at)}` : ''}
                     </div>
                   </div>
                 </div>
                 <span className="badge" style={{ color: status.color, border: `1px solid ${status.color}`, background: 'transparent' }}>{status.label}</span>
               </div>
+
+              {approved && (
+                <dl className="family-summary">
+                  <div><dt>Team</dt><dd>{childTeams.map(t => t.name).join(', ') || 'Not placed yet'}</dd></div>
+                  <div><dt>Next game</dt><dd>{nextMatch ? <>{fixtureWhen(nextMatch.match_date)}<br /><span className="text-meta">{nextMatch.home_team_name} v {nextMatch.away_team_name}{nextMatch.venue ? ` · ${nextMatch.venue}` : ''}</span></> : 'None scheduled'}</dd></div>
+                  <div><dt>{season}</dt><dd>{stats ? `${stats.appearances} games · ${stats.goals} goals` : 'No games yet'}</dd></div>
+                  <div><dt>Fees</dt><dd style={{ color: due ? 'var(--c-amber)' : undefined }}>{due || 'Nothing due'}</dd></div>
+                </dl>
+              )}
 
               {pending && (
                 <p className="text-note" style={{ margin: '0.75rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -147,11 +193,14 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                 <button type="button" className={`btn btn-sm ${section === 'messages' ? 'btn-primary' : 'btn-secondary'}`} aria-expanded={section === 'messages'} onClick={() => toggle(child.id, 'messages')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <MessageSquare size={15} /> Messages{thread.length ? ` (${thread.length})` : ''}{unread ? ` · ${unread} new` : ''}
                 </button>
+                <button type="button" className={`btn btn-sm ${section === 'details' ? 'btn-primary' : 'btn-secondary'}`} aria-expanded={section === 'details'} onClick={() => toggle(child.id, 'details')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <HeartPulse size={15} /> Consent &amp; medical
+                </button>
               </div>
 
               {section === 'pass' && approved && (
                 <div style={{ marginTop: '1rem', maxWidth: '420px' }}>
-                  <VirtualPassCard club={club} member={child} />
+                  <VirtualPassCard club={club} member={child} teams={childTeams} nextMatch={nextMatch} />
                 </div>
               )}
 
@@ -167,6 +216,37 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                   </select>
                   <PaymentStep key={plan.id} clubId={club.id} kind="membership_renewal" memberId={child.id} planId={plan.id} amountCents={plan.price_cents} label={`Renew ${child.full_name}: ${plan.name} (${plan.duration_months} months)`} />
                 </div>
+              )}
+
+              {section === 'details' && (
+                <form onSubmit={saveDetails(child)} style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem', maxWidth: '560px' }}>
+                  <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+                    <legend className="form-label">Photos of {child.full_name.split(' ')[0]} on the club&apos;s public pages</legend>
+                    <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
+                      {([[true, 'Yes, that’s fine'], [false, 'No public photos']] as const).map(([value, label]) => (
+                        <label key={label} className="row" style={{ gap: '0.4rem', minHeight: '44px' }}>
+                          <input type="radio" name={`consent-${child.id}`} checked={d.photo_consent === value}
+                            onChange={() => setDetails(x => ({ ...x, [child.id]: { ...d, photo_consent: value } }))} />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <label className="form-label" htmlFor={`emergency-${child.id}`}>Emergency contact (name and phone)</label>
+                  <input id={`emergency-${child.id}`} className="form-input" maxLength={200} value={d.emergency_contact} placeholder="e.g. Sam Lee 0400 000 000"
+                    onChange={e => setDetails(x => ({ ...x, [child.id]: { ...d, emergency_contact: e.target.value } }))} />
+                  <label className="form-label" htmlFor={`medical-${child.id}`}>Medical notes for coaches (optional)</label>
+                  <textarea id={`medical-${child.id}`} className="form-input" rows={3} maxLength={2000} value={d.medical_notes} placeholder="Allergies, asthma, medication, anything the coach should know"
+                    onChange={e => setDetails(x => ({ ...x, [child.id]: { ...d, medical_notes: e.target.value } }))} />
+                  <p className="text-meta" style={{ margin: 0 }}>Only the club&apos;s committee and coaches see these. They&apos;re never shown publicly.</p>
+                  <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={dState === 'saving'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Save size={15} /> {dState === 'saving' ? 'Saving…' : 'Save details'}
+                    </button>
+                    {dState === 'saved' && <span role="status" style={{ color: 'var(--c-green)', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={15} /> Saved</span>}
+                    {dState && dState !== 'saved' && dState !== 'saving' && <span role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem' }}>{dState}</span>}
+                  </div>
+                </form>
               )}
 
               {section === 'messages' && (

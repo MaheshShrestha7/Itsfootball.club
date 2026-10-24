@@ -248,6 +248,8 @@ interface ClubContextType {
   sendMemberMessage: (messageData: Omit<MemberMessage, 'id' | 'created_at' | 'is_read'>) => MemberMessage;
   replyToMemberMessage: (originalMessageId: string, replyContent: string, adminName?: string) => { success: boolean; message?: MemberMessage };
   markMemberMessageRead: (messageId: string) => void;
+  /** A member (or their parent) has read the club's messages to them */
+  markClubMessagesRead: (clubId: string, memberId: string) => Promise<void>;
   getMemberMessages: (clubId: string, memberId: string) => MemberMessage[];
   getClubMemberMessages: (clubId: string) => MemberMessage[];
   /** Club record for one season (all seasons when none is given) */
@@ -3117,6 +3119,15 @@ export function ClubProvider({
     setMemberMessages(prev => prev.map(m => (m.id === messageId && !m.is_read ? { ...m, is_read: true } : m)));
   }, []);
 
+  // Saved by the server (members can't edit message rows), then folded in as already synced
+  const markClubMessagesRead = useCallback(async (clubId: string, memberId: string) => {
+    const unread = memberMessages.filter(m => m.club_id === clubId && m.member_id === memberId && m.sender_type === 'admin' && !m.is_read);
+    const client = getSupabaseClient();
+    if (!unread.length || !client) return;
+    const { error } = await client.rpc('mark_messages_read', { p_club_id: clubId, p_member_id: memberId });
+    if (!error) unread.forEach(m => applyServerRow('memberMessages', setMemberMessages, { ...m, is_read: true }));
+  }, [memberMessages, applyServerRow]);
+
   const getMemberMessages = useCallback((clubId: string, memberId: string): MemberMessage[] => {
     return memberMessages
       .filter(m => m.club_id === clubId && m.member_id === memberId)
@@ -3597,6 +3608,7 @@ export function ClubProvider({
         sendMemberMessage,
         replyToMemberMessage,
         markMemberMessageRead,
+        markClubMessagesRead,
         getMemberMessages,
         getClubMemberMessages,
         getClubSeasonStats,

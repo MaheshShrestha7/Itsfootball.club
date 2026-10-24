@@ -569,6 +569,7 @@ function PersonPanel({
               {junior && <div className="ppl-card-note">Parent: {[m.guardian_name, m.guardian_email, m.guardian_phone].filter(Boolean).join(' · ') || 'not set'}</div>}
               {m.emergency_contact && <div className="ppl-card-note">Emergency contact: {m.emergency_contact}</div>}
               {junior && m.photo_consent != null && <div className="ppl-card-note">Photo consent: {m.photo_consent ? 'yes' : 'no'}</div>}
+              {m.medical_notes && <div className="ppl-card-note">Medical: {m.medical_notes}</div>}
               {m.safeguarding_check_type && <div className="ppl-card-note">{m.safeguarding_check_type}{m.safeguarding_check_expiry_date ? ` to ${fmtDate(m.safeguarding_check_expiry_date)}` : ''}</div>}
               {checks.length > 0 ? checks.map(c => (
                 <div key={c.kind} className="row" style={{ gap: '0.35rem', marginTop: 4, fontSize: '0.8rem', fontWeight: 700, color: c.urgent ? 'var(--c-red)' : 'var(--c-amber)' }}>

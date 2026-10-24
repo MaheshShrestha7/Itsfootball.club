@@ -2877,6 +2877,12 @@ dialog.confirm-dialog::backdrop {
   transition: transform 100ms ease-out, background 100ms ease-out;
 }
 
+/* A parent's answer for one child: name beside the buttons, above them on phones */
+.app-kid-answer { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.65rem; }
+.app-kid-answer > span { min-width: 4.5rem; font-weight: 800; font-size: 0.85rem; color: var(--text-primary); }
+.app-kid-answer .app-answers { flex: 1; margin-top: 0; }
+@media (max-width: 480px) { .app-kid-answer { flex-direction: column; align-items: stretch; gap: 0.35rem; } }
+
 .app-answers button:active {
   transform: scale(0.96);
 }
@@ -3737,6 +3743,13 @@ dialog.confirm-dialog::backdrop {
 .auth-next li.is-now::before { border-color: var(--c-amber); box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18); }
 .auth-next strong { font-size: 0.88rem; color: var(--text-primary); }
 .auth-next span { font-size: 0.78rem; color: var(--text-muted); }
+
+/* Family page: one child's team, next game, season and fees at a glance (as many across as fit, 2 on phones) */
+.family-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 0.75rem; margin: 1rem 0 0; }
+.family-summary > div { padding: 0.65rem 0.75rem; border-radius: var(--radius-md); background: rgba(var(--tint-rgb), 0.04); border: 1px solid var(--border-subtle); min-width: 0; }
+.family-summary dt { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.family-summary dd { margin: 0.2rem 0 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .family-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Join steps */
 .auth-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; list-style: none; padding: 0; }

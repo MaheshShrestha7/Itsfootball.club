@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth-context';
 import ThemeToggle from '@/components/ThemeToggle';
 import PushToggle from '@/components/PushToggle';
 import { useShopOpen } from '@/lib/use-shop-open';
+import { useMyChildren } from '@/lib/use-my-children';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
 import { Shield, Radio, CreditCard, Users, Calendar, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen } from 'lucide-react';
@@ -36,6 +37,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const userRole = user ? getUserRoleForClub(club.id) : null;
   // Signed in but not a member here (or not approved yet): still offered "Join the Club"
   const isClubMember = !!(isAuthenticated && user && userRole);
+  // A parent of a junior here goes to their family page, not Join
+  const isParent = useMyChildren(club.id).length > 0;
 
   const [logoError, setLogoError] = useState(false);
 
@@ -263,7 +266,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           )}
 
           {/* Join the Club, for anyone who isn't a member here (members reach their pass from their avatar) */}
-          {!isClubMember && (
+          {!isClubMember && !isParent && (
           <Link
             href={`/${club.slug}/member?join=1`}
             style={{
@@ -493,13 +496,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
                 {/* Members: their member pass. Everyone else: join the club */}
                 <Link
-                  href={isClubMember ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
+                  href={isClubMember || isParent ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-primary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem' }}
                 >
-                  {isClubMember ? <CreditCard size={16} /> : <UserPlus size={16} />}
-                  <span>{isClubMember ? 'Digital Member Pass' : 'Join the Club'}</span>
+                  {isClubMember ? <CreditCard size={16} /> : isParent ? <Users size={16} /> : <UserPlus size={16} />}
+                  <span>{isClubMember ? 'Digital Member Pass' : isParent ? 'My family' : 'Join the Club'}</span>
                 </Link>
               </div>
 

@@ -925,6 +925,13 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             )}
+            {/* Who sees it on the Join page: under 18s aren't offered adult plans and start on a junior one */}
+            <select className="form-select" style={{ width: 140 }} aria-label="Who can choose" title="Who can choose this plan"
+              value={row.audience || 'all'} onChange={e => set({ audience: e.target.value as MembershipPlan['audience'] })}>
+              <option value="all">Everyone</option>
+              <option value="junior">Under 18s</option>
+              <option value="adult">Adults (18+)</option>
+            </select>
           </span>
         )}
         extraLabel="Months"

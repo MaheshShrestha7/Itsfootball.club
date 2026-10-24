@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, CalendarDays, Radio, LayoutGrid, CreditCard, UserPlus, Shield } from 'lucide-react';
+import { Home, CalendarDays, Radio, LayoutGrid, CreditCard, UserPlus, Shield, Users } from 'lucide-react';
 import type { Club } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { matchPath } from '@/lib/slugs';
+import { useMyChildren } from '@/lib/use-my-children';
 
 /**
  * Phone tab bar for the club site (shown under 769px, and at any width in the installed app, by
@@ -23,6 +24,8 @@ export default function ClubTabBar({ club }: { club: Club }) {
   const fixturesInView = useSectionInView(onHome ? 'fixtures' : null);
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const member = !!user && members.some(m => m.club_id === club.id && m.user_id === user.id);
+  // A parent's family page (their children's passes) instead of Join
+  const parent = useMyChildren(club.id).length > 0;
 
   const tabs = [
     { label: 'Home', href: base, icon: Home },
@@ -30,7 +33,9 @@ export default function ClubTabBar({ club }: { club: Club }) {
       ? { label: 'Live', href: matchPath(club.slug, live), icon: Radio }
       : { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
     { label: 'My Club', href: `${base}/app`, icon: LayoutGrid },
-    member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard } : { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus },
+    member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard }
+      : parent ? { label: 'Family', href: `${base}/member`, icon: Users }
+      : { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus },
     ...(user && hasClubAdminAccess(club.id) ? [{ label: 'Admin', href: `${base}/admin`, icon: Shield }] : []),
   ];
 

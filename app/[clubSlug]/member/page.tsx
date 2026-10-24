@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { passTokenHint } from '@/lib/ids';
-import { clubTeamsOf, teamsOfMember, teamOfMatch } from '@/lib/teams';
-import { clubPlaysIn, kickoff, soonestFirst } from '@/lib/fixtures';
+import { clubTeamsOf, teamsOfMember, nextFixtureOf } from '@/lib/teams';
 import { SITE_URL, authReturnUrl, safeNextPath } from '@/lib/slugs';
 import { defaultSeasonLabel } from '@/lib/season';
 import { liveStreak } from '@/lib/clubscore-defaults';
@@ -184,6 +183,8 @@ export default function MemberPortalPage({
   const juniorTeamPicked = signupForm.role === 'player' && joinableTeams.length > 1
     && !!joinableTeams.find(t => t.id === signupForm.teamId)?.is_junior;
   const needsGuardian = isMinor || juniorTeamPicked || addingChild;
+  // A parent filling the form in for their child: the form talks to the parent about the child
+  const forChild = addingChild || isMinor;
   const [signupError, setSignupError] = useState<string | null>(null);
   // After a sign-in link or reset email goes out, the card shows "Check your inbox" for this address
   const [sentTo, setSentTo] = useState<{ kind: 'link' | 'reset'; email: string } | null>(null);
@@ -240,14 +241,20 @@ export default function MemberPortalPage({
 
   // Priced plans from Admin > Finance; with none set up the form keeps its built-in free tiers
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  // Plans for every team, plus those of the team the player picked (all of them until one is picked)
-  const formPlans = plans.filter(p => !p.team_id || !signupForm.teamId || p.team_id === signupForm.teamId);
+  // Plans for every team, plus those of the team the player picked (all of them until one is picked),
+  // and only those for the applicant's age (Finance -> plan -> Who can choose): a child added by a
+  // parent counts as junior even before the date of birth is in
+  const ageGroup = isMinor || (addingChild && applicantAge === null) ? 'junior' : applicantAge !== null ? 'adult' : null;
+  const formPlans = plans.filter(p => (!p.team_id || !signupForm.teamId || p.team_id === signupForm.teamId)
+    && (!ageGroup || (p.audience || 'all') === 'all' || p.audience === ageGroup));
   useEffect(() => {
-    if (formPlans.length && !formPlans.some(p => p.name === signupForm.tier)) {
-      setSignupForm(f => ({ ...f, tier: formPlans[0].name }));
-    }
+    // An under-18 starts on a junior plan when the club has one
+    const juniorPlan = ageGroup === 'junior' ? formPlans.find(p => p.audience === 'junior') : undefined;
+    const current = formPlans.find(p => p.name === signupForm.tier);
+    if (juniorPlan && current?.audience !== 'junior') setSignupForm(f => ({ ...f, tier: juniorPlan.name }));
+    else if (formPlans.length && !current) setSignupForm(f => ({ ...f, tier: formPlans[0].name }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signupForm.teamId, plans]);
+  }, [signupForm.teamId, plans, ageGroup]);
   const [currency, setCurrency] = useState('AUD');
   const [paymentNotice, setPaymentNotice] = useState<'success' | 'cancelled' | null>(null);
   const [renewPlanId, setRenewPlanId] = useState('');
@@ -550,7 +557,7 @@ export default function MemberPortalPage({
     if (!signupForm.termsAccepted) return setSignupError('Please accept the club terms and privacy policy.');
     if (needsGuardian && !signupForm.guardianEmail.trim()) return setSignupError('Please add the parent or guardian\'s email: the club emails them about the player, and they sign in with it.');
     if (!needsGuardian && !signupForm.email.trim()) return setSignupError('Please add your email address.');
-    if (juniorTeamPicked && !signupForm.dateOfBirth) return setSignupError('Please add the player\'s date of birth: junior teams are by age group.');
+    if ((juniorTeamPicked || addingChild) && !signupForm.dateOfBirth) return setSignupError(addingChild ? 'Please add your child\'s date of birth: teams and fees go by age.' : 'Please add the player\'s date of birth: junior teams are by age group.');
     if (needsGuardian && (!signupForm.guardianName.trim() || !signupForm.guardianPhone.trim())) return setSignupError('Please add a parent or guardian\'s name and phone number.');
     if (needsGuardian && !signupForm.photoConsent) return setSignupError('Please choose whether photos of the player can be shown publicly.');
     if (needsGuardian && !signupForm.guardianConsent) return setSignupError(juniorTeamPicked && !isMinor ? 'A parent or guardian needs to give their consent for junior team players.' : 'A parent or guardian needs to give their consent for applicants under 18.');
@@ -710,21 +717,7 @@ export default function MemberPortalPage({
 
   // Back of the member pass: their teams, their next fixture, and renewal when it's offered
   const passTeams = activeMember ? teamsOfMember(clubTeamMembers, clubTeamsOf(clubTeams, club.id), activeMember.id) : [];
-  const passNextMatch = (() => {
-    if (!activeMember) return undefined;
-    const startOfToday = new Date().setHours(0, 0, 0, 0);
-    const teamIds = new Set(passTeams.map(t => t.id));
-    return matches
-      .filter(m => m.club_id === club.id && m.status === 'upcoming' && kickoff(m) >= startOfToday)
-      .filter(m => clubPlaysIn(m, tournamentParticipants, club.name))
-      // With teams known, only their own teams' games (internal and tournament games count for everyone)
-      .filter(m => {
-        if (!teamIds.size) return true;
-        const team = teamOfMatch(m, clubTeams);
-        return !team || teamIds.has(team.id);
-      })
-      .sort(soonestFirst)[0];
-  })();
+  const passNextMatch = activeMember ? nextFixtureOf(matches, club.id, club.name, passTeams, clubTeams, tournamentParticipants) : undefined;
   const canRenew = !!activeMember?.membership_expires_at && plans.some(p => p.price_cents > 0);
   const openRenewal = () => {
     setRenewOpen(true);
@@ -979,7 +972,8 @@ export default function MemberPortalPage({
                       </>
                     ) : (
                       <>
-                        <h2>Application sent, {submittedApplication.full_name.split(' ')[0]}</h2>
+                        {/* A parent applied for their child: speak to the parent */}
+                        <h2>{submittedApplication.guardian_email ? `Application sent for ${submittedApplication.full_name.split(' ')[0]}` : `Application sent, ${submittedApplication.full_name.split(' ')[0]}`}</h2>
                         <p>Your application for <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.membership_tier}</strong> is with the {club.name} committee.</p>
 
                         <ol className="auth-next" aria-label="What happens next">
@@ -990,7 +984,7 @@ export default function MemberPortalPage({
                             return fee > 0 ? <li className="is-now"><strong>Pay {formatMoney(fee, currency)}</strong><span>Below, now or later by signing in. The committee approves once it&apos;s paid</span></li> : null;
                           })()}
                           <li className={plans.find(p => p.name === submittedApplication.membership_tier)?.price_cents ? '' : 'is-now'}><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
-                          <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>Then sign in here for your member pass</span></li>
+                          <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>{submittedApplication.guardian_email ? `Then sign in here to see ${submittedApplication.full_name.split(' ')[0]}'s pass` : 'Then sign in here for your member pass'}</span></li>
                         </ol>
                       </>
                     )}
@@ -1046,7 +1040,7 @@ export default function MemberPortalPage({
                   /* Application form, in three steps. Only the current step is on the page, so the browser checks just its fields. */
                   <form onSubmit={handleSignupSubmit} ref={joinShake}>
                     <ol className="auth-steps" aria-label={`Step ${joinStep} of 3`}>
-                      {['About you', 'Membership', 'Confirm'].map((label, i) => (
+                      {[forChild ? 'Your child' : 'About you', 'Membership', 'Confirm'].map((label, i) => (
                         <li key={label} className={i + 1 < joinStep ? 'is-done' : i + 1 === joinStep ? 'is-now' : ''} aria-current={i + 1 === joinStep ? 'step' : undefined}>
                           {i + 1}. {label}
                         </li>
@@ -1058,7 +1052,7 @@ export default function MemberPortalPage({
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-full-name" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          {addingChild ? 'Child’s full name' : 'Full name'}
+                          {forChild ? 'Your child’s full name' : 'Full name'}
                         </label>
                         <input autoComplete="name" id="member-full-name"
                           type="text"
@@ -1071,11 +1065,11 @@ export default function MemberPortalPage({
                       </div>
                       <div>
                         <label htmlFor="member-date-of-birth" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          Date of birth{juniorTeamPicked ? '' : ' (optional)'}
+                          {forChild ? 'Their date of birth' : 'Date of birth'}{juniorTeamPicked || addingChild ? '' : ' (optional)'}
                         </label>
                         <input id="member-date-of-birth"
                           type="date"
-                          required={juniorTeamPicked}
+                          required={juniorTeamPicked || addingChild}
                           max={todayIso()}
                           value={signupForm.dateOfBirth}
                           onChange={e => setSignupForm({ ...signupForm, dateOfBirth: e.target.value })}
@@ -1087,7 +1081,7 @@ export default function MemberPortalPage({
                     <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <label htmlFor="member-email-address" className="form-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                          {needsGuardian ? 'Player\'s own email (optional)' : 'Email'}
+                          {needsGuardian ? 'Their own email (optional)' : 'Email'}
                         </label>
                         <input autoComplete="email" id="member-email-address"
                           type="email"
@@ -1115,7 +1109,7 @@ export default function MemberPortalPage({
                       </div>
                     </div>
                     {isMinor && !addingChild && (
-                      <div className="auth-field-hint" style={{ marginTop: '-0.25rem', marginBottom: '1rem' }}>Under 18: we&apos;ll ask for a parent or guardian in the next step.</div>
+                      <div className="auth-field-hint" style={{ marginTop: '-0.25rem', marginBottom: '1rem' }}>Under 18: fill this in about your child. We&apos;ll ask for your details as their parent or guardian next.</div>
                     )}
                     </>)}
 
