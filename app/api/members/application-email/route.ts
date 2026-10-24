@@ -13,11 +13,15 @@ import { isUuid } from '@/lib/ids';
 //   POST { clubId, memberId, kind: 'applied' }    anyone, within an hour of applying (the applicant
 //                                                 is signed out; only they know the new row's id)
 //   POST { clubId, memberId, kind: 'approved' | 'rejected' }   club admins with Member Approvals
+//   POST { clubId, memberId, kind: 'approved' }   anyone, within an hour of a free supporter pass being
+//                                                 approved automatically (auto_approve_free_application)
 // Each email goes out once per application (email_log), however often this is called.
 
 const KINDS = { applied: 'pending', approved: 'approved', rejected: 'rejected' } as const;
 type Kind = keyof typeof KINDS;
 const APPLY_WINDOW_MS = 60 * 60 * 1000;
+// reviewed_by on applications the club's free-plan setting approved (migration 20261120)
+const AUTO_REVIEWER = 'Automatic (free supporter plan)';
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -26,13 +30,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 
-  if (kind === 'applied') {
-    if (!(await durableRateLimit(`application-email:${getClientIp(req.headers)}`, 10, 60 * 60 * 1000))) {
-      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
-    }
-  } else {
+  // An applicant (signed out) may only ask for their own fresh application's email: checked below
+  let applicant = kind === 'applied';
+  if (!applicant) {
     const auth = await requireClubPerm(req, body.clubId, ['members'], 'edit');
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    if (!auth.ok && kind !== 'approved') return NextResponse.json({ error: auth.error }, { status: auth.status });
+    applicant = !auth.ok;
+  }
+  if (applicant && !(await durableRateLimit(`application-email:${getClientIp(req.headers)}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
   }
 
   const db = getServiceClient();
@@ -41,7 +47,7 @@ export async function POST(req: NextRequest) {
   const [{ data: club }, { data: member }] = await Promise.all([
     db.from('clubs').select(CLUB_BRAND_COLUMNS).eq('id', body.clubId).maybeSingle(),
     db.from('club_members')
-      .select(`id, ${MEMBER_RECIPIENT_COLUMNS}, membership_tier, membership_status, rejection_reason, applied_at, reviewed_at`)
+      .select(`id, ${MEMBER_RECIPIENT_COLUMNS}, membership_tier, membership_status, rejection_reason, applied_at, reviewed_at, reviewed_by`)
       .eq('club_id', body.clubId).eq('id', body.memberId).maybeSingle(),
   ]);
   if (!club || !member) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
@@ -52,6 +58,10 @@ export async function POST(req: NextRequest) {
   if (!recipient) return NextResponse.json({ sent: false, error: 'No email address.' }, { status: 400 });
   if (kind === 'applied' && !(member.applied_at && Date.now() - new Date(member.applied_at).getTime() < APPLY_WINDOW_MS)) {
     return NextResponse.json({ sent: false, error: 'Too late to send.' }, { status: 409 });
+  }
+  if (applicant && kind === 'approved' && !(member.reviewed_by === AUTO_REVIEWER && member.reviewed_at
+    && Date.now() - new Date(member.reviewed_at).getTime() < APPLY_WINDOW_MS)) {
+    return NextResponse.json({ error: 'Not allowed.' }, { status: 403 });
   }
 
   const row = club as ClubBrandRow;

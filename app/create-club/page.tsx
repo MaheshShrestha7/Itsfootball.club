@@ -8,10 +8,11 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import ImageUploadZone from '@/components/ImageUploadZone';
+import WizardGroundSearch, { type WizardGround } from '@/components/grounds/WizardGroundSearch';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import {
   Shield,
@@ -42,6 +43,20 @@ export default function CreateClubPage() {
   const [stepError, setStepError] = useState<string | null>(null);
   // The slug message waits until the admin has typed a name or slug
   const [slugTouched, setSlugTouched] = useState(false);
+  // A ground picked from the public grounds directory: becomes the club's home ground once saved
+  const [directoryGround, setDirectoryGround] = useState<WizardGround | null>(null);
+  const pickDirectoryGround = (g: WizardGround | null) => {
+    setDirectoryGround(g);
+    if (!g) return;
+    const pitch = (g.pitches || [])[0];
+    setFormData(prev => ({
+      ...prev,
+      stadium_name: g.name,
+      stadium_address: [g.address, `${g.suburb} ${g.state}${g.postcode ? ` ${g.postcode}` : ''}`].filter(Boolean).join(', '),
+      ...(g.parking ? { stadium_parking_info: g.parking.slice(0, 200) } : {}),
+      ...(pitch?.surface && /synthetic|turf|artificial/i.test(pitch.surface) ? { stadium_pitch_type: '3G / 4G All-Weather Turf' } : {}),
+    }));
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -208,7 +223,17 @@ export default function CreateClubPage() {
     // Straight into the new club's admin, where the getting-started list waits. The admin pages
     // load the club from the server, so save it first (My Clubs works from this browser if that's slow).
     setLaunching(true);
-    router.push((await waitForClubSaved(newClub.id)) ? `/${newClub.slug}/admin` : '/my-clubs');
+    const saved = await waitForClubSaved(newClub.id);
+    if (saved && directoryGround) {
+      // Not fatal: the ground can be linked later under Branding -> Home ground guide
+      const token = await getAccessToken();
+      await fetch('/api/admin/grounds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: newClub.id, action: 'save', groundId: directoryGround.id, listed: false }),
+      }).catch(() => undefined);
+    }
+    router.push(saved ? `/${newClub.slug}/admin` : '/my-clubs');
   };
 
   // 1. Still resolving the current session: avoid flashing the sign-in checkpoint
@@ -751,7 +776,7 @@ export default function CreateClubPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginTop: '2rem' }}>
                   <button type="button" onClick={() => setStep(1)} className="btn btn-secondary">
                     <ArrowLeft size={16} /> Back
                   </button>
@@ -772,6 +797,8 @@ export default function CreateClubPage() {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
                   Where you play home games, so fans and visiting teams can find you.
                 </p>
+
+                <WizardGroundSearch picked={directoryGround} onPick={pickDirectoryGround} />
 
                 <div className="form-group">
                   <label htmlFor="create-club-home-ground-name" className="form-label">Home Ground Name *</label>
@@ -826,7 +853,7 @@ export default function CreateClubPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginTop: '2rem' }}>
                   <button type="button" onClick={() => setStep(2)} className="btn btn-secondary">
                     <ArrowLeft size={16} /> Back
                   </button>

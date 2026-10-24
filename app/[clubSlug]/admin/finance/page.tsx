@@ -1,7 +1,8 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
-import { Wallet, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save } from 'lucide-react';
+import { Wallet, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
+import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { clubTeamsOf } from '@/lib/teams';
@@ -298,7 +299,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     if (error) return flash('error', error.message);
     // fulfil_payment files a renewal for a still-pending applicant as their sign-up
     const kind = (data as Payment | null)?.kind || p.kind;
-    flash('ok', kind === 'membership_signup' ? 'Payment verified. The application can now be approved in Members.'
+    flash('ok', kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
       : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
     load();
   };
@@ -447,6 +448,12 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {p.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} /> Receipt</button>}
                   {/* A pending cash or bank payment (e.g. one whose fulfilment failed) can be finished here too */}
+                  {/* The same application's card in Members: verify and approve there in one go */}
+                  {p.kind === 'membership_signup' && p.member_id && members.find(m => m.id === p.member_id)?.membership_status === 'pending' && (
+                    <Link data-view-ok href={`/${club.slug}/admin/members?member=${p.member_id}`} className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Open this application in Members">
+                      <UserCheck size={14} /> Application
+                    </Link>
+                  )}
                   {(p.status === 'awaiting_review' || (p.status === 'pending' && p.method !== 'stripe')) && (
                     <>
                       <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> Verify</button>
@@ -631,6 +638,18 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
     flash('ok', 'Membership approval & payment policy saved.');
   };
 
+  // Free supporter passes approved straight away (migration 20261120)
+  const autoFree = !!club?.auto_approve_free;
+  const [savingFree, setSavingFree] = useState(false);
+  const toggleAutoFree = async () => {
+    setSavingFree(true);
+    const { error } = await db!.rpc('set_auto_approve_free', { p_club_id: clubId, p_on: !autoFree });
+    setSavingFree(false);
+    if (error) return flash('error', error.code === 'PGRST202' ? 'This needs the 20261120_auto_approve_free.sql database migration.' : error.message);
+    updateClubBranding(clubId, { auto_approve_free: !autoFree });
+    flash('ok', !autoFree ? 'Free supporter sign-ups are now approved straight away.' : 'Free supporter sign-ups now wait for the committee again.');
+  };
+
   return (
     <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -703,6 +722,18 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
       >
         <Save size={16} /> Save Policy
       </button>
+
+      <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', cursor: savingFree ? 'wait' : 'pointer',
+        background: 'rgba(var(--shade-rgb), 0.2)', border: `1.5px solid ${autoFree ? 'var(--club-primary)' : 'var(--border-subtle)'}` }}>
+        <input type="checkbox" checked={autoFree} disabled={savingFree} onChange={toggleAutoFree}
+          style={{ marginTop: '0.25rem', accentColor: 'var(--club-primary)' }} />
+        <span>
+          <strong style={{ color: 'var(--text-primary)', fontSize: '0.92rem' }}>Approve free supporter sign-ups straight away</strong>
+          <span style={{ display: 'block', fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            Adults joining as a supporter on a $0 plan get their member pass as soon as they sign up. Players, juniors and paid plans still come to you for approval.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   AGE_GROUPS, ageGroupAge, clubTeamsOf, defaultTeamOf, hasMultipleTeams, isTeamFixture, suggestedFormat,
   squadForMatch, teamMemberIds, teamOfMatch, teamSlug, teamsOfMember, uniqueTeamSlug,
   ageGroupCutoff, ageGroupFit, ageOnDate, isJuniorAgeGroup, isJuniorFixture, isJuniorMember, juniorMemberIds,
-  juniorPublicName, publicMember, safeguardingCheckStatus, goalScoringSide,
+  juniorPublicName, publicMember, safeguardingCheckStatus, goalScoringSide, suggestJuniorTeam, matchTypeForCompetition,
 } from './teams';
 
 const team = (id: string, extra: Partial<ClubTeam> = {}): ClubTeam => ({
@@ -138,5 +138,22 @@ assert.equal(goalScoringSide({ event_type: 'goal', team_side: 'away' }), 'away')
 assert.equal(goalScoringSide({ event_type: 'penalty', team_side: 'home' }), 'home');
 assert.equal(goalScoringSide({ event_type: 'own_goal', team_side: 'home' }), 'away');
 assert.equal(goalScoringSide({ event_type: 'yellow_card', team_side: 'home' }), null);
+
+// Junior team suggestion for under-18 applicants
+const juniors = [team('u12', { is_junior: true, age_group: 'U12' }), team('u9', { is_junior: true, age_group: 'U9' }), team('first'),
+  team('old', { is_junior: true, age_group: 'U14', is_active: false })];
+assert.equal(suggestJuniorTeam('2018-01-01', juniors, cutoff)?.id, 'u9'); // 8: youngest group that fits
+assert.equal(suggestJuniorTeam('2015-01-01', juniors, cutoff)?.id, 'u12'); // 11
+assert.equal(suggestJuniorTeam('2012-01-01', juniors, cutoff)?.id, 'u12'); // 14: no fit (U14 inactive), first junior team
+assert.equal(suggestJuniorTeam(undefined, juniors, cutoff)?.id, 'u12');
+assert.equal(suggestJuniorTeam('2015-01-01', [team('first')], cutoff), undefined);
+
+// Match type from the competition name
+assert.equal(matchTypeForCompetition('State Cup'), 'tournament');
+assert.equal(matchTypeForCompetition('Winter Carnival'), 'tournament');
+assert.equal(matchTypeForCompetition('League Match'), 'friendly');
+assert.equal(matchTypeForCompetition('Club Friendly'), 'friendly');
+assert.equal(matchTypeForCompetition('Intra-Squad'), 'internal');
+assert.equal(matchTypeForCompetition('Cupcake Social'), null);
 
 console.log('teams.check: ok');

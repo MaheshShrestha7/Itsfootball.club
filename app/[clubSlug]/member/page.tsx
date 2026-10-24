@@ -53,7 +53,8 @@ import {
   ExternalLink,
   Check,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  BadgeCheck,
 } from 'lucide-react';
 import { AuthAlert, AuthTabs, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 import PlayerAvatar from '@/components/PlayerAvatar';
@@ -942,20 +943,37 @@ export default function MemberPortalPage({
                 {submittedApplication ? (
                   /* Application Confirmation Screen */
                   <div className="auth-sent" role="status" style={{ padding: '0.5rem 0' }}>
-                    <div className="auth-sent-icon" aria-hidden="true" style={{ color: 'var(--c-amber)', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.35)' }}>
-                      <Clock size={34} />
+                    <div className="auth-sent-icon" aria-hidden="true" style={submittedApplication.membership_status === 'approved'
+                      ? { color: 'var(--c-green)', background: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.35)' }
+                      : { color: 'var(--c-amber)', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.35)' }}>
+                      {submittedApplication.membership_status === 'approved' ? <BadgeCheck size={34} /> : <Clock size={34} />}
                       <span className="auth-sent-tick">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                       </span>
                     </div>
-                    <h2>Application sent, {submittedApplication.full_name.split(' ')[0]}</h2>
-                    <p>Your application for <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.membership_tier}</strong> is with the {club.name} committee.</p>
+                    {submittedApplication.membership_status === 'approved' ? (
+                      <>
+                        {/* The club approves free supporter passes straight away (Finance -> Settings) */}
+                        <h2>You&apos;re in, {submittedApplication.full_name.split(' ')[0]}!</h2>
+                        <p>Your <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.membership_tier}</strong> membership with {club.name} is active now.</p>
+                        <ol className="auth-next" aria-label="What happens next">
+                          <li className="is-done"><strong>Signed up</strong><span>Just now</span></li>
+                          <li className="is-done"><strong>Pass approved</strong><span>Free supporter passes are approved straight away</span></li>
+                          <li className="is-now"><strong>Sign in with {submittedApplication.email}</strong><span>Your member pass is waiting</span></li>
+                        </ol>
+                      </>
+                    ) : (
+                      <>
+                        <h2>Application sent, {submittedApplication.full_name.split(' ')[0]}</h2>
+                        <p>Your application for <strong style={{ color: 'var(--text-primary)' }}>{submittedApplication.membership_tier}</strong> is with the {club.name} committee.</p>
 
-                    <ol className="auth-next" aria-label="What happens next">
-                      <li className="is-done"><strong>Application sent</strong><span>Just now</span></li>
-                      <li className="is-now"><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
-                      <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>Then sign in here for your member pass</span></li>
-                    </ol>
+                        <ol className="auth-next" aria-label="What happens next">
+                          <li className="is-done"><strong>Application sent</strong><span>Just now</span></li>
+                          <li className="is-now"><strong>Committee review</strong><span>They&apos;ll check your details</span></li>
+                          <li><strong>We email {submittedApplication.guardian_email || submittedApplication.email}</strong><span>Then sign in here for your member pass</span></li>
+                        </ol>
+                      </>
+                    )}
 
                     <div style={{
                       background: 'rgba(var(--shade-rgb), 0.35)',
