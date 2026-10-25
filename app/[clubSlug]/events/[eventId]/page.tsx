@@ -9,7 +9,7 @@ import { DATE_LOCALE, SITE_TIME_ZONE } from '@/lib/dates';
 import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import SponsorLogo from '@/components/SponsorLogo';
-import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
+import { sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
 import KickoffCountdown from '@/components/KickoffCountdown';
@@ -264,7 +264,7 @@ export default function EventDetailsPage({
                       backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
                       color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)',
                     }}>
-                      {sponsorTierLabel(sponsor.tier)}
+                      {sponsorLabel(sponsor)}
                     </span>
                     {sponsor.website_url && (
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

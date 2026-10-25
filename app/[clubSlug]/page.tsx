@@ -16,7 +16,7 @@ import { clubPlaysIn, kickoff, latestFirst, soonestFirst } from '@/lib/fixtures'
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
-import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
+import { sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
@@ -1668,7 +1668,7 @@ export default function ClubPublicPage({
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
                 <div>
                   <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
-                    Commercial Backers &amp; Kit Partners
+                    Club Partners
                   </span>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                     Official Club Sponsors
@@ -1707,7 +1707,7 @@ export default function ClubPublicPage({
                   const isLG = scale === 'lg';
                   const isMD = scale === 'md';
 
-                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorTierLabel(sponsor.tier).toUpperCase();
+                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorLabel(sponsor).toUpperCase();
 
                   return (
                     <SponsorTrackedLink

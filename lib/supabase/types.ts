@@ -363,6 +363,8 @@ export interface Sponsor {
   logo_url: string;
   website_url?: string;
   tier: SponsorTier;
+  /** Badge text typed by the admin; blank shows the tier name (see sponsorLabel) */
+  label?: string | null;
   size_scale?: SponsorSizeScale;
   display_order: number;
   is_active: boolean;

@@ -1,7 +1,7 @@
-// Self-check for sponsor link filtering.
+// Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { safeLinkHref, sponsorHref } from './sponsors';
+import { safeLinkHref, sponsorHref, sponsorLabel, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -20,4 +20,17 @@ assert.equal(safeLinkHref('/\\evil.com'), undefined);
 assert.equal(safeLinkHref('javascript:alert(1)'), undefined);
 assert.equal(safeLinkHref(null), undefined);
 
-console.log('sponsors: link filtering OK');
+// Badge text: the admin's label, otherwise the plain tier name
+assert.equal(sponsorTierLabel('platinum'), 'Platinum Partner');
+assert.equal(sponsorTierLabel('gold'), 'Gold Partner');
+assert.equal(sponsorTierLabel('silver'), 'Silver Partner');
+assert.equal(sponsorTierLabel('bronze'), 'Bronze Partner');
+assert.equal(sponsorTierLabel('grassroots'), 'Grassroots Partner');
+assert.equal(sponsorTierLabel(undefined), 'Club Partner');
+assert.equal(sponsorLabel({ tier: 'silver', label: 'Front of Shirt Partner' }), 'Front of Shirt Partner');
+assert.equal(sponsorLabel({ tier: 'silver', label: '  Water Partner ' }), 'Water Partner');
+assert.equal(sponsorLabel({ tier: 'silver', label: '   ' }), 'Silver Partner');
+assert.equal(sponsorLabel({ tier: 'bronze', label: null }), 'Bronze Partner');
+assert.equal(sponsorLabel({ tier: 'gold' }), 'Gold Partner');
+
+console.log('sponsors: link filtering and labels OK');

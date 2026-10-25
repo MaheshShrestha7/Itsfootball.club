@@ -32,30 +32,30 @@ export async function POST(req: NextRequest) {
 
   const { data: pkg } = await db
     .from('sponsorship_packages')
-    .select('id, tier, price_cents')
+    .select('id, name, tier, price_cents')
     .eq('id', packageId)
     .eq('club_id', clubId)
     .eq('is_active', true)
     .maybeSingle();
   if (!pkg) return NextResponse.json({ error: 'That package is no longer available.' }, { status: 404 });
 
-  const { data: sponsor, error } = await db
-    .from('sponsors')
-    .insert({
-      club_id: clubId,
-      name,
-      logo_url: '/logo-96.png', // placeholder until the club uploads the sponsor's artwork
-      website_url: website,
-      tier: pkg.tier,
-      is_active: false,
-      contact_name: contactName,
-      contact_email: contactEmail,
-      contact_phone: contactPhone,
-      package_value: pkg.price_cents / 100,
-      package_status: 'prospect',
-    })
-    .select('id')
-    .single();
+  const row = {
+    club_id: clubId,
+    name,
+    logo_url: '/logo-96.png', // placeholder until the club uploads the sponsor's artwork
+    website_url: website,
+    tier: pkg.tier,
+    is_active: false,
+    contact_name: contactName,
+    contact_email: contactEmail,
+    contact_phone: contactPhone,
+    package_value: pkg.price_cents / 100,
+    package_status: 'prospect',
+  };
+  // The badge shows the package's name; before migration 20261127 there is no label column, so save without it
+  const label = typeof pkg.name === 'string' ? pkg.name.trim().slice(0, 60) || null : null;
+  let { data: sponsor, error } = await db.from('sponsors').insert({ ...row, label }).select('id').single();
+  if (error?.code === 'PGRST204') ({ data: sponsor, error } = await db.from('sponsors').insert(row).select('id').single());
   if (error || !sponsor) return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 });
   return NextResponse.json({ sponsorId: sponsor.id });
 }

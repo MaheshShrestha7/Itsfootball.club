@@ -4,7 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
-import { sponsorHref } from '@/lib/sponsors';
+import { sponsorHref, sponsorLabel, sponsorTierLabel } from '@/lib/sponsors';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
 import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
@@ -61,6 +61,12 @@ export default function AdminSponsorsPage({
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
 
+  // Labels need migration 20261127_sponsor_labels.sql; until it runs the box stays hidden so saves keep working
+  const [labelsReady, setLabelsReady] = useState<boolean | null>(() => (getSupabaseClient() ? null : true));
+  useEffect(() => {
+    getSupabaseClient()?.from('sponsors').select('label').limit(1).then(({ error }) => setLabelsReady(!error));
+  }, []);
+
   const blankForm = {
     scope: 'club' as 'club' | 'event',
     event_id: '',
@@ -69,6 +75,7 @@ export default function AdminSponsorsPage({
     logo_url: '',
     website_url: '',
     tier: 'gold' as SponsorTier,
+    label: '',
     size_scale: 'auto' as SponsorSizeScale,
     display_order: clubWideSponsors.length + 1,
     is_active: true,
@@ -97,6 +104,7 @@ export default function AdminSponsorsPage({
       logo_url: s.logo_url,
       website_url: s.website_url || '',
       tier: s.tier,
+      label: s.label || '',
       size_scale: s.size_scale || 'auto',
       display_order: s.display_order,
       is_active: s.is_active,
@@ -115,9 +123,11 @@ export default function AdminSponsorsPage({
     if (!form.name) return;
     if (form.scope === 'event' && !form.event_id) return;
 
-    const { scope, ...rest } = form;
+    const { scope, label, ...rest } = form;
     const payload = {
       ...rest,
+      // Only sent once the label column exists
+      ...(labelsReady ? { label: label.trim() || null } : {}),
       event_id: scope === 'event' ? form.event_id : undefined,
       package_value: form.package_value === '' ? undefined : Number(form.package_value),
     };
@@ -255,7 +265,7 @@ export default function AdminSponsorsPage({
                         backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(var(--tint-rgb), 0.08)',
                         color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-muted)',
                       }}>
-                        {sponsor.tier.toUpperCase()}
+                        {sponsorLabel(sponsor).toUpperCase()}
                       </span>
                       <span style={{ fontSize: '0.7rem', color: isXL ? 'var(--c-amber)' : 'var(--text-muted)', fontWeight: 600 }}>
                         {scale.toUpperCase()} Space
@@ -311,6 +321,7 @@ export default function AdminSponsorsPage({
                     }}>
                       {sponsor.tier.toUpperCase()}
                     </span>
+                    {sponsor.label?.trim() && <span className="text-meta">Shown as &ldquo;{sponsor.label.trim()}&rdquo;</span>}
                     <span className="badge" style={{
                       backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
                       color: scale === 'xl' ? 'var(--c-amber)' : 'var(--text-muted)',
@@ -560,12 +571,15 @@ export default function AdminSponsorsPage({
                     value={form.tier}
                     onChange={e => setForm({ ...form, tier: e.target.value as SponsorTier })}
                   >
-                    <option value="platinum">Platinum (Main Kit Sponsor)</option>
-                    <option value="gold">Gold (Training Kit Partner)</option>
-                    <option value="silver">Silver (Official Supplier)</option>
+                    <option value="platinum">Platinum Partner</option>
+                    <option value="gold">Gold Partner</option>
+                    <option value="silver">Silver Partner</option>
                     <option value="bronze">Bronze Partner</option>
-                    <option value="grassroots">Grassroots Community Supporter</option>
+                    <option value="grassroots">Grassroots Partner</option>
                   </select>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    Sets the order on the club page and the default logo size.
+                  </p>
                 </div>
 
                 <div className="form-group">
@@ -579,6 +593,23 @@ export default function AdminSponsorsPage({
                 </div>
               </div>
 
+              {labelsReady && (
+                <div className="form-group">
+                  <label htmlFor="sponsors-label" className="form-label">Label shown on site (optional)</label>
+                  <input id="sponsors-label"
+                    type="text"
+                    className="form-input"
+                    maxLength={60}
+                    placeholder={sponsorTierLabel(form.tier)}
+                    value={form.label}
+                    onChange={e => setForm({ ...form, label: e.target.value })}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    For example &ldquo;Front of Shirt Partner&rdquo;. Leave blank to show &ldquo;{sponsorTierLabel(form.tier)}&rdquo;.
+                  </p>
+                </div>
+              )}
+
               <div className="form-group">
                 <label htmlFor="sponsors-display-size-space-scale-public-page-foo" className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>Display Size / Space Scale</span>
@@ -589,11 +620,11 @@ export default function AdminSponsorsPage({
                   value={form.size_scale}
                   onChange={e => setForm({ ...form, size_scale: e.target.value as SponsorSizeScale })}
                 >
-                  <option value="auto">Auto (By Tier: Platinum=Premier XL, Gold=Large, Silver=Medium, Bronze=Compact)</option>
-                  <option value="xl">Extra Large (Premier Partner Space &amp; Hero Presence)</option>
-                  <option value="lg">Large (Substantial Partner Space)</option>
-                  <option value="md">Medium (Standard Supplier Space)</option>
-                  <option value="sm">Compact (Community Supporter Space)</option>
+                  <option value="auto">Auto (by tier)</option>
+                  <option value="xl">Extra Large</option>
+                  <option value="lg">Large</option>
+                  <option value="md">Medium</option>
+                  <option value="sm">Compact</option>
                 </select>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                   Determines how much visual real estate and logo size this sponsor commands on the public club page.
