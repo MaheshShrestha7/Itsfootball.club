@@ -51,6 +51,13 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
+import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
+import LocalTime from '@/components/LocalTime';
+import ResultChip from '@/components/ResultChip';
+
+// Still to be played: listed first, soonest at the top
+const AHEAD: MatchStatus[] = ['upcoming', 'live', 'halftime', 'postponed'];
+const isAhead = (m: Match) => AHEAD.includes(m.status);
 
 const FLYER_PRESETS = [
   {
@@ -494,7 +501,9 @@ export default function AdminMatchesPage({
       }
 
       return true;
-    }).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+    }).sort((a, b) =>
+      // Games still to play first (next one at the top), then results newest first
+      Number(isAhead(b)) - Number(isAhead(a)) || (isAhead(a) ? kickoff(a) - kickoff(b) : kickoff(b) - kickoff(a)));
   }, [clubMatches, statusTab, typeFilter, seasonFilter, searchQuery, multiTeam, teamFilter, clubTeams]);
 
   // Counts for KPI Cards
@@ -585,8 +594,16 @@ export default function AdminMatchesPage({
         </div>
       </div>
 
-      {/* KPI Metric Cards: two to a row on a phone, so the fixtures aren't six cards down the page */}
+      {/* On a phone the five tiles are one line, so the fixtures start on the first screen */}
+      <p className="admin-kpi-line text-meta">
+        {totalCount} fixtures · <strong style={{ color: 'var(--c-green)' }}>{upcomingCount} upcoming</strong> · {completedCount} played
+        {heroFeaturedCount > 0 && <> · {heroFeaturedCount} on home page</>}
+        {qrEnabledCount > 0 && <> · {qrEnabledCount} with door QR</>}
+      </p>
+
+      {/* KPI Metric Cards */}
       <div
+        className="admin-kpi-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
@@ -757,7 +774,11 @@ export default function AdminMatchesPage({
         </div>
       ) : (
         <div className="stack">
-          {filteredMatches.map(m => {
+          {filteredMatches.map((m, i) => {
+            // "Coming up" / "Played" headings where the list changes over
+            const heading = statusTab === 'all' && (i === 0 || isAhead(filteredMatches[i - 1]) !== isAhead(m))
+              ? (isAhead(m) ? 'Coming up' : 'Played')
+              : null;
             const isCompleted = m.status === 'completed';
             const isLive = m.status === 'live' || m.status === 'halftime';
             // Cup games are scored and scheduled on their tournament page: editing names, deleting or
@@ -765,11 +786,15 @@ export default function AdminMatchesPage({
             const cupHref = m.tournament_id ? `/${club.slug}/admin/tournaments/${m.tournament_id}` : null;
             const matchType = m.match_type || 'friendly';
 
+            const result = isCompleted ? clubResult(m) : null;
+            const when = hasKickoffTime(m) ? m.match_date : `${m.match_date?.slice(0, 10)}T12:00:00`;
+
             return (
+              <React.Fragment key={m.id}>
+              {heading && <h2 className="admin-fixture-heading">{heading}</h2>}
               <div
-                key={m.id}
                 data-item-id={m.id}
-                className="glass-panel admin-match-card-grid"
+                className={`glass-panel admin-match-card-grid${m.match_flyer_url ? '' : ' admin-match-card-dated'}`}
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
@@ -777,7 +802,17 @@ export default function AdminMatchesPage({
                   position: 'relative'
                 }}
               >
-                {/* Flyer Thumbnail or Visual Badge */}
+                {/* No flyer: a date tile (as on the public fixture list) instead of an empty placeholder */}
+                {!m.match_flyer_url ? (
+                  <div className="admin-match-date">
+                    <div className="fixture-row-date" aria-hidden="true">
+                      <span className="fixture-row-dow"><LocalTime value={when} options={{ weekday: 'short' }} /></span>
+                      <span className="fixture-row-day"><LocalTime value={when} options={{ day: 'numeric' }} /></span>
+                      <span className="fixture-row-month"><LocalTime value={when} options={{ month: 'short' }} /></span>
+                    </div>
+                    <span className="admin-match-date-type">{matchType}{m.is_club_home ? ' · home' : ''}</span>
+                  </div>
+                ) : (
                 <div
                   className="match-flyer-thumb"
                   data-theme="dark" style={{
@@ -829,6 +864,7 @@ export default function AdminMatchesPage({
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Match Details */}
                 <div className="min-w-0">
@@ -917,7 +953,7 @@ export default function AdminMatchesPage({
                     </span>
                     {(isCompleted || isLive || (m.home_score !== undefined && m.home_score !== null && (m.home_score > 0 || m.away_score > 0))) && (
                       <span style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Trophy size={13} color="var(--club-primary)" />
+                        {result?.outcome ? <ResultChip outcome={result.outcome} /> : <Trophy size={13} color="var(--club-primary)" />}
                         Score: {m.home_score ?? 0} - {m.away_score ?? 0}
                       </span>
                     )}
@@ -1110,6 +1146,7 @@ export default function AdminMatchesPage({
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
         </div>

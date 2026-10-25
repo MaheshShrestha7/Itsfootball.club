@@ -29,7 +29,8 @@ import {
   CalendarDays,
   X,
   Calendar,
-  QrCode
+  QrCode,
+  MoreHorizontal,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import StatsFixModal from '@/components/StatsFixModal';
@@ -195,6 +196,18 @@ export default function AdminMatchCenterControllerPage({
   const [eventDetail, setEventDetail] = useState('');
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
+  // Phones: Draft and the public page fold into "More"; the score follows down the page once the scoreboard scrolls away
+  const [moreActions, setMoreActions] = useState(false);
+  const scoreboardRef = useRef<HTMLDivElement>(null);
+  const [scoreboardOut, setScoreboardOut] = useState(false);
+  useEffect(() => {
+    const el = scoreboardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    // Out = scrolled up past the top, not still below the fold
+    const io = new IntersectionObserver(([entry]) => setScoreboardOut(!entry.isIntersecting && entry.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [adminTab, match?.id]);
   const [isFixModalOpen, setIsFixModalOpen] = useState<boolean>(false);
   // Format switched on the tactics pitch but not saved yet (keyed by match, so it never leaks to another fixture)
   const [pitchFormat, setPitchFormat] = useState<{ matchId: string; format: MatchFormat } | null>(null);
@@ -484,6 +497,9 @@ export default function AdminMatchCenterControllerPage({
     showFeedback(`Tactical lineup & ${formationName} formation published live to Match Centre!`);
   };
 
+  // Full time and stats not saved yet: the one moment "Save Player Stats" should stand out
+  const statsDue = match.status === 'completed' && !match.is_audited;
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header (trimmed on phones so the scoreboard is near the top) */}
@@ -507,7 +523,7 @@ export default function AdminMatchCenterControllerPage({
           </p>
         </div>
 
-        <div className="admin-match-center-actions">
+        <div className="admin-match-center-actions" data-more={moreActions ? 'open' : undefined}>
           <button
             type="button"
             onClick={() => setIsCheckinModalOpen(true)}
@@ -538,22 +554,33 @@ export default function AdminMatchCenterControllerPage({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.4rem',
+              // Only a call to action once the game is over: before that it's a quiet button
               background: match.is_audited
                 ? 'rgba(16, 185, 129, 0.15)'
-                : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-              color: match.is_audited ? 'var(--c-green)' : '#000000',
+                : statsDue ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.06)',
+              color: match.is_audited ? 'var(--c-green)' : statsDue ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
               fontWeight: 800,
-              border: match.is_audited ? '1px solid #10B981' : 'none',
-              boxShadow: match.is_audited ? 'none' : '0 4px 14px rgba(245, 158, 11, 0.4)',
+              border: match.is_audited ? '1px solid #10B981' : statsDue ? 'none' : '1px solid var(--border-medium)',
+              boxShadow: statsDue ? '0 4px 14px rgba(var(--club-primary-rgb), 0.4)' : 'none',
             }}
           >
             <ShieldCheck size={15} />
             <span>{match.is_audited ? 'Stats Saved ✓ · Fix' : 'Save Player Stats'}</span>
           </button>
 
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm touch-target mc-actions-more-toggle"
+            aria-expanded={moreActions}
+            onClick={() => setMoreActions(v => !v)}
+          >
+            <MoreHorizontal size={15} aria-hidden="true" />
+            <span>{moreActions ? 'Less' : 'More'}</span>
+          </button>
+
           <Link
-            href={`/${club.slug}/admin/lineup/draft`}
-            className="btn btn-secondary btn-sm touch-target"
+            href={`/${club.slug}/admin/lineup/draft?match=${match.id}`}
+            className="btn btn-secondary btn-sm touch-target mc-action-extra"
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
           >
             <Layers size={14} color="var(--c-amber)" />
@@ -563,7 +590,7 @@ export default function AdminMatchCenterControllerPage({
           <Link
             href={matchPath(club.slug, match)}
             target="_blank"
-            className="btn btn-secondary btn-sm touch-target"
+            className="btn btn-secondary btn-sm touch-target mc-action-extra"
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(var(--tint-rgb), 0.15)' }}
           >
             <span>Public Match Centre</span>
@@ -708,8 +735,18 @@ export default function AdminMatchCenterControllerPage({
       {/* ========================================================================= */}
       {adminTab === 'events' && (
         <div>
+          {/* Phones: the score and clock stay in view while an event is logged further down */}
+          {scoreboardOut && (
+            <div className="mc-score-float glass-panel" data-theme="dark" aria-hidden="true">
+              <span className="mc-score-float-min"><LiveMinute match={match} />&apos;</span>
+              <span className="mc-score-float-team">{match.home_team_name}</span>
+              <span className="mc-score-float-score">{match.home_score ?? 0} - {match.away_score ?? 0}</span>
+              <span className="mc-score-float-team">{match.away_team_name}</span>
+            </div>
+          )}
+
           {/* Main Scoreboard Command Hub */}
-          <div className="glass-panel" data-theme="dark" style={{
+          <div ref={scoreboardRef} className="glass-panel" data-theme="dark" style={{
             padding: 'clamp(1rem, 2.5vw, 2rem)',
             marginBottom: '2rem',
             background: 'linear-gradient(180deg, #0e1624 0%, #080d15 100%)',
@@ -953,6 +990,13 @@ export default function AdminMatchCenterControllerPage({
               : ['goal-home', 'goal-away', 'yellow_card-home', 'yellow_card-away', 'sub-home', 'sub-away']);
             const foldedCount = quickActions.filter(a => !PHONE_FIRST.has(a.key)).length + 2;
 
+            // One-tap player picking: the side's saved line-up (or a small squad), not a search box
+            const sideLineupIds = ((teamSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [])
+              .map(p => p.member_id).filter((id): id is string => !!id);
+            const chipPlayers = !selectedSquad || eventType === 'sub' || eventType === 'commentary' || eventType === 'whistle' ? []
+              : sideLineupIds.length ? sideLineupIds.map(id => selectedSquad.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p)
+              : selectedSquad.length <= 20 ? selectedSquad : [];
+
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
               { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },
               { key: 'whistle', label: 'Period Whistle', emoji: '📢', eventType: 'whistle' },
@@ -1068,7 +1112,7 @@ export default function AdminMatchCenterControllerPage({
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
+                  <div className="mc-side-minute" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
                     <div className="form-group m-0">
                       <label htmlFor="match-center-team-side" className="form-label">Team Side</label>
                       <select id="match-center-team-side"
@@ -1101,6 +1145,16 @@ export default function AdminMatchCenterControllerPage({
                         <label className="form-label">
                           {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
                         </label>
+                        {chipPlayers.length > 0 && (
+                          <div className="mc-player-chips" role="group" aria-label="Tap a player">
+                            {chipPlayers.map(p => (
+                              <button key={p.id} type="button" className="mc-player-chip touch-target" aria-pressed={selectedPlayerId === p.id} onClick={() => setSelectedPlayerId(p.id)}>
+                                {p.jersey_number != null && <span className="mc-player-chip-num">{p.jersey_number}</span>}
+                                <span className="mc-player-chip-name">{p.full_name.split(' ')[0]}{p.full_name.includes(' ') ? ` ${p.full_name.split(' ').slice(-1)[0][0]}.` : ''}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         <PlayerSearchSelect
                           id="player-involved-search"
                           players={selectedSquad ?? []}
@@ -1185,8 +1239,9 @@ export default function AdminMatchCenterControllerPage({
                     )}
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="match-center-event-detail-tactical-notes" className="form-label">Event Detail / Tactical Notes</label>
+                  <details className="form-group mc-note" open={!!eventDetail || undefined}>
+                    <summary className="form-label" style={{ cursor: 'pointer' }}>Add a note (optional)</summary>
+                    <label htmlFor="match-center-event-detail-tactical-notes" className="sr-only">Event Detail / Tactical Notes</label>
                     <input id="match-center-event-detail-tactical-notes"
                       type="text"
                       className="form-input"
@@ -1194,7 +1249,7 @@ export default function AdminMatchCenterControllerPage({
                       value={eventDetail}
                       onChange={e => setEventDetail(e.target.value)}
                     />
-                  </div>
+                  </details>
 
                   {/* Stays in reach on phones while the form scrolls */}
                   <div className="mc-log-submit" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>

@@ -20,10 +20,10 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
   );
 
   // A junior playing up for this team is shown as "Sam T.", without a photo unless a guardian allowed it
-  const memberById = useMemo(() => {
+  const { memberById, juniorIds } = useMemo(() => {
     const clubMembers = members.filter(m => m.club_id === club?.id && (m.membership_status || 'approved') === 'approved');
     const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false });
-    return new Map(clubMembers.map(m => [m.id, publicMember(m, juniorIds)]));
+    return { memberById: new Map(clubMembers.map(m => [m.id, publicMember(m, juniorIds)])), juniorIds };
   }, [members, club, clubTeams, clubTeamMembers]);
 
   const players = useMemo(() => {
@@ -119,18 +119,26 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
               <div className="glass-panel" style={{ padding: '1.25rem' }}>{isHydrated ? 'No players listed yet.' : 'Loading…'}</div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: '0.75rem' }}>
-                {players.map(p => (
-                  <div key={p.id} className="glass-panel row" style={{ padding: '0.75rem 1rem' }}>
-                    <PlayerAvatar name={p.full_name} photoUrl={p.photo_url} size={40} />
-                    <div className="min-w-0">
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                        {p.jersey_number != null && <span style={{ color: 'var(--club-ink)', marginRight: 6 }}>#{p.jersey_number}</span>}
-                        {p.full_name}
+                {players.map(p => {
+                  const card = (
+                    <>
+                      <PlayerAvatar name={p.full_name} photoUrl={p.photo_url} size={40} />
+                      <div className="min-w-0">
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                          {p.jersey_number != null && <span style={{ color: 'var(--club-ink)', marginRight: 6 }}>#{p.jersey_number}</span>}
+                          {p.full_name}
+                        </div>
+                        {p.player_position && <div className="text-meta">{p.player_position}</div>}
                       </div>
-                      {p.player_position && <div className="text-meta">{p.player_position}</div>}
-                    </div>
-                  </div>
-                ))}
+                    </>
+                  );
+                  // A junior playing up keeps a plain card: no public player page
+                  return juniorIds.has(p.id) || p.is_junior ? (
+                    <div key={p.id} className="glass-panel row" style={{ padding: '0.75rem 1rem' }}>{card}</div>
+                  ) : (
+                    <Link key={p.id} href={`/${club.slug}/squad/${p.id}`} className="glass-panel glass-panel-interactive row" style={{ padding: '0.75rem 1rem', color: 'inherit', textDecoration: 'none' }}>{card}</Link>
+                  );
+                })}
               </div>
             )}
           </section>

@@ -10,6 +10,9 @@ import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import SponsorLogo from '@/components/SponsorLogo';
 import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
+import { useAuth } from '@/lib/auth-context';
+import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
+import KickoffCountdown from '@/components/KickoffCountdown';
 import {
   Shield,
   Calendar,
@@ -19,7 +22,12 @@ import {
   ArrowLeft,
   ExternalLink,
   Award,
+  CalendarPlus,
+  MessageCircle,
 } from 'lucide-react';
+
+// How long an event with no end time is treated as running
+const DEFAULT_LENGTH = 3 * 3600000;
 
 const CATEGORY_COLOR: Record<string, string> = {
   training: '#10B981',
@@ -40,6 +48,9 @@ export default function EventDetailsPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const { hasClubAdminAccess } = useAuth();
+  // Read once: whether the event is still ahead decides the countdown and calendar buttons
+  const [now] = useState(() => Date.now());
 
   if (!club) return null;
 
@@ -51,8 +62,8 @@ export default function EventDetailsPage({
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
           This event does not exist or may have been removed from the calendar.
         </p>
-        <Link href={`/${club.slug}#events`} className="btn btn-primary">
-          Back to Club Calendar
+        <Link href={`/${club.slug}/events`} className="btn btn-primary">
+          See all events
         </Link>
       </div>
     );
@@ -64,16 +75,23 @@ export default function EventDetailsPage({
 
   const categoryColor = CATEGORY_COLOR[event.category] || 'var(--club-primary)';
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;
+  const start = new Date(event.start_time).getTime();
+  const end = event.end_time ? new Date(event.end_time).getTime() : start + DEFAULT_LENGTH;
+  const upcoming = start > now;
+  const over = end < now;
+  const place = event.location || club.stadium_name;
+  // "0 / 150 checked in" days out reads as nobody coming: the count shows once people arrive (admins always)
+  const showCheckins = event.max_capacity > 0 && (event.rsvp_count > 0 || hasClubAdminAccess(club.id));
 
   return (
     <div style={{ minHeight: '100vh' }}>
       <div className="container" style={{ padding: '2.5rem 1.5rem 4rem 1.5rem', maxWidth: '860px' }}>
         <Link
-          href={`/${club.slug}#events`}
+          href={`/${club.slug}/events`}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}
         >
           <ArrowLeft size={14} />
-          <span>Back to {club.name} Calendar</span>
+          <span>All events</span>
         </Link>
 
         {/* Event Header */}
@@ -154,13 +172,20 @@ export default function EventDetailsPage({
               <div>
                 <div className="text-meta">Location</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  {event.location || club.stadium_name}
+                  {place}
                 </div>
               </div>
             </div>
           </div>
 
-          {event.max_capacity > 0 && (
+          {upcoming && (
+            <div className="stack stack-sm" style={{ marginBottom: '1.5rem' }}>
+              <div className="prematch-label">Starts in</div>
+              <KickoffCountdown kickoff={start} event />
+            </div>
+          )}
+
+          {showCheckins && (
             <div style={{ marginBottom: '1.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -174,18 +199,26 @@ export default function EventDetailsPage({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setContactModalOpen(true)}
-            className="btn btn-primary row"
-          >
-            <span>Ask about this event</span>
-          </button>
+          <div className="matchday-actions">
+            {!over && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => downloadEventIcs(club.name, club.slug, event)}>
+                <CalendarPlus size={14} aria-hidden="true" /> Add to calendar
+              </button>
+            )}
+            {!over && place && (
+              <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                <MapPin size={14} aria-hidden="true" /> Directions
+              </a>
+            )}
+            <button type="button" onClick={() => setContactModalOpen(true)} className="btn btn-secondary btn-sm">
+              <MessageCircle size={14} aria-hidden="true" /> Ask about this event
+            </button>
+          </div>
           </div>
           </div>
         </div>
 
-        <EventTickets event={event} />
+        <EventTickets event={event} onContact={() => setContactModalOpen(true)} />
 
         {/* Event Sponsors */}
         {eventSponsors.length > 0 && (

@@ -18,6 +18,7 @@ import { clubPlaysIn } from '@/lib/fixtures';
 import { matchPath, SITE_URL } from '@/lib/slugs';
 import { formatMoney } from '@/lib/finance';
 import { useShopOpen } from '@/lib/use-shop-open';
+import { useClubSections } from '@/lib/use-club-sections';
 import { useMyChildren } from '@/lib/use-my-children';
 import MyTickets from '@/components/MyTickets';
 import PushToggle from '@/components/PushToggle';
@@ -231,6 +232,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id, hasPaidEvent]);
   const shopOpen = useShopOpen(club.id);
+  const sections = useClubSections(club.id);
 
   // A player's own fixture: home or away, and whether the published line-up has them in it
   const myMatchNote = (m: (typeof matches)[number]) => {
@@ -262,10 +264,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'My pass', href: `${base}/member`, icon: CreditCard },
         { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
         { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
-        { label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy },
+        ...(sections.tournaments ? [{ label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy }] : []),
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         { label: 'News', href: `${base}#news`, icon: Newspaper },
-        { label: 'Gallery', href: `${base}/gallery`, icon: Images },
+        ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ]
     : [
@@ -277,7 +279,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
         { label: 'News', href: `${base}#news`, icon: Newspaper },
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
-        { label: 'Gallery', href: `${base}/gallery`, icon: Images },
+        ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ];
 

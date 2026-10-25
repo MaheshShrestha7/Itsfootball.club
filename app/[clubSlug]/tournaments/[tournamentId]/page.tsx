@@ -250,7 +250,7 @@ export default function PublicTournamentDetailPage({
               }}
             >
               <Trophy size={16} />
-              <span>Interactive Tiesheet Bracket</span>
+              <span>Draw & Bracket</span>
             </button>
           )}
 
