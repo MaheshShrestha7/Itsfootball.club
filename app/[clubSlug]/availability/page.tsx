@@ -28,7 +28,10 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
-import { defaultFixture } from '@/lib/fixtures';
+import { defaultFixture, matchKind, prepFixtures, teamSideIn, tournamentTeamGroups, type MatchKind } from '@/lib/fixtures';
+import { clubSidePlayers } from '@/lib/tournament-engine';
+import { fixtureLabel } from '@/lib/fixture-label';
+import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
 import { DATE_LOCALE } from '@/lib/dates';
 
 function AvailabilityHub() {
@@ -50,6 +53,8 @@ function AvailabilityHub() {
     clubTeams,
     clubTeamMembers,
     tournamentParticipants,
+    tournaments,
+    internalTeams,
   } = useClub();
 
   const club = selectClubBySlug(slug);
@@ -88,11 +93,53 @@ function AvailabilityHub() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const targetMatch = clubMatches.find(m => m.id === selectedMatchId) || defaultMatch;
-  // The fixture's team squad once the club has several teams (everyone otherwise)
-  const matchSquad = useMemo(
-    () => squadForMatch(squadPlayers, targetMatch, clubTeams, clubTeamMembers),
-    [squadPlayers, targetMatch, clubTeams, clubTeamMembers]
+
+  // The games worth asking about: still to play, and only ones the club's own players are in
+  const prepGames = useMemo(
+    () => (club ? prepFixtures(clubMatches, tournamentParticipants, club.name) : []),
+    [club, clubMatches, tournamentParticipants]
   );
+  // Club games, tournaments and in-house games each have their own list (the switch above the picker)
+  const kind: MatchKind = targetMatch ? matchKind(targetMatch) : 'club';
+  const kindGames = (k: MatchKind) => prepGames.filter(m => matchKind(m) === k);
+  // A tournament is asked about per team for the whole day, not game by game: one answer covers
+  // every game that team plays there
+  const teamGroups = useMemo(
+    () => tournamentTeamGroups(prepGames.filter(m => m.tournament_id), tournamentParticipants),
+    [prepGames, tournamentParticipants]
+  );
+  const [groupPick, setGroupPick] = useState<string | null>(null);
+  const activeGroup = useMemo(
+    () => (kind === 'tournament' && targetMatch
+      ? teamGroups.find(g => g.key === groupPick && g.games.some(x => x.id === targetMatch.id))
+        || teamGroups.find(g => g.games.some(x => x.id === targetMatch.id))
+      : undefined),
+    [kind, targetMatch, teamGroups, groupPick]
+  );
+  const groupGames = useMemo(() => (activeGroup ? activeGroup.games : targetMatch ? [targetMatch] : []), [activeGroup, targetMatch]);
+  const groupGameIds = groupGames.map(m => m.id).join(',');
+  const tournamentName = (id?: string | null) => tournaments.find(t => t.id === id)?.name || 'Tournament';
+  const pickKind = (k: MatchKind) => {
+    if (k === 'tournament' && teamGroups[0]) {
+      setGroupPick(teamGroups[0].key);
+      setSelectedMatchId(teamGroups[0].games[0].id);
+      return;
+    }
+    const first = kindGames(k)[0];
+    if (first) setSelectedMatchId(first.id);
+  };
+  // The picker's own list keeps the open game even when it's no longer "to play"
+  const kindList = kindGames(kind);
+  const pickerGames = targetMatch && kind !== 'tournament' && !kindList.some(m => m.id === targetMatch.id) ? [targetMatch, ...kindList] : kindList;
+
+  // The fixture's team squad once the club has several teams (everyone otherwise); a tournament
+  // team fields its own roster
+  const matchSquad = useMemo(() => {
+    const squad = squadForMatch(squadPlayers, targetMatch, clubTeams, clubTeamMembers);
+    if (!activeGroup || !targetMatch) return squad;
+    const side = teamSideIn(targetMatch, activeGroup.participant.name);
+    return clubSidePlayers(targetMatch, side, squad, tournamentParticipants, internalTeams) ?? squad;
+  }, [squadPlayers, targetMatch, clubTeams, clubTeamMembers, activeGroup, tournamentParticipants, internalTeams]);
 
   // Opened from a player's personal link: show that link's fixture
   useEffect(() => {
@@ -107,33 +154,44 @@ function AvailabilityHub() {
   const dataLoaded = ['off', 'idle', 'saving', 'readonly'].includes(syncStatus.phase);
   useEffect(() => {
     if (!targetMatch || !dataLoaded) return;
-    matchSquad.forEach(p => ensureAvailability(targetMatch.id, p.id));
+    groupGames.forEach(g => matchSquad.forEach(p => ensureAvailability(g.id, p.id)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetMatch?.id, matchSquad.length, dataLoaded]);
+  }, [targetMatch?.id, groupGameIds, matchSquad.length, dataLoaded]);
 
-  // Match Availabilities
+  // Match Availabilities (every game of a tournament team's day)
   const matchAvailabilities = useMemo(() => {
-    if (!targetMatch) return [];
-    return availabilities.filter(a => a.match_id === targetMatch.id);
-  }, [availabilities, targetMatch]);
+    const ids = new Set(groupGames.map(g => g.id));
+    return availabilities.filter(a => a.match_id && ids.has(a.match_id));
+  }, [availabilities, groupGames]);
 
-  // Map squad players with their availability status
+  // Map squad players with their availability status. Across a tournament team's games: one answer
+  // when they all agree, else Doubtful with how many games the player is in for
   const playerRosterWithStatus = useMemo(() => {
     return matchSquad.map(player => {
-      const record = matchAvailabilities.find(a => a.member_id === player.id);
+      const own = matchAvailabilities.filter(a => a.member_id === player.id);
+      const record = own.find(a => a.match_id === targetMatch?.id) || own[0];
+      const answered = new Set(own.map(a => a.status).filter(st => st !== 'pending'));
+      const mixed = groupGames.length > 1 && (answered.size > 1 || (answered.size === 1 && own.some(a => a.status === 'pending')));
+      const inFor = own.filter(a => a.status === 'available').length;
       return {
         player,
-        availability: record || {
+        mixedLabel: mixed ? `In for ${inFor} of ${groupGames.length} games` : null,
+        availability: record ? {
+          ...record,
+          status: mixed ? 'maybe' as AvailabilityStatus : answered.size === 1 ? [...answered][0] : record.status,
+          note: own.map(a => a.note).find(Boolean),
+        } : {
           id: `tmp-${player.id}`,
           club_id: club?.id || '',
           match_id: targetMatch?.id,
           member_id: player.id,
           status: 'pending' as AvailabilityStatus,
+          note: undefined as string | undefined,
           response_token: '',
         },
       };
     });
-  }, [matchSquad, matchAvailabilities, club, targetMatch]);
+  }, [matchSquad, matchAvailabilities, club, targetMatch, groupGames]);
 
   // Counts breakdown
   const confirmedCount = playerRosterWithStatus.filter(p => p.availability.status === 'available').length;
@@ -154,9 +212,9 @@ function AvailabilityHub() {
   const handleAdminSetStatus = (memberId: string, status: AvailabilityStatus) => {
     if (!targetMatch) return;
     const player = squadPlayers.find(p => p.id === memberId);
-    const existingNote = matchAvailabilities.find(a => a.member_id === memberId)?.note;
-    setPlayerAvailability(targetMatch.id, memberId, status, existingNote);
-    setFeedbackToast(`${player?.full_name || 'Player'} manually marked ${status.toUpperCase()} by admin`);
+    const existingNote = matchAvailabilities.find(a => a.member_id === memberId && a.note)?.note;
+    groupGames.forEach(g => setPlayerAvailability(g.id, memberId, status, existingNote));
+    setFeedbackToast(`${player?.full_name || 'Player'} manually marked ${status.toUpperCase()} by admin${groupGames.length > 1 ? ` for all ${groupGames.length} games` : ''}`);
     setTimeout(() => setFeedbackToast(null), 3500);
   };
 
@@ -168,7 +226,9 @@ function AvailabilityHub() {
   // Saves the note and keeps the player's current answer (a player with no answer yet stays pending)
   const handleSaveNote = (memberId: string, status: AvailabilityStatus) => {
     if (!targetMatch) return;
-    setPlayerAvailability(targetMatch.id, memberId, status, noteDraft);
+    // A tournament team's answer can differ game by game: each game keeps its own, the note goes on all
+    groupGames.forEach(g => setPlayerAvailability(g.id, memberId,
+      matchAvailabilities.find(a => a.match_id === g.id && a.member_id === memberId)?.status || status, noteDraft));
     setNotePlayerId(null);
     setFeedbackToast('Note saved');
     setTimeout(() => setFeedbackToast(null), 3500);
@@ -180,7 +240,9 @@ function AvailabilityHub() {
 
   const whatsappMessage = encodeURIComponent(
     `⚽ *${club.name} Match Call-Up*\n` +
-    `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n` +
+    (activeGroup
+      ? `🏆 ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)} (${groupGames.length} games)\n`
+      : `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n`) +
     `📍 ${targetMatch?.venue}\n` +
     `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}\n\n` +
     `Squad members, please confirm your availability in 5 seconds (no WhatsApp clutter!):\n` +
@@ -305,29 +367,73 @@ function AvailabilityHub() {
           {/* LEFT COLUMN: Fixture Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-            {/* Match Selector */}
-            {clubMatches.length > 0 && (
+            {/* Match Selector: club games, tournaments (one entry per team for the day) or in-house */}
+            {(prepGames.length > 0 || targetMatch) && (
               <div>
+                <MatchKindSwitch games={prepGames} active={kind} onPick={pickKind} />
                 <label htmlFor="availability-availability-for" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                   Availability For:
                 </label>
-                <select data-view-ok id="availability-availability-for"
-                  className="form-select"
-                  value={targetMatch?.id || selectedMatchId}
-                  onChange={e => setSelectedMatchId(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
-                >
-                  {clubMatches.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.home_team_name} vs {m.away_team_name} — {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })} ({m.status})
-                    </option>
-                  ))}
-                </select>
+                {activeGroup ? (
+                  <select data-view-ok id="availability-availability-for"
+                    className="form-select"
+                    value={activeGroup.key}
+                    onChange={e => {
+                      const g = teamGroups.find(x => x.key === e.target.value);
+                      if (!g) return;
+                      setGroupPick(g.key);
+                      setSelectedMatchId(g.games[0].id);
+                    }}
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
+                  >
+                    {teamGroups.map(g => (
+                      <option key={g.key} value={g.key}>
+                        {g.participant.name} · {tournamentName(g.tournamentId)} ({g.games.length} game{g.games.length === 1 ? '' : 's'})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select data-view-ok id="availability-availability-for"
+                    className="form-select"
+                    value={targetMatch?.id || selectedMatchId}
+                    onChange={e => setSelectedMatchId(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
+                  >
+                    {pickerGames.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {fixtureLabel(m, club.name)}{m.status !== 'upcoming' ? ` (${m.status})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
 
-            {/* 1. Upcoming Fixture Card */}
-            {targetMatch && (
+            {/* A tournament team's day: every game its answer covers */}
+            {activeGroup && (
+              <div className="glass-panel" style={{ padding: '1.25rem', borderColor: 'rgba(245, 158, 11, 0.35)' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--c-amber)', marginBottom: '0.35rem' }}>
+                  {tournamentName(activeGroup.tournamentId)}
+                </div>
+                <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
+                  One answer covers all of {activeGroup.participant.name}&apos;s {groupGames.length} games
+                </div>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.35rem', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                  {groupGames.map(g => {
+                    const opp = teamSideIn(g, activeGroup.participant.name) === 'home' ? g.away_team_name : g.home_team_name;
+                    return (
+                      <li key={g.id} style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
+                        <span className="min-w-0">vs {opp}</span>
+                        <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>{[g.match_time, g.pitch_label].filter(Boolean).join(' · ')}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* 1. Upcoming Fixture Card (a tournament team's day lists its games above instead) */}
+            {targetMatch && !activeGroup && (
               <div className="glass-panel" style={{ padding: '1.5rem', border: `1.5px solid ${club.primary_color}40`, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
@@ -463,7 +569,7 @@ function AvailabilityHub() {
                   No players match the current filter.
                 </div>
               ) : (
-                filteredRoster.map(({ player, availability }) => {
+                filteredRoster.map(({ player, availability, mixedLabel }) => {
                   const statusColors = {
                     available: { bg: 'rgba(16, 185, 129, 0.15)', text: 'var(--c-green)', border: 'rgba(16, 185, 129, 0.4)', icon: CheckCircle2, label: 'Available' },
                     maybe: { bg: 'rgba(245, 158, 11, 0.15)', text: 'var(--c-amber)', border: 'rgba(245, 158, 11, 0.4)', icon: AlertCircle, label: 'Doubtful' },
@@ -505,6 +611,9 @@ function AvailabilityHub() {
                             </span>
                           </div>
 
+                          {mixedLabel && (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{mixedLabel}</div>
+                          )}
                           {availability.note && (
                             <div style={{ fontSize: '0.74rem', color: 'var(--c-amber)', fontStyle: 'italic', marginTop: '0.15rem' }}>
                               &ldquo;{availability.note}&rdquo;
@@ -563,7 +672,8 @@ function AvailabilityHub() {
                           <MessageSquare size={13} />
                           <span>Note</span>
                         </button>
-                        <button
+                        {/* A personal link answers one game, so a tournament team's day leaves it out */}
+                        {!activeGroup && <button
                           type="button"
                           onClick={() => handleCopyPlayerLink(player.id, availability.response_token)}
                           disabled={!availability.response_token}
@@ -572,7 +682,7 @@ function AvailabilityHub() {
                         >
                           {copiedPlayerId === player.id ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
                           <span>{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
-                        </button>
+                        </button>}
                       </div>
 
                       {/* Note editor, opened from the row's Note button */}

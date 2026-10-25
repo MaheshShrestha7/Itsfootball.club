@@ -206,7 +206,8 @@ interface ClubContextType {
   draftLineups: DraftLineup[];
   saveDraftLineup: (draft: Partial<DraftLineup> & { match_id: string; club_id: string }) => void;
   getDraftLineup: (matchId: string) => DraftLineup | undefined;
-  publishDraftLineup: (matchId: string, latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>) => { success: boolean; message: string };
+  /** `side`: the columns to write (a tournament team playing away); else the club's usual side */
+  publishDraftLineup: (matchId: string, latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>, side?: 'home' | 'away') => { success: boolean; message: string };
 
   // Post-Match Stats Audit & Leaderboard Baking
   auditAndBakeMatchStats: (matchId: string, payload: MatchAuditPayload) => { success: boolean; totalPointsAwarded: number; message: string };
@@ -2011,7 +2012,8 @@ export function ClubProvider({
 
   const publishDraftLineup = useCallback((
     matchId: string,
-    latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>
+    latest?: Pick<DraftLineup, 'format' | 'formation' | 'lineup_coords'>,
+    side?: 'home' | 'away'
   ): { success: boolean; message: string } => {
     // `latest` lets a caller publish the lineup it just saved in the same event: saveDraftLineup's
     // state update hasn't landed yet, so `draftLineups` here would still be the previous version.
@@ -2025,8 +2027,8 @@ export function ClubProvider({
         m.id === matchId
           ? {
               ...m,
-              [`${clubLineupSide(m)}_formation`]: draft.formation,
-              [`${clubLineupSide(m)}_lineup_coords`]: draft.lineup_coords,
+              [`${side || clubLineupSide(m)}_formation`]: draft.formation,
+              [`${side || clubLineupSide(m)}_lineup_coords`]: draft.lineup_coords,
               match_format: draft.format,
             }
           : m

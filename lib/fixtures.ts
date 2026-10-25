@@ -1,4 +1,5 @@
 import { countsTowardClubRecord, type Match, type TournamentParticipant } from './supabase/types';
+import { compareTournamentMatches } from './tournament-engine';
 
 /** Kickoff as a timestamp, for sorting (0 when the date can't be read) */
 export function kickoff(m: Pick<Match, 'match_date'>): number {
@@ -36,6 +37,48 @@ export type MatchKind = 'club' | 'tournament' | 'inhouse';
 export function matchKind(m: Pick<Match, 'tournament_id' | 'match_type'>): MatchKind {
   if (m.tournament_id) return 'tournament';
   return m.match_type === 'internal' ? 'inhouse' : 'club';
+}
+
+/** The games a coach gets ready for (Availability, Lineup Draft): not yet played, not more than a day
+ *  past kick-off (one left on "upcoming" after its day), and only games the club's own players are in */
+export function prepFixtures<M extends Match>(
+  matches: M[],
+  participants: Pick<TournamentParticipant, 'tournament_id' | 'team_type' | 'name'>[],
+  clubName: string,
+  now = Date.now(),
+): M[] {
+  return matches
+    .filter(m => m.status === 'upcoming' && kickoff(m) >= now - 86400000 && clubPlaysIn(m, participants, clubName))
+    // Tournament games share a date and keep their kick-off in match_time
+    .sort((a, b) => soonestFirst(a, b) || (a.match_time || '').localeCompare(b.match_time || ''));
+}
+
+/** One of the club's teams on one tournament day: the unit a coach asks availability and picks a
+ *  line-up for, instead of game by game */
+export interface TournamentTeamGroup<M extends Match = Match> {
+  key: string;
+  tournamentId: string;
+  participant: TournamentParticipant;
+  /** Its games, in playing order */
+  games: M[];
+}
+
+/** The side a tournament team plays on in one of its games */
+export const teamSideIn = (m: Pick<Match, 'home_team_name' | 'away_team_name'>, teamName: string): 'home' | 'away' =>
+  m.home_team_name.trim().toLowerCase() === teamName.trim().toLowerCase() ? 'home' : 'away';
+
+/** The club's own (internal) teams in each tournament, each with its games from `games` */
+export function tournamentTeamGroups<M extends Match>(games: M[], participants: TournamentParticipant[]): TournamentTeamGroup<M>[] {
+  const norm = (s: string) => s.trim().toLowerCase();
+  const groups: TournamentTeamGroup<M>[] = [];
+  for (const p of participants) {
+    if (p.team_type !== 'internal') continue;
+    const own = games
+      .filter(m => m.tournament_id === p.tournament_id && (norm(m.home_team_name) === norm(p.name) || norm(m.away_team_name) === norm(p.name)))
+      .sort(compareTournamentMatches);
+    if (own.length) groups.push({ key: `${p.tournament_id}:${p.id}`, tournamentId: p.tournament_id, participant: p, games: own });
+  }
+  return groups.sort((a, b) => soonestFirst(a.games[0], b.games[0]) || compareTournamentMatches(a.games[0], b.games[0]) || a.participant.name.localeCompare(b.participant.name));
 }
 
 /** The fixture an admin page should open on: the live one (unless `skipLive`, for pages about the
