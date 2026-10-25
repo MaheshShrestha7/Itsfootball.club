@@ -672,8 +672,7 @@ function AvailabilityHub() {
                           <MessageSquare size={13} />
                           <span>Note</span>
                         </button>
-                        {/* A personal link answers one game, so a tournament team's day leaves it out */}
-                        {!activeGroup && <button
+                        <button
                           type="button"
                           onClick={() => handleCopyPlayerLink(player.id, availability.response_token)}
                           disabled={!availability.response_token}
@@ -682,7 +681,7 @@ function AvailabilityHub() {
                         >
                           {copiedPlayerId === player.id ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
                           <span>{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
-                        </button>}
+                        </button>
                       </div>
 
                       {/* Note editor, opened from the row's Note button */}
@@ -726,7 +725,7 @@ function AvailabilityHub() {
 // Player view: a personal link (?token=...) lets one player answer for themselves
 // ---------------------------------------------------------------------------
 function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
-  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken, members } = useClub();
+  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken, members, tournaments } = useClub();
   const { user } = useAuth();
   const router = useRouter();
   const club = selectClubBySlug(slug);
@@ -831,6 +830,15 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
                 {match.home_team_name} vs {match.away_team_name}
                 <br />
                 {new Date(match.match_date).toLocaleString(DATE_LOCALE, { dateStyle: 'full', timeStyle: 'short' })} · {match.venue}
+                {/* respond_availability answers the player's other games in the tournament too */}
+                {match.tournament_id && (
+                  <>
+                    <br />
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      Your answer covers all your games at {tournaments.find(t => t.id === match.tournament_id)?.name || 'this tournament'}.
+                    </strong>
+                  </>
+                )}
               </p>
             )}
 

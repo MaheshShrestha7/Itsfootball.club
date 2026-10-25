@@ -89,7 +89,7 @@ function TileGrid({ tiles }: { tiles: Tile[] }) {
 /** The club app's home: what this person does at the club, by role (visitor, member, player, staff) */
 export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, members, clubTeams, tournamentParticipants } = useClub();
+  const { clubs, selectClubBySlug, matches, events, members, clubTeams, tournamentParticipants, tournaments } = useClub();
   const { user, isLoading, can, isClubSuperUser, hasClubAdminAccess, getClubAccess, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const base = `/${club.slug}`;
@@ -119,15 +119,25 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const now = Date.now();
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
   const upcoming = (() => {
-    const ms = matches
+    const ours = matches
       // Not other clubs' games in a cup the club hosts: members aren't asked In/Out for those
       .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000 && clubPlaysIn(m, tournamentParticipants, club.name))
-      .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m, price: 0 }));
+      .sort((a, b) => a.match_date.localeCompare(b.match_date) || (a.match_time || '').localeCompare(b.match_time || ''));
+    const ms = ours
+      .filter(m => !m.tournament_id)
+      .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m as typeof m | undefined, gameIds: [m.id], href: matchPath(club.slug, m), price: 0 }));
+    // A tournament is one card and one answer for all its games (each player is only asked about
+    // their own team's games, below), not a card per game
+    const cups = [...new Set(ours.filter(m => m.tournament_id).map(m => m.tournament_id!))].map(tid => {
+      const games = ours.filter(m => m.tournament_id === tid);
+      const name = tournaments.find(t => t.id === tid)?.name || 'Tournament';
+      return { kind: 'match' as const, id: `cup:${tid}`, title: `${name} · ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/tournaments/${tid}`, price: 0 };
+    });
     const es = events
       // A supporter isn't asked about training (players and parents of players are)
       .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now && !(supporterOnly && e.category === 'training'))
-      .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location, match: undefined, price: e.ticket_price_cents ?? 0 }));
-    return [...ms, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
+      .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location, match: undefined, gameIds: [e.id], href: `${base}/events/${e.id}`, price: e.ticket_price_cents ?? 0 }));
+    return [...ms, ...cups, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   })();
 
   // My availability answers (signed-in members answer here; the email link still works too)
@@ -149,7 +159,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   // The fixtures this player is asked about: their own team's, not every team's (a U12 player isn't
   // asked about First XI games). 'all' when the server can't say (e.g. before its migration runs).
   const [squadMatchIds, setSquadMatchIds] = useState<Set<string> | 'all' | null>(null);
-  const upcomingMatchKey = upcoming.filter(u => u.kind === 'match').map(u => u.id).join(',');
+  const upcomingMatchKey = upcoming.filter(u => u.kind === 'match').flatMap(u => u.gameIds).join(',');
   useEffect(() => {
     const db = getSupabaseClient();
     if (!db || !player) return;
@@ -161,6 +171,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     });
     return () => { cancelled = true; };
   }, [club.id, player, upcomingMatchKey]);
+
+  // The games the player is asked about in an item: one for a fixture, their team's in a tournament
+  const myGameIds = (item: { kind: 'match' | 'event'; gameIds: string[] }) =>
+    item.kind === 'match' ? item.gameIds.filter(id => squadMatchIds === 'all' || !!squadMatchIds?.has(id)) : item.gameIds;
 
   // Each child's answers and fixtures (family_availability / family_squad_matches); keys are child:item
   const [kidAnswers, setKidAnswers] = useState<Record<string, Answer>>({});
@@ -181,19 +195,23 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     setKidSquad(new Set(((squad || []) as { member_id: string; match_id: string }[]).map(r => `${r.member_id}:${r.match_id}`)));
   }, [club.id, kidKey]);
   useEffect(() => { loadKidAnswers(); }, [loadKidAnswers, upcomingMatchKey]);
-  const answerForKid = async (kidId: string, item: { kind: 'match' | 'event'; id: string }, value: Answer) => {
+  // The games a child is asked about in an item (one for a fixture, their team's games in a tournament)
+  const kidGameIds = (kidId: string, item: { kind: 'match' | 'event'; gameIds: string[] }) =>
+    item.kind === 'match' ? item.gameIds.filter(id => kidSquad?.has(`${kidId}:${id}`)) : item.gameIds;
+  const answerForKid = async (kidId: string, item: { kind: 'match' | 'event'; id: string; gameIds: string[] }, value: Answer) => {
     const db = getSupabaseClient();
     if (!db) return;
-    const key = `${kidId}:${item.id}`;
-    setSaving(key);
+    const ids = kidGameIds(kidId, item);
+    setSaving(`${kidId}:${item.id}`);
     setAnswerError(null);
-    setKidAnswers(a => ({ ...a, [key]: value }));
-    const { error } = await db.rpc('set_child_availability', {
+    setKidAnswers(a => ({ ...a, ...Object.fromEntries(ids.map(id => [`${kidId}:${id}`, value])) }));
+    const results = await Promise.all(ids.map(id => db.rpc('set_child_availability', {
       p_club_id: club.id, p_member_id: kidId,
-      p_match_id: item.kind === 'match' ? item.id : null,
-      p_event_id: item.kind === 'event' ? item.id : null,
+      p_match_id: item.kind === 'match' ? id : null,
+      p_event_id: item.kind === 'event' ? id : null,
       p_status: value,
-    });
+    })));
+    const error = results.find(r => r.error)?.error;
     setSaving(null);
     if (error) {
       setAnswerError('That answer was not saved. Please try again.');
@@ -201,21 +219,24 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     }
   };
   // Which children are asked about an item: their own team's matches, and every free event
-  const kidsFor = (item: { kind: 'match' | 'event'; id: string; price: number }) =>
-    item.kind === 'match' ? kids.filter(k => kidSquad?.has(`${k.id}:${item.id}`)) : item.price === 0 ? kids : [];
+  const kidsFor = (item: { kind: 'match' | 'event'; id: string; gameIds: string[]; price: number }) =>
+    item.kind === 'match' ? kids.filter(k => kidGameIds(k.id, item).length > 0) : item.price === 0 ? kids : [];
 
-  const answer = async (item: { kind: 'match' | 'event'; id: string }, value: Answer) => {
+  const answer = async (item: { kind: 'match' | 'event'; id: string; gameIds: string[] }, value: Answer) => {
     const db = getSupabaseClient();
     if (!db) return;
+    const ids = myGameIds(item);
     setSaving(item.id);
     setAnswerError(null);
-    setAnswers(a => ({ ...a, [item.id]: value })); // shown straight away; reverted below if it fails
-    const { error } = await db.rpc('set_my_availability', {
+    // shown straight away; reverted below if it fails
+    setAnswers(a => ({ ...a, ...Object.fromEntries(ids.map(id => [id, value])) }));
+    const results = await Promise.all(ids.map(id => db.rpc('set_my_availability', {
       p_club_id: club.id,
-      p_match_id: item.kind === 'match' ? item.id : null,
-      p_event_id: item.kind === 'event' ? item.id : null,
+      p_match_id: item.kind === 'match' ? id : null,
+      p_event_id: item.kind === 'event' ? id : null,
       p_status: value,
-    });
+    })));
+    const error = results.find(r => r.error)?.error;
     setSaving(null);
     if (error) {
       setAnswerError('Your answer was not saved. Please try again.');
@@ -283,8 +304,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ];
 
-  const canAnswer = (item: { kind: 'match' | 'event'; id: string; price: number }) =>
-    item.kind === 'match' ? player && (squadMatchIds === 'all' || !!squadMatchIds?.has(item.id)) : approved && item.price === 0;
+  const canAnswer = (item: { kind: 'match' | 'event'; id: string; gameIds: string[]; price: number }) =>
+    item.kind === 'match' ? player && myGameIds(item).length > 0 : approved && item.price === 0;
+  // An answer shows as given once every game it covers has it
+  const allAnswered = (got: Record<string, Answer>, keys: string[], value: Answer) => keys.length > 0 && keys.every(k => got[k] === value);
 
   return (
     <div className="container app-home" style={{ padding: '1.25rem 1rem 2rem', maxWidth: '760px', margin: '0 auto' }}>
@@ -322,9 +345,14 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {upcoming.map(item => (
             <div key={item.id} className="glass-panel" style={{ padding: '0.85rem 1rem' }}>
-              <Link href={item.kind === 'match' ? matchPath(club.slug, item) : `${base}/events/${item.id}`} style={{ display: 'block', color: 'inherit' }}>
+              <Link href={item.href} style={{ display: 'block', color: 'inherit' }}>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.title}</div>
                 <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? ` · ${item.where}` : ''}</div>
+                {item.kind === 'match' && !item.match && canAnswer(item) && (
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
+                    One answer for your {myGameIds(item).length} game{myGameIds(item).length === 1 ? '' : 's'}
+                  </div>
+                )}
                 {item.match && canAnswer(item) && (() => {
                   const note = myMatchNote(item.match);
                   return (
@@ -341,7 +369,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                   <div role="group" aria-label={`Is ${kid.full_name.split(' ')[0]} available for ${item.title}?`} className="app-answers">
                     {ANSWERS.map(a => {
                       const A = a.icon;
-                      const on = kidAnswers[`${kid.id}:${item.id}`] === a.value;
+                      const on = allAnswered(kidAnswers, kidGameIds(kid.id, item).map(id => `${kid.id}:${id}`), a.value);
                       return (
                         <button key={a.value} type="button" aria-pressed={on} disabled={saving === `${kid.id}:${item.id}`}
                           onClick={() => answerForKid(kid.id, item, a.value)}
@@ -365,7 +393,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                 <div role="group" aria-label={`Are you available for ${item.title}?`} className="app-answers">
                   {ANSWERS.map(a => {
                     const A = a.icon;
-                    const on = answers[item.id] === a.value;
+                    const on = allAnswered(answers, myGameIds(item), a.value);
                     return (
                       <button
                         key={a.value}
