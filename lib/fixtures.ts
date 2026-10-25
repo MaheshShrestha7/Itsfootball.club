@@ -28,6 +28,16 @@ export function clubPlaysIn(
   return !(isExternal(m.home_team_name) && isExternal(m.away_team_name));
 }
 
+export type MatchKind = 'club' | 'tournament' | 'inhouse';
+
+/** Which Match Centre list a game sits in: a game in one of the club's tournaments (whoever plays),
+ *  two of the club's own teams against each other, or a game against another club (league, cup or
+ *  friendly; a cup game typed in by hand without a tournament is one of these too). */
+export function matchKind(m: Pick<Match, 'tournament_id' | 'match_type'>): MatchKind {
+  if (m.tournament_id) return 'tournament';
+  return m.match_type === 'internal' ? 'inhouse' : 'club';
+}
+
 /** The fixture an admin page should open on: the live one (unless `skipLive`, for pages about the
  *  next game such as availability), else the club's next fixture, else its latest result (and only
  *  then other teams' tournament games). */

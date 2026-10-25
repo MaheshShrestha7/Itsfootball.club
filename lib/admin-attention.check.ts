@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { attentionItems, needsLineup, needsResult } from './admin-attention';
-import { clubResult, hasKickoffTime } from './fixtures';
+import { clubResult, hasKickoffTime, matchKind } from './fixtures';
+import { nextOnPitch } from './tournament-engine';
 import type { Match } from './supabase/types';
 
 const NOW = Date.parse('2026-10-25T09:00:00Z');
@@ -45,4 +46,18 @@ assert.equal(clubResult(m({ tournament_id: 't1', is_club_home: true, home_score:
 assert.equal(hasKickoffTime(m({ match_date: '2026-10-24' })), false);
 assert.equal(hasKickoffTime(m({ match_date: '2026-10-24T00:00:00+00:00', match_time: '09:00' })), false);
 assert.equal(hasKickoffTime(m({ match_date: '2026-10-24T04:00:00.000Z', match_time: '15:00' })), true);
+// Match Centre lists: tournament games, in-house games, and everything against another club
+assert.equal(matchKind(m({ tournament_id: 't1', match_type: 'tournament' })), 'tournament');
+assert.equal(matchKind(m({ match_type: 'internal' })), 'inhouse');
+assert.equal(matchKind(m({ match_type: 'friendly', competition: 'NSW League Two' })), 'club');
+assert.equal(matchKind(m({ match_type: 'tournament' })), 'club', 'a hand-entered cup game without a tournament');
+
+// Next on the same pitch: later in the cup, not finished, same pitch label
+const cup = (id: string, round: number, pitch: string, status: Match['status'] = 'upcoming') =>
+  m({ id, tournament_id: 't1', tournament_stage: 'group', tournament_round: round, pitch_label: pitch, status, match_date: '2026-10-25', match_time: `0${8 + round}:00` });
+const day = [cup('a1', 1, 'Pitch 1', 'live'), cup('b1', 1, 'Pitch 2', 'live'), cup('a2', 2, 'Pitch 1'), cup('b2', 2, 'Pitch 2'), cup('a3', 3, 'Pitch 1')];
+assert.equal(nextOnPitch(day[0], day)?.id, 'a2');
+assert.equal(nextOnPitch(day[1], day)?.id, 'b2');
+assert.equal(nextOnPitch(day[4], day), undefined, 'last game on the pitch');
+assert.equal(nextOnPitch(m({}), day), undefined, 'not a tournament game');
 console.log('admin-attention checks passed');

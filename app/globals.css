@@ -2116,6 +2116,94 @@ textarea {
   }
 }
 
+/* Match Centre: club games / tournaments / in-house switch, tournament-day pitch board */
+.mc-kind-switch {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(var(--shade-rgb), 0.3);
+  border: 1px solid var(--border-subtle);
+  max-width: 560px;
+}
+.mc-kind-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.5rem 0.35rem;
+  min-height: 44px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.mc-kind-tab[aria-selected='true'] {
+  background: rgba(var(--tint-rgb), 0.1);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+  box-shadow: inset 0 -2px 0 var(--club-primary);
+}
+.mc-kind-tab.mc-kind-tournament[aria-selected='true'] { box-shadow: inset 0 -2px 0 #F59E0B; }
+.mc-kind-label { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; font-size: 0.88rem; white-space: nowrap; }
+.mc-kind-sub { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+.mc-kind-sub.is-live { color: var(--c-red); }
+.mc-kind-sub .pulse-dot { width: 6px; height: 6px; }
+.mc-context { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; margin-top: 0.75rem; }
+.mc-badge-muted { background: rgba(var(--tint-rgb), 0.06); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+.mc-context-note { font-size: 0.78rem; color: var(--text-muted); }
+.mc-pitch-board-wrap { margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--border-subtle); }
+.mc-pitch-board-title { display: block; margin-bottom: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.mc-pitch-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.5rem; }
+.mc-pitch-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(var(--tint-rgb), 0.04);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mc-pitch-card.is-open { border-color: #F59E0B; background: rgba(245, 158, 11, 0.08); }
+.mc-pitch-card.is-next { border-style: dashed; }
+.mc-pitch-card-top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.mc-pitch-card-min { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--c-red); }
+.mc-pitch-card-min .pulse-dot { width: 6px; height: 6px; }
+.mc-pitch-card-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; }
+.mc-pitch-card-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-pitch-card-row b { font-family: var(--font-heading); font-weight: 800; font-variant-numeric: tabular-nums; }
+.mc-next-game {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin: -1rem 0 2rem;
+  padding: 0.8rem 1rem;
+  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mc-next-game-when { display: block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-amber); }
+.mc-next-game-teams { display: block; margin-top: 0.15rem; font-weight: 700; font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .mc-kind-switch { max-width: none; }
+  .mc-kind-label { font-size: 0.8rem; }
+  .mc-pitch-board { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .mc-pitch-card { flex: 0 0 165px; }
+  .mc-next-game { margin: -0.75rem 0 1rem; }
+}
+
 /* Match Centre on phones: headings and extras fold away so the scoreboard sits near the top,
    the shortcut buttons become one scrolling row, six event buttons show before "More events",
    and Log Event stays in reach */

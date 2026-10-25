@@ -52,6 +52,17 @@ export function compareTournamentMatches(a: Match, b: Match): number {
   );
 }
 
+/** The game after this one on the same pitch (or simply the tournament's next game when pitches
+ *  aren't labelled), for the "Next on Pitch 2" shortcut on tournament day */
+export function nextOnPitch(match: Match, matches: Match[]): Match | undefined {
+  if (!match.tournament_id) return undefined;
+  const pitch = match.pitch_label || null;
+  return matches
+    .filter(m => m.tournament_id === match.tournament_id && m.id !== match.id && m.status === 'upcoming'
+      && (m.pitch_label || null) === pitch && compareTournamentMatches(m, match) > 0)
+    .sort(compareTournamentMatches)[0];
+}
+
 export interface TiesheetOptions {
   shuffle?: boolean;
   /** Minutes per match slot (game plus changeover). Set: matches on the same day get their own
