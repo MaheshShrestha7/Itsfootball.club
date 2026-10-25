@@ -161,6 +161,9 @@ export default function AdminLayout({
   const unreadInquiries = unreadEnquiries + unreadMemberMessages;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
   const hasJuniorTeam = clubTeamsOf(clubTeams, club.id).some(t => t.is_junior);
+  // The phone menu is closed behind one button: a dot on it when any red badge inside is set
+  const menuNeedsAttention = unreadInquiries > 0 || !!liveMatch || receiptsToReview > 0 || ordersToHandOut > 0
+    || (pendingMembersCount > 0 && can(club.id, 'members'));
 
   interface NavItem {
     label: string;
@@ -735,9 +738,10 @@ export default function AdminLayout({
             type="button"
             onClick={() => setMobileDrawerOpen(true)}
             className="btn btn-secondary btn-sm touch-target"
-            aria-label="Open admin menu"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}
+            aria-label={menuNeedsAttention ? 'Open admin menu (items need attention)' : 'Open admin menu'}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0, position: 'relative' }}
           >
+            {menuNeedsAttention && <span className="admin-menu-dot" aria-hidden="true" />}
             <Menu size={18} />
             <span className="admin-subbar-menu-label">Admin Menu</span>
           </button>

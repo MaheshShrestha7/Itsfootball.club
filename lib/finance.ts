@@ -1,6 +1,8 @@
 // Club finance: shared labels and formatting (client + server). Category keys match the CHECK
 // constraints in supabase/migrations/20261010_finance.sql.
 
+import { DATE_LOCALE } from './dates';
+
 export const INCOME_CATEGORIES: Record<string, string> = {
   membership: 'Membership fees',
   sponsorship: 'Sponsorship',
@@ -86,7 +88,9 @@ export function bookingFeeText(fee = BOOKING_FEE): string {
 
 export function formatMoney(cents: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100);
+    // A fixed locale, not the runtime's: the server (en-US: "A$15.00") and an Australian browser
+    // ("$15.00") disagreed, which broke hydration on the events page and app home
+    return new Intl.NumberFormat(DATE_LOCALE, { style: 'currency', currency }).format(cents / 100);
   } catch {
     return `${currency} ${(cents / 100).toFixed(2)}`;
   }

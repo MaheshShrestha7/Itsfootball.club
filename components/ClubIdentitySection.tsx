@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
 import { publicScoreHidden } from '@/lib/teams';
+import { latestFirst } from '@/lib/fixtures';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -115,7 +116,9 @@ export default function ClubIdentitySection({
   );
   const rawMatchesPlayed = rawPlayedMatches.length;
 
-  const rawCurrentSeason = getActiveSeason(clubId)?.name || rawPlayedMatches[0]?.season || defaultSeasonLabel();
+  // No season set up: the latest played game's season (not whichever row happens to come first)
+  const latestPlayed = [...rawPlayedMatches].sort(latestFirst)[0];
+  const rawCurrentSeason = getActiveSeason(clubId)?.name || latestPlayed?.season || defaultSeasonLabel();
   const rawSeasonMatches = rawPlayedMatches.filter(
     m => !m.season || m.season === rawCurrentSeason
   );

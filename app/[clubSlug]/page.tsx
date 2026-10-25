@@ -1,7 +1,7 @@
 'use client';
 
 import { PageSkeleton } from '@/components/Skeleton';
-import React, { useState, useEffect, use, useMemo } from 'react';
+import React, { useState, useEffect, use, useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { matchTypeTag } from '@/lib/fixture-label';
@@ -10,8 +10,9 @@ import ContactModal from '@/components/ContactModal';
 import ClubContactSection from '@/components/ClubContactSection';
 import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
+import MatchdayStrip from '@/components/MatchdayStrip';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { clubPlaysIn, latestFirst, soonestFirst } from '@/lib/fixtures';
+import { clubPlaysIn, kickoff, latestFirst, soonestFirst } from '@/lib/fixtures';
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
@@ -59,6 +60,15 @@ const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   trial: 'Trials',
   tournament: 'Tournament',
 };
+
+// Visitors who ask for less motion get a still hero (no autoplay)
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+const subscribeReducedMotion = (onChange: () => void) => {
+  const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(REDUCED_MOTION) : null;
+  mq?.addEventListener?.('change', onChange);
+  return () => mq?.removeEventListener?.('change', onChange);
+};
+const reducedMotionNow = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(REDUCED_MOTION).matches;
 
 interface HomeHeroSlide {
   id: string;
@@ -135,6 +145,10 @@ export default function ClubPublicPage({
   // Hero Slider states
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
+  // Touch, keyboard or a swipe on the slider stops autoplay for good: phones have no hover to pause it
+  const [sliderTouched, setSliderStopped] = useState(false);
+  const prefersReducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionNow, () => false);
+  const sliderStopped = sliderTouched || prefersReducedMotion;
   const [heroLogoError, setHeroLogoError] = useState(false);
 
   // Reset logo error whenever club branding updates
@@ -165,17 +179,28 @@ export default function ClubPublicPage({
     ? (activeSeason?.name || defaultSeasonLabel())
     : fixturesSeasonFilter;
 
-  const filteredClubMatches = clubMatches.filter(m => {
-    if (fixturesSeasonFilter === 'ALL') return true;
-    return m.season === resolvedSeasonName;
-  });
+  // A club that never set up a season runs on the fallback label, which rolls over on 1 August
+  // (lib/season.ts). An Australian winter season spans that date, so games saved under last
+  // year's label in the same calendar year still count as current. Rows with no season always do.
+  const previousFallback = defaultSeasonLabel(new Date(new Date().getFullYear() - 1, new Date().getMonth(), 15));
+  const inCurrentSeason = (m: typeof clubMatches[number]) => {
+    if (!m.season || m.season === resolvedSeasonName) return true;
+    if (clubSeasons.length > 0 || fixturesSeasonFilter !== 'CURRENT') return false;
+    return m.season === previousFallback && new Date(m.match_date).getFullYear() === new Date().getFullYear();
+  };
+  const filteredClubMatches = clubMatches.filter(m => fixturesSeasonFilter === 'ALL' || inCurrentSeason(m));
 
   // Only games the club's own players are in: a hosted cup between other clubs stays on its tournament page
   const ourMatches = filteredClubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || ''));
-  const upcomingMatches = ourMatches.filter(m => m.status === 'upcoming').sort(soonestFirst);
+  // What's coming up never hides behind a season label: the current view lists every future game
+  const ourAllMatches = clubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || ''));
+  const upcomingSource = fixturesSeasonFilter === 'CURRENT' ? ourAllMatches : ourMatches;
+  const upcomingMatches = upcomingSource.filter(m => m.status === 'upcoming').sort(soonestFirst);
   // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
-  const upcomingFixtures = ourMatches.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
+  const upcomingFixtures = upcomingSource.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
   const pastMatches = ourMatches.filter(m => m.status === 'completed').sort(latestFirst);
+  // Matchday strip: the latest result of any season, so it never empties when a season rolls over
+  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort(latestFirst)[0];
   // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
   const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
   const inFixturesTeam = (m: typeof clubMatches[number]) => {
@@ -190,6 +215,8 @@ export default function ClubPublicPage({
     .filter(e => { const end = Date.parse(e.end_time || e.start_time); return Number.isNaN(end) || end >= nowMs; })
     .sort((a, b) => (Date.parse(a.start_time) || 0) - (Date.parse(b.start_time) || 0));
   const nextEvent = upcomingEvents[0] || clubEvents[0];
+  // The strip's next match skips a game left on "upcoming" after it was played (no result entered yet)
+  const stripNextMatch = upcomingMatches.find(m => kickoff(m) >= nowMs - 3 * 3600000);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
   const clubNews = news.filter(n => n.club_id === clubId);
@@ -218,6 +245,12 @@ export default function ClubPublicPage({
     a.full_name.localeCompare(b.full_name)
   );
   const topPlayers = rankedSquad.slice(0, 5);
+  // A rank only means something once a player has played: no "1st" for whoever sorts first by name
+  const hasSeasonStats = (memberId: string) => {
+    const st = statFor(memberId);
+    return !!(st?.appearances || st?.goals || st?.assists || st?.motm_awards);
+  };
+  const anyRanked = topPlayers.some(p => hasSeasonStats(p.id));
   const countOf = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
 
   const positionPills = (
@@ -242,14 +275,12 @@ export default function ClubPublicPage({
     </div>
   );
 
-  // Top leaderboard players
+  // Top leaderboard players: this season only, and only people with at least one of the stat
+  const leaderboardValue = (s: { goals: number; assists: number; appearances: number }) =>
+    leaderboardTab === 'goals' ? s.goals : leaderboardTab === 'assists' ? s.assists : s.appearances;
   const leaderboardList = [...playerStats]
-    .filter(s => s.club_id === clubId && !juniorIds.has(s.member_id))
-    .sort((a, b) => {
-      if (leaderboardTab === 'goals') return b.goals - a.goals;
-      if (leaderboardTab === 'assists') return b.assists - a.assists;
-      return b.appearances - a.appearances;
-    })
+    .filter(s => s.club_id === clubId && !juniorIds.has(s.member_id) && s.season === currentSeasonName && (leaderboardValue(s) || 0) > 0)
+    .sort((a, b) => leaderboardValue(b) - leaderboardValue(a))
     .slice(0, 5)
     .map(stat => {
       const player = clubMembers.find(m => m.id === stat.member_id);
@@ -358,7 +389,7 @@ export default function ClubPublicPage({
         subtitle: liveMatch
           ? `${(!liveMatch.competition || liveMatch.competition === 'Premier Regional League') ? 'Club Match' : liveMatch.competition} • In Play at ${liveMatch.venue}`
           : upcomingMatches[0]
-          ? `${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? 'Club Fixture' : upcomingMatches[0].competition} • Kickoff Countdown`
+          ? `${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? 'Club Fixture' : upcomingMatches[0].competition}${upcomingMatches[0].venue ? ` • ${upcomingMatches[0].venue}` : ''}`
           : 'Official Match Schedule & Match Reports',
         targetMatch: liveMatch || upcomingMatches[0],
       },
@@ -397,12 +428,12 @@ export default function ClubPublicPage({
 
   // Autoplay ticker with pause-on-hover
   useEffect(() => {
-    if (isSliderPaused || heroSlides.length <= 1) return;
+    if (isSliderPaused || sliderStopped || heroSlides.length <= 1) return;
     const interval = setInterval(() => {
       setActiveSlide(prev => (prev + 1) % heroSlides.length);
     }, 6500);
     return () => clearInterval(interval);
-  }, [isSliderPaused, heroSlides.length]);
+  }, [isSliderPaused, sliderStopped, heroSlides.length]);
 
   const currentSlide = heroSlides[activeSlide] || heroSlides[0];
 
@@ -452,6 +483,8 @@ export default function ClubPublicPage({
       <section
         onMouseEnter={() => setIsSliderPaused(true)}
         onMouseLeave={() => setIsSliderPaused(false)}
+        onTouchStart={() => setSliderStopped(true)}
+        onFocusCapture={() => setSliderStopped(true)}
         data-theme="dark" style={{
           position: 'relative',
           minHeight: '560px',
@@ -1248,7 +1281,7 @@ export default function ClubPublicPage({
                     )}
 
                     {/* Animated Progress Timer Bar when active and not paused */}
-                    {isActive && !isSliderPaused && (
+                    {isActive && !isSliderPaused && !sliderStopped && (
                       <div
                         key={`progress-${idx}-${activeSlide}`}
                         style={{
@@ -1318,6 +1351,15 @@ export default function ClubPublicPage({
         </div>
       </section>
 
+      {/* 4.15 MATCHDAY STRIP: next match and last result, always in view under the hero */}
+      <MatchdayStrip
+        club={club}
+        live={liveMatch}
+        next={stripNextMatch}
+        last={lastResult}
+        lastScoreHidden={lastResult ? publicScoreHidden(lastResult, clubTeams) : false}
+      />
+
       {/* 4.2 DEDICATED CLUB IDENTITY SECTION (DYNAMIC SUM COUNTS FROM RAW DATASET) */}
       <ClubIdentitySection
         club={club}
@@ -1328,175 +1370,6 @@ export default function ClubPublicPage({
         playerStats={playerStats}
         onOpenContactModal={() => setContactModalOpen(true)}
       />
-
-      {/* 4.3 SPONSORS SHOWCASE */}
-      {clubSponsors.length > 0 && (() => {
-        const getSponsorScale = (sponsor: any): 'xl' | 'lg' | 'md' | 'sm' => {
-          if (sponsor.size_scale && sponsor.size_scale !== 'auto') {
-            return sponsor.size_scale;
-          }
-          switch (sponsor.tier) {
-            case 'platinum':
-              return 'xl';
-            case 'gold':
-              return 'lg';
-            case 'silver':
-              return 'md';
-            case 'bronze':
-            case 'grassroots':
-            default:
-              return 'sm';
-          }
-        };
-
-        // Highest tier first (a size override changes a card's size, not its place in the order)
-        const sortedSponsors = sortSponsorsByTier(clubSponsors);
-
-        return (
-          <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
-            <div className="container">
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
-                    Commercial Backers &amp; Kit Partners
-                  </span>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                    Official Club Sponsors
-                  </h3>
-                </div>
-                <Link
-                  href={`/${club.slug}/sponsor`}
-                  style={{
-                    display: 'inline-block',
-                    textDecoration: 'none',
-                    background: 'rgba(var(--tint-rgb), 0.05)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    color: 'var(--club-primary, #FFFFFF)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Become a Club Sponsor &rarr;
-                </Link>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'stretch',
-                gap: '1.25rem',
-                justifyContent: 'center',
-              }}>
-                {sortedSponsors.map(sponsor => {
-                  const scale = getSponsorScale(sponsor);
-                  const isXL = scale === 'xl';
-                  const isLG = scale === 'lg';
-                  const isMD = scale === 'md';
-
-                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorTierLabel(sponsor.tier).toUpperCase();
-
-                  return (
-                    <SponsorTrackedLink
-                      key={sponsor.id}
-                      clubId={sponsor.club_id}
-                      sponsorId={sponsor.id}
-                      placement="club_home_showcase"
-                      href={sponsor.website_url || '#'}
-                      className="glass-panel"
-                      style={{
-                        padding: isXL ? '1.6rem 2.2rem' : isLG ? '1.3rem 1.75rem' : isMD ? '1.05rem 1.4rem' : '0.85rem 1.15rem',
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: isXL ? '1.25rem 1.75rem' : isLG ? '1rem 1.4rem' : isMD ? '0.8rem 1.1rem' : '0.65rem 0.85rem',
-                        textDecoration: 'none',
-                        borderRadius: isXL ? '18px' : isLG ? '16px' : '12px',
-                        minWidth: isXL ? 'min(100%, 340px)' : isLG ? 'min(100%, 280px)' : isMD ? 'min(100%, 220px)' : 'min(100%, 170px)',
-                        flex: isXL ? '2 1 420px' : isLG ? '1.5 1 320px' : isMD ? '1 1 240px' : '0.7 1 180px',
-                        maxWidth: isXL ? '720px' : isLG ? '560px' : isMD ? '420px' : '320px',
-                        background: isXL
-                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(var(--dk-15-23-42), 0.85))'
-                          : isLG
-                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.07), rgba(var(--dk-15-23-42), 0.65))'
-                          : 'rgba(var(--tint-rgb), 0.025)',
-                        border: isXL
-                          ? '1px solid rgba(245, 158, 11, 0.45)'
-                          : isLG
-                          ? '1px solid rgba(245, 158, 11, 0.22)'
-                          : isMD
-                          ? '1px solid rgba(var(--tint-rgb), 0.1)'
-                          : '1px solid rgba(var(--tint-rgb), 0.05)',
-                        boxShadow: isXL ? '0 10px 32px rgba(245, 158, 11, 0.14)' : isLG ? '0 6px 20px rgba(0, 0, 0, 0.25)' : 'none',
-                        transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'translateY(-3px)';
-                        if (isXL) e.currentTarget.style.borderColor = '#F59E0B';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        if (isXL) e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
-                      }}
-                    >
-                      <SponsorLogo
-                        src={sponsor.logo_url}
-                        name={sponsor.name}
-                        height={isXL ? 100 : isLG ? 76 : isMD ? 58 : 44}
-                        style={{
-                          maxWidth: isXL ? 'min(100%, 300px)' : isLG ? 'min(100%, 230px)' : isMD ? 'min(100%, 170px)' : 'min(100%, 130px)',
-                          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
-                        }}
-                      />
-                      {/* Below ~180px beside the logo, the name moves under it rather than squeezing into a thin column */}
-                      <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 180px' }}>
-                        <div style={{
-                          fontWeight: 900,
-                          fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
-                          color: 'var(--text-primary)',
-                          lineHeight: 1.25,
-                          // Up to two lines: long business names stay readable instead of cutting off
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          overflowWrap: 'anywhere',
-                          letterSpacing: '-0.01em',
-                        }} title={sponsor.name}>
-                          {sponsor.name}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
-                          <span className="badge" style={{
-                            fontSize: isXL ? '0.72rem' : '0.68rem',
-                            padding: isXL ? '0.2rem 0.55rem' : '0.15rem 0.4rem',
-                            fontWeight: 800,
-                            backgroundColor: sponsor.tier === 'platinum'
-                              ? 'rgba(245, 158, 11, 0.22)'
-                              : sponsor.tier === 'gold'
-                              ? 'rgba(234, 179, 8, 0.18)'
-                              : 'rgba(var(--tint-rgb), 0.08)',
-                            color: sponsor.tier === 'platinum'
-                              ? '#F59E0B'
-                              : sponsor.tier === 'gold'
-                              ? '#FBBF24'
-                              : 'var(--text-muted)',
-                            letterSpacing: '0.04em',
-                          }}>
-                            {badgeText}
-                          </span>
-                        </div>
-                      </div>
-                    </SponsorTrackedLink>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        );
-      })()}
 
       {/* 4.3 FIXTURES & RESULTS */}
       <section id="fixtures" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -1764,6 +1637,175 @@ export default function ClubPublicPage({
         </div>
       </section>
 
+      {/* 4.35 SPONSORS SHOWCASE (after the fixtures: fans come for the games first) */}
+      {clubSponsors.length > 0 && (() => {
+        const getSponsorScale = (sponsor: any): 'xl' | 'lg' | 'md' | 'sm' => {
+          if (sponsor.size_scale && sponsor.size_scale !== 'auto') {
+            return sponsor.size_scale;
+          }
+          switch (sponsor.tier) {
+            case 'platinum':
+              return 'xl';
+            case 'gold':
+              return 'lg';
+            case 'silver':
+              return 'md';
+            case 'bronze':
+            case 'grassroots':
+            default:
+              return 'sm';
+          }
+        };
+
+        // Highest tier first (a size override changes a card's size, not its place in the order)
+        const sortedSponsors = sortSponsorsByTier(clubSponsors);
+
+        return (
+          <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
+            <div className="container">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
+                    Commercial Backers &amp; Kit Partners
+                  </span>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                    Official Club Sponsors
+                  </h3>
+                </div>
+                <Link
+                  href={`/${club.slug}/sponsor`}
+                  style={{
+                    display: 'inline-block',
+                    textDecoration: 'none',
+                    background: 'rgba(var(--tint-rgb), 0.05)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    color: 'var(--club-primary, #FFFFFF)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Become a Club Sponsor &rarr;
+                </Link>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'stretch',
+                gap: '1.25rem',
+                justifyContent: 'center',
+              }}>
+                {sortedSponsors.map(sponsor => {
+                  const scale = getSponsorScale(sponsor);
+                  const isXL = scale === 'xl';
+                  const isLG = scale === 'lg';
+                  const isMD = scale === 'md';
+
+                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorTierLabel(sponsor.tier).toUpperCase();
+
+                  return (
+                    <SponsorTrackedLink
+                      key={sponsor.id}
+                      clubId={sponsor.club_id}
+                      sponsorId={sponsor.id}
+                      placement="club_home_showcase"
+                      href={sponsor.website_url || '#'}
+                      className="glass-panel"
+                      style={{
+                        padding: isXL ? '1.6rem 2.2rem' : isLG ? '1.3rem 1.75rem' : isMD ? '1.05rem 1.4rem' : '0.85rem 1.15rem',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: isXL ? '1.25rem 1.75rem' : isLG ? '1rem 1.4rem' : isMD ? '0.8rem 1.1rem' : '0.65rem 0.85rem',
+                        textDecoration: 'none',
+                        borderRadius: isXL ? '18px' : isLG ? '16px' : '12px',
+                        minWidth: isXL ? 'min(100%, 340px)' : isLG ? 'min(100%, 280px)' : isMD ? 'min(100%, 220px)' : 'min(100%, 170px)',
+                        flex: isXL ? '2 1 420px' : isLG ? '1.5 1 320px' : isMD ? '1 1 240px' : '0.7 1 180px',
+                        maxWidth: isXL ? '720px' : isLG ? '560px' : isMD ? '420px' : '320px',
+                        background: isXL
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.16), rgba(var(--dk-15-23-42), 0.85))'
+                          : isLG
+                          ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.07), rgba(var(--dk-15-23-42), 0.65))'
+                          : 'rgba(var(--tint-rgb), 0.025)',
+                        border: isXL
+                          ? '1px solid rgba(245, 158, 11, 0.45)'
+                          : isLG
+                          ? '1px solid rgba(245, 158, 11, 0.22)'
+                          : isMD
+                          ? '1px solid rgba(var(--tint-rgb), 0.1)'
+                          : '1px solid rgba(var(--tint-rgb), 0.05)',
+                        boxShadow: isXL ? '0 10px 32px rgba(245, 158, 11, 0.14)' : isLG ? '0 6px 20px rgba(0, 0, 0, 0.25)' : 'none',
+                        transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        if (isXL) e.currentTarget.style.borderColor = '#F59E0B';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        if (isXL) e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                      }}
+                    >
+                      <SponsorLogo
+                        src={sponsor.logo_url}
+                        name={sponsor.name}
+                        height={isXL ? 100 : isLG ? 76 : isMD ? 58 : 44}
+                        style={{
+                          maxWidth: isXL ? 'min(100%, 300px)' : isLG ? 'min(100%, 230px)' : isMD ? 'min(100%, 170px)' : 'min(100%, 130px)',
+                          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
+                        }}
+                      />
+                      {/* Below ~180px beside the logo, the name moves under it rather than squeezing into a thin column */}
+                      <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 180px' }}>
+                        <div style={{
+                          fontWeight: 900,
+                          fontSize: isXL ? '1.3rem' : isLG ? '1.1rem' : isMD ? '0.95rem' : '0.85rem',
+                          color: 'var(--text-primary)',
+                          lineHeight: 1.25,
+                          // Up to two lines: long business names stay readable instead of cutting off
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          overflowWrap: 'anywhere',
+                          letterSpacing: '-0.01em',
+                        }} title={sponsor.name}>
+                          {sponsor.name}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
+                          <span className="badge" style={{
+                            fontSize: isXL ? '0.72rem' : '0.68rem',
+                            padding: isXL ? '0.2rem 0.55rem' : '0.15rem 0.4rem',
+                            fontWeight: 800,
+                            backgroundColor: sponsor.tier === 'platinum'
+                              ? 'rgba(245, 158, 11, 0.22)'
+                              : sponsor.tier === 'gold'
+                              ? 'rgba(234, 179, 8, 0.18)'
+                              : 'rgba(var(--tint-rgb), 0.08)',
+                            color: sponsor.tier === 'platinum'
+                              ? '#F59E0B'
+                              : sponsor.tier === 'gold'
+                              ? '#FBBF24'
+                              : 'var(--text-muted)',
+                            letterSpacing: '0.04em',
+                          }}>
+                            {badgeText}
+                          </span>
+                        </div>
+                      </div>
+                    </SponsorTrackedLink>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
       {/* 4.4 SCHEDULED SOCIAL EVENTS */}
       <section id="events" className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
@@ -2007,7 +2049,9 @@ export default function ClubPublicPage({
             <div>
               <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Top Players</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                {currentSeasonName}: ranked by goals, then assists, Player of the Match and appearances.
+                {anyRanked
+                  ? `${currentSeasonName}: ranked by goals, then assists, Player of the Match and appearances.`
+                  : `${currentSeasonName}: rankings appear once the first match stats are saved.`}
               </p>
             </div>
 
@@ -2054,7 +2098,9 @@ export default function ClubPublicPage({
                       ) : ''}
                     </div>
                     <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
-                      <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
+                      {hasStats && (
+                        <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
+                      )}
                     </div>
                     <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
                       {player.player_position && (
@@ -2153,6 +2199,11 @@ export default function ClubPublicPage({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {leaderboardList.length === 0 && (
+                  <div className="text-meta" style={{ textAlign: 'center', padding: '1.25rem 1rem', background: 'rgba(var(--shade-rgb), 0.25)', borderRadius: '8px', border: '1px dashed var(--border-subtle)' }}>
+                    {leaderboardTab === 'goals' ? 'No goals' : leaderboardTab === 'assists' ? 'No assists' : 'No appearances'} recorded yet this season. The table fills in as match stats are saved at full time.
+                  </div>
+                )}
                 {leaderboardList.map((item, index) => (
                   <div
                     key={item.player?.id || index}
@@ -2197,7 +2248,11 @@ export default function ClubPublicPage({
                     <div style={{ flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-ink)' }}>
                       {leaderboardTab === 'goals' ? item.stat.goals : leaderboardTab === 'assists' ? item.stat.assists : item.stat.appearances}
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginLeft: '0.3rem' }}>
-                        {leaderboardTab === 'goals' ? 'goals' : leaderboardTab === 'assists' ? 'assists' : 'apps'}
+                        {(() => {
+                          const n = leaderboardValue(item.stat);
+                          const word = leaderboardTab === 'goals' ? 'goal' : leaderboardTab === 'assists' ? 'assist' : 'app';
+                          return n === 1 ? word : `${word}s`;
+                        })()}
                       </span>
                     </div>
                   </div>
