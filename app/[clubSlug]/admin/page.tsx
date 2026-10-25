@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import GettingStartedChecklist from '@/components/admin/GettingStartedChecklist';
+import NeedsYouCard from '@/components/admin/NeedsYouCard';
+import { useAdminAttention } from '@/lib/use-admin-attention';
+import { defaultFixture } from '@/lib/fixtures';
+import { matchPath } from '@/lib/slugs';
+import LocalTime from '@/components/LocalTime';
 import { isPlayerMember } from '@/lib/supabase/types';
 import {
   Users,
@@ -41,7 +46,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics } = useClub();
+  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const { can, isClubSuperUser } = useAuth();
   // Shortcuts only for the areas this person's roles cover (a Treasurer has no fixtures or scanner)
@@ -67,6 +72,10 @@ export default function AdminDashboardPage({
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 5);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
+  const attention = useAdminAttention(club);
+  // When nothing is live, the Matchday card points at the next game instead of an empty box
+  const nextFixture = defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true });
+  const nextMatch = nextFixture?.status === 'upcoming' ? nextFixture : undefined;
 
   return (
     <div>
@@ -106,6 +115,8 @@ export default function AdminDashboardPage({
           </div>
         )}
       </div>
+
+      <NeedsYouCard items={attention} />
 
       {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
 
@@ -364,14 +375,40 @@ export default function AdminDashboardPage({
               )}
             </div>
           ) : (
+            nextMatch ? (
+              <div>
+                <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem 1.25rem', borderRadius: '12px', marginBottom: '1rem' }}>
+                  <div className="text-meta" style={{ textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Next match</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>
+                    {nextMatch.home_team_name} vs {nextMatch.away_team_name}
+                  </div>
+                  <div className="text-meta" style={{ marginTop: '0.2rem' }}>
+                    <LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />
+                    {' · '}<LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
+                    {nextMatch.venue ? ` · ${nextMatch.venue}` : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {canMatchCentre && (
+                    <Link href={`/${club.slug}/admin/match-center?match=${nextMatch.id}`} className="btn btn-primary btn-sm">
+                      Start match in Match Centre
+                    </Link>
+                  )}
+                  <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary btn-sm">
+                    Public match page
+                  </Link>
+                </div>
+              </div>
+            ) : (
             <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No match is live right now.</p>
-              {canMatchCentre && (
-                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-secondary btn-sm">
-                  Open Match Centre
+              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No match is live and nothing is scheduled.</p>
+              {canEditFixtures && (
+                <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm">
+                  Schedule a match
                 </Link>
               )}
             </div>
+            )
           )}
         </div>
 

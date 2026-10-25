@@ -105,7 +105,9 @@ export async function GET(
     const { data: matches, error: matchesError } = await supabase
       .from('matches')
       .select('id, competition, season, home_score, away_score, is_club_home, status, tournament_id, match_type, team_id')
-      .eq('club_id', clubId);
+      .eq('club_id', clubId)
+      // Newest first: the "latest match" season fallback below reads the first row
+      .order('match_date', { ascending: false });
 
     // Filter for the club's own matches that have actually been played (completed, live, or halftime)
     const playedMatches = matches

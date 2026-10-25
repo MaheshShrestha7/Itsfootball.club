@@ -32,5 +32,7 @@ export default function LocalTime({
     format === 'time' ? date.toLocaleTimeString(loc, opts)
     : format === 'both' ? date.toLocaleString(loc, opts)
     : date.toLocaleDateString(loc, opts);
-  return <>{text}</>;
+  // Node's en-AU data spells some short months in full ("June", "July", "Sept") where browsers
+  // don't: the server's HTML then differs from the hydrating render. One spelling everywhere.
+  return <>{options?.month === 'short' ? text.replace(/\b(June|July|Sept)\b/g, m => m.slice(0, 3)) : text}</>;
 }

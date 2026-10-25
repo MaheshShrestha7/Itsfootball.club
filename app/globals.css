@@ -3871,3 +3871,303 @@ dialog.confirm-dialog::backdrop {
     animation: none !important;
   }
 }
+
+/* ===== Fixture rows (/club/fixtures, team pages) and W/D/L chips ===== */
+.fixture-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+}
+.fixture-row-date {
+  flex-shrink: 0;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-radius: 10px;
+  background: rgba(var(--club-primary-rgb), 0.12);
+  border: 1px solid rgba(var(--club-primary-rgb), 0.28);
+  line-height: 1.1;
+}
+.fixture-row-dow,
+.fixture-row-month {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--club-ink);
+}
+.fixture-row-day {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+.fixture-row-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fixture-row-score {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fixture-row-ha {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.result-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.result-chip-md {
+  width: 30px;
+  height: 30px;
+  font-size: 0.9rem;
+}
+.result-chip-win {
+  background: rgba(16, 185, 129, 0.18);
+  color: color-mix(in srgb, var(--c-green), var(--text-primary) 15%);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+.result-chip-draw {
+  background: rgba(var(--tint-rgb), 0.08);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+.result-chip-loss {
+  background: rgba(239, 68, 68, 0.16);
+  color: color-mix(in srgb, var(--c-red), var(--text-primary) 20%);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ===== Kick-off countdown (matchday strip, match page before kick-off) ===== */
+.kickoff-countdown {
+  display: flex;
+  gap: 0.5rem;
+}
+.kickoff-countdown-cell {
+  min-width: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(var(--shade-rgb), 0.3);
+  border: 1px solid var(--border-subtle);
+  line-height: 1.1;
+}
+.kickoff-countdown-num {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 1.45rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.kickoff-countdown-sm .kickoff-countdown-cell { min-width: 48px; padding: 0.35rem 0.45rem; }
+.kickoff-countdown-sm .kickoff-countdown-num { font-size: 1.15rem; }
+.kickoff-countdown-unit {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--club-ink);
+}
+.kickoff-countdown-soon {
+  font-weight: 800;
+  color: var(--club-ink);
+}
+
+/* ===== Matchday strip (club home, under the hero): next match + last result ===== */
+.matchday-strip {
+  padding: clamp(1.25rem, 3vw, 2rem) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(var(--club-primary-rgb), 0.06) 0%, transparent 100%);
+}
+.matchday-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 1rem;
+}
+.matchday-tile {
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.matchday-tile-next { border-color: rgba(var(--club-primary-rgb), 0.35); }
+.matchday-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.matchday-tile-comp {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.matchday-teams {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  line-height: 1.25;
+}
+.matchday-us { color: var(--text-primary); }
+.matchday-vs {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--club-ink);
+  text-transform: uppercase;
+}
+.matchday-score {
+  font-weight: 900;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(var(--shade-rgb), 0.3);
+  border: 1px solid var(--border-subtle);
+}
+.matchday-result {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.matchday-teams-result { font-size: 1.05rem; }
+.matchday-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.matchday-actions .btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+.matchday-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--club-ink);
+}
+
+/* ===== Admin dashboard: "Needs you" card ===== */
+.needs-you {
+  padding: 1.25rem 1.25rem 1rem;
+  margin-bottom: 1.5rem;
+  border-color: rgba(var(--club-primary-rgb), 0.4);
+  box-shadow: 0 0 0 1px rgba(var(--club-primary-rgb), 0.12), var(--shadow-sm);
+}
+.needs-you-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.needs-you-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+.needs-you-title svg { color: var(--club-ink); }
+.needs-you-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.needs-you-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(var(--shade-rgb), 0.25);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.needs-you-row:hover { border-color: rgba(var(--club-primary-rgb), 0.45); }
+.needs-you-row-urgent { border-left: 3px solid var(--club-primary); }
+.needs-you-count {
+  flex-shrink: 0;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.4rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  background: rgba(var(--club-primary-rgb), 0.16);
+  color: var(--club-ink);
+}
+.needs-you-text { flex: 1; min-width: 0; }
+.needs-you-arrow { flex-shrink: 0; color: var(--text-muted); }
+
+/* Phone Admin Menu button: a dot when something in the menu needs attention */
+.admin-menu-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-red);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
+
+/* ===== Match page before kick-off ===== */
+.prematch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.prematch-tile {
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.prematch-countdown { border-color: rgba(var(--club-primary-rgb), 0.35); }
+.prematch-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--club-ink);
+}

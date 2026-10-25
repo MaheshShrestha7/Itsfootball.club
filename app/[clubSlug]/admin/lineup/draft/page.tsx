@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
@@ -53,7 +53,10 @@ export default function DraftLineupPage() {
     return matches.filter(m => m.club_id === club.id);
   }, [club, matches]);
 
-  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
+  // ?match=<id> (from the dashboard's "Needs you" card) opens on that fixture
+  const requestedMatchId = useSearchParams().get('match') || '';
+  const [pickedMatchId, setSelectedMatchId] = useState<string>('');
+  const selectedMatchId = pickedMatchId || requestedMatchId;
   const activeMatch =
     clubMatches.find(m => m.id === selectedMatchId) ||
     clubMatches.find(m => m.status === 'upcoming') ||

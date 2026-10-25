@@ -40,6 +40,7 @@ import { matchReport } from '@/lib/match-report';
 import { DATE_LOCALE } from '@/lib/dates';
 import { TIME_ZONE } from '@/lib/email/format';
 import GettingThere from '@/components/grounds/GettingThere';
+import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
@@ -297,6 +298,14 @@ export default function MatchCenterPage({
       players: clubSidePlayers(match, side, lineupSquad, tournamentParticipants, internalTeams),
     }))
     .filter((s): s is typeof s & { players: NonNullable<typeof s.players> } => s.players !== null);
+
+  // Before kick-off there's nothing for Timeline or Stats yet: a pre-match panel instead, and the
+  // Lineups tab only once a line-up is saved for one of the club's sides
+  const preMatch = match.status === 'upcoming' || match.status === 'postponed';
+  const lineupAnnounced = lineupSides.some(({ side }) => ((side === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || []).length > 0);
+  const previousMeeting = preMatch ? lastMeeting(match, matches.filter(m => m.club_id === club.id)) : undefined;
+  const visibleTabs = preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
+  const shownTab = preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
 
   // One team's crest and name. The club's crest only stands in on the club's own side.
   const teamBlock = (side: Side) => {
@@ -684,6 +693,17 @@ export default function MatchCenterPage({
         {/* Directions, parking and wet weather from the ground guide, before and during the match */}
         {match.status !== 'completed' && match.status !== 'cancelled' && <GettingThere match={match} />}
 
+        {preMatch && (
+          <PreMatchPanel
+            club={club}
+            match={match}
+            previous={previousMeeting}
+            previousScoreHidden={previousMeeting ? publicScoreHidden(previousMeeting, clubTeams) : false}
+            lineupAnnounced={lineupAnnounced}
+            onShowLineup={() => document.getElementById('match-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          />
+        )}
+
         {/* Full-time report in plain sentences, from the logged events (none when the team hides scores) */}
         {match.status === 'completed' && !scoreHidden && (
           <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
@@ -784,7 +804,8 @@ export default function MatchCenterPage({
         )}
 
         {/* Tab Selector: Match Events Timeline, Lineups / Pitch, Stats */}
-        <div className="scroll-pill-strip" style={{
+        {visibleTabs.length > 0 && (
+        <div id="match-tabs" className="scroll-pill-strip" style={{
           borderBottom: '1px solid var(--border-subtle)',
           marginBottom: '2rem',
           gap: '1.25rem',
@@ -794,7 +815,7 @@ export default function MatchCenterPage({
             { id: 'timeline', label: 'Timeline & Commentary', short: 'Timeline' },
             { id: 'lineups', label: 'Tactical Pitch & Lineups', short: 'Lineups' },
             { id: 'stats', label: 'Match Statistics', short: 'Stats' },
-          ].map(tab => (
+          ].filter(tab => visibleTabs.includes(tab.id)).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
@@ -802,9 +823,9 @@ export default function MatchCenterPage({
               style={{
                 background: 'transparent',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? `3px solid var(--club-primary)` : '3px solid transparent',
+                borderBottom: shownTab === tab.id ? `3px solid var(--club-primary)` : '3px solid transparent',
                 padding: '0.75rem 0.25rem',
-                color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                color: shownTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -818,9 +839,10 @@ export default function MatchCenterPage({
             </button>
           ))}
         </div>
+        )}
 
         {/* TAB 1: LIVE TIMELINE */}
-        {activeTab === 'timeline' && (
+        {shownTab === 'timeline' && (
           <div style={{ maxWidth: '780px', margin: '0 auto' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
               {/* Vertical line connector */}
@@ -906,7 +928,7 @@ export default function MatchCenterPage({
         )}
 
         {/* TAB 2: TACTICAL LINEUPS & PITCH, one per side that fields the club's own players */}
-        {activeTab === 'lineups' && (
+        {shownTab === 'lineups' && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -984,7 +1006,7 @@ export default function MatchCenterPage({
         )}
 
         {/* TAB 3: MATCH STATISTICS */}
-        {activeTab === 'stats' && (() => {
+        {shownTab === 'stats' && (() => {
           // Derive real stats from the logged event array
           const homeGoals = match.home_score;
           const awayGoals = match.away_score;
