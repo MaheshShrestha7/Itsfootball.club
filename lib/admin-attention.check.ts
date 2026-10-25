@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { attentionItems, needsLineup, needsResult } from './admin-attention';
-import { clubResult, hasKickoffTime, matchKind } from './fixtures';
+import { clubResult, hasKickoffTime, matchKind, prepFixtures, teamSideIn, tournamentTeamGroups } from './fixtures';
+import type { TournamentParticipant } from './supabase/types';
 import { nextOnPitch } from './tournament-engine';
 import type { Match } from './supabase/types';
 
@@ -60,4 +61,17 @@ assert.equal(nextOnPitch(day[0], day)?.id, 'a2');
 assert.equal(nextOnPitch(day[1], day)?.id, 'b2');
 assert.equal(nextOnPitch(day[4], day), undefined, 'last game on the pitch');
 assert.equal(nextOnPitch(m({}), day), undefined, 'not a tournament game');
+// Availability / Lineup Draft lists: upcoming games the club's players are in, and a tournament per team
+const team = (id: string, name: string, type: 'internal' | 'external'): TournamentParticipant =>
+  ({ id, tournament_id: 't1', team_type: type, name, short_name: name, logo_url: '' });
+const parts = [team('p1', 'RFC U12 Blue', 'internal'), team('p2', 'RFC U12 Red', 'internal'), team('p3', 'Westside', 'external'), team('p4', 'Hills', 'external')];
+const tg = (id: string, round: number, home: string, away: string, status: Match['status'] = 'upcoming') =>
+  m({ id, tournament_id: 't1', tournament_stage: 'group', tournament_round: round, home_team_name: home, away_team_name: away, status, match_date: '2026-10-25', match_time: `0${8 + round}:00` });
+const dayGames = [tg('g1', 1, 'RFC U12 Blue', 'Westside', 'completed'), tg('g2', 2, 'Hills', 'RFC U12 Blue'), tg('g3', 2, 'RFC U12 Red', 'Westside'), tg('g4', 3, 'RFC U12 Red', 'RFC U12 Blue'), tg('g5', 3, 'Westside', 'Hills')];
+const prep = prepFixtures([...dayGames, m({ id: 'old', match_date: '2026-09-01T04:00:00Z' })], parts, 'Riverside FC', NOW);
+assert.deepEqual(prep.map(g => g.id), ['g2', 'g3', 'g4'], 'not played, not stale, not two outside teams');
+const groups = tournamentTeamGroups(prep, parts);
+assert.deepEqual(groups.map(g => [g.participant.name, g.games.map(x => x.id)]), [['RFC U12 Blue', ['g2', 'g4']], ['RFC U12 Red', ['g3', 'g4']]]);
+assert.equal(teamSideIn(dayGames[1], 'RFC U12 Blue'), 'away');
+assert.equal(teamSideIn(dayGames[3], 'rfc u12 red'), 'home');
 console.log('admin-attention checks passed');

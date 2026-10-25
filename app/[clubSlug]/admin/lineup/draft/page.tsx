@@ -7,7 +7,9 @@ import { useClub } from '@/lib/club-context';
 import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import { FORMAT_PRESETS, buildLineupForPreset, defaultPresetFor, normalizeLineup } from '@/components/TacticalPitch';
 import LineupWorkbench from '@/components/LineupWorkbench';
-import { clubLineupSide } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
+import { matchKind, prepFixtures, teamSideIn, tournamentTeamGroups, type MatchKind } from '@/lib/fixtures';
+import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
 import { fixtureLabel } from '@/lib/fixture-label';
 import AdminGuard from '@/components/AdminGuard';
 import {
@@ -37,6 +39,9 @@ export default function DraftLineupPage() {
     publishDraftLineup,
     clubTeams,
     clubTeamMembers,
+    tournamentParticipants,
+    tournaments,
+    internalTeams,
     syncStatus,
   } = useClub();
 
@@ -57,23 +62,54 @@ export default function DraftLineupPage() {
   const requestedMatchId = useSearchParams().get('match') || '';
   const [pickedMatchId, setSelectedMatchId] = useState<string>('');
   const selectedMatchId = pickedMatchId || requestedMatchId;
+  // The games a line-up gets picked for: still to play, and only ones the club's own players are in
+  const prepGames = useMemo(
+    () => (club ? prepFixtures(clubMatches, tournamentParticipants, club.name) : []),
+    [club, clubMatches, tournamentParticipants]
+  );
   const activeMatch =
     clubMatches.find(m => m.id === selectedMatchId) ||
+    prepGames[0] ||
     clubMatches.find(m => m.status === 'upcoming') ||
     clubMatches[0];
 
-  const matchAvailabilities = useMemo(() => {
-    if (!activeMatch) return [];
-    return availabilities.filter(a => a.match_id === activeMatch.id);
-  }, [availabilities, activeMatch]);
-
-  // The fixture's team squad once the club has several teams (everyone otherwise)
-  const teamSquad = useMemo(
-    () => squadForMatch(allSquadPlayers, activeMatch, clubTeams, clubTeamMembers),
-    [allSquadPlayers, activeMatch, clubTeams, clubTeamMembers]
+  // Club games, tournaments and in-house games each have their own list. A tournament gets one
+  // line-up per team for the whole day, published to every game that team plays there.
+  const kind: MatchKind = activeMatch ? matchKind(activeMatch) : 'club';
+  const kindGames = (k: MatchKind) => prepGames.filter(m => matchKind(m) === k);
+  const teamGroups = useMemo(
+    () => tournamentTeamGroups(prepGames.filter(m => m.tournament_id), tournamentParticipants),
+    [prepGames, tournamentParticipants]
   );
+  const [groupPick, setGroupPick] = useState<string | null>(null);
+  const activeGroup = useMemo(
+    () => (kind === 'tournament' && activeMatch
+      ? teamGroups.find(g => g.key === groupPick && g.games.some(x => x.id === activeMatch.id))
+        || teamGroups.find(g => g.games.some(x => x.id === activeMatch.id))
+      : undefined),
+    [kind, activeMatch, teamGroups, groupPick]
+  );
+  const groupGames = useMemo(() => (activeGroup ? activeGroup.games : activeMatch ? [activeMatch] : []), [activeGroup, activeMatch]);
+  const tournamentName = (id?: string | null) => tournaments.find(t => t.id === id)?.name || 'Tournament';
+  // The columns the line-up lives in: the team's own side in a tournament game
+  const sideIn = (m: NonNullable<typeof activeMatch>) => (activeGroup ? teamSideIn(m, activeGroup.participant.name) : clubLineupSide(m));
+  const kindList = kindGames(kind);
+  const pickerGames = activeMatch && kind !== 'tournament' && !kindList.some(m => m.id === activeMatch.id) ? [activeMatch, ...kindList] : kindList;
 
-  // Only players marked "available" for this fixture can be picked. If attendance was never tracked, use the full squad.
+  const matchAvailabilities = useMemo(() => {
+    const ids = new Set(groupGames.map(g => g.id));
+    return availabilities.filter(a => a.match_id && ids.has(a.match_id));
+  }, [availabilities, groupGames]);
+
+  // The fixture's team squad once the club has several teams (everyone otherwise); a tournament team its own roster
+  const teamSquad = useMemo(() => {
+    const squad = squadForMatch(allSquadPlayers, activeMatch, clubTeams, clubTeamMembers);
+    if (!activeGroup || !activeMatch) return squad;
+    return clubSidePlayers(activeMatch, teamSideIn(activeMatch, activeGroup.participant.name), squad, tournamentParticipants, internalTeams) ?? squad;
+  }, [allSquadPlayers, activeMatch, clubTeams, clubTeamMembers, activeGroup, tournamentParticipants, internalTeams]);
+
+  // Only players marked "available" for this fixture (any of a tournament team's games) can be picked.
+  // If attendance was never tracked, use the full squad.
   const squadPlayers = useMemo(() => {
     if (matchAvailabilities.length === 0) return teamSquad;
     const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
@@ -88,7 +124,7 @@ export default function DraftLineupPage() {
     if (currentDraft?.lineup_coords?.length) {
       return { format: currentDraft.format, formation: currentDraft.formation, coords: currentDraft.lineup_coords, notes: currentDraft.tactical_notes || '' };
     }
-    const side = clubLineupSide(activeMatch);
+    const side = activeGroup ? teamSideIn(activeMatch, activeGroup.participant.name) : clubLineupSide(activeMatch);
     const publishedFormation = activeMatch[`${side}_formation`];
     const publishedCoords = activeMatch[`${side}_lineup_coords`];
     if (publishedCoords?.length) {
@@ -99,7 +135,7 @@ export default function DraftLineupPage() {
       ? publishedFormation
       : defaultPresetFor(fmt);
     return { format: fmt, formation: presetKey, coords: buildLineupForPreset(squadPlayers, presetKey), notes: '' };
-  }, [activeMatch, currentDraft, squadPlayers]);
+  }, [activeMatch, currentDraft, squadPlayers, activeGroup]);
   const sourceKey = source ? `${activeMatch?.id}|${JSON.stringify(source)}` : '';
 
   const [matchFormat, setMatchFormat] = useState<MatchFormat>('11v11');
@@ -127,7 +163,7 @@ export default function DraftLineupPage() {
   const updateLineup: React.Dispatch<React.SetStateAction<PitchPosition[]>> = useCallback(update => {
     setLineupCoords(update);
     setIsDirty(true);
-  }, []);
+  }, [setIsDirty]);
 
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -166,8 +202,11 @@ export default function DraftLineupPage() {
     );
   }
 
-  const getPlayerAvailability = (memberId: string) =>
-    matchAvailabilities.find(a => a.member_id === memberId)?.status || 'pending';
+  // Across a tournament team's games: the best answer the player gave
+  const getPlayerAvailability = (memberId: string) => {
+    const given = matchAvailabilities.filter(a => a.member_id === memberId).map(a => a.status);
+    return (['available', 'maybe', 'unavailable'] as const).find(st => given.includes(st)) || 'pending';
+  };
 
   const starterCount = lineupCoords.filter(p => p.member_id).length;
   const benchIdsFor = (coords: PitchPosition[]) =>
@@ -196,15 +235,24 @@ export default function DraftLineupPage() {
   const handlePublish = () => {
     persistDraft(formation, lineupCoords);
     // Pass the lineup on screen: the save above hasn't reached `draftLineups` yet within this event
-    const res = publishDraftLineup(activeMatch.id, { format: matchFormat, formation, lineup_coords: lineupCoords });
+    const latest = { format: matchFormat, formation, lineup_coords: lineupCoords };
+    // A tournament team's line-up goes on every game it plays that day, on its own side of each
+    const results = groupGames.map(g => publishDraftLineup(g.id, latest, sideIn(g)));
+    const res = results.find(r => !r.success) || results[0];
     setShowPublishModal(false);
-    showFeedback(res.message, res.success ? 'success' : 'error');
+    showFeedback(res && res.success && groupGames.length > 1 ? `Published to all ${groupGames.length} of ${activeGroup?.participant.name}'s games.` : res?.message || '', res?.success ? 'success' : 'error');
   };
 
-  const handleSelectMatch = async (matchId: string) => {
+  const handleSelectMatch = async (matchId: string, groupKey?: string) => {
     if (isDirty && !(await confirmAction({ title: 'Discard unsaved lineup changes?', message: "Your changes to this fixture's lineup haven't been saved.", confirmLabel: 'Discard changes', cancelLabel: 'Keep editing', danger: true }))) return;
     setIsDirty(false);
+    if (groupKey) setGroupPick(groupKey);
     setSelectedMatchId(matchId);
+  };
+  const pickKind = (k: MatchKind) => {
+    if (k === 'tournament' && teamGroups[0]) return void handleSelectMatch(teamGroups[0].games[0].id, teamGroups[0].key);
+    const first = kindGames(k)[0];
+    if (first) void handleSelectMatch(first.id);
   };
 
   return (
@@ -256,7 +304,7 @@ export default function DraftLineupPage() {
               }}
             >
               <Send size={15} />
-              <span>Publish to Match Centre</span>
+              <span>{groupGames.length > 1 ? `Publish to all ${groupGames.length} games` : 'Publish to Match Centre'}</span>
             </button>
           </div>
         </div>
@@ -289,22 +337,50 @@ export default function DraftLineupPage() {
         {/* Fixture selector & status */}
         <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
           <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+            <MatchKindSwitch games={prepGames} active={kind} onPick={pickKind} />
             <label htmlFor="fixture-select" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-              Fixture Target:
+              {activeGroup ? 'Team:' : 'Fixture Target:'}
             </label>
-            <select data-view-ok
-              id="fixture-select"
-              className="form-select"
-              value={activeMatch.id}
-              onChange={e => handleSelectMatch(e.target.value)}
-              style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', width: '100%', maxWidth: '420px' }}
-            >
-              {clubMatches.map(m => (
-                <option key={m.id} value={m.id}>
-                  {fixtureLabel(m, club?.name || '')} ({m.competition})
-                </option>
-              ))}
-            </select>
+            {activeGroup ? (
+              <select data-view-ok
+                id="fixture-select"
+                className="form-select"
+                value={activeGroup.key}
+                onChange={e => {
+                  const g = teamGroups.find(x => x.key === e.target.value);
+                  if (g) void handleSelectMatch(g.games[0].id, g.key);
+                }}
+                style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', width: '100%', maxWidth: '420px' }}
+              >
+                {teamGroups.map(g => (
+                  <option key={g.key} value={g.key}>
+                    {g.participant.name} · {tournamentName(g.tournamentId)} ({g.games.length} game{g.games.length === 1 ? '' : 's'})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select data-view-ok
+                id="fixture-select"
+                className="form-select"
+                value={activeMatch.id}
+                onChange={e => handleSelectMatch(e.target.value)}
+                style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', width: '100%', maxWidth: '420px' }}
+              >
+                {pickerGames.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {fixtureLabel(m, club?.name || '')}{m.competition ? ` (${m.competition})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {activeGroup && (
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                One line-up for the day, published to every game: {groupGames.map(g => {
+                  const opp = teamSideIn(g, activeGroup.participant.name) === 'home' ? g.away_team_name : g.home_team_name;
+                  return `${g.match_time ? `${g.match_time} ` : ''}vs ${opp}`;
+                }).join(' · ')}
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -348,7 +424,7 @@ export default function DraftLineupPage() {
           matchFormat={matchFormat}
           onFormatChange={fmt => { setMatchFormat(fmt); setIsDirty(true); }}
           primaryColor={club.primary_color}
-          teamName={activeMatch.home_team_name}
+          teamName={activeGroup?.participant.name || activeMatch.home_team_name}
           getAvailability={getPlayerAvailability}
           onSave={handleSaveDraft}
           onNotify={showFeedback}
@@ -410,7 +486,11 @@ export default function DraftLineupPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                   <span className="text-muted">Match:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', textAlign: 'right' }}>{activeMatch.home_team_name} vs {activeMatch.away_team_name}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {activeGroup
+                      ? `${activeGroup.participant.name} · ${tournamentName(activeGroup.tournamentId)} (all ${groupGames.length} games)`
+                      : `${activeMatch.home_team_name} vs ${activeMatch.away_team_name}`}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-muted">Format:</span>

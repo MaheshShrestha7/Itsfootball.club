@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Shield,
   Send,
   Trash2,
   ExternalLink,
@@ -36,6 +35,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
+import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
 import StatsFixModal from '@/components/StatsFixModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
@@ -130,16 +130,6 @@ export default function AdminMatchCenterControllerPage({
   const kind: MatchKind = match ? matchKind(match) : 'club';
   const kindGames = (k: MatchKind) => filteredMatches.filter(m => matchKind(m) === k);
   const isLiveGame = (m: { status: string }) => m.status === 'live' || m.status === 'halftime';
-  const kindTabs = ([
-    { id: 'club', label: 'Club games', icon: Shield },
-    { id: 'tournament', label: 'Tournaments', icon: Trophy },
-    { id: 'inhouse', label: 'In-house', icon: ArrowLeftRight },
-  ] as const).map(t => {
-    const games = kindGames(t.id);
-    const live = games.filter(isLiveGame).length;
-    const toPlay = games.filter(m => m.status === 'upcoming').length;
-    return { ...t, count: games.length, live, sub: live ? `${live} live` : toPlay ? `${toPlay} to play` : `${games.length} played` };
-  }).filter(t => t.count > 0);
   const pickGame = (pool: typeof filteredMatches) => {
     const next = defaultFixture(pool, tournamentParticipants, club.name);
     if (next) setSelectedMatchId(next.id);
@@ -678,30 +668,7 @@ export default function AdminMatchCenterControllerPage({
       )}
 
       {/* Which kind of game: club games, tournaments or in-house (only when the club has more than one kind) */}
-      {kindTabs.length > 1 && (
-        <div className="mc-kind-switch" role="tablist" aria-label="Kind of match" style={{ gridTemplateColumns: `repeat(${kindTabs.length}, minmax(0, 1fr))` }}>
-          {kindTabs.map(t => {
-            const Icon = t.icon;
-            const active = kind === t.id;
-            return (
-              <button data-view-ok
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={`mc-kind-tab mc-kind-${t.id}`}
-                onClick={() => { if (!active) pickGame(kindGames(t.id)); }}
-              >
-                <span className="mc-kind-label"><Icon size={15} aria-hidden="true" />{t.label}</span>
-                <span className={`mc-kind-sub${t.live ? ' is-live' : ''}`}>
-                  {t.live > 0 && <span className="pulse-dot" aria-hidden="true" />}
-                  {t.sub}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <MatchKindSwitch games={filteredMatches} active={kind} onPick={k => pickGame(kindGames(k))} />
 
       {/* Fixture Selector Dropdown & Season Controls */}
       <div className="glass-panel mc-fixture-bar" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
