@@ -16,7 +16,7 @@ import { clubPlaysIn, kickoff, latestFirst, soonestFirst } from '@/lib/fixtures'
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
-import { sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
+import { sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
@@ -1707,7 +1707,7 @@ export default function ClubPublicPage({
                   const isLG = scale === 'lg';
                   const isMD = scale === 'md';
 
-                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorTierLabel(sponsor.tier).toUpperCase();
+                  const badgeText = (sponsor.tier === 'platinum' ? '★ ' : '') + sponsorLabel(sponsor).toUpperCase();
 
                   return (
                     <SponsorTrackedLink

@@ -9,7 +9,7 @@ import { Shield, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import SponsorTrackedLink from './SponsorTrackedLink';
 import SponsorLogo from './SponsorLogo';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
-import { sponsorTierLabel } from '@/lib/sponsors';
+import { sponsorLabel } from '@/lib/sponsors';
 import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
 
 interface FooterProps {
@@ -143,7 +143,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                       backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.05)',
                       color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)'
                     }}>
-                      {sponsorTierLabel(sponsor.tier)}
+                      {sponsorLabel(sponsor)}
                     </span>
                   </SponsorTrackedLink>
                 );

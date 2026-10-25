@@ -39,3 +39,8 @@ const TIER_LABEL: Record<string, string> = {
 export function sponsorTierLabel(tier: string | undefined): string {
   return (tier && TIER_LABEL[tier]) || 'Club Partner';
 }
+
+/** A sponsor's badge text: what the admin typed, otherwise the tier name */
+export function sponsorLabel(sponsor: { tier?: string; label?: string | null }): string {
+  return sponsor.label?.trim() || sponsorTierLabel(sponsor.tier);
+}
