@@ -27,10 +27,15 @@ export function sortSponsorsByTier<T extends Pick<Sponsor, 'tier' | 'display_ord
   );
 }
 
-/** What each tier is called on club pages (the admin picks platinum / gold / silver / bronze) */
+const TIER_LABEL: Record<string, string> = {
+  platinum: 'Principal Partner',
+  gold: 'Gold Partner',
+  silver: 'Silver Partner',
+  bronze: 'Bronze Partner',
+  grassroots: 'Community Supporter',
+};
+
+/** What each tier is called on club pages, from the sponsor's tier in the database */
 export function sponsorTierLabel(tier: string | undefined): string {
-  return tier === 'platinum' ? 'Principal Partner'
-    : tier === 'gold' ? 'Gold Partner'
-    : tier === 'silver' ? 'Official Supplier'
-    : 'Community Supporter';
+  return (tier && TIER_LABEL[tier]) || 'Community Supporter';
 }

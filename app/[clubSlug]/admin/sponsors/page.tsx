@@ -562,7 +562,7 @@ export default function AdminSponsorsPage({
                   >
                     <option value="platinum">Platinum (Main Kit Sponsor)</option>
                     <option value="gold">Gold (Training Kit Partner)</option>
-                    <option value="silver">Silver (Official Supplier)</option>
+                    <option value="silver">Silver Partner</option>
                     <option value="bronze">Bronze Partner</option>
                     <option value="grassroots">Grassroots Community Supporter</option>
                   </select>
