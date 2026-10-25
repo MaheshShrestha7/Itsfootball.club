@@ -49,7 +49,7 @@ export default function PublicTournamentsPage({
             }}
           >
             <Trophy size={14} />
-            <span>Championship & Cup Tiesheets</span>
+            <span>Cups & Tournaments</span>
           </div>
 
           <h1
@@ -67,7 +67,7 @@ export default function PublicTournamentsPage({
           </h1>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', margin: 0, lineHeight: 1.6 }}>
-            Track live tournament progression, explore interactive soccer brackets, review auto-updating league standings, and support your squad.
+            Follow the club&apos;s cups and tournaments: live draws, brackets, tables and results.
           </p>
         </div>
       </section>

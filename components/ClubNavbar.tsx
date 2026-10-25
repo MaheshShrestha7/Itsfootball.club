@@ -16,6 +16,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
 import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
+import { useClubSections } from '@/lib/use-club-sections';
 
 interface ClubNavbarProps {
   club: Club;
@@ -51,6 +52,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   // The Shop link only once the club has something on sale
   const hasShop = useShopOpen(club.id);
+  const { tournaments: hasTournaments, gallery: hasGallery } = useClubSections(club.id);
 
   // Check if any match for this club is currently LIVE
   const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
@@ -147,7 +149,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
     { title: 'Matchday', links: [
       { path: '/fixtures', label: 'Fixtures & Results', icon: Calendar },
-      { path: '/tournaments', label: 'Tournaments & Cups', icon: Trophy },
+      ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments & Cups', icon: Trophy }] : []),
       { path: '/events', label: 'Events & Trainings', icon: CalendarDays },
     ] },
     { title: 'The club', links: [
@@ -155,7 +157,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       { path: '/about', label: 'About the Club', icon: BookOpen },
       { path: teamsLink.path, label: multiTeam ? 'Our Teams' : 'Squad & Stats', icon: Users },
       { path: '#news', label: 'Latest News', icon: Newspaper },
-      { path: '/gallery', label: 'Gallery & Videos', icon: Images },
+      ...(hasGallery ? [{ path: '/gallery', label: 'Gallery & Videos', icon: Images }] : []),
     ] },
     { title: 'Support the club', links: [
       ...(hasShop ? [{ path: '/shop', label: 'Club Shop', icon: ShoppingBag }] : []),
@@ -280,11 +282,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           {barLink('/fixtures', 'Fixtures')}
           {barLink(teamsLink.path, teamsLink.label, 8)}
           {barLink('/events', 'Events', 7)}
-          {barLink('/tournaments', 'Tournaments', 6)}
+          {hasTournaments && barLink('/tournaments', 'Tournaments', 6)}
           {barLink('#news', 'News', 5)}
           {hasShop && barLink('/shop', 'Shop', 4)}
           {barLink('/about', 'About', 3)}
-          {barLink('/gallery', 'Gallery', 2)}
+          {hasGallery && barLink('/gallery', 'Gallery', 2)}
           {/* Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar */}
           {!isAuthenticated && barLink('/sponsor', 'Sponsor', 1)}
 

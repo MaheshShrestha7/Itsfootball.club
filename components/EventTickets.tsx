@@ -11,7 +11,7 @@ import PaymentStep from '@/components/PaymentStep';
 
 // "Buy tickets" on a paid event's page. The server re-checks everything (lib/payments-server.ts);
 // this only keeps buyers from starting an order that can't go through.
-export default function EventTickets({ event }: { event: ClubEvent }) {
+export default function EventTickets({ event, onContact }: { event: ClubEvent; onContact?: () => void }) {
   const { user } = useAuth();
   const price = event.ticket_price_cents ?? 0;
   const [left, setLeft] = useState<number | null | undefined>(undefined); // null = no limit
@@ -65,7 +65,10 @@ export default function EventTickets({ event }: { event: ClubEvent }) {
       {!open ? (
         <p className="text-note" style={{ margin: 0 }}>Ticket sales for this event have closed.</p>
       ) : pay && !pay.card && !pay.bank ? (
-        <p className="text-note" style={{ margin: 0 }}>Tickets aren&apos;t on sale online yet. Contact the club to book.</p>
+        <div className="stack stack-sm">
+          <p className="text-note" style={{ margin: 0 }}>Tickets aren&apos;t on sale online yet. Contact the club to book.</p>
+          {onContact && <button type="button" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={onContact}>Ask the club for tickets</button>}
+        </div>
       ) : left === undefined || pay === undefined ? (
         <p className="text-note" style={{ margin: 0 }}>Checking availability…</p>
       ) : left === 0 ? (

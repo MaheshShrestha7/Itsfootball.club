@@ -14,7 +14,7 @@ import ResultChip from '@/components/ResultChip';
 const competitionOf = (m: Match) => (m.competition && m.competition !== 'Premier Regional League' ? m.competition : null);
 
 /** Date (and kick-off time when the fixture has one) in the site's style */
-function When({ m }: { m: Match }) {
+export function When({ m }: { m: Match }) {
   if (!hasKickoffTime(m)) {
     return <><LocalTime value={`${m.match_date.slice(0, 10)}T12:00:00`} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{m.match_time ? ` · ${m.match_time}` : ''}</>;
   }

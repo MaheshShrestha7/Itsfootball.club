@@ -5,7 +5,8 @@
 // has one main team (is_default). While a club has only that one team, every screen behaves as
 // it did before teams existed: team pickers, filters and labels only appear once there are two.
 // ==============================================================================
-import type { ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
+import type { ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
+import { isPlayerMember } from './supabase/types';
 import { clubPlaysIn, kickoff, soonestFirst } from './fixtures';
 
 export const TEAM_TYPES: { value: ClubTeamType; label: string }[] = [
@@ -111,6 +112,13 @@ export function teamMemberIds(rows: ClubTeamMember[], teamId: string, role: Club
   return rows
     .filter(r => r.team_id === teamId && r.is_active !== false && (role === 'staff' ? r.team_role !== 'player' : r.team_role === role))
     .map(r => r.member_id);
+}
+
+/** Who counts as a player on the public squad: a 'player' club role, or a place in any team's
+ *  squad (an admin or coach who also plays is listed on the team page, so the squad page too) */
+export function squadPlayerIds(members: Pick<ClubMember, 'id' | 'role' | 'roles'>[], rows: ClubTeamMember[]): Set<string> {
+  const onTeams = new Set(rows.filter(r => r.team_role === 'player' && r.is_active !== false).map(r => r.member_id));
+  return new Set(members.filter(m => isPlayerMember(m) || onTeams.has(m.id)).map(m => m.id));
 }
 
 /** The teams a member plays for or staffs */

@@ -10,7 +10,7 @@ import ContactModal from '@/components/ContactModal';
 import ClubContactSection from '@/components/ClubContactSection';
 import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
-import MatchdayStrip from '@/components/MatchdayStrip';
+import MatchdayStrip, { When as MatchWhen } from '@/components/MatchdayStrip';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { clubPlaysIn, kickoff, latestFirst, soonestFirst } from '@/lib/fixtures';
 import SponsorLogo from '@/components/SponsorLogo';
@@ -997,7 +997,7 @@ export default function ClubPublicPage({
                           </div>
                         </div>
                         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.25rem' }}>
-                          Kickoff: <LocalTime value={activeSlideMatch.match_date} /> at <LocalTime value={activeSlideMatch.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} /> • {activeSlideMatch.venue}
+                          Kick-off: <MatchWhen m={activeSlideMatch} />{activeSlideMatch.venue ? ` · ${activeSlideMatch.venue}` : ''}
                         </div>
                         <Link
                           href={matchPath(club.slug, activeSlideMatch)}
@@ -1104,7 +1104,8 @@ export default function ClubPublicPage({
                           </div>
                         </div>
 
-                        {/* Attendance Progress Meter */}
+                        {/* Attendance Progress Meter: only once people have checked in ("0 checked in" reads as nobody coming) */}
+                        {activeSlideEvent.rsvp_count > 0 && (
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
                             <span className="text-muted">Checked In</span>
@@ -1118,6 +1119,7 @@ export default function ClubPublicPage({
                             }} />
                           </div>
                         </div>
+                        )}
 
                         <button
                           onClick={() => setContactModalOpen(true)}
@@ -2069,10 +2071,13 @@ export default function ClubPublicPage({
               const hasStats = !!(stat?.appearances || stat?.goals || stat?.assists || stat?.motm_awards);
 
               return (
-                <div
+                <Link
                   key={player.id}
+                  href={`/${club.slug}/squad/${player.id}`}
                   className="glass-panel glass-panel-interactive top-player"
                   style={{
+                    color: 'inherit',
+                    textDecoration: 'none',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
@@ -2150,7 +2155,7 @@ export default function ClubPublicPage({
                       </div>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
