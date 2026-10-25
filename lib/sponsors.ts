@@ -28,14 +28,14 @@ export function sortSponsorsByTier<T extends Pick<Sponsor, 'tier' | 'display_ord
 }
 
 const TIER_LABEL: Record<string, string> = {
-  platinum: 'Principal Partner',
+  platinum: 'Platinum Partner',
   gold: 'Gold Partner',
   silver: 'Silver Partner',
   bronze: 'Bronze Partner',
-  grassroots: 'Community Supporter',
+  grassroots: 'Grassroots Partner',
 };
 
 /** What each tier is called on club pages, from the sponsor's tier in the database */
 export function sponsorTierLabel(tier: string | undefined): string {
-  return (tier && TIER_LABEL[tier]) || 'Community Supporter';
+  return (tier && TIER_LABEL[tier]) || 'Club Partner';
 }

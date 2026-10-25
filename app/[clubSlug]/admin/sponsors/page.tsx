@@ -560,11 +560,11 @@ export default function AdminSponsorsPage({
                     value={form.tier}
                     onChange={e => setForm({ ...form, tier: e.target.value as SponsorTier })}
                   >
-                    <option value="platinum">Platinum (Main Kit Sponsor)</option>
-                    <option value="gold">Gold (Training Kit Partner)</option>
+                    <option value="platinum">Platinum Partner</option>
+                    <option value="gold">Gold Partner</option>
                     <option value="silver">Silver Partner</option>
                     <option value="bronze">Bronze Partner</option>
-                    <option value="grassroots">Grassroots Community Supporter</option>
+                    <option value="grassroots">Grassroots Partner</option>
                   </select>
                 </div>
 
