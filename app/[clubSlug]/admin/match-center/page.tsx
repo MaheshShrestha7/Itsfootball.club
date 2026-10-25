@@ -31,6 +31,9 @@ import {
   Calendar,
   QrCode,
   MoreHorizontal,
+  Trophy,
+  ArrowLeftRight,
+  ChevronRight,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import StatsFixModal from '@/components/StatsFixModal';
@@ -39,10 +42,10 @@ import LiveMinute from '@/components/LiveMinute';
 import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS, useNowTick } from '@/lib/match-clock';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { squadForMatch } from '@/lib/teams';
-import { defaultFixture } from '@/lib/fixtures';
+import { defaultFixture, matchKind, type MatchKind } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import { alertFor, type MatchState } from '@/lib/match-alerts';
 import { getAccessToken } from '@/lib/supabase/client';
@@ -86,6 +89,7 @@ export default function AdminMatchCenterControllerPage({
     clubTeams,
     clubTeamMembers,
     updateTournamentMatchScore,
+    tournaments,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
@@ -120,6 +124,40 @@ export default function AdminMatchCenterControllerPage({
   };
 
   const match = filteredMatches.find(m => m.id === selectedMatchId) || defaultMatch;
+
+  // Club games, tournament games and in-house games each get their own list, so a tournament's
+  // dozens of games don't bury Sunday's league match. The open game decides which list shows.
+  const kind: MatchKind = match ? matchKind(match) : 'club';
+  const kindGames = (k: MatchKind) => filteredMatches.filter(m => matchKind(m) === k);
+  const isLiveGame = (m: { status: string }) => m.status === 'live' || m.status === 'halftime';
+  const kindTabs = ([
+    { id: 'club', label: 'Club games', icon: Shield },
+    { id: 'tournament', label: 'Tournaments', icon: Trophy },
+    { id: 'inhouse', label: 'In-house', icon: ArrowLeftRight },
+  ] as const).map(t => {
+    const games = kindGames(t.id);
+    const live = games.filter(isLiveGame).length;
+    const toPlay = games.filter(m => m.status === 'upcoming').length;
+    return { ...t, count: games.length, live, sub: live ? `${live} live` : toPlay ? `${toPlay} to play` : `${games.length} played` };
+  }).filter(t => t.count > 0);
+  const pickGame = (pool: typeof filteredMatches) => {
+    const next = defaultFixture(pool, tournamentParticipants, club.name);
+    if (next) setSelectedMatchId(next.id);
+  };
+  // Tournament games: one tournament at a time, in bracket order
+  const matchTournament = match?.tournament_id ? tournaments.find(t => t.id === match.tournament_id) : undefined;
+  const kindTournaments = tournaments.filter(t => t.club_id === club.id && filteredMatches.some(m => m.tournament_id === t.id));
+  const tournamentGames = match?.tournament_id
+    ? filteredMatches.filter(m => m.tournament_id === match.tournament_id).sort(compareTournamentMatches)
+    : [];
+  const pickerGames = kind === 'tournament' ? tournamentGames : kindGames(kind);
+  // Tournament day: every game being played now, plus the next one, one tap apart
+  const liveCupGames = tournamentGames.filter(isLiveGame);
+  const upNextCupGame = tournamentGames.find(m => m.status === 'upcoming' && m.id !== match?.id);
+  const pitchBoard = liveCupGames.length > 0 && liveCupGames.length + (upNextCupGame ? 1 : 0) >= 2
+    ? [...liveCupGames, ...(upNextCupGame ? [upNextCupGame] : [])]
+    : [];
+  const nextGameOnPitch = match && (isLiveGame(match) || match.status === 'completed') ? nextOnPitch(match, tournamentGames) : undefined;
 
   // Followers' live-score alerts: kick-off, each goal, full time, as this screen sees them happen
   // (whichever button or event caused it). The first look at a match only records where it stands;
@@ -524,10 +562,30 @@ export default function AdminMatchCenterControllerPage({
         </div>
 
         <div className="admin-match-center-actions" data-more={moreActions ? 'open' : undefined}>
+          {match.tournament_id && (
+            <Link
+              href={`/${club.slug}/admin/tournaments/${match.tournament_id}`}
+              className="btn btn-sm touch-target"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                background: 'rgba(245, 158, 11, 0.14)',
+                border: '1px solid rgba(245, 158, 11, 0.45)',
+                color: 'var(--c-amber)',
+                fontWeight: 800,
+              }}
+            >
+              <Trophy size={15} />
+              <span>Bracket &amp; Table</span>
+            </Link>
+          )}
+          {/* Gate check-in is for club games; tournament and in-house games keep it under More on phones */}
           <button
             type="button"
             onClick={() => setIsCheckinModalOpen(true)}
-            className="btn btn-sm touch-target"
+            className={`btn btn-sm touch-target${kind === 'club' ? '' : ' mc-action-extra'}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -619,6 +677,32 @@ export default function AdminMatchCenterControllerPage({
         </div>
       )}
 
+      {/* Which kind of game: club games, tournaments or in-house (only when the club has more than one kind) */}
+      {kindTabs.length > 1 && (
+        <div className="mc-kind-switch" role="tablist" aria-label="Kind of match" style={{ gridTemplateColumns: `repeat(${kindTabs.length}, minmax(0, 1fr))` }}>
+          {kindTabs.map(t => {
+            const Icon = t.icon;
+            const active = kind === t.id;
+            return (
+              <button data-view-ok
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={`mc-kind-tab mc-kind-${t.id}`}
+                onClick={() => { if (!active) pickGame(kindGames(t.id)); }}
+              >
+                <span className="mc-kind-label"><Icon size={15} aria-hidden="true" />{t.label}</span>
+                <span className={`mc-kind-sub${t.live ? ' is-live' : ''}`}>
+                  {t.live > 0 && <span className="pulse-dot" aria-hidden="true" />}
+                  {t.sub}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Fixture Selector Dropdown & Season Controls */}
       <div className="glass-panel mc-fixture-bar" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -643,9 +727,27 @@ export default function AdminMatchCenterControllerPage({
               </select>
             </div>
 
+            {kind === 'tournament' && kindTournaments.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                  Tournament:
+                </span>
+                <select data-view-ok aria-label="Tournament"
+                  className="form-select"
+                  style={{ width: '100%', maxWidth: '100%' }}
+                  value={match.tournament_id || ''}
+                  onChange={e => pickGame(filteredMatches.filter(m => m.tournament_id === e.target.value))}
+                >
+                  {kindTournaments.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                Fixture:
+                {kind === 'tournament' ? 'Game:' : 'Fixture:'}
               </span>
               <select data-view-ok aria-label="Fixture"
                 className="form-select"
@@ -653,9 +755,11 @@ export default function AdminMatchCenterControllerPage({
                 value={match?.id || ''}
                 onChange={e => setSelectedMatchId(e.target.value)}
               >
-                {filteredMatches.map(m => (
+                {pickerGames.map(m => (
                   <option key={m.id} value={m.id}>
-                    {fixtureLabel(m, club.name)} ({m.season}) [{m.status.toUpperCase()}]
+                    {kind === 'tournament'
+                      ? `${[tournamentMatchLabel(m), `${m.home_team_name} vs ${m.away_team_name}`, m.pitch_label].filter(Boolean).join(' · ')} [${m.status.toUpperCase()}]`
+                      : `${fixtureLabel(m, club.name)} (${m.season}) [${m.status.toUpperCase()}]`}
                   </option>
                 ))}
               </select>
@@ -684,6 +788,63 @@ export default function AdminMatchCenterControllerPage({
             </Link>
           </div>
         </div>
+
+        {/* What kind of game this is, and where its result goes */}
+        <div className="mc-context">
+          {kind === 'tournament' ? (
+            <>
+              <span className="badge badge-gold">
+                <Trophy size={12} aria-hidden="true" />
+                {[matchTournament?.name, match.tournament_group && `Group ${match.tournament_group}`, tournamentMatchLabel(match)].filter(Boolean).join(' · ')}
+              </span>
+              {match.pitch_label && <span className="badge mc-badge-muted">{match.pitch_label}</span>}
+            </>
+          ) : kind === 'inhouse' ? (
+            <span className="badge mc-badge-muted"><ArrowLeftRight size={12} aria-hidden="true" /> In-house game</span>
+          ) : (
+            <>
+              {match.competition && <span className="badge badge-primary">{match.competition}</span>}
+              <span className="badge mc-badge-muted">{match.is_club_home === false ? 'Away' : 'Home'}</span>
+            </>
+          )}
+          <span className="mc-context-note">
+            {kind === 'tournament'
+              ? "Saved to the tournament's table and bracket. Doesn't count toward the club's win/loss record."
+              : kind === 'inhouse'
+                ? "Your own teams against each other. Doesn't count toward the club's win/loss record."
+                : "Counts toward the club's win/loss record."}
+          </span>
+        </div>
+
+        {/* Tournament day: the games on the pitches now, one tap apart */}
+        {pitchBoard.length > 0 && (
+          <div className="mc-pitch-board-wrap">
+            <span className="mc-pitch-board-title">On the pitches now</span>
+            <div className="mc-pitch-board">
+              {pitchBoard.map(g => {
+                const live = isLiveGame(g);
+                return (
+                  <button data-view-ok
+                    key={g.id}
+                    type="button"
+                    className={`mc-pitch-card${g.id === match.id ? ' is-open' : ''}${live ? '' : ' is-next'}`}
+                    aria-pressed={g.id === match.id}
+                    onClick={() => setSelectedMatchId(g.id)}
+                  >
+                    <span className="mc-pitch-card-top">
+                      <span>{live ? g.pitch_label || tournamentMatchLabel(g) || 'Live' : 'Up next'}</span>
+                      {live
+                        ? <span className="mc-pitch-card-min"><span className="pulse-dot" aria-hidden="true" /><span>{g.status === 'halftime' ? 'HT' : <><LiveMinute match={g} />&apos;</>}</span></span>
+                        : <span>{g.match_time || ''}</span>}
+                    </span>
+                    <span className="mc-pitch-card-row"><span>{g.home_team_name}</span><b>{live ? g.home_score ?? 0 : '–'}</b></span>
+                    <span className="mc-pitch-card-row"><span>{g.away_team_name}</span><b>{live ? g.away_score ?? 0 : '–'}</b></span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
@@ -932,6 +1093,19 @@ export default function AdminMatchCenterControllerPage({
               </div>
             </div>
           </div>
+
+          {/* Tournament day: straight on to the next game on this pitch */}
+          {nextGameOnPitch && (
+            <button data-view-ok type="button" className="glass-panel mc-next-game" onClick={() => setSelectedMatchId(nextGameOnPitch.id)}>
+              <span style={{ minWidth: 0 }}>
+                <span className="mc-next-game-when">
+                  Next{nextGameOnPitch.pitch_label ? ` on ${nextGameOnPitch.pitch_label}` : ''}{nextGameOnPitch.match_time ? ` · ${nextGameOnPitch.match_time}` : ''}
+                </span>
+                <span className="mc-next-game-teams">{nextGameOnPitch.home_team_name} vs {nextGameOnPitch.away_team_name}</span>
+              </span>
+              <span className="btn btn-secondary btn-sm" aria-hidden="true">Open <ChevronRight size={14} /></span>
+            </button>
+          )}
 
           {/* Event Logger Form */}
           {(() => {
