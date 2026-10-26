@@ -42,7 +42,7 @@ import { TIME_ZONE } from '@/lib/email/format';
 import GettingThere from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
-import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, publicMember, publicScoreHidden } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 import { matchForParam } from '@/lib/slugs';
 
@@ -116,6 +116,21 @@ export default function MatchCenterPage({
   const isLive = match?.status === 'live' || match?.status === 'halftime';
   // Tournament fixtures store is_club_home = true for every match, so neither side is "the club" there
   const isClubSide = (side: Side) => !!match && !match.tournament_id && (side === 'home') === (match.is_club_home ?? true);
+
+  // Club players' names link to their public page (adults only; never in a junior team's fixture).
+  // Events keep a typed name, so it is matched to the one club player with that name, on a side the
+  // club's players are on (both in an in-house game, and either in a tournament).
+  const pageIds = useMemo(
+    () => (club ? publicPlayerIds(allMembers.filter(m => m.club_id === club.id), clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false }) : new Set<string>()),
+    [club, allMembers, clubTeams, clubTeamMembers]
+  );
+  const idsByName = useMemo(() => playerIdsByName(allMembers.filter(m => m.club_id === club?.id), pageIds), [allMembers, club?.id, pageIds]);
+  const playerLink = (name: string | undefined, side?: Side, memberId?: string): React.ReactNode => {
+    if (!name || !club || !match || juniorFixture) return name;
+    const ownSide = !side || match.match_type === 'internal' || !!match.tournament_id || isClubSide(side);
+    const id = memberId && pageIds.has(memberId) ? memberId : ownSide ? idsByName.get(name.trim().toLowerCase()) : undefined;
+    return id ? <Link href={`/${club.slug}/squad/${id}`} className="player-name-link">{name}</Link> : name;
+  };
 
   const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
@@ -727,7 +742,7 @@ export default function MatchCenterPage({
         )}
 
         {/* Player of the Match & Goal Scorers */}
-        {(motmMember || goalEvents.length > 0) && (
+        {(motmMember || (goalEvents.length > 0 && match.status !== 'completed')) && (
           <div
             className="glass-panel"
             style={{
@@ -765,14 +780,15 @@ export default function MatchCenterPage({
                     Player of the Match
                   </div>
                   <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>
-                    {motmMember.full_name}
+                    {playerLink(motmMember.full_name, undefined, motmMember.id)}
                     {motmMember.jersey_number ? ` (#${motmMember.jersey_number})` : ''}
                   </div>
                 </div>
               </div>
             )}
 
-            {goalEvents.length > 0 && (
+            {/* At full time the report above names every scorer, and the timeline lists them below */}
+            {goalEvents.length > 0 && match.status !== 'completed' && (
               <div style={{ flex: '2 1 320px', minWidth: 0 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <Target size={13} />
@@ -784,10 +800,10 @@ export default function MatchCenterPage({
                       <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{evt.minute}&apos;</span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                          {evt.player_name}{evt.event_type === 'penalty' ? ' (pen.)' : evt.event_type === 'own_goal' ? ' (own goal)' : ''}
+                          {playerLink(evt.player_name, evt.team_side)}{evt.event_type === 'penalty' ? ' (pen.)' : evt.event_type === 'own_goal' ? ' (own goal)' : ''}
                         </span>
                         {evt.assist_player_name && (
-                          <span className="text-secondary"> (Assist: {evt.assist_player_name})</span>
+                          <span className="text-secondary"> (Assist: {playerLink(evt.assist_player_name, evt.team_side)})</span>
                         )}
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                           {' · '}
@@ -910,7 +926,8 @@ export default function MatchCenterPage({
                       </div>
 
                       <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                        {evt.player_name} {evt.assist_player_name ? `(Assist: ${evt.assist_player_name})` : ''}
+                        {playerLink(evt.player_name, evt.team_side)}
+                        {evt.assist_player_name && <> (Assist: {playerLink(evt.assist_player_name, evt.team_side)})</>}
                       </h4>
 
                       {evt.detail_text && (
@@ -986,7 +1003,7 @@ export default function MatchCenterPage({
                           }}>
                             {p.jersey_number ? `#${p.jersey_number}` : ''}
                           </span>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.full_name}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{playerLink(p.full_name, undefined, p.id)}</span>
                         </div>
                         <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)' }}>
                           {p.player_position}

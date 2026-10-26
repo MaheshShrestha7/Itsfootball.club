@@ -12,7 +12,7 @@ import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import MatchdayStrip, { When as MatchWhen } from '@/components/MatchdayStrip';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { clubPlaysIn, kickoff, latestFirst, soonestFirst } from '@/lib/fixtures';
+import { clubPlaysIn, kickoff, latestFirst, publicFixtures, soonestFirst } from '@/lib/fixtures';
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
@@ -49,7 +49,7 @@ import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
+import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
@@ -173,7 +173,7 @@ export default function ClubPublicPage({
   // 99 is "no order set"; 0 is a real position (e.g. the President first)
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
   const clubMatches = matches.filter(m => m.club_id === clubId);
-  const liveMatch = clubMatches.find(m => m.status === 'live');
+  const liveMatch = publicFixtures(clubMatches).find(m => m.status === 'live');
 
   const resolvedSeasonName = fixturesSeasonFilter === 'CURRENT'
     ? (activeSeason?.name || defaultSeasonLabel())
@@ -191,9 +191,10 @@ export default function ClubPublicPage({
   const filteredClubMatches = clubMatches.filter(m => fixturesSeasonFilter === 'ALL' || inCurrentSeason(m));
 
   // Only games the club's own players are in: a hosted cup between other clubs stays on its tournament page
-  const ourMatches = filteredClubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || ''));
+  // and in-house games (two of the club's own sides) stay with the squad, not the public fixture list
+  const ourMatches = publicFixtures(filteredClubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || '')), clubMatches);
   // What's coming up never hides behind a season label: the current view lists every future game
-  const ourAllMatches = clubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || ''));
+  const ourAllMatches = publicFixtures(clubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || '')), clubMatches);
   const upcomingSource = fixturesSeasonFilter === 'CURRENT' ? ourAllMatches : ourMatches;
   const upcomingMatches = upcomingSource.filter(m => m.status === 'upcoming').sort(soonestFirst);
   // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
@@ -286,6 +287,8 @@ export default function ClubPublicPage({
       const player = clubMembers.find(m => m.id === stat.member_id);
       return { stat, player };
     });
+  // Who has a public player page (adult players), for the leaderboard's name links
+  const playerPageIds = publicPlayerIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club?.junior_includes_u18 !== false });
 
   // Dynamic multi-slider definition reading admin pinned items or falling back to defaults
   const heroSlides: HomeHeroSlide[] = useMemo(() => {
@@ -323,7 +326,8 @@ export default function ClubPublicPage({
             category: 'news',
             phoneTabLabel: article?.tags?.[0] || 'News',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'News',
-            badge: item.badge || `BREAKING NEWS • ${article?.tags?.[0] || 'FIRST TEAM'}`,
+            // Slides saved before Oct 2026 carry a made-up "BREAKING NEWS" label; the club never chose it
+            badge: (item.badge || '').replace(/^BREAKING NEWS/i, 'LATEST NEWS') || (article?.tags?.[0] ? `LATEST NEWS • ${article.tags[0]}` : 'LATEST NEWS'),
             bgImage: item.image_url || article?.cover_image_url || club.banner_url || '',
             title: item.title || article?.title || `${club.name} Dispatches`,
             subtitle: item.subtitle || article?.summary || 'Latest match summaries and announcements.',
@@ -357,9 +361,10 @@ export default function ClubPublicPage({
           category: 'image',
           phoneTabLabel: 'Spotlight',
           tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
-          badge: item.badge || 'SPECIAL FEATURE',
+          // Older default home ground slides were saved as "HOME FORTRESS" / "<ground> Fortress"
+          badge: (item.badge || 'SPECIAL FEATURE').replace(/^HOME FORTRESS$/i, 'HOME GROUND'),
           bgImage: item.image_url || club.banner_url || '',
-          title: item.title || `${club.name} Feature`,
+          title: (item.title || `${club.name} Feature`).replace(/ Fortress$/, ''),
           subtitle: item.subtitle || club.motto || 'Strength, Passion, and Football Heritage',
           ctaLabel: item.cta_label || 'Explore Feature',
           ctaLink: item.cta_link || `/${club.slug}`,
@@ -397,7 +402,7 @@ export default function ClubPublicPage({
         id: 'latest-news',
         category: 'news',
         tabLabel: 'Latest News',
-        badge: `BREAKING NEWS • ${featuredArticle?.tags?.[0] || 'FIRST TEAM'}`,
+        badge: featuredArticle?.tags?.[0] ? `LATEST NEWS • ${featuredArticle.tags[0]}` : 'LATEST NEWS',
         bgImage: featuredArticle?.cover_image_url || club.banner_url || '',
         title: featuredArticle?.title || `${club.name} First Team Dispatches`,
         subtitle: featuredArticle?.summary || 'Latest match summaries, tactical insights, and club announcements.',
@@ -417,8 +422,8 @@ export default function ClubPublicPage({
       {
         id: 'stadium-atmosphere',
         category: 'stadium',
-        tabLabel: 'Home Ground & Fortress',
-        badge: `HOME FORTRESS • ${club.stadium_name}`,
+        tabLabel: 'Home ground',
+        badge: `HOME GROUND • ${club.stadium_name}`,
         bgImage: (club.slider_images && club.slider_images[1]) || gallery[0]?.media_url || '',
         title: club.stadium_name,
         subtitle: club.stadium_pitch_type,
@@ -485,9 +490,9 @@ export default function ClubPublicPage({
         onMouseLeave={() => setIsSliderPaused(false)}
         onTouchStart={() => setSliderStopped(true)}
         onFocusCapture={() => setSliderStopped(true)}
+        className="club-hero-section"
         data-theme="dark" style={{
           position: 'relative',
-          minHeight: '560px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
@@ -796,7 +801,7 @@ export default function ClubPublicPage({
                 );
               })()}
 
-              {/* SLIDE 5: STADIUM FORTRESS */}
+              {/* SLIDE 5: HOME GROUND */}
               {currentSlide.category === 'stadium' && (
                 <div>
                   <div data-theme="dark" style={{
@@ -832,7 +837,7 @@ export default function ClubPublicPage({
                     marginBottom: '1.75rem',
                     lineHeight: 1.6,
                   }}>
-                    The official home pitch of {club.name}. Built with {club.stadium_pitch_type}.
+                    Where {club.name} play home matches.{club.stadium_pitch_type ? ` Surface: ${club.stadium_pitch_type}.` : ''}
                   </p>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
@@ -856,8 +861,13 @@ export default function ClubPublicPage({
               )}
             </div>
 
-            {/* Right Column: Interactive Card matching slide content */}
-            <div>
+            {/* Right Column: Interactive Card matching slide content. On phones an upcoming fixture's or
+                a story's card only repeats the headline (and the matchday strip below), so it's left out
+                there and the slide tabs stay above the bottom menu; a live score always shows. */}
+            <div className={
+              (currentSlide.category === 'match' && !['live', 'halftime'].includes(currentSlide.targetMatch?.status || ''))
+              || currentSlide.category === 'news' ? 'club-hero-side-repeat' : undefined
+            }>
               {/* SLIDE: LIVE MATCH SCOREBOARD OR NEXT FIXTURE */}
               {currentSlide.category === 'match' && (
                 <div>
@@ -1038,7 +1048,7 @@ export default function ClubPublicPage({
                             style={{ width: '100%', height: '100%' }}
                           />
                           <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
-                            <span className="badge badge-gold">EXCLUSIVE STORY</span>
+                            <span className="badge badge-gold">{activeSlideNews.is_featured ? 'FEATURED' : 'LATEST NEWS'}</span>
                           </div>
                         </div>
 
@@ -1134,7 +1144,7 @@ export default function ClubPublicPage({
                 </div>
               )}
 
-              {/* SLIDE 5 RIGHT: STADIUM FORTRESS MAP & STATS */}
+              {/* SLIDE 5 RIGHT: HOME GROUND MAP */}
               {currentSlide.category === 'stadium' && (
                 <div className="glass-panel" style={{
                   padding: '2rem',
@@ -1142,7 +1152,7 @@ export default function ClubPublicPage({
                   background: 'rgba(var(--dk-14-20-30), 0.9)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                    <span className="badge badge-primary">FORTRESS SPECS</span>
+                    <span className="badge badge-primary">HOME GROUND</span>
                     <span className="text-note">Grounds & Facility</span>
                   </div>
 
@@ -1155,13 +1165,15 @@ export default function ClubPublicPage({
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                      <Shield size={18} color="var(--club-primary)" />
-                      <div>
-                        <div className="text-meta">Pitch Surface</div>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_pitch_type}</div>
+                    {club.stadium_pitch_type && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                        <Shield size={18} color="var(--club-primary)" />
+                        <div>
+                          <div className="text-meta">Pitch Surface</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_pitch_type}</div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   <a
@@ -2243,7 +2255,11 @@ export default function ClubPublicPage({
                       <PlayerAvatar photoUrl={item.player?.photo_url} name={item.player?.full_name || 'Player'} size={36} style={{ borderRadius: '8px' }} />
 
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>{item.player?.full_name}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>
+                          {item.player && playerPageIds.has(item.player.id)
+                            ? <Link href={`/${club.slug}/squad/${item.player.id}`} className="player-name-link">{item.player.full_name}</Link>
+                            : item.player?.full_name}
+                        </div>
                         <div className="text-meta">
                           {[item.player?.jersey_number != null && `#${item.player.jersey_number}`, item.player?.player_position].filter(Boolean).join(' • ')}
                         </div>

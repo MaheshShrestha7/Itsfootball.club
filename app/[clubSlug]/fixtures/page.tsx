@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarPlus } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
-import { clubPlaysIn, kickoff } from '@/lib/fixtures';
+import { clubPlaysIn, kickoff, publicFixtures } from '@/lib/fixtures';
 import { SITE_URL } from '@/lib/slugs';
 import FixtureRow from '@/components/FixtureRow';
 
@@ -18,9 +18,13 @@ export default function ClubFixturesPage({ params }: { params: Promise<{ clubSlu
   const [teamId, setTeamId] = useState<string>('all');
   const season = getActiveSeason(club.id)?.name;
 
-  const clubMatches = useMemo(() => matches
-    .filter(m => m.club_id === club.id && clubPlaysIn(m, tournamentParticipants, club.name))
-    .filter(m => teamId === 'all' || teamOfMatch(m, clubTeams)?.id === teamId), [matches, club, tournamentParticipants, teamId, clubTeams]);
+  // In-house games (two of the club's own sides) stay with the squad unless the club plays nothing else
+  const clubMatches = useMemo(() => {
+    const own = matches.filter(m => m.club_id === club.id);
+    return publicFixtures(own, own)
+      .filter(m => clubPlaysIn(m, tournamentParticipants, club.name))
+      .filter(m => teamId === 'all' || teamOfMatch(m, clubTeams)?.id === teamId);
+  }, [matches, club, tournamentParticipants, teamId, clubTeams]);
   const upcoming = clubMatches
     .filter(m => ['upcoming', 'live', 'halftime', 'postponed'].includes(m.status))
     .sort((a, b) => kickoff(a) - kickoff(b));

@@ -46,7 +46,7 @@ export default function AdminContentPage({
           target_id: article.id,
           title: article.title,
           subtitle: article.summary,
-          badge: `BREAKING NEWS • ${article.tags[0] || 'FIRST TEAM'}`,
+          badge: article.tags[0] ? `LATEST NEWS • ${article.tags[0]}` : 'LATEST NEWS',
           image_url: article.cover_image_url || '',
           cta_label: 'Read Full Story',
           cta_link: `/${club.slug}#news`,

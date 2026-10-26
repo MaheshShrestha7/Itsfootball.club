@@ -1,5 +1,6 @@
 import { Club, Match, NewsArticle, ClubEvent, HeroSliderPinnedItem } from './supabase/types';
 import { getLiveMinute } from './match-clock';
+import { publicFixtures, soonestFirst } from './fixtures';
 
 /**
  * Returns default hero pinned slides for a club if none have been explicitly customized.
@@ -7,7 +8,7 @@ import { getLiveMinute } from './match-clock';
  * 1. Live match or next upcoming fixture
  * 2. Featured news story
  * 3. Upcoming training or open event
- * 4. Stadium & fortress showcase banner
+ * 4. Home ground banner
  */
 export function getDefaultHeroPinnedItems(
   club: Club,
@@ -20,8 +21,11 @@ export function getDefaultHeroPinnedItems(
   const clubNews = news.filter(n => n.club_id === club.id);
   const clubEvents = events.filter(e => e.club_id === club.id);
 
-  // 1. Fixture / Matchday live
-  const liveOrUpcoming = clubMatches.find(m => m.status === 'live') || clubMatches[0];
+  // 1. Fixture / Matchday live: a game fans can come to, not an in-house training game
+  const shown = publicFixtures(clubMatches);
+  const liveOrUpcoming = shown.find(m => m.status === 'live')
+    || shown.filter(m => m.status === 'upcoming').sort(soonestFirst)[0]
+    || shown[0];
   if (liveOrUpcoming) {
     const isLive = liveOrUpcoming.status === 'live';
     const compLabel = (!liveOrUpcoming.competition || liveOrUpcoming.competition === 'Premier Regional League')
@@ -77,14 +81,14 @@ export function getDefaultHeroPinnedItems(
     });
   }
 
-  // 4. Stadium Fortress Spotlight
+  // 4. Home ground (the surface only when the club set one)
   defaults.push({
     id: 'pin-image-fortress',
     type: 'image',
     image_url: club.slider_images?.[1] || club.banner_url || '',
-    title: `${club.stadium_name} Fortress`,
-    subtitle: club.stadium_pitch_type || 'Natural Hybrid Turf',
-    badge: 'HOME FORTRESS',
+    title: club.stadium_name || 'Home ground',
+    subtitle: club.stadium_pitch_type || club.stadium_address || '',
+    badge: 'HOME GROUND',
     cta_label: 'View Home Ground Map',
     cta_link: `/${club.slug}#stadium`,
     is_active: true,

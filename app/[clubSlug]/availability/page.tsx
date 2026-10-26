@@ -34,6 +34,9 @@ import { fixtureLabel } from '@/lib/fixture-label';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
 import { DATE_LOCALE } from '@/lib/dates';
 
+// The roster lists who still needs chasing first
+const STATUS_ORDER: Record<AvailabilityStatus, number> = { pending: 0, maybe: 1, available: 2, unavailable: 3 };
+
 function AvailabilityHub() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -75,7 +78,7 @@ function AvailabilityHub() {
 
   // Opens on the club's next fixture (not another club's game in a cup it hosts); recomputed as data arrives
   const defaultMatch = useMemo(
-    () => (club ? defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true }) : undefined),
+    () => (club ? defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true, preferClubGames: true }) : undefined),
     [club, clubMatches, tournamentParticipants]
   );
 
@@ -245,7 +248,7 @@ function AvailabilityHub() {
       : `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n`) +
     `📍 ${targetMatch?.venue}\n` +
     `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}\n\n` +
-    `Squad members, please confirm your availability in 5 seconds (no WhatsApp clutter!):\n` +
+    `Please tap In, Maybe or Out:\n` +
     `${shareableUrl}`
   );
 
@@ -288,7 +291,18 @@ function AvailabilityHub() {
       || (player.player_position && player.player_position.toLowerCase().includes(searchFilter.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || availability.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  })
+    // Who still needs chasing first, then Maybe, In and Out
+    .sort((a, b) => STATUS_ORDER[a.availability.status] - STATUS_ORDER[b.availability.status]);
+
+  // A WhatsApp message to just the players who haven't answered, by first name
+  const pendingNames = playerRosterWithStatus.filter(p => p.availability.status === 'pending').map(p => p.player.full_name.split(' ')[0]);
+  const nudgeMessage = encodeURIComponent(
+    `${pendingNames.join(', ')}: can you play ` +
+    (activeGroup ? `for ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)}` : `${targetMatch?.home_team_name} v ${targetMatch?.away_team_name}`) +
+    `${targetMatch ? ` on ${new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}? ` +
+    `Tap In, Maybe or Out: ${shareableUrl}`
+  );
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -305,10 +319,10 @@ function AvailabilityHub() {
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: 'var(--text-primary)' }}>
-                Pre-Match Availability Hub
+                Availability
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginTop: '0.35rem' }}>
-                One-tap availability responses for squad members without chaotic WhatsApp group clutter.
+                See who can play, and chase anyone who hasn&apos;t answered.
               </p>
             </div>
 
@@ -444,16 +458,17 @@ function AvailabilityHub() {
                   </span>
                 </div>
 
-                {/* Each side gets an equal share and wraps its name, so long names never crowd the VS */}
+                {/* Each side gets an equal share, crest above its name, so a long name wraps between words
+                    instead of breaking in the middle of one */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 0', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem', flex: '1 1 0', minWidth: 0 }}>
                     <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.home_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.home_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'anywhere', minWidth: 0 }}>{targetMatch.home_team_name}</span>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'break-word', minWidth: 0 }}>{targetMatch.home_team_name}</span>
                   </div>
                   <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-muted)', flexShrink: 0, padding: '0 0.25rem' }}>VS</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexDirection: 'row-reverse', flex: '1 1 0', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem', flex: '1 1 0', minWidth: 0 }}>
                     <img loading="eager" decoding="async" width={40} height={40} src={targetMatch.away_team_logo || DEFAULT_CREST} onError={crestOnError} alt={`${targetMatch.away_team_name} crest`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'anywhere', minWidth: 0, textAlign: 'right' }}>{targetMatch.away_team_name}</span>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, color: 'var(--text-primary)', overflowWrap: 'break-word', minWidth: 0 }}>{targetMatch.away_team_name}</span>
                   </div>
                 </div>
 
@@ -464,7 +479,7 @@ function AvailabilityHub() {
                   </div>
                   <div className="row">
                     <Clock size={15} color={club.primary_color} />
-                    <span>Kickoff: {new Date(targetMatch.match_date).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>Kick-off {new Date(targetMatch.match_date).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}</span>
                   </div>
                   <div className="row">
                     <MapPin size={15} color={club.primary_color} />
@@ -477,30 +492,30 @@ function AvailabilityHub() {
             {/* Quick Link to Draft Lineup for Coaches */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>Coach Draft Workbench</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Experiment with tactical shapes and lineup rotations.</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>Line-up</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Pick the team from who&apos;s in.</div>
               </div>
               <Link
                 href={`/${club.slug}/admin/lineup/draft`}
                 className="btn btn-secondary btn-sm"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
               >
-                <span>Draft Lineup</span>
+                <span>Pick line-up</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
           </div>
 
           {/* RIGHT COLUMN: Real-Time Roster Breakdown */}
-          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <div className="glass-panel avail-roster-panel">
             {/* Header & Metric Badges */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Users size={20} color={club.primary_color} /> Squad Availability Breakdown
+                  <Users size={20} color={club.primary_color} /> Who&apos;s in
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                  Live headcount for this match fixture.
+                  Answers so far for this game. You can set one for a player too.
                 </p>
               </div>
             </div>
@@ -528,6 +543,19 @@ function AvailabilityHub() {
               </div>
             </div>
 
+            {pendingCount > 0 && (
+              <a
+                href={`https://api.whatsapp.com/send?text=${nudgeMessage}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', width: '100%', marginBottom: '1rem' }}
+              >
+                <Share2 size={14} />
+                <span>Nudge the {pendingCount} who haven&apos;t answered</span>
+              </a>
+            )}
+
             {/* Filter Bar */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '1rem' }}>
               <input data-view-ok aria-label="Search players"
@@ -539,8 +567,8 @@ function AvailabilityHub() {
                 style={{ flex: 1, minWidth: '160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
               />
 
-              <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                {['all', 'available', 'maybe', 'unavailable'].map(st => (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                {['all', 'pending', 'available', 'maybe', 'unavailable'].map(st => (
                   <button data-view-ok
                     key={st}
                     onClick={() => setStatusFilter(st)}
@@ -562,8 +590,8 @@ function AvailabilityHub() {
               </div>
             </div>
 
-            {/* Roster List Table */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+            {/* Roster: one compact row per player, in the page's own scroll (no box inside a box) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {filteredRoster.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                   No players match the current filter.
@@ -587,17 +615,18 @@ function AvailabilityHub() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '0.65rem 0.85rem',
+                        padding: '0.5rem 0.75rem',
                         borderRadius: '10px',
                         background: 'rgba(var(--dk-15-23-42), 0.6)',
                         border: '1px solid var(--border-subtle)',
-                        gap: '0.75rem',
+                        borderLeft: `3px solid ${cfg.border}`,
+                        gap: '0.4rem 0.75rem',
                         flexWrap: 'wrap',
                       }}
                     >
                       {/* Player Info: takes the whole first line on narrow screens, status + actions wrap below */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: '1 1 12rem' }}>
-                        <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={36} />
+                        <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
                         <div className="min-w-0">
                           <div className="row">
                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
@@ -611,9 +640,10 @@ function AvailabilityHub() {
                             </span>
                           </div>
 
-                          {mixedLabel && (
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{mixedLabel}</div>
-                          )}
+                          <div className="row" style={{ gap: '0.3rem', fontSize: '0.72rem', fontWeight: 700, color: cfg.text, marginTop: '0.1rem' }}>
+                            <Icon size={12} aria-hidden="true" />
+                            <span>{mixedLabel || (availability.status === 'pending' ? 'No answer yet' : cfg.label)}</span>
+                          </div>
                           {availability.note && (
                             <div style={{ fontSize: '0.74rem', color: 'var(--c-amber)', fontStyle: 'italic', marginTop: '0.15rem' }}>
                               &ldquo;{availability.note}&rdquo;
@@ -622,26 +652,8 @@ function AvailabilityHub() {
                         </div>
                       </div>
 
-                      {/* Status Pill */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '20px',
-                        background: cfg.bg,
-                        border: `1px solid ${cfg.border}`,
-                        color: cfg.text,
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        flexShrink: 0,
-                      }}>
-                        <Icon size={13} />
-                        <span>{cfg.label}</span>
-                      </div>
-
                       {/* Admin Manual Override: set the answer, add a note, or copy the player's own RSVP link */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', minWidth: 0 }}>
+                      <div className="avail-row-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
                         {overrideOptions.map(o => {
                           const OptionIcon = o.icon;
                           const active = availability.status === o.value;
@@ -658,7 +670,7 @@ function AvailabilityHub() {
                                 color: o.color,
                               }}
                             >
-                              <OptionIcon size={13} />
+                              <OptionIcon size={13} className="avail-row-icon" aria-hidden="true" />
                               <span>{o.label}</span>
                             </button>
                           );
@@ -667,20 +679,22 @@ function AvailabilityHub() {
                           type="button"
                           onClick={() => openNote(player.id, availability.note)}
                           title={`${availability.note ? 'Edit' : 'Add'} a note for ${player.full_name}`}
+                          aria-label={`${availability.note ? 'Edit' : 'Add'} a note for ${player.full_name}`}
                           style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: notePlayerId === player.id ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)' }}
                         >
                           <MessageSquare size={13} />
-                          <span>Note</span>
+                          <span className="avail-row-label">Note</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleCopyPlayerLink(player.id, availability.response_token)}
                           disabled={!availability.response_token}
                           title={`Copy ${player.full_name}'s personal RSVP link`}
+                          aria-label={`Copy ${player.full_name}'s personal RSVP link`}
                           style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)', opacity: availability.response_token ? 1 : 0.5, cursor: availability.response_token ? 'pointer' : 'not-allowed' }}
                         >
                           {copiedPlayerId === player.id ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
-                          <span>{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
+                          <span className="avail-row-label">{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
                         </button>
                       </div>
 
