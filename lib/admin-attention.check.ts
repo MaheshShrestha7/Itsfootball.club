@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { attentionItems, needsLineup, needsResult } from './admin-attention';
-import { clubResult, hasKickoffTime, matchKind, prepFixtures, teamSideIn, tournamentTeamGroups } from './fixtures';
+import { clubResult, defaultFixture, hasKickoffTime, matchKind, prepFixtures, publicFixtures, teamSideIn, tournamentTeamGroups } from './fixtures';
 import type { TournamentParticipant } from './supabase/types';
 import { nextOnPitch } from './tournament-engine';
 import type { Match } from './supabase/types';
@@ -74,4 +74,16 @@ const groups = tournamentTeamGroups(prep, parts);
 assert.deepEqual(groups.map(g => [g.participant.name, g.games.map(x => x.id)]), [['RFC U12 Blue', ['g2', 'g4']], ['RFC U12 Red', ['g3', 'g4']]]);
 assert.equal(teamSideIn(dayGames[1], 'RFC U12 Blue'), 'away');
 assert.equal(teamSideIn(dayGames[3], 'rfc u12 red'), 'home');
+// In-house games stay off public fixture lists, unless the club plays nothing else
+const bibs = m({ id: 'bibs', match_type: 'internal', match_date: new Date(NOW + 1 * 24 * H).toISOString() });
+const league = m({ id: 'league', match_date: new Date(NOW + 5 * 24 * H).toISOString() });
+const cupGame = m({ id: 'cup', tournament_id: 't1', match_date: new Date(NOW + 6 * 24 * H).toISOString() });
+assert.deepEqual(publicFixtures([bibs, league, cupGame]).map(x => x.id), ['league', 'cup']);
+assert.deepEqual(publicFixtures([bibs]).map(x => x.id), ['bibs'], 'a club with only in-house games still shows them');
+assert.deepEqual(publicFixtures([bibs], [bibs, league]).map(x => x.id), [], 'judged on the whole list');
+// Availability and Lineup Draft open on the club game, Match Centre on the soonest
+assert.equal(defaultFixture([bibs, league], [], 'Riverside FC', { skipLive: true, preferClubGames: true })?.id, 'league');
+assert.equal(defaultFixture([bibs, league], [], 'Riverside FC', { skipLive: true })?.id, 'bibs');
+assert.equal(defaultFixture([bibs], [], 'Riverside FC', { preferClubGames: true })?.id, 'bibs', 'falls back to in-house');
+
 console.log('admin-attention checks passed');

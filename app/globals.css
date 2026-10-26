@@ -1830,6 +1830,17 @@ textarea {
   }
 }
 
+/* The home page hero: tall on wider screens; on a phone only as tall as the slide, so the slide
+   tabs and the matchday strip aren't pushed under the bottom menu */
+.club-hero-section { min-height: 560px; }
+
+@media (max-width: 640px) {
+  .club-hero-side-repeat {
+    display: none;
+  }
+  .club-hero-section { min-height: 460px; }
+}
+
 /* Fixtures & Results Responsive Card */
 .fixture-card {
   padding: 1.25rem 1.75rem;
@@ -2891,6 +2902,28 @@ dialog.confirm-dialog::backdrop {
   color: var(--text-primary);
   border-left: 4px solid var(--c-red);
 }
+
+/* Club app home: last result and a player's own season, side by side (stacked on phones) */
+.app-me {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.app-me-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.app-me-tile .app-heading { margin-bottom: 0; }
+.app-me-line { min-width: 0; font-weight: 800; font-size: 0.95rem; }
+.app-me-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin: 0; text-align: center; }
+.app-me-stats dt { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.app-me-stats dd { margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text-primary); }
+.app-me-link { display: inline-flex; align-items: center; gap: 0.2rem; min-height: 32px; font-size: 0.82rem; font-weight: 700; color: var(--club-ink); }
 
 .app-tiles {
   display: grid;
@@ -4454,3 +4487,18 @@ dialog.confirm-dialog::backdrop {
   .mc-header .admin-match-center-actions:not([data-more="open"]) .mc-action-extra { display: none !important; }
   .mc-side-minute { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important; gap: 0.6rem !important; margin: 0.9rem 0 !important; }
 }
+
+/* Admin Availability roster: In / Maybe / Out, Note and Link stay on one line; on a phone Note and
+   Link drop their words (icons with labels for screen readers) */
+.avail-roster-panel { padding: 1.75rem; }
+.avail-row-actions { flex-wrap: nowrap; }
+@media (max-width: 480px) {
+  .avail-roster-panel { padding: 1rem; }
+  .avail-row-actions .avail-row-label,
+  .avail-row-actions .avail-row-icon { display: none; }
+}
+
+/* A club player's name linking to their public page (match page, leaderboard): a faint underline
+   (so it reads as tappable on a phone), in the club colour on hover or focus */
+.player-name-link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--tint-rgb), 0.3); }
+.player-name-link:hover, .player-name-link:focus-visible { text-decoration-color: var(--club-primary); }

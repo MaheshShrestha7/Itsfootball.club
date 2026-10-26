@@ -558,8 +558,17 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
               <BackRow label={isPlayerMember(member) ? 'Next fixture' : 'Next home match'}>
                 {nextMatch ? (
                   <>
-                    <strong>{nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>
-                    <span style={{ color: GLASS_MUTED }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
+                    {nextMatch.match_type === 'internal' ? (
+                      <>
+                        <strong>{nextMatch.home_team_name} v {nextMatch.away_team_name}</strong>
+                        <span style={{ color: GLASS_MUTED }}> (In-house)</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>{nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>
+                        <span style={{ color: GLASS_MUTED }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
+                      </>
+                    )}
                     <div style={{ color: GLASS_MUTED }}>
                       {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${nextMatch.match_time.slice(0, 5)}` : ''}
                     </div>

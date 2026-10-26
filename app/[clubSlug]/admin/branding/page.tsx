@@ -63,7 +63,7 @@ export default function AdminBrandingPage({
     stadium_name: club?.stadium_name || '',
     stadium_address: club?.stadium_address || '',
     stadium_capacity: club?.stadium_capacity || 5000,
-    stadium_pitch_type: club?.stadium_pitch_type || 'Natural Hybrid Turf',
+    stadium_pitch_type: club?.stadium_pitch_type || '',
     stadium_parking_info: club?.stadium_parking_info || '',
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
@@ -91,7 +91,7 @@ export default function AdminBrandingPage({
         stadium_name: club.stadium_name || '',
         stadium_address: club.stadium_address || '',
         stadium_capacity: club.stadium_capacity || 5000,
-        stadium_pitch_type: club.stadium_pitch_type || 'Natural Hybrid Turf',
+        stadium_pitch_type: club.stadium_pitch_type || '',
         stadium_parking_info: club.stadium_parking_info || '',
         contact_email: club.contact_email || '',
         contact_phone: club.contact_phone || '',
@@ -758,6 +758,8 @@ export default function AdminBrandingPage({
                 value={formData.stadium_pitch_type}
                 onChange={handleChange}
               >
+                {/* Left unset, the site doesn't mention a surface at all */}
+                <option value="">Not set</option>
                 <option value="Natural Grass">Natural Grass</option>
                 <option value="Natural Hybrid Turf">Natural Hybrid Turf</option>
                 <option value="Hybrid Grass">Hybrid Grass</option>

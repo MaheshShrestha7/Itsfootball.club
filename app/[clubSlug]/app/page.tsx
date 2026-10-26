@@ -6,6 +6,7 @@ import {
   Radio, ClipboardCheck, Layers, QrCode, CalendarDays, Trophy, Calendar, Flag, Users, Shield, UserCheck, Award,
   BellRing, Flame, Wallet, ShoppingBag, DollarSign, Palette, Sparkles, FileText, Images, BarChart3, Mail, KeyRound,
   LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download, BookOpen, CalendarPlus, Ticket,
+  ChevronRight,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -13,8 +14,10 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
-import { publicScoreHidden } from '@/lib/teams';
-import { clubPlaysIn } from '@/lib/fixtures';
+import { juniorMemberIds, publicScoreHidden } from '@/lib/teams';
+import { clubPlaysIn, clubResult, latestFirst, publicFixtures } from '@/lib/fixtures';
+import { defaultSeasonLabel } from '@/lib/season';
+import ResultChip from '@/components/ResultChip';
 import { matchPath, SITE_URL } from '@/lib/slugs';
 import { formatMoney } from '@/lib/finance';
 import { useShopOpen } from '@/lib/use-shop-open';
@@ -89,7 +92,7 @@ function TileGrid({ tiles }: { tiles: Tile[] }) {
 /** The club app's home: what this person does at the club, by role (visitor, member, player, staff) */
 export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, members, clubTeams, tournamentParticipants, tournaments } = useClub();
+  const { clubs, selectClubBySlug, matches, events, members, clubTeams, clubTeamMembers, tournamentParticipants, tournaments, playerStats, getActiveSeason } = useClub();
   const { user, isLoading, can, isClubSuperUser, hasClubAdminAccess, getClubAccess, getUserRoleForClub } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const base = `/${club.slug}`;
@@ -115,6 +118,17 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     ...(children.length ? [`Parent of ${children.map(c => c.full_name.split(' ')[0]).join(', ')}`] : []),
   ];
 
+  // The club's last result (a game against another club or a cup, not an in-house one), and a
+  // player's own season. Their public page and card are only for adults (juniors never get one).
+  const clubGames = matches.filter(m => m.club_id === club.id);
+  const lastResult = publicFixtures(clubGames.filter(m => m.status === 'completed' && clubPlaysIn(m, tournamentParticipants, club.name)), clubGames)
+    .sort(latestFirst)[0];
+  const lastOutcome = lastResult ? clubResult(lastResult) : null;
+  const seasonName = getActiveSeason?.(club.id)?.name || defaultSeasonLabel();
+  const myStats = player && me ? playerStats.find(st => st.member_id === me.id && st.season === seasonName) : undefined;
+  const myPageOpen = !!player && !!me && !me.is_junior
+    && !juniorMemberIds(members.filter(m => m.club_id === club.id), clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false }).has(me.id);
+
   // Live now, then what's coming up
   const now = Date.now();
   const live = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
@@ -125,6 +139,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       .sort((a, b) => a.match_date.localeCompare(b.match_date) || (a.match_time || '').localeCompare(b.match_time || ''));
     const ms = ours
       .filter(m => !m.tournament_id)
+      // An in-house game is for the squad: a supporter (or a visitor) isn't shown Reds v Blues
+      .filter(m => player || kids.length > 0 || m.match_type !== 'internal')
       .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m as typeof m | undefined, gameIds: [m.id], href: matchPath(club.slug, m), price: 0 }));
     // A tournament is one card and one answer for all its games (each player is only asked about
     // their own team's games, below), not a card per game
@@ -283,7 +299,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const clubTiles: Tile[] = approved
     ? [
         { label: 'My pass', href: `${base}/member`, icon: CreditCard },
-        { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
+        { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
+        { label: 'Squad', href: `${base}/squad`, icon: Users },
         { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
         ...(sections.tournaments ? [{ label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy }] : []),
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
@@ -325,6 +342,43 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
           </div>
         </div>
       </div>
+
+      {/* Last result and, for a player, their season so far */}
+      {approved && (lastResult || player) && (
+        <section className="app-me" aria-label={player ? 'Last result and my season' : 'Last result'}>
+          {lastResult && lastOutcome && (
+            <Link href={matchPath(club.slug, lastResult)} className="glass-panel glass-panel-interactive app-me-tile">
+              <span className="app-heading">Last result</span>
+              <span className="row" style={{ gap: '0.5rem', flexWrap: 'nowrap' }}>
+                {lastOutcome.outcome && !publicScoreHidden(lastResult, clubTeams) && <ResultChip outcome={lastOutcome.outcome} />}
+                <strong className="app-me-line">
+                  {publicScoreHidden(lastResult, clubTeams)
+                    ? `${lastResult.home_team_name} v ${lastResult.away_team_name}`
+                    : `${lastResult.home_team_name} ${lastResult.home_score ?? 0}–${lastResult.away_score ?? 0} ${lastResult.away_team_name}`}
+                </strong>
+              </span>
+              <span className="text-meta"><LocalTime value={lastResult.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /> · Match report</span>
+            </Link>
+          )}
+          {player && (
+            <div className="glass-panel app-me-tile">
+              <span className="app-heading">My season · {seasonName}</span>
+              <dl className="app-me-stats">
+                <div><dt>Apps</dt><dd>{myStats?.appearances ?? 0}</dd></div>
+                <div><dt>Goals</dt><dd>{myStats?.goals ?? 0}</dd></div>
+                <div><dt>Assists</dt><dd>{myStats?.assists ?? 0}</dd></div>
+                <div><dt>POTM</dt><dd>{myStats?.motm_awards ?? 0}</dd></div>
+              </dl>
+              {myPageOpen && (
+                <span className="row" style={{ gap: '0.25rem 1rem', flexWrap: 'wrap' }}>
+                  <Link href={`${base}/squad/${me!.id}`} className="app-me-link">My player page <ChevronRight size={14} aria-hidden="true" /></Link>
+                  <Link href="/tools/player-card-maker" className="app-me-link">Make my player card <ChevronRight size={14} aria-hidden="true" /></Link>
+                </span>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {live && (
         <Link href={matchPath(club.slug, live)} className="glass-panel app-live">

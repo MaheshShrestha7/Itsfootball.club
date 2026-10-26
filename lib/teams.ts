@@ -7,7 +7,7 @@
 // ==============================================================================
 import type { ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
 import { isPlayerMember } from './supabase/types';
-import { clubPlaysIn, kickoff, soonestFirst } from './fixtures';
+import { clubPlaysIn, kickoff, matchKind, soonestFirst } from './fixtures';
 
 export const TEAM_TYPES: { value: ClubTeamType; label: string }[] = [
   { value: 'senior', label: 'First / senior team' },
@@ -119,6 +119,27 @@ export function teamMemberIds(rows: ClubTeamMember[], teamId: string, role: Club
 export function squadPlayerIds(members: Pick<ClubMember, 'id' | 'role' | 'roles'>[], rows: ClubTeamMember[]): Set<string> {
   const onTeams = new Set(rows.filter(r => r.team_role === 'player' && r.is_active !== false).map(r => r.member_id));
   return new Set(members.filter(m => isPlayerMember(m) || onTeams.has(m.id)).map(m => m.id));
+}
+
+/** Who has a public player page (/club/squad/{id}): approved adult players. Juniors never do. */
+export function publicPlayerIds(
+  clubMembers: ClubMember[], clubTeams: ClubTeam[], rows: ClubTeamMember[], opts: { includeU18: boolean },
+): Set<string> {
+  const approved = clubMembers.filter(m => (m.membership_status || 'approved') === 'approved');
+  const juniors = juniorMemberIds(approved, clubTeams, rows, opts);
+  const squad = squadPlayerIds(approved, rows);
+  return new Set(approved.filter(m => squad.has(m.id) && !juniors.has(m.id) && !m.is_junior).map(m => m.id));
+}
+
+/** Player names as typed on match events, to the player page of the one club player with that
+ *  name (names two players share stay plain, as do names that aren't a club player's) */
+export function playerIdsByName(clubMembers: Pick<ClubMember, 'id' | 'full_name'>[], ids: Set<string>): Map<string, string> {
+  const byName = new Map<string, string | null>();
+  clubMembers.filter(m => ids.has(m.id)).forEach(m => {
+    const key = m.full_name.trim().toLowerCase();
+    byName.set(key, byName.has(key) ? null : m.id);
+  });
+  return new Map([...byName].filter((e): e is [string, string] => e[1] !== null));
 }
 
 /** The teams a member plays for or staffs */
@@ -350,5 +371,6 @@ export function nextFixtureOf(
       const team = teamOfMatch(m, clubTeams);
       return !team || teamIds.has(team.id);
     })
-    .sort(soonestFirst)[0];
+    // A game against another club (or a cup) comes before a training game between the club's own sides
+    .sort((a, b) => Number(matchKind(a) === 'inhouse') - Number(matchKind(b) === 'inhouse') || soonestFirst(a, b))[0];
 }

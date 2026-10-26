@@ -39,6 +39,13 @@ export function matchKind(m: Pick<Match, 'tournament_id' | 'match_type'>): Match
   return m.match_type === 'internal' ? 'inhouse' : 'club';
 }
 
+/** The games fans see as the club's fixtures (home page hero, Next Match, Fixtures, a pass's next
+ *  game): in-house games between two of the club's own sides are for the squad, so they're left out,
+ *  unless `all` (the club's whole list) has nothing else, as for a club that only plays in-house. */
+export function publicFixtures<M extends Pick<Match, 'tournament_id' | 'match_type'>>(games: M[], all: M[] = games): M[] {
+  return all.some(m => matchKind(m) !== 'inhouse') ? games.filter(m => matchKind(m) !== 'inhouse') : games;
+}
+
 /** The games a coach gets ready for (Availability, Lineup Draft): not yet played, not more than a day
  *  past kick-off (one left on "upcoming" after its day), and only games the club's own players are in */
 export function prepFixtures<M extends Match>(
@@ -88,7 +95,7 @@ export function defaultFixture<M extends Match>(
   matches: M[],
   participants: Pick<TournamentParticipant, 'tournament_id' | 'team_type' | 'name'>[],
   clubName: string,
-  { skipLive = false }: { skipLive?: boolean } = {},
+  { skipLive = false, preferClubGames = false }: { skipLive?: boolean; preferClubGames?: boolean } = {},
 ): M | undefined {
   const live = matches.find(m => m.status === 'live' || m.status === 'halftime');
   if (live && !skipLive) return live;
@@ -96,7 +103,9 @@ export function defaultFixture<M extends Match>(
   const upcoming = ours.filter(m => m.status === 'upcoming').sort(soonestFirst);
   // A match left on "upcoming" after its day (never updated) shouldn't win over the real next one
   const dayAgo = Date.now() - 86400000;
-  const next = upcoming.find(m => kickoff(m) >= dayAgo) || upcoming[0];
+  // Availability and Lineup Draft open on a game against another club (or a cup) before a training game
+  const pool = preferClubGames && upcoming.some(m => matchKind(m) !== 'inhouse') ? upcoming.filter(m => matchKind(m) !== 'inhouse') : upcoming;
+  const next = pool.find(m => kickoff(m) >= dayAgo) || pool[0];
   if (next) return next;
   return live || ours.filter(m => m.status === 'completed').sort(latestFirst)[0] || [...matches].sort(latestFirst)[0];
 }

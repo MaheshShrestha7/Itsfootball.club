@@ -4,7 +4,7 @@ import React, { use, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
-import { juniorMemberIds, squadPlayerIds, teamsOfMember } from '@/lib/teams';
+import { publicPlayerIds, teamsOfMember } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubResult, latestFirst } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
@@ -25,11 +25,9 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const player = useMemo(() => {
-    const clubMembers = members.filter(m => m.club_id === club.id && (m.membership_status || 'approved') === 'approved');
-    const juniorIds = juniorMemberIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false });
-    const squad = squadPlayerIds(clubMembers, clubTeamMembers);
-    const m = clubMembers.find(x => x.id === playerId);
-    return m && squad.has(m.id) && !juniorIds.has(m.id) && !m.is_junior ? m : undefined;
+    const clubMembers = members.filter(m => m.club_id === club.id);
+    const open = publicPlayerIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false });
+    return open.has(playerId) ? clubMembers.find(x => x.id === playerId) : undefined;
   }, [members, club, clubTeams, clubTeamMembers, playerId]);
 
   const season = getActiveSeason?.(club.id)?.name || defaultSeasonLabel();

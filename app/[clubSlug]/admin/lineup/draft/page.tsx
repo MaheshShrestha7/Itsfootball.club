@@ -69,6 +69,8 @@ export default function DraftLineupPage() {
   );
   const activeMatch =
     clubMatches.find(m => m.id === selectedMatchId) ||
+    // A game against another club (or a cup) before a training game
+    prepGames.find(m => matchKind(m) !== 'inhouse') ||
     prepGames[0] ||
     clubMatches.find(m => m.status === 'upcoming') ||
     clubMatches[0];

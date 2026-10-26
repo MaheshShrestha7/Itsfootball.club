@@ -7,6 +7,7 @@ import {
   squadForMatch, teamMemberIds, teamOfMatch, teamSlug, teamsOfMember, uniqueTeamSlug,
   ageGroupCutoff, ageGroupFit, ageOnDate, isJuniorAgeGroup, isJuniorFixture, isJuniorMember, juniorMemberIds,
   juniorPublicName, publicMember, safeguardingCheckStatus, goalScoringSide, suggestJuniorTeam, matchTypeForCompetition,
+  nextFixtureOf, playerIdsByName, publicPlayerIds,
 } from './teams';
 
 const team = (id: string, extra: Partial<ClubTeam> = {}): ClubTeam => ({
@@ -165,5 +166,31 @@ assert.equal(matchTypeForCompetition('League Match'), 'friendly');
 assert.equal(matchTypeForCompetition('Club Friendly'), 'friendly');
 assert.equal(matchTypeForCompetition('Intra-Squad'), 'internal');
 assert.equal(matchTypeForCompetition('Cupcake Social'), null);
+
+// Public player pages: approved adult players only; typed names link only when unambiguous
+{
+  const p = (id: string, extra: Record<string, unknown> = {}) =>
+    ({ id, club_id: 'c1', full_name: id, role: 'player', membership_status: 'approved', date_of_birth: '1995-01-01', ...extra }) as unknown as Parameters<typeof publicPlayerIds>[0][number];
+  const people = [p('Sam Striker'), p('Kid Junior', { date_of_birth: '2016-01-01' }), p('Pending Pat', { membership_status: 'pending' }), p('Fan Fran', { role: 'supporter' }), p('Alex Twin'), p('alex twin ')];
+  const ids = publicPlayerIds(people, [], [], { includeU18: true });
+  assert.ok(ids.has('Sam Striker'));
+  assert.ok(!ids.has('Kid Junior'), 'juniors never');
+  assert.ok(!ids.has('Pending Pat'));
+  assert.ok(!ids.has('Fan Fran'));
+  const byName = playerIdsByName(people, ids);
+  assert.equal(byName.get('sam striker'), 'Sam Striker');
+  assert.equal(byName.get('alex twin'), undefined, 'two players share the name');
+}
+
+// A pass's next fixture: a club game before an in-house one
+{
+  const day = 86400000;
+  const fx = (id: string, inDays: number, extra: Record<string, unknown> = {}) => ({
+    id, club_id: 'c1', status: 'upcoming', match_type: 'friendly', home_team_name: 'A', away_team_name: 'B',
+    match_date: new Date(Date.now() + inDays * day).toISOString(), ...extra,
+  }) as unknown as Parameters<typeof nextFixtureOf>[0][number];
+  assert.equal(nextFixtureOf([fx('bibs', 1, { match_type: 'internal' }), fx('league', 4)], 'c1', 'A', [], [], [])?.id, 'league');
+  assert.equal(nextFixtureOf([fx('bibs', 1, { match_type: 'internal' })], 'c1', 'A', [], [], [])?.id, 'bibs');
+}
 
 console.log('teams.check: ok');
