@@ -6,6 +6,10 @@ import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
+import ThemeToggle from '@/components/ThemeToggle';
+import { RailLogo } from '@/components/admin/platform/McArt';
+import type { MissionTab } from '@/lib/mission-control';
+import './mission-control.css';
 import {
   PlatformMetrics,
   PlatformClubItem,
@@ -29,18 +33,18 @@ import {
   Radio,
   MapPin,
   RefreshCw,
-  UserPlus,
   ShieldCheck,
   Lock,
+  LogOut,
 } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
-  { days: 7, label: 'Last 7 Days' },
-  { days: 30, label: 'Last 30 Days' },
-  { days: 90, label: 'Last 90 Days' },
+  { days: 7, label: '7 days' },
+  { days: 30, label: '30 days' },
+  { days: 90, label: '90 days' },
 ];
 
-type TabType = 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts';
+type TabType = MissionTab;
 
 export default function PlatformOwnerDashboard() {
   const { user, isAuthenticated, isLoading: authLoading, isPlatformAdmin } = useAuth();
@@ -119,6 +123,11 @@ export default function PlatformOwnerDashboard() {
       fetchClubs('');
     }
   }, [isAuthenticated, isPlatformAdmin, periodDays, fetchMetrics, fetchClubs]);
+
+  // The platform team card on the Cockpit shows who has access
+  useEffect(() => {
+    if (isAuthenticated && isPlatformAdmin) fetchAdmins();
+  }, [isAuthenticated, isPlatformAdmin, fetchAdmins]);
 
   // Initial setup claim handler if no platform admins exist yet
   const handleClaimInitialAdmin = async () => {
@@ -297,10 +306,19 @@ export default function PlatformOwnerDashboard() {
     );
   }
 
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
-      <PlatformNavbar />
+  const clubsNeedingAttention = clubs.filter(c => c.pending_count >= 5 || (c.membership_payment_policy === 'require_payment' && !c.stripe_ready)).length;
 
+  const RAIL: { id: TabType; label: string; icon: React.ElementType; dot?: boolean }[] = [
+    { id: 'cockpit', label: 'Cockpit', icon: Gauge },
+    { id: 'clubs', label: `Clubs (${clubs.length})`, icon: Building, dot: clubsNeedingAttention > 0 },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'grounds', label: 'Grounds', icon: MapPin },
+    { id: 'health', label: 'System health', icon: Activity },
+    { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
+  ];
+
+  return (
+    <div className="mc">
       {/* Floating Save Toast */}
       {toastMessage && (
         <div role="status" className="admin-save-toast" style={{
@@ -310,7 +328,7 @@ export default function PlatformOwnerDashboard() {
           background: 'var(--c-green)',
           color: '#FFFFFF',
           padding: '0.75rem 1.25rem',
-          borderRadius: '8px',
+          borderRadius: '999px',
           fontWeight: 700,
           boxShadow: 'var(--shadow-lg)',
           zIndex: 99999,
@@ -319,133 +337,62 @@ export default function PlatformOwnerDashboard() {
         </div>
       )}
 
-      <main className="container" style={{ flex: 1, padding: '2rem 1rem 4rem 1rem', maxWidth: '1440px' }}>
-        {/* Top Header & Range Toolbar */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem', marginBottom: '1.75rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-              <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.2)', color: '#818CF8', fontWeight: 800, letterSpacing: '0.06em' }}>
-                SUPER-ADMIN CONSOLE
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--c-green)', fontWeight: 700 }}>
-                <span className="pulse-dot" style={{ background: '#10B981', width: '7px', height: '7px' }} />
-                <span>Live Telemetry Online</span>
-              </div>
-            </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Gauge size={28} color="#818CF8" />
-              <span>Platform Mission Control</span>
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem', marginBottom: 0 }}>
-              Live governance, multi-tenant fleet management, cross-tenant user lookup, and infrastructure vitals for <strong>itsfootball.club</strong>.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Period Pills */}
-            <div style={{ display: 'flex', background: 'rgba(var(--tint-rgb), 0.05)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              {PERIOD_OPTIONS.map(opt => (
-                <button
-                  key={opt.days}
-                  type="button"
-                  onClick={() => setPeriodDays(opt.days)}
-                  style={{
-                    border: 'none',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    background: periodDays === opt.days ? '#6366F1' : 'transparent',
-                    color: periodDays === opt.days ? '#FFFFFF' : 'var(--text-muted)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Refresh button */}
+      {/* ICON RAIL (a bottom bar on phones) */}
+      <nav className="mc-rail" aria-label="Mission Control">
+        <Link href="/" className="mc-rail-logo" aria-label="itsfootball.club home">
+          <RailLogo />
+        </Link>
+        {RAIL.map(item => {
+          const Icon = item.icon;
+          return (
             <button
+              key={item.id}
               type="button"
-              onClick={() => { fetchMetrics(periodDays); fetchClubs(''); }}
-              disabled={loadingMetrics || loadingClubs}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              title="Refresh all metrics"
+              className="mc-nav"
+              aria-label={item.label}
+              aria-current={activeTab === item.id ? 'page' : undefined}
+              onClick={() => { setActiveTab(item.id); window.scrollTo({ top: 0 }); }}
             >
-              <RefreshCw size={14} className={loadingMetrics || loadingClubs ? 'spin' : ''} />
-              <span>Refresh</span>
+              <Icon size={18} />
+              {item.dot && <span className="mc-dot" aria-hidden="true" />}
+              <span className="mc-tip" aria-hidden="true">{item.label}</span>
             </button>
+          );
+        })}
+        <span className="mc-rail-spacer" />
+        <button
+          type="button"
+          className="mc-nav desk-only"
+          aria-label="Manage admins"
+          onClick={() => { fetchAdmins(); setAdminsModalOpen(true); }}
+        >
+          <ShieldCheck size={18} />
+          <span className="mc-tip" aria-hidden="true">Manage admins</span>
+        </button>
+        <span className="theme-toggle-slot">
+          <ThemeToggle />
+        </span>
+        <Link href="/" className="mc-nav desk-only" aria-label="Back to the site">
+          <LogOut size={18} />
+          <span className="mc-tip" aria-hidden="true">Back to the site</span>
+        </Link>
+      </nav>
 
-            {/* Manage Admins button */}
-            <button
-              type="button"
-              onClick={() => { fetchAdmins(); setAdminsModalOpen(true); }}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#818CF8' }}
-            >
-              <UserPlus size={14} />
-              <span>Manage Admins</span>
-            </button>
-          </div>
-        </div>
-
-        {/* MODERN TAB NAVIGATION BAR */}
-        <div style={{
-          display: 'flex',
-          gap: '0.5rem',
-          borderBottom: '1px solid var(--border-subtle)',
-          marginBottom: '2rem',
-          overflowX: 'auto',
-          paddingBottom: '0.5rem',
-        }}>
-          {[
-            { id: 'cockpit' as TabType, label: 'Cockpit Overview', icon: Gauge },
-            { id: 'clubs' as TabType, label: `Clubs Fleet (${clubs.length})`, icon: Building },
-            { id: 'users' as TabType, label: 'Platform Users', icon: Users },
-            { id: 'grounds' as TabType, label: 'Grounds', icon: MapPin },
-            { id: 'health' as TabType, label: 'System Health & Vitals', icon: Activity },
-            { id: 'broadcasts' as TabType, label: 'Broadcasts & Banners', icon: Radio },
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  border: 'none',
-                  padding: '0.65rem 1.1rem',
-                  borderRadius: '8px',
-                  fontSize: '0.88rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: isActive ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
-                  color: isActive ? '#818CF8' : 'var(--text-secondary)',
-                  borderBottom: isActive ? '2px solid #818CF8' : '2px solid transparent',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Icon size={16} color={isActive ? '#818CF8' : 'var(--text-muted)'} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
+      <main className="mc-main">
         {/* ACTIVE TAB CONTENT */}
         {activeTab === 'cockpit' && (
           <CockpitTab
             metrics={metrics}
             clubs={clubs}
+            admins={adminsList}
+            userName={user?.full_name}
+            userEmail={user?.email}
             periodDays={periodDays}
+            periodOptions={PERIOD_OPTIONS}
+            onPeriodChange={setPeriodDays}
+            refreshing={loadingMetrics || loadingClubs}
+            onRefresh={() => { fetchMetrics(periodDays); fetchClubs(''); fetchAdmins(); }}
+            onManageAdmins={() => { fetchAdmins(); setAdminsModalOpen(true); }}
             onSelectTab={setActiveTab}
             onSelectClub={c => setSelectedClub(c)}
           />
@@ -495,8 +442,6 @@ export default function PlatformOwnerDashboard() {
         onAddAdmin={handleAddAdmin}
         onRemoveAdmin={handleRemoveAdmin}
       />
-
-      <Footer />
     </div>
   );
 }
