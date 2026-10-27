@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { PlatformAnnouncement } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   Trash2,
   ExternalLink,
-  Power,
   RefreshCw,
   Bell,
 } from 'lucide-react';
@@ -26,7 +25,7 @@ interface BroadcastsTabProps {
 export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
   const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
 
   // New announcement form state
@@ -85,8 +84,7 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
       if (error) {
         alert(error.message);
       } else {
-        showToast('✓ Announcement broadcasted successfully!');
-        setModalOpen(false);
+        showToast('✓ Broadcast published');
         setTitle('');
         setMessage('');
         setLinkUrl('');
@@ -140,338 +138,159 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
   const getLevelMeta = (lvl: string) => {
     switch (lvl) {
       case 'warning':
-        return { label: 'Warning', icon: AlertTriangle, color: 'var(--c-amber)', bg: 'rgba(245, 158, 11, 0.15)' };
+        return { label: 'Warning', icon: AlertTriangle, color: 'var(--mc-amber)', bg: 'var(--mc-amber-bg)' };
       case 'critical':
-        return { label: 'Critical / Maintenance', icon: AlertCircle, color: 'var(--c-red)', bg: 'rgba(239, 68, 68, 0.15)' };
+        return { label: 'Critical or maintenance', icon: AlertCircle, color: 'var(--mc-red)', bg: 'var(--mc-red-bg)' };
       case 'success':
-        return { label: 'Announcement / Release', icon: CheckCircle2, color: 'var(--c-green)', bg: 'rgba(16, 185, 129, 0.15)' };
+        return { label: 'Feature or news', icon: CheckCircle2, color: 'var(--mc-green-ink)', bg: 'var(--mc-mint)' };
       default:
-        return { label: 'Information', icon: Info, color: '#818CF8', bg: 'rgba(99, 102, 241, 0.15)' };
+        return { label: 'Information', icon: Info, color: 'var(--mc-indigo)', bg: 'var(--mc-lilac)' };
     }
   };
 
+  const TARGETS: Record<string, string> = {
+    all: 'Everyone',
+    admins: 'Club admins',
+    members: 'Club members',
+    public: 'Main site visitors',
+  };
+  const LEVELS = [['info', 'Information'], ['warning', 'Warning'], ['critical', 'Critical'], ['success', 'Feature or news']] as const;
+
+  const preview = getLevelMeta(level);
+  const PreviewIcon = preview.icon;
+
   return (
-    <div className="glass-panel" style={{ padding: '1.75rem' }}>
-      {/* Top Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+    <div>
+      <div className="mc-page-h">
         <div>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Radio size={22} color="#818CF8" />
-            <span>Platform Broadcasts &amp; Global Banners</span>
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Publish maintenance windows, critical announcements, and release highlights across all tenants
-          </span>
+          <h1>Broadcasts</h1>
+          <p>Banners shown across the platform. Switch one off to hide it straight away.</p>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button
-            type="button"
-            onClick={fetchAnnouncements}
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            <RefreshCw size={14} className={loading ? 'spin' : ''} />
-            <span>Refresh</span>
+        <div className="right">
+          <button type="button" className="mc-pill-btn ghost" onClick={fetchAnnouncements} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
-
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="btn btn-primary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            <PlusCircle size={15} />
-            <span>New Broadcast</span>
+          <button type="button" className="mc-pill-btn" onClick={() => titleRef.current?.focus()}>
+            <PlusCircle size={14} /> New broadcast
           </button>
         </div>
       </div>
 
-      {/* Announcements List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {loading ? (
-          <div style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Loading platform announcements...
-          </div>
-        ) : announcements.length === 0 ? (
-          <div style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(var(--tint-rgb), 0.02)', borderRadius: '8px', border: '1px dashed var(--border-subtle)' }}>
-            <Radio size={32} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem auto' }} />
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              No Active Broadcasts
+      <div className="mc-bc-wrap">
+        <div className="mc-bc-list">
+          {loading && announcements.length === 0 ? (
+            <div className="mc-card mc-empty">Loading broadcasts…</div>
+          ) : announcements.length === 0 ? (
+            <div className="mc-card mc-empty">
+              <Radio size={28} style={{ margin: '0 auto 0.6rem', display: 'block' }} />
+              <b style={{ color: 'var(--mc-ink)', display: 'block', marginBottom: 4 }}>No broadcasts yet</b>
+              Use the form to show a banner to visitors, club admins or members.
             </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-              Broadcasts allow you to display global notifications to visitors, club admins, or members.
-            </p>
-          </div>
-        ) : (
-          announcements.map(ann => {
-            const meta = getLevelMeta(ann.level);
-            const Icon = meta.icon;
-
-            return (
-              <div
-                key={ann.id}
-                style={{
-                  padding: '1.25rem',
-                  background: 'rgba(var(--tint-rgb), 0.03)',
-                  borderRadius: '8px',
-                  border: ann.is_active ? `1px solid ${meta.color}` : '1px solid var(--border-subtle)',
-                  opacity: ann.is_active ? 1 : 0.6,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="badge" style={{ background: meta.bg, color: meta.color, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 800 }}>
-                      <Icon size={12} />
-                      <span>{meta.label}</span>
-                    </span>
-                    <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)' }}>
-                      Target: {ann.target}
-                    </span>
-                    {ann.is_active ? (
-                      <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>
-                        LIVE
-                      </span>
-                    ) : (
-                      <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.05)', color: 'var(--text-muted)' }}>
-                        PAUSED
-                      </span>
-                    )}
+          ) : (
+            announcements.map(ann => {
+              const meta = getLevelMeta(ann.level);
+              const Icon = meta.icon;
+              const href = safeLinkHref(ann.link_url);
+              return (
+                <div key={ann.id} className={`mc-card mc-bc${ann.is_active ? '' : ' off'}`}>
+                  <span className="mc-sq" style={{ background: meta.bg, color: meta.color }}><Icon size={17} /></span>
+                  <div style={{ minWidth: 0 }}>
+                    <h3>{ann.title}</h3>
+                    <p>{ann.message}</p>
+                    <div className="meta">
+                      <span className="mc-flag" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
+                      <span className="mc-flag">{TARGETS[ann.target] || ann.target}</span>
+                      <span className="mc-flag">Added {formatDate(ann.created_at)}</span>
+                      {href && (
+                        <a href={href} target="_blank" rel="noopener noreferrer">{ann.link_text || 'Learn more'} <ExternalLink size={11} /></a>
+                      )}
+                    </div>
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="side">
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={ann.is_active}
+                      aria-label={ann.is_active ? `Hide ${ann.title}` : `Show ${ann.title}`}
+                      className="mc-switch"
                       onClick={() => handleToggleActive(ann.id, ann.is_active)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '0.25rem 0.55rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                    >
-                      <Power size={12} color={ann.is_active ? 'var(--c-green)' : 'var(--text-muted)'} />
-                      <span>{ann.is_active ? 'Deactivate' : 'Activate'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(ann.id)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '0.25rem 0.45rem', color: 'var(--c-red)' }}
-                      title="Delete Broadcast"
-                    >
+                    />
+                    <small>{ann.is_active ? 'Showing' : 'Hidden'}</small>
+                    <button type="button" className="mc-icon-btn" style={{ color: 'var(--mc-red)' }} onClick={() => handleDelete(ann.id)} aria-label={`Delete ${ann.title}`} title="Delete broadcast">
                       <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.35rem 0' }}>
-                  {ann.title}
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                  {ann.message}
-                </p>
-
-                {safeLinkHref(ann.link_url) && (
-                  <div style={{ marginTop: '0.65rem' }}>
-                    <a
-                      href={safeLinkHref(ann.link_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.8rem', color: '#818CF8', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                    >
-                      <span>{ann.link_text || 'Learn more'}</span>
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
-                )}
-
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-                  Broadcast created on {formatDate(ann.created_at)}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* CREATE BROADCAST MODAL */}
-      {modalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '540px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 1rem 0' }}>
-              Create Platform Broadcast
-            </h3>
-
-            <form onSubmit={handleCreateAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Announcement Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Scheduled Database Maintenance Notice"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    background: 'rgba(var(--shade-rgb), 0.5)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '6px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.85rem',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Message Body
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Briefly describe the notification, impact, or instructions..."
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    background: 'rgba(var(--shade-rgb), 0.5)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '6px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.85rem',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                    Severity Level
-                  </label>
-                  <select
-                    value={level}
-                    onChange={e => setLevel(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: 'rgba(var(--shade-rgb), 0.5)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <option value="info">Info (Blue)</option>
-                    <option value="warning">Warning (Amber)</option>
-                    <option value="critical">Critical / Maintenance (Red)</option>
-                    <option value="success">Feature / News (Green)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                    Target Audience
-                  </label>
-                  <select
-                    value={target}
-                    onChange={e => setTarget(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: 'rgba(var(--shade-rgb), 0.5)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <option value="all">All Visitors &amp; Tenants</option>
-                    <option value="admins">Club Admins Only</option>
-                    <option value="members">Club Members Only</option>
-                    <option value="public">Public Landing Page Only</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                    Optional Action Link URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={linkUrl}
-                    onChange={e => setLinkUrl(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: 'rgba(var(--shade-rgb), 0.5)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                    Optional Button Label
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Read Status Details"
-                    value={linkText}
-                    onChange={e => setLinkText(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: 'rgba(var(--shade-rgb), 0.5)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn btn-primary btn-sm"
-                >
-                  {saving ? 'Broadcasting...' : 'Publish Broadcast'}
-                </button>
-              </div>
-            </form>
-          </div>
+              );
+            })
+          )}
         </div>
-      )}
+
+        <div className="mc-card">
+          <div className="mc-card-h"><h3>New broadcast</h3><Bell size={16} color="var(--mc-ink-3)" /></div>
+          <form className="mc-form" onSubmit={handleCreateAnnouncement}>
+            <label htmlFor="bc-title">
+              Title
+              <input
+                id="bc-title"
+                ref={titleRef}
+                type="text"
+                required
+                placeholder="e.g. Scheduled database maintenance"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+              />
+            </label>
+            <label htmlFor="bc-message">
+              Message
+              <textarea
+                id="bc-message"
+                required
+                rows={3}
+                placeholder="What is happening, and what people should do"
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+              />
+            </label>
+            <div className="lbl">
+              Type
+              <span className="mc-chips" role="group" aria-label="Type">
+                {LEVELS.map(([k, label]) => (
+                  <button key={k} type="button" aria-pressed={level === k} onClick={() => setLevel(k)}>{label}</button>
+                ))}
+              </span>
+            </div>
+            <div className="lbl">
+              Who sees it
+              <span className="mc-chips" role="group" aria-label="Who sees it">
+                {(Object.keys(TARGETS) as (keyof typeof TARGETS)[]).map(k => (
+                  <button key={k} type="button" aria-pressed={target === k} onClick={() => setTarget(k as typeof target)}>{TARGETS[k]}</button>
+                ))}
+              </span>
+            </div>
+            <div className="two">
+              <label htmlFor="bc-link">
+                Link (optional)
+                <input id="bc-link" type="url" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} />
+              </label>
+              <label htmlFor="bc-link-text">
+                Button text (optional)
+                <input id="bc-link-text" type="text" placeholder="e.g. Read more" value={linkText} onChange={e => setLinkText(e.target.value)} />
+              </label>
+            </div>
+            <div className="lbl">
+              Preview
+              <span className="mc-preview" style={{ background: preview.bg, color: preview.color }}>
+                <PreviewIcon size={14} style={{ marginTop: 1 }} />
+                <span>{title.trim() || 'Your title shows here'}</span>
+              </span>
+            </div>
+            <button type="submit" className="mc-pill-btn" disabled={saving || !title.trim() || !message.trim()} style={{ justifySelf: 'start' }}>
+              {saving ? 'Publishing…' : 'Publish broadcast'}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

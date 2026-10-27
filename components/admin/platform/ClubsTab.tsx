@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PlatformClubItem, MembershipPaymentPolicy } from '@/lib/supabase/types';
 import { formatMoney, toCsv } from '@/lib/finance';
+import { softTint } from '@/lib/mission-control';
+import { Crest } from '@/components/admin/platform/McArt';
 import {
   Search,
   Download,
@@ -17,6 +19,7 @@ import {
   Globe,
   CreditCard,
   Building,
+  Clock,
 } from 'lucide-react';
 
 interface ClubsTabProps {
@@ -36,7 +39,7 @@ export default function ClubsTab({
 }: ClubsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'stripe' | 'domain' | 'backlog'>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'stripe' | 'domain' | 'backlog' | 'nostripe'>('all');
   const [sortBy, setSortBy] = useState<'visits' | 'members' | 'gmv' | 'newest'>('newest');
 
   // Filtered and sorted clubs
@@ -48,6 +51,7 @@ export default function ClubsTab({
       if (quickFilter === 'stripe' && !c.stripe_ready) return false;
       if (quickFilter === 'domain' && !c.custom_domain) return false;
       if (quickFilter === 'backlog' && c.pending_count < 5) return false;
+      if (quickFilter === 'nostripe' && !(c.membership_payment_policy === 'require_payment' && !c.stripe_ready)) return false;
 
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
@@ -118,338 +122,172 @@ export default function ClubsTab({
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="glass-panel" style={{ padding: '1.75rem' }}>
-      {/* Top Header & Search Controls */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.25rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Building size={22} color="var(--c-amber)" />
-            <span>Master Club Fleet ({processedClubs.length})</span>
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Deep operational control, status toggling, and multi-tenant telemetry
-          </span>
-        </div>
+  const counts = {
+    backlog: clubs.filter(c => c.pending_count >= 5).length,
+    nostripe: clubs.filter(c => c.membership_payment_policy === 'require_payment' && !c.stripe_ready).length,
+    domain: clubs.filter(c => c.custom_domain).length,
+    stripe: clubs.filter(c => c.stripe_ready).length,
+    suspended: clubs.filter(c => !c.is_active).length,
+  };
+  const attentionTotal = counts.backlog + counts.nostripe;
+  const maxCount = Math.max(1, ...Object.values(counts));
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Search Bar */}
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search club, slug, domain, owner..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.45rem 0.75rem 0.45rem 2.2rem',
-                background: 'rgba(var(--shade-rgb), 0.5)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '0.82rem',
-              }}
-            />
+  const policyFlag = (policy: MembershipPaymentPolicy) => {
+    switch (policy) {
+      case 'require_payment':
+        return <span className="mc-flag bad">Must pay to join</span>;
+      case 'allow_waiver':
+        return <span className="mc-flag info">Fee can be waived</span>;
+      case 'auto_approve':
+      case 'auto_approve_with_waiver':
+        return <span className="mc-flag ok">Auto-approve</span>;
+      default:
+        return <span className="mc-flag">Standard</span>;
+    }
+  };
+
+  const sideRows: { key: typeof quickFilter; label: string; count: number; icon: React.ElementType; bg: string; color: string; bar: string }[] = [
+    { key: 'backlog', label: 'Approval backlog (5+)', count: counts.backlog, icon: Clock, bg: 'var(--mc-amber-bg)', color: 'var(--mc-amber)', bar: '#F59E0B' },
+    { key: 'nostripe', label: 'Must pay, no Stripe', count: counts.nostripe, icon: AlertTriangle, bg: 'var(--mc-red-bg)', color: 'var(--mc-red)', bar: '#EF4444' },
+    { key: 'domain', label: 'Own web address', count: counts.domain, icon: Globe, bg: 'var(--mc-lilac)', color: 'var(--mc-indigo)', bar: '#818CF8' },
+    { key: 'stripe', label: 'Stripe connected', count: counts.stripe, icon: CreditCard, bg: 'var(--mc-mint)', color: 'var(--mc-green-ink)', bar: '#10B981' },
+  ];
+
+  return (
+    <div>
+      <div className="mc-page-h">
+        <div>
+          <h1>Clubs</h1>
+          <p>Every club on itsfootball.club. Click a club to open its details.</p>
+        </div>
+        <div className="right">
+          <span className="mc-seg" role="group" aria-label="Status">
+            {([['all', 'All'], ['active', 'Active'], ['inactive', 'Suspended']] as const).map(([k, label]) => (
+              <button key={k} type="button" aria-pressed={statusFilter === k} onClick={() => setStatusFilter(k)}>{label}</button>
+            ))}
+          </span>
+          <button type="button" className="mc-pill-btn" onClick={handleExportCsv} title="Download the clubs list as a spreadsheet">
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div className="mc-wrap">
+        <div>
+          <div className="mc-toolbar">
+            <label className="mc-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Search club, web address or owner"
+                aria-label="Search clubs"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </label>
+            <select className="mc-select" value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort clubs">
+              <option value="newest">Newest first</option>
+              <option value="visits">Most visits (30 days)</option>
+              <option value="members">Most members</option>
+              <option value="gmv">Most money in</option>
+            </select>
+            <span className="mc-eyebrow num">{processedClubs.length} shown</span>
           </div>
 
-          {/* Sort Filter */}
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as any)}
-            style={{
-              padding: '0.45rem 0.75rem',
-              background: 'rgba(var(--shade-rgb), 0.5)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '6px',
-              color: 'var(--text-primary)',
-              fontSize: '0.82rem',
-            }}
-          >
-            <option value="newest">Sort: Newest First</option>
-            <option value="visits">Sort: Most Traffic (30d)</option>
-            <option value="members">Sort: Most Members</option>
-            <option value="gmv">Sort: Highest GMV</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-            style={{
-              padding: '0.45rem 0.75rem',
-              background: 'rgba(var(--shade-rgb), 0.5)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '6px',
-              color: 'var(--text-primary)',
-              fontSize: '0.82rem',
-            }}
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active Only</option>
-            <option value="inactive">Suspended Only</option>
-          </select>
-
-          {/* CSV Export */}
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            title="Download Master Directory CSV"
-          >
-            <Download size={14} />
-            <span>Export CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Preset Filter Chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        {[
-          { key: 'all', label: 'All Fleet' },
-          { key: 'stripe', label: 'Stripe Connected' },
-          { key: 'domain', label: 'Custom Domain Routing' },
-          { key: 'backlog', label: 'High Pending Backlog (≥5)' },
-        ].map(chip => (
-          <button
-            key={chip.key}
-            type="button"
-            onClick={() => setQuickFilter(chip.key as any)}
-            style={{
-              border: 'none',
-              padding: '0.3rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: quickFilter === chip.key ? 'rgba(99, 102, 241, 0.25)' : 'rgba(var(--tint-rgb), 0.04)',
-              color: quickFilter === chip.key ? '#818CF8' : 'var(--text-secondary)',
-              borderWidth: '1px',
-              borderStyle: 'solid',
-              borderColor: quickFilter === chip.key ? 'rgba(99, 102, 241, 0.4)' : 'var(--border-subtle)',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Clubs Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <th style={{ padding: '0.75rem 0.5rem' }}>Club</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>Owner</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>Footprint</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>Payment Gateway</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>30d Traffic</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>GMV</th>
-              <th style={{ padding: '0.75rem 0.5rem' }}>Status</th>
-              <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  Loading clubs...
-                </td>
-              </tr>
-            ) : processedClubs.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No clubs found matching your search and filter criteria.
-                </td>
-              </tr>
-            ) : (
-              processedClubs.map(c => {
-                const getPolicyBadge = (policy: MembershipPaymentPolicy) => {
-                  switch (policy) {
-                    case 'require_payment':
-                      return <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)' }}>Strict Payment</span>;
-                    case 'allow_waiver':
-                      return <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818CF8' }}>Waiver Allowed</span>;
-                    case 'auto_approve':
-                    case 'auto_approve_with_waiver':
-                      return <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>Auto-Approve</span>;
-                    default:
-                      return <span className="badge">Standard</span>;
-                  }
-                };
-
+          {loading ? (
+            <div className="mc-card mc-empty">Loading clubs…</div>
+          ) : processedClubs.length === 0 ? (
+            <div className="mc-card mc-empty">No clubs match that search or filter.</div>
+          ) : (
+            <div className="mc-grid">
+              {processedClubs.map(c => {
                 const isStatusUpdating = statusUpdatingId === c.id;
-
                 return (
-                  <tr
-                    key={c.id}
-                    style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      transition: 'background 0.15s ease',
-                      opacity: c.is_active ? 1 : 0.65,
-                    }}
-                  >
-                    {/* Club Info */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        {c.logo_url ? (
-                          <img
-                            width={28}
-                            height={28}
-                            src={c.logo_url}
-                            alt=""
-                            style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'contain' }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '4px',
-                              background: c.primary_color || 'var(--club-primary)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#fff',
-                              fontSize: '0.75rem',
-                              fontWeight: 800,
-                            }}
-                          >
-                            {c.short_name.slice(0, 2)}
-                          </div>
-                        )}
-                        <div>
-                          <div
-                            style={{ fontWeight: 800, color: 'var(--text-primary)', cursor: 'pointer' }}
-                            onClick={() => onSelectClub(c)}
-                            title="Click to inspect club details"
-                          >
-                            {c.name}
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <span>/{c.slug}</span>
-                            {c.custom_domain && (
-                              <span style={{ color: '#818CF8', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                                <Globe size={10} />
-                                <span>{c.custom_domain}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Owner */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.owner_name || 'Founder'}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{c.owner_email || '—'}</div>
-                    </td>
-
-                    {/* Footprint */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {c.member_count} members {c.pending_count > 0 && <span style={{ color: 'var(--c-amber)', fontSize: '0.7rem' }}>({c.pending_count} pending)</span>}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {c.team_count} teams · {c.match_count} matches
-                      </div>
-                    </td>
-
-                    {/* Payment Gateway */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
-                        {getPolicyBadge(c.membership_payment_policy)}
-                        <span style={{ fontSize: '0.68rem', color: c.stripe_ready ? 'var(--c-green)' : 'var(--text-muted)' }}>
-                          {c.stripe_ready ? '✓ Stripe Connected' : 'Manual Bank Only'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* 30d Traffic */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ fontWeight: 800, color: '#818CF8' }}>{c.visits_30d.toLocaleString()}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>views</div>
-                    </td>
-
-                    {/* GMV */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--c-green)' }}>{formatMoney(c.gmv_cents, 'AUD')}</div>
-                    </td>
-
-                    {/* Status */}
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      {c.is_active ? (
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>Active</span>
-                      ) : (
-                        <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)' }}>Suspended</span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
-                        {/* Inspect Drawer button */}
-                        <button
-                          type="button"
-                          onClick={() => onSelectClub(c)}
-                          className="btn btn-secondary btn-sm"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                          title="Inspect Club Diagnostics"
-                        >
-                          <Eye size={12} />
-                          <span>Inspect</span>
-                        </button>
-
-                        {/* Public Site link */}
-                        <Link
-                          href={`/${c.slug}`}
-                          target="_blank"
-                          className="btn btn-secondary btn-sm"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                          title="Open public website"
-                        >
-                          <ExternalLink size={12} />
-                        </Link>
-
-                        {/* Admin Link */}
-                        <Link
-                          href={`/${c.slug}/admin`}
-                          target="_blank"
-                          className="btn btn-primary btn-sm"
-                          style={{ padding: '0.25rem 0.55rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                          title="Enter Club Admin"
-                        >
-                          <Shield size={12} />
-                          <span>Admin</span>
-                        </Link>
-
-                        {/* Quick Toggle Status */}
-                        <button
-                          type="button"
-                          disabled={isStatusUpdating}
-                          onClick={() => onToggleStatus(c.id, c.is_active)}
-                          className="btn btn-sm"
-                          style={{
-                            padding: '0.25rem 0.45rem',
-                            fontSize: '0.72rem',
-                            background: c.is_active ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                            color: c.is_active ? 'var(--c-red)' : 'var(--c-green)',
-                            border: '1px solid var(--border-subtle)',
-                          }}
-                          title={c.is_active ? 'Suspend Club' : 'Reactivate Club'}
-                        >
-                          {isStatusUpdating ? '...' : c.is_active ? 'Suspend' : 'Reactivate'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <div key={c.id} className={`mc-card mc-gcard mc-lift${c.is_active ? '' : ' dim'}`}>
+                    <button type="button" className="top" style={{ background: softTint(c.primary_color, 0.28) }} onClick={() => onSelectClub(c)} aria-label={`Open ${c.name}`}>
+                      <span className={`st${c.is_active ? '' : ' off'}`}>{c.is_active ? 'Active' : 'Suspended'}</span>
+                      <Crest logoUrl={c.logo_url} label={c.short_name} color={c.primary_color} />
+                    </button>
+                    <h3><button type="button" onClick={() => onSelectClub(c)}>{c.name}</button></h3>
+                    <div className="meta num">
+                      {c.member_count} members{c.pending_count > 0 && <span style={{ color: 'var(--mc-amber)' }}> · {c.pending_count} waiting</span>}
+                      {' · '}{c.team_count} teams · {c.match_count} matches
+                    </div>
+                    <div className="meta">
+                      {c.owner_name || 'Founder'}{c.owner_email ? ` · ${c.owner_email}` : ''}
+                    </div>
+                    <div className="meta num" style={{ marginTop: 4 }}>
+                      <Eye size={11} style={{ verticalAlign: '-1px' }} /> {c.visits_30d.toLocaleString()} views · <span style={{ color: 'var(--mc-green-ink)' }}>{formatMoney(c.gmv_cents, 'AUD')}</span>
+                    </div>
+                    <div className="flags">
+                      {policyFlag(c.membership_payment_policy)}
+                      <span className={`mc-flag${c.stripe_ready ? ' ok' : ''}`}>{c.stripe_ready ? 'Stripe' : 'Bank transfer only'}</span>
+                      {c.custom_domain && <span className="mc-flag info"><Globe size={10} />{c.custom_domain}</span>}
+                    </div>
+                    <div className="acts">
+                      <button type="button" className="mc-icon-btn" onClick={() => onSelectClub(c)} aria-label={`${c.name} details`} title="See club details">
+                        <Sliders size={13} />
+                      </button>
+                      <Link href={`/${c.slug}/admin`} target="_blank" className="mc-pill-btn" title="Open the club admin">
+                        <Shield size={12} /> Admin
+                      </Link>
+                      <Link href={`/${c.slug}`} target="_blank" className="mc-icon-btn" aria-label={`Open ${c.name} website`} title="Open the club website">
+                        <ExternalLink size={13} />
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={isStatusUpdating}
+                        onClick={() => onToggleStatus(c.id, c.is_active)}
+                        className={`mc-icon-btn`}
+                        style={{ color: c.is_active ? 'var(--mc-red)' : 'var(--mc-green-ink)' }}
+                        aria-label={c.is_active ? `Suspend ${c.name}` : `Reactivate ${c.name}`}
+                        title={c.is_active ? 'Suspend club' : 'Reactivate club'}
+                      >
+                        {isStatusUpdating ? '…' : c.is_active ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+                      </button>
+                    </div>
+                  </div>
                 );
-              })
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mc-card">
+          <div className="mc-card-h">
+            <h3>Needs attention</h3>
+            {quickFilter !== 'all' && (
+              <button type="button" className="mc-pill-btn ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setQuickFilter('all')}>Show all</button>
             )}
-          </tbody>
-        </table>
+          </div>
+          <div className="mc-coll">
+            {sideRows.map(r => {
+              const Icon = r.icon;
+              return (
+                <button key={r.key} type="button" className="mc-coll-row" aria-pressed={quickFilter === r.key} onClick={() => setQuickFilter(quickFilter === r.key ? 'all' : r.key)}>
+                  <span className="mc-sq" style={{ background: r.bg, color: r.color }}><Icon size={14} /></span>
+                  <div>
+                    <b>{r.label}</b>
+                    <div className="mc-track"><span style={{ width: `${Math.round((r.count / maxCount) * 100)}%`, background: r.bar }} /></div>
+                  </div>
+                  <em className="num">{r.count} {r.count === 1 ? 'club' : 'clubs'}</em>
+                </button>
+              );
+            })}
+            <button type="button" className="mc-coll-row" aria-pressed={statusFilter === 'inactive'} onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}>
+              <span className="mc-sq" style={{ background: 'var(--mc-bar)', color: 'var(--mc-ink-2)' }}><Building size={14} /></span>
+              <div>
+                <b>Suspended</b>
+                <div className="mc-track"><span style={{ width: `${Math.round((counts.suspended / maxCount) * 100)}%`, background: 'var(--mc-ink-3)' }} /></div>
+              </div>
+              <em className="num">{counts.suspended} {counts.suspended === 1 ? 'club' : 'clubs'}</em>
+            </button>
+          </div>
+          <div className="mc-coll-total">
+            <b className="num">{attentionTotal}</b>
+            <small>{attentionTotal === 1 ? 'club needs' : 'clubs need'} a look right now</small>
+          </div>
+        </div>
       </div>
     </div>
   );

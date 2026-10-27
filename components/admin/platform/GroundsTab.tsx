@@ -30,10 +30,6 @@ type View = 'all' | 'import' | 'edit';
 const ACCENT = '#818CF8';
 const muted: React.CSSProperties = { fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 };
 const inline: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.4rem' };
-const pill = (on: boolean): React.CSSProperties => ({
-  border: '1px solid var(--border-subtle)', padding: '0.45rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
-  background: on ? 'rgba(99, 102, 241, 0.18)' : 'transparent', color: on ? ACCENT : 'var(--text-secondary)', ...inline,
-});
 const badge = (bg: string, color: string): React.CSSProperties => ({ background: bg, color, fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.04em' });
 const SURFACES = ['Grass', 'Synthetic', 'Hybrid'];
 
@@ -47,12 +43,6 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown }):
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `The server couldn’t do that (error ${res.status}). Try again.`);
   return json as T;
-}
-
-function Status({ g }: { g: ListedGround }) {
-  if (!g.is_published) return <span className="badge" style={badge('rgba(245, 158, 11, 0.15)', 'var(--c-amber)')}>DRAFT</span>;
-  if (g.indexable) return <span className="badge" style={badge('rgba(16, 185, 129, 0.15)', 'var(--c-green)')}>LIVE · IN GOOGLE</span>;
-  return <span className="badge" style={badge('rgba(var(--tint-rgb), 0.08)', 'var(--text-secondary)')}>LIVE · NOT IN GOOGLE YET</span>;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -516,34 +506,51 @@ export default function GroundsTab({ showToast }: { showToast: (msg: string) => 
     }
   };
 
-  const tabs: { id: View; label: string; icon: React.ElementType }[] = [
-    { id: 'all', label: 'All grounds', icon: MapPin },
-    { id: 'import', label: 'Import from map', icon: Layers },
+  // Grounds per council for the side panel, biggest first
+  const byCouncil = Object.entries(
+    grounds.reduce<Record<string, number>>((acc, g) => {
+      const c = councilName(g) || 'No council yet';
+      acc[c] = (acc[c] || 0) + 1;
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+  const councilMax = Math.max(1, ...byCouncil.map(([, c]) => c));
+  const COUNCIL_TINTS = [
+    ['var(--mc-mint)', 'var(--mc-green-ink)', '#10B981'],
+    ['var(--mc-lilac)', 'var(--mc-indigo)', '#818CF8'],
+    ['var(--mc-pink)', 'var(--mc-pink-ink)', '#F472B6'],
+    ['var(--mc-sky)', 'var(--mc-sky-ink)', '#60A5FA'],
   ];
 
+  const surfaceClass = (g: ListedGround) => {
+    if (!g.is_published) return 'draft';
+    const s = (g.pitches || []).map(p => (p.surface || '').toLowerCase());
+    return s.length && s.every(x => x === 'synthetic') ? 'syn' : '';
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {tabs.map(t => {
-            const Icon = t.icon;
-            return (
-              <button key={t.id} type="button" style={pill(view === t.id)} onClick={() => { setView(t.id); setEditing(null); }}>
-                <Icon size={15} /> {t.label}
-              </button>
-            );
-          })}
-          <button type="button" style={pill(view === 'edit' && !editing)} onClick={() => { setEditing(null); setView('edit'); }}>
-            <Plus size={15} /> Add a ground
-          </button>
+    <div>
+      <div className="mc-page-h">
+        <div>
+          <h1>Grounds</h1>
+          <p>Every ground in the public directory, with or without a club.</p>
         </div>
-        <a href="/grounds" target="_blank" rel="noopener" className="btn btn-secondary btn-sm" style={inline}>
-          <ExternalLink size={14} /> Public directory
-        </a>
+        <div className="right">
+          <span className="mc-seg" role="group" aria-label="Grounds view">
+            <button type="button" aria-pressed={view === 'all'} onClick={() => { setView('all'); setEditing(null); }}>All grounds</button>
+            <button type="button" aria-pressed={view === 'import'} onClick={() => { setView('import'); setEditing(null); }}>Import from map</button>
+          </span>
+          <button type="button" className="mc-pill-btn" onClick={() => { setEditing(null); setView('edit'); }}>
+            <Plus size={14} /> Add a ground
+          </button>
+          <a href="/grounds" target="_blank" rel="noopener" className="mc-icon-btn" aria-label="Open the public directory" title="Open the public directory">
+            <ExternalLink size={14} />
+          </a>
+        </div>
       </div>
 
       {!migrated && (
-        <p className="glass-panel" style={{ ...muted, padding: '0.9rem 1rem', color: 'var(--c-amber)' }}>
+        <p className="mc-card" style={{ ...muted, marginBottom: '1rem', color: 'var(--mc-amber)' }}>
           Run the 20261114_grounds_platform.sql database migration before importing from the map.
         </p>
       )}
@@ -556,69 +563,109 @@ export default function GroundsTab({ showToast }: { showToast: (msg: string) => 
       {view === 'import' && <ImportPanel showToast={showToast} onImported={load} />}
 
       {view === 'all' && (
-        <>
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: '1 1 260px' }}>
-              <Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: 'var(--text-muted)' }} aria-hidden="true" />
-              <input className="form-input" style={{ paddingLeft: 36 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Ground, suburb, postcode or council" aria-label="Search grounds" />
-            </div>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {([['all', 'All'], ['drafts', 'Drafts'], ['live', 'Live'], ['noclub', 'No club']] as const).map(([f, label]) => (
-                <button key={f} type="button" style={pill(filter === f)} onClick={() => setFilter(f)}>{label} {counts[f]}</button>
-              ))}
-              <button type="button" className="btn btn-secondary btn-sm" onClick={load} disabled={loading} aria-label="Refresh">
+        <div className="mc-wrap">
+          <div>
+            <div className="mc-toolbar">
+              <label className="mc-search">
+                <Search size={15} aria-hidden="true" />
+                <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ground, suburb, postcode or council" aria-label="Search grounds" />
+              </label>
+              <span className="mc-seg" role="group" aria-label="Filter grounds">
+                {([['all', 'All'], ['drafts', 'Drafts'], ['live', 'Live'], ['noclub', 'No club']] as const).map(([f, label]) => (
+                  <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>{label} {counts[f]}</button>
+                ))}
+              </span>
+              <button type="button" className="mc-icon-btn" onClick={load} disabled={loading} aria-label="Refresh">
                 <RefreshCw size={14} className={loading ? 'spin' : ''} />
               </button>
             </div>
-          </div>
 
-          {error && <p role="alert" style={{ ...muted, color: 'var(--c-red)' }}>{error}</p>}
+            {error && <p role="alert" style={{ ...muted, color: 'var(--mc-red)', marginBottom: '0.75rem' }}>{error}</p>}
 
-          <div className="glass-panel" style={{ padding: '0.4rem' }}>
-            {loading && !grounds.length && <p style={{ ...muted, padding: '1rem', ...inline }}><Loader2 size={15} className="spin" /> Loading grounds…</p>}
+            {loading && !grounds.length && <div className="mc-card mc-empty" style={inline}><Loader2 size={15} className="spin" /> Loading grounds…</div>}
             {!loading && !shown.length && (
-              <p style={{ ...muted, padding: '1rem' }}>
+              <div className="mc-card mc-empty">
                 {grounds.length ? 'No grounds match.' : 'No grounds yet. Add one, or import a council area from the map.'}
-              </p>
-            )}
-            {shown.map((g, i) => (
-              <div key={g.id} style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap', padding: '0.85rem 0.8rem', borderTop: i ? '1px solid var(--border-subtle)' : 'none' }}>
-                <MapPin size={18} color={ACCENT} style={{ flexShrink: 0 }} />
-                <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                  <div style={{ ...inline, flexWrap: 'wrap', fontWeight: 800, color: 'var(--text-primary)' }}>{g.name} <Status g={g} /></div>
-                  <p style={muted}>
-                    {[`${g.suburb} ${g.state}${g.postcode ? ` ${g.postcode}` : ''}`, councilName(g), (g.pitches || []).length ? pitchSummary(g.pitches) : 'No pitches yet'].filter(Boolean).join(' · ')}
-                  </p>
-                  <p style={{ ...muted, fontSize: '0.76rem' }}>
-                    Looked after by <strong style={{ color: 'var(--text-secondary)' }}>{g.steward_name || 'itsfootball.club'}</strong>
-                    {g.clubs_using > 0 && <> · home ground of {g.clubs_using} {g.clubs_using === 1 ? 'club' : 'clubs'}</>}
-                    {g.source === 'osm' && <> · from OpenStreetMap</>}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {!g.is_published && (
-                    <button type="button" className="btn btn-primary btn-sm" style={inline} disabled={busyId === g.id} onClick={() => act(g, 'publish')}>
-                      {busyId === g.id ? <Loader2 size={14} className="spin" /> : <Check size={14} />} Publish
-                    </button>
-                  )}
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing(g); setView('edit'); }}>Edit</button>
-                  {g.is_published
-                    ? (
-                      <>
-                        <a className="btn btn-secondary btn-sm" href={groundPath(g)} target="_blank" rel="noopener" aria-label={`Open ${g.name}`}><ExternalLink size={14} /></a>
-                        <button type="button" className="btn btn-secondary btn-sm" disabled={busyId === g.id} onClick={() => act(g, 'unpublish')}>Take down</button>
-                      </>
-                    )
-                    : (
-                      <button type="button" className="btn btn-secondary btn-sm" aria-label={`Delete ${g.name}`} disabled={busyId === g.id} onClick={() => act(g, 'delete')}>
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                </div>
               </div>
-            ))}
+            )}
+
+            {shown.length > 0 && (
+              <div className="mc-grid">
+                {shown.map(g => (
+                  <div key={g.id} className="mc-card mc-gcard mc-lift">
+                    <button type="button" className={`top mc-pitch ${surfaceClass(g)}`} onClick={() => { setEditing(g); setView('edit'); }} aria-label={`Edit ${g.name}`}>
+                      <span className="mid" />
+                      <span className={`st${g.is_published ? '' : ' draft'}`}>{g.is_published ? (g.indexable ? 'Live · in Google' : 'Live') : 'Draft'}</span>
+                    </button>
+                    <h3><button type="button" onClick={() => { setEditing(g); setView('edit'); }}>{g.name}</button></h3>
+                    <div className="meta">
+                      {[`${g.suburb} ${g.state}${g.postcode ? ` ${g.postcode}` : ''}`, councilName(g)].filter(Boolean).join(' · ')}
+                    </div>
+                    <div className="meta" style={{ marginTop: 4 }}>
+                      Looked after by {g.steward_name || 'itsfootball.club'}
+                      {g.clubs_using > 0 && <> · home of {g.clubs_using} {g.clubs_using === 1 ? 'club' : 'clubs'}</>}
+                    </div>
+                    <div className="flags">
+                      <span className={`mc-flag${(g.pitches || []).length ? ' ok' : ' warn'}`}>{(g.pitches || []).length ? pitchSummary(g.pitches) : 'No pitches yet'}</span>
+                      {g.is_published && !g.indexable && <span className="mc-flag">Not in Google yet</span>}
+                      {g.source === 'osm' && <span className="mc-flag info">From OpenStreetMap</span>}
+                    </div>
+                    <div className="acts">
+                      {!g.is_published && (
+                        <button type="button" className="mc-pill-btn ok" disabled={busyId === g.id} onClick={() => act(g, 'publish')}>
+                          {busyId === g.id ? <Loader2 size={12} className="spin" /> : <Check size={12} />} Publish
+                        </button>
+                      )}
+                      <button type="button" className="mc-pill-btn soft" onClick={() => { setEditing(g); setView('edit'); }}>Edit</button>
+                      {g.is_published
+                        ? (
+                          <>
+                            <a className="mc-icon-btn" href={groundPath(g)} target="_blank" rel="noopener" aria-label={`Open ${g.name}`} title="Open the ground page"><ExternalLink size={13} /></a>
+                            <button type="button" className="mc-pill-btn ghost" disabled={busyId === g.id} onClick={() => act(g, 'unpublish')}>Take down</button>
+                          </>
+                        )
+                        : (
+                          <button type="button" className="mc-icon-btn" style={{ color: 'var(--mc-red)' }} aria-label={`Delete ${g.name}`} title="Delete draft" disabled={busyId === g.id} onClick={() => act(g, 'delete')}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </>
+
+          <div className="mc-card">
+            <div className="mc-card-h"><h3>By council</h3><span className="mc-eyebrow num">{grounds.length} grounds</span></div>
+            {byCouncil.length === 0 ? (
+              <p className="mc-muted">No grounds yet.</p>
+            ) : (
+              <div className="mc-coll">
+                {byCouncil.slice(0, 8).map(([name, count], idx) => {
+                  const [bg, color, bar] = COUNCIL_TINTS[idx % COUNCIL_TINTS.length];
+                  return (
+                    <button key={name} type="button" className="mc-coll-row" aria-pressed={needle === name.toLowerCase()} onClick={() => setQ(needle === name.toLowerCase() || name === 'No council yet' ? '' : name)}>
+                      <span className="mc-sq" style={{ background: bg, color }}><MapPin size={14} /></span>
+                      <div>
+                        <b>{name}</b>
+                        <div className="mc-track"><span style={{ width: `${Math.round((count / councilMax) * 100)}%`, background: bar }} /></div>
+                      </div>
+                      <em className="num">{count}</em>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mc-dark-cta">
+              <b>Import from map</b>
+              <p>Find the soccer pitches in a council area on OpenStreetMap. Nothing is added until you tick and confirm.</p>
+              <button type="button" className="mc-pill-btn" onClick={() => setView('import')}>
+                <Layers size={14} /> Pick the council
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
