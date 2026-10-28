@@ -14,7 +14,7 @@ interface SponsorMarqueeProps {
 }
 
 /** Continuously scrolling strip of sponsor logos. Pauses on hover/focus; static for reduced-motion users. */
-export default function SponsorMarquee({ sponsors, placement, title = 'Club Partners' }: SponsorMarqueeProps) {
+export default function SponsorMarquee({ sponsors, placement, title = 'Club Sponsors' }: SponsorMarqueeProps) {
   if (sponsors.length === 0) return null;
 
   const ordered = sortSponsorsByTier(sponsors);

@@ -16,6 +16,10 @@ export interface AttentionCounts {
   sponsorsToPutOnSite?: number;
   /** Sponsors who signed up on the website in the last two weeks and haven't paid yet */
   sponsorSignups?: number;
+  /** Sponsors on the site whose end date is in the next 30 days */
+  sponsorsEndingSoon?: number;
+  /** Unpaid website sign-ups older than 60 days, for the admin to clear */
+  staleSponsorSignups?: number;
 }
 
 export interface AttentionItem {
@@ -60,6 +64,8 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   if (counts.unreadMessages) items.push({ key: 'messages', area: 'inquiries', count: counts.unreadMessages, text: `${plural(counts.unreadMessages, 'unread message', 'unread messages')}`, href: `${base}/inquiries`, tone: 'normal' });
   if (counts.sponsorsToPutOnSite) items.push({ key: 'sponsors-paid', area: 'sponsors', count: counts.sponsorsToPutOnSite, text: `${plural(counts.sponsorsToPutOnSite, 'paid sponsor', 'paid sponsors')} waiting to go on the site`, href: `${base}/sponsors?view=new`, tone: 'urgent' });
   if (counts.sponsorSignups) items.push({ key: 'sponsors-new', area: 'sponsors', count: counts.sponsorSignups, text: `${plural(counts.sponsorSignups, 'new sponsor sign-up', 'new sponsor sign-ups')} not paid yet`, href: `${base}/sponsors?view=new`, tone: 'normal' });
+  if (counts.sponsorsEndingSoon) items.push({ key: 'sponsors-ending', area: 'sponsors', count: counts.sponsorsEndingSoon, text: `${counts.sponsorsEndingSoon === 1 ? '1 sponsorship ends' : `${counts.sponsorsEndingSoon} sponsorships end`} in the next 30 days`, href: `${base}/sponsors?view=ending`, tone: 'normal' });
+  if (counts.staleSponsorSignups) items.push({ key: 'sponsors-stale', area: 'sponsors', count: counts.staleSponsorSignups, text: `${plural(counts.staleSponsorSignups, 'unpaid sponsor sign-up', 'unpaid sponsor sign-ups')} older than 60 days`, href: `${base}/sponsors?view=new`, tone: 'normal' });
   if (counts.ordersToHandOut) items.push({ key: 'orders', area: 'shop', count: counts.ordersToHandOut, text: `${plural(counts.ordersToHandOut, 'shop order', 'shop orders')} to hand out`, href: `${base}/shop#orders`, tone: 'normal' });
   for (const m of matches.filter(x => needsLineup(x, now)).sort((a, b) => kickoff(a) - kickoff(b))) {
     items.push({ key: `lineup-${m.id}`, area: 'lineup', text: `Pick the line-up ${m.is_club_home ? 'vs' : 'at'} ${opponentOf(m)}`, href: `${base}/lineup/draft?match=${m.id}`, tone: 'normal' });

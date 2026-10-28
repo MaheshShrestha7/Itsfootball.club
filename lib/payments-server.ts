@@ -48,6 +48,8 @@ export function readPaymentInput(get: (key: string) => unknown) {
     kind: (['membership_signup', 'membership_renewal', 'sponsorship', 'shop_order', 'event_ticket'].includes(kind as string) ? kind : null) as PayableKind | null,
     memberId: uuid(get('memberId')),
     sponsorId: uuid(get('sponsorId')),
+    /** The secret from a payment or renewal link the club emailed (sponsors.access_key) */
+    sponsorKey: /^[0-9a-f]{64}$/.test(String(get('sponsorKey') ?? '')) ? String(get('sponsorKey')) : null,
     planId: uuid(get('planId')),
     packageId: uuid(get('packageId')),
     eventId: uuid(get('eventId')),
@@ -63,7 +65,8 @@ export function readPaymentInput(get: (key: string) => unknown) {
  *   membership_signup   a pending application; its id is only known to the applicant (club_members is not public)
  *   membership_renewal  only the signed-in member themselves (`payerUserId` from their session), or their
  *                       parent / guardian (`payerEmail`, the session's confirmed email, is the member's guardian_email)
- *   sponsorship         a sponsor still at 'prospect', i.e. one that just applied; active sponsors' ids are public
+ *   sponsorship         a sponsor still at 'prospect', i.e. one that just applied; active sponsors' ids are public,
+ *                       so renewing an existing sponsorship also needs the secret key from the club's renewal link
  *   shop_order          anyone: it pays for new goods, never for someone else's record
  *   event_ticket        anyone: new tickets for a public event, priced from the event row
  */
@@ -146,12 +149,16 @@ export async function preparePayment(
 
   if (input.kind === 'sponsorship') {
     if (!input.sponsorId || !input.packageId) return bad('Choose a sponsorship package.');
-    const [{ data: sponsor }, { data: pkg }] = await Promise.all([
-      db.from('sponsors').select('id, name, contact_name, contact_email, package_status').eq('id', input.sponsorId).eq('club_id', club.id).maybeSingle(),
+    // access_key only exists after migration 20261132, so it's only asked for when a link sent one
+    const sponsorColumns = `id, name, contact_name, contact_email, package_status${input.sponsorKey ? ', access_key' : ''}`;
+    const [{ data: sponsorRow }, { data: pkg }] = await Promise.all([
+      db.from('sponsors').select(sponsorColumns).eq('id', input.sponsorId).eq('club_id', club.id).maybeSingle(),
       db.from('sponsorship_packages').select('id, name, price_cents').eq('id', input.packageId).eq('club_id', club.id).eq('is_active', true).maybeSingle(),
     ]);
+    const sponsor = sponsorRow as unknown as { id: string; name: string; contact_name: string | null; contact_email: string | null; package_status: string | null; access_key?: string | null } | null;
     if (!sponsor || !pkg) return bad('Sponsorship not found.', 404);
-    if (sponsor.package_status !== 'prospect') return bad('This sponsorship is already set up. Please contact the club about payment.', 409);
+    const renewing = !!input.sponsorKey && !!sponsor.access_key && sponsor.access_key === input.sponsorKey;
+    if (sponsor.package_status !== 'prospect' && !renewing) return bad('This sponsorship is already set up. Please contact the club about payment.', 409);
     if (pkg.price_cents <= 0) return bad('This package has nothing to pay.');
     const label = `${club.name} sponsorship: ${pkg.name}`;
     return {
@@ -162,7 +169,7 @@ export async function preparePayment(
         row: {
           club_id: club.id, kind: 'sponsorship', category: 'sponsorship',
           member_id: null, sponsor_id: sponsor.id, plan_id: null, package_id: pkg.id,
-          description: `${pkg.name} (${sponsor.name})`,
+          description: `${pkg.name}${sponsor.package_status !== 'prospect' ? ' renewal' : ''} (${sponsor.name})`,
           amount_cents: pkg.price_cents, currency,
           payer_name: sponsor.contact_name || sponsor.name, payer_email: sponsor.contact_email,
         },

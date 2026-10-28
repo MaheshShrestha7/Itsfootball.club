@@ -11,7 +11,7 @@ export type EmailKind =
   | 'availability' | 'event' | 'renewal'
   | 'notice_match' | 'notice_event' | 'notice_news' | 'notice_renewal'
   | 'member_applied' | 'member_approved' | 'member_rejected'
-  | 'inquiry_reply';
+  | 'inquiry_reply' | 'sponsor_payment' | 'sponsor_renewal';
 
 export interface ClubEmail {
   /** Unique name of this email; a key already in email_log is never sent again */
