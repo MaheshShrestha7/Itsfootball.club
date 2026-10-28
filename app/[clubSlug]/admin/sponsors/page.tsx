@@ -4,10 +4,13 @@ import React, { useEffect, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
-import { sponsorHref, sponsorLabel, sponsorTierLabel } from '@/lib/sponsors';
+import { isSponsorOnSite, sponsorHref, sponsorLabel, sponsorTierLabel } from '@/lib/sponsors';
+import { useUrlTab } from '@/lib/use-url-tab';
+import { useSearchParams } from 'next/navigation';
+import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Trash2, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Maximize2, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
@@ -20,6 +23,36 @@ const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   expired: 'Expired',
   cancelled: 'Cancelled',
 };
+
+const ENDED: SponsorPackageStatus[] = ['expired', 'cancelled'];
+const isEnded = (s: Sponsor) => !!s.package_status && ENDED.includes(s.package_status);
+/** Signed up on the club's website and not put on the site yet (paid or not) */
+const isNewSignup = (s: Sponsor) => !s.is_active && !isEnded(s) && (s.package_status === 'prospect' || s.package_status === 'paid');
+
+type View = 'all' | 'new' | 'live' | 'hidden' | 'ended';
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'new', label: 'New sign-ups' },
+  { id: 'live', label: 'On site' },
+  { id: 'hidden', label: 'Hidden' },
+  { id: 'ended', label: 'Ended' },
+];
+const viewOf = (s: Sponsor): Exclude<View, 'all'> =>
+  isEnded(s) ? 'ended' : isNewSignup(s) ? 'new' : isSponsorOnSite(s) ? 'live' : 'hidden';
+
+/** An on/off switch in the style of Branding's home ground panel */
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
+      style={{ flexShrink: 0, width: 48, height: 28, padding: 0, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.1)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
+      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s ease' }} />
+    </button>
+  );
+}
+
+const onSiteBadge = (s: Sponsor) => isSponsorOnSite(s)
+  ? <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '0.7rem' }}>● On site</span>
+  : <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-muted)', border: '1px dashed var(--border-medium)', fontSize: '0.7rem' }}>Hidden from site</span>;
 
 function getSponsorEffectiveScale(s: Sponsor): 'xl' | 'lg' | 'md' | 'sm' {
   if (s.size_scale && s.size_scale !== 'auto') {
@@ -50,6 +83,37 @@ export default function AdminSponsorsPage({
 
   const clubSponsors = sponsors.filter(s => s.club_id === club.id);
   const clubWideSponsors = clubSponsors.filter(s => !s.event_id);
+  // The preview shows what fans see: club-wide sponsors that are on the site
+  const previewSponsors = clubWideSponsors.filter(isSponsorOnSite);
+
+  // Sponsor list or Packages (?tab=packages, from the admin menu and Finance)
+  const [tab, setTab] = useUrlTab(['list', 'packages'] as const);
+  // Which sponsors the list shows (?view=new opens New sign-ups, from "Needs you")
+  // (replaceState with no state of its own keeps useSearchParams in sync, as in useUrlTab)
+  const searchParams = useSearchParams();
+  const view: View = VIEWS.find(v => v.id === searchParams.get('view'))?.id ?? 'all';
+  const setView = (next: View) => {
+    const query = new URLSearchParams(window.location.search);
+    if (next === 'all') query.delete('view');
+    else query.set('view', next);
+    const search = query.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
+  };
+  const viewCounts = clubSponsors.reduce<Record<View, number>>(
+    (acc, sp) => ({ ...acc, [viewOf(sp)]: acc[viewOf(sp)] + 1 }),
+    { all: clubSponsors.length, new: 0, live: 0, hidden: 0, ended: 0 }
+  );
+  const shownSponsors = view === 'all' ? clubSponsors : clubSponsors.filter(sp => viewOf(sp) === view);
+
+  const putOnSite = (sp: Sponsor) => updateSponsor(sp.id, { is_active: true });
+  const endSponsorship = async (sp: Sponsor) => {
+    if (await confirmAction({
+      title: `End the sponsorship with ${sp.name}?`,
+      message: 'They come off your club site straight away. Their details, payments and view and click history are kept, and you can bring them back later.',
+      confirmLabel: 'End sponsorship',
+    })) updateSponsor(sp.id, { is_active: false, package_status: 'expired' });
+  };
+  const bringBack = (sp: Sponsor) => updateSponsor(sp.id, { is_active: true, package_status: 'confirmed' });
   const clubEvents = events.filter(e => e.club_id === club.id);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -126,6 +190,8 @@ export default function AdminSponsorsPage({
     const { scope, label, ...rest } = form;
     const payload = {
       ...rest,
+      // An ended sponsorship is never on the site
+      is_active: rest.is_active && !ENDED.includes(rest.package_status),
       // Only sent once the label column exists
       ...(labelsReady ? { label: label.trim() || null } : {}),
       event_id: scope === 'event' ? form.event_id : undefined,
@@ -142,6 +208,15 @@ export default function AdminSponsorsPage({
     }
     setModalOpen(false);
   };
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setModalOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [modalOpen]);
+
+  const editingSponsor = editingId ? clubSponsors.find(sp => sp.id === editingId) : undefined;
 
   return (
     <div>
@@ -168,6 +243,17 @@ export default function AdminSponsorsPage({
           <span>Add New Sponsor</span>
         </button>
       </div>
+
+      <div className="sponsor-tabs" role="tablist" aria-label="Sponsors" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        {([['list', 'Sponsor List', Shield], ['packages', 'Packages', Package]] as const).map(([id, label, Icon]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} data-view-ok onClick={() => setTab(id)}
+            className={`btn btn-sm ${tab === id ? 'btn-primary' : 'btn-secondary'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Icon size={14} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : (<>
 
       {/* Top Banner & Live Preview Toggle */}
       <div style={{
@@ -202,7 +288,7 @@ export default function AdminSponsorsPage({
       </div>
 
       {/* Live Public Scaling Preview (club-wide sponsors only - event sponsors show on their event's page) */}
-      {showLivePreview && clubWideSponsors.length > 0 && (
+      {showLivePreview && previewSponsors.length > 0 && (view === 'all' || view === 'live') && (
         <div style={{
           marginBottom: '2rem',
           padding: '1.25rem',
@@ -212,15 +298,15 @@ export default function AdminSponsorsPage({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <LayoutGrid size={14} /> Club Public Page Scaled Layout Preview
+              <LayoutGrid size={14} /> What fans see
             </span>
             <span className="text-meta">
-              Proportional space as displayed to fans
+              Only sponsors that are on the site, at the size fans see them
             </span>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', justifyContent: 'flex-start' }}>
-            {clubWideSponsors.map(sponsor => {
+            {previewSponsors.map(sponsor => {
               const scale = getSponsorEffectiveScale(sponsor);
               const isXL = scale === 'xl';
               const isLG = scale === 'lg';
@@ -279,12 +365,33 @@ export default function AdminSponsorsPage({
         </div>
       )}
 
+      {/* Which sponsors to list */}
+      <div className="row row-wrap" role="group" aria-label="Show" style={{ gap: '0.4rem', marginBottom: '1.25rem', padding: '0.3rem', borderRadius: '12px', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', width: 'fit-content', maxWidth: '100%' }}>
+        {VIEWS.map(v => (
+          <button key={v.id} type="button" data-view-ok aria-pressed={view === v.id} onClick={() => setView(v.id)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', borderRadius: '9px', cursor: 'pointer',
+              border: 'none', fontSize: '0.8rem', fontWeight: 700,
+              background: view === v.id ? 'rgba(var(--tint-rgb), 0.1)' : 'transparent',
+              color: view === v.id ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: view === v.id ? 'inset 0 -2px 0 var(--club-primary)' : 'none',
+            }}>
+            {v.label}
+            <span style={{ fontSize: '0.7rem', padding: '0 0.45rem', borderRadius: 999, background: v.id === 'new' && viewCounts.new > 0 ? 'rgba(59, 130, 246, 0.25)' : 'rgba(var(--tint-rgb), 0.1)', color: v.id === 'new' && viewCounts.new > 0 ? 'var(--c-blue)' : 'var(--text-secondary)' }}>
+              {viewCounts[v.id]}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Sponsors List */}
       {(() => {
         const renderSponsorRow = (sponsor: Sponsor) => {
           const scale = getSponsorEffectiveScale(sponsor);
           const isCustomScale = sponsor.size_scale && sponsor.size_scale !== 'auto';
           const linkedEvent = sponsor.event_id ? clubEvents.find(e => e.id === sponsor.event_id) : undefined;
+          const stage = viewOf(sponsor);
+          const website = sponsorHref(sponsor.website_url);
           return (
             <div
               key={sponsor.id}
@@ -296,7 +403,10 @@ export default function AdminSponsorsPage({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '1rem',
-                borderLeft: scale === 'xl' ? '4px solid #F59E0B' : scale === 'lg' ? '4px solid #EAB308' : undefined,
+                opacity: stage === 'ended' ? 0.75 : undefined,
+                borderLeft: stage === 'new' && sponsor.package_status === 'paid' ? '4px solid #10B981'
+                  : stage === 'ended' ? undefined
+                  : scale === 'xl' ? '4px solid #F59E0B' : scale === 'lg' ? '4px solid #EAB308' : undefined,
               }}
             >
               {/* On a phone the details move under the logo instead of squeezing into a narrow column */}
@@ -322,32 +432,35 @@ export default function AdminSponsorsPage({
                       {sponsor.tier.toUpperCase()}
                     </span>
                     {sponsor.label?.trim() && <span className="text-meta">Shown as &ldquo;{sponsor.label.trim()}&rdquo;</span>}
-                    <span className="badge" style={{
-                      backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                      color: scale === 'xl' ? 'var(--c-amber)' : 'var(--text-muted)',
-                      fontSize: '0.7rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                    }}>
-                      <Maximize2 size={10} />
-                      {scale.toUpperCase()} Space Allocation
-                      {isCustomScale && ' (Custom)'}
-                    </span>
+                    {stage !== 'new' && stage !== 'ended' && (
+                      <span className="badge" style={{
+                        backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                        color: scale === 'xl' ? 'var(--c-amber)' : 'var(--text-muted)',
+                        fontSize: '0.7rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}>
+                        <Maximize2 size={10} />
+                        {scale.toUpperCase()} Space Allocation
+                        {isCustomScale && ' (Custom)'}
+                      </span>
+                    )}
                     {sponsor.package_status && (
                       <span className="badge" style={{
                         backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
                         color: sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
                         fontSize: '0.7rem',
                       }}>
-                        {PACKAGE_STATUS_LABEL[sponsor.package_status]}
+                        {stage === 'new' && sponsor.package_status === 'prospect' ? 'Not paid yet' : PACKAGE_STATUS_LABEL[sponsor.package_status]}
                       </span>
                     )}
+                    {stage !== 'ended' && onSiteBadge(sponsor)}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', marginTop: '4px' }}>
-                    {sponsor.website_url && (
+                    {website && (
                       <a
-                        href={sponsorHref(sponsor.website_url)}
+                        href={website}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
@@ -369,10 +482,24 @@ export default function AdminSponsorsPage({
                       </span>
                     )}
                   </div>
+                  {/* A website sign-up: what to check before it goes on the site */}
+                  {stage === 'new' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 0.9rem', marginTop: '0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                      {sponsor.package_status === 'paid' && (
+                        <span style={{ color: 'var(--c-green)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Check size={12} /> Paid</span>
+                      )}
+                      {sponsor.logo_url
+                        ? <span style={{ color: 'var(--c-green)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Check size={12} /> Logo added</span>
+                        : <span style={{ color: 'var(--c-amber)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertCircle size={12} /> No logo yet (their initials will show)</span>}
+                      <span style={{ color: 'var(--c-amber)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <AlertCircle size={12} /> {website ? 'Check the name and website they typed' : 'Check the name they typed (no website)'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="row">
+              <div className="row row-wrap">
                 {linkedEvent && (
                   <span className="badge badge-primary" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Calendar size={11} /> {linkedEvent.title}
@@ -381,78 +508,108 @@ export default function AdminSponsorsPage({
                 <button onClick={() => handleOpenEdit(sponsor)} title={`Edit ${sponsor.name}`} aria-label={`Edit ${sponsor.name}`} className="btn btn-secondary btn-sm" style={{ minWidth: '40px', minHeight: '40px' }}>
                   <Edit2 size={14} />
                 </button>
-                <button data-needs-full
-                  onClick={async () => {
-                    if (await confirmAction({ title: `Delete sponsor "${sponsor.name}"?`, message: 'They will be removed from your club site. This cannot be undone.', confirmLabel: 'Delete sponsor', danger: true })) {
-                      deleteSponsor(sponsor.id);
-                    }
-                  }}
-                  title={`Delete ${sponsor.name}`}
-                  aria-label={`Delete ${sponsor.name}`}
-                  className="btn btn-danger btn-sm"
-                  style={{ minWidth: '40px', minHeight: '40px' }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                {(stage === 'new' || stage === 'hidden') && (
+                  <button type="button" onClick={() => putOnSite(sponsor)} className="btn btn-primary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Eye size={14} /> Put on site
+                  </button>
+                )}
+                {stage === 'live' && (
+                  <button type="button" onClick={() => endSponsorship(sponsor)} className="btn btn-secondary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Power size={14} /> End sponsorship
+                  </button>
+                )}
+                {stage === 'ended' && (
+                  <button type="button" onClick={() => bringBack(sponsor)} className="btn btn-secondary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <RotateCcw size={14} /> Bring back
+                  </button>
+                )}
               </div>
             </div>
           );
         };
 
-        // Group event-scoped sponsors under the event they belong to; sponsors whose
-        // event was since deleted still show under a "Former Event" fallback group.
-        const eventGroups = clubEvents
-          .map(evt => ({ event: evt, list: clubSponsors.filter(s => s.event_id === evt.id) }))
-          .filter(g => g.list.length > 0);
-        const orphanedEventSponsors = clubSponsors.filter(
-          s => s.event_id && !clubEvents.some(e => e.id === s.event_id)
+        const heading = (icon: React.ReactNode, text: string) => (
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {icon} {text}
+          </h3>
         );
 
         if (clubSponsors.length === 0) {
           return (
             <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No sponsors yet. Click &ldquo;Add New Sponsor&rdquo; to add your first club or event partner.
+              No sponsors yet. Click &ldquo;Add New Sponsor&rdquo; to add your first club or event partner, or set up
+              packages so businesses can sign up on your site.
+            </div>
+          );
+        }
+        if (shownSponsors.length === 0) {
+          return (
+            <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Nothing here right now.
             </div>
           );
         }
 
+        // New sign-ups first, then the club-wide and event sponsors, then ended sponsorships
+        const signups = shownSponsors.filter(sp => viewOf(sp) === 'new');
+        const ended = shownSponsors.filter(sp => viewOf(sp) === 'ended');
+        const current = shownSponsors.filter(sp => viewOf(sp) === 'live' || viewOf(sp) === 'hidden');
+        const currentClubWide = current.filter(sp => !sp.event_id);
+        // Group event-scoped sponsors under the event they belong to; sponsors whose
+        // event was since deleted still show under a "Former Event" fallback group.
+        const eventGroups = clubEvents
+          .map(evt => ({ event: evt, list: current.filter(sp => sp.event_id === evt.id) }))
+          .filter(g => g.list.length > 0);
+        const orphanedEventSponsors = current.filter(
+          sp => sp.event_id && !clubEvents.some(e => e.id === sp.event_id)
+        );
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {clubWideSponsors.length > 0 && (
+            {signups.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Shield size={14} /> Club-Wide Sponsors
-                </h3>
-                <div className="stack">
-                  {clubWideSponsors.map(renderSponsorRow)}
-                </div>
+                {heading(<Inbox size={14} />, 'New sign-ups from your website')}
+                <p className="text-note" style={{ margin: '-0.4rem 0 0.85rem' }}>
+                  They stay off your site until you check their details and tap Put on site.
+                </p>
+                <div className="stack">{signups.map(renderSponsorRow)}</div>
+              </div>
+            )}
+
+            {currentClubWide.length > 0 && (
+              <div>
+                {heading(<Shield size={14} />, 'Club-Wide Sponsors')}
+                <div className="stack">{currentClubWide.map(renderSponsorRow)}</div>
               </div>
             )}
 
             {eventGroups.map(({ event, list }) => (
               <div key={event.id}>
-                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Calendar size={14} /> Event Sponsors • {event.title}
-                </h3>
-                <div className="stack">
-                  {list.map(renderSponsorRow)}
-                </div>
+                {heading(<Calendar size={14} />, `Event Sponsors • ${event.title}`)}
+                <div className="stack">{list.map(renderSponsorRow)}</div>
               </div>
             ))}
 
             {orphanedEventSponsors.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
-                  Former Event Sponsors
-                </h3>
-                <div className="stack">
-                  {orphanedEventSponsors.map(renderSponsorRow)}
-                </div>
+                {heading(null, 'Former Event Sponsors')}
+                <div className="stack">{orphanedEventSponsors.map(renderSponsorRow)}</div>
+              </div>
+            )}
+
+            {ended.length > 0 && (
+              <div>
+                {heading(<EyeOff size={14} />, 'Ended')}
+                <p className="text-note" style={{ margin: '-0.4rem 0 0.85rem' }}>
+                  Off your site. Their details, payments and view and click history are kept for renewal talks.
+                </p>
+                <div className="stack">{ended.map(renderSponsorRow)}</div>
               </div>
             )}
           </div>
         );
       })()}
+      </>)}
 
       {/* Add / Edit Sponsor Modal */}
       {modalOpen && (
@@ -482,12 +639,25 @@ export default function AdminSponsorsPage({
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
               </h3>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setModalOpen(false)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleSave}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.85rem', marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid rgba(var(--club-primary-rgb), 0.45)', background: 'rgba(var(--club-primary-rgb), 0.08)' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div id="sponsors-on-site" style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Show on the club site</div>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    {form.is_active
+                      ? 'On: fans see this sponsor on your club pages.'
+                      : 'Off: only admins can see this sponsor. It turns off by itself when the sponsorship ends.'}
+                  </p>
+                </div>
+                <Switch checked={form.is_active} label="Show on the club site"
+                  onChange={on => setForm({ ...form, is_active: on, package_status: on && ENDED.includes(form.package_status) ? 'confirmed' : form.package_status })} />
+              </div>
+
               <div className="form-group">
                 <label className="form-label">Sponsor Scope</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
@@ -634,8 +804,8 @@ export default function AdminSponsorsPage({
               <div className="form-group">
                 <ImageUploadZone
                   clubId={club.id}
-                  label="Sponsor Logo *"
-                  recommendedText="Transparent PNG or square logo, up to 5MB"
+                  label="Sponsor Logo"
+                  recommendedText="Transparent PNG or square logo, up to 5MB. Until there is one, their initials show."
                   currentImageUrl={form.logo_url}
                   onUploadComplete={url => setForm({ ...form, logo_url: url })}
                   folder="sponsors"
@@ -648,9 +818,13 @@ export default function AdminSponsorsPage({
                 <input id="sponsors-website-link"
                   type="url"
                   className="form-input"
+                  placeholder="https://"
                   value={form.website_url}
                   onChange={e => setForm({ ...form, website_url: e.target.value })}
                 />
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  No website? Leave it blank. The logo then shows without a link.
+                </p>
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
@@ -726,7 +900,11 @@ export default function AdminSponsorsPage({
                     <select id="sponsors-package-status"
                       className="form-select"
                       value={form.package_status}
-                      onChange={e => setForm({ ...form, package_status: e.target.value as SponsorPackageStatus })}
+                      onChange={e => {
+                        const status = e.target.value as SponsorPackageStatus;
+                        // An ended sponsorship comes off the site
+                        setForm({ ...form, package_status: status, is_active: ENDED.includes(status) ? false : form.is_active });
+                      }}
                     >
                       {(Object.keys(PACKAGE_STATUS_LABEL) as SponsorPackageStatus[]).map(status => (
                         <option key={status} value={status}>{PACKAGE_STATUS_LABEL[status]}</option>
@@ -755,6 +933,25 @@ export default function AdminSponsorsPage({
                   Save Sponsor
                 </button>
               </div>
+              {editingSponsor && (
+                <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.25rem', paddingTop: '1rem', textAlign: 'center' }}>
+                  <button data-needs-full type="button" className="btn btn-sm"
+                    style={{ background: 'transparent', border: 'none', color: 'var(--c-red)', fontWeight: 700 }}
+                    onClick={async () => {
+                      if (await confirmAction({
+                        title: `Delete ${editingSponsor.name} for good?`,
+                        message: 'This also deletes their view and click history, and their payments lose the link to them. To take them off the site and keep their history, use End sponsorship instead. This cannot be undone.',
+                        confirmLabel: 'Delete for good',
+                        danger: true,
+                      })) {
+                        deleteSponsor(editingSponsor.id);
+                        setModalOpen(false);
+                      }
+                    }}>
+                    Delete for good
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

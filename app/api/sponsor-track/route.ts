@@ -47,13 +47,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false }, { status: 503 });
     }
 
-    // What the old insert policy checked: an active sponsor of this (active) club
+    // What the old insert policy checked: an active sponsor of this (active) club, on the site
     const { data: sponsor } = await client
       .from('sponsors')
       .select('id, clubs!inner(is_active)')
       .eq('id', sponsorId)
       .eq('club_id', clubId)
       .eq('is_active', true)
+      // Ended sponsorships are off the site, so nothing new is counted for them
+      .or('package_status.is.null,package_status.not.in.(expired,cancelled)')
       .eq('clubs.is_active', true)
       .maybeSingle();
     if (!sponsor) {

@@ -64,7 +64,7 @@ import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
 import { goalScoringSide, publicScoreHidden } from './teams';
-import { DATE_LOCALE } from '@/lib/dates';
+import { chartBuckets } from '@/lib/sponsors';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -230,7 +230,8 @@ interface ClubContextType {
   // Sponsor Placement Analytics (real impressions/clicks, not modeled)
   sponsorAnalyticsEvents: SponsorAnalyticsEvent[];
   trackSponsorEvent: (clubId: string, sponsorId: string, eventType: SponsorAnalyticsEventType, opts?: { placement?: string; dwellMs?: number }) => void;
-  loadSponsorAnalytics: (clubId: string) => Promise<void>;
+  /** Loads the last 90 days, or from `since` when that's earlier (a custom range in the Sponsor Report) */
+  loadSponsorAnalytics: (clubId: string, since?: Date) => Promise<void>;
   getSponsorAnalytics: (clubId: string, range?: { since?: Date; until?: Date }) => SponsorAnalyticsSummary;
 
   // Member Portal, Application Lifecycle & Messaging
@@ -2551,10 +2552,11 @@ export function ClubProvider({
       .catch(() => { /* best-effort */ });
   }, []);
 
-  const loadSponsorAnalytics = useCallback(async (clubId: string) => {
+  const loadSponsorAnalytics = useCallback(async (clubId: string, from?: Date) => {
     const client = getSupabaseClient();
     if (!client || !isUuid(clubId)) return;
-    const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const ninetyDays = Date.now() - 90 * 24 * 3600 * 1000;
+    const since = new Date(from && from.getTime() < ninetyDays ? from.getTime() : ninetyDays).toISOString();
     const { data, error } = await fetchPaged<SponsorAnalyticsEvent>(
       (from, to) => client
         .from('sponsor_analytics')
@@ -2609,26 +2611,17 @@ export function ClubProvider({
     const repeatVisitors = [...visitCounts.values()].filter(c => c > 1).length;
     const repeatExposureRate = uniqueReach > 0 ? (repeatVisitors / uniqueReach) * 100 : 0;
 
-    // Last 7 days, bucketed by day
-    const byDay: { day: string; impressions: number; clicks: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dayLabel = d.toLocaleDateString(DATE_LOCALE, { weekday: 'short' });
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const dayEnd = dayStart + 24 * 3600 * 1000;
-      byDay.push({
-        day: dayLabel,
-        impressions: impressionsRows.filter(r => {
-          const t = new Date(r.created_at).getTime();
-          return t >= dayStart && t < dayEnd;
-        }).length,
-        clicks: clickRows.filter(r => {
-          const t = new Date(r.created_at).getTime();
-          return t >= dayStart && t < dayEnd;
-        }).length,
-      });
-    }
+    // The range picked, one bar a day (a week for long ranges). With no start date, from the
+    // earliest data loaded (or the last 30 days when there is none)
+    const earliest = rows.reduce((min, r) => Math.min(min, new Date(r.created_at).getTime()), Date.now());
+    const chartFrom = new Date(sinceMs ?? Math.min(earliest, Date.now() - 29 * 24 * 3600 * 1000));
+    const byDay = chartBuckets(chartFrom, new Date(untilMs ?? Date.now())).map(b => {
+      const inBar = (r: SponsorAnalyticsEvent) => {
+        const t = new Date(r.created_at).getTime();
+        return t >= b.start && t < b.end;
+      };
+      return { day: b.label, impressions: impressionsRows.filter(inBar).length, clicks: clickRows.filter(inBar).length };
+    });
 
     // Per-sponsor breakdown
     const sponsorIds = new Set(rows.map(r => r.sponsor_id));

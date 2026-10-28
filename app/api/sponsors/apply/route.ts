@@ -3,12 +3,15 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { sponsorHref } from '@/lib/sponsors';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
+import { formatMoney } from '@/lib/finance';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, max) : '');
 
 // Public sponsorship sign-up: creates a hidden 'prospect' sponsor the club can then take payment for.
-// It stays off the public site until an admin adds the logo and switches it on.
+// It stays off the public site until an admin checks it and taps Put on site (even once paid).
+// A "price on request" package (price 0) skips payment: the business's message goes to the Inbox.
+// Either way the club hears about it in their Inbox, and on the admin "Needs you" list.
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
   if (!(await durableRateLimit(`sponsor-apply:${ip}`, 3, 10 * 60 * 1000))) {
@@ -29,6 +32,7 @@ export async function POST(req: NextRequest) {
   const contactEmail = clean(body.contact_email).toLowerCase();
   const contactPhone = clean(body.contact_phone, 64) || null;
   const website = sponsorHref(clean(body.website_url, 500) || undefined) ?? null;
+  const offer = clean(body.message, 2000);
   if (!clubId || !packageId || !name || !contactName || !EMAIL_RE.test(contactEmail)) {
     return NextResponse.json({ error: 'Please fill in your business name, contact name and a valid email.' }, { status: 400 });
   }
@@ -42,6 +46,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (!pkg) return NextResponse.json({ error: 'That package is no longer available.' }, { status: 404 });
 
+  const onRequest = !(pkg.price_cents > 0);
   const row = {
     club_id: clubId,
     name,
@@ -51,11 +56,9 @@ export async function POST(req: NextRequest) {
     contact_name: contactName,
     contact_email: contactEmail,
     contact_phone: contactPhone,
-    package_value: pkg.price_cents / 100,
+    package_value: onRequest ? null : pkg.price_cents / 100,
     package_status: 'prospect',
   };
-  // The badge shows the package's name; before migration 20261127 there is no label column, so save without it
-  const label = typeof pkg.name === 'string' ? pkg.name.trim().slice(0, 60) || null : null;
   // Applying again with the same email (a retry, or a different package) updates the hidden
   // prospect from last time instead of adding another one to the club's sponsor list
   const { data: earlier } = await db
@@ -71,10 +74,38 @@ export async function POST(req: NextRequest) {
   const save = (values: Record<string, unknown>) =>
     earlier
       ? db.from('sponsors').update(values).eq('id', earlier.id).select('id').single()
-      // The logo is a placeholder until the club uploads the sponsor's artwork
-      : db.from('sponsors').insert({ logo_url: '/logo-96.png', ...values }).select('id').single();
-  let { data: sponsor, error } = await save({ ...row, label });
-  if (error?.code === 'PGRST204') ({ data: sponsor, error } = await save(row));
+      // No logo yet: their initials show until the club uploads the artwork. The badge label is
+      // left to the admin, so the site shows the tier name ("Gold Partner"), not the package's name.
+      : db.from('sponsors').insert({ logo_url: '', ...values }).select('id').single();
+  const { data: sponsor, error } = await save(row);
   if (error || !sponsor) return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 });
-  return NextResponse.json({ sponsorId: sponsor.id });
+
+  // Tell the club in their Inbox. Best effort: the sign-up is saved either way, and the inbox's own
+  // 2-minute per-email cooldown quietly drops a quick repeat
+  const { data: settings } = await db.from('club_payment_settings').select('currency').eq('club_id', clubId).maybeSingle();
+  const price = onRequest ? 'price on request' : formatMoney(pkg.price_cents, settings?.currency || 'AUD');
+  const lines = [
+    `New sponsor sign-up from your website: ${name}.`,
+    '',
+    `Package: ${pkg.name} (${price})`,
+    `Contact: ${contactName}, ${contactEmail}${contactPhone ? `, ${contactPhone}` : ''}`,
+    website ? `Website: ${website}` : 'Website: none given',
+    '',
+    onRequest
+      ? `What they would like to offer:\n${offer || '(no message)'}`
+      : 'They have gone on to payment. Card payments show as Paid on the Sponsors page; bank transfers wait for you to check the receipt in Finance.',
+    '',
+    'They stay off your site until you check their details and tap Put on site on the Sponsors page.',
+  ];
+  await db.from('contact_inquiries').insert({
+    club_id: clubId,
+    sender_name: contactName,
+    sender_email: contactEmail,
+    sender_phone: contactPhone,
+    inquiry_type: 'Sponsorship',
+    message: lines.join('\n'),
+    status: 'unread',
+  }).then(() => undefined, () => undefined);
+
+  return NextResponse.json({ sponsorId: sponsor.id, onRequest });
 }

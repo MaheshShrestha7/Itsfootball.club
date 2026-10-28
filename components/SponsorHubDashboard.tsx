@@ -3,8 +3,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
+import { toCsv } from '@/lib/finance';
+import { isSponsorOnSite } from '@/lib/sponsors';
 import {
-  Eye, MousePointerClick, Percent, DollarSign, ShieldCheck, Globe2,
+  Eye, MousePointerClick, Percent, ShieldCheck, Globe2,
   Download, Search, Users2, Clock, Layers, Info,
 } from 'lucide-react';
 
@@ -49,12 +51,9 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   const [customTo, setCustomTo] = useState('');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadSponsorAnalytics(club.id);
-  }, [club.id, loadSponsorAnalytics]);
-
+  // Club sponsors on the site now, plus any that collected views in the range (e.g. since ended)
   const clubSponsors = useMemo(
-    () => sponsors.filter(s => s.club_id === club.id && s.is_active),
+    () => sponsors.filter(s => s.club_id === club.id && isSponsorOnSite(s)),
     [sponsors, club.id]
   );
 
@@ -68,22 +67,25 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
     };
   }, [range, customFrom, customTo]);
 
+  // The last 90 days load by default; a custom range that starts earlier loads from its start
+  const loadFrom = since?.toISOString().slice(0, 10);
+  useEffect(() => {
+    loadSponsorAnalytics(club.id, loadFrom ? new Date(loadFrom) : undefined);
+  }, [club.id, loadFrom, loadSponsorAnalytics]);
+
   const data = getSponsorAnalytics(club.id, { since, until });
 
   const rows = useMemo(() => {
-    return clubSponsors
+    const seen = new Set(clubSponsors.map(s => s.id));
+    const ended = sponsors.filter(s => s.club_id === club.id && !seen.has(s.id) && data.bySponsor[s.id]);
+    return [...clubSponsors, ...ended]
       .map(sponsor => ({ sponsor, stats: data.bySponsor[sponsor.id] }))
       .filter(r => {
         const q = search.trim().toLowerCase();
         if (q && !r.sponsor.name.toLowerCase().includes(q)) return false;
         return true;
       });
-  }, [clubSponsors, data.bySponsor, search]);
-
-  const totalSpend = clubSponsors.reduce((a, s) => a + (s.package_value || 0), 0);
-  const ecpm = data.totals.impressions > 0 && totalSpend > 0
-    ? totalSpend / (data.totals.impressions / 1000)
-    : 0;
+  }, [clubSponsors, sponsors, club.id, data.bySponsor, search]);
 
   const maxDayImpressions = Math.max(...data.byDay.map(d => d.impressions), 1);
 
@@ -93,14 +95,13 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
     { key: 'clicks', label: 'Clicks & Interactions', icon: MousePointerClick, value: data.totals.clicks.toLocaleString(), color: 'var(--c-amber)' },
     { key: 'ctr', label: 'CTR', icon: Percent, value: `${data.totals.ctr.toFixed(2)}%`, color: 'var(--c-purple)' },
     { key: 'viewability', label: 'Viewability Rate', icon: ShieldCheck, value: `${data.totals.viewabilityRate.toFixed(1)}%`, color: '#22D3EE' },
-    { key: 'ecpm', label: 'eCPM', icon: DollarSign, value: ecpm > 0 ? `$${ecpm.toFixed(2)}` : '—', color: 'var(--c-red)' },
   ];
 
   const handleExportCsv = () => {
     const header = ['Creative / Slot', 'Placement', 'Impressions', 'Viewable Impressions', 'Viewability %', 'Clicks', 'CTR %', 'Avg. Time in View (s)', 'Status'];
     const lines = rows.map(({ sponsor, stats }) => [
       sponsor.name,
-      `"${placementLabel(stats?.placements)}"`,
+      placementLabel(stats?.placements),
       stats?.impressions || 0,
       stats?.viewableImpressions || 0,
       (stats?.viewabilityRate || 0).toFixed(2),
@@ -108,8 +109,9 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       (stats?.ctr || 0).toFixed(2),
       ((stats?.avgDwellMs || 0) / 1000).toFixed(1),
       statusLabel(sponsor.package_status),
-    ].join(','));
-    const csv = [header.join(','), ...lines].join('\n');
+    ]);
+    // Quoted and formula-safe: sponsor names can come from the public sign-up form
+    const csv = '\uFEFF' + toCsv([header, ...lines]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -172,7 +174,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
           <span>
             No sponsor placement data recorded yet for this range. Impressions and clicks are tracked automatically
-            whenever a visitor sees or clicks a sponsor logo in the site footer — figures will populate as real traffic comes in.
+            whenever a visitor sees or clicks a sponsor logo on your club pages (home page, footer, match and event pages), and figures fill in as real visitors come.
           </span>
         </div>
       ) : null}
@@ -180,7 +182,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       {clubSponsors.length > 0 && (
         <>
           {/* KPI Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
             {kpiCards.map(card => {
               const Icon = card.icon;
               return (
@@ -196,12 +198,16 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           </div>
 
           {/* Placement performance + engagement depth */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div className="glass-panel" style={{ padding: '1.75rem' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Placement Performance</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Impressions and clicks over the last 7 days, recorded live from every sponsor placement on the site.</p>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', height: '180px' }}>
-                {data.byDay.map(d => {
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                Impressions and clicks {data.byDay.length > 0 && data.byDay[0].day.startsWith('w/c') ? 'per week' : 'per day'} for the range picked, recorded live from every sponsor placement on the site.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: data.byDay.length > 14 ? '2px' : '0.75rem', height: '180px' }}>
+                {data.byDay.map((d, i) => {
+                  // Long ranges label every few bars so the dates stay readable
+                  const labelEvery = Math.ceil(data.byDay.length / 7);
                   const heightPct = Math.max(4, Math.round((d.impressions / maxDayImpressions) * 100));
                   return (
                     <div
@@ -209,13 +215,13 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       title={`${d.impressions.toLocaleString()} impressions · ${d.clicks.toLocaleString()} clicks`}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: 'default' }}
                     >
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>{d.clicks > 0 ? `${d.clicks} clicks` : ''}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>{d.clicks > 0 && data.byDay.length <= 14 ? `${d.clicks} clicks` : ''}</span>
                       <div style={{
                         width: '100%', maxWidth: '34px', height: `${heightPct}%`,
                         background: 'linear-gradient(180deg, var(--club-primary), rgba(16,185,129,0.35))',
                         borderRadius: '5px 5px 0 0',
                       }} />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{d.day}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', whiteSpace: 'nowrap', minHeight: '1em' }}>{i % labelEvery === 0 ? d.day : ''}</span>
                     </div>
                   );
                 })}

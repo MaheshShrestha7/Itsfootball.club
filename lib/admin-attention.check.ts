@@ -36,6 +36,13 @@ assert.equal(items[2].text, '1 unread message');
 assert.equal(items[3].href, '/rfc/admin/lineup/draft?match=m2');
 assert.deepEqual(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0 }, [], NOW), []);
 
+// Sponsor sign-ups: paid ones first (urgent), then new unpaid ones, both open New sign-ups
+const sponsorItems = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorsToPutOnSite: 1, sponsorSignups: 2 }, [], NOW);
+assert.deepEqual(sponsorItems.map(i => [i.key, i.area, i.tone]), [['sponsors-paid', 'sponsors', 'urgent'], ['sponsors-new', 'sponsors', 'normal']]);
+assert.equal(sponsorItems[0].text, '1 paid sponsor waiting to go on the site');
+assert.equal(sponsorItems[1].text, '2 new sponsor sign-ups not paid yet');
+assert.equal(sponsorItems[1].href, '/rfc/admin/sponsors?view=new');
+
 // Results from the club's side: an away 1-2 loss is L 1-2, never "2-1"
 assert.deepEqual(clubResult(m({ is_club_home: false, home_score: 2, away_score: 1 })), { us: 1, them: 2, outcome: 'L', onPens: false });
 assert.deepEqual(clubResult(m({ home_score: 3, away_score: 1 })), { us: 3, them: 1, outcome: 'W', onPens: false });

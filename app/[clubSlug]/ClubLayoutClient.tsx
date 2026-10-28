@@ -9,7 +9,7 @@ import ClubNavbar from '@/components/ClubNavbar';
 import Footer from '@/components/Footer';
 import ClubTabBar from '@/components/ClubTabBar';
 import { hexToRgb, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
-import { sortSponsorsByTier } from '@/lib/sponsors';
+import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 
 export default function ClubLayoutClient({
   children,
@@ -75,8 +75,12 @@ export default function ClubLayoutClient({
   // WCAG 2.2 AA Contrast calculation
   const contrastEval = evaluateColorContrast(club?.primary_color || '#10B981');
 
-  // Club-wide only - event-scoped sponsors show on their own event's page instead.
-  const clubSponsors = club ? sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id)) : [];
+  // Club-wide only - event-scoped sponsors show on their own event's page instead. Admins load
+  // hidden and ended sponsors too, so filter here and show them what fans see.
+  const clubSponsors = club ? sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s))) : [];
+  // The home page has its own sponsor showcase and match pages their Club Partners strip,
+  // so the footer's sponsor block would show every sponsor twice there
+  const ownSponsorBlock = pathname === `/${club.slug}` || pathname === '/' || /^\/[^/]+\/match\//.test(pathname || '');
 
   return (
     <div
@@ -101,7 +105,7 @@ export default function ClubLayoutClient({
         {children}
       </div>
       {/* Admin pages get a slim footer: the public sponsors block and site links only made them longer */}
-      <Footer club={club} sponsors={pathname === `/${club.slug}` || pathname === '/' ? undefined : clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
+      <Footer club={club} sponsors={ownSponsorBlock ? undefined : clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
       <ClubTabBar club={club} />
     </div>
   );

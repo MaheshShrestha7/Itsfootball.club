@@ -14,10 +14,11 @@ import {
 } from '@/lib/finance';
 import type { RenewalMode, MembershipPaymentPolicy } from '@/lib/finance';
 import type {
-  ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
+  ClubPaymentSettings, MembershipPlan, Payment, Expense,
 } from '@/lib/supabase/types';
 import { PUBLIC_PAYMENT_SETTINGS } from '@/lib/supabase/types';
 import { askText, confirmAction } from '@/components/ConfirmDialog';
+import PriceList from '@/components/admin/PriceList';
 import { DATE_LOCALE } from '@/lib/dates';
 import { openReceipt } from '@/lib/receipts';
 
@@ -45,7 +46,6 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   const [tab, setTab] = useUrlTab(TAB_IDS);
   const [settings, setSettings] = useState<ClubPaymentSettings | null>(null);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [packages, setPackages] = useState<SponsorshipPackage[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [season, setSeason] = useState('all');
@@ -62,19 +62,17 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   // ponytail: loads the club's whole ledger; page it by season if a club passes a few thousand rows
   const load = useCallback(async () => {
     if (!db) return;
-    const [s, pl, pk, pay, exp] = await Promise.all([
+    const [s, pl, pay, exp] = await Promise.all([
       // The Stripe account id isn't readable here (migration 20261116); stripe_connected says whether there is one.
       // Before that migration stripe_connected doesn't exist yet, so fall back to every column.
       db.from('club_payment_settings').select(`${PUBLIC_PAYMENT_SETTINGS}, stripe_connected`).eq('club_id', club.id).maybeSingle()
         .then(res => (res.error ? db.from('club_payment_settings').select('*').eq('club_id', club.id).maybeSingle() : res)),
       db.from('membership_plans').select('*').eq('club_id', club.id).order('sort_order'),
-      db.from('sponsorship_packages').select('*').eq('club_id', club.id).order('sort_order'),
       db.from('payments').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
       db.from('expenses').select('*').eq('club_id', club.id).order('spent_on', { ascending: false }),
     ]);
     setSettings(s.data ?? null);
     setPlans(pl.data || []);
-    setPackages(pk.data || []);
     setPayments(pay.data || []);
     setExpenses(exp.data || []);
   }, [db, club.id]);
@@ -157,7 +155,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       )}
       {tab === 'income' && <IncomeTab {...shared} payments={seasonPayments} plans={plans} members={members.filter(m => m.club_id === club.id)} />}
       {tab === 'expenses' && <ExpensesTab {...shared} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)} />}
-      {tab === 'settings' && <SettingsTab {...shared} settings={settings} plans={plans} packages={packages} />}
+      {tab === 'settings' && <SettingsTab {...shared} settings={settings} plans={plans} />}
     </div>
   );
 }
@@ -825,8 +823,8 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
   );
 }
 
-function SettingsTab({ club, db, load, flash, settings, plans, packages }: Shared & {
-  settings: ClubPaymentSettings | null; plans: MembershipPlan[]; packages: SponsorshipPackage[];
+function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
+  settings: ClubPaymentSettings | null; plans: MembershipPlan[];
 }) {
   // Clubs with several teams can tie a plan to one team (e.g. junior fees)
   const { clubTeams } = useClub();
@@ -946,90 +944,12 @@ function SettingsTab({ club, db, load, flash, settings, plans, packages }: Share
         )}
         extraLabel="Months"
       />
-      <PriceList<SponsorshipPackage>
-        title="Sponsorship packages" table="sponsorship_packages" rows={packages} db={db} clubId={club.id} flash={flash} load={load}
-        blank={{ name: 'New package', price_cents: 0, tier: 'gold' as SponsorTier }}
-        extra={(row, set) => (
-          <select className="form-select" style={{ width: 130 }} aria-label="Tier" value={row.tier} onChange={e => set({ tier: e.target.value as SponsorTier })}>
-            {['platinum', 'gold', 'silver', 'bronze', 'grassroots'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        )}
-        extraLabel="Tier"
-        textField="benefits"
-      />
+      <p className="text-note">
+        Sponsorship packages are set up on the <Link href={`/${club.slug}/admin/sponsors?tab=packages`}>Sponsors page</Link>, next to the sponsors they sign up.
+      </p>
       <p className="text-note">
         Public sign-up pages: <a href={`/${club.slug}/member`}>/{club.slug}/member</a> and <a href={`/${club.slug}/sponsor`}>/{club.slug}/sponsor</a>
       </p>
-    </div>
-  );
-}
-
-// Editable price rows shared by membership plans and sponsorship packages
-function PriceList<T extends { id: string; name: string; price_cents: number; is_active: boolean; sort_order: number; benefits?: string | null; description?: string | null }>({
-  title, table, rows, db, clubId, flash, load, blank, extra, extraLabel, textField = 'description',
-}: {
-  title: string; table: string; rows: T[]; db: Shared['db']; clubId: string; flash: Shared['flash']; load: () => Promise<void>;
-  blank: Partial<T>; extra: (row: T, set: (patch: Partial<T>) => void) => React.ReactNode; extraLabel: string; textField?: 'description' | 'benefits';
-}) {
-  const [draft, setDraft] = useState<Record<string, T>>({});
-  const [prices, setPrices] = useState<Record<string, string>>({});
-  useEffect(() => { setDraft(Object.fromEntries(rows.map(r => [r.id, r]))); setPrices(Object.fromEntries(rows.map(r => [r.id, (r.price_cents / 100).toFixed(2)]))); }, [rows]);
-
-  // A new row starts hidden (not on the public sign-up pages) until it's named, priced and saved as active
-  const add = async () => {
-    const { error } = await db!.from(table).insert({ ...blank, is_active: false, club_id: clubId, sort_order: rows.length });
-    if (error) return flash('error', error.message);
-    load();
-  };
-  const save = async (id: string) => {
-    const cents = parseMoneyToCents(prices[id] || '');
-    if (cents === null) return flash('error', 'Enter a valid price, e.g. 50 or 49.99');
-    const row: Record<string, unknown> = { ...draft[id], price_cents: cents };
-    delete row.id;
-    delete row.created_at;
-    const { error } = await db!.from(table).update(row).eq('id', id);
-    if (error) return flash('error', error.message);
-    flash('ok', `${draft[id].name} saved.`);
-    load();
-  };
-  const remove = async (id: string) => {
-    if (!(await confirmAction({ title: 'Delete this?', message: 'Past payments keep their amounts. Untick "active" instead to just hide it.', confirmLabel: 'Delete', danger: true }))) return;
-    const { error } = await db!.from(table).delete().eq('id', id);
-    if (error) return flash('error', error.message);
-    load();
-  };
-
-  return (
-    <div className="glass-panel" style={{ padding: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h3>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={add}><Plus size={14} /> Add</button>
-      </div>
-      {rows.length === 0 && <p className="text-note">None yet.</p>}
-      <div className="stack stack-sm">
-        {rows.map(r => {
-          const row = draft[r.id] || r;
-          const set = (patch: Partial<T>) => setDraft(d => ({ ...d, [r.id]: { ...row, ...patch } }));
-          return (
-            <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
-              <input className="form-input" style={{ flex: '1 1 180px' }} aria-label="Name" value={row.name} onChange={e => set({ name: e.target.value } as Partial<T>)} />
-              <input className="form-input" style={{ width: 110 }} aria-label="Price" inputMode="decimal" value={prices[r.id] ?? ''} onChange={e => setPrices(p => ({ ...p, [r.id]: e.target.value }))} />
-              <span title={extraLabel}>{extra(row, set)}</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
-                <input type="checkbox" checked={row.is_active} onChange={e => set({ is_active: e.target.checked } as Partial<T>)} /> Active
-              </label>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => save(r.id)}><Save size={14} /> Save</button>
-              <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={() => remove(r.id)} aria-label="Delete"><Trash2 size={14} /></button>
-              <textarea className="form-textarea" rows={2} style={{ flexBasis: '100%' }} aria-label={textField === 'benefits' ? 'Benefits' : 'Description'}
-                placeholder={textField === 'benefits' ? 'Benefits (logo on kit, website, matchday banner…)' : 'Short description (optional)'}
-                value={(row[textField] as string) || ''} onChange={e => set({ [textField]: e.target.value } as Partial<T>)} />
-              {!r.is_active && (
-                <p className="text-note" style={{ flexBasis: '100%', margin: 0 }}>Hidden from your public pages. Tick Active and Save when it&apos;s ready.</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

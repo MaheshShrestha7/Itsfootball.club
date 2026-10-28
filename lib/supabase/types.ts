@@ -374,6 +374,8 @@ export interface Sponsor {
   package_value?: number;
   package_status?: SponsorPackageStatus;
   season?: string;
+  /** Set by the database; read only */
+  created_at?: string;
 }
 
 export interface NewsArticle {
