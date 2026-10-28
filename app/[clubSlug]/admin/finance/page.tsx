@@ -17,7 +17,7 @@ import type {
   ClubPaymentSettings, MembershipPlan, SponsorshipPackage, Payment, Expense, SponsorTier,
 } from '@/lib/supabase/types';
 import { PUBLIC_PAYMENT_SETTINGS } from '@/lib/supabase/types';
-import { confirmAction } from '@/components/ConfirmDialog';
+import { askText, confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { openReceipt } from '@/lib/receipts';
 
@@ -314,7 +314,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     load();
   };
   const reject = async (p: Payment) => {
-    const reason = prompt('Why is this transfer being rejected? (shown to the treasurer only)');
+    const reason = await askText({ title: 'Reject this transfer?', message: 'The payment is marked rejected. Your reason is only shown to the club\'s finance team.', label: 'Reason', placeholder: 'e.g. No money received yet', confirmLabel: 'Reject transfer', danger: true });
     if (reason === null) return;
     const { error } = await db!.from('payments').update({ status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() }).eq('id', p.id);
     if (error) return flash('error', error.message);

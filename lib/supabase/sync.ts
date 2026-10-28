@@ -466,7 +466,13 @@ export class SupabaseSync {
    * server function changed in the meantime aren't overwritten with this copy's stale ones), and
    * deletes exactly the ids in `deletes`.
    */
-  async flush(state: Partial<SyncState>, deletes: Partial<Record<EntityKey, Set<string>>> = {}): Promise<FlushResult> {
+  async flush(
+    state: Partial<SyncState>,
+    deletes: Partial<Record<EntityKey, Set<string>>> = {},
+    /** Called once, just before the first write goes out (lets the admin show "Saving…") */
+    onWriting?: () => void
+  ): Promise<FlushResult> {
+    const writing = () => { onWriting?.(); onWriting = undefined; };
     const result: FlushResult = { wrote: 0, deleted: 0, deletedIds: [], pendingReadonly: 0, errors: [] };
     const signedIn = await this.hasSession();
 
@@ -503,6 +509,7 @@ export class SupabaseSync {
         continue;
       }
 
+      if (inserts.length > 0 || updates.length > 0) writing();
       if (inserts.length > 0) await this.insertRows(cfg, inserts, synced, failed, result);
       // ponytail: one request per changed row; batch through an RPC if bulk edits get slow
       for (const { row, patch } of updates) await this.updateRow(cfg, row, patch, synced, failed, result);
@@ -516,6 +523,7 @@ export class SupabaseSync {
         result.pendingReadonly += ids.length;
         continue;
       }
+      writing();
       const { error } = await this.client.from(cfg.table).delete().in('id', ids);
       if (error) {
         result.errors.push(`${cfg.table}: could not delete (${error.message})`);

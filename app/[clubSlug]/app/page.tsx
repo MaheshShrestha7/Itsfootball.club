@@ -6,7 +6,7 @@ import {
   Radio, ClipboardCheck, Layers, QrCode, CalendarDays, Trophy, Calendar, Flag, Users, Shield, UserCheck, Award,
   BellRing, Flame, Wallet, ShoppingBag, DollarSign, Palette, Sparkles, FileText, Images, BarChart3, Mail, KeyRound,
   LayoutDashboard, CreditCard, Newspaper, UserPlus, Check, HelpCircle, X, Download, BookOpen, CalendarPlus, Ticket,
-  ChevronRight,
+  ChevronRight, MessageSquare,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -299,12 +299,13 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
   const clubTiles: Tile[] = approved
     ? [
         { label: 'My pass', href: `${base}/member`, icon: CreditCard },
+        { label: 'Messages', href: `${base}/member?tab=messages`, icon: MessageSquare },
         { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
         { label: 'Squad', href: `${base}/squad`, icon: Users },
         { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
         ...(sections.tournaments ? [{ label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy }] : []),
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
-        { label: 'News', href: `${base}#news`, icon: Newspaper },
+        { label: 'News', href: `${base}/news`, icon: Newspaper },
         ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ]
@@ -313,9 +314,9 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         children.length
           ? { label: 'My family', href: `${base}/member`, icon: Users }
           : { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
-        { label: 'Fixtures', href: `${base}#fixtures`, icon: CalendarDays },
+        { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
         { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
-        { label: 'News', href: `${base}#news`, icon: Newspaper },
+        { label: 'News', href: `${base}/news`, icon: Newspaper },
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },

@@ -12,6 +12,7 @@ import { COUNCILS, STATES, type AuState } from '@/lib/councils';
 import { councilName, groundPath, mapEmbedUrl, parseLatLng, pitchSummary, slugify, type GroundRow, type Pitch } from '@/lib/grounds';
 import { OSM_COPYRIGHT_URL, findExisting, pitchesLine, type Candidate } from '@/lib/ground-import';
 import { councilAreas, findGroundsInCouncil } from '@/lib/ground-import-fetch';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 interface ListedGround extends GroundRow {
   source?: string | null;
@@ -493,14 +494,14 @@ export default function GroundsTab({ showToast }: { showToast: (msg: string) => 
   );
 
   const act = async (g: ListedGround, action: 'publish' | 'unpublish' | 'delete') => {
-    if (action === 'delete' && !confirm(`Delete the draft ${g.name}? This can’t be undone.`)) return;
+    if (action === 'delete' && !(await confirmAction({ title: `Delete the draft ${g.name}?`, message: 'This can’t be undone.', confirmLabel: 'Delete', danger: true }))) return;
     setBusyId(g.id);
     try {
       await api('', { method: 'POST', body: action === 'delete' ? { action, id: g.id } : { action: 'publish', id: g.id, published: action === 'publish' } });
       showToast(action === 'publish' ? `✓ ${g.name} is live` : action === 'unpublish' ? `✓ ${g.name} taken down` : `✓ Deleted ${g.name}`);
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      notify((e as Error).message);
     } finally {
       setBusyId(null);
     }

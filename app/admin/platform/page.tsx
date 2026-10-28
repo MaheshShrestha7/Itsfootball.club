@@ -37,6 +37,7 @@ import {
   Lock,
   LogOut,
 } from 'lucide-react';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 const PERIOD_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -137,7 +138,7 @@ export default function PlatformOwnerDashboard() {
     try {
       const { error } = await client.rpc('claim_first_platform_admin');
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast('✓ Platform super-admin claimed! Reloading permissions...');
         window.location.reload();
@@ -157,31 +158,31 @@ export default function PlatformOwnerDashboard() {
         p_role: role,
       });
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast(`✓ Added ${email} as platform ${role}`);
         fetchAdmins();
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message);
     }
   };
 
   // Remove platform admin
   const handleRemoveAdmin = async (email: string) => {
-    if (!confirm(`Are you sure you want to revoke platform admin access for ${email}?`)) return;
+    if (!(await confirmAction({ title: 'Remove platform admin?', message: `${email} will lose access to Mission Control.`, confirmLabel: 'Remove', danger: true }))) return;
     const client = getSupabaseClient();
     if (!client) return;
     try {
       const { error } = await client.rpc('remove_platform_admin', { p_email: email });
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast(`✓ Revoked platform access for ${email}`);
         fetchAdmins();
       }
     } catch (err: unknown) {
-      alert((err as Error).message);
+      notify((err as Error).message);
     }
   };
 
@@ -191,7 +192,7 @@ export default function PlatformOwnerDashboard() {
     const confirmMsg = newStatus
       ? 'Reactivate this club? Public page access and fixtures will be restored.'
       : 'Suspend this club? Public page will display maintenance mode and portal access will be paused.';
-    if (!confirm(confirmMsg)) return;
+    if (!(await confirmAction({ title: newStatus ? 'Reactivate this club?' : 'Suspend this club?', message: confirmMsg, confirmLabel: newStatus ? 'Reactivate' : 'Suspend', danger: !newStatus }))) return;
 
     setStatusUpdatingId(clubId);
     const client = getSupabaseClient();
@@ -226,7 +227,7 @@ export default function PlatformOwnerDashboard() {
         setSelectedClub(prev => (prev ? { ...prev, is_active: newStatus } : null));
       }
     } catch (err: any) {
-      alert(`Could not update club status: ${err.message}`);
+      notify(`Could not update club status: ${err.message}`);
     } finally {
       setStatusUpdatingId(null);
     }

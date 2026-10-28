@@ -90,6 +90,8 @@ export interface SyncStatus {
   phase: 'off' | 'loading' | 'idle' | 'saving' | 'readonly' | 'error';
   message?: string;
   pending?: number;
+  /** When this browser's last changes reached the database (shows "Saved" in admin) */
+  savedAt?: number;
 }
 
 interface ClubContextType {
@@ -820,7 +822,7 @@ export function ClubProvider({
     let saved = false;
     flushingRef.current = true;
     try {
-      const result = await engine.flush(syncStateRef.current, pendingDeletesRef.current);
+      const result = await engine.flush(syncStateRef.current, pendingDeletesRef.current, () => setSyncStatus({ phase: 'saving' }));
       const done = new Set(result.deletedIds);
       Object.values(pendingDeletesRef.current).forEach(queue => done.forEach(id => queue?.delete(id)));
       if (result.errors.length > 0) {
@@ -832,7 +834,7 @@ export function ClubProvider({
           message: 'Sign in to save your changes to the cloud.',
         });
       } else {
-        setSyncStatus({ phase: 'idle' });
+        setSyncStatus(result.wrote + result.deleted > 0 ? { phase: 'idle', savedAt: Date.now() } : prev => (prev.phase === 'idle' ? prev : { phase: 'idle' }));
         saved = true;
       }
     } catch (err: any) {
@@ -2751,7 +2753,7 @@ export function ClubProvider({
       jersey_number: input.jersey_number,
       status: 'active',
       membership_status: 'pending',
-      membership_tier: input.membership_tier || 'Supporter Season Pass',
+      membership_tier: input.membership_tier || 'Supporter',
       membership_expires_at: membershipTermEnd(todayIso(), clubsRef.current.find(c => c.id === clubId)),
       qr_code_token: pendingToken,
       is_executive: false,

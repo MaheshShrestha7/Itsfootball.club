@@ -21,6 +21,7 @@ import { SITE_URL } from '@/lib/seo';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 import { MAKER_PATH, isEventClub, tournamentManagePath, tournamentPagePath, tournamentProgress, tournamentSummary } from '@/lib/public-tournaments';
 import type { Club, Match, Tournament } from '@/lib/supabase/types';
+import ShareLinkButton from '@/components/ShareLinkButton';
 
 export type TournamentTab = 'bracket' | 'standings' | 'fixtures' | 'teams';
 
@@ -34,7 +35,7 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: '0.85rem 1.1rem',
   background: 'transparent',
   border: 'none',
-  borderBottom: active ? '2px solid #10B981' : '2px solid transparent',
+  borderBottom: active ? '2px solid var(--club-primary, #10B981)' : '2px solid transparent',
   color: active ? 'var(--c-green)' : 'var(--text-secondary)',
   fontWeight: 800,
   fontSize: '0.92rem',
@@ -190,30 +191,7 @@ function EmbedDialog({ slug, name, onClose }: { slug: string; name: string; onCl
 }
 
 function ShareButton({ title, slug }: { title: string; slug: string }) {
-  const [copied, setCopied] = useState(false);
-  const share = async () => {
-    const url = `${SITE_URL}${tournamentPagePath(slug)}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text: `${title}: live fixtures, tables and bracket`, url });
-        return;
-      } catch (e) {
-        if ((e as Error)?.name === 'AbortError') return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt('Copy this link', url);
-    }
-  };
-  return (
-    <button type="button" className="btn btn-primary btn-sm" onClick={share}>
-      {copied ? <Check size={14} /> : <Share2 size={14} />} {copied ? 'Link copied' : 'Share'}
-    </button>
-  );
+  return <ShareLinkButton className="btn btn-primary btn-sm" url={`${SITE_URL}${tournamentPagePath(slug)}`} title={title} text={`${title}: live fixtures, tables and bracket`} />;
 }
 
 /** Machine-readable date for crawlers, shown in the visitor's own time zone */
@@ -317,7 +295,7 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
       <section style={{
         background: tournament.banner_url
           ? `linear-gradient(180deg, rgba(var(--dk-9-13-22), 0.75) 0%, rgba(var(--dk-9-13-22), 0.96) 100%), url(${tournament.banner_url}) center/cover no-repeat`
-          : 'linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(var(--dk-9-13-22), 0.95) 100%)',
+          : 'linear-gradient(180deg, rgba(var(--club-primary-rgb, 16, 185, 129), 0.12) 0%, rgba(var(--dk-9-13-22), 0.95) 100%)',
         borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
         padding: '2.5rem 1.5rem 1.5rem',
       }}>

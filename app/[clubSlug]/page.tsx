@@ -51,6 +51,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
+import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   match: 'Match',
@@ -220,7 +221,7 @@ export default function ClubPublicPage({
   const stripNextMatch = upcomingMatches.find(m => kickoff(m) >= nowMs - 3 * 3600000);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
-  const clubNews = news.filter(n => n.club_id === clubId);
+  const clubNews = newestFirst(news.filter(n => n.club_id === clubId));
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 
   // Squad filtering
@@ -329,7 +330,7 @@ export default function ClubPublicPage({
             // Slides saved before Oct 2026 carry a made-up "BREAKING NEWS" label; the club never chose it
             badge: (item.badge || '').replace(/^BREAKING NEWS/i, 'LATEST NEWS') || (article?.tags?.[0] ? `LATEST NEWS • ${article.tags[0]}` : 'LATEST NEWS'),
             bgImage: item.image_url || article?.cover_image_url || club.banner_url || '',
-            title: item.title || article?.title || `${club.name} Dispatches`,
+            title: item.title || article?.title || `${club.name} news`,
             subtitle: item.subtitle || article?.summary || 'Latest match summaries and announcements.',
             ctaLabel: item.cta_label || 'Read Full Story',
             ctaLink: item.cta_link || `/${club.slug}#news`,
@@ -362,11 +363,11 @@ export default function ClubPublicPage({
           phoneTabLabel: 'Spotlight',
           tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
           // Older default home ground slides were saved as "HOME FORTRESS" / "<ground> Fortress"
-          badge: (item.badge || 'SPECIAL FEATURE').replace(/^HOME FORTRESS$/i, 'HOME GROUND'),
+          badge: (item.badge || 'SPOTLIGHT').replace(/^HOME FORTRESS$/i, 'HOME GROUND'),
           bgImage: item.image_url || club.banner_url || '',
-          title: (item.title || `${club.name} Feature`).replace(/ Fortress$/, ''),
-          subtitle: item.subtitle || club.motto || 'Strength, Passion, and Football Heritage',
-          ctaLabel: item.cta_label || 'Explore Feature',
+          title: (item.title || club.name).replace(/ Fortress$/, ''),
+          subtitle: item.subtitle || club.motto || '',
+          ctaLabel: item.cta_label || 'Find out more',
           ctaLink: item.cta_link || `/${club.slug}`,
         };
       });
@@ -404,8 +405,8 @@ export default function ClubPublicPage({
         tabLabel: 'Latest News',
         badge: featuredArticle?.tags?.[0] ? `LATEST NEWS • ${featuredArticle.tags[0]}` : 'LATEST NEWS',
         bgImage: featuredArticle?.cover_image_url || club.banner_url || '',
-        title: featuredArticle?.title || `${club.name} First Team Dispatches`,
-        subtitle: featuredArticle?.summary || 'Latest match summaries, tactical insights, and club announcements.',
+        title: featuredArticle?.title || `${club.name} news`,
+        subtitle: featuredArticle?.summary || 'Match reports and club announcements.',
         targetNews: featuredArticle,
       },
       {
@@ -783,7 +784,7 @@ export default function ClubPublicPage({
                             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                           >
                             <Sparkles size={16} />
-                            <span>{currentSlide.ctaLabel || 'Explore Feature'}</span>
+                            <span>{currentSlide.ctaLabel || 'Find out more'}</span>
                           </Link>
 
                           <Link
@@ -1125,7 +1126,7 @@ export default function ClubPublicPage({
                             <div style={{
                               width: `${activeSlideEvent.max_capacity > 0 ? Math.min(100, Math.round((activeSlideEvent.rsvp_count / activeSlideEvent.max_capacity) * 100)) : 0}%`,
                               height: '100%',
-                              background: 'linear-gradient(90deg, #10B981, #F59E0B)',
+                              background: 'linear-gradient(90deg, var(--club-primary), var(--club-accent, var(--club-primary)))',
                             }} />
                           </div>
                         </div>
@@ -1897,7 +1898,7 @@ export default function ClubPublicPage({
       <section id="news" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ marginBottom: '2.5rem' }}>
-            <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MEDIA & DISPATCHES</span>
+            <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB NEWS</span>
             <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Latest Club News & Video</h2>
           </div>
 
@@ -1952,7 +1953,7 @@ export default function ClubPublicPage({
 
             {/* News Feed Grid */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {clubNews.filter(n => n.id !== featuredArticle?.id).map(article => (
+              {clubNews.filter(n => n.id !== featuredArticle?.id).slice(0, HOME_NEWS_COUNT).map(article => (
                 <Link
                   key={article.id}
                   id={`news-${article.slug}`}
@@ -1990,6 +1991,11 @@ export default function ClubPublicPage({
                   </div>
                 </Link>
               ))}
+              {clubNews.length > 0 && (
+                <Link href={`/${club.slug}/news`} className="btn btn-secondary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  All news <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              )}
             </div>
           </div>
         </div>

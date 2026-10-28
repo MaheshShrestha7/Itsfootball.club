@@ -44,6 +44,7 @@ import {
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
 import AdminSearch from '@/components/AdminSearch';
+import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { CALENDAR_AREAS } from '@/lib/admin-calendar';
@@ -72,7 +73,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, syncStatus, retrySync, inquiries, memberMessages, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, inquiries, memberMessages, updateClubBranding } = useClub();
   const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -810,34 +811,7 @@ export default function AdminLayout({
         {/* Main Admin Content Canvas */}
         <main className="admin-main-canvas">
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            {(syncStatus.phase === 'error' || (syncStatus.phase === 'readonly' && (syncStatus.pending || 0) > 0)) && (
-              <div
-                role="alert"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  flexWrap: 'wrap',
-                  marginBottom: '1.25rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.825rem',
-                  background: syncStatus.phase === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                  border: `1px solid ${syncStatus.phase === 'error' ? '#EF4444' : '#F59E0B'}`,
-                  color: syncStatus.phase === 'error' ? 'var(--c-red)' : '#FCD34D',
-                }}
-              >
-                <span>
-                  {syncStatus.phase === 'error'
-                    ? `Some changes are not saved to the database. ${syncStatus.message || ''}`
-                    : `${syncStatus.pending} change(s) are only saved in this browser. ${syncStatus.message || ''}`}
-                </span>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={retrySync}>
-                  Retry
-                </button>
-              </div>
-            )}
+            <AdminSaveStatus />
             {viewOnly && (
               <div className="row" style={{ gap: '0.5rem', marginBottom: '1rem', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', background: 'rgba(var(--tint-rgb), 0.04)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
                 <Eye size={14} />

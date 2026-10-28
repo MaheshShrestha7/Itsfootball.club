@@ -9,6 +9,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 export default function ShareGround({ url, fileName }: { url: string; fileName: string }) {
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  const linkRef = useRef<HTMLInputElement>(null);
   const shown = url.replace(/^https?:\/\//, '');
 
   const copy = async () => {
@@ -17,7 +18,9 @@ export default function ShareGround({ url, fileName }: { url: string; fileName: 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt('Copy this link', url);
+      // Copying blocked: select the link in the box so it can be copied by hand
+      linkRef.current?.focus();
+      linkRef.current?.select();
     }
   };
 
@@ -32,7 +35,7 @@ export default function ShareGround({ url, fileName }: { url: string; fileName: 
 
   return (
     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
-      <input className="form-input" readOnly value={shown} aria-label="Link to this ground guide" onFocus={e => e.currentTarget.select()} style={{ flex: '1 1 240px', fontSize: '0.85rem' }} />
+      <input ref={linkRef} className="form-input" readOnly value={shown} aria-label="Link to this ground guide" onFocus={e => e.currentTarget.select()} style={{ flex: '1 1 240px', fontSize: '0.85rem' }} />
       <button type="button" className="btn btn-primary" onClick={copy} style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
         {copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />} {copied ? 'Copied' : 'Copy link'}
       </button>

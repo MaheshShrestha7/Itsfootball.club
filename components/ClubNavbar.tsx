@@ -156,7 +156,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       { path: '/', label: 'Club home', icon: Shield },
       { path: '/about', label: 'About the Club', icon: BookOpen },
       { path: teamsLink.path, label: multiTeam ? 'Our Teams' : 'Squad & Stats', icon: Users },
-      { path: '#news', label: 'Latest News', icon: Newspaper },
+      { path: '/news', label: 'Latest News', icon: Newspaper },
       ...(hasGallery ? [{ path: '/gallery', label: 'Gallery & Videos', icon: Images }] : []),
     ] },
     { title: 'Support the club', links: [
@@ -283,7 +283,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           {barLink(teamsLink.path, teamsLink.label, 8)}
           {barLink('/events', 'Events', 7)}
           {hasTournaments && barLink('/tournaments', 'Tournaments', 6)}
-          {barLink('#news', 'News', 5)}
+          {barLink('/news', 'News', 5)}
           {hasShop && barLink('/shop', 'Shop', 4)}
           {barLink('/about', 'About', 3)}
           {hasGallery && barLink('/gallery', 'Gallery', 2)}

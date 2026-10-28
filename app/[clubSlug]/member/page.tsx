@@ -105,6 +105,9 @@ const guessRole = (tier: string): 'player' | 'supporter' =>
 /** Short, readable application reference ('3F9A21C0' rather than a full database id) */
 const applicationRef = (id: string) => id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
+const CLUBHOUSE_TABS = ['pass', 'stats', 'messages', 'shop'] as const;
+type ClubhouseTab = (typeof CLUBHOUSE_TABS)[number];
+
 export default function MemberPortalPage({
   params,
 }: {
@@ -161,7 +164,7 @@ export default function MemberPortalPage({
     fullName: '',
     email: '',
     phone: '',
-    tier: 'Supporter Season Pass',
+    tier: 'Supporter',
     position: '' as PlayerPosition | '',
     jerseyNumber: '',
     notes: '',
@@ -272,7 +275,14 @@ export default function MemberPortalPage({
   const [renewFor, setRenewFor] = useState<string | null>(null);
 
   // Authenticated Member Clubhouse State
-  const [activeClubhouseTab, setActiveClubhouseTab] = useState<'pass' | 'stats' | 'messages' | 'shop'>('pass');
+  const [activeClubhouseTab, setActiveClubhouseTab] = useState<ClubhouseTab>('pass');
+  /** Switches tab and keeps it in the address (?tab=), so a link or a refresh lands on the same tab */
+  const openClubhouseTab = (tab: ClubhouseTab) => {
+    setActiveClubhouseTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === 'pass') url.searchParams.delete('tab'); else url.searchParams.set('tab', tab);
+    window.history.replaceState(window.history.state, '', url);
+  };
   // Season shown on the Season Stats tab ('' = the club's active season)
   const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
@@ -381,6 +391,8 @@ export default function MemberPortalPage({
     // "Join the Club" links open straight on the membership application
     if (search.has('join')) setGatewayTab('signup');
     setRenewFor(search.get('renew'));
+    const tab = search.get('tab');
+    if (tab && (CLUBHOUSE_TABS as readonly string[]).includes(tab)) setActiveClubhouseTab(tab as ClubhouseTab);
     const client = getSupabaseClient();
     if (!client) return;
     client.from('membership_plans').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')
@@ -1144,7 +1156,7 @@ export default function MemberPortalPage({
                           name: p.name,
                           price: p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Free',
                           hint: [p.duration_months ? (p.duration_months === 12 ? '12 months' : `${p.duration_months} month${p.duration_months === 1 ? '' : 's'}`) : '', p.description || ''].filter(Boolean).join(' · '),
-                        })) : ['Supporter Season Pass', 'Senior Squad Player', 'Academy / Youth Squad', 'Club Volunteer', 'VIP Gold Pass'].map(name => ({ name, price: '', hint: '' }))
+                        })) : ['Supporter', 'Senior player', 'Junior player', 'Volunteer'].map(name => ({ name, price: '', hint: '' }))
                         ).map(({ name, price, hint }) => (
                           <label key={name} className="auth-choice">
                             <input type="radio" name="member-membership-tier" value={name} checked={signupForm.tier === name} required
@@ -1488,8 +1500,8 @@ export default function MemberPortalPage({
               <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} />
             )}
 
-            {/* Clubhouse Sub-Tabs */}
-            <div style={{
+            {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop opens one directly, e.g. from a message email) */}
+            <div role="tablist" aria-label="Member area" style={{
               display: 'flex',
               gap: '0.75rem',
               marginBottom: '2rem',
@@ -1497,103 +1509,52 @@ export default function MemberPortalPage({
               paddingBottom: '0.75rem',
               flexWrap: 'wrap',
             }}>
-              <button
-                type="button"
-                onClick={() => setActiveClubhouseTab('pass')}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: '8px',
-                  border: activeClubhouseTab === 'pass' ? `1px solid ${club.primary_color}` : '1px solid transparent',
-                  background: activeClubhouseTab === 'pass' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'pass' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: 800,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-              >
-                <CreditCard size={17} color={activeClubhouseTab === 'pass' ? 'var(--club-primary)' : undefined} />
-                <span>Member Pass</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveClubhouseTab('stats')}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: '8px',
-                  border: activeClubhouseTab === 'stats' ? `1px solid ${club.primary_color}` : '1px solid transparent',
-                  background: activeClubhouseTab === 'stats' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'stats' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: 800,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-              >
-                <Activity size={17} color={activeClubhouseTab === 'stats' ? 'var(--club-primary)' : undefined} />
-                <span>Season Stats</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveClubhouseTab('messages')}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: '8px',
-                  border: activeClubhouseTab === 'messages' ? `1px solid ${club.primary_color}` : '1px solid transparent',
-                  background: activeClubhouseTab === 'messages' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: activeClubhouseTab === 'messages' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: 800,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-              >
-                <MessageSquare size={17} color={activeClubhouseTab === 'messages' ? 'var(--club-primary)' : undefined} />
-                <span>Messages</span>
-                {memberMessagesList.length > 0 && (
-                  <span style={{
-                    background: 'var(--club-primary)',
-                    color: '#000',
-                    borderRadius: '10px',
-                    padding: '0.1rem 0.4rem',
-                    fontSize: '0.7rem',
-                    fontWeight: 900,
-                  }}>
-                    {memberMessagesList.length}
-                  </span>
-                )}
-              </button>
-
-              {shopOpen && (
-                <button
-                  type="button"
-                  onClick={() => setActiveClubhouseTab('shop')}
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
-                    border: activeClubhouseTab === 'shop' ? `1px solid ${club.primary_color}` : '1px solid transparent',
-                    background: activeClubhouseTab === 'shop' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                    color: activeClubhouseTab === 'shop' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontWeight: 800,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                  }}
-                >
-                  <ShoppingBag size={17} color={activeClubhouseTab === 'shop' ? 'var(--club-primary)' : undefined} />
-                  <span>Club Shop</span>
-                </button>
-              )}
+              {([
+                { id: 'pass', label: 'Member Pass', Icon: CreditCard },
+                { id: 'stats', label: 'Season Stats', Icon: Activity },
+                { id: 'messages', label: 'Messages', Icon: MessageSquare },
+                ...(shopOpen ? [{ id: 'shop' as const, label: 'Club Shop', Icon: ShoppingBag }] : []),
+              ] as const).map(({ id, label, Icon }) => {
+                const selected = activeClubhouseTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`member-tab-${id}`}
+                    aria-selected={selected}
+                    onClick={() => openClubhouseTab(id)}
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      border: selected ? '1px solid var(--club-primary)' : '1px solid transparent',
+                      background: selected ? 'rgba(var(--club-primary-rgb), 0.15)' : 'transparent',
+                      color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: 800,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                    }}
+                  >
+                    <Icon size={17} color={selected ? 'var(--club-primary)' : undefined} />
+                    <span>{label}</span>
+                    {id === 'messages' && memberMessagesList.length > 0 && (
+                      <span style={{
+                        background: 'var(--club-primary)',
+                        color: 'var(--club-primary-contrast, #090D16)',
+                        borderRadius: '10px',
+                        padding: '0.1rem 0.4rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                      }}>
+                        {memberMessagesList.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* SUB-TAB: CLUB SHOP (the same shop as /{slug}/shop, kept inside the clubhouse) */}
@@ -1921,7 +1882,7 @@ export default function MemberPortalPage({
                       gap: '0.5rem',
                     }}>
                       <CheckCircle2 size={16} />
-                      <span>Message dispatched to club committee inbox!</span>
+                      <span>Message sent to the club.</span>
                     </div>
                   )}
 
@@ -2012,8 +1973,8 @@ export default function MemberPortalPage({
                             style={{
                               alignSelf: isAdmin ? 'flex-start' : 'flex-end',
                               maxWidth: '85%',
-                              background: isAdmin ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                              border: isAdmin ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                              background: isAdmin ? 'rgba(var(--tint-rgb), 0.06)' : 'rgba(var(--club-primary-rgb), 0.15)',
+                              border: isAdmin ? '1px solid var(--border-subtle)' : '1px solid rgba(var(--club-primary-rgb), 0.3)',
                               borderRadius: '12px',
                               padding: '0.85rem 1rem',
                             }}

@@ -32,7 +32,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { getLiveMinute } from '@/lib/match-clock';
-import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminHeroSliderPage({
@@ -69,11 +68,12 @@ export default function AdminHeroSliderPage({
   // Custom Image Banner Form
   const [customImageForm, setCustomImageForm] = useState({
     image_url: '',
-    title: `Official Season Pass ${defaultSeasonLabel()}`,
-    subtitle: 'Secure guaranteed entry to all home fixtures, VIP member lounge access, and exclusive kit discount.',
-    badge: 'MEMBERSHIP SPOTLIGHT',
-    cta_label: 'Get Season Pass',
-    cta_link: `/${club?.slug || ''}#membership`,
+    // Empty, with examples as placeholders: whatever goes live is what the club wrote
+    title: '',
+    subtitle: '',
+    badge: '',
+    cta_label: '',
+    cta_link: '',
   });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -223,8 +223,8 @@ export default function AdminHeroSliderPage({
       image_url: customImageForm.image_url,
       title: customImageForm.title,
       subtitle: customImageForm.subtitle,
-      badge: customImageForm.badge || 'SPECIAL FEATURE',
-      cta_label: customImageForm.cta_label || 'Learn More',
+      badge: customImageForm.badge || 'SPOTLIGHT',
+      cta_label: customImageForm.cta_label || 'Find out more',
       cta_link: customImageForm.cta_link || `/${club.slug}`,
       is_active: true,
       order: pinnedItems.length + 1,
@@ -943,7 +943,7 @@ export default function AdminHeroSliderPage({
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                           <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', fontSize: '0.7rem' }}>
-                            {n.tags[0] || 'DISPATCH'}
+                            {n.tags[0] || 'NEWS'}
                           </span>
                           <span className="text-meta">
                             By {n.author_name}
@@ -1009,7 +1009,7 @@ export default function AdminHeroSliderPage({
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. 2026/27 Season Ticket Passes"
+                  placeholder="e.g. Registrations for next season are open"
                   value={customImageForm.title}
                   onChange={e => setCustomImageForm({ ...customImageForm, title: e.target.value })}
                 />
@@ -1020,7 +1020,7 @@ export default function AdminHeroSliderPage({
                 <textarea id="hero-slider-subtitle-caption"
                   className="form-input"
                   rows={2}
-                  placeholder="Brief descriptive statement for fans..."
+                  placeholder="e.g. Sign up by 31 January to be placed in a team"
                   value={customImageForm.subtitle}
                   onChange={e => setCustomImageForm({ ...customImageForm, subtitle: e.target.value })}
                 />
@@ -1032,7 +1032,7 @@ export default function AdminHeroSliderPage({
                   <input id="hero-slider-tag-badge"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. SPECIAL PROMO"
+                    placeholder="e.g. REGISTRATIONS"
                     value={customImageForm.badge}
                     onChange={e => setCustomImageForm({ ...customImageForm, badge: e.target.value })}
                   />
@@ -1042,7 +1042,7 @@ export default function AdminHeroSliderPage({
                   <input id="hero-slider-cta-button-label"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Get Tickets"
+                    placeholder="e.g. Join now"
                     value={customImageForm.cta_label}
                     onChange={e => setCustomImageForm({ ...customImageForm, cta_label: e.target.value })}
                   />
@@ -1054,7 +1054,7 @@ export default function AdminHeroSliderPage({
                 <input id="hero-slider-cta-link-destination"
                   type="text"
                   className="form-input"
-                  placeholder={`/${club.slug}#membership`}
+                  placeholder={`/${club.slug}/member?join=1`}
                   value={customImageForm.cta_link}
                   onChange={e => setCustomImageForm({ ...customImageForm, cta_link: e.target.value })}
                 />

@@ -410,18 +410,18 @@ export default function MatchCenterPage({
                 gap: '0.45rem',
                 padding: '0.4rem 0.8rem',
                 borderRadius: 'var(--radius-sm)',
-                background: liveSyncPulse ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.12)',
-                border: `1px solid ${liveSyncPulse ? '#10B981' : 'rgba(16, 185, 129, 0.35)'}`,
-                color: 'var(--c-green)',
+                background: liveSyncPulse ? 'rgba(var(--club-primary-rgb), 0.25)' : 'rgba(var(--club-primary-rgb), 0.12)',
+                border: `1px solid ${liveSyncPulse ? 'var(--club-primary)' : 'rgba(var(--club-primary-rgb), 0.35)'}`,
+                color: 'var(--club-ink)',
                 fontSize: '0.74rem',
                 fontWeight: 800,
                 minHeight: '44px',
                 transition: 'all 0.3s ease',
               }}
-              title="Real-time match feed synced directly from club touchline controller"
+              title="Updates as the club enters goals and cards"
             >
-              <span className="pulse-dot" style={{ background: '#10B981', width: '7px', height: '7px' }} />
-              <span>LIVE FEED SYNCED</span>
+              <span className="pulse-dot" style={{ background: 'var(--club-primary)', width: '7px', height: '7px' }} />
+              <span>LIVE UPDATES</span>
             </div>}
 
             {/* No Door Check-In button for the public: the QR code at the entrance opens self check-in */}
@@ -890,7 +890,7 @@ export default function MatchCenterPage({
                       gap: '1.25rem',
                       position: 'relative',
                       zIndex: 1,
-                      borderLeft: isGoal ? `4px solid #10B981` : evt.event_type === 'red_card' ? '4px solid #EF4444' : evt.event_type === 'yellow_card' ? '4px solid #F59E0B' : '1px solid var(--border-subtle)',
+                      borderLeft: isGoal ? '4px solid var(--club-primary)' : evt.event_type === 'red_card' ? '4px solid #EF4444' : evt.event_type === 'yellow_card' ? '4px solid #F59E0B' : '1px solid var(--border-subtle)',
                     }}
                   >
                     {/* Minute Circle Badge */}
@@ -898,7 +898,7 @@ export default function MatchCenterPage({
                       width: '42px',
                       height: '42px',
                       borderRadius: '50%',
-                      background: isGoal ? '#10B981' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'var(--bg-surface-elevated)',
+                      background: isGoal ? 'var(--club-primary)' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'var(--bg-surface-elevated)',
                       border: '2px solid rgba(255, 255, 255, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
@@ -915,7 +915,7 @@ export default function MatchCenterPage({
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
                         <span className="badge" style={{
-                          backgroundColor: isGoal ? 'rgba(16, 185, 129, 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
+                          backgroundColor: isGoal ? 'rgba(var(--club-primary-rgb), 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
                           color: isGoal ? 'var(--c-green)' : evt.event_type === 'yellow_card' ? 'var(--c-amber)' : 'var(--text-primary)',
                         }}>
                           {evt.event_type.toUpperCase().replace(/_/g, ' ')}
