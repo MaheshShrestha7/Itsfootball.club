@@ -50,7 +50,7 @@ export const ACCESS_AREAS: AccessArea[] = [
 ];
 
 /** Admin pages only super users (Owner, Club Admin) open; never granted by a role */
-export const SUPER_USER_AREAS = ['roles'];
+export const SUPER_USER_AREAS = ['roles', 'activity'];
 
 const RANK: Record<string, number> = { view: 1, edit: 2, full: 3 };
 

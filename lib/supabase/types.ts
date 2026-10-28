@@ -163,8 +163,6 @@ export interface ClubMember {
   guardian_phone?: string;
   /** Photo consent given by the guardian: true / false, null or missing = not asked yet */
   photo_consent?: boolean | null;
-  /** Allergies, conditions and the like; staff and the member's guardian only (migration 20261123) */
-  medical_notes?: string | null;
   /** Staff background check (e.g. DBS / Working With Children); expiry drives the admin warnings */
   safeguarding_check_type?: string;
   safeguarding_check_date?: string;

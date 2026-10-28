@@ -35,7 +35,7 @@ import {
   Flag,
   Flame,
   Images,
-  ShieldCheck, Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye,
+  ShieldCheck, Wallet, BellRing, LifeBuoy, ShoppingBag, KeyRound, Lock, Eye, History,
   ChevronDown,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -323,6 +323,7 @@ export default function AdminLayout({
         // Opens the junior settings (U18 rule, welfare officer) on Club Teams; only once the club has a junior team
         ...(hasJuniorTeam ? [{ area: 'teams', label: 'Junior & Safeguarding', href: `/${club.slug}/admin/teams#junior-settings`, icon: ShieldCheck }] : []),
         { area: 'roles', label: 'Roles & Permissions', href: `/${club.slug}/admin/roles`, icon: KeyRound },
+        { area: 'activity', label: 'Activity Log', href: `/${club.slug}/admin/activity`, icon: History },
       ],
     },
   ] as NavSection[])

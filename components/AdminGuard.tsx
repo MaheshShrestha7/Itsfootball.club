@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Club } from '@/lib/supabase/types';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
+import { openMfaChallenge } from '@/components/MfaChallenge';
+import { getMfaStatus } from '@/lib/mfa';
 import { AuthAlert, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 import {
   ShieldAlert,
@@ -32,6 +34,15 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
   const captcha = useRef<CaptchaHandle>(null);
   const [resetSentTo, setResetSentTo] = useState<string | null>(null);
   const shake = useShake<HTMLFormElement>(loginError);
+  // Two-step sign-in is on for this account but this session skipped the code, so the
+  // database refuses admin changes until it's entered (mfa_ok() in 20261129_security_3.sql)
+  const [needsCode, setNeedsCode] = useState(false);
+  useEffect(() => {
+    if (!isAuthenticated) { setNeedsCode(false); return; }
+    let live = true;
+    getMfaStatus().then(s => { if (live) setNeedsCode(Boolean(s?.needsCode)); }, () => {});
+    return () => { live = false; };
+  }, [isAuthenticated]);
 
   // 1. Loading state
   if (isLoading) {
@@ -195,7 +206,28 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
     );
   }
 
-  // 3. Authenticated but Insufficient Permissions (e.g. Player or Supporter)
+  // 3. Signed in, but the second sign-in step is still to do
+  if (needsCode) {
+    return (
+      <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+        <div className="glass-panel" style={{ maxWidth: '520px', width: '100%', padding: '2.5rem', textAlign: 'center', borderRadius: 'var(--radius-xl)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(var(--club-primary-rgb), 0.15)', color: 'var(--club-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+            <KeyRound size={30} />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Enter your sign-in code</h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            Two-step sign-in is on for <strong>{user?.email}</strong>. Enter the code from your authenticator app to open {club.name} admin.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button type="button" className="btn btn-primary" onClick={openMfaChallenge}>Enter code</button>
+            <button type="button" className="btn btn-secondary" onClick={() => logout()}>Sign out</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Authenticated but Insufficient Permissions (e.g. Player or Supporter)
   const userRole = getUserRoleForClub(club.id);
   const isAuthorized = hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id);
 
@@ -280,6 +312,6 @@ export default function AdminGuard({ club, children }: AdminGuardProps) {
     );
   }
 
-  // 4. Authenticated and Authorized: Render Protected Admin Portal Content
+  // 5. Authenticated and Authorized: Render Protected Admin Portal Content
   return <>{children}</>;
 }

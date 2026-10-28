@@ -75,6 +75,9 @@ const SECURITY_HEADERS = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()' },
+  // HTTPS only for a year. Per host, so club custom domains and their other subdomains aren't
+  // affected; browsers ignore it on plain http (local development).
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
 ];
 
 const nextConfig: NextConfig = {

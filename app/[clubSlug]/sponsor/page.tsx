@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import ClubContactSection from '@/components/ClubContactSection';
 import { ArrowLeft, CheckCircle2, AlertCircle, Handshake } from 'lucide-react';
@@ -9,6 +9,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
 import type { SponsorshipPackage } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 
 export default function SponsorSignupPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
@@ -23,6 +24,8 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   useEffect(() => {
     setPaymentNotice(new URLSearchParams(window.location.search).get('payment'));
@@ -37,13 +40,15 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
+    const notReady = captchaError(captchaToken);
+    if (notReady) return setError(notReady);
     setBusy(true);
     setError(null);
     try {
       const res = await fetch('/api/sponsors/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, clubId: club.id, packageId: selected.id }),
+        body: JSON.stringify({ ...form, clubId: club.id, packageId: selected.id, captchaToken }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Could not save your details.');
@@ -52,6 +57,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
       setError((err as Error).message);
     } finally {
       setBusy(false);
+      captcha.current?.reset();
     }
   };
 
@@ -125,6 +131,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                 <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={form.company_website_confirm}
                   onChange={e => setForm({ ...form, company_website_confirm: e.target.value })}
                   style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} />
+                <Captcha ref={captcha} onToken={setCaptchaToken} />
                 {error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem' }}>{error}</p>}
                 <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Continue to payment'}</button>
               </form>

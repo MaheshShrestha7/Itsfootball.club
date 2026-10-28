@@ -22,6 +22,8 @@ import {
   Search, Plus, FileSpreadsheet, X, ChevronLeft, ChevronRight, Phone, Mail, Edit2, Activity, Trash2,
   MessageSquare, List, LayoutGrid, Clock, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
+import { useMemberHealth } from '@/lib/use-member-health';
+import MedicalNote from '@/components/admin/MedicalNote';
 
 const CHIPS: { id: PeopleGroup; label: string }[] = [
   { id: 'everyone', label: 'Everyone' },
@@ -476,6 +478,8 @@ function PersonPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<PanelTab>('overview');
+  // Medical notes come only to those allowed to read them (Club Admins, the member's coaches)
+  const health = useMemberHealth(club.id);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -569,7 +573,7 @@ function PersonPanel({
               {junior && <div className="ppl-card-note">Parent: {[m.guardian_name, m.guardian_email, m.guardian_phone].filter(Boolean).join(' · ') || 'not set'}</div>}
               {m.emergency_contact && <div className="ppl-card-note">Emergency contact: {m.emergency_contact}</div>}
               {junior && m.photo_consent != null && <div className="ppl-card-note">Photo consent: {m.photo_consent ? 'yes' : 'no'}</div>}
-              {m.medical_notes && <div className="ppl-card-note">Medical: {m.medical_notes}</div>}
+              <MedicalNote text={health.notes[m.id]} />
               {m.safeguarding_check_type && <div className="ppl-card-note">{m.safeguarding_check_type}{m.safeguarding_check_expiry_date ? ` to ${fmtDate(m.safeguarding_check_expiry_date)}` : ''}</div>}
               {checks.length > 0 ? checks.map(c => (
                 <div key={c.kind} className="row" style={{ gap: '0.35rem', marginTop: 4, fontSize: '0.8rem', fontWeight: 700, color: c.urgent ? 'var(--c-red)' : 'var(--c-amber)' }}>
