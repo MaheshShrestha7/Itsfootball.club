@@ -36,6 +36,8 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
   // A payment or renewal link the club emailed: ?pay={sponsor}&package={package}&k={secret}
   const [payLink, setPayLink] = useState<{ sponsorId: string; packageId: string; key: string | null } | null>(null);
+  // What the emailed link can do now (SPE-1): undefined while checking, null if it couldn't be checked
+  const [linkState, setLinkState] = useState<{ canPay: boolean; receiptWaiting: boolean } | null | undefined>(undefined);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
 
@@ -44,7 +46,16 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
     setPaymentNotice(query.get('payment'));
     const pay = query.get('pay');
     const packageId = query.get('package');
-    if (pay && packageId) setPayLink({ sponsorId: pay, packageId, key: query.get('k') });
+    if (pay && packageId) {
+      const key = query.get('k');
+      setPayLink({ sponsorId: pay, packageId, key });
+      // Already paid, or a receipt waiting? Then the link shows that instead of a second payment
+      if (key) fetch(`/api/sponsors/portal?k=${encodeURIComponent(key)}`)
+        .then(res => (res.ok ? res.json() : null))
+        .then(json => setLinkState(json ? { canPay: json.canPay !== false, receiptWaiting: !!json.receiptWaiting } : null))
+        .catch(() => setLinkState(null));
+      else setLinkState(null);
+    }
     const client = getSupabaseClient();
     if (!client) return setPackages([]);
     client.from('sponsorship_packages').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')
@@ -53,6 +64,8 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
 
+  // The emailed link has nothing to pay right now
+  const linkDone = !!linkState && (!linkState.canPay || linkState.receiptWaiting);
   // The emailed link's package, while it's still offered and priced
   const payLinkPackage = payLink ? packages?.find(p => p.id === payLink.packageId && !isOnRequest(p)) : undefined;
 
@@ -87,7 +100,10 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const field = (key: keyof typeof form, label: string, type = 'text', required = true) => (
     <div className="form-group">
       <label className="form-label" htmlFor={`sponsor-${key}`}>{label}{required ? ' *' : ''}</label>
-      <input id={`sponsor-${key}`} className="form-input" type={type} required={required} value={form[key]}
+      {/* A website box is plain text, so "www.acme.com.au" is accepted (type="url" insists on https://, SPE-4);
+          the server adds the https:// */}
+      <input id={`sponsor-${key}`} className="form-input" type={type === 'url' ? 'text' : type} required={required} value={form[key]}
+        {...(type === 'url' ? { inputMode: 'url' as const, autoComplete: 'url', placeholder: 'yourbusiness.com.au' } : {})}
         onChange={e => setForm({ ...form, [key]: e.target.value })} />
     </div>
   );
@@ -107,7 +123,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
             Sponsor {club.name}
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto' }}>
-            {payLinkPackage && paymentNotice !== 'success'
+            {payLinkPackage && paymentNotice !== 'success' && !linkDone
               ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
               : 'Put your business in front of our players, families and matchday crowd. Choose a package below.'}
           </p>
@@ -147,7 +163,23 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           </div>
         )}
 
-        {payLinkPackage && paymentNotice !== 'success' && payLink ? (
+        {payLinkPackage && paymentNotice !== 'success' && payLink && linkState === undefined ? (
+          <p className="text-muted">Checking your link…</p>
+        ) : payLinkPackage && paymentNotice !== 'success' && payLink && linkDone && linkState ? (
+          <div role="status" className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #10B981' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+              <CheckCircle2 size={18} color="var(--c-green)" /> {linkState.receiptWaiting ? 'Your receipt is with the club' : 'This sponsorship is already paid'}
+            </div>
+            <p className="text-body" style={{ margin: '0 0 0.75rem' }}>
+              {linkState.receiptWaiting
+                ? 'There is nothing more to pay until the club has checked your bank transfer.'
+                : `Thank you for supporting ${club.name}. There is nothing to pay. Your sponsor page has your invoice, and offers renewal nearer the end date.`}
+            </p>
+            {payLink.key && (
+              <Link href={`/${club.slug}/sponsor/your-sponsorship?k=${payLink.key}`} className="btn btn-primary">Open my sponsor page</Link>
+            )}
+          </div>
+        ) : payLinkPackage && paymentNotice !== 'success' && payLink ? (
           <div className="stack">
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
               <span className="badge" style={TIER_BADGE[payLinkPackage.tier]}>{sponsorTierLabel(payLinkPackage.tier)}</span>

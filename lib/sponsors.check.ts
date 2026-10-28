@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, canPayRenewal, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -85,6 +85,14 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
   assert.equal(renewedEndDate('2026-11-15', noon), '2027-11-15');
   assert.equal(renewedEndDate('2025-09-30', noon), '2027-10-28');
   assert.equal(renewedEndDate(null, noon), '2027-10-28');
+  // SPE-1: paying again through a link only when a renewal is due
+  assert.equal(canPayRenewal({ package_status: 'paid', ends_on: '2027-10-28' }, noon), false);
+  assert.equal(canPayRenewal({ package_status: 'paid', ends_on: '2026-12-27' }, noon), true);
+  assert.equal(canPayRenewal({ package_status: 'paid', ends_on: '2026-12-28' }, noon), false);
+  assert.equal(canPayRenewal({ package_status: 'confirmed', ends_on: '2026-10-01' }, noon), true);
+  assert.equal(canPayRenewal({ package_status: 'paid', ends_on: null }, noon), false);
+  assert.equal(canPayRenewal({ package_status: 'expired', ends_on: null }, noon), true);
+  assert.equal(canPayRenewal({ package_status: 'prospect', ends_on: '2026-11-01' }, noon), false);
   assert.equal(renewedEndDate('2028-02-29', noon), '2029-02-28');
 
   // Default end: the current season's end, else the next season's, else a year from today
@@ -156,6 +164,10 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
   assert.equal(typedWebsite(' http://acme.com.au/x '), 'http://acme.com.au/x');
   assert.equal(typedWebsite('javascript:alert(1)'), undefined);
   assert.equal(typedWebsite(''), undefined);
+  assert.equal(typedWebsite('www.acme.com.au'), 'https://www.acme.com.au/');
+  assert.equal(typedWebsite('not a website'), undefined);
+  assert.equal(typedWebsite('acme'), undefined);
+  assert.equal(typedWebsite('https://localhost'), undefined);
   assert.ok(!isSponsorKey('A'.repeat(64)) && !isSponsorKey('a'.repeat(63)) && !isSponsorKey(undefined));
 }
 

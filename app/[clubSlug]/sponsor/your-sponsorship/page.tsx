@@ -277,7 +277,7 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                     </div>
                     {p.status === 'paid' && key && (
                       <Link href={`/${club.slug}/sponsor/invoice/${p.id}?k=${encodeURIComponent(key)}`} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <FileText size={14} /> {data.taxInvoice ? 'Tax invoice' : 'Invoice'}
+                        <FileText size={14} /> {p.taxInvoice ? 'Tax invoice' : 'Invoice'}
                       </Link>
                     )}
                   </div>

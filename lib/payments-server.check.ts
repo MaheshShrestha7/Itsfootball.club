@@ -13,6 +13,10 @@ const ADULT_USER = '99999999-9999-4999-8999-000000000002';
 const PKG = '00000000-0000-4000-8000-000000000700';
 const NEW_SPONSOR = '00000000-0000-4000-8000-000000000801';
 const LIVE_SPONSOR = '00000000-0000-4000-8000-000000000802';
+const PAID_SPONSOR = '00000000-0000-4000-8000-000000000803';
+const ENDED_SPONSOR = '00000000-0000-4000-8000-000000000804';
+const BANK_SPONSOR = '00000000-0000-4000-8000-000000000805';
+const inDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 const KEY = 'a'.repeat(64);
 
 const tables: Record<string, Record<string, unknown>[]> = {
@@ -22,8 +26,12 @@ const tables: Record<string, Record<string, unknown>[]> = {
   sponsorship_packages: [{ id: PKG, club_id: CLUB, name: 'Gold Package', price_cents: 150000, is_active: true }],
   sponsors: [
     { id: NEW_SPONSOR, club_id: CLUB, name: 'Kelly Bakery', contact_name: 'Sam', contact_email: 'sam@x.test', package_status: 'prospect', access_key: 'b'.repeat(64) },
-    { id: LIVE_SPONSOR, club_id: CLUB, name: 'Acme Plumbing', contact_name: 'Dan', contact_email: 'dan@x.test', package_status: 'paid', access_key: KEY },
+    { id: LIVE_SPONSOR, club_id: CLUB, name: 'Acme Plumbing', contact_name: 'Dan', contact_email: 'dan@x.test', package_status: 'paid', access_key: KEY, ends_on: inDays(20) },
+    { id: PAID_SPONSOR, club_id: CLUB, name: 'Corner Cafe', contact_name: 'Kim', contact_email: 'kim@x.test', package_status: 'paid', access_key: 'c'.repeat(64), ends_on: inDays(300) },
+    { id: ENDED_SPONSOR, club_id: CLUB, name: 'Old Mill', contact_name: 'Jo', contact_email: 'jo@x.test', package_status: 'expired', access_key: 'd'.repeat(64), ends_on: null },
+    { id: BANK_SPONSOR, club_id: CLUB, name: 'Bay Bakery', contact_name: 'Pat', contact_email: 'pat@x.test', package_status: 'prospect', access_key: 'e'.repeat(64) },
   ],
+  payments: [{ id: 'p1', sponsor_id: BANK_SPONSOR, kind: 'sponsorship', status: 'awaiting_review' }],
   club_members: [
     { id: KID, club_id: CLUB, user_id: null, full_name: 'Kid One', email: '', guardian_name: 'Pat Parent', guardian_email: 'Pat@X.test', membership_status: 'approved' },
     { id: ADULT, club_id: CLUB, user_id: ADULT_USER, full_name: 'Al Adult', email: 'al@x.test', guardian_name: null, guardian_email: null, membership_status: 'approved' },
@@ -37,6 +45,7 @@ function fakeDb(): SupabaseClient {
     const q = {
       select: () => q,
       eq: (col: string, val: unknown) => { filters.push([col, val]); return q; },
+      limit: () => q,
       maybeSingle: async () => ({ data: (tables[table] || []).find(r => filters.every(([c, v]) => r[c] === v)) ?? null, error: null }),
     };
     return q;
@@ -86,6 +95,14 @@ async function main() {
   assert.ok(!badKey.ok, 'a malformed key is ignored');
   const renewal = await sponsorPay(LIVE_SPONSOR, KEY);
   assert.ok(renewal.ok && renewal.draft.row.description === 'Gold Package renewal (Acme Plumbing)' && renewal.draft.row.amount_cents === 150000, 'the renewal link pays');
+
+  // SPE-1: the key only renews when a renewal is due, so an old link can't take a second payment
+  const early = await sponsorPay(PAID_SPONSOR, 'c'.repeat(64));
+  assert.ok(!early.ok && early.status === 409 && /already paid/.test(early.error), 'a sponsor who paid this term cannot pay again through an old link');
+  const ended = await sponsorPay(ENDED_SPONSOR, 'd'.repeat(64));
+  assert.ok(ended.ok, 'an ended sponsorship can be renewed through its link');
+  const waiting = await sponsorPay(BANK_SPONSOR);
+  assert.ok(!waiting.ok && waiting.status === 409 && /receipt/.test(waiting.error), 'no card payment while a bank transfer receipt waits to be checked');
 
   console.log('payments-server: renewal by member or guardian, sponsorship sign-up and renewal OK');
 }

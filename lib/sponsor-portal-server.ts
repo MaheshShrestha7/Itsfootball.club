@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
 import { fetchPaged } from '@/lib/paged';
-import { cleanAbn } from '@/lib/invoice';
-import { daysUntilEnd, isSponsorKey, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
+import { cleanAbn, invoiceIsTax } from '@/lib/invoice';
+import { canPayRenewal, isSponsorKey, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
 import type { Sponsor } from '@/lib/supabase/types';
 
 // A sponsor's own private page (/{club}/sponsor/your-sponsorship?k=...), read on the server with
@@ -35,6 +35,8 @@ export interface PortalPayment {
   status: 'paid' | 'awaiting_review';
   paid_at: string | null;
   created_at: string;
+  /** A tax invoice (the club's GST registration and ABN when this payment was made, SPE-5) */
+  taxInvoice: boolean;
 }
 
 export interface PortalData {
@@ -59,6 +61,10 @@ export interface PortalData {
   taxInvoice: boolean;
   /** The renewal payment link, in the last 60 days or once ended */
   renewLink: string | null;
+  /** Their payment link can take a payment now: a new sign-up, or a renewal that is due (SPE-1) */
+  canPay: boolean;
+  /** A bank transfer receipt is waiting for the club to check it */
+  receiptWaiting: boolean;
 }
 
 const DAY = 24 * 3600 * 1000;
@@ -85,7 +91,8 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
         .eq('sponsor_id', sponsor.id).gte('created_at', `${since}T00:00:00Z`).order('id').range(from, to),
       50000
     ),
-    db.from('payments').select('id, description, package_id, amount_cents, currency, method, status, paid_at, created_at')
+    // '*' so the invoice snapshot columns (migration 20261135) are read once they exist
+    db.from('payments').select('*')
       .eq('sponsor_id', sponsor.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review'])
       .order('created_at', { ascending: false }).limit(20),
     db.from('sponsorship_packages').select('id, name, tier, price_cents, is_active').eq('club_id', sponsor.club_id),
@@ -94,9 +101,8 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
   ]);
 
   const packageName = new Map((packages || []).map(p => [p.id as string, p.name as string]));
-  const days = daysUntilEnd(sponsor);
   let renewLink: string | null = null;
-  if (sponsor.ends_on && days !== null && days <= 60 && sponsor.package_status !== 'prospect') {
+  if (canPayRenewal(sponsor)) {
     const pkg = matchSponsorPackage(sponsor, (packages || []).filter(p => p.is_active));
     if (pkg) renewLink = `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: pkg.id, k: sponsor.access_key })}`;
   }
@@ -127,8 +133,11 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
       status: p.status,
       paid_at: p.paid_at,
       created_at: p.created_at,
+      taxInvoice: invoiceIsTax(p, settings),
     })),
     taxInvoice: !!settings?.gst_registered && !!cleanAbn(settings.abn),
     renewLink,
+    canPay: sponsor.package_status === 'prospect' || canPayRenewal(sponsor),
+    receiptWaiting: (payments || []).some(p => p.status === 'awaiting_review'),
   };
 }

@@ -4,7 +4,7 @@ import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { findSponsorByKey } from '@/lib/sponsor-portal-server';
 import { clubBaseUrl } from '@/lib/email/club-brand';
 import { isUuid } from '@/lib/ids';
-import { cleanAbn, gstIncludedCents } from '@/lib/invoice';
+import { gstIncludedCents, invoiceTaxDetails } from '@/lib/invoice';
 
 // A sponsorship invoice (SP-F4). GET ?k={sponsor link secret}&payment={id}, paid payments only.
 // The club's next invoice number is given the first time it's opened (assign_invoice_number,
@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
   const { sponsor, club } = found;
 
   const { data: payment } = await db.from('payments')
-    .select('id, club_id, sponsor_id, kind, status, description, package_id, amount_cents, currency, method, paid_at, created_at, season')
+    // '*' so the GST snapshot columns (migration 20261135) are read once they exist
+    .select('*')
     .eq('id', paymentId).maybeSingle();
   if (!payment || payment.sponsor_id !== sponsor.id || payment.club_id !== club.id || payment.kind !== 'sponsorship') {
     return NextResponse.json({ error: 'This invoice link is not valid.' }, { status: 404 });
@@ -43,9 +44,8 @@ export async function GET(req: NextRequest) {
       ? db.from('sponsorship_packages').select('name, benefits').eq('id', payment.package_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
-  const abn = cleanAbn(settings?.abn);
-  // A tax invoice needs the club's ABN as well as GST registration
-  const taxInvoice = !!settings?.gst_registered && !!abn;
+  // The GST registration and ABN the club had when this was paid (SPE-5), so the invoice never changes
+  const { taxInvoice, abn } = invoiceTaxDetails(payment, settings);
 
   return NextResponse.json({
     number,
