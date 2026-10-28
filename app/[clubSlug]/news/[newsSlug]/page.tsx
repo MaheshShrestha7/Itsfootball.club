@@ -1,15 +1,18 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Newspaper } from 'lucide-react';
+import { ArrowLeft, EyeOff, Newspaper } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import ArticleBody from '@/components/ArticleBody';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 import { decodeSlugParam, newsPath } from '@/lib/slugs';
-import { newestFirst } from '@/lib/news';
+import { isNewsLive, liveNews, newestFirst, newsState } from '@/lib/news';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { isUuid } from '@/lib/ids';
+import type { NewsArticle } from '@/lib/supabase/types';
 import ShareLinkButton from '@/components/ShareLinkButton';
 
 /** A club news article on its own page (replaces the old pop-up on the club home page), so it can be shared, indexed and cited */
@@ -21,11 +24,22 @@ export default function NewsArticlePage({
   const { clubSlug, newsSlug } = use(params);
   const { selectClubBySlug, news } = useClub();
   const club = selectClubBySlug(clubSlug);
+  const slug = decodeSlugParam(newsSlug);
+  // A draft or scheduled post, opened with its private preview link (?preview=token)
+  const [preview, setPreview] = useState<NewsArticle | null>(null);
+  const clubId = club?.id;
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('preview');
+    const client = getSupabaseClient();
+    if (!clubId || !client || !isUuid(token)) return;
+    client.rpc('news_preview', { p_club_id: clubId, p_slug: slug, p_token: token })
+      .then(({ data }) => setPreview(((data as NewsArticle[] | null) || [])[0] || null), () => {});
+  }, [clubId, slug]);
   if (!club) return null;
 
-  const slug = decodeSlugParam(newsSlug);
   const clubNews = news.filter(n => n.club_id === club.id);
-  const article = clubNews.find(n => n.slug === slug);
+  // Drafts are only in the club's staff's copy of the news (the database hides them from everyone else)
+  const article = clubNews.find(n => n.slug === slug) || preview || undefined;
   const backLink = (
     <Link href={`/${club.slug}/news`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
       <ArrowLeft size={14} />
@@ -46,11 +60,23 @@ export default function NewsArticlePage({
     );
   }
 
-  const more = newestFirst(clubNews.filter(n => n.id !== article.id)).slice(0, 3);
+  const more = newestFirst(liveNews(clubNews.filter(n => n.id !== article.id))).slice(0, 3);
+  const state = newsState(article);
 
   return (
     <div className="container" style={{ padding: '2.5rem 1.5rem 4rem 1.5rem', maxWidth: '760px' }}>
       {backLink}
+
+      {!isNewsLive(article) && (
+        <div role="status" className="glass-panel" style={{ padding: '0.85rem 1.1rem', marginBottom: '1.25rem', display: 'flex', gap: '0.6rem', alignItems: 'center', border: '1px solid rgba(245, 158, 11, 0.45)' }}>
+          <EyeOff size={18} color="var(--c-amber)" aria-hidden="true" />
+          <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+            <strong className="text-primary">Preview.</strong>{' '}
+            {state === 'draft' ? 'This draft isn’t public yet.' : <>This post goes live on <LocalTime value={article.published_at} />.</>}
+            {' '}Only people with this link, and club staff, can see it.
+          </span>
+        </div>
+      )}
 
       <article>
         {/* No cover: the club's banner, else a panel in the club colours with its crest (not the platform logo) */}
@@ -75,7 +101,7 @@ export default function NewsArticlePage({
           <p className="text-meta" style={{ margin: 0 }}>
             By {article.author_name || club.name} · <LocalTime value={article.published_at} />
           </p>
-          <ShareLinkButton url={newsPath(club.slug, article.slug)} title={article.title} text={article.summary || undefined} />
+          {isNewsLive(article) && <ShareLinkButton url={newsPath(club.slug, article.slug)} title={article.title} text={article.summary || undefined} />}
         </div>
         {article.summary && (
           <p style={{ fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--text-primary)', fontWeight: 500, marginBottom: '1.5rem' }}>

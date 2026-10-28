@@ -188,9 +188,12 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
 
     case 'news': {
       const { data: article } = await db.from('news_articles')
-        .select('id, title, summary, content, cover_image_url')
+        .select('*') // is_draft only exists after migration 20261130
         .eq('club_id', club.id).eq('id', req.refId || '').maybeSingle();
       if (!article) return { ok: false, status: 404, error: 'Article not found.' };
+      if (article.is_draft || new Date(article.published_at).getTime() > Date.now()) {
+        return { ok: false, status: 400, error: 'That post isn\'t published yet. Send the notice once it is live.' };
+      }
       const summary = article.summary || articleText(article.content).slice(0, 280);
       return {
         ok: true, label: `News: ${article.title}`, skippedNoEmail,

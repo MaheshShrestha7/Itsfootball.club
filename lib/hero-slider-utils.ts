@@ -1,6 +1,7 @@
 import { Club, Match, NewsArticle, ClubEvent, HeroSliderPinnedItem } from './supabase/types';
 import { getLiveMinute } from './match-clock';
 import { publicFixtures, soonestFirst } from './fixtures';
+import { liveNews } from './news';
 
 /**
  * Returns default hero pinned slides for a club if none have been explicitly customized.
@@ -18,7 +19,7 @@ export function getDefaultHeroPinnedItems(
 ): HeroSliderPinnedItem[] {
   const defaults: HeroSliderPinnedItem[] = [];
   const clubMatches = matches.filter(m => m.club_id === club.id);
-  const clubNews = news.filter(n => n.club_id === club.id);
+  const clubNews = liveNews(news.filter(n => n.club_id === club.id));
   const clubEvents = events.filter(e => e.club_id === club.id);
 
   // 1. Fixture / Matchday live: a game fans can come to, not an in-house training game

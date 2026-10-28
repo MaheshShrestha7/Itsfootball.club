@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useMemo, useState, use } from 'react';
 import CoverImage from "@/components/CoverImage";
 import { useClub } from '@/lib/club-context';
 import { NewsArticle } from '@/lib/supabase/types';
@@ -9,7 +9,11 @@ import RichTextEditor from '@/components/RichTextEditor';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
-import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles } from 'lucide-react';
+import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles, Link2, Send, Clock, PenLine } from 'lucide-react';
+import { useNewsDraftsReady } from '@/lib/use-news-drafts';
+import { matchReportSlug, newestFirst, newsPreviewPath, newsState } from '@/lib/news';
+import { publicScoreHidden } from '@/lib/teams';
+import { newId } from '@/lib/ids';
 import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminContentPage({
@@ -18,10 +22,25 @@ export default function AdminContentPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, news, matches, events, addNewsArticle, updateNewsArticle, deleteNewsArticle, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, news, matches, events, clubTeams, addNewsArticle, updateNewsArticle, deleteNewsArticle, updateClubBranding, draftMatchReport } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  const draftsReady = useNewsDraftsReady();
 
-  const clubNews = news.filter(n => n.club_id === club.id);
+  // Drafts and scheduled posts first (they still need something), then the newest
+  const clubNews = useMemo(() => {
+    const own = newestFirst(news.filter(n => n.club_id === club.id));
+    return [...own.filter(n => newsState(n) !== 'published'), ...own.filter(n => newsState(n) === 'published')];
+  }, [news, club.id]);
+  // Recent results with no report yet, to start one from what was logged
+  const reportable = useMemo(() => {
+    const slugs = new Set(clubNews.map(n => n.slug));
+    return matches
+      .filter(m => m.club_id === club.id && m.status === 'completed' && !m.tournament_id && m.match_type !== 'internal'
+        && Date.now() - new Date(m.match_date).getTime() < 21 * 86400000
+        && !publicScoreHidden(m, clubTeams) && !slugs.has(matchReportSlug(m)))
+      .sort((a, b) => b.match_date.localeCompare(a.match_date))
+      .slice(0, 5);
+  }, [matches, club.id, clubTeams, clubNews]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -61,7 +80,8 @@ export default function AdminContentPage({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const [form, setForm] = useState({
+  type PublishMode = 'publish' | 'draft' | 'schedule';
+  const blankForm = {
     title: '',
     slug: '',
     summary: '',
@@ -71,25 +91,31 @@ export default function AdminContentPage({
     author_name: 'Club Media Team',
     tags: 'Match Report, First Team',
     is_featured: false,
-  });
+    publishMode: 'publish' as PublishMode,
+    /** datetime-local value for a scheduled post */
+    scheduleAt: '',
+  };
+  const [form, setForm] = useState(blankForm);
+
+  // <input type="datetime-local"> works in local time, without a zone
+  const toLocalInput = (iso: string) => {
+    const d = new Date(iso);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+  const tomorrowMorning = () => {
+    const d = new Date(Date.now() + 86400000);
+    d.setHours(9, 0, 0, 0);
+    return toLocalInput(d.toISOString());
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
-    setForm({
-      title: '',
-      slug: '',
-      summary: '',
-      content: '',
-      cover_image_url: '',
-      video_embed_url: '',
-      author_name: 'Club Media Team',
-      tags: 'Match Report, First Team',
-      is_featured: false,
-    });
+    setForm({ ...blankForm, scheduleAt: tomorrowMorning() });
     setModalOpen(true);
   };
 
   const handleOpenEdit = (article: NewsArticle) => {
+    const state = newsState(article);
     setEditingId(article.id);
     setForm({
       title: article.title,
@@ -101,6 +127,8 @@ export default function AdminContentPage({
       author_name: article.author_name,
       tags: article.tags.join(', '),
       is_featured: article.is_featured,
+      publishMode: state === 'draft' ? 'draft' : state === 'scheduled' ? 'schedule' : 'publish',
+      scheduleAt: state === 'scheduled' ? toLocalInput(article.published_at) : tomorrowMorning(),
     });
     setModalOpen(true);
   };
@@ -109,29 +137,75 @@ export default function AdminContentPage({
     e.preventDefault();
     if (!form.title) return;
     if (isArticleEmpty(form.content)) {
-      notify('The article is empty', 'Write the story, or add a picture or video, before publishing.');
+      notify('The article is empty', 'Write the story, or add a picture or video, before saving.');
       return;
+    }
+    let scheduledIso = '';
+    if (form.publishMode === 'schedule') {
+      const at = new Date(form.scheduleAt);
+      if (!form.scheduleAt || Number.isNaN(at.getTime()) || at.getTime() <= Date.now()) {
+        notify('Pick a time in the future', 'Scheduled posts go live by themselves at the time you choose.');
+        return;
+      }
+      scheduledIso = at.toISOString();
     }
 
     const slug = form.slug || form.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const tagsArray = form.tags.split(',').map(t => t.trim()).filter(Boolean);
+    // The publish choice isn't an article field
+    const { publishMode, scheduleAt, ...fields } = form;
+    void scheduleAt;
+    const editing = editingId ? clubNews.find(n => n.id === editingId) : undefined;
+    // Publishing: now, or keep the date of a post that is already live. Drafts and schedules only once the database has the columns.
+    const timing = !draftsReady
+      ? {}
+      : publishMode === 'draft'
+        ? { is_draft: true }
+        : publishMode === 'schedule'
+          ? { is_draft: false, published_at: scheduledIso }
+          : { is_draft: false, ...(editing && newsState(editing) === 'published' ? {} : { published_at: new Date().toISOString() }) };
 
     if (editingId) {
-      updateNewsArticle(editingId, {
-        ...form,
-        slug,
-        tags: tagsArray,
-      });
+      updateNewsArticle(editingId, { ...fields, slug, tags: tagsArray, ...timing });
     } else {
       addNewsArticle({
         club_id: club.id,
-        ...form,
+        ...fields,
         slug,
         tags: tagsArray,
+        ...timing,
+        ...(draftsReady ? { preview_token: newId() } : {}),
       });
     }
-
     setModalOpen(false);
+    setToastMessage(publishMode === 'draft' && draftsReady ? 'Saved as a draft' : publishMode === 'schedule' && draftsReady
+      ? `Scheduled for ${new Date(scheduledIso).toLocaleString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`
+      : 'Published');
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const publishNow = (article: NewsArticle) => {
+    updateNewsArticle(article.id, { is_draft: false, published_at: new Date().toISOString() });
+    setToastMessage(`Published "${article.title}"`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const copyPreview = async (article: NewsArticle) => {
+    const url = `${window.location.origin}${newsPreviewPath(club.slug, article)}`;
+    if (!article.preview_token) return notify('The preview link isn\u2019t ready yet', 'Reload the page in a moment and try again.');
+    try {
+      await navigator.clipboard.writeText(url);
+      setToastMessage('Preview link copied. Anyone with it can read this post before it goes live.');
+    } catch {
+      await notify('Copy this preview link', url);
+    }
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const startReport = (matchId: string) => {
+    const report = draftMatchReport(matchId);
+    if (!report) return notify('Nothing to write yet', 'Log the goals (or enter the score) for this match first.');
+    handleOpenEdit(report);
   };
 
   return (
@@ -150,15 +224,40 @@ export default function AdminContentPage({
             Content & Media Management
           </h1>
           <p className="text-body">
-            Publish club news, match reports, match highlights, and video embeds.
+            Publish club news, match reports, match highlights, and video embeds. Save a draft or schedule a post for later.
           </p>
         </div>
 
         <button onClick={handleOpenAdd} className="btn btn-primary row">
           <Plus size={16} />
-          <span>Publish Article / Video</span>
+          <span>New Article / Video</span>
         </button>
       </div>
+
+      {/* Recent results without a report: start one from the logged events */}
+      {draftsReady && reportable.length > 0 && (
+        <section className="glass-panel" style={{ padding: '1.1rem 1.25rem', marginBottom: '1.25rem' }} aria-labelledby="reports-due">
+          <h2 id="reports-due" style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <PenLine size={16} aria-hidden="true" /> Results without a report
+          </h2>
+          <p className="text-note" style={{ marginBottom: '0.75rem' }}>
+            Start a draft from the score, scorers and Player of the Match you logged, then add your own words before publishing.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {reportable.map(m => (
+              <div key={m.id} className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                  {m.home_team_name} {m.home_score}–{m.away_score} {m.away_team_name}
+                  <span className="text-meta" style={{ marginLeft: '0.5rem' }}>{new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                </span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => startReport(m.id)}>
+                  <PenLine size={14} /> Write report draft
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* News Articles List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -184,7 +283,13 @@ export default function AdminContentPage({
                 style={{ width: '120px', height: '80px', borderRadius: '10px' }}
               />
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+                  {newsState(article) === 'draft' && <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-secondary)' }}>DRAFT</span>}
+                  {newsState(article) === 'scheduled' && (
+                    <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Clock size={10} /> SCHEDULED {new Date(article.published_at).toLocaleString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  )}
                   {article.is_featured && <span className="badge badge-gold">FEATURED</span>}
                   {article.video_embed_url && (
                     <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)' }}>
@@ -192,7 +297,7 @@ export default function AdminContentPage({
                     </span>
                   )}
                   <span className="text-meta">
-                    {new Date(article.published_at).toLocaleDateString(DATE_LOCALE)} • {article.author_name}
+                    {newsState(article) === 'published' ? `${new Date(article.published_at).toLocaleDateString(DATE_LOCALE)} • ` : ''}{article.author_name}
                   </span>
                 </div>
 
@@ -205,8 +310,18 @@ export default function AdminContentPage({
               </div>
             </div>
 
-            <div className="row">
-              {(() => {
+            <div className="row row-wrap">
+              {newsState(article) !== 'published' && (
+                <>
+                  <button type="button" onClick={() => copyPreview(article)} className="btn btn-secondary btn-sm" title="Copy a private link to this post">
+                    <Link2 size={14} /> <span>Preview link</span>
+                  </button>
+                  <button type="button" onClick={() => publishNow(article)} className="btn btn-primary btn-sm">
+                    <Send size={14} /> <span>Publish now</span>
+                  </button>
+                </>
+              )}
+              {newsState(article) === 'published' && (() => {
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'news' && p.target_id === article.id);
                 return (
                   <button
@@ -268,7 +383,7 @@ export default function AdminContentPage({
           }}>
             <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {editingId ? 'Edit Article' : 'Publish New Story'}
+                {editingId ? 'Edit Article' : 'New Story'}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
@@ -369,12 +484,43 @@ export default function AdminContentPage({
                 </label>
               </div>
 
+              {draftsReady && (
+                <fieldset className="form-group" style={{ border: 0, padding: 0 }}>
+                  <legend className="form-label" style={{ marginBottom: '0.4rem' }}>When should it go live?</legend>
+                  <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                    {([
+                      ['publish', editingId && clubNews.find(n => n.id === editingId && newsState(n) === 'published') ? 'Published' : 'Publish now'],
+                      ['draft', 'Save as draft'],
+                      ['schedule', 'Schedule'],
+                    ] as const).map(([mode, label]) => (
+                      <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
+                        <input type="radio" name="publish-mode" checked={form.publishMode === mode} onChange={() => setForm(f => ({ ...f, publishMode: mode }))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  {form.publishMode === 'schedule' && (
+                    <div style={{ marginTop: '0.75rem', maxWidth: '280px' }}>
+                      <label htmlFor="content-schedule-at" className="form-label">Goes live at</label>
+                      <input id="content-schedule-at" type="datetime-local" className="form-input" value={form.scheduleAt}
+                        onChange={e => setForm(f => ({ ...f, scheduleAt: e.target.value }))} />
+                    </div>
+                  )}
+                  <span className="text-note" style={{ display: 'block', marginTop: '0.4rem' }}>
+                    {form.publishMode === 'draft' ? 'Only club staff can see a draft. Share its preview link with the committee to check it.'
+                      : form.publishMode === 'schedule' ? 'It appears on your site by itself at that time. Until then only staff and the preview link can see it.'
+                        : 'It appears on your club site straight away.'}
+                  </span>
+                </fieldset>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Publish Story
+                  {!draftsReady || form.publishMode === 'publish' ? (editingId && clubNews.find(n => n.id === editingId && newsState(n) === 'published') ? 'Save Changes' : 'Publish Story')
+                    : form.publishMode === 'draft' ? 'Save Draft' : 'Schedule Post'}
                 </button>
               </div>
             </form>

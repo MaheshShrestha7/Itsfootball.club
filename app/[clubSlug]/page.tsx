@@ -51,7 +51,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
-import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
+import { HOME_NEWS_COUNT, liveNews, newestFirst } from '@/lib/news';
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   match: 'Match',
@@ -221,7 +221,7 @@ export default function ClubPublicPage({
   const stripNextMatch = upcomingMatches.find(m => kickoff(m) >= nowMs - 3 * 3600000);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
-  const clubNews = newestFirst(news.filter(n => n.club_id === clubId));
+  const clubNews = newestFirst(liveNews(news.filter(n => n.club_id === clubId)));
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 
   // Squad filtering
@@ -321,7 +321,7 @@ export default function ClubPublicPage({
         }
 
         if (item.type === 'news') {
-          const article = news.find(n => n.id === item.target_id) || featuredArticle;
+          const article = clubNews.find(n => n.id === item.target_id) || featuredArticle;
           return {
             id: item.id || `pin-news-${idx}`,
             category: 'news',

@@ -1,5 +1,6 @@
 // Email templates. One layout (table-based, inline styles: what Gmail, Outlook and Apple Mail
 // all render the same) plus a builder per email. Every value is escaped; builders pass plain text.
+import type { FixtureChange } from '@/lib/fixture-alerts';
 import { SITE_URL } from '@/lib/seo';
 import { evaluateColorContrast } from '@/lib/theme-utils';
 
@@ -381,6 +382,44 @@ export function newsNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientNa
     paragraphs: [summary || `Hi ${firstName(p.recipientName)}, there's news from ${p.brand.name}.`],
     cta: { label: 'Read on the club site', url: p.link },
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
+  });
+}
+
+export function teamMessage(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; recipientName: string; team: string; title: string; body: string; link: string }): RenderedEmail {
+  const paragraphs = p.body.split(/\n{2,}/).map(x => x.trim()).filter(Boolean);
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl,
+    subject: `${p.team}: ${p.title}`,
+    preheader: paragraphs[0]?.slice(0, 120) || p.title,
+    heading: p.title,
+    paragraphs: [
+      p.childName ? `Hi ${firstName(p.recipientName)}, a message for ${p.team} about ${firstName(p.childName)}'s team:` : `Hi ${firstName(p.recipientName)}, a message for ${p.team}:`,
+      ...paragraphs,
+    ],
+    cta: { label: 'Open the club app', url: p.link },
+    reason: `You're receiving this because ${p.childName ? `${p.childName} is` : 'you are'} in ${p.team} at ${p.brand.name}.`,
+  });
+}
+
+export function fixtureChangeNotice(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; recipientName: string; team: string; fixture: string; change: FixtureChange; when: string; venue: string; wasWhen?: string; wasVenue?: string; link: string }): RenderedEmail {
+  const what = p.change === 'cancelled' ? 'is cancelled' : p.change === 'postponed' ? 'is postponed' : 'has changed';
+  const heading = p.change === 'cancelled' ? 'Game cancelled' : p.change === 'postponed' ? 'Game postponed' : 'Game moved';
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
+    subject: `${heading}: ${p.fixture}`,
+    preheader: `${p.fixture} ${what}.`,
+    heading,
+    paragraphs: [
+      `Hi ${firstName(p.recipientName)}, ${p.fixture} ${what}.`
+        + (p.change === 'postponed' ? ' The club will let you know the new date.' : p.change === 'moved' ? ' The new details are below.' : ''),
+    ],
+    details: p.change === 'moved'
+      ? [['Match', p.fixture], ['When', p.when], ['Where', p.venue || 'To be confirmed'],
+        ...(p.wasWhen && p.wasWhen !== p.when ? [['Was', p.wasWhen] as [string, string]] : []),
+        ...(p.wasVenue && p.wasVenue !== p.venue ? [['Was at', p.wasVenue] as [string, string]] : [])]
+      : [['Match', p.fixture], ['Was', p.when]],
+    cta: { label: 'See the fixture', url: p.link },
+    reason: `You're receiving this because ${p.childName ? `${p.childName} is` : 'you are'} in ${p.team} at ${p.brand.name}.`,
   });
 }
 

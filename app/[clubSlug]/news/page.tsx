@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { newsPath } from '@/lib/slugs';
-import { newestFirst } from '@/lib/news';
+import { liveNews, newestFirst } from '@/lib/news';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 
@@ -19,7 +19,7 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
   const [tag, setTag] = useState('all');
   const [shown, setShown] = useState(PAGE);
 
-  const clubNews = useMemo(() => newestFirst(news.filter(n => n.club_id === club.id)), [news, club.id]);
+  const clubNews = useMemo(() => newestFirst(liveNews(news.filter(n => n.club_id === club.id))), [news, club.id]);
   // Tags used on at least two articles: one-off tags would just add noise
   const tags = useMemo(() => {
     const count = new Map<string, number>();
