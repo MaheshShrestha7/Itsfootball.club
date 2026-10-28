@@ -36,9 +36,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import MatchReport from '@/components/MatchReport';
-import { matchReport } from '@/lib/match-report';
-import { DATE_LOCALE } from '@/lib/dates';
-import { TIME_ZONE } from '@/lib/email/format';
+import { matchReport, reportInputFor } from '@/lib/match-report';
 import GettingThere from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
@@ -724,19 +722,7 @@ export default function MatchCenterPage({
           <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
           <MatchReport
             source={`Written from the match events ${club.name} logged.`}
-            paragraphs={matchReport({
-              home: match.home_team_name,
-              away: match.away_team_name,
-              homeScore: match.home_score ?? 0,
-              awayScore: match.away_score ?? 0,
-              competition: match.competition && match.competition !== 'Premier Regional League' ? match.competition : undefined,
-              venue: match.venue,
-              // The club's time zone, so the server's HTML and the browser agree on the day
-              dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
-              goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
-              redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name })),
-              playerOfTheMatch: motmMember?.full_name,
-            })}
+            paragraphs={matchReport(reportInputFor(match, events, motmMember?.full_name))}
           />
           </div>
         )}

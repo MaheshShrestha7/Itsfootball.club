@@ -62,7 +62,9 @@ import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } f
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
-import { goalScoringSide, publicScoreHidden } from './teams';
+import { goalScoringSide, isJuniorFixture, juniorMemberIds, juniorPublicName, publicScoreHidden } from './teams';
+import { matchReportArticle, reportInputFor } from './match-report';
+import { matchReportSlug } from './news';
 import { DATE_LOCALE } from '@/lib/dates';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
@@ -164,7 +166,10 @@ interface ClubContextType {
   deleteSponsor: (sponsorId: string) => void;
   
   // Content CMS Management
-  addNewsArticle: (articleData: Omit<NewsArticle, 'id' | 'published_at'>) => void;
+  /** published_at defaults to now; a later time schedules the post */
+  addNewsArticle: (articleData: Omit<NewsArticle, 'id' | 'published_at'> & { published_at?: string }) => void;
+  /** The factual report of a finished fixture as a draft news post (once per fixture); null when there's nothing to write */
+  draftMatchReport: (matchId: string, motmMemberId?: string) => NewsArticle | null;
   updateNewsArticle: (articleId: string, updates: Partial<NewsArticle>) => void;
   deleteNewsArticle: (articleId: string) => void;
   addMediaItem: (mediaData: Omit<MediaGalleryItem, 'id' | 'created_at'>) => void;
@@ -1742,14 +1747,46 @@ export function ClubProvider({
   }, [queueDelete]);
 
   // 8. News Articles CMS
-  const addNewsArticle = useCallback((articleData: Omit<NewsArticle, 'id' | 'published_at'>) => {
+  const addNewsArticle = useCallback((articleData: Omit<NewsArticle, 'id' | 'published_at'> & { published_at?: string }) => {
     const newArticle: NewsArticle = {
       ...articleData,
       id: newId(),
-      published_at: new Date().toISOString(),
+      published_at: articleData.published_at || new Date().toISOString(),
     };
     setNews(prev => [newArticle, ...prev]);
   }, []);
+
+  // Written from what was logged, with names as the public match page shows them (juniors shortened)
+  const draftMatchReport = useCallback((matchId: string, motmMemberId?: string): NewsArticle | null => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match || match.status !== 'completed' || publicScoreHidden(match, clubTeams)) return null;
+    const slug = matchReportSlug(match);
+    if (news.some(n => n.club_id === match.club_id && n.slug === slug)) return null;
+    const club = clubs.find(c => c.id === match.club_id);
+    const juniorFixture = isJuniorFixture(match, clubTeams);
+    const juniorIds = juniorMemberIds(members, clubTeams, clubTeamMembers, { includeU18: club?.junior_includes_u18 !== false });
+    const shown = (name: string, memberId?: string) => (juniorFixture || (memberId && juniorIds.has(memberId)) ? juniorPublicName(name) : name);
+    const events = matchEvents.filter(e => e.match_id === match.id).map(e => ({ ...e, player_name: shown(e.player_name) }));
+    const motmId = motmMemberId || activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id)?.member_id;
+    const motm = motmId ? members.find(m => m.id === motmId) : undefined;
+    const post = matchReportArticle(reportInputFor(match, events, motm ? shown(motm.full_name, motm.id) : undefined));
+    if (!post) return null;
+    const article: NewsArticle = {
+      id: newId(),
+      club_id: match.club_id,
+      ...post,
+      slug,
+      cover_image_url: '',
+      author_name: club?.name || 'Club Media Team',
+      tags: ['Match report'],
+      is_featured: false,
+      is_draft: true,
+      preview_token: newId(),
+      published_at: new Date().toISOString(),
+    };
+    setNews(prev => [article, ...prev]);
+    return article;
+  }, [matches, clubTeams, news, clubs, members, clubTeamMembers, matchEvents, activityLogs]);
 
   const updateNewsArticle = useCallback((articleId: string, updates: Partial<NewsArticle>) => {
     setNews(prev => prev.map(n => (n.id === articleId ? { ...n, ...updates } : n)));
@@ -3595,6 +3632,7 @@ export function ClubProvider({
         updateSponsor,
         deleteSponsor,
         addNewsArticle,
+        draftMatchReport,
         updateNewsArticle,
         deleteNewsArticle,
         addMediaItem,

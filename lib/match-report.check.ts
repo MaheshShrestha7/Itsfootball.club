@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { matchReport, type ReportInput } from './match-report';
+import { matchReport, matchReportArticle, type ReportInput } from './match-report';
 
 const base: ReportInput = { home: 'Riverside FC', away: 'Parramatta City', homeScore: 3, awayScore: 1, goals: [], redCards: [] };
 
@@ -47,3 +47,13 @@ assert.deepEqual(
 assert.deepEqual(matchReport({ ...base, homeScore: 0, awayScore: 0 }), ['Riverside FC and Parramatta City drew 0–0.']);
 
 console.log('match-report checks passed');
+
+// As a news post to tidy up and publish
+{
+  const post = matchReportArticle({ ...base, goals: [{ minute: 5, side: 'home', player: 'Sam <b>' }] });
+  assert.equal(post?.title, 'Riverside FC 3–1 Parramatta City');
+  assert.equal(post?.summary, 'Riverside FC beat Parramatta City 3–1.');
+  assert.ok(post?.content.startsWith('<p>Riverside FC beat'));
+  assert.ok(post?.content.includes('Sam &#60;b&#62;'), 'names are escaped');
+  console.log('match-report article OK');
+}

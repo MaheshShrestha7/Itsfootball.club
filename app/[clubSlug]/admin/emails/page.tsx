@@ -3,10 +3,13 @@
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { getAccessToken } from '@/lib/supabase/client';
+import { isNewsLive } from '@/lib/news';
 import { REMINDER_SETTINGS, type EmailSettings, type ReminderSetting } from '@/lib/email/settings';
-import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw } from 'lucide-react';
+import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw, Users } from 'lucide-react';
+import { clubTeamsOf, teamLabel } from '@/lib/teams';
+import { newId } from '@/lib/ids';
 
-type NoticeKind = 'renewal' | 'match' | 'event' | 'news';
+type NoticeKind = 'team' | 'renewal' | 'match' | 'event' | 'news';
 
 interface Overview {
   settings: EmailSettings;
@@ -23,10 +26,13 @@ interface Preview {
   noEmail: number;
   /** Phones/browsers following the club that also get it as a push notification */
   followers: number;
+  /** Team messages: everyone in the team, who also get it in their app inbox */
+  members?: number;
   preview: { subject: string; html: string } | null;
 }
 
 const NOTICE_TYPES: { kind: NoticeKind; label: string; icon: React.ElementType; hint: string }[] = [
+  { kind: 'team', label: 'Message a team', icon: Users, hint: 'A quick message to one team: its players, their parents and guardians, and its coaches. It also appears in their Messages in the club app.' },
   { kind: 'match', label: 'Upcoming match', icon: CalendarDays, hint: 'Fixture details and a link to the match centre.' },
   { kind: 'event', label: 'Upcoming event', icon: Calendar, hint: 'Event details and a link to register.' },
   { kind: 'news', label: 'News article', icon: Newspaper, hint: 'The headline, summary and cover image, linking to your news.' },
@@ -41,6 +47,8 @@ const HISTORY_LABELS: Record<string, string> = {
   notice_match: 'Match notice',
   notice_event: 'Event notice',
   notice_news: 'News notice',
+  notice_team: 'Team message',
+  notice_fixture: 'Fixture change alert',
 };
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -96,14 +104,20 @@ function Switch({ checked, onChange, label, disabled }: { checked: boolean; onCh
 
 export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, news } = useClub();
+  const { clubs, selectClubBySlug, matches, events, news, clubTeams } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<ReminderSetting | null>(null);
 
-  const [kind, setKind] = useState<NoticeKind>('match');
+  const [kind, setKind] = useState<NoticeKind>('team');
+  const teams = useMemo(() => clubTeamsOf(clubTeams, club.id), [clubTeams, club.id]);
+  const [teamId, setTeamId] = useState('');
+  const [teamTitle, setTeamTitle] = useState('');
+  const [teamPush, setTeamPush] = useState(false);
+  // One id per message, so pressing Send twice sends it once; a new one after each send
+  const [messageId, setMessageId] = useState(() => newId());
   const [refId, setRefId] = useState('');
   const [audience, setAudience] = useState<'members' | 'players'>('members');
   const [message, setMessage] = useState('');
@@ -126,7 +140,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() > Date.now())
     .sort((a, b) => a.start_time.localeCompare(b.start_time)), [events, club.id]);
   const articles = useMemo(() => news
-    .filter(n => n.club_id === club.id)
+    .filter(n => n.club_id === club.id && isNewsLive(n))
     .sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''))
     .slice(0, 30), [news, club.id]);
 
@@ -137,7 +151,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     : [];
 
   // A different notice invalidates the preview
-  useEffect(() => { setPreview(null); setFeedback(null); }, [kind, refId, audience, message]);
+  useEffect(() => { setPreview(null); setFeedback(null); }, [kind, refId, audience, message, teamId, teamTitle, teamPush]);
   useEffect(() => { setRefId(''); }, [kind]);
 
   const toggle = async (key: ReminderSetting, value: boolean) => {
@@ -154,11 +168,23 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
   };
 
   const notice = () => ({ clubId: club.id, kind, refId: refId || undefined, audience, message: message.trim() || undefined });
+  const teamNotice = () => ({ clubId: club.id, teamId, messageId, title: teamTitle.trim(), body: message.trim(), push: teamPush });
+  const post = async (body: object) => {
+    if (kind !== 'team') return api('POST', body);
+    const token = await getAccessToken();
+    const res = await fetch('/api/admin/team-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    return { ok: !!res?.ok, data, error: res ? data.error : 'Network error. Check your connection.' };
+  };
 
   const runPreview = async () => {
     setBusy('preview');
     setFeedback(null);
-    const r = await api('POST', notice());
+    const r = await post(kind === 'team' ? teamNotice() : notice());
     setBusy(null);
     if (r.ok) setPreview(r.data);
     else setFeedback({ type: 'error', text: r.error || 'Could not prepare the notice.' });
@@ -166,21 +192,27 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
   const send = async () => {
     setBusy('send');
-    const r = await api('POST', { ...notice(), send: true });
+    const r = await post({ ...(kind === 'team' ? teamNotice() : notice()), send: true });
     setBusy(null);
     if (r.ok) {
       const sent = r.data.sent ?? 0;
       const pushed = r.data.pushed ? ` Notified ${r.data.pushed} follower${r.data.pushed === 1 ? '' : 's'}.` : '';
-      setFeedback({ type: 'success', text: (sent ? `Sent to ${sent} ${sent === 1 ? 'person' : 'people'}.` : 'Everyone already had this one. Nothing new to send.') + pushed });
+      const inbox = r.data.inbox ? ` It's in ${r.data.inbox} ${r.data.inbox === 1 ? 'member\'s' : 'members\''} Messages in the app.` : '';
+      setFeedback({ type: 'success', text: (sent ? `Emailed ${sent} ${sent === 1 ? 'person' : 'people'}.` : kind === 'team' ? 'No new emails to send.' : 'Everyone already had this one. Nothing new to send.') + inbox + pushed });
       setPreview(null);
+      if (kind === 'team') {
+        setMessageId(newId());
+        setTeamTitle('');
+        setMessage('');
+      }
       load();
     } else {
       setFeedback({ type: 'error', text: r.error || 'Sending failed.' });
     }
   };
 
-  const needsRef = kind !== 'renewal';
-  const canPreview = !needsRef || !!refId;
+  const needsRef = kind !== 'renewal' && kind !== 'team';
+  const canPreview = kind === 'team' ? !!teamId && !!teamTitle.trim() && !!message.trim() : !needsRef || !!refId;
   const ready = overview?.ready;
   const notReady = ready && (!ready.resend || !ready.database);
 
@@ -272,6 +304,29 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{NOTICE_TYPES.find(t => t.kind === kind)?.hint}</p>
 
+        {kind === 'team' && (
+          <>
+            <div className="form-row-2" style={{ gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="team-message-team">Team</label>
+                {teams.length ? (
+                  <select id="team-message-team" className="form-select" value={teamId} onChange={e => setTeamId(e.target.value)}>
+                    <option value="">Choose...</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{teamLabel(t)}</option>)}
+                  </select>
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Set up your teams on Club Teams first.</p>
+                )}
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="team-message-title">Subject</label>
+                <input id="team-message-title" className="form-input" maxLength={120} value={teamTitle} onChange={e => setTeamTitle(e.target.value)}
+                  placeholder="e.g. Training is off tonight" />
+              </div>
+            </div>
+          </>
+        )}
+
         {needsRef && (
           <div className="form-group">
             <label className="form-label" htmlFor="notice-ref">{kind === 'match' ? 'Match' : kind === 'event' ? 'Event' : 'Article'}</label>
@@ -303,23 +358,35 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         )}
 
         <div className="form-group">
-          <label className="form-label" htmlFor="notice-message">Personal message (optional)</label>
+          <label className="form-label" htmlFor="notice-message">{kind === 'team' ? 'Message' : 'Personal message (optional)'}</label>
           <textarea
             id="notice-message"
             className="form-textarea"
-            rows={3}
-            maxLength={1000}
+            rows={kind === 'team' ? 5 : 3}
+            maxLength={kind === 'team' ? 2000 : 1000}
             value={message}
             onChange={e => setMessage(e.target.value)}
-            placeholder="e.g. Big game this week, come and support the team!"
+            placeholder={kind === 'team' ? 'e.g. The council has closed the grounds after the rain, so training is off tonight. See you Saturday.' : 'e.g. Big game this week, come and support the team!'}
           />
         </div>
+
+        {kind === 'team' && (
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={teamPush} onChange={e => setTeamPush(e.target.checked)} style={{ marginTop: '3px', accentColor: 'var(--club-primary)' }} />
+            <span>Also send it as a phone notification to everyone following the club (not only this team). Leave it off for messages only the team needs.</span>
+          </label>
+        )}
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <button type="button" className="btn btn-secondary" disabled={!canPreview || !!busy} onClick={runPreview}>
             <Eye size={16} /> {busy === 'preview' ? 'Preparing...' : 'Preview'}
           </button>
-          {preview && preview.recipients > 0 && (
+          {preview && kind === 'team' && !!preview.members && (
+            <button type="button" className="btn btn-primary" disabled={!!busy} onClick={send}>
+              <Send size={16} /> {busy === 'send' ? 'Sending...' : `Send to ${preview.members} in the team`}
+            </button>
+          )}
+          {preview && kind !== 'team' && preview.recipients > 0 && (
             <button type="button" className="btn btn-primary" disabled={!!busy || !ready?.resend} onClick={send}>
               <Send size={16} /> {busy === 'send' ? 'Sending...' : `Send to ${preview.recipients} ${preview.recipients === 1 ? 'person' : 'people'}`}
             </button>
@@ -336,11 +403,13 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
           <div style={{ marginTop: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
               <strong className="text-primary">
-                {preview.recipients ? `${preview.recipients} ${preview.recipients === 1 ? 'person' : 'people'} will get this.` : 'Nobody new to send this to.'}
+                {kind === 'team' && !preview.members ? 'Nobody is in this team yet. Add players and coaches on Club Teams.'
+                  : preview.recipients ? `${preview.recipients} ${preview.recipients === 1 ? 'person' : 'people'} will get this by email.` : kind === 'team' ? 'Nobody to email.' : 'Nobody new to send this to.'}
               </strong>
               {preview.alreadySent > 0 && ` ${preview.alreadySent} already received it.`}
               {preview.optedOut > 0 && ` ${preview.optedOut} unsubscribed.`}
               {preview.noEmail > 0 && ` ${preview.noEmail} member${preview.noEmail === 1 ? ' has' : 's have'} no email address.`}
+              {preview.members ? ` All ${preview.members} in the team also see it in Messages in the club app.` : ''}
               {preview.followers > 0 && ` ${preview.followers} follower${preview.followers === 1 ? '' : 's'} also get a push notification (headline and link only).`}
             </div>
             {preview.preview && (

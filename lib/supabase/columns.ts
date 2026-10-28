@@ -9,7 +9,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   match_events: ['id', 'match_id', 'club_id', 'minute', 'added_minute', 'event_type', 'team_side', 'player_name', 'assist_player_name', 'detail_text', 'created_at'],
   events: ['id', 'club_id', 'title', 'description', 'category', 'season', 'start_time', 'end_time', 'location', 'max_capacity', 'rsvp_count', 'is_public', 'door_qr_checkin_enabled', 'ticket_price_cents', 'flyer_url', 'created_at'],
   sponsors: ['id', 'club_id', 'event_id', 'name', 'logo_url', 'website_url', 'tier', 'label', 'size_scale', 'display_order', 'is_active', 'contact_name', 'contact_email', 'contact_phone', 'package_value', 'package_status', 'season'],
-  news_articles: ['id', 'club_id', 'title', 'slug', 'summary', 'content', 'cover_image_url', 'video_embed_url', 'author_name', 'tags', 'is_featured', 'published_at'],
+  news_articles: ['id', 'club_id', 'title', 'slug', 'summary', 'content', 'cover_image_url', 'video_embed_url', 'author_name', 'tags', 'is_featured', 'is_draft', 'preview_token', 'published_at'],
   media_gallery: ['id', 'club_id', 'title', 'media_type', 'media_url', 'thumbnail_url', 'album_name', 'is_album_cover', 'created_at'],
   member_clubscore_profiles: ['id', 'club_id', 'member_id', 'season', 'total_points', 'weekly_points', 'monthly_points', 'current_streak', 'highest_streak', 'tier', 'badges', 'last_activity_date', 'streak_updated_at', 'created_at', 'updated_at'],
   gamification_activity_log: ['id', 'club_id', 'member_id', 'event_type', 'points_awarded', 'multiplier', 'final_points', 'description', 'reference_id', 'created_by', 'created_at'],

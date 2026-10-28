@@ -2,6 +2,11 @@
 // the Match): no AI writing, nothing guessed. Search engines and AI answers quote plain sentences like these.
 // Junior names arrive already shortened (publicMember), and a team that hides its scores gets no report.
 
+import type { Match, MatchEvent } from './supabase/types';
+import { textToHtml } from './article-text';
+import { DATE_LOCALE } from './dates';
+import { TIME_ZONE } from './email/format';
+
 export interface ReportGoal { minute: number; side: 'home' | 'away'; player: string; penalty?: boolean; ownGoal?: boolean }
 
 export interface ReportInput {
@@ -55,4 +60,40 @@ export function matchReport(r: ReportInput): string[] {
   if (r.redCards.length) out.push(`Sent off: ${list(r.redCards.map(c => `${c.player} (${c.side === 'home' ? r.home : r.away}, ${c.minute}')`))}.`);
   if (r.playerOfTheMatch) out.push(`Player of the Match: ${r.playerOfTheMatch}.`);
   return out;
+}
+
+/**
+ * The report's input from a finished match and its logged events. Pass the events and Player of
+ * the Match name as the public should see them (juniors shortened, none when scores are hidden).
+ */
+export function reportInputFor(
+  match: Pick<Match, 'home_team_name' | 'away_team_name' | 'home_score' | 'away_score' | 'competition' | 'venue' | 'match_date'>,
+  events: Pick<MatchEvent, 'event_type' | 'minute' | 'team_side' | 'player_name'>[],
+  playerOfTheMatch?: string
+): ReportInput {
+  return {
+    home: match.home_team_name,
+    away: match.away_team_name,
+    homeScore: match.home_score ?? 0,
+    awayScore: match.away_score ?? 0,
+    // The old placeholder competition every fixture once had isn't worth a mention
+    competition: match.competition && match.competition !== 'Premier Regional League' ? match.competition : undefined,
+    venue: match.venue,
+    // The club's time zone, so the server's HTML and the browser agree on the day
+    dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
+    goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
+    redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name })),
+    playerOfTheMatch,
+  };
+}
+
+/** The report as a news post to tidy up and publish: "Riverside FC 3–1 Hills United". Null when there's nothing to say. */
+export function matchReportArticle(r: ReportInput): { title: string; summary: string; content: string } | null {
+  const paragraphs = matchReport(r);
+  if (!paragraphs.length) return null;
+  return {
+    title: `${r.home} ${r.homeScore}–${r.awayScore} ${r.away}`,
+    summary: paragraphs[0],
+    content: textToHtml(paragraphs.join('\n\n')),
+  };
 }

@@ -41,18 +41,22 @@ import {
   CalendarDays,
   Layers,
   ArrowRight,
-  Share2
+  Share2,
+  Upload
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { todayIso } from '@/lib/finance';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { confirmAction } from '@/components/ConfirmDialog';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
 import LocalTime from '@/components/LocalTime';
+import FixtureImportModal from '@/components/admin/FixtureImportModal';
+import { fixtureChangeOf, type FixtureChange } from '@/lib/fixture-alerts';
+import { getAccessToken } from '@/lib/supabase/client';
 import ResultChip from '@/components/ResultChip';
 
 // Still to be played: listed first, soonest at the top
@@ -142,6 +146,7 @@ export default function AdminMatchesPage({
   const [qrModalMatch, setQrModalMatch] = useState<Match | null>(null);
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Form State
   const defaultDate = todayIso(new Date(Date.now() + 3 * 86400000));
@@ -397,6 +402,10 @@ export default function AdminMatchesPage({
         ...(resolvedStatus === 'completed' && opened.status !== 'completed' ? { period: 'full_time' } : {}),
       });
       showToast(`Updated fixture: ${cleanTitle || cleanOpponent}`);
+      // Cancelled, postponed or moved: offer to tell the team (club fixtures only)
+      const after = { status: resolvedStatus === opened.status && editingMatch ? editingMatch.status : resolvedStatus, match_date: combinedDateIso, match_time: form.match_time, venue: cleanVenue };
+      const change = editingMatch && !editingMatch.tournament_id && form.match_type !== 'internal' ? fixtureChangeOf(editingMatch, after) : null;
+      if (editingMatch && change) void offerFixtureAlert(editingMatch, change, after);
     } else {
       // Add new match
       const created = addMatch({
@@ -434,6 +443,33 @@ export default function AdminMatchesPage({
     }
 
     setIsFormModalOpen(false);
+  };
+
+  const offerFixtureAlert = async (before: Match, change: FixtureChange, after: Pick<Match, 'match_date' | 'match_time' | 'venue'>) => {
+    const fixture = `${before.home_team_name} vs ${before.away_team_name}`;
+    const ok = await confirmAction({
+      title: 'Let the team know?',
+      message: `${fixture} is ${change}. Email the team's players, parents and coaches, put it in their Messages in the club app, and send a notification to the club's followers.`,
+      confirmLabel: 'Send alert',
+      cancelLabel: 'Not now',
+    });
+    if (!ok) return;
+    const token = await getAccessToken();
+    const res = await fetch('/api/admin/fixture-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        clubId: club.id,
+        matchId: before.id,
+        change,
+        now: { date: after.match_date, time: after.match_time || null, venue: after.venue },
+        was: { date: before.match_date, time: before.match_time || null, venue: before.venue },
+      }),
+    }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    if (!res?.ok) return notify('The alert wasn\u2019t sent', data.error || 'Check your connection and try again.');
+    const parts = [data.sent ? `emailed ${data.sent}` : '', data.inbox ? `${data.inbox} in app Messages` : '', data.pushed ? `${data.pushed} followers notified` : ''].filter(Boolean);
+    showToast(parts.length ? `Team told: ${parts.join(', ')}` : 'The team had already been told about this change');
   };
 
   // 1-Click Status Switcher (Upcoming <-> Completed)
@@ -582,6 +618,16 @@ export default function AdminMatchesPage({
             <Radio size={16} color="var(--c-red)" />
             <span>Match Centre</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Upload size={16} />
+            <span>Import Fixtures</span>
+          </button>
 
           <button
             onClick={() => handleOpenAddModal()}
@@ -1155,6 +1201,22 @@ export default function AdminMatchesPage({
       {/* ========================================================================= */}
       {/* 1. ADD / EDIT MATCH FORM MODAL                                            */}
       {/* ========================================================================= */}
+      {importOpen && (
+        <FixtureImportModal
+          club={club}
+          teams={teams}
+          defaultTeamId={teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId}
+          season={activeSeason?.name || defaultSeasonLabel()}
+          existing={clubMatches}
+          onClose={() => setImportOpen(false)}
+          onImport={fixtures => {
+            fixtures.forEach(f => addMatch(f));
+            setImportOpen(false);
+            showToast(`Added ${fixtures.length} fixture${fixtures.length === 1 ? '' : 's'}`);
+          }}
+        />
+      )}
+
       {isFormModalOpen && (
         <div
           style={{

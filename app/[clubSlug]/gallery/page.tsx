@@ -8,6 +8,7 @@ import { AlbumGrid, Lightbox, groupAlbums, photoCount } from '@/components/Photo
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import { videoEmbed } from '@/lib/video';
+import { isNewsLive } from '@/lib/news';
 
 export default function GalleryPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
@@ -22,7 +23,7 @@ export default function GalleryPage({ params }: { params: Promise<{ clubSlug: st
   const album = albums.find(a => a.name === openName);
   // Videos are the club's news articles with a playable video link
   const videos = news
-    .filter(n => n.club_id === club.id && videoEmbed(n.video_embed_url))
+    .filter(n => n.club_id === club.id && isNewsLive(n) && videoEmbed(n.video_embed_url))
     .sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''));
 
   return (

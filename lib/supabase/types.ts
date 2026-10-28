@@ -390,7 +390,12 @@ export interface NewsArticle {
   author_name: string;
   tags: string[];
   is_featured: boolean;
+  /** When it goes live; later than now = scheduled */
   published_at: string;
+  /** Not public yet (needs migration 20261130_news_drafts.sql) */
+  is_draft?: boolean;
+  /** For the private preview link (/club/news/slug?preview=token); the database fills it in for older posts */
+  preview_token?: string;
 }
 
 export interface MediaGalleryItem {

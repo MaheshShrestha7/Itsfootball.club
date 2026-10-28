@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDialog } from '@/lib/use-escape-to-close';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
+import { useNewsDraftsReady } from '@/lib/use-news-drafts';
 import { useClub } from '@/lib/club-context';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
 import { clubLineupSide } from '@/lib/tournament-engine';
@@ -37,7 +38,8 @@ export default function StatsAuditModal({
   onClose,
   onAuditCompleted,
 }: StatsAuditModalProps) {
-  const { auditAndBakeMatchStats, clubScoreRules } = useClub();
+  const { auditAndBakeMatchStats, clubScoreRules, draftMatchReport } = useClub();
+  const draftsReady = useNewsDraftsReady();
   const rules = clubScoreRules[match.club_id] || getDefaultClubScoreRules(match.club_id);
 
   // The club's own side: away when it played away (its goals and cards are logged on that side)
@@ -197,7 +199,9 @@ export default function StatsAuditModal({
     setIsBaking(false);
 
     if (res.success) {
-      setAuditResult({ totalXP: res.totalPointsAwarded, message: res.message });
+      // The match report waits in News as a draft, to tidy up and publish
+      const report = draftsReady ? draftMatchReport(match.id, motmMemberId || undefined) : null;
+      setAuditResult({ totalXP: res.totalPointsAwarded, message: report ? `${res.message} A match report is waiting in News as a draft.` : res.message });
       if (onAuditCompleted) onAuditCompleted();
     } else {
       setAuditError(res.message);

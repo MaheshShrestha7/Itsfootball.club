@@ -9,7 +9,7 @@ import { normalizeEmail } from './recipient';
 
 export type EmailKind =
   | 'availability' | 'event' | 'renewal'
-  | 'notice_match' | 'notice_event' | 'notice_news' | 'notice_renewal'
+  | 'notice_match' | 'notice_event' | 'notice_news' | 'notice_renewal' | 'notice_team' | 'notice_fixture'
   | 'member_applied' | 'member_approved' | 'member_rejected'
   | 'inquiry_reply';
 
