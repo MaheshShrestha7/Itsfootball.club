@@ -374,6 +374,13 @@ export interface Sponsor {
   package_value?: number;
   package_status?: SponsorPackageStatus;
   season?: string;
+  /** Last day on the site (YYYY-MM-DD); blank means no end date. Migration 20261132. */
+  ends_on?: string | null;
+  /** When the payment or renewal link was last emailed to them */
+  link_sent_at?: string | null;
+  /** Secret for their payment and renewal links. Set by the database; never written by the app,
+   *  so not in TABLE_COLUMNS. */
+  access_key?: string;
   /** Set by the database; read only */
   created_at?: string;
 }

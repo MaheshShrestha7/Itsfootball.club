@@ -1,18 +1,21 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useRef, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
-import { isSponsorOnSite, sponsorHref, sponsorLabel, sponsorTierLabel } from '@/lib/sponsors';
+import {
+  daysUntilEnd, defaultSponsorEnd, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
+  LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorTierLabel,
+} from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
 import { DATE_LOCALE } from '@/lib/dates';
 
@@ -25,20 +28,26 @@ const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
 };
 
 const ENDED: SponsorPackageStatus[] = ['expired', 'cancelled'];
-const isEnded = (s: Sponsor) => !!s.package_status && ENDED.includes(s.package_status);
+/** Marked Expired or Cancelled, or past its end date */
+const isEnded = (s: Sponsor) => (!!s.package_status && ENDED.includes(s.package_status)) || isPastEndDate(s);
 /** Signed up on the club's website and not put on the site yet (paid or not) */
 const isNewSignup = (s: Sponsor) => !s.is_active && !isEnded(s) && (s.package_status === 'prospect' || s.package_status === 'paid');
 
-type View = 'all' | 'new' | 'live' | 'hidden' | 'ended';
+type View = 'all' | 'new' | 'live' | 'hidden' | 'ending' | 'ended';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'new', label: 'New sign-ups' },
   { id: 'live', label: 'On site' },
   { id: 'hidden', label: 'Hidden' },
+  { id: 'ending', label: 'Ending soon' },
   { id: 'ended', label: 'Ended' },
 ];
-const viewOf = (s: Sponsor): Exclude<View, 'all'> =>
+/** Each sponsor's group ("Ending soon" is a filter over On site, not a group of its own) */
+const viewOf = (s: Sponsor): Exclude<View, 'all' | 'ending'> =>
   isEnded(s) ? 'ended' : isNewSignup(s) ? 'new' : isSponsorOnSite(s) ? 'live' : 'hidden';
+
+/** The edit popup's sections, which the tabs at its top jump to */
+const SECTIONS = [['business', 'Business'], ['shows', 'How it shows'], ['deal', 'Deal']] as const;
 
 /** An on/off switch in the style of Branding's home ground panel */
 function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -54,7 +63,11 @@ const onSiteBadge = (s: Sponsor) => isSponsorOnSite(s)
   ? <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '0.7rem' }}>● On site</span>
   : <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-muted)', border: '1px dashed var(--border-medium)', fontSize: '0.7rem' }}>Hidden from site</span>;
 
-function getSponsorEffectiveScale(s: Sponsor): 'xl' | 'lg' | 'md' | 'sm' {
+const sectionHeading: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
+const sectionBox: React.CSSProperties = { borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' };
+const hint: React.CSSProperties = { fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' };
+
+function getSponsorEffectiveScale(s: Pick<Sponsor, 'size_scale' | 'tier'>): 'xl' | 'lg' | 'md' | 'sm' {
   if (s.size_scale && s.size_scale !== 'auto') {
     return s.size_scale;
   }
@@ -78,13 +91,13 @@ export default function AdminSponsorsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, sponsors, events, addSponsor, updateSponsor, deleteSponsor } = useClub();
+  const { clubs, selectClubBySlug, sponsors, events, seasons, addSponsor, updateSponsor, deleteSponsor } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubSponsors = sponsors.filter(s => s.club_id === club.id);
   const clubWideSponsors = clubSponsors.filter(s => !s.event_id);
   // The preview shows what fans see: club-wide sponsors that are on the site
-  const previewSponsors = clubWideSponsors.filter(isSponsorOnSite);
+  const previewSponsors = sortSponsorsByTier(clubWideSponsors.filter(sp => isSponsorOnSite(sp)));
 
   // Sponsor list or Packages (?tab=packages, from the admin menu and Finance)
   const [tab, setTab] = useUrlTab(['list', 'packages'] as const);
@@ -101,9 +114,12 @@ export default function AdminSponsorsPage({
   };
   const viewCounts = clubSponsors.reduce<Record<View, number>>(
     (acc, sp) => ({ ...acc, [viewOf(sp)]: acc[viewOf(sp)] + 1 }),
-    { all: clubSponsors.length, new: 0, live: 0, hidden: 0, ended: 0 }
+    { all: clubSponsors.length, new: 0, live: 0, hidden: 0, ending: clubSponsors.filter(sp => isEndingSoon(sp)).length, ended: 0 }
   );
-  const shownSponsors = view === 'all' ? clubSponsors : clubSponsors.filter(sp => viewOf(sp) === view);
+  const shownSponsors = view === 'all' ? clubSponsors
+    : view === 'ending' ? clubSponsors.filter(sp => isEndingSoon(sp))
+    : clubSponsors.filter(sp => viewOf(sp) === view);
+  const staleSignups = clubSponsors.filter(sp => isStaleSignup(sp));
 
   const putOnSite = (sp: Sponsor) => updateSponsor(sp.id, { is_active: true });
   const endSponsorship = async (sp: Sponsor) => {
@@ -113,7 +129,67 @@ export default function AdminSponsorsPage({
       confirmLabel: 'End sponsorship',
     })) updateSponsor(sp.id, { is_active: false, package_status: 'expired' });
   };
-  const bringBack = (sp: Sponsor) => updateSponsor(sp.id, { is_active: true, package_status: 'confirmed' });
+  // Renewing moves the end date a year on (from today if it has passed); paying through the
+  // renewal link does the same by itself (fulfil_payment, migration 20261132)
+  const renew = async (sp: Sponsor) => {
+    const until = renewedEndDate(sp.ends_on);
+    if (await confirmAction({
+      title: `Renew ${sp.name} until ${formatEndDate(until)}?`,
+      message: isSponsorOnSite(sp)
+        ? 'Use this once they have agreed to carry on. If they pay through a renewal link instead, this happens by itself.'
+        : 'Use this once they have agreed to carry on. They go back on your club site straight away.',
+      confirmLabel: 'Renew',
+    })) updateSponsor(sp.id, { ends_on: until, ...(isEnded(sp) ? { is_active: true, package_status: 'confirmed' as const } : {}) });
+  };
+  const bringBack = (sp: Sponsor) => updateSponsor(sp.id, {
+    is_active: true,
+    package_status: 'confirmed',
+    // Past its end date it would stay off the site, so it gets a new one
+    ...(renewalsReady && isPastEndDate(sp) ? { ends_on: renewedEndDate(sp.ends_on) } : {}),
+  });
+  const clearOldSignups = async () => {
+    if (await confirmAction({
+      title: `Delete ${staleSignups.length === 1 ? '1 old sign-up' : `${staleSignups.length} old sign-ups`}?`,
+      message: `${staleSignups.map(sp => sp.name).join(', ')}. They signed up on your website over 60 days ago and never paid. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })) staleSignups.forEach(sp => deleteSponsor(sp.id));
+  };
+
+  // Payment and renewal links (app/api/sponsors/send-link): the result shows under the sponsor's card
+  const [linkResult, setLinkResult] = useState<{ sponsorId: string; busy?: boolean; link?: string; emailed?: boolean; note?: string; copied?: boolean } | null>(null);
+  const sendLink = async (sp: Sponsor, kind: 'payment' | 'renewal') => {
+    setLinkResult({ sponsorId: sp.id, busy: true });
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/sponsors/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, sponsorId: sp.id, kind }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return setLinkResult({ sponsorId: sp.id, note: json.error || 'The link could not be sent.' });
+      setLinkResult({ sponsorId: sp.id, link: json.link, emailed: json.emailed, note: json.note });
+      if (json.emailed && renewalsReady) updateSponsor(sp.id, { link_sent_at: new Date().toISOString() });
+    } catch {
+      setLinkResult({ sponsorId: sp.id, note: 'The link could not be sent. Check your connection and try again.' });
+    }
+  };
+  const copyLink = async () => {
+    if (!linkResult?.link) return;
+    try {
+      await navigator.clipboard.writeText(linkResult.link);
+      setLinkResult({ ...linkResult, copied: true });
+    } catch {
+      window.prompt('Copy this link', linkResult.link);
+    }
+  };
+
+  // Order fans see within a tier: drag the handle on a computer, or the arrows on a phone
+  const [dragId, setDragId] = useState<string | null>(null);
+  const moveSponsor = (ordered: Sponsor[], id: string, toIndex: number) => {
+    for (const change of reorderSponsors(ordered, id, toIndex)) updateSponsor(change.id, { display_order: change.display_order });
+  };
   const clubEvents = events.filter(e => e.club_id === club.id);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -130,6 +206,12 @@ export default function AdminSponsorsPage({
   useEffect(() => {
     getSupabaseClient()?.from('sponsors').select('label').limit(1).then(({ error }) => setLabelsReady(!error));
   }, []);
+  // End dates, Renew and renewal links need migration 20261132_sponsor_renewals.sql; hidden until it runs
+  const [renewalsReady, setRenewalsReady] = useState<boolean | null>(() => (getSupabaseClient() ? null : true));
+  useEffect(() => {
+    getSupabaseClient()?.from('sponsors').select('ends_on').limit(1).then(({ error }) => setRenewalsReady(!error));
+  }, []);
+  const seasonEnd = defaultSponsorEnd(seasons.filter(se => se.club_id === club.id));
 
   const blankForm = {
     scope: 'club' as 'club' | 'event',
@@ -141,7 +223,8 @@ export default function AdminSponsorsPage({
     tier: 'gold' as SponsorTier,
     label: '',
     size_scale: 'auto' as SponsorSizeScale,
-    display_order: clubWideSponsors.length + 1,
+    // New sponsors go last in their tier (drag or the arrows to move them)
+    display_order: Math.max(0, ...clubSponsors.map(sp => sp.display_order || 0)) + 1,
     is_active: true,
     contact_name: '',
     contact_email: '',
@@ -149,13 +232,15 @@ export default function AdminSponsorsPage({
     package_value: '' as number | '',
     package_status: 'confirmed' as SponsorPackageStatus,
     season: defaultSeasonLabel(),
+    // The end of the club's season (Seasons), or a year from today
+    ends_on: seasonEnd,
   };
 
   const [form, setForm] = useState(blankForm);
 
   const handleOpenAdd = () => {
     setEditingId(null);
-    setForm({ ...blankForm, display_order: clubWideSponsors.length + 1 });
+    setForm(blankForm);
     setModalOpen(true);
   };
 
@@ -178,6 +263,7 @@ export default function AdminSponsorsPage({
       package_value: s.package_value ?? '',
       package_status: s.package_status || 'confirmed',
       season: s.season || defaultSeasonLabel(),
+      ends_on: s.ends_on || '',
     });
     setModalOpen(true);
   };
@@ -187,9 +273,11 @@ export default function AdminSponsorsPage({
     if (!form.name) return;
     if (form.scope === 'event' && !form.event_id) return;
 
-    const { scope, label, ...rest } = form;
+    const { scope, label, ends_on, ...rest } = form;
     const payload = {
       ...rest,
+      // Only sent once the column exists (migration 20261132); blank means no end date
+      ...(renewalsReady ? { ends_on: ends_on || null } : {}),
       // An ended sponsorship is never on the site
       is_active: rest.is_active && !ENDED.includes(rest.package_status),
       // Only sent once the label column exists
@@ -217,6 +305,34 @@ export default function AdminSponsorsPage({
   }, [modalOpen]);
 
   const editingSponsor = editingId ? clubSponsors.find(sp => sp.id === editingId) : undefined;
+
+  // The popup's section tabs: tapping one scrolls to it; scrolling marks the section in view
+  const modalScroll = useRef<HTMLDivElement>(null);
+  const [section, setSection] = useState<(typeof SECTIONS)[number][0]>('business');
+  // A tapped tab stays marked while the smooth scroll runs past the other sections
+  const jumpedAt = useRef(0);
+  const jumpTo = (id: (typeof SECTIONS)[number][0], at: number) => {
+    setSection(id);
+    jumpedAt.current = at;
+    document.getElementById(`sponsor-sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  useEffect(() => {
+    const box = modalScroll.current;
+    if (!modalOpen || !box) return;
+    const onScroll = (e: Event) => {
+      if (e.timeStamp - jumpedAt.current < 1000) return;
+      // At the bottom the last section can't scroll up to the top, so it counts as in view
+      if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) return setSection('deal');
+      const top = box.getBoundingClientRect().top + 140;
+      let current: (typeof SECTIONS)[number][0] = 'business';
+      box.querySelectorAll<HTMLElement>('[data-section]').forEach(el => {
+        if (el.getBoundingClientRect().top <= top) current = el.dataset.section as typeof current;
+      });
+      setSection(current);
+    };
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return () => box.removeEventListener('scroll', onScroll);
+  }, [modalOpen]);
 
   return (
     <div>
@@ -272,8 +388,8 @@ export default function AdminSponsorsPage({
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 260px', minWidth: 0 }}>
           <Sparkles size={16} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Sponsor Space Scaling Active: </strong>
-            Platinum sponsors receive premier width &amp; larger logos, cascading down to Gold, Silver, and Grassroots.
+            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Bigger tiers get bigger logos. </strong>
+            Platinum shows biggest, then Gold, Silver, Bronze and Grassroots. Change one sponsor&apos;s size with Logo size when you edit them.
           </p>
         </div>
         <button data-view-ok
@@ -354,7 +470,7 @@ export default function AdminSponsorsPage({
                         {sponsorLabel(sponsor).toUpperCase()}
                       </span>
                       <span style={{ fontSize: '0.7rem', color: isXL ? 'var(--c-amber)' : 'var(--text-muted)', fontWeight: 600 }}>
-                        {scale.toUpperCase()} Space
+                        {LOGO_SIZE_LABEL[scale]} logo
                       </span>
                     </div>
                   </div>
@@ -367,7 +483,7 @@ export default function AdminSponsorsPage({
 
       {/* Which sponsors to list */}
       <div className="row row-wrap" role="group" aria-label="Show" style={{ gap: '0.4rem', marginBottom: '1.25rem', padding: '0.3rem', borderRadius: '12px', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', width: 'fit-content', maxWidth: '100%' }}>
-        {VIEWS.map(v => (
+        {VIEWS.filter(v => v.id !== 'ending' || renewalsReady).map(v => (
           <button key={v.id} type="button" data-view-ok aria-pressed={view === v.id} onClick={() => setView(v.id)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', borderRadius: '9px', cursor: 'pointer',
@@ -377,7 +493,9 @@ export default function AdminSponsorsPage({
               boxShadow: view === v.id ? 'inset 0 -2px 0 var(--club-primary)' : 'none',
             }}>
             {v.label}
-            <span style={{ fontSize: '0.7rem', padding: '0 0.45rem', borderRadius: 999, background: v.id === 'new' && viewCounts.new > 0 ? 'rgba(59, 130, 246, 0.25)' : 'rgba(var(--tint-rgb), 0.1)', color: v.id === 'new' && viewCounts.new > 0 ? 'var(--c-blue)' : 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.7rem', padding: '0 0.45rem', borderRadius: 999,
+              background: v.id === 'new' && viewCounts.new > 0 ? 'rgba(59, 130, 246, 0.25)' : v.id === 'ending' && viewCounts.ending > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
+              color: v.id === 'new' && viewCounts.new > 0 ? 'var(--c-blue)' : v.id === 'ending' && viewCounts.ending > 0 ? 'var(--c-amber)' : 'var(--text-secondary)' }}>
               {viewCounts[v.id]}
             </span>
           </button>
@@ -386,17 +504,28 @@ export default function AdminSponsorsPage({
 
       {/* Sponsors List */}
       {(() => {
-        const renderSponsorRow = (sponsor: Sponsor) => {
+        // `ordered`: the group as fans see it, when the card can be moved within it
+        const renderSponsorRow = (sponsor: Sponsor, index?: number, ordered?: Sponsor[]) => {
           const scale = getSponsorEffectiveScale(sponsor);
           const isCustomScale = sponsor.size_scale && sponsor.size_scale !== 'auto';
           const linkedEvent = sponsor.event_id ? clubEvents.find(e => e.id === sponsor.event_id) : undefined;
           const stage = viewOf(sponsor);
           const website = sponsorHref(sponsor.website_url);
+          const daysLeft = daysUntilEnd(sponsor);
+          const endingSoon = isEndingSoon(sponsor);
+          const movable = !!ordered && ordered.length > 1 && index !== undefined;
+          const canUp = movable && index! > 0 && ordered![index! - 1].tier === sponsor.tier;
+          const canDown = movable && index! < ordered!.length - 1 && ordered![index! + 1].tier === sponsor.tier;
+          const result = linkResult?.sponsorId === sponsor.id ? linkResult : null;
+          const actionStyle: React.CSSProperties = { minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' };
           return (
             <div
               key={sponsor.id}
               className="glass-panel"
+              onDragOver={movable && dragId && ordered!.find(o => o.id === dragId)?.tier === sponsor.tier ? e => e.preventDefault() : undefined}
+              onDrop={movable ? e => { e.preventDefault(); if (dragId) moveSponsor(ordered!, dragId, index!); setDragId(null); } : undefined}
               style={{
+                outline: dragId && dragId !== sponsor.id && ordered?.find(o => o.id === dragId)?.tier === sponsor.tier ? '1px dashed var(--border-medium)' : undefined,
                 padding: '1.25rem 1.75rem',
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -406,11 +535,29 @@ export default function AdminSponsorsPage({
                 opacity: stage === 'ended' ? 0.75 : undefined,
                 borderLeft: stage === 'new' && sponsor.package_status === 'paid' ? '4px solid #10B981'
                   : stage === 'ended' ? undefined
+                  : endingSoon ? '4px solid #F59E0B'
                   : scale === 'xl' ? '4px solid #F59E0B' : scale === 'lg' ? '4px solid #EAB308' : undefined,
               }}
             >
               {/* On a phone the details move under the logo instead of squeezing into a narrow column */}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem 1.25rem', flex: '1 1 auto', minWidth: 0 }}>
+                {movable && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span draggable onDragStart={e => { setDragId(sponsor.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDragId(null)}
+                      title="Drag to change the order" aria-hidden="true" style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'inline-flex' }}>
+                      <GripVertical size={18} />
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {([['up', canUp, ChevronUp, index! - 1], ['down', canDown, ChevronDown, index! + 1]] as const).map(([dir, enabled, Icon, to]) => (
+                        <button key={dir} type="button" disabled={!enabled} onClick={() => moveSponsor(ordered!, sponsor.id, to)}
+                          aria-label={`Move ${sponsor.name} ${dir}`} title={enabled ? `Move ${dir}` : 'Higher tiers always show first'}
+                          style={{ width: 30, height: 22, padding: 0, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', display: 'grid', placeItems: 'center', cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.35 }}>
+                          <Icon size={13} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <SponsorLogo
                   src={sponsor.logo_url}
                   name={sponsor.name}
@@ -442,8 +589,7 @@ export default function AdminSponsorsPage({
                         gap: '0.25rem',
                       }}>
                         <Maximize2 size={10} />
-                        {scale.toUpperCase()} Space Allocation
-                        {isCustomScale && ' (Custom)'}
+                        Logo size: {LOGO_SIZE_LABEL[scale]}{!isCustomScale && ' (by tier)'}
                       </span>
                     )}
                     {sponsor.package_status && (
@@ -456,6 +602,11 @@ export default function AdminSponsorsPage({
                       </span>
                     )}
                     {stage !== 'ended' && onSiteBadge(sponsor)}
+                    {endingSoon && daysLeft !== null && (
+                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.7rem' }}>
+                        {daysLeft === 0 ? 'Last day today' : `Ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', marginTop: '4px' }}>
                     {website && (
@@ -475,10 +626,22 @@ export default function AdminSponsorsPage({
                         {sponsor.season ? ` • ${sponsor.season}` : ''}
                       </span>
                     )}
+                    {sponsor.ends_on && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Calendar size={11} />
+                        {isPastEndDate(sponsor) ? 'Ended' : 'Ends on'} {formatEndDate(sponsor.ends_on)}
+                      </span>
+                    )}
                     {sponsor.contact_name && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <User size={11} />
                         {sponsor.contact_name}
+                      </span>
+                    )}
+                    {sponsor.link_sent_at && (stage === 'new' || endingSoon || stage === 'ended') && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Check size={11} />
+                        {stage === 'new' ? 'Payment' : 'Renewal'} link sent {new Date(sponsor.link_sent_at).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })}
                       </span>
                     )}
                   </div>
@@ -505,25 +668,58 @@ export default function AdminSponsorsPage({
                     <Calendar size={11} /> {linkedEvent.title}
                   </span>
                 )}
+                {/* Price-on-request sign-ups have nothing to pay: the club replies to their Inbox message */}
+                {stage === 'new' && sponsor.package_status === 'prospect' && Number(sponsor.package_value) > 0 && (
+                  <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'payment')} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <Send size={14} /> {sponsor.link_sent_at ? 'Send payment link again' : 'Send payment link'}
+                  </button>
+                )}
+                {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
+                  <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'renewal')} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <Send size={14} /> {sponsor.link_sent_at ? 'Send renewal link again' : 'Send renewal link'}
+                  </button>
+                )}
+                {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
+                  <button type="button" onClick={() => renew(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}>
+                    <RefreshCw size={14} /> Renew
+                  </button>
+                )}
                 <button onClick={() => handleOpenEdit(sponsor)} title={`Edit ${sponsor.name}`} aria-label={`Edit ${sponsor.name}`} className="btn btn-secondary btn-sm" style={{ minWidth: '40px', minHeight: '40px' }}>
                   <Edit2 size={14} />
                 </button>
                 {(stage === 'new' || stage === 'hidden') && (
-                  <button type="button" onClick={() => putOnSite(sponsor)} className="btn btn-primary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <button type="button" onClick={() => putOnSite(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}>
                     <Eye size={14} /> Put on site
                   </button>
                 )}
                 {stage === 'live' && (
-                  <button type="button" onClick={() => endSponsorship(sponsor)} className="btn btn-secondary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <button type="button" onClick={() => endSponsorship(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>
                     <Power size={14} /> End sponsorship
                   </button>
                 )}
-                {stage === 'ended' && (
-                  <button type="button" onClick={() => bringBack(sponsor)} className="btn btn-secondary btn-sm" style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                {stage === 'ended' && !(renewalsReady && isPastEndDate(sponsor)) && (
+                  <button type="button" onClick={() => bringBack(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>
                     <RotateCcw size={14} /> Bring back
                   </button>
                 )}
               </div>
+
+              {/* What happened to the payment or renewal link */}
+              {result && !result.busy && (
+                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 0.85rem', padding: '0.65rem 0.85rem', borderRadius: '10px', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
+                  {result.emailed
+                    ? <span style={{ color: 'var(--c-green)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Check size={14} /> Emailed to {sponsor.contact_email}</span>
+                    : <span style={{ color: result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
+                  {result.link && (
+                    <button type="button" onClick={copyLink} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Copy size={13} /> {result.copied ? 'Copied' : 'Copy link'}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setLinkResult(null)} aria-label="Dismiss" className="btn btn-sm" style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           );
         };
@@ -554,12 +750,22 @@ export default function AdminSponsorsPage({
         const signups = shownSponsors.filter(sp => viewOf(sp) === 'new');
         const ended = shownSponsors.filter(sp => viewOf(sp) === 'ended');
         const current = shownSponsors.filter(sp => viewOf(sp) === 'live' || viewOf(sp) === 'hidden');
-        const currentClubWide = current.filter(sp => !sp.event_id);
+        // In the order fans see them: higher tiers first, then the order set here
+        const currentClubWide = sortSponsorsByTier(current.filter(sp => !sp.event_id));
         // Group event-scoped sponsors under the event they belong to; sponsors whose
         // event was since deleted still show under a "Former Event" fallback group.
         const eventGroups = clubEvents
-          .map(evt => ({ event: evt, list: current.filter(sp => sp.event_id === evt.id) }))
+          .map(evt => ({ event: evt, list: sortSponsorsByTier(current.filter(sp => sp.event_id === evt.id)) }))
           .filter(g => g.list.length > 0);
+        // Moving needs the whole group, so the arrows only show when nothing is filtered out
+        const canReorder = view === 'all' || view === 'live';
+        const reorderHint = (list: Sponsor[]) => canReorder && list.length > 1 && (
+          <p className="text-note" style={{ margin: '-0.4rem 0 0.85rem' }}>
+            Fans see higher tiers first. To change the order within a tier, drag the handle or use the arrows.
+          </p>
+        );
+        const plain = (sp: Sponsor) => renderSponsorRow(sp);
+        const movable = (list: Sponsor[]) => list.map((sp, i) => renderSponsorRow(sp, i, canReorder ? list : undefined));
         const orphanedEventSponsors = current.filter(
           sp => sp.event_id && !clubEvents.some(e => e.id === sp.event_id)
         );
@@ -572,28 +778,42 @@ export default function AdminSponsorsPage({
                 <p className="text-note" style={{ margin: '-0.4rem 0 0.85rem' }}>
                   They stay off your site until you check their details and tap Put on site.
                 </p>
-                <div className="stack">{signups.map(renderSponsorRow)}</div>
+                <div className="stack">
+                  {signups.map(plain)}
+                  {staleSignups.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem 1rem', padding: '0.85rem 1rem', border: '1px dashed var(--border-medium)', borderRadius: '12px' }}>
+                      <span className="text-meta" style={{ flex: '1 1 240px' }}>
+                        {staleSignups.length === 1 ? '1 unpaid sign-up is' : `${staleSignups.length} unpaid sign-ups are`} older than 60 days. Nothing is deleted unless you tap the button.
+                      </span>
+                      <button type="button" onClick={clearOldSignups} className="btn btn-secondary btn-sm" style={{ color: 'var(--c-red)', minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Trash2 size={14} /> Clear old sign-ups ({staleSignups.length})
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {currentClubWide.length > 0 && (
               <div>
                 {heading(<Shield size={14} />, 'Club-Wide Sponsors')}
-                <div className="stack">{currentClubWide.map(renderSponsorRow)}</div>
+                {reorderHint(currentClubWide)}
+                <div className="stack">{movable(currentClubWide)}</div>
               </div>
             )}
 
             {eventGroups.map(({ event, list }) => (
               <div key={event.id}>
                 {heading(<Calendar size={14} />, `Event Sponsors • ${event.title}`)}
-                <div className="stack">{list.map(renderSponsorRow)}</div>
+                {reorderHint(list)}
+                <div className="stack">{movable(list)}</div>
               </div>
             ))}
 
             {orphanedEventSponsors.length > 0 && (
               <div>
                 {heading(null, 'Former Event Sponsors')}
-                <div className="stack">{orphanedEventSponsors.map(renderSponsorRow)}</div>
+                <div className="stack">{orphanedEventSponsors.map(plain)}</div>
               </div>
             )}
 
@@ -601,9 +821,9 @@ export default function AdminSponsorsPage({
               <div>
                 {heading(<EyeOff size={14} />, 'Ended')}
                 <p className="text-note" style={{ margin: '-0.4rem 0 0.85rem' }}>
-                  Off your site. Their details, payments and view and click history are kept for renewal talks.
+                  Off your site, because they were ended or their end date has passed. Their details, payments and view and click history are kept for renewal talks.
                 </p>
-                <div className="stack">{ended.map(renderSponsorRow)}</div>
+                <div className="stack">{ended.map(plain)}</div>
               </div>
             )}
           </div>
@@ -611,9 +831,9 @@ export default function AdminSponsorsPage({
       })()}
       </>)}
 
-      {/* Add / Edit Sponsor Modal */}
+      {/* Add / Edit Sponsor Modal: Business, How it shows and Deal, with the title and Save kept on screen */}
       {modalOpen && (
-        <div style={{
+        <div ref={modalScroll} style={{
           position: 'fixed',
           inset: 0,
           overflowY: 'auto',
@@ -633,24 +853,34 @@ export default function AdminSponsorsPage({
             background: 'var(--bg-surface-elevated)',
             border: '1px solid var(--border-medium)',
             borderRadius: 'var(--radius-xl)',
-            padding: '2rem',
+            padding: '0 1.5rem',
           }}>
-            <div className="section-head">
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
-              </h3>
-              <button type="button" onClick={() => setModalOpen(false)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
+            <div style={{ position: 'sticky', top: '-1rem', zIndex: 2, background: 'var(--bg-surface-elevated)', padding: '1.5rem 0 0', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0' }}>
+              <div className="section-head" style={{ marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
+                </h3>
+                <button type="button" onClick={() => setModalOpen(false)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+              <nav aria-label="Sections" style={{ display: 'flex', gap: '1.1rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                {SECTIONS.map(([id, label]) => (
+                  <button key={id} type="button" onClick={e => jumpTo(id, e.timeStamp)}
+                    style={{ padding: '0.55rem 0.1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', color: section === id ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: section === id ? 'inset 0 -2px 0 var(--club-primary)' : 'none' }}>
+                    {label}
+                  </button>
+                ))}
+              </nav>
             </div>
 
-            <form onSubmit={handleSave}>
+            <form onSubmit={handleSave} style={{ paddingTop: '1.25rem' }}>
               <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.85rem', marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid rgba(var(--club-primary-rgb), 0.45)', background: 'rgba(var(--club-primary-rgb), 0.08)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div id="sponsors-on-site" style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Show on the club site</div>
                   <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                     {form.is_active
-                      ? 'On: fans see this sponsor on your club pages.'
+                      ? `On: fans see this sponsor on your club pages${renewalsReady && form.ends_on ? ` until ${formatEndDate(form.ends_on)}` : ''}.`
                       : 'Off: only admins can see this sponsor. It turns off by itself when the sponsorship ends.'}
                   </p>
                 </div>
@@ -658,185 +888,48 @@ export default function AdminSponsorsPage({
                   onChange={on => setForm({ ...form, is_active: on, package_status: on && ENDED.includes(form.package_status) ? 'confirmed' : form.package_status })} />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Sponsor Scope</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, scope: 'club', event_id: '' })}
-                    className="btn btn-sm"
-                    style={{
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      background: form.scope === 'club' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                      border: form.scope === 'club' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      color: form.scope === 'club' ? 'var(--c-green)' : 'var(--text-secondary)',
-                    }}
-                  >
-                    <Shield size={14} /> Club Sponsor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, scope: 'event' })}
-                    className="btn btn-sm"
-                    style={{
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      background: form.scope === 'event' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                      border: form.scope === 'event' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      color: form.scope === 'event' ? 'var(--c-green)' : 'var(--text-secondary)',
-                    }}
-                  >
-                    <Calendar size={14} /> Event Sponsor
-                  </button>
-                </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  {form.scope === 'club'
-                    ? 'Shown on the club\'s public sponsor showcase.'
-                    : 'Shown only on the selected event\'s detail page.'}
-                </p>
-              </div>
-
-              {form.scope === 'event' && (
-                <div className="form-group">
-                  <label htmlFor="sponsors-event" className="form-label">Event *</label>
-                  <select id="sponsors-event"
-                    className="form-select"
-                    required={form.scope === 'event'}
-                    value={form.event_id}
-                    onChange={e => setForm({ ...form, event_id: e.target.value })}
-                  >
-                    <option value="">Select an event…</option>
-                    {clubEvents.map(evt => (
-                      <option key={evt.id} value={evt.id}>
-                        {evt.title} ({new Date(evt.start_time).toLocaleDateString(DATE_LOCALE)})
-                      </option>
-                    ))}
-                  </select>
-                  {clubEvents.length === 0 && (
-                    <p style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.35rem' }}>
-                      No events yet - add one under Events first.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="form-group">
-                <label htmlFor="sponsors-sponsor-partner-name" className="form-label">Sponsor / Partner Name *</label>
-                <input id="sponsors-sponsor-partner-name"
-                  type="text"
-                  required
-                  className="form-input"
-                  placeholder="e.g. Aura Hydration"
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-
-              <div className="form-row-2" style={{ gap: '1rem' }}>
-                <div className="form-group">
-                  <label htmlFor="sponsors-sponsorship-tier" className="form-label">Sponsorship Tier</label>
-                  <select id="sponsors-sponsorship-tier"
-                    className="form-select"
-                    value={form.tier}
-                    onChange={e => setForm({ ...form, tier: e.target.value as SponsorTier })}
-                  >
-                    <option value="platinum">Platinum Partner</option>
-                    <option value="gold">Gold Partner</option>
-                    <option value="silver">Silver Partner</option>
-                    <option value="bronze">Bronze Partner</option>
-                    <option value="grassroots">Grassroots Partner</option>
-                  </select>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    Sets the order on the club page and the default logo size.
-                  </p>
-                </div>
+              {/* ---------- Business ---------- */}
+              <section id="sponsor-sec-business" data-section="business" style={{ scrollMarginTop: '7rem' }}>
+                <h4 style={sectionHeading}><Shield size={14} color="var(--club-primary)" /> Business</h4>
 
                 <div className="form-group">
-                  <label htmlFor="sponsors-display-order" className="form-label">Display Order</label>
-                  <input id="sponsors-display-order"
-                    type="number"
-                    className="form-input"
-                    value={form.display_order}
-                    onChange={e => setForm({ ...form, display_order: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
-
-              {labelsReady && (
-                <div className="form-group">
-                  <label htmlFor="sponsors-label" className="form-label">Label shown on site (optional)</label>
-                  <input id="sponsors-label"
+                  <label htmlFor="sponsors-sponsor-partner-name" className="form-label">Sponsor / Partner Name *</label>
+                  <input id="sponsors-sponsor-partner-name"
                     type="text"
+                    required
                     className="form-input"
-                    maxLength={60}
-                    placeholder={sponsorTierLabel(form.tier)}
-                    value={form.label}
-                    onChange={e => setForm({ ...form, label: e.target.value })}
+                    placeholder="e.g. Aura Hydration"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    For example &ldquo;Front of Shirt Partner&rdquo;. Leave blank to show &ldquo;{sponsorTierLabel(form.tier)}&rdquo;.
-                  </p>
                 </div>
-              )}
-
-              <div className="form-group">
-                <label htmlFor="sponsors-display-size-space-scale-public-page-foo" className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Display Size / Space Scale</span>
-                  <span className="text-meta">Public Page Footprint</span>
-                </label>
-                <select id="sponsors-display-size-space-scale-public-page-foo"
-                  className="form-select"
-                  value={form.size_scale}
-                  onChange={e => setForm({ ...form, size_scale: e.target.value as SponsorSizeScale })}
-                >
-                  <option value="auto">Auto (by tier)</option>
-                  <option value="xl">Extra Large</option>
-                  <option value="lg">Large</option>
-                  <option value="md">Medium</option>
-                  <option value="sm">Compact</option>
-                </select>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  Determines how much visual real estate and logo size this sponsor commands on the public club page.
-                </p>
-              </div>
-
-              <div className="form-group">
-                <ImageUploadZone
-                  clubId={club.id}
-                  label="Sponsor Logo"
-                  recommendedText="Transparent PNG or square logo, up to 5MB. Until there is one, their initials show."
-                  currentImageUrl={form.logo_url}
-                  onUploadComplete={url => setForm({ ...form, logo_url: url })}
-                  folder="sponsors"
-                  aspectRatio="1:1"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="sponsors-website-link" className="form-label">Website Link</label>
-                <input id="sponsors-website-link"
-                  type="url"
-                  className="form-input"
-                  placeholder="https://"
-                  value={form.website_url}
-                  onChange={e => setForm({ ...form, website_url: e.target.value })}
-                />
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  No website? Leave it blank. The logo then shows without a link.
-                </p>
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <User size={14} color="var(--club-primary)" /> Sponsor Contact
-                </h4>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                  Internal only - never shown on the public site.
-                </p>
 
                 <div className="form-group">
-                  <label htmlFor="sponsors-contact-name" className="form-label">Contact Name</label>
+                  <ImageUploadZone
+                    clubId={club.id}
+                    label="Sponsor Logo"
+                    recommendedText="Transparent PNG or square logo, up to 5MB. Until there is one, their initials show."
+                    currentImageUrl={form.logo_url}
+                    onUploadComplete={url => setForm({ ...form, logo_url: url })}
+                    folder="sponsors"
+                    aspectRatio="1:1"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="sponsors-website-link" className="form-label">Website Link</label>
+                  <input id="sponsors-website-link"
+                    type="url"
+                    className="form-input"
+                    placeholder="https://"
+                    value={form.website_url}
+                    onChange={e => setForm({ ...form, website_url: e.target.value })}
+                  />
+                  <p style={hint}>No website? Leave it blank. The logo then shows without a link.</p>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="sponsors-contact-name" className="form-label row row-tight"><User size={12} /> Contact Name</label>
                   <input id="sponsors-contact-name"
                     type="text"
                     className="form-input"
@@ -872,15 +965,147 @@ export default function AdminSponsorsPage({
                     />
                   </div>
                 </div>
-              </div>
+                <p style={{ ...hint, marginTop: '-0.5rem' }}>Contact details are for admins only, never shown on the site.</p>
+              </section>
 
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <DollarSign size={14} color="var(--club-primary)" /> Sponsorship Package
-                </h4>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                  Internal only - never shown on the public site.
-                </p>
+              {/* ---------- How it shows ---------- */}
+              <section id="sponsor-sec-shows" data-section="shows" style={{ ...sectionBox, scrollMarginTop: '7rem' }}>
+                <h4 style={sectionHeading}><Eye size={14} color="var(--club-primary)" /> How it shows</h4>
+
+                <div className="form-group">
+                  <label className="form-label">Where it shows</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                    {([['club', Shield, 'Whole club'], ['event', Calendar, 'One event']] as const).map(([value, Icon, text]) => (
+                      <button key={value} type="button" aria-pressed={form.scope === value}
+                        onClick={() => setForm({ ...form, scope: value, event_id: value === 'club' ? '' : form.event_id })}
+                        className="btn btn-sm"
+                        style={{
+                          justifyContent: 'center',
+                          gap: '0.4rem',
+                          background: form.scope === value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                          border: form.scope === value ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                          color: form.scope === value ? 'var(--c-green)' : 'var(--text-secondary)',
+                        }}>
+                        <Icon size={14} /> {text}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={hint}>
+                    {form.scope === 'club'
+                      ? 'On the club home page, page footers and match pages.'
+                      : 'Only on the chosen event’s page.'}
+                  </p>
+                </div>
+
+                {form.scope === 'event' && (
+                  <div className="form-group">
+                    <label htmlFor="sponsors-event" className="form-label">Event *</label>
+                    <select id="sponsors-event"
+                      className="form-select"
+                      required={form.scope === 'event'}
+                      value={form.event_id}
+                      onChange={e => setForm({ ...form, event_id: e.target.value })}
+                    >
+                      <option value="">Select an event…</option>
+                      {clubEvents.map(evt => (
+                        <option key={evt.id} value={evt.id}>
+                          {evt.title} ({new Date(evt.start_time).toLocaleDateString(DATE_LOCALE)})
+                        </option>
+                      ))}
+                    </select>
+                    {clubEvents.length === 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.35rem' }}>
+                        No events yet - add one under Events first.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="sponsors-sponsorship-tier" className="form-label">Sponsorship Tier</label>
+                  <select id="sponsors-sponsorship-tier"
+                    className="form-select"
+                    value={form.tier}
+                    onChange={e => setForm({ ...form, tier: e.target.value as SponsorTier })}
+                  >
+                    <option value="platinum">Platinum Partner</option>
+                    <option value="gold">Gold Partner</option>
+                    <option value="silver">Silver Partner</option>
+                    <option value="bronze">Bronze Partner</option>
+                    <option value="grassroots">Grassroots Partner</option>
+                  </select>
+                  <p style={hint}>Higher tiers show first, with bigger logos.</p>
+                </div>
+
+                {labelsReady && (
+                  <div className="form-group">
+                    <label htmlFor="sponsors-label" className="form-label">Label shown on site (optional)</label>
+                    <input id="sponsors-label"
+                      type="text"
+                      className="form-input"
+                      maxLength={60}
+                      placeholder={sponsorTierLabel(form.tier)}
+                      value={form.label}
+                      onChange={e => setForm({ ...form, label: e.target.value })}
+                    />
+                    <p style={hint}>
+                      For example &ldquo;Front of Shirt Partner&rdquo;. Leave blank to show &ldquo;{sponsorTierLabel(form.tier)}&rdquo;.
+                    </p>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <span id="sponsors-logo-size" className="form-label">Logo size</span>
+                  <div role="group" aria-labelledby="sponsors-logo-size" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)' }}>
+                    {(['auto', 'xl', 'lg', 'md', 'sm'] as SponsorSizeScale[]).map(size => (
+                      <button key={size} type="button" aria-pressed={form.size_scale === size} onClick={() => setForm({ ...form, size_scale: size })}
+                        style={{
+                          flex: 1, padding: '0.5rem 0.2rem', borderRadius: '9px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                          border: 'none',
+                          background: form.size_scale === size ? 'rgba(var(--club-primary-rgb), 0.2)' : 'transparent',
+                          color: form.size_scale === size ? 'var(--text-primary)' : 'var(--text-muted)',
+                          boxShadow: form.size_scale === size ? 'inset 0 0 0 1px rgba(var(--club-primary-rgb), 0.6)' : 'none',
+                        }}>
+                        {LOGO_SIZE_LABEL[size]}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={hint}>
+                    By tier: {sponsorTierLabel(form.tier)} shows {LOGO_SIZE_LABEL[getSponsorEffectiveScale({ tier: form.tier, size_scale: 'auto' })].toLowerCase()}.
+                  </p>
+                </div>
+              </section>
+
+              {/* ---------- Deal ---------- */}
+              <section id="sponsor-sec-deal" data-section="deal" style={{ ...sectionBox, scrollMarginTop: '7rem' }}>
+                <h4 style={sectionHeading}><DollarSign size={14} color="var(--club-primary)" /> Deal</h4>
+                <p style={{ ...hint, marginTop: '-0.5rem', marginBottom: '1rem' }}>Only admins see this.</p>
+
+                {renewalsReady && (
+                  <div className="form-group">
+                    <label htmlFor="sponsors-ends-on" className="form-label">Ends on</label>
+                    <input id="sponsors-ends-on"
+                      type="date"
+                      className="form-input"
+                      value={form.ends_on}
+                      onChange={e => setForm({ ...form, ends_on: e.target.value })}
+                    />
+                    <p style={hint}>
+                      {form.ends_on
+                        ? 'The day after, they come off the site and move to Ended. Needs you reminds you 30 days before.'
+                        : 'No end date: they stay on the site until you end the sponsorship.'}
+                      {form.ends_on !== seasonEnd && (
+                        <>
+                          {' '}
+                          <button type="button" onClick={() => setForm({ ...form, ends_on: seasonEnd })}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--club-ink)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}>
+                            Use {formatEndDate(seasonEnd)}{seasons.some(se => se.club_id === club.id) ? ' (season end)' : ''}
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
 
                 <div className="form-row-2" style={{ gap: '1rem' }}>
                   <div className="form-group">
@@ -923,18 +1148,10 @@ export default function AdminSponsorsPage({
                     onChange={e => setForm({ ...form, season: e.target.value })}
                   />
                 </div>
-              </div>
+              </section>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Sponsor
-                </button>
-              </div>
               {editingSponsor && (
-                <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.25rem', paddingTop: '1rem', textAlign: 'center' }}>
+                <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '0.5rem', paddingTop: '1rem', textAlign: 'center' }}>
                   <button data-needs-full type="button" className="btn btn-sm"
                     style={{ background: 'transparent', border: 'none', color: 'var(--c-red)', fontWeight: 700 }}
                     onClick={async () => {
@@ -952,6 +1169,15 @@ export default function AdminSponsorsPage({
                   </button>
                 </div>
               )}
+
+              <div style={{ position: 'sticky', bottom: '-1rem', zIndex: 2, display: 'flex', gap: '0.75rem', margin: '1rem -1.5rem 0', padding: '0.9rem 1.5rem 1.4rem', background: 'var(--bg-surface-elevated)', borderTop: '1px solid var(--border-subtle)', borderRadius: '0 0 var(--radius-xl) var(--radius-xl)' }}>
+                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
+                  Save Sponsor
+                </button>
+              </div>
             </form>
           </div>
         </div>

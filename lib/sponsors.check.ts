@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { chartBuckets, isSponsorOnSite, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { chartBuckets, daysUntilEnd, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -62,4 +62,76 @@ assert.equal(weeks.length, 14);
 assert.ok(weeks[0].label.startsWith('w/c '));
 assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
 
-console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars OK');
+
+// End dates (SP-F5): on the site to the end of the last day, off the day after
+{
+  const noon = new Date(2026, 9, 28, 12).getTime(); // 28 Oct 2026, local time
+  assert.equal(localDateISO(noon), '2026-10-28');
+  const live = { is_active: true, package_status: 'paid' as const };
+  assert.equal(isSponsorOnSite({ ...live, ends_on: '2026-10-28' }, noon), true);
+  assert.equal(isSponsorOnSite({ ...live, ends_on: '2026-10-27' }, noon), false);
+  assert.equal(isSponsorOnSite({ ...live, ends_on: null }, noon), true);
+  assert.equal(isSponsorOnSite(live, noon), true); // public view rows have no end date
+  assert.equal(isPastEndDate({ ends_on: '2026-10-27' }, noon), true);
+  assert.equal(daysUntilEnd({ ends_on: '2026-10-28' }, noon), 0);
+  assert.equal(daysUntilEnd({ ends_on: '2026-11-27' }, noon), 30);
+  assert.equal(daysUntilEnd({ ends_on: null }, noon), null);
+  assert.equal(isEndingSoon({ ...live, ends_on: '2026-11-27' }, noon), true);
+  assert.equal(isEndingSoon({ ...live, ends_on: '2026-11-28' }, noon), false);
+  assert.equal(isEndingSoon({ ...live, ends_on: '2026-10-27' }, noon), false); // already ended
+  assert.equal(isEndingSoon({ is_active: false, package_status: 'paid', ends_on: '2026-11-01' }, noon), false); // hidden
+
+  // Renewing: a year from the old end date, or from today once it has passed
+  assert.equal(renewedEndDate('2026-11-15', noon), '2027-11-15');
+  assert.equal(renewedEndDate('2025-09-30', noon), '2027-10-28');
+  assert.equal(renewedEndDate(null, noon), '2027-10-28');
+  assert.equal(renewedEndDate('2028-02-29', noon), '2029-02-28');
+
+  // Default end: the current season's end, else the next season's, else a year from today
+  const season = (start_date: string, end_date: string, is_current = false) => ({ start_date, end_date, is_current });
+  assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-12-15', true)], noon), '2026-12-15');
+  assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-09-30', true), season('2027-02-01', '2027-09-30'), season('2028-02-01', '2028-09-30')], noon), '2027-09-30');
+  assert.equal(defaultSponsorEnd([], noon), '2027-10-28');
+
+  // Clearing old sign-ups: unpaid, hidden and over 60 days old only
+  const day = 24 * 3600 * 1000;
+  const old = new Date(noon - 61 * day).toISOString();
+  assert.equal(isStaleSignup({ is_active: false, package_status: 'prospect', created_at: old }, noon), true);
+  assert.equal(isStaleSignup({ is_active: false, package_status: 'prospect', created_at: new Date(noon - 59 * day).toISOString() }, noon), false);
+  assert.equal(isStaleSignup({ is_active: false, package_status: 'paid', created_at: old }, noon), false);
+  assert.equal(isStaleSignup({ is_active: true, package_status: 'prospect', created_at: old }, noon), false);
+  assert.equal(isStaleSignup({ is_active: false, package_status: 'prospect' }, noon), false);
+}
+
+// Reordering (SP-U4): moves only within the sponsor's tier, renumbers down the list
+{
+  const list = [
+    { id: 'a', tier: 'platinum' as const, display_order: 1 },
+    { id: 'b', tier: 'gold' as const, display_order: 2 },
+    { id: 'c', tier: 'gold' as const, display_order: 3 },
+    { id: 'd', tier: 'gold' as const, display_order: 7 },
+    { id: 'e', tier: 'silver' as const, display_order: 4 },
+  ];
+  assert.deepEqual(reorderSponsors(list, 'd', 1), [{ id: 'd', display_order: 2 }, { id: 'b', display_order: 3 }, { id: 'c', display_order: 4 }, { id: 'e', display_order: 5 }]);
+  assert.deepEqual(reorderSponsors(list, 'b', 0), [{ id: 'd', display_order: 4 }, { id: 'e', display_order: 5 }]); // can't jump above platinum
+  assert.deepEqual(reorderSponsors(list, 'c', 2), [{ id: 'd', display_order: 4 }, { id: 'e', display_order: 5 }]); // same place: only tidies numbers
+  assert.deepEqual(reorderSponsors(list, 'zz', 0), []);
+}
+
+// Which package a payment / renewal link is for
+{
+  const pkgs = [
+    { id: 'free', tier: 'gold' as const, price_cents: 0 },
+    { id: 'gold', tier: 'gold' as const, price_cents: 150000 },
+    { id: 'gold2', tier: 'gold' as const, price_cents: 200000 },
+    { id: 'silver', tier: 'silver' as const, price_cents: 75000 },
+  ];
+  assert.equal(matchSponsorPackage({ tier: 'gold', package_value: 2000 }, pkgs)?.id, 'gold2');
+  assert.equal(matchSponsorPackage({ tier: 'gold', package_value: undefined }, pkgs)?.id, 'gold');
+  assert.equal(matchSponsorPackage({ tier: 'platinum', package_value: 750 }, pkgs)?.id, 'silver');
+  assert.equal(matchSponsorPackage({ tier: 'platinum', package_value: 99 }, pkgs), null);
+  assert.equal(matchSponsorPackage({ tier: 'platinum', package_value: 99 }, [pkgs[3]])?.id, 'silver');
+  assert.equal(matchSponsorPackage({ tier: 'gold', package_value: 0 }, [pkgs[0]]), null); // price on request: nothing to pay
+}
+
+console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering OK');

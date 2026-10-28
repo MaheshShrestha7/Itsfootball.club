@@ -469,6 +469,32 @@ export function inquiryReply(p: { brand: EmailBrand; senderName: string; reply: 
 }
 
 // ---------------------------------------------------------------------------------------------
+// Sponsors
+// ---------------------------------------------------------------------------------------------
+
+/** A payment link for a sponsor who signed up but hasn't paid, or a renewal link before their
+ *  sponsorship ends (sent from Admin, Sponsors) */
+export function sponsorLink(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; renewal: boolean; endsOn?: string | null; ended?: boolean; link: string; canReply: boolean }): RenderedEmail {
+  const ends = p.endsOn ? (p.ended ? `ended on ${p.endsOn}` : `ends on ${p.endsOn}`) : null;
+  return renderEmail({
+    brand: p.brand,
+    subject: p.renewal ? `Renew your ${p.brand.name} sponsorship` : `Finish your ${p.brand.name} sponsorship`,
+    preheader: p.renewal ? `${p.business}'s sponsorship${ends ? ` ${ends}` : ''}. Renew for another year.` : `Pay for the ${p.packageName} package to finish signing up.`,
+    heading: p.renewal ? 'Time to renew your sponsorship' : 'Finish your sponsorship',
+    paragraphs: [
+      p.renewal
+        ? `Hi ${firstName(p.contactName)}, thank you for supporting ${p.brand.name}. ${p.business}'s sponsorship${ends ? ` ${ends}` : ' is coming up for renewal'}. To keep your logo on the club's site for another year, renew below.`
+        : `Hi ${firstName(p.contactName)}, thanks for signing up to sponsor ${p.brand.name}. To finish, pay for the ${p.packageName} package below. You can pay by card or bank transfer.`,
+      ...(p.canReply ? ['Questions about the package? Just reply to this email.'] : []),
+    ],
+    details: [['Business', p.business], ['Package', p.packageName], ['Price', p.price], ...(p.endsOn ? [[p.ended ? 'Ended' : 'Ends', p.endsOn] as [string, string]] : [])],
+    cta: { label: p.renewal ? 'Renew my sponsorship' : 'Pay for my sponsorship', url: p.link },
+    note: 'This link is just for your business. Please don\'t share it.',
+    reason: `You're receiving this because ${p.business} ${p.renewal ? 'sponsors' : 'signed up to sponsor'} ${p.brand.name}.`,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // Grounds directory
 // ---------------------------------------------------------------------------------------------
 

@@ -59,14 +59,16 @@ export async function POST(req: NextRequest) {
     package_value: onRequest ? null : pkg.price_cents / 100,
     package_status: 'prospect',
   };
-  // Applying again with the same email (a retry, or a different package) updates the hidden
-  // prospect from last time instead of adding another one to the club's sponsor list
+  // Applying again with the same email within the hour (a retry, or a change of package) updates
+  // that hidden prospect instead of adding another one to the club's sponsor list. Anything older
+  // makes a new sign-up, so typing someone else's email can't overwrite their business's details.
   const { data: earlier } = await db
     .from('sponsors')
     .select('id')
     .eq('club_id', clubId)
     .eq('package_status', 'prospect')
     .eq('is_active', false)
+    .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
     .ilike('contact_email', contactEmail.replace(/[%_\\]/g, '\\$&'))
     .order('created_at', { ascending: false })
     .limit(1)

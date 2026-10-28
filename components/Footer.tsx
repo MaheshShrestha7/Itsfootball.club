@@ -87,7 +87,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
               marginBottom: '1rem',
               fontWeight: 700,
             }}>
-              Official Club Partners & Sponsors
+              Club Sponsors
             </div>
             <div style={{
               display: 'flex',

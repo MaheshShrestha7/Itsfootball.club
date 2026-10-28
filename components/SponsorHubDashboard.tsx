@@ -91,7 +91,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
 
   const kpiCards = [
     { key: 'impr', label: 'Impressions', icon: Eye, value: data.totals.impressions.toLocaleString(), color: 'var(--c-green)' },
-    { key: 'reach', label: 'Unique Reach', icon: Users2, value: data.totals.uniqueReach.toLocaleString(), color: 'var(--c-blue)' },
+    { key: 'reach', label: 'Unique reach (estimate)', icon: Users2, value: data.totals.uniqueReach.toLocaleString(), color: 'var(--c-blue)' },
     { key: 'clicks', label: 'Clicks & Interactions', icon: MousePointerClick, value: data.totals.clicks.toLocaleString(), color: 'var(--c-amber)' },
     { key: 'ctr', label: 'CTR', icon: Percent, value: `${data.totals.ctr.toFixed(2)}%`, color: 'var(--c-purple)' },
     { key: 'viewability', label: 'Viewability Rate', icon: ShieldCheck, value: `${data.totals.viewabilityRate.toFixed(1)}%`, color: '#22D3EE' },
@@ -182,7 +182,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       {clubSponsors.length > 0 && (
         <>
           {/* KPI Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1.25rem', marginBottom: '0.75rem' }}>
             {kpiCards.map(card => {
               const Icon = card.icon;
               return (
@@ -196,6 +196,9 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
               );
             })}
           </div>
+          <p className="text-note" style={{ margin: '0 0 2.5rem' }}>
+            Unique reach counts browsers, not people: someone who visits on their phone and their laptop counts twice, and clearing cookies counts again.
+          </p>
 
           {/* Placement performance + engagement depth */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>

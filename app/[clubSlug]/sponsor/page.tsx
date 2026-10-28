@@ -38,11 +38,17 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  // A payment or renewal link the club emailed: ?pay={sponsor}&package={package}&k={secret}
+  const [payLink, setPayLink] = useState<{ sponsorId: string; packageId: string; key: string | null } | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
 
   useEffect(() => {
-    setPaymentNotice(new URLSearchParams(window.location.search).get('payment'));
+    const query = new URLSearchParams(window.location.search);
+    setPaymentNotice(query.get('payment'));
+    const pay = query.get('pay');
+    const packageId = query.get('package');
+    if (pay && packageId) setPayLink({ sponsorId: pay, packageId, key: query.get('k') });
     const client = getSupabaseClient();
     if (!client) return setPackages([]);
     client.from('sponsorship_packages').select('*').eq('club_id', club.id).eq('is_active', true).order('sort_order')
@@ -50,6 +56,9 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
     client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
       .then(({ data }) => data?.currency && setCurrency(data.currency));
   }, [club.id]);
+
+  // The emailed link's package, while it's still offered and priced
+  const payLinkPackage = payLink ? packages?.find(p => p.id === payLink.packageId && !isOnRequest(p)) : undefined;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,12 +104,19 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <Handshake size={30} color="var(--club-primary)" /> Sponsor {club.name}
         </h1>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          Put your business in front of our players, members and matchday crowd. Choose a package below.
+          {payLinkPackage && paymentNotice !== 'success'
+            ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
+            : 'Put your business in front of our players, members and matchday crowd. Choose a package below.'}
         </p>
 
         {paymentNotice === 'success' && (
           <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #10B981', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
             <CheckCircle2 size={18} color="var(--c-green)" /> Payment received, thank you! The club will be in touch about your logo and artwork.
+          </div>
+        )}
+        {payLink && packages && !payLinkPackage && (
+          <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #F59E0B', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <AlertCircle size={18} color="var(--c-amber)" /> That payment link&apos;s package isn&apos;t offered any more. Please contact the club, or pick a package below.
           </div>
         )}
         {paymentNotice === 'cancelled' && (
@@ -109,7 +125,20 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           </div>
         )}
 
-        {sentToClub && selected ? (
+        {payLinkPackage && paymentNotice !== 'success' && payLink ? (
+          <div className="stack">
+            <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <span className="badge" style={TIER_BADGE[payLinkPackage.tier]}>{sponsorTierLabel(payLinkPackage.tier)}</span>
+              <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0.5rem 0 0.25rem' }}>{payLinkPackage.name}</div>
+              <div style={{ fontWeight: 800, color: 'var(--club-ink)', marginBottom: '0.5rem' }}>{formatMoney(payLinkPackage.price_cents, currency)}</div>
+              {payLinkPackage.benefits && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{payLinkPackage.benefits}</div>}
+            </div>
+            <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={payLink.sponsorId} packageId={payLinkPackage.id}
+              amountCents={payLinkPackage.price_cents} label={`${payLinkPackage.name} sponsorship`}
+              extra={payLink.key ? { sponsorKey: payLink.key } : undefined} />
+            <p className="text-note" style={{ margin: 0 }}>Want a different package? Reply to the club&apos;s email or use the contact form on the club site.</p>
+          </div>
+        ) : sentToClub && selected ? (
           <div role="status" className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #10B981' }}>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
               <CheckCircle2 size={18} color="var(--c-green)" /> Thanks, your details are with {club.name}

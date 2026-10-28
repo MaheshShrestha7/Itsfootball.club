@@ -126,6 +126,18 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'sponsors',
+    heading: 'Businesses that sponsor a club',
+    body: (
+      <>
+        <p><strong>What a sponsor sign-up stores.</strong> When a business signs up on a club&rsquo;s sponsor page, we store the business name, website, contact name, email and phone, the package chosen and any message. The club&rsquo;s admins who look after sponsors see these details, and a copy goes to the club&rsquo;s Inbox. Card payments are handled by Stripe; bank transfer receipts are stored for the club&rsquo;s treasurer to check.</p>
+        <p><strong>What appears publicly.</strong> Nothing, until the club checks the sign-up and puts the sponsor on its site. Then the business name, logo, website link and tier show on the club&rsquo;s pages. Contact details and the amount paid are never shown publicly.</p>
+        <p><strong>Emails and statistics.</strong> The club can email the contact a link to pay or to renew. We count views of the sponsor&rsquo;s logo and clicks on its link, as described under Visit statistics, so the club can report results to the sponsor.</p>
+        <p><strong>Unpaid sign-ups.</strong> Sign-ups that are never paid stay hidden. The club can clear the ones older than 60 days, and the business can ask the club (or us at {mail}) to delete theirs at any time.</p>
+      </>
+    ),
+  },
+  {
     id: 'retention',
     heading: 'How long we keep it',
     body: (
