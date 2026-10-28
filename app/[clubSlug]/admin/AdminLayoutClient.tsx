@@ -50,6 +50,7 @@ import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { CALENDAR_AREAS } from '@/lib/admin-calendar';
 import { useClubAppIcons } from '@/lib/app-icons';
 import { clubTeamsOf } from '@/lib/teams';
+import { sponsorSignupStage } from '@/lib/sponsors';
 
 // Menu layout preferences, remembered per browser
 const SIDEBAR_COLLAPSED_KEY = 'itsfootball_admin_sidebar_collapsed';
@@ -73,7 +74,7 @@ export default function AdminLayout({
 }) {
   const resolvedParams = use(params);
   const pathname = usePathname();
-  const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, inquiries, memberMessages, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, inquiries, memberMessages, updateClubBranding, sponsors } = useClub();
   const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -162,9 +163,11 @@ export default function AdminLayout({
   const unreadInquiries = unreadEnquiries + unreadMemberMessages;
   const pendingMembersCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
   const hasJuniorTeam = clubTeamsOf(clubTeams, club.id).some(t => t.is_junior);
+  // Website sponsor sign-ups still waiting on the club (paid and waiting to go on the site, or new)
+  const sponsorSignups = sponsors.filter(s => s.club_id === club.id && sponsorSignupStage(s) !== null).length;
   // The phone menu is closed behind one button: a dot on it when any red badge inside is set
   const menuNeedsAttention = unreadInquiries > 0 || !!liveMatch || receiptsToReview > 0 || ordersToHandOut > 0
-    || (pendingMembersCount > 0 && can(club.id, 'members'));
+    || (pendingMembersCount > 0 && can(club.id, 'members')) || (sponsorSignups > 0 && can(club.id, 'sponsors'));
 
   interface NavItem {
     label: string;
@@ -288,8 +291,10 @@ export default function AdminLayout({
         },
         {
           area: 'sponsors', label: 'Sponsors', href: `/${club.slug}/admin/sponsors`, icon: DollarSign,
+          badge: sponsorSignups > 0 ? `${sponsorSignups} NEW` : undefined,
           children: [
-            { label: 'Sponsor List', href: `/${club.slug}/admin/sponsors` },
+            { label: 'Sponsor List', href: `/${club.slug}/admin/sponsors`, badge: sponsorSignups > 0 ? `${sponsorSignups}` : undefined },
+            { label: 'Packages', href: `/${club.slug}/admin/sponsors?tab=packages` },
             // The sponsor exposure report lives on the Analytics page and keeps its access area
             { area: 'analytics', label: 'Sponsor Report', href: `/${club.slug}/admin/analytics?tab=sponsors` },
           ],

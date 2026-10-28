@@ -12,8 +12,8 @@ interface SponsorTrackedLinkProps {
   children: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
-  onMouseEnter?: React.MouseEventHandler<HTMLAnchorElement>;
-  onMouseLeave?: React.MouseEventHandler<HTMLAnchorElement>;
+  onMouseEnter?: React.MouseEventHandler<HTMLElement>;
+  onMouseLeave?: React.MouseEventHandler<HTMLElement>;
 }
 
 /** Wraps a sponsor placement link with real impression/viewability/click tracking
@@ -23,7 +23,8 @@ export default function SponsorTrackedLink({
   clubId, sponsorId, placement, href, children, style, className, onMouseEnter, onMouseLeave,
 }: SponsorTrackedLinkProps) {
   const { trackSponsorEvent } = useClub();
-  const ref = useRef<HTMLAnchorElement>(null);
+  const ref = useRef<HTMLElement>(null);
+  const link = sponsorHref(href);
 
   useEffect(() => {
     const el = ref.current;
@@ -69,10 +70,22 @@ export default function SponsorTrackedLink({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clubId, sponsorId, placement]);
 
+  // No website: the logo and name still show (and count as seen), but not as a link that
+  // would open a copy of this page in a new tab
+  if (!link) {
+    return (
+      <div ref={ref as React.RefObject<HTMLDivElement>} className={className} style={{ ...style, cursor: 'default' }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <a
-      ref={ref}
-      href={sponsorHref(href) || '#'}
+      ref={ref as React.RefObject<HTMLAnchorElement>}
+      href={link}
       target="_blank"
       rel="noopener noreferrer"
       className={className}

@@ -9,7 +9,7 @@ import { DATE_LOCALE, SITE_TIME_ZONE } from '@/lib/dates';
 import EventTickets from '@/components/EventTickets';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
 import SponsorLogo from '@/components/SponsorLogo';
-import { sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
+import { isSponsorOnSite, sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
 import KickoffCountdown from '@/components/KickoffCountdown';
@@ -71,7 +71,7 @@ export default function EventDetailsPage({
 
   // Sponsors scoped to this specific event - separate from the club's general
   // sponsor showcase, which only shows club-wide (non-event) sponsors.
-  const eventSponsors = sortSponsorsByTier(sponsors.filter(s => s.event_id === event.id && s.is_active));
+  const eventSponsors = sortSponsorsByTier(sponsors.filter(s => s.event_id === event.id && isSponsorOnSite(s)));
 
   const categoryColor = CATEGORY_COLOR[event.category] || 'var(--club-primary)';
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;

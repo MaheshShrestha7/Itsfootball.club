@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth-context';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorMarquee from '@/components/SponsorMarquee';
+import { isSponsorOnSite } from '@/lib/sponsors';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember, type PitchPosition } from '@/lib/supabase/types';
 import { extractCrestTextColor } from '@/lib/image-color';
@@ -102,7 +103,7 @@ export default function MatchCenterPage({
   const squadPlayers = allSquadPlayers.filter(p => attendingIds.has(p.id));
 
   // Club-wide partners (event-scoped sponsors belong to their event's page)
-  const matchSponsors = club ? sponsors.filter(s => s.club_id === club.id && !s.event_id && s.is_active) : [];
+  const matchSponsors = club ? sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)) : [];
 
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;

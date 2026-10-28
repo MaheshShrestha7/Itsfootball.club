@@ -16,7 +16,7 @@ import { clubPlaysIn, kickoff, latestFirst, publicFixtures, soonestFirst } from 
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
-import { sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
+import { isSponsorOnSite, sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
@@ -220,7 +220,8 @@ export default function ClubPublicPage({
   // The strip's next match skips a game left on "upcoming" after it was played (no result entered yet)
   const stripNextMatch = upcomingMatches.find(m => kickoff(m) >= nowMs - 3 * 3600000);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
-  const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id);
+  // Admins also load hidden and ended sponsors; they see the same showcase as fans.
+  const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id && isSponsorOnSite(s));
   const clubNews = newestFirst(news.filter(n => n.club_id === clubId));
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 

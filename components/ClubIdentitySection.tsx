@@ -14,6 +14,7 @@ import {
 import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
 import { publicScoreHidden } from '@/lib/teams';
 import { latestFirst } from '@/lib/fixtures';
+import { isSponsorOnSite } from '@/lib/sponsors';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -129,7 +130,7 @@ export default function ClubIdentitySection({
   }, 0);
 
   const rawEventsCount = events.filter(e => e.club_id === clubId).length;
-  const rawSponsorsCount = sponsors.filter(s => s.club_id === clubId && s.is_active !== false && !s.event_id).length;
+  const rawSponsorsCount = sponsors.filter(s => s.club_id === clubId && isSponsorOnSite(s) && !s.event_id).length;
 
   // Real-time dynamic stats state initialized with exact raw counts
   const [stats, setStats] = useState<DynamicIdentityStats>({

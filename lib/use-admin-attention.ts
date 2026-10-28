@@ -5,10 +5,11 @@ import { getSupabaseClient } from './supabase/client';
 import { useClub } from './club-context';
 import { useAuth } from './auth-context';
 import { attentionItems, type AttentionItem } from './admin-attention';
+import { sponsorSignupStage } from './sponsors';
 
 /** The dashboard's "Needs you" list for one club, limited to what this person's roles can act on */
 export function useAdminAttention(club: { id: string; slug: string }): AttentionItem[] {
-  const { members, matches, inquiries, memberMessages } = useClub();
+  const { members, matches, inquiries, memberMessages, sponsors } = useClub();
   const { can } = useAuth();
   const [receiptsToReview, setReceiptsToReview] = useState(0);
   const [ordersToHandOut, setOrdersToHandOut] = useState(0);
@@ -30,12 +31,15 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
       .then(({ count }) => setOrdersToHandOut(count || 0));
   }, [club.id]);
 
+  const clubSponsors = sponsors.filter(s => s.club_id === club.id);
   const counts = {
     pendingApplications: members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length,
     receiptsToReview,
     unreadMessages: inquiries.filter(i => i.club_id === club.id && i.status === 'unread').length
       + memberMessages.filter(m => m.club_id === club.id && m.sender_type === 'member' && !m.is_read).length,
     ordersToHandOut,
+    sponsorsToPutOnSite: clubSponsors.filter(s => sponsorSignupStage(s, now) === 'paid').length,
+    sponsorSignups: clubSponsors.filter(s => sponsorSignupStage(s, now) === 'unpaid').length,
   };
   return attentionItems(club.slug, counts, matches.filter(m => m.club_id === club.id), now)
     .filter(item => can(club.id, item.area));
