@@ -4,6 +4,7 @@ import { preparePayment, readPaymentInput } from '@/lib/payments-server';
 import { storeReceipt, MAX_RECEIPT_SIZE } from '@/lib/storage/receipts';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase/server-auth';
+import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 
 // Records a bank transfer with the payer's receipt (photo or PDF) for an admin to verify.
 export async function POST(req: NextRequest) {
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
 
   // Renewals need the member's own session, or their guardian's (see preparePayment)
   const payer = await requireUser(req);
+  // Signed-out buyers (event tickets, sponsors) pass the bot check before a receipt is stored
+  if (!payer.ok && !(await verifyTurnstile(form.get('captchaToken'), getClientIp(req.headers)))) {
+    return NextResponse.json({ error: TURNSTILE_FAILED }, { status: 400 });
+  }
   const prepared = await preparePayment(db, readPaymentInput(k => form.get(k)), payer.ok ? payer.userId : null, payer.ok ? payer.confirmedEmail ?? null : null);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });
   const { row } = prepared.draft;

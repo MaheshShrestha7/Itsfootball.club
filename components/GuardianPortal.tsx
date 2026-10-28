@@ -12,6 +12,7 @@ import { DATE_LOCALE } from '@/lib/dates';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { clubTeamsOf, teamsOfMember, nextFixtureOf } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
+import { useMemberHealth } from '@/lib/use-member-health';
 
 // A parent or guardian's view of the children they look after at this club (my_children RPC,
 // matched on their confirmed sign-in email = club_members.guardian_email): each child's application
@@ -51,8 +52,10 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
   // Photo consent, emergency contact and medical notes, saved by the server (update_child_details)
   const [details, setDetails] = useState<Record<string, { photo_consent: boolean | null; emergency_contact: string; medical_notes: string }>>({});
   const [detailState, setDetailState] = useState<Record<string, string>>({});
+  // Medical notes live in their own table (migration 20261129), read only by those who need them
+  const health = useMemberHealth(club.id, childMembers.length > 0);
   const detailsOf = (child: ClubMember) => details[child.id] ?? {
-    photo_consent: child.photo_consent ?? null, emergency_contact: child.emergency_contact || '', medical_notes: child.medical_notes || '',
+    photo_consent: child.photo_consent ?? null, emergency_contact: child.emergency_contact || '', medical_notes: health.notes[child.id] || '',
   };
   const saveDetails = (child: ClubMember) => async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +67,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
       p_club_id: club.id, p_member_id: child.id, p_photo_consent: d.photo_consent, p_emergency_contact: d.emergency_contact, p_medical_notes: d.medical_notes,
     });
     setDetails(x => ({ ...x, [child.id]: d }));
+    if (!error) health.setLocal(child.id, d.medical_notes);
     setDetailState(x => ({ ...x, [child.id]: error ? 'Not saved. Please try again.' : 'saved' }));
   };
   const [open, setOpen] = useState<Record<string, Section | undefined>>({});

@@ -160,10 +160,17 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'health',
+    heading: 'Health information',
+    body: (
+      <p>A member, or a junior player&rsquo;s parent or guardian, can add medical notes such as allergies, asthma or medication, so coaches know what to do in an emergency. This is health information, which the Privacy Act treats as sensitive. It is kept apart from the rest of the member&rsquo;s record and only the club&rsquo;s Owner and Club Admins, the coaches and team staff of that player&rsquo;s teams, the member themselves and their guardian can see it. It isn&rsquo;t saved in the browser, and it is used only for the player&rsquo;s safety at the club. The member or guardian can change or clear it at any time, or ask the club to remove it.</p>
+    ),
+  },
+  {
     id: 'security',
     heading: 'Security',
     body: (
-      <p>All traffic to the site is encrypted, each club&rsquo;s records are only available to that club&rsquo;s admins, and card payments are handled by Stripe. No system is perfectly secure, but if a data breach is likely to cause you serious harm we&rsquo;ll notify you and the regulator as the law requires.</p>
+      <p>All traffic to the site is encrypted, admins can turn on two-step sign-in with an authenticator app (platform staff must), sensitive admin actions are recorded in a log nobody can edit, each club&rsquo;s records are only available to that club&rsquo;s admins, and card payments are handled by Stripe. No system is perfectly secure, but if a data breach is likely to cause you serious harm we&rsquo;ll notify you and the regulator as the law requires.</p>
     ),
   },
   {

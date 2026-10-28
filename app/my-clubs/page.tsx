@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth-context';
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { getAccessToken } from '@/lib/supabase/client';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import TwoStepSignIn from '@/components/TwoStepSignIn';
 import {
   Shield,
   PlusCircle,
@@ -657,6 +658,7 @@ export default function MyClubsPage() {
               </div>
             )}
 
+            <TwoStepSignIn />
             <DeleteAccount />
           </>
         )}

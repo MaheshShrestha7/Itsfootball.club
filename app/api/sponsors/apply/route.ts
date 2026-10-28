@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { sponsorHref } from '@/lib/sponsors';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
+import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, max) : '');
@@ -9,7 +10,8 @@ const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>
 // Public sponsorship sign-up: creates a hidden 'prospect' sponsor the club can then take payment for.
 // It stays off the public site until an admin adds the logo and switches it on.
 export async function POST(req: NextRequest) {
-  if (!(await durableRateLimit(`sponsor-apply:${getClientIp(req.headers)}`, 3, 10 * 60 * 1000))) {
+  const ip = getClientIp(req.headers);
+  if (!(await durableRateLimit(`sponsor-apply:${ip}`, 3, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a few minutes.' }, { status: 429 });
   }
   const db = getServiceClient();
@@ -18,6 +20,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   if (clean(body.company_website_confirm)) return NextResponse.json({ sponsorId: crypto.randomUUID() }); // honeypot
+  if (!(await verifyTurnstile(body.captchaToken, ip))) return NextResponse.json({ error: TURNSTILE_FAILED }, { status: 400 });
 
   const clubId = clean(body.clubId, 36);
   const packageId = clean(body.packageId, 36);
@@ -42,7 +45,6 @@ export async function POST(req: NextRequest) {
   const row = {
     club_id: clubId,
     name,
-    logo_url: '/logo-96.png', // placeholder until the club uploads the sponsor's artwork
     website_url: website,
     tier: pkg.tier,
     is_active: false,
@@ -54,8 +56,25 @@ export async function POST(req: NextRequest) {
   };
   // The badge shows the package's name; before migration 20261127 there is no label column, so save without it
   const label = typeof pkg.name === 'string' ? pkg.name.trim().slice(0, 60) || null : null;
-  let { data: sponsor, error } = await db.from('sponsors').insert({ ...row, label }).select('id').single();
-  if (error?.code === 'PGRST204') ({ data: sponsor, error } = await db.from('sponsors').insert(row).select('id').single());
+  // Applying again with the same email (a retry, or a different package) updates the hidden
+  // prospect from last time instead of adding another one to the club's sponsor list
+  const { data: earlier } = await db
+    .from('sponsors')
+    .select('id')
+    .eq('club_id', clubId)
+    .eq('package_status', 'prospect')
+    .eq('is_active', false)
+    .ilike('contact_email', contactEmail.replace(/[%_\\]/g, '\\$&'))
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const save = (values: Record<string, unknown>) =>
+    earlier
+      ? db.from('sponsors').update(values).eq('id', earlier.id).select('id').single()
+      // The logo is a placeholder until the club uploads the sponsor's artwork
+      : db.from('sponsors').insert({ logo_url: '/logo-96.png', ...values }).select('id').single();
+  let { data: sponsor, error } = await save({ ...row, label });
+  if (error?.code === 'PGRST204') ({ data: sponsor, error } = await save(row));
   if (error || !sponsor) return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 });
   return NextResponse.json({ sponsorId: sponsor.id });
 }
