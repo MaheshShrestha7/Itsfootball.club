@@ -8,10 +8,12 @@ import { confirmAction } from '@/components/ConfirmDialog';
 
 // Editable price rows shared by membership plans and sponsorship packages
 export default function PriceList<T extends { id: string; name: string; price_cents: number; is_active: boolean; sort_order: number; benefits?: string | null; description?: string | null }>({
-  title, table, rows, db, clubId, flash, load, blank, extra, extraLabel, textField = 'description',
+  title, table, rows, db, clubId, flash, load, blank, extra, extraLabel, textField = 'description', below,
 }: {
   title: string; table: string; rows: T[]; db: ReturnType<typeof getSupabaseClient>; clubId: string; flash: (type: 'ok' | 'error', text: string) => void; load: () => Promise<void>;
   blank: Partial<T>; extra: (row: T, set: (patch: Partial<T>) => void) => React.ReactNode; extraLabel: string; textField?: 'description' | 'benefits';
+  /** More fields under the row's text box (the sponsorship packages' "What's included" ticks) */
+  below?: (row: T, set: (patch: Partial<T>) => void) => React.ReactNode;
 }) {
   const [draft, setDraft] = useState<Record<string, T>>({});
   const [prices, setPrices] = useState<Record<string, string>>({});
@@ -65,6 +67,7 @@ export default function PriceList<T extends { id: string; name: string; price_ce
               <textarea className="form-textarea" rows={2} style={{ flexBasis: '100%' }} aria-label={textField === 'benefits' ? 'Benefits' : 'Description'}
                 placeholder={textField === 'benefits' ? 'Benefits (logo on kit, website, matchday banner…)' : 'Short description (optional)'}
                 value={(row[textField] as string) || ''} onChange={e => set({ [textField]: e.target.value } as Partial<T>)} />
+              {below && <div style={{ flexBasis: '100%' }}>{below(row, set)}</div>}
               {!r.is_active && (
                 <p className="text-note" style={{ flexBasis: '100%', margin: 0 }}>Hidden from your public pages. Tick Active and Save when it&apos;s ready.</p>
               )}

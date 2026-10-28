@@ -3,22 +3,25 @@
 import React, { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import ClubContactSection from '@/components/ClubContactSection';
-import { ArrowLeft, CheckCircle2, AlertCircle, Handshake } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Check } from 'lucide-react';
+import SponsorLogo from '@/components/SponsorLogo';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
 import type { SponsorshipPackage } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
-import { TIER_BADGE, sponsorTierLabel } from '@/lib/sponsors';
+import { TIER_BADGE, isSponsorOnSite, packageIncludeLines, sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 
 /** A package priced 0 has no online payment: the business tells the club what they'd like to offer */
 const isOnRequest = (p: SponsorshipPackage) => !(p.price_cents > 0);
 
 export default function SponsorSignupPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug } = useClub();
+  const { clubs, selectClubBySlug, sponsors } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
+  // "Join Acme Plumbing, Corner Cafe and 3 other local businesses": the club's sponsors on the site now
+  const current = sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)));
 
   const [packages, setPackages] = useState<SponsorshipPackage[] | null>(null);
   const [currency, setCurrency] = useState('AUD');
@@ -96,18 +99,41 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <ArrowLeft size={16} /> Back to {club.name}
         </Link>
 
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Handshake size={30} color="var(--club-primary)" /> Sponsor {club.name}
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          {payLinkPackage && paymentNotice !== 'success'
-            ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
-            : 'Put your business in front of our players, members and matchday crowd. Choose a package below.'}
-        </p>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+          {club.logo_url && (
+            <img src={club.logo_url} alt="" width={84} height={84} style={{ width: 84, height: 84, objectFit: 'contain', margin: '0 auto 0.85rem', display: 'block' }} />
+          )}
+          <h1 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            Sponsor {club.name}
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto' }}>
+            {payLinkPackage && paymentNotice !== 'success'
+              ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
+              : 'Put your business in front of our players, families and matchday crowd. Choose a package below.'}
+          </p>
+        </div>
+
+        {/* SP-U6: the businesses already backing the club */}
+        {current.length > 0 && !payLink && !sponsorId && !sentToClub && (
+          <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+            <p className="text-body" style={{ margin: '0 0 0.75rem' }}>
+              Join {current.slice(0, 2).map((s, i) => <React.Fragment key={s.id}>{i > 0 && (current.length === 2 ? ' and ' : ', ')}<strong className="text-primary">{s.name}</strong></React.Fragment>)}
+              {current.length > 2 && <> and {current.length - 2} other local {current.length - 2 === 1 ? 'business' : 'businesses'}</>}
+              {current.length <= 2 && <> {current.length === 1 ? 'as a club sponsor' : 'as club sponsors'}</>}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+              {current.slice(0, 6).map(s => (
+                <span key={s.id} title={s.name} style={{ width: 96, height: 52, borderRadius: 10, background: s.logo_url ? '#fff' : 'rgba(var(--tint-rgb), 0.06)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem' }}>
+                  <SponsorLogo src={s.logo_url} name={s.name} height={36} style={{ maxWidth: '100%' }} />
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {paymentNotice === 'success' && (
           <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #10B981', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-            <CheckCircle2 size={18} color="var(--c-green)" /> Payment received, thank you! The club will be in touch about your logo and artwork.
+            <CheckCircle2 size={18} color="var(--c-green)" /> Payment received, thank you! The club will email you a link to your own sponsor page, where you can send your logo.
           </div>
         )}
         {payLink && packages && !payLinkPackage && (
@@ -170,10 +196,37 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                   <span className="badge" style={TIER_BADGE[p.tier]}>{sponsorTierLabel(p.tier)}</span>
                   <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0.5rem 0 0.25rem' }}>{p.name}</div>
                   <div style={{ fontWeight: 800, color: 'var(--club-ink)', marginBottom: '0.5rem' }}>{isOnRequest(p) ? 'Price on request' : formatMoney(p.price_cents, currency)}</div>
+                  {packageIncludeLines(p.includes).length > 0 && (
+                    <>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-muted)', margin: '0.25rem 0 0.4rem' }}>WHAT&apos;S INCLUDED</div>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        {packageIncludeLines(p.includes).map(line => (
+                          <li key={line} style={{ display: 'flex', gap: '0.45rem', alignItems: 'flex-start', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            <Check size={15} color="var(--c-green)" style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" /> {line}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                   {p.benefits && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.benefits}</div>}
                 </button>
               ))}
             </div>
+
+            {/* SP-U6: what happens after they pick a package */}
+            {!selected && (
+              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.85rem' }}>What happens next</h2>
+                <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                  {['Pick a package and pay online', 'Send us your logo from your own sponsor page', 'The club checks it and puts you on the site'].map((step, i) => (
+                    <li key={step} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', color: 'var(--text-secondary)' }}>
+                      <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', border: '1px solid var(--club-primary)', background: 'rgba(var(--club-primary-rgb), 0.15)' }}>{i + 1}</span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
 
             {selected && (
               <form onSubmit={submit} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

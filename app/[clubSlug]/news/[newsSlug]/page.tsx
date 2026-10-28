@@ -4,6 +4,7 @@ import React, { use } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Newspaper } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
+import SupportedBy from '@/components/SupportedBy';
 import ArticleBody from '@/components/ArticleBody';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
@@ -85,6 +86,9 @@ export default function NewsArticlePage({
         <NewsVideo url={article.video_embed_url} title={article.title} />
         <ArticleBody content={article.content} style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.75 }} />
       </article>
+      <div style={{ marginTop: '2.5rem' }}>
+        <SupportedBy clubId={club.id} />
+      </div>
 
       {more.length > 0 && (
         <aside aria-labelledby="more-news" style={{ marginTop: '3.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '2rem' }}>

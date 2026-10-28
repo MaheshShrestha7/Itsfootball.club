@@ -878,6 +878,9 @@ export interface SponsorshipPackage {
   tier: SponsorTier;
   price_cents: number;
   benefits?: string | null;
+  /** The ticks on the public package card: PACKAGE_INCLUDES keys, then extras the club typed
+   *  (migration 20261134). Display only. */
+  includes?: string[];
   is_active: boolean;
   sort_order: number;
 }
