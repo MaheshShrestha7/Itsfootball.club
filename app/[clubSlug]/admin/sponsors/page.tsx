@@ -6,7 +6,7 @@ import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/
 import { defaultSeasonLabel } from '@/lib/season';
 import {
   daysUntilEnd, defaultSponsorEnd, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
-  hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel,
+  hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel, typedWebsite,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
@@ -260,10 +260,12 @@ export default function AdminSponsorsPage({
   };
 
   const [form, setForm] = useState(blankForm);
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
 
   const handleOpenAdd = () => {
     setEditingId(null);
     setForm(blankForm);
+    setWebsiteError(null);
     setModalOpen(true);
   };
 
@@ -288,6 +290,7 @@ export default function AdminSponsorsPage({
       season: s.season || defaultSeasonLabel(),
       ends_on: s.ends_on || '',
     });
+    setWebsiteError(null);
     setModalOpen(true);
   };
 
@@ -295,10 +298,18 @@ export default function AdminSponsorsPage({
     e.preventDefault();
     if (!form.name) return;
     if (form.scope === 'event' && !form.event_id) return;
+    // "acme.com.au" is saved as https://acme.com.au/, so the logo links to it
+    const website = form.website_url.trim() ? typedWebsite(form.website_url) : '';
+    if (website === undefined) {
+      setWebsiteError('That website address doesn\'t look right. Try something like acmeplumbing.com.au');
+      document.getElementById('sponsors-website-link')?.focus();
+      return;
+    }
 
     const { scope, label, ends_on, ...rest } = form;
     const payload = {
       ...rest,
+      website_url: website,
       // Only sent once the column exists (migration 20261132); blank means no end date
       ...(renewalsReady ? { ends_on: ends_on || null } : {}),
       // An ended sponsorship is never on the site
@@ -980,13 +991,18 @@ export default function AdminSponsorsPage({
 
                 <div className="form-group">
                   <label htmlFor="sponsors-website-link" className="form-label">Website Link</label>
+                  {/* Plain text so "www.acme.com.au" is accepted; Save adds the https:// (SPE-4) */}
                   <input id="sponsors-website-link"
-                    type="url"
+                    type="text"
+                    inputMode="url"
+                    autoComplete="url"
                     className="form-input"
-                    placeholder="https://"
+                    placeholder="yourbusiness.com.au"
+                    aria-invalid={!!websiteError}
                     value={form.website_url}
-                    onChange={e => setForm({ ...form, website_url: e.target.value })}
+                    onChange={e => { setForm({ ...form, website_url: e.target.value }); setWebsiteError(null); }}
                   />
+                  {websiteError && <p role="alert" style={{ ...hint, color: 'var(--c-red)' }}>{websiteError}</p>}
                   <p style={hint}>No website? Leave it blank. The logo then shows without a link.</p>
                 </div>
 

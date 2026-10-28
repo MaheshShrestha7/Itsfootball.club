@@ -26,3 +26,18 @@ export function gstIncludedCents(totalCents: number): number {
 export function invoiceLabel(n: number): string {
   return `INV-${String(n).padStart(4, '0')}`;
 }
+
+/** The club's GST registration and ABN as an invoice prints them. A payment keeps the ones the club had
+ *  when it was paid (payments.invoice_gst_registered / invoice_abn, migration 20261135), so turning GST
+ *  on later never changes an invoice already issued (SPE-5). Before that snapshot exists, today's settings. */
+export function invoiceTaxDetails(
+  payment: { invoice_gst_registered?: boolean | null; invoice_abn?: string | null },
+  settings: { gst_registered?: boolean | null; abn?: string | null } | null | undefined
+): { taxInvoice: boolean; abn: string | null } {
+  const snapshot = typeof payment.invoice_gst_registered === 'boolean';
+  const abn = cleanAbn(snapshot ? payment.invoice_abn : settings?.abn);
+  // A tax invoice needs the club's ABN as well as GST registration
+  return { taxInvoice: !!(snapshot ? payment.invoice_gst_registered : settings?.gst_registered) && !!abn, abn };
+}
+
+export const invoiceIsTax = (...args: Parameters<typeof invoiceTaxDetails>) => invoiceTaxDetails(...args).taxInvoice;

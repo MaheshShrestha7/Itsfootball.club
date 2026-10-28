@@ -18,6 +18,17 @@ interface ImageUploadZoneProps {
   maxDimension?: number;
 }
 
+/** Any pixel that isn't fully solid. Unreadable pixels count as solid, so the upload still works as before */
+function hasTransparency(ctx: CanvasRenderingContext2D, width: number, height: number): boolean {
+  try {
+    const { data } = ctx.getImageData(0, 0, width, height);
+    for (let i = 3; i < data.length; i += 4) if (data[i] < 255) return true;
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
 // Client-side compression to prevent gigantic base64 strings from exhausting localStorage
 const compressImage = async (file: File, maxDim: number): Promise<File> => {
   if (file.type === 'image/svg+xml') return file;
@@ -42,15 +53,18 @@ const compressImage = async (file: File, maxDim: number): Promise<File> => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve(file);
         ctx.drawImage(img, 0, 0, width, height);
+        // A logo with a see-through background stays a PNG: JPEG has no transparency, so it would
+        // turn the background black (SPE-3, 28 Oct 2026 sponsors test). Photos stay JPEG.
+        const type = file.type !== 'image/jpeg' && hasTransparency(ctx, width, height) ? 'image/png' : 'image/jpeg';
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + (type === 'image/png' ? '.png' : '.jpg'), { type }));
             } else {
               resolve(file);
             }
           },
-          'image/jpeg',
+          type,
           0.85
         );
       };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { isSponsorKey, sponsorHref } from '@/lib/sponsors';
+import { isSponsorKey, typedWebsite } from '@/lib/sponsors';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 import { formatMoney } from '@/lib/finance';
@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
   const contactName = clean(body.contact_name);
   const contactEmail = clean(body.contact_email).toLowerCase();
   const contactPhone = clean(body.contact_phone, 64) || null;
-  const website = sponsorHref(clean(body.website_url, 500) || undefined) ?? null;
+  // "www.acme.com.au" as typed gets its https://; anything that isn't a web address is dropped
+  const website = typedWebsite(clean(body.website_url, 500)) ?? null;
   const offer = clean(body.message, 2000);
   if (!clubId || !packageId || !name || !contactName || !EMAIL_RE.test(contactEmail)) {
     return NextResponse.json({ error: 'Please fill in your business name, contact name and a valid email.' }, { status: 400 });

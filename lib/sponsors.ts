@@ -62,6 +62,20 @@ export function isEndingSoon(sponsor: Pick<Sponsor, 'is_active' | 'package_statu
   return days !== null && days <= 30 && isSponsorOnSite(sponsor, now);
 }
 
+/** How many days before the end date a sponsor can pay to renew (the renewal link works, and their
+ *  page offers "Renew for another year") */
+export const RENEWAL_WINDOW_DAYS = 60;
+
+/** A sponsor that is already set up may pay again only to renew: from 60 days before their end date,
+ *  after it, or once the club has ended the sponsorship. Anything else is a second payment for the
+ *  same term, e.g. an old "Finish your sponsorship" link opened after paying (SPE-1). */
+export function canPayRenewal(sponsor: { package_status?: string | null; ends_on?: string | null }, now = Date.now()): boolean {
+  if (!sponsor.package_status || sponsor.package_status === 'prospect') return false;
+  if (sponsor.package_status === 'expired' || sponsor.package_status === 'cancelled') return true;
+  const days = daysUntilEnd(sponsor, now);
+  return days !== null && days <= RENEWAL_WINDOW_DAYS;
+}
+
 /** Renewing runs a year on from the old end date, or from today if that has passed.
  *  fulfil_payment (migration 20261132) does the same when a renewal is paid online. */
 export function renewedEndDate(endsOn: string | null | undefined, now = Date.now()): string {
@@ -270,11 +284,13 @@ export const hasSentChange = (s: { pending_sent_at?: string | null; pending_logo
   !!s.pending_sent_at && !!(s.pending_logo_url || s.pending_website_url);
 
 /** A website someone typed, with https:// added when they left it off ("acme.com.au"), or undefined
- *  unless it's a real web address (as sponsorHref) */
+ *  unless it's a real web address (as sponsorHref) with a domain like acme.com.au (SPE-4: the form
+ *  box is plain text now, so "not a website" must not become https://not%20a%20website/) */
 export function typedWebsite(input: string | null | undefined): string | undefined {
   const v = (input || '').trim();
-  if (!v) return undefined;
-  return sponsorHref(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`);
+  if (!v || /\s/.test(v)) return undefined;
+  const href = sponsorHref(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`);
+  return href && /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z0-9-]+$/i.test(new URL(href).hostname) ? href : undefined;
 }
 
 /** The places a package can say it includes (sponsorship_packages.includes keys), in plain words:

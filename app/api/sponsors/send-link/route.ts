@@ -6,7 +6,7 @@ import { sendClubEmails, looksLikeEmail } from '@/lib/email/club-emails';
 import { sponsorLink } from '@/lib/email/templates';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { formatMoney } from '@/lib/finance';
-import { formatEndDate, isPastEndDate, isSponsorKey, matchSponsorPackage, sponsorPageUrl } from '@/lib/sponsors';
+import { RENEWAL_WINDOW_DAYS, canPayRenewal, formatEndDate, isPastEndDate, isSponsorKey, matchSponsorPackage, sponsorPageUrl } from '@/lib/sponsors';
 import { isUuid } from '@/lib/ids';
 
 // Emails a sponsor a link to pay (SP-X5, 28 Oct 2026 sponsors review).
@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
   }
   if (kind === 'renewal' && !sponsor.access_key) {
     return NextResponse.json({ error: 'Renewal links need the sponsor renewals update (migration 20261132) first.' }, { status: 409 });
+  }
+  // The link only takes a payment when a renewal is due (SPE-1), so don't send one that wouldn't work
+  if (kind === 'renewal' && !canPayRenewal(sponsor)) {
+    return NextResponse.json({ error: sponsor.ends_on
+      ? `Renewal links work from ${RENEWAL_WINDOW_DAYS} days before their end date (${formatEndDate(sponsor.ends_on)}).`
+      : 'They have no end date yet. Set Ends on in their details first.' }, { status: 409 });
   }
   const pkg = matchSponsorPackage(sponsor, packages || []);
   if (!pkg) {
