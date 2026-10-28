@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Bell,
 } from 'lucide-react';
+import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 interface BroadcastsTabProps {
   showToast: (msg: string) => void;
@@ -64,7 +65,7 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
     if (linkUrl.trim() && !safeLinkHref(linkUrl)) {
-      alert('Use a full web address (https://…) or a path on this site, such as /tools.');
+      notify('Use a full web address (https://…) or a path on this site, such as /tools.');
       return;
     }
     const client = getSupabaseClient();
@@ -82,7 +83,7 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
       });
 
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast('✓ Broadcast published');
         setTitle('');
@@ -92,7 +93,7 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
         fetchAnnouncements();
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message);
     } finally {
       setSaving(false);
     }
@@ -108,30 +109,30 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
         .eq('id', id);
 
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast(!currentStatus ? '✓ Broadcast activated' : '✓ Broadcast deactivated');
         fetchAnnouncements();
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to permanently delete this broadcast?')) return;
+    if (!(await confirmAction({ title: 'Delete this broadcast?', message: 'It comes off every club’s dashboard. This can’t be undone.', confirmLabel: 'Delete', danger: true }))) return;
     const client = getSupabaseClient();
     if (!client) return;
     try {
       const { error } = await client.from('platform_announcements').delete().eq('id', id);
       if (error) {
-        alert(error.message);
+        notify(error.message);
       } else {
         showToast('✓ Broadcast removed');
         fetchAnnouncements();
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message);
     }
   };
 

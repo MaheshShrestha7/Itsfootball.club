@@ -80,7 +80,7 @@ export default function VerifyPassPage({
             {club.name} Pass Verification
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '2rem' }}>
-            Official digital membership and accreditation validator
+            Check that a member pass is real and still valid
           </p>
 
           {/* Verification Form if no token or to re-verify */}
@@ -91,7 +91,7 @@ export default function VerifyPassPage({
                 <input aria-label="Member pass token"
                   type="text"
                   className="form-input"
-                  placeholder="Enter QR token Enter the pass QR token"
+                  placeholder="Paste or type the code under the QR"
                   value={inputToken}
                   onChange={e => setInputToken(e.target.value)}
                   style={{ fontFamily: 'var(--font-mono)' }}

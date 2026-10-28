@@ -25,7 +25,7 @@ export default function PublicTournamentsPage({
       <section
         style={{
           padding: '4rem 1.5rem 3rem 1.5rem',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(var(--dk-9-13-22), 1) 75%)',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(var(--club-primary-rgb), 0.15) 0%, rgba(var(--dk-9-13-22), 1) 75%)',
           borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
           textAlign: 'center',
         }}
@@ -126,7 +126,7 @@ export default function PublicTournamentsPage({
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    e.currentTarget.style.borderColor = 'rgba(var(--club-primary-rgb), 0.4)';
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.transform = 'translateY(0)';

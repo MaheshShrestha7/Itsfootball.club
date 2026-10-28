@@ -251,8 +251,8 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
           background: [
             `radial-gradient(circle at ${mirrored ? '85% 12%' : '10% 8%'}, rgba(${primary.rgbString}, ${tintAlpha(primary)}) 0%, rgba(${primary.rgbString}, ${tintAlpha(primary) * 0.35}) 45%, transparent 75%)`,
             `radial-gradient(circle at ${mirrored ? '15% 95%' : '92% 96%'}, rgba(${accent.rgbString}, ${tintAlpha(accent) * 0.75}) 0%, transparent 55%)`,
-            `radial-gradient(circle at ${mirrored ? '70% 60%' : '35% 62%'}, rgba(16, 185, 129, 0.22) 0%, transparent 45%)`,
-            `radial-gradient(circle at ${mirrored ? '20% 35%' : '80% 30%'}, rgba(124, 58, 237, 0.22) 0%, transparent 45%)`,
+            `radial-gradient(circle at ${mirrored ? '70% 60%' : '35% 62%'}, rgba(${primary.rgbString}, 0.18) 0%, transparent 45%)`,
+            `radial-gradient(circle at ${mirrored ? '20% 35%' : '80% 30%'}, rgba(${accent.rgbString}, 0.14) 0%, transparent 45%)`,
           ].join(', '),
         }}
       />

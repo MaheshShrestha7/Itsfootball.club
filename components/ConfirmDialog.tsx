@@ -8,6 +8,7 @@ import { AlertTriangle, Info } from 'lucide-react';
 //
 //   if (!(await confirmAction({ title: 'Delete sponsor?', message: '…', confirmLabel: 'Delete' }))) return;
 //   await notify('Could not open the receipt.');
+//   const reason = await askText({ title: 'Why is it rejected?', label: 'Reason' }); // null = cancelled
 //
 // <ConfirmRoot /> is mounted once in app/layout.tsx.
 
@@ -22,7 +23,20 @@ export interface ConfirmOptions {
   alertOnly?: boolean;
 }
 
-type Request = ConfirmOptions & { resolve: (ok: boolean) => void };
+/** A one-line text box in the dialog (the prompt() case) */
+export interface AskTextOptions extends Omit<ConfirmOptions, 'alertOnly'> {
+  label: string;
+  placeholder?: string;
+  defaultValue?: string;
+  type?: 'text' | 'url';
+  /** OK stays disabled until something is typed */
+  required?: boolean;
+}
+
+type Request = ConfirmOptions & {
+  input?: Omit<AskTextOptions, keyof ConfirmOptions>;
+  resolve: (ok: boolean, value?: string) => void;
+};
 
 let show: ((req: Request) => void) | null = null;
 
@@ -34,12 +48,20 @@ export function confirmAction(options: ConfirmOptions): Promise<boolean> {
   });
 }
 
+export function askText({ label, placeholder, defaultValue, type, required, ...options }: AskTextOptions): Promise<string | null> {
+  return new Promise(resolve => {
+    if (!show) return resolve(window.prompt(options.title, defaultValue));
+    show({ ...options, input: { label, placeholder, defaultValue, type, required }, resolve: (ok, value) => resolve(ok ? (value ?? '') : null) });
+  });
+}
+
 export function notify(title: string, message?: string): Promise<void> {
   return confirmAction({ title, message, alertOnly: true, confirmLabel: 'OK' }).then(() => undefined);
 }
 
 export function ConfirmRoot() {
   const [req, setReq] = useState<Request | null>(null);
+  const [value, setValue] = useState('');
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -51,11 +73,12 @@ export function ConfirmRoot() {
   }, []);
 
   useEffect(() => {
+    setValue(req?.input?.defaultValue || '');
     if (req && ref.current && !ref.current.open) ref.current.showModal();
   }, [req]);
 
   const close = (ok: boolean) => {
-    req?.resolve(ok);
+    req?.resolve(ok, req.input ? value.trim() : undefined);
     setReq(null);
     ref.current?.close();
   };
@@ -77,6 +100,14 @@ export function ConfirmRoot() {
             <div className="min-w-0">
               <h2 id="confirm-dialog-title" className="confirm-dialog-title">{req.title}</h2>
               {req.message && <p id="confirm-dialog-message" className="confirm-dialog-message">{req.message}</p>}
+              {req.input && (
+                <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+                  <label htmlFor="confirm-dialog-input" className="form-label">{req.input.label}</label>
+                  <input id="confirm-dialog-input" className="form-input" type={req.input.type || 'text'} autoFocus
+                    inputMode={req.input.type === 'url' ? 'url' : undefined} placeholder={req.input.placeholder}
+                    value={value} onChange={e => setValue(e.target.value)} />
+                </div>
+              )}
             </div>
           </div>
           <div className="confirm-dialog-actions">
@@ -85,7 +116,8 @@ export function ConfirmRoot() {
                 {req.cancelLabel || 'Cancel'}
               </button>
             )}
-            <button type="submit" className={`btn ${req.danger ? 'btn-danger' : 'btn-primary'}`} autoFocus={!req.danger}>
+            <button type="submit" className={`btn ${req.danger ? 'btn-danger' : 'btn-primary'}`} autoFocus={!req.danger && !req.input}
+              disabled={!!req.input?.required && !value.trim()}>
               {req.confirmLabel || (req.alertOnly ? 'OK' : 'Confirm')}
             </button>
           </div>

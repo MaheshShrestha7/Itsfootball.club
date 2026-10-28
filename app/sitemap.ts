@@ -70,6 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (sponsorClubIds.includes(club.id)) entries.push({ url: url(`/${club.slug}/sponsor`), changeFrequency: 'monthly', priority: 0.4 });
     if (matches.some(m => m.club_id === club.id)) entries.push({ url: url(`/${club.slug}/fixtures`), changeFrequency: 'daily', priority: 0.7 });
     if (events.some(e => e.club_id === club.id)) entries.push({ url: url(`/${club.slug}/events`), changeFrequency: 'weekly', priority: 0.5 });
+    if (news.some(n => n.club_id === club.id)) entries.push({ url: url(`/${club.slug}/news`), changeFrequency: 'weekly', priority: 0.5 });
     const clubTeams = teams.filter(t => t.club_id === club.id);
     if (clubTeams.length) entries.push({ url: url(`/${club.slug}/teams`), changeFrequency: 'weekly', priority: 0.6 });
     for (const t of clubTeams) entries.push({ url: url(`/${club.slug}/teams/${t.slug}`), changeFrequency: 'weekly', priority: 0.6 });

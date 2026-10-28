@@ -6,7 +6,7 @@ import {
   Link2, ImagePlus, Youtube, RemoveFormatting, Loader2,
 } from 'lucide-react';
 import { uploadImage } from '@/components/ImageUploadZone';
-import { notify } from '@/components/ConfirmDialog';
+import { askText, notify } from '@/components/ConfirmDialog';
 import { sanitizeArticleHtml } from '@/lib/article-html';
 import { textToHtml, toArticleHtml } from '@/lib/article-text';
 import { videoEmbed } from '@/lib/video';
@@ -88,14 +88,14 @@ export default function RichTextEditor({ id, value, onChange, clubId, placeholde
   const insertHtml = (html: string) => exec('insertHTML', html);
 
   const addLink = async () => {
-    const url = window.prompt('Link address (https://…)')?.trim();
+    const url = (await askText({ title: 'Add a link', label: 'Link address', placeholder: 'https://…', type: 'url', confirmLabel: 'Add link', required: true }))?.trim();
     if (!url) return;
     if (!/^(https?:\/\/|mailto:)/i.test(url)) return notify('That link won\'t work', 'Start it with https:// (or mailto: for an email address).');
     exec('createLink', url);
   };
 
   const addVideo = async () => {
-    const url = window.prompt('YouTube link, or a link to an .mp4 file')?.trim();
+    const url = (await askText({ title: 'Add a video', label: 'YouTube link, or a link to an .mp4 file', placeholder: 'https://youtu.be/…', type: 'url', confirmLabel: 'Add video', required: true }))?.trim();
     if (!url) return;
     const video = videoEmbed(url);
     if (!video) return notify('That video can\'t be embedded', 'Paste a YouTube link (youtube.com or youtu.be) or an https link ending in .mp4.');

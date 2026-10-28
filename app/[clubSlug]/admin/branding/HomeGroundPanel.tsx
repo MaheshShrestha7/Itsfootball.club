@@ -12,6 +12,7 @@ import {
   MIN_INDEXABLE_FACTS, SUGGESTION_TOPICS, councilName, factCount, groundPath, mapEmbedUrl, parseLatLng, type GroundRow, type Pitch,
 } from '@/lib/grounds';
 import type { Club } from '@/lib/supabase/types';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 interface Suggestion { id: string; ground_name?: string; topic: string; message: string; contact: string | null; created_at: string }
 
@@ -160,7 +161,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
   };
 
   const unlink = async () => {
-    if (!window.confirm('Remove this ground as your home ground? The ground guide stays in the directory.')) return;
+    if (!(await confirmAction({ title: 'Remove your home ground?', message: 'The ground guide stays in the directory.', confirmLabel: 'Remove', danger: true }))) return;
     setBusy(true);
     const r = await api('POST', { clubId: club.id, action: 'unlink' });
     setBusy(false);

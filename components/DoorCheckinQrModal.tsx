@@ -21,7 +21,7 @@ export default function DoorCheckinQrModal({
   title,
   subtitle,
   checkinUrl,
-  badgeLabel = 'TURNSTILE DOOR STATION',
+  badgeLabel = 'DOOR CHECK-IN',
   disabledNotice,
   onClose,
   extraActions,

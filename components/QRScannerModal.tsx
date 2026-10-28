@@ -230,10 +230,10 @@ export default function QRScannerModal({
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
               {mode === 'match_checkin' && targetMatch
-                ? `Scanning gate passes & tickets for: ${targetMatch.home_team_name} vs ${targetMatch.away_team_name}`
+                ? `Scanning passes and tickets for: ${targetMatch.home_team_name} vs ${targetMatch.away_team_name}`
                 : mode === 'event_checkin' && targetEvent
-                ? `Scanning gate tickets for: ${targetEvent.title}`
-                : 'Present digital season pass or member QR code at stadium gates'}
+                ? `Scanning tickets for: ${targetEvent.title}`
+                : 'Scan a member pass or ticket QR code at the door'}
             </p>
           </div>
 

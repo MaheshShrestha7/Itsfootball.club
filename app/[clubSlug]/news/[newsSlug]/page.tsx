@@ -9,6 +9,8 @@ import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 import { decodeSlugParam, newsPath } from '@/lib/slugs';
+import { newestFirst } from '@/lib/news';
+import ShareLinkButton from '@/components/ShareLinkButton';
 
 /** A club news article on its own page (replaces the old pop-up on the club home page), so it can be shared, indexed and cited */
 export default function NewsArticlePage({
@@ -25,7 +27,7 @@ export default function NewsArticlePage({
   const clubNews = news.filter(n => n.club_id === club.id);
   const article = clubNews.find(n => n.slug === slug);
   const backLink = (
-    <Link href={`/${club.slug}#news`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+    <Link href={`/${club.slug}/news`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
       <ArrowLeft size={14} />
       <span>All {club.name} news</span>
     </Link>
@@ -39,12 +41,12 @@ export default function NewsArticlePage({
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
           This article may have been moved or removed.
         </p>
-        <Link href={`/${club.slug}#news`} className="btn btn-primary">Back to club news</Link>
+        <Link href={`/${club.slug}/news`} className="btn btn-primary">Back to club news</Link>
       </div>
     );
   }
 
-  const more = clubNews.filter(n => n.id !== article.id).slice(0, 3);
+  const more = newestFirst(clubNews.filter(n => n.id !== article.id)).slice(0, 3);
 
   return (
     <div className="container" style={{ padding: '2.5rem 1.5rem 4rem 1.5rem', maxWidth: '760px' }}>
@@ -69,9 +71,12 @@ export default function NewsArticlePage({
         <h1 style={{ fontSize: 'clamp(1.75rem, 4.5vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '0.75rem' }}>
           {article.title}
         </h1>
-        <p className="text-meta" style={{ marginBottom: '1.5rem' }}>
-          By {article.author_name || `${club.name} Media Team`} · <LocalTime value={article.published_at} />
-        </p>
+        <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem 1rem', marginBottom: '1.5rem' }}>
+          <p className="text-meta" style={{ margin: 0 }}>
+            By {article.author_name || club.name} · <LocalTime value={article.published_at} />
+          </p>
+          <ShareLinkButton url={newsPath(club.slug, article.slug)} title={article.title} text={article.summary || undefined} />
+        </div>
         {article.summary && (
           <p style={{ fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--text-primary)', fontWeight: 500, marginBottom: '1.5rem' }}>
             {article.summary}
