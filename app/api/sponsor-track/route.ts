@@ -11,8 +11,10 @@ export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req.headers);
     // Generous limit: a single page view can fire an impression + viewable_impression
-    // per sponsor shown, plus the occasional click.
-    if (!(await durableRateLimit(`sponsor-track:${ip}`, 120, 5 * 60 * 1000))) {
+    // per sponsor shown, plus the occasional click. Matchday crowds share one mobile network
+    // address, so it is per network and wide (SPE-23); each browser is already counted at most
+    // once per sponsor and placement every 30 minutes (trackSponsorEvent)
+    if (!(await durableRateLimit(`sponsor-track:${ip}`, 600, 5 * 60 * 1000))) {
       return NextResponse.json({ success: false }, { status: 429 });
     }
 

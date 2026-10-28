@@ -174,7 +174,7 @@ type MemberLite = { id: string; full_name: string; membership_status?: string; m
 // ------------------------------------------------------------------------------------------------
 function Overview({ money, payments, expenses, members, sponsors, onReview }: Shared & {
   payments: Payment[]; expenses: Expense[]; members: MemberLite[];
-  sponsors: { id: string; name: string; package_status?: string; package_value?: number }[]; onReview: () => void;
+  sponsors: { id: string; name: string; package_status?: string; package_value?: number | null }[]; onReview: () => void;
 }) {
   const paid = payments.filter(p => p.status === 'paid');
   const income = paid.reduce((n, p) => n + p.amount_cents, 0);
@@ -194,7 +194,11 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
     .map(m => ({ ...m, days: Math.ceil((new Date(m.membership_expires_at!).getTime() - now) / 86400000) }))
     .filter(m => m.days <= 30)
     .sort((a, b) => a.days - b.days);
-  const pledges = sponsors.filter(s => s.package_status === 'confirmed' || s.package_status === 'prospect');
+  // Deals with money still to come: not ones paying in kind (no value, SPE-21), and not ones whose
+  // bank transfer receipt is already waiting above (SPE-7)
+  const receiptFrom = new Set(toReview.filter(p => p.kind === 'sponsorship' && p.sponsor_id).map(p => p.sponsor_id));
+  const pledges = sponsors.filter(s => (s.package_status === 'confirmed' || s.package_status === 'prospect')
+    && Number(s.package_value) > 0 && !receiptFrom.has(s.id));
 
   const stat = (label: string, value: string, color: string) => (
     <div className="glass-panel" style={{ padding: '1.1rem 1.25rem' }}>
@@ -243,7 +247,7 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {pledges.map(s => (
                 <li key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <span>{s.name} <span className="text-muted">({s.package_status})</span></span>
+                  <span>{s.name} <span className="text-muted">({s.package_status === 'prospect' ? 'not paid yet' : 'agreed'})</span></span>
                   <span style={{ fontWeight: 700 }}>{s.package_value ? money(Math.round(s.package_value * 100)) : '-'}</span>
                 </li>
               ))}
@@ -322,10 +326,21 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     load();
   };
   const reject = async (p: Payment) => {
-    const reason = await askText({ title: 'Reject this transfer?', message: 'The payment is marked rejected. Your reason is only shown to the club\'s finance team.', label: 'Reason', placeholder: 'e.g. No money received yet', confirmLabel: 'Reject transfer', danger: true });
+    // SPE-8: a sponsor is emailed the reason with a link to pay again; for anyone else it stays with the club
+    const sponsorship = p.kind === 'sponsorship';
+    const reason = await askText({ title: 'Reject this transfer?', message: sponsorship ? 'The payment is marked rejected. The sponsor is emailed your note with a link to pay again.' : 'The payment is marked rejected. Your reason is only shown to the club\'s finance team.', label: sponsorship ? 'Note to the sponsor' : 'Reason', placeholder: 'e.g. No money received yet', confirmLabel: 'Reject transfer', danger: true });
     if (reason === null) return;
     const { error } = await db!.from('payments').update({ status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() }).eq('id', p.id);
     if (error) return flash('error', error.message);
+    if (sponsorship) {
+      const res = await fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
+      }).then(r => r.json()).catch(() => null);
+      flash('ok', res?.sent ? 'Payment rejected. The sponsor was emailed your note and a link to pay again.' : 'Payment rejected. The email didn\'t send, so let the sponsor know yourself.');
+      return load();
+    }
     flash('ok', 'Payment rejected.');
     load();
   };
@@ -878,7 +893,12 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
         <input id="set-abn" className="form-input" inputMode="numeric" autoComplete="off" style={{ maxWidth: 240 }} value={abn}
           placeholder="12 345 678 901" aria-invalid={abnWrong} onChange={e => setAbn(e.target.value)}
           onBlur={() => abnDigits && setAbn(formatAbn(abnDigits))} />
-        {abnWrong && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>That ABN doesn&apos;t look right: it should be 11 digits.</p>}
+        {/* SPE-22: 11 digits that fail the ABN check get their own message */}
+        {abnWrong && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>
+          {abn.replace(/\D/g, '').length === 11
+            ? <>That isn&apos;t a valid ABN: one of the digits is probably wrong. Check it on abr.business.gov.au.</>
+            : <>That ABN doesn&apos;t look right: it should be 11 digits.</>}
+        </p>}
       </div>
       <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer' }}>
         <input type="checkbox" checked={gst} onChange={e => setGst(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />

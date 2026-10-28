@@ -33,6 +33,11 @@ assert.deepEqual(items.map(i => i.key), ['result-m1', 'applications', 'messages'
 assert.equal(items[1].text, '2 applications to approve');
 assert.equal(items[1].href, '/rfc/admin/people?tab=applications');
 assert.equal(items[2].text, '1 unread message');
+// SPE-10: opens the Inbox tab where most of the unread messages are
+const inboxHref = (unreadContact: number, unreadMessages: number) => attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages, unreadContact, ordersToHandOut: 0 }, [], NOW)[0].href;
+assert.equal(inboxHref(4, 4), '/rfc/admin/inquiries?tab=contact');
+assert.equal(inboxHref(0, 3), '/rfc/admin/inquiries');
+assert.equal(inboxHref(1, 5), '/rfc/admin/inquiries');
 assert.equal(items[3].href, '/rfc/admin/lineup/draft?match=m2');
 assert.deepEqual(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0 }, [], NOW), []);
 

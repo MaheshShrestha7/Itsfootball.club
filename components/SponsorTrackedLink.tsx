@@ -38,7 +38,8 @@ export default function SponsorTrackedLink({
     const markViewable = () => {
       if (viewableFired || viewableSince === null) return;
       viewableFired = true;
-      trackSponsorEvent(clubId, sponsorId, 'viewable_impression', { placement, dwellMs: Date.now() - viewableSince });
+      // No dwell time: sent at the 1 second mark it was always about 1.0s, so it meant nothing (SPE-12)
+      trackSponsorEvent(clubId, sponsorId, 'viewable_impression', { placement });
     };
 
     const observer = new IntersectionObserver(

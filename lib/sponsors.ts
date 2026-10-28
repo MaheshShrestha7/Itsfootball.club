@@ -88,13 +88,33 @@ export function renewedEndDate(endsOn: string | null | undefined, now = Date.now
 }
 
 /** A new sponsorship's end date: the end of the club's current season, or the next season if the
- *  current one is over, otherwise twelve months from today */
+ *  current one is over or ends within 90 days (SPE-13: a yearly deal signed in late October shouldn't
+ *  end in November), otherwise twelve months from today */
 export function defaultSponsorEnd(seasons: Pick<ClubSeason, 'start_date' | 'end_date' | 'is_current'>[], now = Date.now()): string {
   const today = localDateISO(now);
-  const current = seasons.find(s => s.is_current && s.end_date >= today);
+  const soon = localDateISO(now + 90 * DAY);
+  const current = seasons.find(s => s.is_current && s.end_date >= soon);
   if (current) return current.end_date;
   const next = seasons.filter(s => s.start_date > today && s.end_date).sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
   return next?.end_date ?? renewedEndDate(today, now);
+}
+
+/** SPE-14: what a sponsorship payment paid for, so a renewal doesn't look like the first payment again.
+ *  `renewal` from the description preparePayment writes ("Gold renewal (Acme)"); `period` from
+ *  covers_from / covers_until (migration 20261136), e.g. "7 Nov 2026 to 7 Nov 2027" */
+export function sponsorshipPaidFor(payment: { description?: string | null; covers_from?: string | null; covers_until?: string | null }): { renewal: boolean; period: string | null } {
+  return {
+    renewal: / renewal \(/.test(payment.description || ''),
+    period: payment.covers_until
+      ? `${payment.covers_from ? `${formatEndDate(payment.covers_from)} to ` : 'Until '}${formatEndDate(payment.covers_until)}`
+      : null,
+  };
+}
+
+/** The season a new sponsor is filed under: the club's current season by name (Seasons), else the
+ *  usual "2026/27" label (SPE-13) */
+export function defaultSponsorSeason(seasons: Pick<ClubSeason, 'name' | 'is_current'>[], fallback: string): string {
+  return seasons.find(s => s.is_current)?.name?.trim() || fallback;
 }
 
 const STALE_SIGNUP_MS = 60 * DAY;
@@ -139,10 +159,11 @@ const SIGNUP_FRESH_MS = 14 * 24 * 3600 * 1000;
  *  'paid' (hidden, waiting for an admin to tap Put on site), 'unpaid' (a fresh, hidden prospect),
  *  or null for everything else. Older unpaid prospects stay on the Sponsors page but stop nagging. */
 export function sponsorSignupStage(
-  sponsor: Pick<Sponsor, 'is_active' | 'package_status' | 'created_at'>,
+  sponsor: Pick<Sponsor, 'is_active' | 'package_status' | 'created_at'> & { went_live_at?: string | null },
   now = Date.now()
 ): 'paid' | 'unpaid' | null {
-  if (sponsor.is_active) return null;
+  // SPE-6: one that has been on the site and was hidden by an admin is not a new sign-up
+  if (sponsor.is_active || sponsor.went_live_at) return null;
   if (sponsor.package_status === 'paid') return 'paid';
   if (sponsor.package_status !== 'prospect') return null;
   const created = sponsor.created_at ? Date.parse(sponsor.created_at) : NaN;

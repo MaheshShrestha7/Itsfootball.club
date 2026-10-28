@@ -11,6 +11,8 @@ export interface AttentionCounts {
   pendingApplications: number;
   receiptsToReview: number;
   unreadMessages: number;
+  /** How many of those came through the website's contact form (the Inbox's Contact form tab) */
+  unreadContact?: number;
   ordersToHandOut: number;
   /** Paid sponsors still hidden: they go on the site when an admin taps Put on site */
   sponsorsToPutOnSite?: number;
@@ -63,7 +65,7 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   }
   if (counts.pendingApplications) items.push({ key: 'applications', area: 'members', count: counts.pendingApplications, text: `${plural(counts.pendingApplications, 'application', 'applications')} to approve`, href: `${base}/people?tab=applications`, tone: 'urgent' });
   if (counts.receiptsToReview) items.push({ key: 'receipts', area: 'finance', count: counts.receiptsToReview, text: `${plural(counts.receiptsToReview, 'bank transfer receipt', 'bank transfer receipts')} to check`, href: `${base}/finance`, tone: 'urgent' });
-  if (counts.unreadMessages) items.push({ key: 'messages', area: 'inquiries', count: counts.unreadMessages, text: `${plural(counts.unreadMessages, 'unread message', 'unread messages')}`, href: `${base}/inquiries`, tone: 'normal' });
+  if (counts.unreadMessages) items.push({ key: 'messages', area: 'inquiries', count: counts.unreadMessages, text: `${plural(counts.unreadMessages, 'unread message', 'unread messages')}`, href: `${base}/inquiries${counts.unreadContact && counts.unreadContact * 2 >= counts.unreadMessages ? '?tab=contact' : ''}`, tone: 'normal' });
   if (counts.sponsorsToPutOnSite) items.push({ key: 'sponsors-paid', area: 'sponsors', count: counts.sponsorsToPutOnSite, text: `${plural(counts.sponsorsToPutOnSite, 'paid sponsor', 'paid sponsors')} waiting to go on the site`, href: `${base}/sponsors?view=new`, tone: 'urgent' });
   if (counts.sponsorSignups) items.push({ key: 'sponsors-new', area: 'sponsors', count: counts.sponsorSignups, text: `${plural(counts.sponsorSignups, 'new sponsor sign-up', 'new sponsor sign-ups')} not paid yet`, href: `${base}/sponsors?view=new`, tone: 'normal' });
   if (counts.sponsorChanges) items.push({ key: 'sponsors-sent', area: 'sponsors', count: counts.sponsorChanges, text: `${counts.sponsorChanges === 1 ? '1 sponsor sent' : `${counts.sponsorChanges} sponsors sent`} a new logo or website to check`, href: `${base}/sponsors`, tone: 'normal' });

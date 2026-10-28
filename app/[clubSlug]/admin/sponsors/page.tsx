@@ -5,7 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
 import {
-  daysUntilEnd, defaultSponsorEnd, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
+  daysUntilEnd, defaultSponsorEnd, defaultSponsorSeason, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
   hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel, typedWebsite,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
@@ -31,7 +31,10 @@ const ENDED: SponsorPackageStatus[] = ['expired', 'cancelled'];
 /** Marked Expired or Cancelled, or past its end date */
 const isEnded = (s: Sponsor) => (!!s.package_status && ENDED.includes(s.package_status)) || isPastEndDate(s);
 /** Signed up on the club's website and not put on the site yet (paid or not) */
-const isNewSignup = (s: Sponsor) => !s.is_active && !isEnded(s) && (s.package_status === 'prospect' || s.package_status === 'paid');
+// SPE-6: one that has been on the site (went_live_at, migration 20261136) and was hidden later is Hidden
+const isNewSignup = (s: Sponsor) => !s.is_active && !s.went_live_at && !isEnded(s) && (s.package_status === 'prospect' || s.package_status === 'paid');
+/** A deal with no money to pay: price on request, agreed in goods or services (SPE-21) */
+const inKind = (s: Pick<Sponsor, 'package_value'>) => !(Number(s.package_value) > 0);
 
 type View = 'all' | 'new' | 'live' | 'hidden' | 'ending' | 'ended';
 const VIEWS: { id: View; label: string }[] = [
@@ -121,7 +124,29 @@ export default function AdminSponsorsPage({
     : clubSponsors.filter(sp => viewOf(sp) === view);
   const staleSignups = clubSponsors.filter(sp => isStaleSignup(sp));
 
-  const putOnSite = (sp: Sponsor) => updateSponsor(sp.id, { is_active: true });
+  const putOnSite = (sp: Sponsor) => updateSponsor(sp.id, {
+    is_active: true,
+    // Kept here too so hiding them later in this visit files them under Hidden (the database sets it)
+    went_live_at: sp.went_live_at || new Date().toISOString(),
+    // SPE-21: a price-on-request sign-up the club has agreed with is no longer "in talks"
+    ...(sp.package_status === 'prospect' && inKind(sp) ? { package_status: 'confirmed' as const } : {}),
+  });
+  // Sponsorship payments by sponsor (Treasurer and Commercial Officer can read them, migration 20261136):
+  // who has paid (SPE-15) and whose bank transfer receipt is waiting to be checked (SPE-7)
+  const [sponsorPayments, setSponsorPayments] = useState<{ paid: Set<string>; receipt: Set<string> }>(() => ({ paid: new Set(), receipt: new Set() }));
+  useEffect(() => {
+    getSupabaseClient()?.from('payments').select('sponsor_id, status')
+      .eq('club_id', club.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review'])
+      .then(({ data }) => {
+        const rows = (data || []) as { sponsor_id: string | null; status: string }[];
+        setSponsorPayments({
+          paid: new Set(rows.filter(r => r.status === 'paid' && r.sponsor_id).map(r => r.sponsor_id!)),
+          receipt: new Set(rows.filter(r => r.status === 'awaiting_review' && r.sponsor_id).map(r => r.sponsor_id!)),
+        });
+      });
+  }, [club.id]);
+  // SPE-15: bringing back or renewing a sponsor who paid keeps them Paid
+  const backOnStatus = (sp: Sponsor): SponsorPackageStatus => (sponsorPayments.paid.has(sp.id) ? 'paid' : 'confirmed');
   const endSponsorship = async (sp: Sponsor) => {
     if (await confirmAction({
       title: `End the sponsorship with ${sp.name}?`,
@@ -139,11 +164,11 @@ export default function AdminSponsorsPage({
         ? 'Use this once they have agreed to carry on. If they pay through a renewal link instead, this happens by itself.'
         : 'Use this once they have agreed to carry on. They go back on your club site straight away.',
       confirmLabel: 'Renew',
-    })) updateSponsor(sp.id, { ends_on: until, ...(isEnded(sp) ? { is_active: true, package_status: 'confirmed' as const } : {}) });
+    })) updateSponsor(sp.id, { ends_on: until, ...(isEnded(sp) ? { is_active: true, package_status: backOnStatus(sp) } : {}) });
   };
   const bringBack = (sp: Sponsor) => updateSponsor(sp.id, {
     is_active: true,
-    package_status: 'confirmed',
+    package_status: backOnStatus(sp),
     // Past its end date it would stay off the site, so it gets a new one
     ...(renewalsReady && isPastEndDate(sp) ? { ends_on: renewedEndDate(sp.ends_on) } : {}),
   });
@@ -170,7 +195,7 @@ export default function AdminSponsorsPage({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) return setLinkResult({ sponsorId: sp.id, note: json.error || 'The link could not be sent.' });
       setLinkResult({ sponsorId: sp.id, link: json.link, emailed: json.emailed, note: json.note });
-      if (json.emailed && renewalsReady) updateSponsor(sp.id, { link_sent_at: new Date().toISOString() });
+      if (json.emailed && renewalsReady) updateSponsor(sp.id, { link_sent_at: new Date().toISOString(), link_kind: kind });
     } catch {
       setLinkResult({ sponsorId: sp.id, note: 'The link could not be sent. Check your connection and try again.' });
     }
@@ -201,12 +226,27 @@ export default function AdminSponsorsPage({
     }
   };
   // A logo or website they sent from that page: nothing changes on the site until Use it
-  const acceptSentChange = (sp: Sponsor) => updateSponsor(sp.id, {
-    ...(sp.pending_logo_url ? { logo_url: sp.pending_logo_url } : {}),
-    ...(sp.pending_website_url ? { website_url: sp.pending_website_url } : {}),
-    pending_logo_url: null, pending_website_url: null, pending_sent_at: null,
-  });
-  const keepOld = (sp: Sponsor) => updateSponsor(sp.id, { pending_logo_url: null, pending_website_url: null, pending_sent_at: null });
+  // SPE-17: then the sponsor is emailed and their page says which (app/api/sponsors/change-reviewed)
+  const tellSponsor = async (sp: Sponsor, used: boolean) => {
+    const token = await getAccessToken();
+    fetch('/api/sponsors/change-reviewed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ clubId: club.id, sponsorId: sp.id, used, logo: !!sp.pending_logo_url, website: !!sp.pending_website_url }),
+    }).catch(() => { /* best effort: the change itself is saved either way */ });
+  };
+  const acceptSentChange = (sp: Sponsor) => {
+    updateSponsor(sp.id, {
+      ...(sp.pending_logo_url ? { logo_url: sp.pending_logo_url } : {}),
+      ...(sp.pending_website_url ? { website_url: sp.pending_website_url } : {}),
+      pending_logo_url: null, pending_website_url: null, pending_sent_at: null,
+    });
+    tellSponsor(sp, true);
+  };
+  const keepOld = (sp: Sponsor) => {
+    updateSponsor(sp.id, { pending_logo_url: null, pending_website_url: null, pending_sent_at: null });
+    tellSponsor(sp, false);
+  };
 
   // Order fans see within a tier: drag the handle on a computer, or the arrows on a phone
   const [dragId, setDragId] = useState<string | null>(null);
@@ -254,7 +294,8 @@ export default function AdminSponsorsPage({
     contact_phone: '',
     package_value: '' as number | '',
     package_status: 'confirmed' as SponsorPackageStatus,
-    season: defaultSeasonLabel(),
+    // SPE-13: the club's current season by name, as Seasons calls it
+    season: defaultSponsorSeason(seasons.filter(se => se.club_id === club.id), defaultSeasonLabel()),
     // The end of the club's season (Seasons), or a year from today
     ends_on: seasonEnd,
   };
@@ -321,7 +362,9 @@ export default function AdminSponsorsPage({
     };
 
     if (editingId) {
-      updateSponsor(editingId, payload);
+      const before = clubSponsors.find(sp => sp.id === editingId);
+      // Shown now: no longer a new sign-up if they're hidden again later in this visit (SPE-6)
+      updateSponsor(editingId, { ...payload, ...(payload.is_active && !before?.went_live_at ? { went_live_at: new Date().toISOString() } : {}) });
     } else {
       addSponsor({
         club_id: club.id,
@@ -495,9 +538,11 @@ export default function AdminSponsorsPage({
                     <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
                       {sponsor.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.2rem 0.35rem', marginTop: '2px' }}>
                       <span className="badge" style={{
                         fontSize: '0.7rem',
+                        // SPE-24: the badge stays on one line; the logo size moves under it instead
+                        whiteSpace: 'nowrap',
                         backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(var(--tint-rgb), 0.08)',
                         color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-muted)',
                       }}>
@@ -551,6 +596,14 @@ export default function AdminSponsorsPage({
           const canUp = movable && index! > 0 && ordered![index! - 1].tier === sponsor.tier;
           const canDown = movable && index! < ordered!.length - 1 && ordered![index! + 1].tier === sponsor.tier;
           const result = linkResult?.sponsorId === sponsor.id ? linkResult : null;
+          // SPE-7: they paid by bank transfer and the receipt is waiting for the treasurer
+          const receiptWaiting = sponsor.package_status === 'prospect' && sponsorPayments.receipt.has(sponsor.id);
+          const statusText = receiptWaiting ? 'Receipt to check'
+            : stage === 'new' && sponsor.package_status === 'prospect' ? 'Not paid yet'
+            : sponsor.package_status === 'confirmed' && inKind(sponsor) ? 'Agreed, in kind'
+            : sponsor.package_status ? PACKAGE_STATUS_LABEL[sponsor.package_status] : '';
+          // SPE-16: older links (before migration 20261136) don't say which they were
+          const sentLinkName = sponsor.link_kind === 'renewal' ? 'Renewal' : sponsor.link_kind === 'payment' || stage === 'new' ? 'Payment' : null;
           const actionStyle: React.CSSProperties = { minHeight: '40px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' };
           return (
             <div
@@ -628,11 +681,11 @@ export default function AdminSponsorsPage({
                     )}
                     {sponsor.package_status && (
                       <span className="badge" style={{
-                        backgroundColor: sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                        color: sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
+                        backgroundColor: receiptWaiting ? 'rgba(245, 158, 11, 0.15)' : sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                        color: receiptWaiting ? 'var(--c-amber)' : sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
                         fontSize: '0.7rem',
                       }}>
-                        {stage === 'new' && sponsor.package_status === 'prospect' ? 'Not paid yet' : PACKAGE_STATUS_LABEL[sponsor.package_status]}
+                        {statusText}
                       </span>
                     )}
                     {stage !== 'ended' && onSiteBadge(sponsor)}
@@ -675,7 +728,7 @@ export default function AdminSponsorsPage({
                     {sponsor.link_sent_at && (stage === 'new' || endingSoon || stage === 'ended') && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Check size={11} />
-                        {stage === 'new' ? 'Payment' : 'Renewal'} link sent {new Date(sponsor.link_sent_at).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })}
+                        {sentLinkName ? `${sentLinkName} link` : 'Link'} sent {new Date(sponsor.link_sent_at).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })}
                       </span>
                     )}
                   </div>
@@ -732,14 +785,19 @@ export default function AdminSponsorsPage({
                   </span>
                 )}
                 {/* Price-on-request sign-ups have nothing to pay: the club replies to their Inbox message */}
-                {stage === 'new' && sponsor.package_status === 'prospect' && Number(sponsor.package_value) > 0 && (
+                {receiptWaiting && (
+                  <a href={`/${club.slug}/admin/finance?tab=income`} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <DollarSign size={14} /> Check the receipt in Finance
+                  </a>
+                )}
+                {stage === 'new' && sponsor.package_status === 'prospect' && Number(sponsor.package_value) > 0 && !receiptWaiting && (
                   <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'payment')} className="btn btn-secondary btn-sm" style={actionStyle}>
-                    <Send size={14} /> {sponsor.link_sent_at ? 'Send payment link again' : 'Send payment link'}
+                    <Send size={14} /> {sponsor.link_sent_at && sponsor.link_kind !== 'renewal' ? 'Send payment link again' : 'Send payment link'}
                   </button>
                 )}
                 {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
                   <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'renewal')} className="btn btn-secondary btn-sm" style={actionStyle}>
-                    <Send size={14} /> {sponsor.link_sent_at ? 'Send renewal link again' : 'Send renewal link'}
+                    <Send size={14} /> {sponsor.link_sent_at && sponsor.link_kind === 'renewal' ? 'Send renewal link again' : 'Send renewal link'}
                   </button>
                 )}
                 {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (

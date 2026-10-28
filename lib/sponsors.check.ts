@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, canPayRenewal, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, canPayRenewal, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -51,6 +51,7 @@ assert.equal(sponsorSignupStage({ is_active: false, package_status: 'prospect', 
 assert.equal(sponsorSignupStage({ is_active: true, package_status: 'paid' }, NOW), null, 'already on the site');
 assert.equal(sponsorSignupStage({ is_active: false, package_status: 'expired' }, NOW), null);
 assert.equal(sponsorSignupStage({ is_active: false, package_status: 'confirmed' }, NOW), null, 'hidden by an admin');
+assert.equal(sponsorSignupStage({ is_active: false, package_status: 'paid', created_at: ago(40), went_live_at: ago(30) }, NOW), null, 'SPE-6: paid, was on the site, hidden by an admin');
 
 // Report chart: a bar a day up to 31 days, a bar a week beyond, covering the whole range
 const days = chartBuckets(new Date(2026, 9, 1, 15), new Date(2026, 9, 7, 12));
@@ -97,7 +98,15 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
 
   // Default end: the current season's end, else the next season's, else a year from today
   const season = (start_date: string, end_date: string, is_current = false) => ({ start_date, end_date, is_current });
-  assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-12-15', true)], noon), '2026-12-15');
+  assert.equal(defaultSponsorEnd([season('2026-02-01', '2027-06-15', true)], noon), '2027-06-15');
+  // SPE-13: a season ending within 90 days gives the next one, else a year from today
+  assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-11-30', true)], noon), '2027-10-28');
+  assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-11-30', true), season('2027-02-01', '2027-09-30')], noon), '2027-09-30');
+  assert.equal(defaultSponsorSeason([{ name: '2026', is_current: true }, { name: '2025', is_current: false }], '2026/27'), '2026');
+  assert.equal(defaultSponsorSeason([], '2026/27'), '2026/27');
+  // SPE-14: a renewal says so, with the period it pays for
+  assert.deepEqual(sponsorshipPaidFor({ description: 'Gold Package renewal (Acme Plumbing)', covers_from: '2026-11-07', covers_until: '2027-11-07' }), { renewal: true, period: '7 Nov 2026 to 7 Nov 2027' });
+  assert.deepEqual(sponsorshipPaidFor({ description: 'Gold Package (Kelly Bakery)', covers_until: null }), { renewal: false, period: null });
   assert.equal(defaultSponsorEnd([season('2026-02-01', '2026-09-30', true), season('2027-02-01', '2027-09-30'), season('2028-02-01', '2028-09-30')], noon), '2027-09-30');
   assert.equal(defaultSponsorEnd([], noon), '2027-10-28');
 

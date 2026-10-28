@@ -81,7 +81,7 @@ export const ENTITIES: EntityConfig[] = [
   { key: 'matchEvents', table: 'match_events' },
   { key: 'events', table: 'events' },
   // The platform home page shows every club's sponsors
-  { key: 'sponsors', table: 'sponsors', scope: 'all', extraReadSources: ['sponsors_public'] },
+  { key: 'sponsors', table: 'sponsors', scope: 'all', extraReadSources: ['sponsors_public'], clearable: ['event_id', 'package_value'] },
   { key: 'news', table: 'news_articles' },
   { key: 'gallery', table: 'media_gallery' },
   { key: 'clubScoreRules', table: 'clubscore_rules' },

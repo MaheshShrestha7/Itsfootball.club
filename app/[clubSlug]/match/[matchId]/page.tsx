@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth-context';
 import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorMarquee from '@/components/SponsorMarquee';
-import { isSponsorOnSite } from '@/lib/sponsors';
+import { isSponsorOnSite, topTierSponsors } from '@/lib/sponsors';
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember, type PitchPosition } from '@/lib/supabase/types';
 import { extractCrestTextColor } from '@/lib/image-color';
@@ -1085,12 +1085,17 @@ export default function MatchCenterPage({
           );
         })()}
 
-        {/* Club partners, under whichever tab is open */}
-        {matchSponsors.length > 0 && (
-          <div style={{ marginTop: '2rem' }}>
-            <SponsorMarquee sponsors={matchSponsors} placement="match_center_marquee" />
-          </div>
-        )}
+        {/* Club partners, under whichever tab is open. Once the report's "Supported by" shows the top
+            tier, they aren't repeated here (SPE-19): each logo shows once on the page */}
+        {(() => {
+          const supportedBy = match.status === 'completed' && !scoreHidden ? new Set(topTierSponsors(matchSponsors).map(s => s.id)) : null;
+          const rest = supportedBy ? matchSponsors.filter(s => !supportedBy.has(s.id)) : matchSponsors;
+          return rest.length > 0 && (
+            <div style={{ marginTop: '2rem' }}>
+              <SponsorMarquee sponsors={rest} placement="match_center_marquee" />
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

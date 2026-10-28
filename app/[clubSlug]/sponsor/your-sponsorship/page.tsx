@@ -199,6 +199,15 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                     <span>{sent ? 'Sent. ' : ''}{sentWhat} sent {formatDate(sponsor.pending_sent_at)}. The club will check it before it goes on the site.</span>
                   </p>
                 )}
+                {/* SPE-17: what the club did with what they last sent */}
+                {!pendingNote && !sent && sponsor.change_reviewed && sponsor.change_reviewed_at && (
+                  <p role="status" style={{ display: 'flex', gap: '0.45rem', alignItems: 'flex-start', color: sponsor.change_reviewed === 'used' ? 'var(--c-green)' : 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.9rem 0 0' }}>
+                    {sponsor.change_reviewed === 'used' ? <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: 2 }} /> : <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />}
+                    <span>{sponsor.change_reviewed === 'used'
+                      ? `The club put what you sent on their site on ${formatDate(sponsor.change_reviewed_at)}.`
+                      : `On ${formatDate(sponsor.change_reviewed_at)} the club kept what was already on their site. Contact them if you'd like to know why, or send a different one.`}</span>
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-body" style={{ margin: 0 }}>
@@ -268,7 +277,8 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                 {payments.map(p => (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.packageName || p.description || 'Sponsorship'}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.packageName ? `${p.packageName}${p.renewal ? ' renewal' : ''}` : p.description || 'Sponsorship'}</div>
+                      {p.period && <div className="text-meta">Covers {p.period}</div>}
                       <div className="text-meta">
                         {p.status === 'paid'
                           ? `Paid ${formatDate(p.paid_at || p.created_at)} · ${formatMoney(p.amount_cents, p.currency)}`

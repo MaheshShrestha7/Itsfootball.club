@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
 import { fetchPaged } from '@/lib/paged';
 import { cleanAbn, invoiceIsTax } from '@/lib/invoice';
-import { canPayRenewal, isSponsorKey, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
+import { canPayRenewal, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
 import type { Sponsor } from '@/lib/supabase/types';
 
 // A sponsor's own private page (/{club}/sponsor/your-sponsorship?k=...), read on the server with
@@ -37,6 +37,9 @@ export interface PortalPayment {
   created_at: string;
   /** A tax invoice (the club's GST registration and ABN when this payment was made, SPE-5) */
   taxInvoice: boolean;
+  /** SPE-14: a renewal, and the period it pays for ("7 Nov 2026 to 7 Nov 2027") when known */
+  renewal: boolean;
+  period: string | null;
 }
 
 export interface PortalData {
@@ -52,6 +55,9 @@ export interface PortalData {
     pending_logo_url: string | null;
     pending_website_url: string | null;
     pending_sent_at: string | null;
+    /** What the club did with what they last sent (SPE-17, migration 20261136) */
+    change_reviewed: 'used' | 'kept' | null;
+    change_reviewed_at: string | null;
   };
   /** False until migration 20261133 adds the pending columns: the page then hides the upload */
   canSend: boolean;
@@ -120,6 +126,8 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
       pending_logo_url: sponsor.pending_logo_url ?? null,
       pending_website_url: sponsor.pending_website_url ?? null,
       pending_sent_at: sponsor.pending_sent_at ?? null,
+      change_reviewed: sponsor.change_reviewed ?? null,
+      change_reviewed_at: sponsor.change_reviewed_at ?? null,
     },
     canSend: 'pending_sent_at' in sponsor,
     results: { ...summariseSponsorEvents(events), since },
@@ -134,6 +142,7 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
       paid_at: p.paid_at,
       created_at: p.created_at,
       taxInvoice: invoiceIsTax(p, settings),
+      ...sponsorshipPaidFor(p),
     })),
     taxInvoice: !!settings?.gst_registered && !!cleanAbn(settings.abn),
     renewLink,

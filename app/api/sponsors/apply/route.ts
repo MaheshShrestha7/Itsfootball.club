@@ -14,7 +14,9 @@ const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>
 // Either way the club hears about it in their Inbox, and on the admin "Needs you" list.
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  if (!(await durableRateLimit(`sponsor-apply:${ip}`, 3, 10 * 60 * 1000))) {
+  // SPE-23: several businesses can sign up from one clubhouse wifi, so the per-network limit is wide;
+  // the per-email limit below (and Turnstile) stops one person repeating it
+  if (!(await durableRateLimit(`sponsor-apply:${ip}`, 12, 10 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a few minutes.' }, { status: 429 });
   }
   const db = getServiceClient();
@@ -36,6 +38,9 @@ export async function POST(req: NextRequest) {
   const offer = clean(body.message, 2000);
   if (!clubId || !packageId || !name || !contactName || !EMAIL_RE.test(contactEmail)) {
     return NextResponse.json({ error: 'Please fill in your business name, contact name and a valid email.' }, { status: 400 });
+  }
+  if (!(await durableRateLimit(`sponsor-apply-email:${contactEmail}`, 3, 10 * 60 * 1000))) {
+    return NextResponse.json({ error: 'Too many attempts. Please wait a few minutes.' }, { status: 429 });
   }
 
   const { data: pkg } = await db

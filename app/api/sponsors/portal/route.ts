@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
     pending_sent_at: sentAt,
   }).eq('id', sponsor.id);
   if (error) return NextResponse.json({ error: 'Could not send that to the club. Please try again.' }, { status: 500 });
+  // SPE-17: a new send replaces the club's last answer (migration 20261136; quietly nothing before it)
+  await db.from('sponsors').update({ change_reviewed: null, change_reviewed_at: null }).eq('id', sponsor.id).then(() => undefined, () => undefined);
 
   // Tell the club in their Inbox (an inbox message needs a sender email). Best effort: the Sponsors
   // page and the admin "Needs you" list show it either way
