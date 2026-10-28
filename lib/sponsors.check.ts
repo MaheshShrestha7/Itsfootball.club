@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { chartBuckets, daysUntilEnd, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { chartBuckets, daysUntilEnd, isSponsorKey, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -134,4 +134,29 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
   assert.equal(matchSponsorPackage({ tier: 'gold', package_value: 0 }, [pkgs[0]]), null); // price on request: nothing to pay
 }
 
-console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering OK');
+// The sponsor's page and the admin report, in plain words
+{
+  const r = summariseSponsorEvents([
+    { event_type: 'impression', placement: 'club_home_showcase', visitor_hash: 'a' },
+    { event_type: 'impression', placement: 'club_home_showcase', visitor_hash: 'a' },
+    { event_type: 'impression', placement: 'footer_marquee', visitor_hash: 'b' },
+    { event_type: 'impression', placement: 'something_new', visitor_hash: null },
+    { event_type: 'viewable_impression', placement: 'footer_marquee', visitor_hash: 'c' },
+    { event_type: 'click', placement: 'footer_marquee', visitor_hash: 'b' },
+  ]);
+  assert.equal(r.seen, 4);
+  assert.equal(r.people, 2);
+  assert.equal(r.clicks, 1);
+  assert.deepEqual(r.byPlacement.map(p => [p.label, p.seen, p.clicks]), [['Home page', 2, 0], ['Every page footer', 1, 1], ['Other pages', 1, 0]]);
+  assert.deepEqual(summariseSponsorEvents([]), { seen: 0, people: 0, clicks: 0, byPlacement: [] });
+  const key = 'a'.repeat(64);
+  assert.equal(sponsorPageUrl('https://itsfootball.club/riverside-rovers-fc/', key), `https://itsfootball.club/riverside-rovers-fc/sponsor/your-sponsorship?k=${key}`);
+  assert.ok(isSponsorKey(key));
+  assert.equal(typedWebsite('acme.com.au'), 'https://acme.com.au/');
+  assert.equal(typedWebsite(' http://acme.com.au/x '), 'http://acme.com.au/x');
+  assert.equal(typedWebsite('javascript:alert(1)'), undefined);
+  assert.equal(typedWebsite(''), undefined);
+  assert.ok(!isSponsorKey('A'.repeat(64)) && !isSponsorKey('a'.repeat(63)) && !isSponsorKey(undefined));
+}
+
+console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results OK');

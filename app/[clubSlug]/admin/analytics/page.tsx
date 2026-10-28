@@ -64,7 +64,7 @@ export default function AdminAnalyticsPage({
             borderBottom: view === 'sponsors' ? '2px solid var(--club-primary)' : '2px solid transparent',
           }}
         >
-          <Megaphone size={15} /> Sponsor Hub / Media Kit
+          <Megaphone size={15} /> Sponsor Report
         </button>
       </div>
 

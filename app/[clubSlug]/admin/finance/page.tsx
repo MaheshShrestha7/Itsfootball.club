@@ -17,6 +17,7 @@ import type {
   ClubPaymentSettings, MembershipPlan, Payment, Expense,
 } from '@/lib/supabase/types';
 import { PUBLIC_PAYMENT_SETTINGS } from '@/lib/supabase/types';
+import { cleanAbn, formatAbn } from '@/lib/invoice';
 import { askText, confirmAction } from '@/components/ConfirmDialog';
 import PriceList from '@/components/admin/PriceList';
 import { DATE_LOCALE } from '@/lib/dates';
@@ -305,6 +306,15 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
         body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
       }).then(r => r.json()).catch(() => null);
       flash('ok', res?.sent ? 'Payment verified. Tickets issued and emailed to the buyer.' : 'Payment verified and tickets issued. The email didn\'t send: share the ticket link from the order.');
+      return load();
+    }
+    if (kind === 'sponsorship') {
+      const res = await fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
+      }).then(r => r.json()).catch(() => null);
+      flash('ok', res?.sent ? 'Payment verified. The sponsor was emailed a thank-you with the link to their sponsor page.' : 'Payment verified. Put them on the site from the Sponsors page.');
       return load();
     }
     flash('ok', kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
@@ -823,6 +833,70 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
   );
 }
 
+/** ABN and GST registration, printed on sponsorship invoices (SP-F4, migration 20261133). Hidden
+ *  until that migration runs, so the rest of Settings keeps saving. */
+function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId: string; db: Shared['db']; flash: Shared['flash']; load: Shared['load']; hasSettings: boolean }) {
+  const [ready, setReady] = useState<boolean | null>(null);
+  const [abn, setAbn] = useState('');
+  const [gst, setGst] = useState(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    db?.from('club_payment_settings').select('abn, gst_registered').eq('club_id', clubId).maybeSingle()
+      .then(({ data, error }) => {
+        setReady(!error);
+        setAbn(data?.abn ? formatAbn(data.abn) : '');
+        setGst(!!data?.gst_registered);
+      });
+  }, [db, clubId]);
+  if (!ready) return null;
+
+  const abnDigits = abn.trim() ? cleanAbn(abn) : null;
+  const abnWrong = !!abn.trim() && !abnDigits;
+  const save = async () => {
+    if (abnWrong) return flash('error', 'That ABN doesn\'t look right. Check it on abr.business.gov.au.');
+    setSaving(true);
+    const values = { abn: abnDigits, gst_registered: gst, updated_at: new Date().toISOString() };
+    const { error } = hasSettings
+      ? await db!.from('club_payment_settings').update(values).eq('club_id', clubId)
+      : await db!.from('club_payment_settings').insert({ club_id: clubId, ...values });
+    setSaving(false);
+    if (error) return flash('error', error.message);
+    flash('ok', 'Invoice details saved.');
+    load();
+  };
+
+  return (
+    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><FileText size={18} /> Invoices</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.35rem 0 0' }}>
+          Printed on the invoices sponsors open from their own page.
+        </p>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="set-abn">ABN (Australian Business Number)</label>
+        <input id="set-abn" className="form-input" inputMode="numeric" autoComplete="off" style={{ maxWidth: 240 }} value={abn}
+          placeholder="12 345 678 901" aria-invalid={abnWrong} onChange={e => setAbn(e.target.value)}
+          onBlur={() => abnDigits && setAbn(formatAbn(abnDigits))} />
+        {abnWrong && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>That ABN doesn&apos;t look right: it should be 11 digits.</p>}
+      </div>
+      <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+        <input type="checkbox" checked={gst} onChange={e => setGst(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+        <span>
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Registered for GST</span>
+          <span className="text-meta" style={{ display: 'block' }}>
+            {gst
+              ? 'Sponsors get a "Tax invoice". Your prices include GST, and the invoice shows it (1/11th of the price).'
+              : 'Sponsors get an "Invoice" that says no GST has been charged. Most small clubs aren\'t registered.'}
+          </span>
+        </span>
+      </label>
+      {gst && !abnDigits && <p className="text-note" style={{ margin: 0, color: 'var(--c-amber)' }}>Add your ABN too: a tax invoice needs it. Until then sponsors get a plain invoice.</p>}
+      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={saving}><Save size={16} /> {saving ? 'Saving…' : 'Save'}</button>
+    </div>
+  );
+}
+
 function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
   settings: ClubPaymentSettings | null; plans: MembershipPlan[];
 }) {
@@ -918,6 +992,8 @@ function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
         </div>
         <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={saveSettings}><Save size={16} /> Save</button>
       </div>
+
+      <InvoiceDetailsPanel clubId={club.id} db={db} flash={flash} load={load} hasSettings={!!settings} />
 
       <PriceList<MembershipPlan>
         title="Membership plans" table="membership_plans" rows={plans} db={db} clubId={club.id} flash={flash} load={load}

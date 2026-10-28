@@ -50,6 +50,7 @@ assert.deepEqual(renewalItems.map(i => [i.key, i.text, i.href]), [
   ['sponsors-stale', '1 unpaid sponsor sign-up older than 60 days', '/rfc/admin/sponsors?view=new'],
 ]);
 assert.equal(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorsEndingSoon: 1 }, [], NOW)[0].text, '1 sponsorship ends in the next 30 days');
+assert.equal(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorChanges: 2 }, [], NOW)[0].text, '2 sponsors sent a new logo or website to check');
 
 // Results from the club's side: an away 1-2 loss is L 1-2, never "2-1"
 assert.deepEqual(clubResult(m({ is_club_home: false, home_score: 2, away_score: 1 })), { us: 1, them: 2, outcome: 'L', onPens: false });

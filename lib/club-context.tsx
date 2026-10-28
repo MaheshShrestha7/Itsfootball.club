@@ -64,7 +64,7 @@ import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
 import { goalScoringSide, publicScoreHidden } from './teams';
-import { chartBuckets } from '@/lib/sponsors';
+import { chartBuckets, summariseSponsorEvents } from '@/lib/sponsors';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -2642,6 +2642,7 @@ export function ClubProvider({
         ctr: sImpr.length > 0 ? (sClicks.length / sImpr.length) * 100 : 0,
         viewabilityRate: sImpr.length > 0 ? (sViewable.length / sImpr.length) * 100 : 0,
         avgDwellMs: dwellValues.length > 0 ? dwellValues.reduce((a, b) => a + b, 0) / dwellValues.length : 0,
+        topPlacement: summariseSponsorEvents(sImpr).byPlacement[0]?.label ?? null,
       };
     });
 
@@ -2667,6 +2668,7 @@ export function ClubProvider({
       totals: { impressions, viewableImpressions, clicks, uniqueReach, ctr, viewabilityRate, repeatExposureRate },
       byDay,
       bySponsor,
+      byPlacement: summariseSponsorEvents(rows).byPlacement,
       byCountry,
       byDevice: [
         { name: 'Mobile Phones (Smartphones)', percentage: `${Math.round((mobileCount / totalDeviceRows) * 100)}%`, color: '#10B981' },

@@ -1,0 +1,134 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
+import { fetchPaged } from '@/lib/paged';
+import { cleanAbn } from '@/lib/invoice';
+import { daysUntilEnd, isSponsorKey, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
+import type { Sponsor } from '@/lib/supabase/types';
+
+// A sponsor's own private page (/{club}/sponsor/your-sponsorship?k=...), read on the server with
+// the service role. The link's secret (sponsors.access_key, migration 20261132) is the only key:
+// nothing here is readable from the browser's own Supabase session.
+
+export type PortalClub = ClubBrandRow & { contact_email: string | null; stadium_address: string | null };
+
+export interface PortalSponsorRow extends Sponsor {
+  access_key: string;
+}
+
+/** The sponsor and their club for a link's secret, or null */
+export async function findSponsorByKey(db: SupabaseClient, key: unknown): Promise<{ sponsor: PortalSponsorRow; club: PortalClub } | null> {
+  if (!isSponsorKey(key)) return null;
+  const { data: sponsor } = await db.from('sponsors').select('*').eq('access_key', key).maybeSingle();
+  if (!sponsor) return null;
+  const { data: club } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email, stadium_address`).eq('id', sponsor.club_id).maybeSingle();
+  if (!club) return null;
+  return { sponsor: sponsor as PortalSponsorRow, club: club as PortalClub };
+}
+
+export interface PortalPayment {
+  id: string;
+  description: string | null;
+  packageName: string | null;
+  amount_cents: number;
+  currency: string;
+  method: string;
+  status: 'paid' | 'awaiting_review';
+  paid_at: string | null;
+  created_at: string;
+}
+
+export interface PortalData {
+  club: { name: string; slug: string; logo_url: string | null; primary_color: string | null; contact_email: string | null };
+  sponsor: {
+    name: string;
+    tier: string;
+    label: string | null;
+    logo_url: string;
+    website_url: string | null;
+    ends_on: string | null;
+    on_site: boolean;
+    pending_logo_url: string | null;
+    pending_website_url: string | null;
+    pending_sent_at: string | null;
+  };
+  /** False until migration 20261133 adds the pending columns: the page then hides the upload */
+  canSend: boolean;
+  results: SponsorResults & { since: string };
+  payments: PortalPayment[];
+  /** The club is registered for GST and has an ABN: its invoices are tax invoices */
+  taxInvoice: boolean;
+  /** The renewal payment link, in the last 60 days or once ended */
+  renewLink: string | null;
+}
+
+const DAY = 24 * 3600 * 1000;
+
+/** Results run from the start of their current year (a year before the end date), or from when they
+ *  joined, and never further back than a year */
+export function resultsSince(sponsor: { ends_on?: string | null; created_at?: string }, now = Date.now()): string {
+  const yearAgo = localDateISO(now - 365 * DAY);
+  let from = sponsor.created_at ? sponsor.created_at.slice(0, 10) : yearAgo;
+  if (sponsor.ends_on) {
+    const end = new Date(`${sponsor.ends_on}T00:00:00Z`);
+    end.setUTCFullYear(end.getUTCFullYear() - 1);
+    const startOfTerm = end.toISOString().slice(0, 10);
+    if (startOfTerm > from) from = startOfTerm;
+  }
+  return from < yearAgo ? yearAgo : from > localDateISO(now) ? localDateISO(now) : from;
+}
+
+export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, club: PortalClub): Promise<PortalData> {
+  const since = resultsSince(sponsor);
+  const [{ data: events }, { data: payments }, { data: packages }, { data: settings }] = await Promise.all([
+    fetchPaged<{ event_type: string; placement: string | null; visitor_hash: string | null }>(
+      (from, to) => db.from('sponsor_analytics').select('event_type, placement, visitor_hash')
+        .eq('sponsor_id', sponsor.id).gte('created_at', `${since}T00:00:00Z`).order('id').range(from, to),
+      50000
+    ),
+    db.from('payments').select('id, description, package_id, amount_cents, currency, method, status, paid_at, created_at')
+      .eq('sponsor_id', sponsor.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review'])
+      .order('created_at', { ascending: false }).limit(20),
+    db.from('sponsorship_packages').select('id, name, tier, price_cents, is_active').eq('club_id', sponsor.club_id),
+    // abn and gst_registered are from migration 20261133; before it runs this errors and data is null
+    db.from('club_payment_settings').select('abn, gst_registered').eq('club_id', sponsor.club_id).maybeSingle(),
+  ]);
+
+  const packageName = new Map((packages || []).map(p => [p.id as string, p.name as string]));
+  const days = daysUntilEnd(sponsor);
+  let renewLink: string | null = null;
+  if (sponsor.ends_on && days !== null && days <= 60 && sponsor.package_status !== 'prospect') {
+    const pkg = matchSponsorPackage(sponsor, (packages || []).filter(p => p.is_active));
+    if (pkg) renewLink = `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: pkg.id, k: sponsor.access_key })}`;
+  }
+
+  return {
+    club: { name: club.name, slug: club.slug, logo_url: club.logo_url, primary_color: club.primary_color, contact_email: club.contact_email },
+    sponsor: {
+      name: sponsor.name,
+      tier: sponsor.tier,
+      label: sponsor.label ?? null,
+      logo_url: sponsor.logo_url || '',
+      website_url: sponsor.website_url || null,
+      ends_on: sponsor.ends_on ?? null,
+      on_site: isSponsorOnSite(sponsor),
+      pending_logo_url: sponsor.pending_logo_url ?? null,
+      pending_website_url: sponsor.pending_website_url ?? null,
+      pending_sent_at: sponsor.pending_sent_at ?? null,
+    },
+    canSend: 'pending_sent_at' in sponsor,
+    results: { ...summariseSponsorEvents(events), since },
+    payments: (payments || []).map(p => ({
+      id: p.id,
+      description: p.description,
+      packageName: p.package_id ? packageName.get(p.package_id) ?? null : null,
+      amount_cents: p.amount_cents,
+      currency: p.currency,
+      method: p.method,
+      status: p.status,
+      paid_at: p.paid_at,
+      created_at: p.created_at,
+    })),
+    taxInvoice: !!settings?.gst_registered && !!cleanAbn(settings.abn),
+    renewLink,
+  };
+}

@@ -5,6 +5,7 @@ import { preparePayment, readPaymentInput } from '@/lib/payments-server';
 import { bookingFeeCents } from '@/lib/finance';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase/server-auth';
+import { isSponsorKey } from '@/lib/sponsors';
 
 // Starts a hosted Stripe Checkout on the club's connected account. The webhook completes it.
 export async function POST(req: NextRequest) {
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
   const path = `/${draft.club.slug}/${page}`;
   // Tickets: the buyer lands on their tickets; the order id is the (unguessable) key to that page
   const ticketsPath = `/${draft.club.slug}/tickets/${payment.id}`;
+  // Sponsors land on their own page (SP-F1/F3), where they send their logo next
+  let sponsorPage: string | null = null;
+  if (draft.row.kind === 'sponsorship' && draft.row.sponsor_id) {
+    const { data: sponsor } = await db.from('sponsors').select('*').eq('id', draft.row.sponsor_id).maybeSingle();
+    if (isSponsorKey(sponsor?.access_key)) sponsorPage = `/${draft.club.slug}/sponsor/your-sponsorship?k=${sponsor.access_key}&payment=success`;
+  }
   const currency = draft.currency.toLowerCase();
   // Booking fee sits on top of the club's price as its own line; Stripe routes it to the platform
   // (application fee), so the club still receives amount_cents, which is what its ledger records.
@@ -60,7 +67,7 @@ export async function POST(req: NextRequest) {
         client_reference_id: payment.id,
         metadata: { payment_id: payment.id },
         payment_intent_data: { metadata: { payment_id: payment.id }, ...(fee > 0 ? { application_fee_amount: fee } : {}) },
-        success_url: draft.row.kind === 'event_ticket' ? `${origin}${ticketsPath}` : `${origin}${path}?payment=success`,
+        success_url: draft.row.kind === 'event_ticket' ? `${origin}${ticketsPath}` : sponsorPage ? `${origin}${sponsorPage}` : `${origin}${path}?payment=success`,
         cancel_url: draft.row.kind === 'event_ticket'
           ? `${origin}/${draft.club.slug}/events/${draft.row.event_id}?payment=cancelled`
           : `${origin}${path}?payment=cancelled`,

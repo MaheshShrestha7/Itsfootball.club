@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe, Stripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
 import { emailTickets } from '@/lib/email/tickets';
+import { emailSponsorPaid } from '@/lib/email/sponsor-paid';
 import type { Payment } from '@/lib/supabase/types';
 
 // Connect webhook: receives events from every club's connected Stripe account.
@@ -54,6 +55,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Fulfilment failed' }, { status: 500 }); // Stripe retries
       }
       if ((paid as Payment | null)?.kind === 'event_ticket' && (paid as Payment).status === 'paid') await emailTickets(db, paid as Payment);
+      // Best effort: a failed thank-you email must not make Stripe retry a payment that went through
+      if ((paid as Payment | null)?.kind === 'sponsorship') await emailSponsorPaid(db, paid as Payment).catch(() => false);
       break;
     }
     case 'checkout.session.async_payment_failed':

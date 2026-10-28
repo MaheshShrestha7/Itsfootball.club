@@ -6,7 +6,7 @@ import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/
 import { defaultSeasonLabel } from '@/lib/season';
 import {
   daysUntilEnd, defaultSponsorEnd, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
-  LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorTierLabel,
+  hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
@@ -184,6 +184,29 @@ export default function AdminSponsorsPage({
       window.prompt('Copy this link', linkResult.link);
     }
   };
+
+  // The sponsor's own private page (SP-F1/F3/F4): their logo, results and invoices
+  const pageLink = (sp: Sponsor) => sp.access_key
+    ? sponsorPageUrl(club.custom_domain ? `https://${club.custom_domain}` : `${window.location.origin}/${club.slug}`, sp.access_key)
+    : null;
+  const copyPageLink = async (sp: Sponsor) => {
+    const link = pageLink(sp);
+    if (!link) return;
+    const note = 'Their own page, where they send a new logo and see their results and invoices. Only send it to them.';
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkResult({ sponsorId: sp.id, link, note, copied: true });
+    } catch {
+      setLinkResult({ sponsorId: sp.id, link, note });
+    }
+  };
+  // A logo or website they sent from that page: nothing changes on the site until Use it
+  const acceptSentChange = (sp: Sponsor) => updateSponsor(sp.id, {
+    ...(sp.pending_logo_url ? { logo_url: sp.pending_logo_url } : {}),
+    ...(sp.pending_website_url ? { website_url: sp.pending_website_url } : {}),
+    pending_logo_url: null, pending_website_url: null, pending_sent_at: null,
+  });
+  const keepOld = (sp: Sponsor) => updateSponsor(sp.id, { pending_logo_url: null, pending_website_url: null, pending_sent_at: null });
 
   // Order fans see within a tier: drag the handle on a computer, or the arrows on a phone
   const [dragId, setDragId] = useState<string | null>(null);
@@ -662,6 +685,35 @@ export default function AdminSponsorsPage({
                 </div>
               </div>
 
+              {/* A new logo or website they sent from their own page */}
+              {hasSentChange(sponsor) && (
+                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem 1rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+                  {sponsor.pending_logo_url && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={40} style={{ width: 64, background: '#fff', padding: 4, borderRadius: 6 }} />
+                      <span aria-hidden="true" className="text-muted">→</span>
+                      <img src={sponsor.pending_logo_url} alt={`New logo from ${sponsor.name}`} style={{ height: 40, width: 64, objectFit: 'contain', background: '#fff', padding: 4, borderRadius: 6 }} />
+                    </div>
+                  )}
+                  <div style={{ flex: '1 1 200px', minWidth: 0, fontSize: '0.82rem' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {sponsor.pending_logo_url && sponsor.pending_website_url ? 'New logo and website sent' : sponsor.pending_logo_url ? 'New logo sent' : 'New website sent'}
+                      {sponsor.pending_sent_at && <span className="text-muted" style={{ fontWeight: 500 }}> {new Date(sponsor.pending_sent_at).toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })}</span>}
+                    </div>
+                    {sponsor.pending_website_url && (
+                      <div className="text-muted" style={{ overflowWrap: 'anywhere' }}>
+                        Website: <a href={sponsorHref(sponsor.pending_website_url)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-ink)' }}>{sponsor.pending_website_url}</a>
+                      </div>
+                    )}
+                    <div className="text-muted">Nothing changes on your site until you tap Use it.</div>
+                  </div>
+                  <div className="row row-wrap">
+                    <button type="button" onClick={() => acceptSentChange(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}><Check size={14} /> Use it</button>
+                    <button type="button" onClick={() => keepOld(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>Keep the old one</button>
+                  </div>
+                </div>
+              )}
+
               <div className="row row-wrap">
                 {linkedEvent && (
                   <span className="badge badge-primary" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -682,6 +734,11 @@ export default function AdminSponsorsPage({
                 {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
                   <button type="button" onClick={() => renew(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}>
                     <RefreshCw size={14} /> Renew
+                  </button>
+                )}
+                {sponsor.access_key && !(stage === 'new' && sponsor.package_status === 'prospect') && (
+                  <button type="button" onClick={() => copyPageLink(sponsor)} title="Copy the link to their own sponsor page" className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <Copy size={14} /> Copy their link
                   </button>
                 )}
                 <button onClick={() => handleOpenEdit(sponsor)} title={`Edit ${sponsor.name}`} aria-label={`Edit ${sponsor.name}`} className="btn btn-secondary btn-sm" style={{ minWidth: '40px', minHeight: '40px' }}>
@@ -709,11 +766,16 @@ export default function AdminSponsorsPage({
                 <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 0.85rem', padding: '0.65rem 0.85rem', borderRadius: '10px', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
                   {result.emailed
                     ? <span style={{ color: 'var(--c-green)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Check size={14} /> Emailed to {sponsor.contact_email}</span>
-                    : <span style={{ color: result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
+                    : <span style={{ color: result.link && result.link === pageLink(sponsor) ? 'var(--text-secondary)' : result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
                   {result.link && (
                     <button type="button" onClick={copyLink} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Copy size={13} /> {result.copied ? 'Copied' : 'Copy link'}
                     </button>
+                  )}
+                  {result.link && result.link === pageLink(sponsor) && (
+                    <a href={result.link} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <ExternalLink size={13} /> Open their page
+                    </a>
                   )}
                   <button type="button" onClick={() => setLinkResult(null)} aria-label="Dismiss" className="btn btn-sm" style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
                     <X size={14} />

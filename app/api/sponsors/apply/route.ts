@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { sponsorHref } from '@/lib/sponsors';
+import { isSponsorKey, sponsorHref } from '@/lib/sponsors';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 import { formatMoney } from '@/lib/finance';
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       ? db.from('sponsors').update(values).eq('id', earlier.id).select('id').single()
       // No logo yet: their initials show until the club uploads the artwork. The badge label is
       // left to the admin, so the site shows the tier name ("Gold Partner"), not the package's name.
-      : db.from('sponsors').insert({ logo_url: '', ...values }).select('id').single();
+      : db.from('sponsors').insert({ logo_url: '', ...values }).select('*').single();
   const { data: sponsor, error } = await save(row);
   if (error || !sponsor) return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 });
 
@@ -109,5 +109,8 @@ export async function POST(req: NextRequest) {
     status: 'unread',
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ sponsorId: sponsor.id, onRequest });
+  // Their own page's secret, only for a brand new sign-up: a retry within the hour could be someone
+  // else typing the same email
+  const portalKey = !earlier && !onRequest && isSponsorKey((sponsor as { access_key?: string }).access_key) ? (sponsor as { access_key: string }).access_key : undefined;
+  return NextResponse.json({ sponsorId: sponsor.id, onRequest, ...(portalKey ? { portalKey } : {}) });
 }
