@@ -38,6 +38,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import TwoStepSignIn from '@/components/TwoStepSignIn';
 
 const PERIOD_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -66,6 +67,16 @@ export default function PlatformOwnerDashboard() {
   const [adminsList, setAdminsList] = useState<PlatformAdmin[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
+  // Listed as a platform admin, but this session hasn't passed two-step sign-in (required here)
+  const [listedRole, setListedRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || isPlatformAdmin) { setListedRole(null); return; }
+    const client = getSupabaseClient();
+    if (!client) return;
+    // Before migration 20261129 this function doesn't exist, and the old gate applies
+    client.rpc('platform_admin_listed').then(({ data }) => setListedRole(typeof data === 'string' ? data : null), () => setListedRole(null));
+  }, [isAuthenticated, isPlatformAdmin]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -247,7 +258,30 @@ export default function PlatformOwnerDashboard() {
     );
   }
 
-  // 2. Unauthorized or not signed in
+  // 2. A platform admin who still needs the second sign-in step
+  if (isAuthenticated && !isPlatformAdmin && listedRole) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
+        <PlatformNavbar />
+        <main className="container" style={{ flex: 1, padding: '4rem 1rem', maxWidth: '680px', margin: 'auto' }}>
+          <div className="glass-panel" style={{ padding: '2.25rem' }}>
+            <div className="row" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <ShieldCheck size={26} style={{ color: 'var(--c-green)' }} aria-hidden="true" />
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>Two-step sign-in needed</h1>
+            </div>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              Mission Control now needs a code from an authenticator app as well as your password, so a stolen password alone can&apos;t open it.
+              Signed in as <strong>{user?.email}</strong>.
+            </p>
+            <TwoStepSignIn reloadWhenOn intro="Set it up once with an app such as Google Authenticator or 1Password. If it's already on, enter today's code." />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // 3. Unauthorized or not signed in
   if (!isAuthenticated || !isPlatformAdmin) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>

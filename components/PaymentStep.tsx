@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CreditCard, Landmark, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { bookingFeeCents, formatMoney, paymentReference } from '@/lib/finance';
 import { PUBLIC_PAYMENT_SETTINGS, type ClubPaymentSettings } from '@/lib/supabase/types';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 
 interface PaymentStepProps {
   clubId: string;
@@ -44,6 +45,14 @@ export default function PaymentStep(props: PaymentStepProps) {
   const [file, setFile] = useState<File | null>(null);
   const reference = props.reference || paymentReference(memberId || sponsorId || '');
   const [payerRef, setPayerRef] = useState(reference);
+  // Signed-out payers (tickets, sponsors) pass a bot check before uploading a receipt
+  const [signedOut, setSignedOut] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
+
+  useEffect(() => {
+    void getAccessToken().then(token => setSignedOut(!token));
+  }, []);
 
   useEffect(() => {
     const client = getSupabaseClient();
@@ -79,12 +88,15 @@ export default function PaymentStep(props: PaymentStepProps) {
   const sendReceipt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return setError('Attach a photo or PDF of your transfer receipt.');
+    const notReady = signedOut ? captchaError(captchaToken) : null;
+    if (notReady) return setError(notReady);
     setBusy(true);
     setError(null);
     const form = new FormData();
     Object.entries(ids).forEach(([k, v]) => v && form.append(k, v));
     form.append('reference', payerRef);
     form.append('receipt', file);
+    if (signedOut && captchaToken) form.append('captchaToken', captchaToken);
     try {
       const res = await fetch('/api/payments/bank-transfer', { method: 'POST', headers: await authHeaders(), body: form });
       const json = await res.json();
@@ -94,6 +106,7 @@ export default function PaymentStep(props: PaymentStepProps) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+      captcha.current?.reset();
     }
   };
 
@@ -175,6 +188,7 @@ export default function PaymentStep(props: PaymentStepProps) {
                 <input id="payment-receipt" className="form-input" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required
                   onChange={e => setFile(e.target.files?.[0] ?? null)} />
               </div>
+              {signedOut && <Captcha ref={captcha} onToken={setCaptchaToken} />}
               <button type="submit" className="btn btn-primary" disabled={busy}>
                 <Upload size={16} /> {busy ? 'Sending…' : 'Send receipt'}
               </button>

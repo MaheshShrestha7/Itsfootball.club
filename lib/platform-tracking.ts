@@ -44,7 +44,7 @@ export function trackPlatformVisit(path: string) {
       event_type: 'page_view',
       page_path: path.slice(0, 255),
       visitor_hash: visitor,
-      referrer: document.referrer || null,
+      referrer: document.referrer.slice(0, 500) || null, // the database caps it at 500
       metadata: { device, screenWidth: window.innerWidth },
     })
     .then(({ error }) => {

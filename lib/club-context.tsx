@@ -59,6 +59,7 @@ import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
 import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
+import { cacheSafeMembers } from './cache-safe';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
@@ -473,11 +474,8 @@ export function ClubProvider({
           if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(prev => withCached(prev, parsed.clubScoreProfiles));
           if (parsed.activityLogs?.length) setActivityLogs(prev => withCached(prev, parsed.activityLogs));
           if (parsed.clubScoreRules) setClubScoreRules(prev => ({ ...parsed.clubScoreRules, ...prev }));
-          if (parsed.availabilities?.length) setAvailabilities(prev => withCached(prev, parsed.availabilities));
           if (parsed.draftLineups?.length) setDraftLineups(prev => withCached(prev, parsed.draftLineups));
           if (Array.isArray(parsed.seasons)) setSeasons(prev => withCached(prev, parsed.seasons));
-          if (parsed.gateScans?.length) setGateScans(prev => withCached(prev, parsed.gateScans));
-          if (parsed.memberMessages?.length) setMemberMessages(prev => withCached(prev, parsed.memberMessages));
           if (Array.isArray(parsed.internalTeams)) {
             setInternalTeams(prev => withCached(prev, parsed.internalTeams));
           }
@@ -970,7 +968,14 @@ export function ClubProvider({
               setActiveClub(found || parsed.clubs[0]);
             }
           }
-          if (parsed.members?.length) setMembers(dropSharedPhotos(parsed.members as ClubMember[]));
+          // The cached copy has no personal details (lib/cache-safe.ts): lay it over this tab's rows so
+          // the details this tab already has stay, rather than being blanked (and then saved as blank)
+          if (parsed.members?.length) {
+            setMembers(prev => {
+              const mine = new Map(prev.map(m => [m.id, m]));
+              return dropSharedPhotos((parsed.members as ClubMember[]).map(m => ({ ...(mine.get(m.id) || {}), ...m })));
+            });
+          }
           if (parsed.playerStats?.length) setPlayerStats(parsed.playerStats);
           if (parsed.matches?.length) setMatches(parsed.matches);
           if (parsed.matchEvents?.length) setMatchEvents(parsed.matchEvents);
@@ -981,11 +986,8 @@ export function ClubProvider({
           if (parsed.clubScoreProfiles?.length) setClubScoreProfiles(parsed.clubScoreProfiles);
           if (parsed.activityLogs?.length) setActivityLogs(parsed.activityLogs);
           if (parsed.clubScoreRules) setClubScoreRules(parsed.clubScoreRules);
-          if (parsed.availabilities?.length) setAvailabilities(parsed.availabilities);
           if (parsed.draftLineups?.length) setDraftLineups(parsed.draftLineups);
           if (Array.isArray(parsed.seasons)) setSeasons(parsed.seasons);
-          if (parsed.gateScans?.length) setGateScans(parsed.gateScans);
-          if (parsed.memberMessages?.length) setMemberMessages(parsed.memberMessages);
           if (Array.isArray(parsed.internalTeams)) setInternalTeams(parsed.internalTeams);
           if (Array.isArray(parsed.clubTeams)) setClubTeams(parsed.clubTeams);
           if (Array.isArray(parsed.clubTeamMembers)) setClubTeamMembers(parsed.clubTeamMembers);
@@ -1006,10 +1008,11 @@ export function ClubProvider({
     if (!isHydrated) return;
     if (typeof window !== 'undefined') {
       try {
+        // Personal details, messages, gate scans and availability notes stay out (lib/cache-safe.ts)
         const stateToSave = {
           clubs,
           activeClubId: activeClub?.id || clubs[0]?.id,
-          members,
+          members: cacheSafeMembers(members, syncedIdsRef.current.members || []),
           playerStats,
           matches,
           matchEvents,
@@ -1020,11 +1023,8 @@ export function ClubProvider({
           clubScoreProfiles,
           activityLogs,
           clubScoreRules,
-          availabilities,
           draftLineups,
           seasons,
-          gateScans,
-          memberMessages,
           internalTeams,
           clubTeams,
           clubTeamMembers,
@@ -2329,7 +2329,7 @@ export function ClubProvider({
         event_type: 'page_view',
         page_path: path.slice(0, 255),
         visitor_hash: visitor,
-        referrer: document.referrer || null,
+        referrer: document.referrer.slice(0, 500) || null, // the database caps it at 500
         metadata: { device, screenWidth: window.innerWidth },
       })
       .then(({ error }) => {

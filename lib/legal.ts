@@ -9,7 +9,7 @@ export const LEGAL = {
   address: '',
 };
 
-export const LEGAL_UPDATED = '15 October 2026';
+export const LEGAL_UPDATED = '28 October 2026';
 
 /** "itsfootball.club is run from New South Wales, Australia (ABN …)" */
 export const LEGAL_IDENTITY = `itsfootball.club is run from ${LEGAL.jurisdiction}${LEGAL.abn ? ` (ABN ${LEGAL.abn})` : ''}`;
