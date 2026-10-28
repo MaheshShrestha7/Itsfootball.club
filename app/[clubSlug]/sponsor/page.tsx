@@ -10,16 +10,7 @@ import { formatMoney } from '@/lib/finance';
 import type { SponsorshipPackage } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
-import { sponsorTierLabel } from '@/lib/sponsors';
-
-// Each tier's badge in its own colour, matching the tier badges on the club page
-const TIER_BADGE: Record<string, React.CSSProperties> = {
-  platinum: { background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.4)' },
-  gold: { background: 'rgba(234, 179, 8, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(234, 179, 8, 0.3)' },
-  silver: { background: 'rgba(148, 163, 184, 0.15)', color: 'var(--text-secondary)', border: '1px solid rgba(148, 163, 184, 0.35)' },
-  bronze: { background: 'rgba(180, 83, 9, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(180, 83, 9, 0.35)' },
-  grassroots: { background: 'rgba(16, 185, 129, 0.12)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.3)' },
-};
+import { TIER_BADGE, sponsorTierLabel } from '@/lib/sponsors';
 
 /** A package priced 0 has no online payment: the business tells the club what they'd like to offer */
 const isOnRequest = (p: SponsorshipPackage) => !(p.price_cents > 0);
@@ -34,6 +25,8 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const [selected, setSelected] = useState<SponsorshipPackage | null>(null);
   const [form, setForm] = useState({ name: '', contact_name: '', contact_email: '', contact_phone: '', website_url: '', message: '', company_website_confirm: '' });
   const [sponsorId, setSponsorId] = useState<string | null>(null);
+  // Their own page's secret, for the link under the payment step
+  const [portalKey, setPortalKey] = useState<string | null>(null);
   const [sentToClub, setSentToClub] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +69,10 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Could not save your details.');
       if (json.onRequest) setSentToClub(true);
-      else setSponsorId(json.sponsorId);
+      else {
+        setSponsorId(json.sponsorId);
+        setPortalKey(json.portalKey || null);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -146,8 +142,17 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
             <p className="text-body" style={{ margin: 0 }}>Nothing to pay now. The club will reply to {form.contact_email} about the {selected.name} package.</p>
           </div>
         ) : sponsorId && selected ? (
-          <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={sponsorId} packageId={selected.id}
-            amountCents={selected.price_cents} label={`${selected.name} sponsorship`} />
+          <div className="stack">
+            <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={sponsorId} packageId={selected.id}
+              amountCents={selected.price_cents} label={`${selected.name} sponsorship`} />
+            {portalKey && (
+              <p className="text-note" style={{ margin: 0 }}>
+                Your own sponsor page, to send your logo and later see your results and invoice:{' '}
+                <Link href={`/${club.slug}/sponsor/your-sponsorship?k=${portalKey}`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>open and bookmark it</Link>.
+                Keep the link private.
+              </p>
+            )}
+          </div>
         ) : packages === null ? (
           <p className="text-muted">Loading packages…</p>
         ) : packages.length === 0 ? (

@@ -381,6 +381,11 @@ export interface Sponsor {
   /** Secret for their payment and renewal links. Set by the database; never written by the app,
    *  so not in TABLE_COLUMNS. */
   access_key?: string;
+  /** A logo or website the sponsor sent from their own page, waiting for an admin to tap Use it
+   *  (migration 20261133). Cleared by Use it or Keep the old one. */
+  pending_logo_url?: string | null;
+  pending_website_url?: string | null;
+  pending_sent_at?: string | null;
   /** Set by the database; read only */
   created_at?: string;
 }
@@ -476,6 +481,8 @@ export interface SponsorPlacementStats {
   ctr: number;
   viewabilityRate: number;
   avgDwellMs: number;
+  /** Where they were seen most, in plain words ("Home page"); null before any views */
+  topPlacement: string | null;
 }
 
 export interface SponsorAnalyticsSummary {
@@ -491,6 +498,8 @@ export interface SponsorAnalyticsSummary {
   };
   byDay: { day: string; impressions: number; clicks: number }[];
   bySponsor: Record<string, SponsorPlacementStats>;
+  /** Views and clicks by where on the site, most seen first, in plain words */
+  byPlacement: { placement: string; label: string; seen: number; clicks: number }[];
   byCountry: { country: string; count: number }[];
   byDevice: { name: string; percentage: string; color: string }[];
 }
@@ -838,6 +847,10 @@ export interface ClubPaymentSettings {
   stripe_charges_enabled: boolean;
   /** Whether a Stripe account is linked, finished or not (generated from stripe_account_id) */
   stripe_connected?: boolean;
+  /** Printed on sponsorship invoices (migration 20261133); digits only */
+  abn?: string | null;
+  /** GST-registered clubs issue a "Tax invoice" showing the GST included */
+  gst_registered?: boolean;
 }
 
 /** The club_payment_settings columns the browser may read (the Stripe account id stays on the server) */

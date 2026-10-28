@@ -1,4 +1,5 @@
 import type { ClubSeason, Sponsor, SponsorSizeScale, SponsorshipPackage } from './supabase/types';
+import type { CSSProperties } from 'react';
 import { DATE_LOCALE } from './dates';
 
 const TIER_RANK: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
@@ -196,3 +197,81 @@ export function matchSponsorPackage<P extends Pick<SponsorshipPackage, 'id' | 't
     ?? (priced.length === 1 ? priced[0] : null);
 }
 
+
+/** Where a sponsor logo shows, in the words a volunteer or a sponsor would use (sponsor_analytics.placement) */
+export const PLACEMENT_LABELS: Record<string, string> = {
+  club_home_showcase: 'Home page',
+  footer_marquee: 'Every page footer',
+  match_center_marquee: 'Match pages',
+  event_page: 'Event pages',
+};
+
+export const placementName = (placement: string | null | undefined) =>
+  (placement && PLACEMENT_LABELS[placement]) || 'Other pages';
+
+/** The link to a sponsor's own private page (SP-F1/F3/F4). base is the club's site, e.g.
+ *  "https://itsfootball.club/riverside-rovers-fc" or "https://riversiderovers.com.au" */
+export function sponsorPageUrl(base: string, accessKey: string): string {
+  return `${base.replace(/\/$/, '')}/sponsor/your-sponsorship?k=${encodeURIComponent(accessKey)}`;
+}
+
+/** A sponsor link's secret (sponsors.access_key): 64 lowercase hex characters */
+export const isSponsorKey = (key: unknown): key is string => typeof key === 'string' && /^[0-9a-f]{64}$/.test(key);
+
+export interface SponsorResults {
+  /** Times the logo was shown */
+  seen: number;
+  /** Different browsers that saw it (an estimate of people) */
+  people: number;
+  /** Clicks through to their website */
+  clicks: number;
+  /** Most seen first */
+  byPlacement: { placement: string; label: string; seen: number; clicks: number }[];
+}
+
+/** Totals for sponsor_analytics rows, in plain terms (the sponsor's page and the admin report) */
+export function summariseSponsorEvents(rows: { event_type: string; placement?: string | null; visitor_hash?: string | null }[]): SponsorResults {
+  const people = new Set<string>();
+  const places = new Map<string, { seen: number; clicks: number }>();
+  let seen = 0;
+  let clicks = 0;
+  for (const r of rows) {
+    if (r.event_type !== 'impression' && r.event_type !== 'click') continue;
+    const key = r.placement && PLACEMENT_LABELS[r.placement] ? r.placement : 'other';
+    const place = places.get(key) || { seen: 0, clicks: 0 };
+    if (r.event_type === 'impression') {
+      seen++;
+      place.seen++;
+      if (r.visitor_hash) people.add(r.visitor_hash);
+    } else {
+      clicks++;
+      place.clicks++;
+    }
+    places.set(key, place);
+  }
+  const byPlacement = [...places.entries()]
+    .map(([placement, v]) => ({ placement, label: placementName(placement), ...v }))
+    .sort((a, b) => b.seen - a.seen || b.clicks - a.clicks);
+  return { seen, people: people.size, clicks, byPlacement };
+}
+
+// Each tier's badge in its own colour, matching the tier badges on the club page
+export const TIER_BADGE: Record<string, CSSProperties> = {
+  platinum: { background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.4)' },
+  gold: { background: 'rgba(234, 179, 8, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(234, 179, 8, 0.3)' },
+  silver: { background: 'rgba(148, 163, 184, 0.15)', color: 'var(--text-secondary)', border: '1px solid rgba(148, 163, 184, 0.35)' },
+  bronze: { background: 'rgba(180, 83, 9, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(180, 83, 9, 0.35)' },
+  grassroots: { background: 'rgba(16, 185, 129, 0.12)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.3)' },
+};
+
+/** The sponsor sent a new logo or website from their page that the admin hasn't checked yet */
+export const hasSentChange = (s: { pending_sent_at?: string | null; pending_logo_url?: string | null; pending_website_url?: string | null }) =>
+  !!s.pending_sent_at && !!(s.pending_logo_url || s.pending_website_url);
+
+/** A website someone typed, with https:// added when they left it off ("acme.com.au"), or undefined
+ *  unless it's a real web address (as sponsorHref) */
+export function typedWebsite(input: string | null | undefined): string | undefined {
+  const v = (input || '').trim();
+  if (!v) return undefined;
+  return sponsorHref(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`);
+}

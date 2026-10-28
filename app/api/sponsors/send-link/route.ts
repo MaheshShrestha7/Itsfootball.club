@@ -6,7 +6,7 @@ import { sendClubEmails, looksLikeEmail } from '@/lib/email/club-emails';
 import { sponsorLink } from '@/lib/email/templates';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { formatMoney } from '@/lib/finance';
-import { formatEndDate, isPastEndDate, matchSponsorPackage } from '@/lib/sponsors';
+import { formatEndDate, isPastEndDate, isSponsorKey, matchSponsorPackage, sponsorPageUrl } from '@/lib/sponsors';
 import { isUuid } from '@/lib/ids';
 
 // Emails a sponsor a link to pay (SP-X5, 28 Oct 2026 sponsors review).
@@ -84,6 +84,8 @@ export async function POST(req: NextRequest) {
         endsOn: kind === 'renewal' && sponsor.ends_on ? formatEndDate(sponsor.ends_on) : null,
         ended: isPastEndDate(sponsor),
         link,
+        // A sign-up that hasn't paid has nothing on their page yet
+        pageLink: kind === 'renewal' && isSponsorKey(sponsor.access_key) ? sponsorPageUrl(clubBaseUrl(row), sponsor.access_key) : null,
         canReply: !!replyTo,
       }),
     }]);
