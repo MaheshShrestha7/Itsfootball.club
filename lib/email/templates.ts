@@ -499,6 +499,51 @@ export function sponsorLink(p: { brand: EmailBrand; contactName: string; busines
   });
 }
 
+/** The club couldn't match a sponsor's bank transfer (Finance, Reject; SPE-8): why, and the link to
+ *  pay again by card or another transfer */
+export function sponsorTransferRejected(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; reason: string | null; link: string; canReply: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `Your ${p.brand.name} sponsorship payment`,
+    preheader: `We couldn't match ${p.business}'s bank transfer. You can pay again from the link inside.`,
+    heading: 'We couldn\'t match your bank transfer',
+    paragraphs: [
+      `Hi ${firstName(p.contactName)}, thank you for signing up to sponsor ${p.brand.name}. We checked ${p.business}'s bank transfer receipt but couldn't match it to a payment, so it hasn't been counted yet.`,
+      'You can pay again by card or bank transfer from the button below.',
+      p.canReply ? 'If you think the money did go through, reply to this email with the date and reference.' : 'If you think the money did go through, contact the club with the date and reference.',
+    ],
+    details: [
+      ['Business', p.business], ['Package', p.packageName], ['Price', p.price],
+      ...(p.reason ? [['Club\'s note', p.reason] as [string, string]] : []),
+    ],
+    cta: { label: 'Pay for my sponsorship', url: p.link },
+    note: 'This link is just for your business. Please don\'t share it.',
+    reason: `You're receiving this because ${p.business} signed up to sponsor ${p.brand.name}.`,
+  });
+}
+
+/** The club looked at the logo or website a sponsor sent from their page (SPE-17) */
+export function sponsorChangeReviewed(p: { brand: EmailBrand; contactName: string; business: string; used: boolean; what: string; pageLink: string; canReply: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: p.used ? `Your new ${p.what} is on the ${p.brand.name} site` : `About the ${p.what} you sent ${p.brand.name}`,
+    preheader: p.used ? `${p.brand.name} is now showing ${p.business}'s new ${p.what}.` : `${p.brand.name} is keeping ${p.business}'s current ${p.what} for now.`,
+    heading: p.used ? `Your new ${p.what} is live` : `The club kept your current ${p.what}`,
+    paragraphs: [
+      p.used
+        ? `Hi ${firstName(p.contactName)}, ${p.brand.name} checked the ${p.what} you sent and it's now on their site.`
+        : `Hi ${firstName(p.contactName)}, ${p.brand.name} looked at the ${p.what} you sent and is keeping the current one for now.`,
+      p.used
+        ? 'You can see how often your logo is seen on your sponsor page.'
+        : (p.canReply ? 'Reply to this email if you\'d like to know why, or send a different one from your sponsor page.' : 'You can send a different one from your sponsor page.'),
+    ],
+    details: [['Business', p.business]],
+    cta: { label: 'Open my sponsor page', url: p.pageLink },
+    note: 'This link is just for your business. Please don\'t share it.',
+    reason: `You're receiving this because ${p.business} sponsors ${p.brand.name}.`,
+  });
+}
+
 /** A sponsor's payment went through (card, or the club verified their bank transfer): thanks, and the
  *  link to their own page to send their logo, see their results and open the invoice */
 export function sponsorPaid(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; pageLink: string; canReply: boolean }): RenderedEmail {

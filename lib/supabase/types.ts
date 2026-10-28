@@ -356,7 +356,7 @@ export interface Sponsor {
   club_id: string;
   /** When set, this sponsor is scoped to one event instead of the whole club - it only
    * appears on that event's detail page, not the club's general sponsor showcase. */
-  event_id?: string;
+  event_id?: string | null;
   name: string;
   logo_url: string;
   website_url?: string;
@@ -371,13 +371,22 @@ export interface Sponsor {
   contact_name?: string;
   contact_email?: string;
   contact_phone?: string;
-  package_value?: number;
+  package_value?: number | null;
   package_status?: SponsorPackageStatus;
   season?: string;
   /** Last day on the site (YYYY-MM-DD); blank means no end date. Migration 20261132. */
   ends_on?: string | null;
   /** When the payment or renewal link was last emailed to them */
   link_sent_at?: string | null;
+  /** Which link that was (SPE-16). Set by the server, migration 20261136 */
+  link_kind?: 'payment' | 'renewal' | null;
+  /** First time they went on the site (SPE-6): one hidden after that isn't a new sign-up. Set by a
+   *  database trigger, migration 20261136 */
+  went_live_at?: string | null;
+  /** Whether the club used or kept the old logo or website they last sent (SPE-17). Set by the
+   *  server, migration 20261136 */
+  change_reviewed?: 'used' | 'kept' | null;
+  change_reviewed_at?: string | null;
   /** Secret for their payment and renewal links. Set by the database; never written by the app,
    *  so not in TABLE_COLUMNS. */
   access_key?: string;
@@ -912,6 +921,9 @@ export interface Payment {
   fulfilled_at?: string | null;
   /** Ticket orders: the event the tickets are for */
   event_id?: string | null;
+  /** Sponsorships: the period this payment pays for (SPE-14, migration 20261136) */
+  covers_from?: string | null;
+  covers_until?: string | null;
   created_at: string;
 }
 

@@ -2499,6 +2499,8 @@ export function ClubProvider({
     if (typeof window === 'undefined' || !isUuid(clubId) || !isUuid(sponsorId)) return;
     // The club's own admins browsing the admin panel aren't sponsor audience (same rule as page views)
     if (window.location.pathname.includes('/admin')) return;
+    // Nor is a sponsor checking their own page or invoice (SPE-11): that would pad their own results
+    if (/\/sponsor\/(your-sponsorship|invoice)(\/|$)/.test(window.location.pathname)) return;
 
     // One impression per sponsor per placement per browser per 30 minutes; clicks are never deduped.
     if (eventType !== 'click') {

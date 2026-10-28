@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
     if (!emailed) emailError = 'The email could not be sent. Copy the link and send it yourself.';
     // link_sent_at is from migration 20261132; before it runs this quietly does nothing
     if (emailed) await db.from('sponsors').update({ link_sent_at: sentAt }).eq('id', sponsor.id).then(() => undefined, () => undefined);
+    // SPE-16: which link it was, so the card doesn't call a payment link a renewal link (migration 20261136)
+    if (emailed) await db.from('sponsors').update({ link_kind: kind }).eq('id', sponsor.id).then(() => undefined, () => undefined);
     if (report.error) console.error('[sponsor-link] email failed:', report.error);
   }
 

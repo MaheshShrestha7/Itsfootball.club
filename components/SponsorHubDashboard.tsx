@@ -29,7 +29,7 @@ const statusColor = (status?: Sponsor['package_status']) =>
 
 const statusLabel = (status?: Sponsor['package_status']) => {
   if (status === 'paid') return 'Paid';
-  if (status === 'confirmed') return 'Active';
+  if (status === 'confirmed') return 'Agreed';
   if (status === 'prospect') return 'Not paid yet';
   if (status === 'expired') return 'Ended';
   if (status === 'cancelled') return 'Cancelled';
@@ -109,7 +109,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   };
 
   const handleExportCsv = () => {
-    const header = ['Sponsor', 'Seen most on', 'Times seen', 'Seen properly', 'Seen properly %', 'Clicks to website', 'Click rate %', 'Avg. seconds on screen', 'Status'];
+    const header = ['Sponsor', 'Seen most on', 'Times seen', 'Seen properly', 'Seen properly %', 'Clicks to website', 'Click rate %', 'Status'];
     const lines = rows.map(({ sponsor, stats }) => [
       sponsor.name,
       stats?.topPlacement || 'Not seen yet',
@@ -118,7 +118,6 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       (stats?.viewabilityRate || 0).toFixed(2),
       stats?.clicks || 0,
       (stats?.ctr || 0).toFixed(2),
-      ((stats?.avgDwellMs || 0) / 1000).toFixed(1),
       statusLabel(sponsor.package_status),
     ]);
     // Quoted and formula-safe: sponsor names can come from the public sign-up form
@@ -131,11 +130,6 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  const avgDwell = (() => {
-    const dwells = Object.values(data.bySponsor).map(s => s.avgDwellMs).filter(v => v > 0);
-    return dwells.length ? dwells.reduce((a, b) => a + b, 0) / dwells.length : 0;
-  })();
 
   return (
     // Display only: stays usable on view-only admin pages
@@ -326,14 +320,13 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
           <details className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem' }}>
               <ChevronDown size={16} /> More detail
-              <span className="text-meta" style={{ fontWeight: 500 }}>seen properly, click rate, time on screen, countries and devices</span>
+              <span className="text-meta" style={{ fontWeight: 500 }}>seen properly, click rate, countries and devices</span>
             </summary>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
               {[
                 ['Seen properly', `${data.totals.viewabilityRate.toFixed(0)}%`, 'Logo at least half on screen for a second or more (viewability).'],
                 ['Click rate', `${data.totals.ctr.toFixed(2)}%`, 'Clicks for every 100 times seen (CTR).'],
-                ['Time on screen', avgDwell > 0 ? `${(avgDwell / 1000).toFixed(1)}s` : '—', 'Average time a logo stayed on screen.'],
                 ['Saw one more than once', `${data.totals.repeatExposureRate.toFixed(0)}%`, 'Share of people who saw a sponsor again.'],
               ].map(([label, value, help]) => (
                 <div key={label} style={{ padding: '0.9rem', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
@@ -351,7 +344,6 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     <th style={{ padding: '0.5rem 0.6rem' }}>Sponsor</th>
                     <th style={{ padding: '0.5rem 0.6rem' }}>Seen properly</th>
                     <th style={{ padding: '0.5rem 0.6rem' }}>Click rate</th>
-                    <th style={{ padding: '0.5rem 0.6rem' }}>Time on screen</th>
                     <th style={{ padding: '0.5rem 0.6rem' }}>People (estimate)</th>
                   </tr>
                 </thead>
@@ -361,7 +353,6 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       <td style={{ ...cell, fontWeight: 700, color: 'var(--text-primary)' }}>{sponsor.name}</td>
                       <td style={cell}>{num(stats?.viewableImpressions || 0)} <span className="text-muted">({(stats?.viewabilityRate || 0).toFixed(0)}%)</span></td>
                       <td style={cell}>{(stats?.ctr || 0).toFixed(2)}%</td>
-                      <td style={cell}>{stats?.avgDwellMs ? `${(stats.avgDwellMs / 1000).toFixed(1)}s` : '—'}</td>
                       <td style={cell}>{num(stats?.uniqueReach || 0)}</td>
                     </tr>
                   ))}

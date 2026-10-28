@@ -5,6 +5,7 @@ import { findSponsorByKey } from '@/lib/sponsor-portal-server';
 import { clubBaseUrl } from '@/lib/email/club-brand';
 import { isUuid } from '@/lib/ids';
 import { gstIncludedCents, invoiceTaxDetails } from '@/lib/invoice';
+import { sponsorshipPaidFor } from '@/lib/sponsors';
 
 // A sponsorship invoice (SP-F4). GET ?k={sponsor link secret}&payment={id}, paid payments only.
 // The club's next invoice number is given the first time it's opened (assign_invoice_number,
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
   ]);
   // The GST registration and ABN the club had when this was paid (SPE-5), so the invoice never changes
   const { taxInvoice, abn } = invoiceTaxDetails(payment, settings);
+  const paidFor = sponsorshipPaidFor(payment);
 
   return NextResponse.json({
     number,
@@ -61,7 +63,10 @@ export async function GET(req: NextRequest) {
     },
     billedTo: { name: sponsor.name, contact_name: sponsor.contact_name || null, contact_email: sponsor.contact_email || null },
     line: {
-      description: pkg?.name ? `${pkg.name} sponsorship${payment.season ? `, ${payment.season} season` : ''}` : payment.description || 'Sponsorship',
+      // SPE-14: a renewal says so, with the period it pays for (else the season, as before)
+      description: pkg?.name
+        ? `${pkg.name} sponsorship${paidFor.renewal ? ' renewal' : ''}${paidFor.period ? `, ${paidFor.period}` : payment.season ? `, ${payment.season} season` : ''}`
+        : payment.description || 'Sponsorship',
       detail: pkg?.benefits ? String(pkg.benefits).split('\n')[0].slice(0, 160) : null,
     },
     amount_cents: payment.amount_cents,
