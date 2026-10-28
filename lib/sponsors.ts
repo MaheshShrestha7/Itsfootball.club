@@ -204,6 +204,7 @@ export const PLACEMENT_LABELS: Record<string, string> = {
   footer_marquee: 'Every page footer',
   match_center_marquee: 'Match pages',
   event_page: 'Event pages',
+  supported_by: 'Match reports and news',
 };
 
 export const placementName = (placement: string | null | undefined) =>
@@ -274,4 +275,44 @@ export function typedWebsite(input: string | null | undefined): string | undefin
   const v = (input || '').trim();
   if (!v) return undefined;
   return sponsorHref(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`);
+}
+
+/** The places a package can say it includes (sponsorship_packages.includes keys), in plain words:
+ *  `admin` is the short tick label in the package editor, `card` the line on the public package card */
+export const PACKAGE_INCLUDES = [
+  { key: 'home_page', admin: 'Home page', card: 'Logo on the home page' },
+  { key: 'footer', admin: 'Every page footer', card: 'Logo in the footer of every page' },
+  { key: 'match_pages', admin: 'Match pages', card: 'Logo on every match page' },
+  { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics' },
+  { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news' },
+  { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages' },
+] as const;
+
+const INCLUDE_KEYS = new Set<string>(PACKAGE_INCLUDES.map(i => i.key));
+
+/** A package's ticks split into the fixed places (in PACKAGE_INCLUDES order) and the club's own extras */
+export function packageIncludes(includes: string[] | null | undefined): { places: string[]; extras: string[] } {
+  const list = includes || [];
+  return {
+    places: PACKAGE_INCLUDES.filter(i => list.includes(i.key)).map(i => i.key),
+    extras: list.filter(i => !INCLUDE_KEYS.has(i)).map(i => i.trim()).filter(Boolean),
+  };
+}
+
+/** The lines on a public package card: the ticked places in plain words, then the extras */
+export function packageIncludeLines(includes: string[] | null | undefined): string[] {
+  const { places, extras } = packageIncludes(includes);
+  return [...PACKAGE_INCLUDES.filter(i => places.includes(i.key)).map(i => i.card), ...extras];
+}
+
+/** The list to save from the editor's ticks and its extras box (one per line), within the database's limits */
+export function buildPackageIncludes(places: string[], extrasText: string): string[] {
+  const extras = extrasText.split('\n').map(l => l.trim().slice(0, 80)).filter(l => l && !INCLUDE_KEYS.has(l));
+  return [...PACKAGE_INCLUDES.filter(i => places.includes(i.key)).map(i => i.key), ...new Set(extras)].slice(0, 16);
+}
+
+/** The sponsors for the "Supported by" strip: the highest tier on the site, at most `max` */
+export function topTierSponsors<T extends Pick<Sponsor, 'tier' | 'display_order'>>(onSite: T[], max = 4): T[] {
+  const sorted = sortSponsorsByTier(onSite);
+  return sorted.filter(s => s.tier === sorted[0]?.tier).slice(0, max);
 }

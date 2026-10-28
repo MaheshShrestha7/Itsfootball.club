@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { chartBuckets, daysUntilEnd, isSponsorKey, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -159,4 +159,21 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
   assert.ok(!isSponsorKey('A'.repeat(64)) && !isSponsorKey('a'.repeat(63)) && !isSponsorKey(undefined));
 }
 
-console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results OK');
+// Package ticks and the "Supported by" strip
+{
+  assert.deepEqual(packageIncludes(['footer', 'Ground sign', 'home_page', ' ']), { places: ['home_page', 'footer'], extras: ['Ground sign'] });
+  assert.deepEqual(packageIncludeLines(['match_graphics', 'Kit sleeve']), ['Logo on match result graphics', 'Kit sleeve']);
+  assert.deepEqual(packageIncludeLines(undefined), []);
+  assert.deepEqual(buildPackageIncludes(['event_pages', 'home_page'], 'Matchday banner\n\n  Kit sleeve \nMatchday banner\nfooter'), ['home_page', 'event_pages', 'Matchday banner', 'Kit sleeve']);
+  assert.equal(buildPackageIncludes([], 'x'.repeat(200))[0].length, 80);
+  const list = [
+    { id: 'a', tier: 'gold' as const, display_order: 2 },
+    { id: 'b', tier: 'silver' as const, display_order: 1 },
+    { id: 'c', tier: 'gold' as const, display_order: 1 },
+  ];
+  assert.deepEqual(topTierSponsors(list).map(s => s.id), ['c', 'a']);
+  assert.deepEqual(topTierSponsors([]), []);
+  assert.equal(placementName('supported_by'), 'Match reports and news');
+}
+
+console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks OK');

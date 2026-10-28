@@ -5,6 +5,8 @@ import { Share2, Download, X } from 'lucide-react';
 import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
+import { useClub } from '@/lib/club-context';
+import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 
 // "Share" on a match page (and on each fixture in Admin > Matches): previews the matchday graphic as a
 // story or a post, then hands it to the phone's share sheet (Instagram, Facebook, WhatsApp...) or
@@ -27,6 +29,12 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  // The club's sponsors on the site, biggest tier first, up to 5 (SP-F2); "Show sponsors" leaves them off
+  const { sponsors } = useClub();
+  const [showSponsors, setShowSponsors] = useState(true);
+  const sponsorKey = JSON.stringify(sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)))
+    .slice(0, 5).map(s => [s.logo_url || '', s.name]));
+  const cardSponsors = useMemo(() => (JSON.parse(sponsorKey) as [string, string][]).map(([src, name]) => ({ src: src || undefined, name })), [sponsorKey]);
   const hasLineup = ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords)?.length;
   const onPitch = lineupHasPositions(match);
   const fileName = `${club.slug}-${kind !== 'score' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
@@ -45,7 +53,10 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     let stale = false;
     setError(null);
     setImage(null);
-    drawMatchCard(match, club, kind, shareLink(club), { hideScore, format, events: hideScore ? undefined : goals, photos })
+    drawMatchCard(match, club, kind, shareLink(club), {
+      hideScore, format, events: hideScore ? undefined : goals, photos,
+      ...(showSponsors && cardSponsors.length ? { sponsors: cardSponsors, sponsorsLabel: 'CLUB SPONSORS' } : {}),
+    })
       .then(blob => {
         if (stale) return;
         url = URL.createObjectURL(blob);
@@ -53,7 +64,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, format, match, club, hideScore, goals, photos]);
+  }, [open, kind, format, match, club, hideScore, goals, photos, showSponsors, cardSponsors]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -129,6 +140,13 @@ export default function MatchShareButton({ match, club, hideScore = false, event
             : image ? <img src={image.url} alt={`Matchday graphic: ${match.home_team_name} vs ${match.away_team_name}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             : <p className="text-note" role="status">Drawing your graphic…</p>}
         </div>
+
+        {cardSponsors.length > 0 && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.88rem', color: 'var(--text-secondary)', cursor: 'pointer', minHeight: 36 }}>
+            <input type="checkbox" checked={showSponsors} onChange={e => setShowSponsors(e.target.checked)} style={{ width: 18, height: 18 }} />
+            Show sponsors
+          </label>
+        )}
 
         <div className="confirm-dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={download} disabled={!image}>

@@ -37,6 +37,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import MatchShareButton from '@/components/MatchShareButton';
 import MatchReport from '@/components/MatchReport';
+import SupportedBy from '@/components/SupportedBy';
 import { matchReport } from '@/lib/match-report';
 import { DATE_LOCALE } from '@/lib/dates';
 import { TIME_ZONE } from '@/lib/email/format';
@@ -739,6 +740,7 @@ export default function MatchCenterPage({
               playerOfTheMatch: motmMember?.full_name,
             })}
           />
+          <SupportedBy clubId={club.id} />
           </div>
         )}
 

@@ -42,8 +42,12 @@ export interface CardOptions {
   subs?: { number: number; name: string }[];
   /** The card's look (the free lineup builder): background shade, a pattern over it and a light shine */
   look?: CardLook;
-  /** Sponsor logos (data or blob URLs from the person's own device), in a strip at the bottom of the lineup cards */
-  sponsors?: string[];
+  /** Sponsor logos in a strip at the bottom: data or blob URLs from the person's own device (the free
+   *  lineup builder, lineup cards), or the club's on-site sponsors with their names (the club's own
+   *  match graphics, every card but the square one; a sponsor without a logo gets a tile with their name) */
+  sponsors?: CardSponsor[];
+  /** The heading over the sponsor strip ("OUR SPONSORS" unless given) */
+  sponsorsLabel?: string;
   /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
@@ -55,6 +59,8 @@ export interface CardOptions {
   /** Icons beside the date, the ground and the Player of the Match's stats (the free result graphic maker) */
   icons?: boolean;
 }
+
+export type CardSponsor = string | { src?: string; name: string };
 
 export interface CardLook {
   /** dark: near-black (the default); midnight: deep navy; club: the team colour, deepened; duo: the team colour into `second` */
@@ -130,6 +136,50 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null);
     img.src = /^(data|blob):/i.test(src) ? src : corsCopy(src);
   });
+}
+
+/** The sponsors that can be drawn: a logo that loaded, or else a name */
+async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
+  const items = await Promise.all((list || []).slice(0, max).map(async s => {
+    const src = typeof s === 'string' ? s : s.src;
+    const name = typeof s === 'string' ? '' : s.name.trim();
+    const img = src ? await loadImage(src) : null;
+    return img || name ? { img, name } : null;
+  }));
+  return items.filter((i): i is { img: HTMLImageElement | null; name: string } => !!i);
+}
+
+/** A row of white sponsor tiles under a small spaced heading, centred across the card. White tiles,
+ *  so a logo made for a light page reads on the dark card */
+function sponsorRow(ctx: CanvasRenderingContext2D, items: { img: HTMLImageElement | null; name: string }[], top: number, rowH: number, tileH: number,
+  label: string, W: number, M: number, maxTileW: number, body: string, heading: string) {
+  ctx.textAlign = 'center';
+  ctx.fillStyle = FAINT;
+  spaced(ctx, 4);
+  ctx.font = `700 20px ${body}`;
+  ctx.fillText(label, W / 2, top + 14);
+  spaced(ctx, 0);
+  const gap = 18;
+  const tileW = Math.min(maxTileW, (W - M * 2 - gap * (items.length - 1)) / items.length);
+  let x = W / 2 - (tileW * items.length + gap * (items.length - 1)) / 2;
+  const y = top + rowH - tileH;
+  for (const { img, name } of items) {
+    roundRect(ctx, x, y, tileW, tileH, 18);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    ctx.fill();
+    const pad = Math.round(tileH * 0.14);
+    if (img) {
+      const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, x + (tileW - w) / 2, y + (tileH - h) / 2, w, h);
+    } else {
+      ctx.fillStyle = BASE;
+      fit(ctx, name.toUpperCase(), 800, Math.round(tileH * 0.3), tileW - pad * 2, heading, 14);
+      ctx.fillText(ellipsize(ctx, name.toUpperCase(), tileW - pad * 2), x + tileW / 2, y + tileH / 2 + 1);
+    }
+    x += tileW + gap;
+  }
 }
 
 /** A crest, or the neutral shield when it's missing or its host doesn't allow CORS */
@@ -702,7 +752,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     // On the list the subs simply carry on down it, after the starters; on the pitch they get a panel of their own
     const subs = kind === 'lineup-list' ? [] : (opts.subs || []).filter(s => s.name.trim());
     const listSubs = kind === 'lineup-list' ? (opts.subs || []).filter(s => s.name.trim()) : [];
-    const sponsorImgs = (await Promise.all((opts.sponsors || []).slice(0, 6).map(loadImage))).filter((i): i is HTMLImageElement => !!i);
+    const sponsorImgs = await loadSponsors(opts.sponsors, 6);
     const sponsorH = sponsorImgs.length ? by(170, 118, 118) : 0;
     let subLines: string[] = [];
     let subSize = by(32, 28, 28);
@@ -952,27 +1002,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         y += subsH + 16;
       }
       if (sponsorH) {
-        ctx.fillStyle = FAINT;
-        spaced(ctx, 4);
-        ctx.font = `700 20px ${body}`;
-        ctx.fillText('OUR SPONSORS', W / 2, y + 14);
-        spaced(ctx, 0);
-        // White tiles, so a logo made for a light page reads on the dark card
-        const gap = 18;
-        const tileH = sponsorH - by(40, 34, 34);
-        const tileW = Math.min(by(260, 240, 240), (W - M * 2 - gap * (sponsorImgs.length - 1)) / sponsorImgs.length);
-        let x = W / 2 - (tileW * sponsorImgs.length + gap * (sponsorImgs.length - 1)) / 2;
-        for (const img of sponsorImgs) {
-          roundRect(ctx, x, y + sponsorH - tileH, tileW, tileH, 18);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
-          ctx.fill();
-          const pad = Math.round(tileH * 0.14);
-          const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
-          const w = img.naturalWidth * scale;
-          const h = img.naturalHeight * scale;
-          ctx.drawImage(img, x + (tileW - w) / 2, y + sponsorH - tileH + (tileH - h) / 2, w, h);
-          x += tileW + gap;
-        }
+        sponsorRow(ctx, sponsorImgs, y, sponsorH, sponsorH - by(40, 34, 34), opts.sponsorsLabel || 'OUR SPONSORS', W, M, by(260, 240, 240), body, heading);
       }
     }
     if (story && (day || time) && !hasExtras) {
@@ -1069,7 +1099,12 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     }
   } else {
     const [homeCrest, awayCrest] = await Promise.all([crest(match.home_team_logo), crest(match.away_team_logo)]);
-    const panelTop = by(640, 400, 320);
+    // The club's sponsors (its own match graphics): a glass strip above the watermark. Not on the
+    // square card, nor with a Player of the Match row, which leave no room for it
+    const clubSponsors = square || (scored && opts.motm?.name) ? [] : await loadSponsors(opts.sponsors, 5);
+    const stripH = clubSponsors.length ? by(150, 120, 0) : 0;
+    // On a story everything moves up a little to make room
+    const panelTop = by(640, 400, 320) - (stripH && story ? 40 : 0);
     const panelH = by(540, 420, 330);
     glass(ctx, M, panelTop, W - M * 2, panelH, 44, backdrop);
     const crestBox = by(210, 170, 140);
@@ -1113,7 +1148,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       // Goalscorers under each team
       ctx.font = `600 ${by(32, 28, 26)}px ${body}`;
       const lineH = by(48, 40, 38);
-      const max = chip ? by(4, 3, 2) : by(6, 3, 3);
+      const max = chip ? by(4, 3, 2) : stripH ? 3 : by(6, 3, 3);
       (['home', 'away'] as const).forEach((side, i) => {
         const lines = scorerLines(opts.events!, side);
         const shown = lines.length > max ? [...lines.slice(0, max - 1), `+${lines.length - max + 1} more`] : lines;
@@ -1216,6 +1251,14 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       const line = [day, match.venue].filter(Boolean).join(' · ');
       fit(ctx, line, 600, 28, W - M * 2, body);
       ctx.fillText(line, W / 2, H - by(310, 150, 100));
+    }
+
+    if (stripH) {
+      // Under the date card on a fixture; on a result, just above the quiet date line
+      const stripY = scored ? H - by(310, 150, 100) - by(46, 36, 0) - stripH : below - by(10, 15, 15) + by(270, 210, 200) + by(30, 24, 0);
+      glass(ctx, M, stripY, W - M * 2, stripH, 32, backdrop);
+      sponsorRow(ctx, clubSponsors, stripY + by(22, 18, 0), stripH - by(40, 32, 0), by(76, 62, 0), opts.sponsorsLabel || 'CLUB SPONSORS',
+        W, M + 24, by(200, 170, 0), body, heading);
     }
   }
 
