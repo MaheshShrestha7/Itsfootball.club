@@ -58,6 +58,11 @@ async function main() {
   const sources = oneCallSources(ENTITIES);
   assert.deepEqual(sources.find(s => s.name === 'matches'), { name: 'matches', scope: 'club', or_in: { column: 'status', values: ['live', 'halftime'] } });
   assert.ok(sources.some(s => s.name === 'club_members_public') && sources.some(s => s.name === 'tournament_participants' && s.scope === 'tournament'));
+  // The sponsor link's secret is never asked for by the browser (migration 20261138), either way of loading
+  const sponsorColumns = sources.find(s => s.name === 'sponsors')?.columns;
+  assert.ok(sponsorColumns?.includes('contact_email') && !sponsorColumns.includes('access_key'));
+  assert.ok(!('columns' in sources.find(s => s.name === 'sponsors_public')!), 'the public view is read whole');
+  assert.ok(!ENTITIES.find(e => e.key === 'sponsors')!.select!.includes('access_key'));
   let rpcArgs: any;
   const rpcClient = {
     rpc: async (_name: string, args: unknown) => (

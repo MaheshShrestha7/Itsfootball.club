@@ -58,6 +58,8 @@ export interface EntityConfig {
   prepare?: (obj: Row) => Row;
   /** Columns the app clears by leaving them undefined: written as NULL so the database clears too */
   clearable?: string[];
+  /** Columns to read from the table, when the browser can't read all of them (default '*') */
+  select?: string;
 }
 
 // Parents first: this is also the upsert order (deletes run in reverse).
@@ -81,7 +83,11 @@ export const ENTITIES: EntityConfig[] = [
   { key: 'matchEvents', table: 'match_events' },
   { key: 'events', table: 'events' },
   // The platform home page shows every club's sponsors
-  { key: 'sponsors', table: 'sponsors', scope: 'all', extraReadSources: ['sponsors_public'], clearable: ['event_id', 'package_value'] },
+  // Every column but access_key, the sponsor link's secret: staff can't read it (migration 20261138)
+  {
+    key: 'sponsors', table: 'sponsors', scope: 'all', extraReadSources: ['sponsors_public'], clearable: ['event_id', 'package_value'],
+    select: 'id, club_id, event_id, name, logo_url, website_url, tier, label, size_scale, display_order, is_active, contact_name, contact_email, contact_phone, package_value, package_status, season, ends_on, link_sent_at, link_kind, went_live_at, change_reviewed, change_reviewed_at, pending_logo_url, pending_website_url, pending_sent_at, package_id, created_at',
+  },
   { key: 'news', table: 'news_articles' },
   { key: 'gallery', table: 'media_gallery' },
   { key: 'clubScoreRules', table: 'clubscore_rules' },
@@ -246,7 +252,11 @@ export function oneCallSources(entities: EntityConfig[]) {
     const also = cfg.alsoLoad?.match(/^(\w+)\.in\.\(([^)]*)\)$/);
     if (cfg.alsoLoad && !also) throw new Error(`public_club_data can't express the filter ${cfg.alsoLoad}`);
     const orIn = also ? { column: also[1], values: also[2].split(',') } : undefined;
-    return [cfg.table, ...(cfg.extraReadSources || [])].map(name => ({ name, scope: cfg.scope ?? 'club', ...(orIn ? { or_in: orIn } : {}) }));
+    return [cfg.table, ...(cfg.extraReadSources || [])].map(name => ({
+      name, scope: cfg.scope ?? 'club', ...(orIn ? { or_in: orIn } : {}),
+      // Before migration 20261138 the function ignores `columns` and reads them all, as before
+      ...(cfg.select && name === cfg.table ? { columns: cfg.select.split(', ') } : {}),
+    }));
   });
 }
 
@@ -317,12 +327,14 @@ export class SupabaseSync {
     return Boolean(data.session);
   }
 
-  private async fetchAll(source: string, narrow: (q: any) => any): Promise<{ rows: Row[]; error?: string }> {
+  private async fetchAll(source: string, narrow: (q: any) => any, columns = '*'): Promise<{ rows: Row[]; error?: string }> {
     const rows: Row[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      const { data, error } = await narrow(this.client.from(source).select('*'))
+      const { data, error } = await narrow(this.client.from(source).select(columns))
         .order('id', { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
+      // A column the database doesn't have yet (an older migration not run): read what there is
+      if (error && columns !== '*') return this.fetchAll(source, narrow);
       if (error) return { rows, error: `${source}: ${error.message}` };
       rows.push(...(data || []));
       if (!data || data.length < PAGE_SIZE) break;
@@ -339,7 +351,7 @@ export class SupabaseSync {
       return;
     }
     const [base, ...extras] = await Promise.all(
-      [cfg.table, ...(cfg.extraReadSources || [])].map(source => this.fetchAll(source, narrow))
+      [cfg.table, ...(cfg.extraReadSources || [])].map(source => this.fetchAll(source, narrow, source === cfg.table ? cfg.select : undefined))
     );
     if (base.error) {
       errors.push(base.error);

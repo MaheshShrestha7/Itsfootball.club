@@ -6,7 +6,7 @@ import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus, Sponsorsh
 import { defaultSeasonLabel } from '@/lib/season';
 import {
   daysUntilEnd, defaultSponsorEnd, defaultSponsorSeason, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
-  hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel, typedWebsite,
+  hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorTierLabel, typedWebsite,
   canPayRenewal, localDateISO, matchSponsorPackage,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
@@ -268,7 +268,8 @@ export default function AdminSponsorsPage({
   };
 
   // Payment and renewal links (app/api/sponsors/send-link): the result shows under the sponsor's card
-  const [linkResult, setLinkResult] = useState<{ sponsorId: string; busy?: boolean; link?: string; emailed?: boolean; note?: string; copied?: boolean } | null>(null);
+  // `page`: the link is to their own page (Copy their link), not a payment or renewal link
+  const [linkResult, setLinkResult] = useState<{ sponsorId: string; busy?: boolean; link?: string; emailed?: boolean; note?: string; copied?: boolean; page?: boolean } | null>(null);
   const sendLink = async (sp: Sponsor, kind: 'payment' | 'renewal') => {
     setLinkResult({ sponsorId: sp.id, busy: true });
     try {
@@ -296,19 +297,30 @@ export default function AdminSponsorsPage({
     }
   };
 
-  // The sponsor's own private page (SP-F1/F3/F4): their logo, results and invoices
-  const pageLink = (sp: Sponsor) => sp.access_key
-    ? sponsorPageUrl(club.custom_domain ? `https://${club.custom_domain}` : `${window.location.origin}/${club.slug}`, sp.access_key)
-    : null;
-  const copyPageLink = async (sp: Sponsor) => {
-    const link = pageLink(sp);
-    if (!link) return;
-    const note = 'Their own page, where they send a new logo and see their results and invoices. Only send it to them.';
+  // The sponsor's own private page (SP-F1/F3/F4): their logo, results and invoices. Its secret comes
+  // from the server (app/api/sponsors/page-link); `rotate` makes a new one so the old link stops working
+  const copyPageLink = async (sp: Sponsor, rotate = false) => {
+    if (rotate && !(await confirmAction({
+      title: `New link for ${sp.name}?`,
+      message: 'Their old page link stops working, and so do invoice, payment and renewal links already sent. Use this if their link reached the wrong person.',
+      confirmLabel: 'Make a new link',
+      danger: true,
+    }))) return;
+    setLinkResult({ sponsorId: sp.id, busy: true });
     try {
-      await navigator.clipboard.writeText(link);
-      setLinkResult({ sponsorId: sp.id, link, note, copied: true });
+      const token = await getAccessToken();
+      const res = await fetch('/api/sponsors/page-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, sponsorId: sp.id, rotate }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.link) return setLinkResult({ sponsorId: sp.id, note: json.error || 'The link could not be fetched.' });
+      const note = `${rotate ? 'New link made: the old one no longer works. ' : ''}Their own page, where they send a new logo and see their results and invoices. Only send it to them.`;
+      const copied = await navigator.clipboard.writeText(json.link).then(() => true, () => false);
+      setLinkResult({ sponsorId: sp.id, link: json.link, note, copied, page: true });
     } catch {
-      setLinkResult({ sponsorId: sp.id, link, note });
+      setLinkResult({ sponsorId: sp.id, note: 'The link could not be fetched. Check your connection and try again.' });
     }
   };
   // A logo or website they sent from that page: nothing changes on the site until Use it
@@ -906,7 +918,7 @@ export default function AdminSponsorsPage({
                   </button>
                 )}
                 {/* SPP-2: for businesses that only pay against an invoice */}
-                {payable && sponsor.access_key && (invoice || packageFor(sponsor)) && (
+                {payable && renewalsReady && (invoice || packageFor(sponsor)) && (
                   <button type="button" disabled={result?.busy} onClick={() => sendInvoice(sponsor, !!invoice)} className="btn btn-secondary btn-sm" style={actionStyle}
                     title={invoice ? 'Email them the same invoice again' : `An invoice due in 14 days${packageFor(sponsor) ? ` for ${packageFor(sponsor)!.name}` : ''}`}>
                     <FileText size={14} /> {invoice ? 'Send invoice again' : 'Send invoice'}
@@ -918,8 +930,8 @@ export default function AdminSponsorsPage({
                     <Banknote size={14} /> Record a payment
                   </button>
                 )}
-                {sponsor.access_key && !(stage === 'new' && sponsor.package_status === 'prospect') && (
-                  <button type="button" onClick={() => copyPageLink(sponsor)} title="Copy the link to their own sponsor page" className="btn btn-secondary btn-sm" style={actionStyle}>
+                {renewalsReady && !(stage === 'new' && sponsor.package_status === 'prospect') && (
+                  <button type="button" disabled={result?.busy} onClick={() => copyPageLink(sponsor)} title="Copy the link to their own sponsor page" className="btn btn-secondary btn-sm" style={actionStyle}>
                     <Copy size={14} /> Copy their link
                   </button>
                 )}
@@ -948,16 +960,21 @@ export default function AdminSponsorsPage({
                 <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 0.85rem', padding: '0.65rem 0.85rem', borderRadius: '10px', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
                   {result.emailed
                     ? <span style={{ color: 'var(--c-green)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Check size={14} /> Emailed to {sponsor.contact_email}</span>
-                    : <span style={{ color: result.link && result.link === pageLink(sponsor) ? 'var(--text-secondary)' : result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
+                    : <span style={{ color: result.link && result.page ? 'var(--text-secondary)' : result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
                   {result.link && (
                     <button type="button" onClick={copyLink} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Copy size={13} /> {result.copied ? 'Copied' : 'Copy link'}
                     </button>
                   )}
-                  {result.link && result.link === pageLink(sponsor) && (
+                  {result.link && result.page && (
                     <a href={result.link} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                       <ExternalLink size={13} /> Open their page
                     </a>
+                  )}
+                  {result.link && result.page && (
+                    <button type="button" onClick={() => copyPageLink(sponsor, true)} title="Stop the old link working, if it reached the wrong person" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <RefreshCw size={13} /> New link
+                    </button>
                   )}
                   <button type="button" onClick={() => setLinkResult(null)} aria-label="Dismiss" className="btn btn-sm" style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
                     <X size={14} />

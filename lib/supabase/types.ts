@@ -387,9 +387,8 @@ export interface Sponsor {
    *  server, migration 20261136 */
   change_reviewed?: 'used' | 'kept' | null;
   change_reviewed_at?: string | null;
-  /** Secret for their payment and renewal links. Set by the database; never written by the app,
-   *  so not in TABLE_COLUMNS. */
-  access_key?: string;
+  // access_key, the secret in their page, payment and renewal links, is left out: the browser can't
+  // read it (migration 20261138). Server code reads it with the service role (PortalSponsorRow).
   /** A logo or website the sponsor sent from their own page, waiting for an admin to tap Use it
    *  (migration 20261133). Cleared by Use it or Keep the old one. */
   pending_logo_url?: string | null;

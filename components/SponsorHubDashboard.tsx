@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { toCsv } from '@/lib/finance';
-import { isSponsorOnSite, sponsorPageUrl } from '@/lib/sponsors';
+import { isSponsorOnSite } from '@/lib/sponsors';
+import { getAccessToken } from '@/lib/supabase/client';
 import {
   Eye, MousePointerClick, Globe2, Download, Search, Users2, Smartphone, Layers, Info, Trophy, Copy, Check, ChevronDown,
 } from 'lucide-react';
@@ -96,10 +97,18 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
     { key: 'best', label: 'Best page', icon: Trophy, value: bestPage?.label || '—', color: 'var(--c-purple)' },
   ];
 
-  // Their own private page (SP-F1/F3/F4): their results, a new logo, invoices
+  // Their own private page (SP-F1/F3/F4): their results, a new logo, invoices. The link's secret
+  // comes from the server, for admins who can edit Sponsors (app/api/sponsors/page-link)
   const copyTheirLink = async (sponsor: Sponsor) => {
-    if (!sponsor.access_key) return;
-    const link = sponsorPageUrl(club.custom_domain ? `https://${club.custom_domain}` : `${window.location.origin}/${club.slug}`, sponsor.access_key);
+    const token = await getAccessToken();
+    const res = await fetch('/api/sponsors/page-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ clubId: club.id, sponsorId: sponsor.id }),
+    }).catch(() => null);
+    const json = await res?.json().catch(() => ({})) ?? {};
+    if (!res?.ok || !json.link) return window.alert(json.error || 'The link could not be fetched. Check your connection and try again.');
+    const link: string = json.link;
     try {
       await navigator.clipboard.writeText(link);
       setCopiedId(sponsor.id);
@@ -303,7 +312,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                     <span><strong className="text-primary">{num(stats?.impressions || 0)}</strong> <span className="text-muted">seen</span></span>
                     <span><strong className="text-primary">{num(stats?.clicks || 0)}</strong> <span className="text-muted">{stats?.clicks === 1 ? 'click' : 'clicks'}</span></span>
                   </div>
-                  {sponsor.access_key && (
+                  {sponsor.package_status !== 'prospect' && (
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyTheirLink(sponsor)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 36 }}>
                       {copiedId === sponsor.id ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy their link</>}
                     </button>
