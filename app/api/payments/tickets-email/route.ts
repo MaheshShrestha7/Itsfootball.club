@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   if (!db || !process.env.RESEND_API_KEY) return NextResponse.json({ sent: false, error: 'Email is not set up.' }, { status: 503 });
   const { data: pay } = await db.from('payments').select('*').eq('id', body.paymentId).eq('club_id', body.clubId).maybeSingle();
   if (pay?.kind === 'sponsorship' && pay.status === 'paid') return NextResponse.json({ sent: await emailSponsorPaid(db, pay as Payment) });
-  if (pay?.kind === 'sponsorship' && pay.status === 'rejected') return NextResponse.json({ sent: await emailSponsorTransferRejected(db, pay as Payment) });
+  // A turned-down receipt for an invoice (SPP-2) leaves the invoice 'pending' again
+  if (pay?.kind === 'sponsorship' && (pay.status === 'rejected' || (pay.status === 'pending' && pay.due_on))) return NextResponse.json({ sent: await emailSponsorTransferRejected(db, pay as Payment) });
   if (!pay || pay.kind !== 'event_ticket' || pay.status !== 'paid') {
     return NextResponse.json({ sent: false, error: 'Not a paid ticket order.' }, { status: 409 });
   }

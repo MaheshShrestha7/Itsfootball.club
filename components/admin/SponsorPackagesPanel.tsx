@@ -33,6 +33,24 @@ function IncludesEditor({ row, set }: { row: SponsorshipPackage; set: (patch: Pa
   );
 }
 
+/** SPP-4: how many of a package the club can sell (one shirt front, one set of naming rights) */
+function LimitEditor({ row, set, taken }: { row: SponsorshipPackage; set: (patch: Partial<SponsorshipPackage>) => void; taken: number }) {
+  const id = `pkg-limit-${row.id}`;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem 0.75rem', marginBottom: '0.5rem' }}>
+      <label htmlFor={id} className="form-label" style={{ margin: 0 }}>How many can you sell?</label>
+      <input id={id} type="number" min={1} max={999} step={1} inputMode="numeric" className="form-input" style={{ width: 110 }} placeholder="No limit"
+        value={row.max_sponsors ?? ''}
+        onChange={e => set({ max_sponsors: e.target.value === '' ? null : Math.min(999, Math.max(1, Math.round(Number(e.target.value)) || 1)) })} />
+      <span className="text-meta">
+        {row.max_sponsors
+          ? `${Math.min(taken, row.max_sponsors)} of ${row.max_sponsors} taken${taken >= row.max_sponsors ? ', shown as Taken on your page' : ''}`
+          : `${taken} taken. Blank means no limit.`}
+      </span>
+    </div>
+  );
+}
+
 /** The club's sponsorship packages (what /{club}/sponsor offers), on the Sponsors page so whoever
  *  looks after sponsors can set them up without Finance access */
 export default function SponsorPackagesPanel({ club }: { club: { id: string; slug: string } }) {
@@ -55,6 +73,14 @@ export default function SponsorPackagesPanel({ club }: { club: { id: string; slu
   useEffect(() => {
     db?.from('sponsorship_packages').select('includes').limit(1).then(({ error }) => setIncludesReady(!error));
   }, [db]);
+  // SPP-4: "How many can we sell?" needs migration 20261137; hidden until it runs
+  const [limitsReady, setLimitsReady] = useState(false);
+  const [taken, setTaken] = useState<Map<string, number>>(() => new Map());
+  useEffect(() => {
+    db?.from('sponsorship_packages').select('max_sponsors').limit(1).then(({ error }) => setLimitsReady(!error));
+    db?.rpc('sponsor_package_spots', { p_club_id: club.id })
+      .then(({ data }) => setTaken(new Map(((data || []) as { package_id: string; taken: number }[]).map(r => [r.package_id, r.taken]))));
+  }, [db, club.id, packages]);
 
   return (
     <div className="stack">
@@ -71,11 +97,22 @@ export default function SponsorPackagesPanel({ club }: { club: { id: string; slu
         )}
         extraLabel="Tier"
         textField="benefits"
-        below={includesReady ? (row, set) => <IncludesEditor key={row.id} row={row} set={set} /> : undefined}
+        below={includesReady || limitsReady ? (row, set) => (
+          <>
+            {limitsReady && <LimitEditor row={row} set={set} taken={taken.get(row.id) || 0} />}
+            {includesReady && <IncludesEditor key={row.id} row={row} set={set} />}
+          </>
+        ) : undefined}
       />
       {includesReady && (
         <p className="text-note" style={{ margin: 0 }}>
           The ticks show on your public packages. Where a logo actually appears still follows the sponsor&apos;s tier and Logo size.
+        </p>
+      )}
+      {limitsReady && (
+        <p className="text-note" style={{ margin: 0 }}>
+          A package with a limit shows how many are left on your page, and can&apos;t be bought once they&apos;re all taken.
+          A website sign-up holds one for 48 hours while they pay, or while their invoice is open.
         </p>
       )}
       <p className="text-note" style={{ margin: 0 }}>

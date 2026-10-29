@@ -145,7 +145,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       {label}
     </Link>
   );
-  // The menu, in three groups; links the visitor can't use (no shop yet, sponsor pitch once signed in) left out
+  // The menu, in three groups; links the visitor can't use (no shop yet) left out
   const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
     { title: 'Matchday', links: [
       { path: '/fixtures', label: 'Fixtures & Results', icon: Calendar },
@@ -161,7 +161,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     ] },
     { title: 'Support the club', links: [
       ...(hasShop ? [{ path: '/shop', label: 'Club Shop', icon: ShoppingBag }] : []),
-      ...(!isAuthenticated ? [{ path: '/sponsor', label: 'Become a Sponsor', icon: Handshake }] : []),
+      // SPP-5: for everyone, signed in too: the parents and players who run local businesses are the club's likeliest sponsors
+      { path: '/sponsor', label: 'Become a Sponsor', icon: Handshake },
     ] },
   ];
 

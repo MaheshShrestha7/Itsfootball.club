@@ -474,10 +474,12 @@ export function inquiryReply(p: { brand: EmailBrand; senderName: string; reply: 
 
 /** A payment link for a sponsor who signed up but hasn't paid, or a renewal link before their
  *  sponsorship ends (sent from Admin, Sponsors) */
-export function sponsorLink(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; renewal: boolean; endsOn?: string | null; ended?: boolean; link: string; pageLink?: string | null; canReply: boolean }): RenderedEmail {
+export function sponsorLink(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; renewal: boolean; endsOn?: string | null; ended?: boolean; link: string; pageLink?: string | null; canReply: boolean; unsubscribeUrl?: string | null }): RenderedEmail {
   const ends = p.endsOn ? (p.ended ? `ended on ${p.endsOn}` : `ends on ${p.endsOn}`) : null;
   return renderEmail({
     brand: p.brand,
+    // The daily renewal reminders (SPP-1) can be unsubscribed from; links an admin sends by hand can't
+    unsubscribeUrl: p.unsubscribeUrl,
     subject: p.renewal ? `Renew your ${p.brand.name} sponsorship` : `Finish your ${p.brand.name} sponsorship`,
     preheader: p.renewal ? `${p.business}'s sponsorship${ends ? ` ${ends}` : ''}. Renew for another year.` : `Pay for the ${p.packageName} package to finish signing up.`,
     heading: p.renewal ? 'Time to renew your sponsorship' : 'Finish your sponsorship',
@@ -496,6 +498,26 @@ export function sponsorLink(p: { brand: EmailBrand; contactName: string; busines
     cta: { label: p.renewal ? 'Renew my sponsorship' : 'Pay for my sponsorship', url: p.link },
     note: 'This link is just for your business. Please don\'t share it.',
     reason: `You're receiving this because ${p.business} ${p.renewal ? 'sponsors' : 'signed up to sponsor'} ${p.brand.name}.`,
+  });
+}
+
+/** SPP-2: an invoice sent before payment ("Invoice me first", or Send invoice in admin), for the
+ *  business to pay or pass to whoever pays their bills */
+export function sponsorInvoice(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; number: string; dueOn: string; invoiceLink: string; canReply: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `Invoice ${p.number} from ${p.brand.name}`,
+    preheader: `${p.price} for the ${p.packageName} package, due ${p.dueOn}.`,
+    heading: `Invoice ${p.number}`,
+    paragraphs: [
+      `Hi ${firstName(p.contactName)}, thank you for sponsoring ${p.brand.name}. Here is ${p.business}'s invoice for the ${p.packageName} package.`,
+      'Open it to print or save it as a PDF for your accounts. It has the club\'s bank details, and a button to pay by card.',
+      ...(p.canReply ? ['Questions? Just reply to this email.'] : []),
+    ],
+    details: [['Business', p.business], ['Package', p.packageName], ['Amount', p.price], ['Due', p.dueOn], ['Invoice', p.number]],
+    cta: { label: 'Open the invoice', url: p.invoiceLink },
+    note: 'This link is just for your business. Please don\'t share it outside your business.',
+    reason: `You're receiving this because ${p.business} signed up to sponsor ${p.brand.name}.`,
   });
 }
 

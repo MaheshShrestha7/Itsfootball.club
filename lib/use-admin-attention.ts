@@ -5,7 +5,7 @@ import { getSupabaseClient } from './supabase/client';
 import { useClub } from './club-context';
 import { useAuth } from './auth-context';
 import { attentionItems, type AttentionItem } from './admin-attention';
-import { isEndingSoon, hasSentChange, isStaleSignup, sponsorSignupStage } from './sponsors';
+import { isEndingSoon, hasRecentlyLapsed, hasSentChange, isStaleSignup, sponsorSignupStage } from './sponsors';
 
 /** The dashboard's "Needs you" list for one club, limited to what this person's roles can act on */
 export function useAdminAttention(club: { id: string; slug: string }): AttentionItem[] {
@@ -48,6 +48,7 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
     sponsorsToPutOnSite: clubSponsors.filter(s => sponsorSignupStage(s, now) === 'paid').length,
     sponsorSignups: clubSponsors.filter(s => sponsorSignupStage(s, now) === 'unpaid' && !sponsorReceipts.has(s.id)).length,
     sponsorsEndingSoon: clubSponsors.filter(s => isEndingSoon(s, now)).length,
+    sponsorsLapsed: clubSponsors.filter(s => hasRecentlyLapsed(s, now)).length,
     staleSponsorSignups: clubSponsors.filter(s => isStaleSignup(s, now)).length,
     sponsorChanges: clubSponsors.filter(s => hasSentChange(s)).length,
   };

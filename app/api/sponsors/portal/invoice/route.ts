@@ -6,8 +6,10 @@ import { clubBaseUrl } from '@/lib/email/club-brand';
 import { isUuid } from '@/lib/ids';
 import { gstIncludedCents, invoiceTaxDetails } from '@/lib/invoice';
 import { sponsorshipPaidFor } from '@/lib/sponsors';
+import { paymentReference } from '@/lib/finance';
 
-// A sponsorship invoice (SP-F4). GET ?k={sponsor link secret}&payment={id}, paid payments only.
+// A sponsorship invoice (SP-F4). GET ?k={sponsor link secret}&payment={id}: a paid payment, or an
+// invoice the club sent before payment (SPP-2, due_on set), which shows what's due and how to pay.
 // The club's next invoice number is given the first time it's opened (assign_invoice_number,
 // migration 20261133), then stays the same. Admins open it from the sponsor's page link too.
 
@@ -29,7 +31,9 @@ export async function GET(req: NextRequest) {
   if (!payment || payment.sponsor_id !== sponsor.id || payment.club_id !== club.id || payment.kind !== 'sponsorship') {
     return NextResponse.json({ error: 'This invoice link is not valid.' }, { status: 404 });
   }
-  if (payment.status !== 'paid') {
+  // SPP-2: an invoice sent before payment can be opened while it's due, or while a receipt is checked
+  const invoicedFirst = !!payment.due_on && (payment.status === 'pending' || payment.status === 'awaiting_review');
+  if (payment.status !== 'paid' && !invoicedFirst) {
     return NextResponse.json({ error: 'The invoice is ready once the club has received the payment.' }, { status: 409 });
   }
 
@@ -40,7 +44,7 @@ export async function GET(req: NextRequest) {
   }
 
   const [{ data: settings }, { data: pkg }] = await Promise.all([
-    db.from('club_payment_settings').select('abn, gst_registered').eq('club_id', club.id).maybeSingle(),
+    db.from('club_payment_settings').select('abn, gst_registered, bank_details').eq('club_id', club.id).maybeSingle(),
     payment.package_id
       ? db.from('sponsorship_packages').select('name, benefits').eq('id', payment.package_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -73,6 +77,16 @@ export async function GET(req: NextRequest) {
     gst_cents: taxInvoice ? gstIncludedCents(payment.amount_cents) : 0,
     currency: payment.currency,
     method: payment.method,
-    date: payment.paid_at || payment.created_at,
+    // An invoice sent before payment keeps the day it was issued; a paid one is dated when it was paid
+    date: payment.due_on ? payment.created_at : payment.paid_at || payment.created_at,
+    status: payment.status === 'paid' ? 'paid' : payment.status === 'awaiting_review' ? 'checking' : 'due',
+    paid_at: payment.status === 'paid' ? payment.paid_at || payment.created_at : null,
+    due_on: payment.due_on || null,
+    // How to pay an open invoice: the club's bank details (with the reference) and its card payment link
+    ...(payment.status === 'pending' ? {
+      bank_details: settings?.bank_details?.trim() || null,
+      reference: paymentReference(sponsor.id),
+      pay_link: payment.package_id ? `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: payment.package_id, k: sponsor.access_key })}` : null,
+    } : {}),
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

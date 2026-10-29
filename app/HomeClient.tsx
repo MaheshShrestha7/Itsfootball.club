@@ -11,7 +11,7 @@ import AuthModal from '@/components/AuthModal';
 import SponsorLogo from '@/components/SponsorLogo';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { sponsorHref } from '@/lib/sponsors';
+import { sponsorClickHref } from '@/lib/sponsors';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
@@ -1392,7 +1392,7 @@ export default function PlatformHomePage() {
                 <h3 className="lp-subhead lp-reveal">Backed by local sponsors</h3>
                 <div className="sponsor-scroll-strip">
                   {allSponsors.map(({ sponsor, club }) => {
-                    const href = sponsorHref(sponsor.website_url);
+                    const href = sponsorClickHref(sponsor.website_url, club.slug);
                     const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
                     const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
                     return (
@@ -1400,7 +1400,7 @@ export default function PlatformHomePage() {
                         key={sponsor.id}
                         href={href || `/${club.slug}`}
                         target={href ? '_blank' : undefined}
-                        rel={href ? 'noopener noreferrer' : undefined}
+                        rel={href ? 'sponsored noopener' : undefined}
                         className="glass-panel glass-panel-interactive sponsor-scroll-card lp-sponsor"
                         style={{ '--sc': isPlatinum ? '#F59E0B' : club.primary_color } as React.CSSProperties}
                       >

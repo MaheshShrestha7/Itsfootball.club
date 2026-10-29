@@ -62,6 +62,14 @@ export function isEndingSoon(sponsor: Pick<Sponsor, 'is_active' | 'package_statu
   return days !== null && days <= 30 && isSponsorOnSite(sponsor, now);
 }
 
+/** On the site until its end date, which passed in the last 14 days (not ended by an admin): it came
+ *  off the site by itself, and nobody has renewed it yet (SPP-1) */
+export function hasRecentlyLapsed(sponsor: Pick<Sponsor, 'is_active' | 'package_status'> & { ends_on?: string | null }, now = Date.now()): boolean {
+  const days = daysUntilEnd(sponsor, now);
+  return days !== null && days < 0 && days >= -14 && sponsor.is_active !== false
+    && sponsor.package_status !== 'expired' && sponsor.package_status !== 'cancelled';
+}
+
 /** How many days before the end date a sponsor can pay to renew (the renewal link works, and their
  *  page offers "Renew for another year") */
 export const RENEWAL_WINDOW_DAYS = 60;
@@ -352,4 +360,46 @@ export function buildPackageIncludes(places: string[], extrasText: string): stri
 export function topTierSponsors<T extends Pick<Sponsor, 'tier' | 'display_order'>>(onSite: T[], max = 4): T[] {
   const sorted = sortSponsorsByTier(onSite);
   return sorted.filter(s => s.tier === sorted[0]?.tier).slice(0, max);
+}
+
+/** SPP-4: a sponsor holds its package's spot while the sponsorship runs (not ended, not past its end
+ *  date) and is paid, agreed or on the site. A website sign-up that hasn't paid holds it for 48 hours,
+ *  or while its invoice or bank transfer receipt is open (`openPayment`). Same rule as the database's
+ *  sponsor_package_spots (migration 20261137). */
+export function holdsPackageSpot(
+  sponsor: Pick<Sponsor, 'is_active' | 'package_status' | 'created_at'> & { ends_on?: string | null; package_id?: string | null },
+  openPayment: boolean,
+  now = Date.now()
+): boolean {
+  if (!sponsor.package_id) return false;
+  if (sponsor.package_status === 'expired' || sponsor.package_status === 'cancelled' || isPastEndDate(sponsor, now)) return false;
+  if (sponsor.package_status === 'paid' || sponsor.package_status === 'confirmed' || !sponsor.package_status || sponsor.is_active) return true;
+  const created = sponsor.created_at ? Date.parse(sponsor.created_at) : NaN;
+  return openPayment || Number.isNaN(created) || now - created < 48 * 3600 * 1000;
+}
+
+/** How many of a package are left to sell: null when it has no limit */
+export function packageSpotsLeft(pkg: { max_sponsors?: number | null }, taken: number): number | null {
+  return pkg.max_sponsors && pkg.max_sponsors > 0 ? Math.max(0, pkg.max_sponsors - taken) : null;
+}
+
+/** Days a sponsor has to pay an invoice sent before payment (SPP-2) */
+export const INVOICE_DUE_DAYS = 14;
+
+/** SPP-2: an invoice the club sent before being paid, still open (paid by card, transfer or in person
+ *  turns the same row paid) */
+export const isOpenInvoice = (p: { kind?: string; status?: string; due_on?: string | null }) =>
+  p.kind === 'sponsorship' && p.status === 'pending' && !!p.due_on;
+
+/** A sponsor's website as the club's pages link to it: tagged so the visits show in the sponsor's own
+ *  analytics as coming from the club (utm_*), unless the address already carries its own tags */
+export function sponsorClickHref(url: string | undefined, clubSlug: string | undefined): string | undefined {
+  const href = sponsorHref(url);
+  if (!href || !clubSlug) return href;
+  const parsed = new URL(href);
+  if ([...parsed.searchParams.keys()].some(k => k.startsWith('utm_'))) return href;
+  parsed.searchParams.set('utm_source', 'itsfootball.club');
+  parsed.searchParams.set('utm_medium', 'sponsor');
+  parsed.searchParams.set('utm_campaign', clubSlug);
+  return parsed.href;
 }

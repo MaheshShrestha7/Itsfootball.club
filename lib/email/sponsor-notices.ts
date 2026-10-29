@@ -15,8 +15,10 @@ async function loadClub(db: SupabaseClient, clubId: string) {
 
 /** SPE-8: tells a sponsor the club couldn't match their bank transfer, with the club's note and the
  *  link to pay again. email_log makes it go out once per payment. */
-export async function emailSponsorTransferRejected(db: SupabaseClient, pay: Payment): Promise<boolean> {
-  if (pay.kind !== 'sponsorship' || pay.status !== 'rejected' || !pay.sponsor_id || !process.env.RESEND_API_KEY) return false;
+export async function emailSponsorTransferRejected(db: SupabaseClient, pay: Payment & { reviewed_at?: string | null }): Promise<boolean> {
+  // SPP-2: a receipt for an invoice the club sent goes back to 'pending' (the invoice is still due)
+  const invoiceStillDue = pay.status === 'pending' && !!pay.due_on && !!pay.reviewed_at;
+  if (pay.kind !== 'sponsorship' || (pay.status !== 'rejected' && !invoiceStillDue) || !pay.sponsor_id || !process.env.RESEND_API_KEY) return false;
   const [{ data: sponsor }, club, { data: pkg }] = await Promise.all([
     db.from('sponsors').select('*').eq('id', pay.sponsor_id).maybeSingle(),
     loadClub(db, pay.club_id),
@@ -26,7 +28,8 @@ export async function emailSponsorTransferRejected(db: SupabaseClient, pay: Paym
   if (!sponsor || !club || !isSponsorKey(sponsor.access_key) || !looksLikeEmail(to)) return false;
   const query = new URLSearchParams({ pay: sponsor.id, ...(pkg?.id ? { package: pkg.id } : {}), k: sponsor.access_key });
   const report = await sendClubEmails(db, [{
-    key: `sponsor_rejected:${pay.id}`,
+    // An invoice can have a receipt turned down more than once: once per check
+    key: `sponsor_rejected:${pay.id}${invoiceStillDue ? `:${pay.reviewed_at}` : ''}`,
     clubId: club.row.id,
     kind: 'sponsor_rejected',
     refId: sponsor.id,

@@ -32,7 +32,9 @@ export interface PortalPayment {
   amount_cents: number;
   currency: string;
   method: string;
-  status: 'paid' | 'awaiting_review';
+  /** 'pending' is an invoice the club sent before payment, due by due_on (SPP-2) */
+  status: 'paid' | 'awaiting_review' | 'pending';
+  due_on: string | null;
   paid_at: string | null;
   created_at: string;
   /** A tax invoice (the club's GST registration and ABN when this payment was made, SPE-5) */
@@ -71,6 +73,8 @@ export interface PortalData {
   canPay: boolean;
   /** A bank transfer receipt is waiting for the club to check it */
   receiptWaiting: boolean;
+  /** SPP-2: they can ask for an invoice to pay against (something to pay, and no invoice open yet) */
+  canInvoice: boolean;
 }
 
 const DAY = 24 * 3600 * 1000;
@@ -99,17 +103,20 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
     ),
     // '*' so the invoice snapshot columns (migration 20261135) are read once they exist
     db.from('payments').select('*')
-      .eq('sponsor_id', sponsor.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review'])
+      .eq('sponsor_id', sponsor.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review', 'pending'])
       .order('created_at', { ascending: false }).limit(20),
     db.from('sponsorship_packages').select('id, name, tier, price_cents, is_active').eq('club_id', sponsor.club_id),
     // abn and gst_registered are from migration 20261133; before it runs this errors and data is null
     db.from('club_payment_settings').select('abn, gst_registered').eq('club_id', sponsor.club_id).maybeSingle(),
   ]);
 
+  // A 'pending' row is an abandoned card checkout, unless it's an invoice the club sent (due_on, SPP-2)
+  const shown = (payments || []).filter(p => p.status !== 'pending' || p.due_on);
   const packageName = new Map((packages || []).map(p => [p.id as string, p.name as string]));
   let renewLink: string | null = null;
   if (canPayRenewal(sponsor)) {
-    const pkg = matchSponsorPackage(sponsor, (packages || []).filter(p => p.is_active));
+    const active = (packages || []).filter(p => p.is_active);
+    const pkg = active.find(p => p.id === sponsor.package_id && p.price_cents > 0) || matchSponsorPackage(sponsor, active);
     if (pkg) renewLink = `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: pkg.id, k: sponsor.access_key })}`;
   }
 
@@ -131,7 +138,7 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
     },
     canSend: 'pending_sent_at' in sponsor,
     results: { ...summariseSponsorEvents(events), since },
-    payments: (payments || []).map(p => ({
+    payments: shown.map(p => ({
       id: p.id,
       description: p.description,
       packageName: p.package_id ? packageName.get(p.package_id) ?? null : null,
@@ -139,6 +146,7 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
       currency: p.currency,
       method: p.method,
       status: p.status,
+      due_on: p.due_on ?? null,
       paid_at: p.paid_at,
       created_at: p.created_at,
       taxInvoice: invoiceIsTax(p, settings),
@@ -147,6 +155,12 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
     taxInvoice: !!settings?.gst_registered && !!cleanAbn(settings.abn),
     renewLink,
     canPay: sponsor.package_status === 'prospect' || canPayRenewal(sponsor),
-    receiptWaiting: (payments || []).some(p => p.status === 'awaiting_review'),
+    receiptWaiting: shown.some(p => p.status === 'awaiting_review'),
+    // Something to pay for, no invoice or receipt open, and a priced package that fits (as the invoice
+    // route picks it). Before migration 20261137 there's no due_on, so nothing is open and the
+    // invoice route says invoices aren't ready.
+    canInvoice: (sponsor.package_status === 'prospect' || canPayRenewal(sponsor))
+      && !shown.some(p => p.status === 'awaiting_review' || (p.status === 'pending' && p.due_on))
+      && !!((packages || []).find(p => p.is_active && p.price_cents > 0 && p.id === sponsor.package_id) || matchSponsorPackage(sponsor, (packages || []).filter(p => p.is_active))),
   };
 }
