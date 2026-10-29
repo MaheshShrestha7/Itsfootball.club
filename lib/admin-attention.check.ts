@@ -56,6 +56,10 @@ assert.deepEqual(renewalItems.map(i => [i.key, i.text, i.href]), [
 ]);
 assert.equal(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorsEndingSoon: 1 }, [], NOW)[0].text, '1 sponsorship ends in the next 30 days');
 assert.equal(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorChanges: 2 }, [], NOW)[0].text, '2 sponsors sent a new logo or website to check');
+// SPP-1: a sponsorship that ran out by itself doesn't drop off the list the day it ends
+const lapsed = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorsLapsed: 1, sponsorsEndingSoon: 2 }, [], NOW);
+assert.deepEqual(lapsed.map(i => [i.key, i.tone, i.href]), [['sponsors-lapsed', 'urgent', '/rfc/admin/sponsors?view=ended'], ['sponsors-ending', 'normal', '/rfc/admin/sponsors?view=ending']]);
+assert.equal(lapsed[0].text, '1 sponsorship ended in the last 2 weeks and came off the site');
 
 // Results from the club's side: an away 1-2 loss is L 1-2, never "2-1"
 assert.deepEqual(clubResult(m({ is_club_home: false, home_score: 2, away_score: 1 })), { us: 1, them: 2, outcome: 'L', onPens: false });

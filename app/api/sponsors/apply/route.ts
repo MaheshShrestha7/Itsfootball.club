@@ -4,6 +4,7 @@ import { isSponsorKey, typedWebsite } from '@/lib/sponsors';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 import { formatMoney } from '@/lib/finance';
+import { packageIsFull, PACKAGE_TAKEN } from '@/lib/sponsor-invoice-server';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max = 255) => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, max) : '');
@@ -45,13 +46,13 @@ export async function POST(req: NextRequest) {
 
   const { data: pkg } = await db
     .from('sponsorship_packages')
-    .select('id, name, tier, price_cents')
+    // '*' so max_sponsors (migration 20261137) is read once it exists
+    .select('*')
     .eq('id', packageId)
     .eq('club_id', clubId)
     .eq('is_active', true)
     .maybeSingle();
   if (!pkg) return NextResponse.json({ error: 'That package is no longer available.' }, { status: 404 });
-
   const onRequest = !(pkg.price_cents > 0);
   const row = {
     club_id: clubId,
@@ -79,6 +80,8 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  // SPP-4: the club can only sell so many of this package (checked again at payment)
+  if (await packageIsFull(db, clubId, pkg, earlier?.id)) return NextResponse.json({ error: PACKAGE_TAKEN }, { status: 409 });
   const save = (values: Record<string, unknown>) =>
     earlier
       ? db.from('sponsors').update(values).eq('id', earlier.id).select('id').single()
@@ -87,6 +90,8 @@ export async function POST(req: NextRequest) {
       : db.from('sponsors').insert({ logo_url: '', ...values }).select('*').single();
   const { data: sponsor, error } = await save(row);
   if (error || !sponsor) return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 });
+  // SPP-4: the package they hold (migration 20261137; before it this quietly does nothing)
+  await db.from('sponsors').update({ package_id: pkg.id }).eq('id', sponsor.id).then(() => undefined, () => undefined);
 
   // Tell the club in their Inbox. Best effort: the sign-up is saved either way, and the inbox's own
   // 2-minute per-email cooldown quietly drops a quick repeat

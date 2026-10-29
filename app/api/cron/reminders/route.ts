@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceClient } from '@/lib/supabase/service';
-import { availabilityReminder, eventReminder, renewalReminder } from '@/lib/email/templates';
+import { availabilityReminder, eventReminder, renewalReminder, sponsorLink } from '@/lib/email/templates';
+import { formatMoney } from '@/lib/finance';
+import { formatEndDate, isSponsorKey, matchSponsorPackage, sponsorPageUrl } from '@/lib/sponsors';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
@@ -12,6 +14,7 @@ import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/f
 //   - match availability: squad members who haven't answered, for matches in the next 48 hours
 //   - events: registered attendees, for events starting in the next 30 hours
 //   - membership: 14 days before expiry, and once in the week after it lapses (clubs with paid plans)
+//   - sponsors: 30 days before the sponsorship ends, and once in the week after, with the renewal link
 // Juniors' reminders go to their parent or guardian (memberRecipient).
 // Each club switches these on in Admin -> Email Notifications (clubs.email_settings); all start off.
 // Unsubscribed addresses are skipped, and each reminder goes out at most once (email_log).
@@ -149,6 +152,58 @@ async function renewalDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   });
 }
 
+async function sponsorRenewalDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
+  // SPP-1: sponsors still on the site (not ended by an admin) whose end date is 30 days away or passed
+  // in the last week. Their renewal link works from 60 days before (canPayRenewal).
+  const today = localDate();
+  const { data: sponsors } = await db.from('sponsors').select('*')
+    .eq('is_active', true).in('package_status', ['paid', 'confirmed'])
+    .gte('ends_on', localDate(-7)).lte('ends_on', localDate(30));
+  const clubs = await clubsWith(db, 'sponsor_renewal_reminders', (sponsors || []).map(s => s.club_id));
+  // Money deals only: one agreed in goods or services has nothing to pay
+  const due = (sponsors || []).filter(s => clubs.has(s.club_id) && isSponsorKey(s.access_key) && looksLikeEmail(s.contact_email)
+    && (Number(s.package_value) > 0 || s.package_id));
+  if (!due.length) return [];
+
+  const clubIds = [...new Set(due.map(s => s.club_id))];
+  const [{ data: packages }, { data: open }, { data: settings }] = await Promise.all([
+    db.from('sponsorship_packages').select('id, club_id, name, tier, price_cents').in('club_id', clubIds).eq('is_active', true).gt('price_cents', 0),
+    // Already paying: a receipt being checked, or an invoice out (due_on, migration 20261137)
+    db.from('payments').select('*').in('sponsor_id', due.map(s => s.id)).eq('kind', 'sponsorship').in('status', ['awaiting_review', 'pending']),
+    db.from('club_payment_settings').select('club_id, currency').in('club_id', clubIds),
+  ]);
+  const paying = new Set((open || []).filter(p => p.status === 'awaiting_review' || p.due_on).map(p => p.sponsor_id));
+  const currency = new Map((settings || []).map(c => [c.club_id, c.currency as string]));
+
+  return due.flatMap(s => {
+    const club = clubs.get(s.club_id);
+    const clubPackages = (packages || []).filter(p => p.club_id === s.club_id);
+    const pkg = clubPackages.find(p => p.id === s.package_id) || matchSponsorPackage(s, clubPackages);
+    if (!club || !pkg || paying.has(s.id)) return [];
+    const ended = s.ends_on < today;
+    const base = clubBaseUrl(club);
+    return [{
+      // One "ending soon" and one "ended" email per term (the end date names the term)
+      key: `sponsor-renewal-${ended ? 'ended' : 'soon'}:${s.id}:${s.ends_on}`,
+      club, kind: 'sponsor_reminder' as const, refId: `${s.id}:${s.ends_on}`, to: String(s.contact_email).trim(),
+      render: (unsubscribeUrl: string | null) => sponsorLink({
+        brand: clubBrand(club),
+        unsubscribeUrl,
+        contactName: s.contact_name || s.name,
+        business: s.name,
+        packageName: pkg.name,
+        price: formatMoney(pkg.price_cents, currency.get(s.club_id) || 'AUD'),
+        renewal: true,
+        endsOn: formatEndDate(s.ends_on),
+        ended,
+        link: `${base}/sponsor?${new URLSearchParams({ pay: s.id, package: pkg.id, k: s.access_key })}`,
+        pageLink: sponsorPageUrl(base, s.access_key),
+        canReply: false,
+      }),
+    }];
+  });
+}
+
 /** Equal-time string compare, so the secret can't be guessed byte by byte from response timing */
 function sameSecret(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -170,7 +225,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
   }
 
-  const drafts = (await Promise.all([availabilityDrafts(db), eventDrafts(db), renewalDrafts(db)])).flat();
+  const drafts = (await Promise.all([availabilityDrafts(db), eventDrafts(db), renewalDrafts(db), sponsorRenewalDrafts(db)])).flat();
 
   const { due, optedOut, alreadySent } = await filterDrafts(db, drafts);
 

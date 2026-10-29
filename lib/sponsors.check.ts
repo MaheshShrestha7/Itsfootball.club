@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, canPayRenewal, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -197,4 +197,40 @@ assert.deepEqual(chartBuckets(new Date(2026, 9, 7), new Date(2026, 9, 1)), []);
   assert.equal(placementName('supported_by'), 'Match reports and news');
 }
 
-console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks OK');
+// SPP-4: who holds a package's spot, and how many are left
+{
+  const NOW = new Date(2026, 9, 29, 12).getTime();
+  const DAY_MS = 864e5;
+  const base = { package_id: 'pkg', is_active: false, created_at: new Date(NOW - 5 * DAY_MS).toISOString() };
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'paid' }, false, NOW), true, 'paid holds it');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'confirmed' }, false, NOW), true, 'agreed by hand holds it');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'prospect' }, false, NOW), false, 'an old unpaid sign-up lets it go');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'prospect', created_at: new Date(NOW - 3600e3).toISOString() }, false, NOW), true, 'a new sign-up holds it for 48 hours');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'prospect' }, true, NOW), true, 'an open invoice or receipt holds it');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'expired' }, true, NOW), false, 'ended');
+  assert.equal(holdsPackageSpot({ ...base, package_status: 'paid', ends_on: '2026-10-28' }, false, NOW), false, 'past its end date');
+  assert.equal(holdsPackageSpot({ ...base, package_id: null, package_status: 'paid' }, false, NOW), false, 'no package');
+  assert.equal(packageSpotsLeft({ max_sponsors: null }, 3), null);
+  assert.equal(packageSpotsLeft({ max_sponsors: 2 }, 1), 1);
+  assert.equal(packageSpotsLeft({ max_sponsors: 1 }, 2), 0);
+
+  // SPP-1: came off the site by itself in the last two weeks
+  assert.equal(hasRecentlyLapsed({ is_active: true, package_status: 'paid', ends_on: '2026-10-20' }, NOW), true);
+  assert.equal(hasRecentlyLapsed({ is_active: true, package_status: 'paid', ends_on: '2026-10-29' }, NOW), false, 'last day today');
+  assert.equal(hasRecentlyLapsed({ is_active: true, package_status: 'paid', ends_on: '2026-10-01' }, NOW), false, 'over two weeks ago');
+  assert.equal(hasRecentlyLapsed({ is_active: false, package_status: 'expired', ends_on: '2026-10-20' }, NOW), false, 'ended by an admin');
+}
+
+// SPP-2: an invoice sent before payment
+assert.equal(isOpenInvoice({ kind: 'sponsorship', status: 'pending', due_on: '2026-11-12' }), true);
+assert.equal(isOpenInvoice({ kind: 'sponsorship', status: 'pending', due_on: null }), false, 'an abandoned card checkout');
+assert.equal(isOpenInvoice({ kind: 'sponsorship', status: 'paid', due_on: '2026-11-12' }), false);
+
+// Sponsor links tell the sponsor's analytics where visits came from
+assert.equal(sponsorClickHref('https://acme.com.au/', 'riverside-fc'), 'https://acme.com.au/?utm_source=itsfootball.club&utm_medium=sponsor&utm_campaign=riverside-fc');
+assert.equal(sponsorClickHref('https://acme.com.au/shop?id=4', 'rfc'), 'https://acme.com.au/shop?id=4&utm_source=itsfootball.club&utm_medium=sponsor&utm_campaign=rfc');
+assert.equal(sponsorClickHref('https://acme.com.au/?utm_source=footy', 'rfc'), 'https://acme.com.au/?utm_source=footy', 'their own tags are kept');
+assert.equal(sponsorClickHref('javascript:alert(1)', 'rfc'), undefined);
+assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.com.au/');
+
+console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices OK');

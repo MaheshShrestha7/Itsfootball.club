@@ -2,13 +2,15 @@
 
 import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, Printer } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Printer, CreditCard } from 'lucide-react';
 import { bookingFeeCents, formatMoney } from '@/lib/finance';
 import { formatDate } from '@/lib/dates';
 import { formatAbn, invoiceLabel } from '@/lib/invoice';
+import { formatEndDate } from '@/lib/sponsors';
 
 // A sponsorship invoice (SP-F4), on white paper that prints or saves as PDF. GST-registered clubs
 // with an ABN issue a "Tax invoice" showing the GST included; other clubs an "Invoice" with no GST.
+// An invoice sent before payment (SPP-2) shows the due date and how to pay instead of PAID.
 
 interface InvoiceData {
   number: number;
@@ -21,6 +23,13 @@ interface InvoiceData {
   currency: string;
   method: string;
   date: string;
+  /** SPP-2: an invoice sent before payment is 'due' until paid ('checking' while a receipt is checked) */
+  status?: 'paid' | 'due' | 'checking';
+  paid_at?: string | null;
+  due_on?: string | null;
+  bank_details?: string | null;
+  reference?: string;
+  pay_link?: string | null;
 }
 
 const METHOD: Record<string, string> = { stripe: 'card', bank_transfer: 'bank transfer', cash: 'cash', other: 'payment' };
@@ -61,6 +70,7 @@ export default function SponsorInvoicePage({ params }: { params: Promise<{ clubS
           body * { visibility: hidden; }
           .invoice-paper, .invoice-paper * { visibility: visible; }
           .invoice-paper { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border: none !important; padding: 0 !important; }
+          .invoice-paper .invoice-no-print { display: none !important; }
         }
       `}</style>
       <div className="container" style={{ maxWidth: '820px' }}>
@@ -100,6 +110,7 @@ export default function SponsorInvoicePage({ params }: { params: Promise<{ clubS
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, color: ink }}>{data.taxInvoice ? 'Tax invoice' : 'Invoice'}</h1>
                 <div style={{ color: muted, fontSize: '0.85rem' }}>No. {invoiceLabel(data.number)}</div>
                 <div style={{ color: muted, fontSize: '0.85rem' }}>Date {formatDate(data.date)}</div>
+                {data.due_on && data.status !== 'paid' && <div style={{ color: ink, fontSize: '0.85rem', fontWeight: 700 }}>Due {formatEndDate(data.due_on)}</div>}
               </div>
             </div>
 
@@ -136,15 +147,40 @@ export default function SponsorInvoicePage({ params }: { params: Promise<{ clubS
                     <td style={{ padding: '0.25rem 0', textAlign: 'right', whiteSpace: 'nowrap' }}>{formatMoney(data.gst_cents, data.currency)}</td>
                   </tr>
                 )}
-                <tr>
-                  <td style={{ padding: '0.25rem 0.5rem 0.25rem 0', textAlign: 'right', color: '#334155' }}>Paid by {METHOD[data.method] || 'payment'}, {formatDate(data.date)}</td>
-                  <td style={{ padding: '0.25rem 0', textAlign: 'right', fontWeight: 800, color: '#059669' }}>PAID</td>
-                </tr>
+                {data.status === 'due' || data.status === 'checking' ? (
+                  <tr>
+                    <td style={{ padding: '0.25rem 0.5rem 0.25rem 0', textAlign: 'right', color: '#334155' }}>
+                      {data.status === 'checking' ? 'Bank transfer received, the club is checking it' : `Amount due${data.due_on ? ` by ${formatEndDate(data.due_on)}` : ''}`}
+                    </td>
+                    <td style={{ padding: '0.25rem 0', textAlign: 'right', fontWeight: 800, color: '#b45309' }}>{data.status === 'checking' ? 'CHECKING' : 'DUE'}</td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td style={{ padding: '0.25rem 0.5rem 0.25rem 0', textAlign: 'right', color: '#334155' }}>Paid by {METHOD[data.method] || 'payment'}, {formatDate(data.paid_at || data.date)}</td>
+                    <td style={{ padding: '0.25rem 0', textAlign: 'right', fontWeight: 800, color: '#059669' }}>PAID</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
             {!data.taxInvoice && <p style={{ margin: '1.25rem 0 0', color: '#334155' }}>No GST has been charged.</p>}
-            {data.method === 'stripe' && bookingFeeCents(data.amount_cents) > 0 && (
+            {data.status === 'due' && (data.bank_details || data.pay_link) && (
+              <div style={{ marginTop: '1.5rem', padding: '1rem 1.1rem', border: rule, borderRadius: 10, background: '#f8fafc' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', color: muted, marginBottom: '0.4rem' }}>HOW TO PAY</div>
+                {data.bank_details && (
+                  <>
+                    <div style={{ whiteSpace: 'pre-wrap', color: '#334155' }}>{data.bank_details}</div>
+                    {data.reference && <div style={{ marginTop: '0.4rem', color: ink }}>Reference: <strong>{data.reference}</strong></div>}
+                  </>
+                )}
+                {data.pay_link && (
+                  <a href={data.pay_link} className="btn btn-primary invoice-no-print" style={{ marginTop: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <CreditCard size={15} /> {data.bank_details ? 'Or pay by card' : 'Pay by card'}
+                  </a>
+                )}
+              </div>
+            )}
+            {data.method === 'stripe' && data.status !== 'due' && bookingFeeCents(data.amount_cents) > 0 && (
               <p style={{ margin: '0.75rem 0 0', color: muted, fontSize: '0.8rem' }}>
                 The card booking fee was paid to itsfootball.club, not to the club, so it isn&apos;t part of this invoice.
               </p>

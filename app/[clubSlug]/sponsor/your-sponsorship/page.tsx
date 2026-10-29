@@ -2,6 +2,7 @@
 
 import React, { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, AlertCircle, Hourglass, Upload, FileText, Printer, ArrowRight } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { formatMoney } from '@/lib/finance';
@@ -21,6 +22,7 @@ const sectionTitle: React.CSSProperties = { fontSize: '1.05rem', fontWeight: 800
 export default function SponsorPortalPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug } = useClub();
+  const router = useRouter();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const [key, setKey] = useState<string | null>(null);
@@ -34,6 +36,23 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
   const [sendError, setSendError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [invoicing, setInvoicing] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  // SPP-2: an invoice due in 14 days, emailed to them too; it opens straight away
+  const askForInvoice = async () => {
+    if (!key) return;
+    setInvoicing(true);
+    setInvoiceError(null);
+    try {
+      const res = await fetch('/api/sponsors/invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: key }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.paymentId) throw new Error(json.error || 'The invoice could not be made. Please try again.');
+      router.push(`/${club.slug}/sponsor/invoice/${json.paymentId}?k=${encodeURIComponent(key)}`);
+    } catch (err) {
+      setInvoiceError((err as Error).message);
+      setInvoicing(false);
+    }
+  };
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -271,7 +290,7 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
           <section className="glass-panel" style={{ padding: '1.5rem' }} aria-labelledby="sponsor-payments">
             <h2 id="sponsor-payments" style={sectionTitle}>Payments</h2>
             {payments.length === 0 ? (
-              <p className="text-body" style={{ margin: 0 }}>No payments yet. Paid by invoice or in person? Ask the club for a copy.</p>
+              <p className="text-body" style={{ margin: 0 }}>No payments yet. Paid the club in person or by direct deposit? Your invoice shows here once they record it.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 {payments.map(p => (
@@ -279,19 +298,32 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.packageName ? `${p.packageName}${p.renewal ? ' renewal' : ''}` : p.description || 'Sponsorship'}</div>
                       {p.period && <div className="text-meta">Covers {p.period}</div>}
-                      <div className="text-meta">
+                      <div className="text-meta" style={p.status === 'pending' ? { color: 'var(--c-amber)' } : undefined}>
                         {p.status === 'paid'
                           ? `Paid ${formatDate(p.paid_at || p.created_at)} · ${formatMoney(p.amount_cents, p.currency)}`
-                          : `${formatMoney(p.amount_cents, p.currency)} · the club is checking your bank transfer`}
+                          : p.status === 'pending'
+                            ? `${formatMoney(p.amount_cents, p.currency)} due${p.due_on ? ` by ${formatEndDate(p.due_on)}` : ''}`
+                            : `${formatMoney(p.amount_cents, p.currency)} · the club is checking your bank transfer`}
                       </div>
                     </div>
-                    {p.status === 'paid' && key && (
+                    {/* SPP-2: an invoice sent before payment opens too, with how to pay it */}
+                    {(p.status === 'paid' || p.due_on) && key && (
                       <Link href={`/${club.slug}/sponsor/invoice/${p.id}?k=${encodeURIComponent(key)}`} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                         <FileText size={14} /> {p.taxInvoice ? 'Tax invoice' : 'Invoice'}
                       </Link>
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+            {/* SPP-2: their bookkeeper needs an invoice before paying */}
+            {data.canInvoice && key && (
+              <div style={{ marginTop: '1rem' }}>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={invoicing} onClick={askForInvoice}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <FileText size={14} /> {invoicing ? 'Making your invoice…' : 'Get an invoice to pay later'}
+                </button>
+                {invoiceError && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>{invoiceError}</p>}
               </div>
             )}
             {sponsor.ends_on && (

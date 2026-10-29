@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useClub } from '@/lib/club-context';
-import { sponsorHref } from '@/lib/sponsors';
+import { sponsorClickHref } from '@/lib/sponsors';
 
 interface SponsorTrackedLinkProps {
   clubId: string;
@@ -22,9 +22,10 @@ interface SponsorTrackedLinkProps {
 export default function SponsorTrackedLink({
   clubId, sponsorId, placement, href, children, style, className, onMouseEnter, onMouseLeave,
 }: SponsorTrackedLinkProps) {
-  const { trackSponsorEvent } = useClub();
+  const { trackSponsorEvent, clubs } = useClub();
   const ref = useRef<HTMLElement>(null);
-  const link = sponsorHref(href);
+  // Tagged with the club, so the sponsor's own analytics show the visits came from the club's site
+  const link = sponsorClickHref(href, clubs.find(c => c.id === clubId)?.slug);
 
   useEffect(() => {
     const el = ref.current;
@@ -88,7 +89,8 @@ export default function SponsorTrackedLink({
       ref={ref as React.RefObject<HTMLAnchorElement>}
       href={link}
       target="_blank"
-      rel="noopener noreferrer"
+      // A paid link (Google asks for "sponsored"); no noreferrer, so the sponsor sees where visits came from
+      rel="sponsored noopener"
       className={className}
       style={style}
       onMouseEnter={onMouseEnter}

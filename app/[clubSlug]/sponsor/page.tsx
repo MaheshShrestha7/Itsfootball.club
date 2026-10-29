@@ -2,8 +2,9 @@
 
 import React, { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ClubContactSection from '@/components/ClubContactSection';
-import { ArrowLeft, CheckCircle2, AlertCircle, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Check, FileText } from 'lucide-react';
 import SponsorLogo from '@/components/SponsorLogo';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -11,7 +12,7 @@ import { formatMoney } from '@/lib/finance';
 import type { SponsorshipPackage } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
-import { TIER_BADGE, isSponsorOnSite, packageIncludeLines, sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
+import { INVOICE_DUE_DAYS, TIER_BADGE, isSponsorOnSite, packageIncludeLines, packageSpotsLeft, sortSponsorsByTier, sponsorTierLabel } from '@/lib/sponsors';
 
 /** A package priced 0 has no online payment: the business tells the club what they'd like to offer */
 const isOnRequest = (p: SponsorshipPackage) => !(p.price_cents > 0);
@@ -19,6 +20,7 @@ const isOnRequest = (p: SponsorshipPackage) => !(p.price_cents > 0);
 export default function SponsorSignupPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug, sponsors } = useClub();
+  const router = useRouter();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   // "Join Acme Plumbing, Corner Cafe and 3 other local businesses": the club's sponsors on the site now
   const current = sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)));
@@ -40,6 +42,37 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const [linkState, setLinkState] = useState<{ canPay: boolean; receiptWaiting: boolean } | null | undefined>(undefined);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
+  // SPP-4: how many of each package are taken (sponsor_package_spots, migration 20261137)
+  const [taken, setTaken] = useState<Map<string, number>>(() => new Map());
+  // SPP-2: "Invoice me first", for businesses that only pay against an invoice
+  const [invoicing, setInvoicing] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const askForInvoice = async (key: string, packageId: string) => {
+    setInvoicing(true);
+    setInvoiceError(null);
+    try {
+      const res = await fetch('/api/sponsors/invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: key, packageId }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.paymentId) throw new Error(json.error || 'The invoice could not be made. Please try again.');
+      router.push(`/${club.slug}/sponsor/invoice/${json.paymentId}?k=${encodeURIComponent(key)}`);
+    } catch (err) {
+      setInvoiceError((err as Error).message);
+      setInvoicing(false);
+    }
+  };
+  const invoiceOption = (key: string, packageId: string) => (
+    <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+      <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Need an invoice first?</div>
+        <div className="text-meta">Get an invoice to pay within {INVOICE_DUE_DAYS} days, by bank transfer or card. We email you a copy for your accounts.</div>
+        {invoiceError && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', margin: '0.4rem 0 0' }}>{invoiceError}</p>}
+      </div>
+      <button type="button" className="btn btn-secondary" disabled={invoicing} onClick={() => askForInvoice(key, packageId)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+        <FileText size={15} /> {invoicing ? 'Making your invoice…' : 'Invoice me'}
+      </button>
+    </div>
+  );
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -62,7 +95,11 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
       .then(({ data }) => setPackages((data || []) as SponsorshipPackage[]));
     client.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()
       .then(({ data }) => data?.currency && setCurrency(data.currency));
+    // Before migration 20261137 this errors, and every package shows as available
+    client.rpc('sponsor_package_spots', { p_club_id: club.id })
+      .then(({ data }) => setTaken(new Map(((data || []) as { package_id: string; taken: number }[]).map(r => [r.package_id, r.taken]))));
   }, [club.id]);
+  const spotsLeft = (p: SponsorshipPackage) => packageSpotsLeft(p, taken.get(p.id) || 0);
 
   // The emailed link has nothing to pay right now
   const linkDone = !!linkState && (!linkState.canPay || linkState.receiptWaiting);
@@ -190,6 +227,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
             <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={payLink.sponsorId} packageId={payLinkPackage.id}
               amountCents={payLinkPackage.price_cents} label={`${payLinkPackage.name} sponsorship`}
               extra={payLink.key ? { sponsorKey: payLink.key } : undefined} />
+            {payLink.key && invoiceOption(payLink.key, payLinkPackage.id)}
             <p className="text-note" style={{ margin: 0 }}>Want a different package? Reply to the club&apos;s email or use the contact form on the club site.</p>
           </div>
         ) : sentToClub && selected ? (
@@ -203,6 +241,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <div className="stack">
             <PaymentStep clubId={club.id} kind="sponsorship" sponsorId={sponsorId} packageId={selected.id}
               amountCents={selected.price_cents} label={`${selected.name} sponsorship`} />
+            {portalKey && invoiceOption(portalKey, selected.id)}
             {portalKey && (
               <p className="text-note" style={{ margin: 0 }}>
                 Your own sponsor page, to send your logo and later see your results and invoice:{' '}
@@ -221,11 +260,24 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              {packages.map(p => (
-                <button key={p.id} type="button" onClick={() => setSelected(p)} aria-pressed={selected?.id === p.id}
-                  className="glass-panel glass-panel-interactive"
-                  style={{ padding: '1.25rem', textAlign: 'left', cursor: 'pointer', border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
-                  <span className="badge" style={TIER_BADGE[p.tier]}>{sponsorTierLabel(p.tier)}</span>
+              {packages.map(p => {
+                const left = spotsLeft(p);
+                const soldOut = left === 0;
+                return (
+                <button key={p.id} type="button" onClick={() => !soldOut && setSelected(p)} aria-pressed={selected?.id === p.id} aria-disabled={soldOut || undefined}
+                  className={soldOut ? 'glass-panel' : 'glass-panel glass-panel-interactive'}
+                  style={{ padding: '1.25rem', textAlign: 'left', cursor: soldOut ? 'default' : 'pointer', opacity: soldOut ? 0.6 : undefined, border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <span className="badge" style={TIER_BADGE[p.tier]}>{sponsorTierLabel(p.tier)}</span>
+                    {/* SPP-4: a package the club can only sell so many of */}
+                    {left !== null && (
+                      <span className="badge" style={soldOut
+                        ? { background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }
+                        : { background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+                        {soldOut ? 'Taken' : `${left} left`}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0.5rem 0 0.25rem' }}>{p.name}</div>
                   <div style={{ fontWeight: 800, color: 'var(--club-ink)', marginBottom: '0.5rem' }}>{isOnRequest(p) ? 'Price on request' : formatMoney(p.price_cents, currency)}</div>
                   {packageIncludeLines(p.includes).length > 0 && (
@@ -241,8 +293,10 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                     </>
                   )}
                   {p.benefits && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.benefits}</div>}
+                  {soldOut && <div className="text-meta" style={{ marginTop: '0.5rem' }}>All taken for now.</div>}
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             {/* SP-U6: what happens after they pick a package */}
@@ -250,7 +304,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
               <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.85rem' }}>What happens next</h2>
                 <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                  {['Pick a package and pay online', 'Send us your logo from your own sponsor page', 'The club checks it and puts you on the site'].map((step, i) => (
+                  {['Pick a package, then pay online or get an invoice', 'Send us your logo from your own sponsor page', 'The club checks it and puts you on the site'].map((step, i) => (
                     <li key={step} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', color: 'var(--text-secondary)' }}>
                       <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', border: '1px solid var(--club-primary)', background: 'rgba(var(--club-primary-rgb), 0.15)' }}>{i + 1}</span>
                       {step}

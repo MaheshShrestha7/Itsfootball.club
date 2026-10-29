@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.async_payment_failed':
     case 'checkout.session.expired': {
       const session = event.data.object as Stripe.Checkout.Session;
+      // SPP-2: an invoice sent before payment stays open (to pay by transfer, or try the card again);
+      // before migration 20261137 there is no due_on, so this matches nothing
+      await db.from('payments').update({ method: 'bank_transfer', stripe_session_id: null })
+        .eq('stripe_session_id', session.id).eq('status', 'pending').not('due_on', 'is', null);
       await db.from('payments').update({ status: 'failed' }).eq('stripe_session_id', session.id).eq('status', 'pending');
       break;
     }

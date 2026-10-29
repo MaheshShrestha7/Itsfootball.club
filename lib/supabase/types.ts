@@ -395,6 +395,9 @@ export interface Sponsor {
   pending_logo_url?: string | null;
   pending_website_url?: string | null;
   pending_sent_at?: string | null;
+  /** The package they hold (SPP-4, migration 20261137): counts towards its max_sponsors. Set by the
+   *  sign-up, payment, and the admin's Package choice */
+  package_id?: string | null;
   /** Set by the database; read only */
   created_at?: string;
 }
@@ -890,6 +893,8 @@ export interface SponsorshipPackage {
   /** The ticks on the public package card: PACKAGE_INCLUDES keys, then extras the club typed
    *  (migration 20261134). Display only. */
   includes?: string[];
+  /** How many of this package the club can sell; blank means no limit (SPP-4, migration 20261137) */
+  max_sponsors?: number | null;
   is_active: boolean;
   sort_order: number;
 }
@@ -924,6 +929,10 @@ export interface Payment {
   /** Sponsorships: the period this payment pays for (SPE-14, migration 20261136) */
   covers_from?: string | null;
   covers_until?: string | null;
+  /** The club's invoice number for it, once one was given (migration 20261133) */
+  invoice_number?: number | null;
+  /** An invoice sent before payment is due by this day (SPP-2, migration 20261137) */
+  due_on?: string | null;
   created_at: string;
 }
 

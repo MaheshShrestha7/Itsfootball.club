@@ -17,6 +17,11 @@ export const REMINDER_SETTINGS = [
     label: 'Membership renewal reminders',
     description: 'Emails members 14 days before their membership expires, and once after it lapses. Needs a paid membership plan.',
   },
+  {
+    key: 'sponsor_renewal_reminders',
+    label: 'Sponsor renewal reminders',
+    description: 'Emails sponsors 30 days before their sponsorship ends, and once in the week after it ends, with a link to renew. Needs a priced sponsorship package.',
+  },
 ] as const;
 
 export type ReminderSetting = (typeof REMINDER_SETTINGS)[number]['key'];

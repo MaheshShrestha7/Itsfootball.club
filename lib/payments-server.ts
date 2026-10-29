@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { describeItems, parseCart, priceCart, type OrderItem, type PricedProduct } from './shop';
 import { ticketOrderError, type TicketedEvent } from './tickets';
 import { canPayRenewal } from './sponsors';
+import { openSponsorInvoice, packageIsFull, PACKAGE_TAKEN } from './sponsor-invoice-server';
 
 // Server-only: works out what a payer owes from ids alone. The amount always comes from the
 // club's plan / package / product rows, never from the client.
@@ -33,6 +34,9 @@ export interface PaymentDraft {
     items?: OrderItem[];
     event_id?: string;
   };
+  /** SPP-2: the sponsor's open invoice this pays. The routes turn that row paid instead of adding one,
+   *  so the invoice number stays the same. */
+  invoiceId?: string;
 }
 
 export const SPONSOR_ALREADY_PAID = 'This sponsorship is already paid, thank you. Your sponsor page has your invoice, and offers renewal nearer the end date.';
@@ -152,24 +156,36 @@ export async function preparePayment(
   }
 
   if (input.kind === 'sponsorship') {
-    if (!input.sponsorId || !input.packageId) return bad('Choose a sponsorship package.');
+    if (!input.sponsorId) return bad('Choose a sponsorship package.');
     // access_key only exists after migration 20261132, so it's only asked for when a link sent one
     const sponsorColumns = `id, name, contact_name, contact_email, package_status${input.sponsorKey ? ', access_key, ends_on' : ''}`;
-    const [{ data: sponsorRow }, { data: pkg }, { data: waiting }] = await Promise.all([
+    const [{ data: sponsorRow }, invoice, { data: waiting }] = await Promise.all([
       db.from('sponsors').select(sponsorColumns).eq('id', input.sponsorId).eq('club_id', club.id).maybeSingle(),
-      db.from('sponsorship_packages').select('id, name, price_cents').eq('id', input.packageId).eq('club_id', club.id).eq('is_active', true).maybeSingle(),
+      // SPP-2: an invoice the club sent before payment; paying it pays that invoice, whatever the link says
+      openSponsorInvoice(db, input.sponsorId),
       // A bank transfer receipt the treasurer hasn't checked yet
       db.from('payments').select('id').eq('sponsor_id', input.sponsorId).eq('kind', 'sponsorship').eq('status', 'awaiting_review').limit(1).maybeSingle(),
     ]);
+    const packageId = invoice?.package_id || input.packageId;
+    if (!packageId) return bad('Choose a sponsorship package.');
+    // '*' so max_sponsors (migration 20261137) is read once it exists. An invoiced package can be paid
+    // even if the club has since stopped offering it.
+    let pkgQuery = db.from('sponsorship_packages').select('*').eq('id', packageId).eq('club_id', club.id);
+    if (!invoice) pkgQuery = pkgQuery.eq('is_active', true);
+    const { data: pkg } = await pkgQuery.maybeSingle();
     const sponsor = sponsorRow as unknown as { id: string; name: string; contact_name: string | null; contact_email: string | null; package_status: string | null; access_key?: string | null; ends_on?: string | null } | null;
-    if (!sponsor || !pkg) return bad('Sponsorship not found.', 404);
+    if (!sponsor || !pkg || (invoice && invoice.club_id !== club.id)) return bad('Sponsorship not found.', 404);
     if (waiting) return bad(SPONSOR_RECEIPT_WAITING, 409);
     const renewing = !!input.sponsorKey && !!sponsor.access_key && sponsor.access_key === input.sponsorKey;
     if (sponsor.package_status !== 'prospect' && !renewing) return bad('This sponsorship is already set up. Please contact the club about payment.', 409);
     // SPE-1: the link's key renews only when a renewal is due, so an old payment or renewal link
-    // opened again after paying can't take a second payment for the same term
-    if (sponsor.package_status !== 'prospect' && !canPayRenewal(sponsor)) return bad(SPONSOR_ALREADY_PAID, 409);
-    if (pkg.price_cents <= 0) return bad('This package has nothing to pay.');
+    // opened again after paying can't take a second payment for the same term. An open invoice from
+    // the club is always payable.
+    if (!invoice && sponsor.package_status !== 'prospect' && !canPayRenewal(sponsor)) return bad(SPONSOR_ALREADY_PAID, 409);
+    const amount = invoice ? invoice.amount_cents : pkg.price_cents;
+    if (!(amount > 0)) return bad('This package has nothing to pay.');
+    // SPP-4: a package with a limit that's sold out (someone else took the last one)
+    if (!invoice && await packageIsFull(db, club.id, pkg, sponsor.id)) return bad(PACKAGE_TAKEN, 409);
     const label = `${club.name} sponsorship: ${pkg.name}`;
     return {
       ok: true,
@@ -179,10 +195,11 @@ export async function preparePayment(
         row: {
           club_id: club.id, kind: 'sponsorship', category: 'sponsorship',
           member_id: null, sponsor_id: sponsor.id, plan_id: null, package_id: pkg.id,
-          description: `${pkg.name}${sponsor.package_status !== 'prospect' ? ' renewal' : ''} (${sponsor.name})`,
-          amount_cents: pkg.price_cents, currency,
+          description: invoice?.description || `${pkg.name}${sponsor.package_status !== 'prospect' ? ' renewal' : ''} (${sponsor.name})`,
+          amount_cents: amount, currency: invoice?.currency || currency,
           payer_name: sponsor.contact_name || sponsor.name, payer_email: sponsor.contact_email,
         },
+        ...(invoice ? { invoiceId: invoice.id } : {}),
       },
     };
   }

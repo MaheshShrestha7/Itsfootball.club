@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
       ? `Renewal links work from ${RENEWAL_WINDOW_DAYS} days before their end date (${formatEndDate(sponsor.ends_on)}).`
       : 'They have no end date yet. Set Ends on in their details first.' }, { status: 409 });
   }
-  const pkg = matchSponsorPackage(sponsor, packages || []);
+  // The package they hold (SPP-4), else the club's package that fits
+  const pkg = (packages || []).find(p => p.id === sponsor.package_id && p.price_cents > 0) || matchSponsorPackage(sponsor, packages || []);
   if (!pkg) {
     return NextResponse.json({ error: 'No package fits this sponsor. Check their tier and value, or add a priced package under Sponsors, Packages.' }, { status: 409 });
   }

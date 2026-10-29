@@ -52,13 +52,11 @@ export async function POST(req: NextRequest) {
   if (!stored.ok) return NextResponse.json({ error: stored.error }, { status: stored.status });
 
   const reference = String(form.get('reference') || '').replace(/[<>]/g, '').trim().slice(0, 64) || null;
-  const { error } = await db.from('payments').insert({
-    ...row,
-    method: 'bank_transfer',
-    status: 'awaiting_review',
-    receipt_key: stored.key,
-    reference,
-  });
+  const receipt = { method: 'bank_transfer', status: 'awaiting_review', receipt_key: stored.key, reference };
+  // SPP-2: a receipt for an invoice the club sent goes on that invoice, so its number stays the same
+  const { error } = prepared.draft.invoiceId
+    ? await db.from('payments').update(receipt).eq('id', prepared.draft.invoiceId).eq('status', 'pending')
+    : await db.from('payments').insert({ ...row, ...receipt });
   if (error) return NextResponse.json({ error: 'Could not save your receipt. Please try again.' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

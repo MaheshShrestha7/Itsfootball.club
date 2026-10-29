@@ -2,21 +2,22 @@
 
 import React, { useEffect, useRef, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
-import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus } from '@/lib/supabase/types';
+import { Sponsor, SponsorTier, SponsorSizeScale, SponsorPackageStatus, SponsorshipPackage } from '@/lib/supabase/types';
 import { defaultSeasonLabel } from '@/lib/season';
 import {
   daysUntilEnd, defaultSponsorEnd, defaultSponsorSeason, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
   hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorPageUrl, sponsorTierLabel, typedWebsite,
+  canPayRenewal, localDateISO, matchSponsorPackage,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
-import { formatMoney } from '@/lib/finance';
+import { formatMoney, parseMoneyToCents } from '@/lib/finance';
 import { DATE_LOCALE } from '@/lib/dates';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
@@ -133,18 +134,103 @@ export default function AdminSponsorsPage({
   });
   // Sponsorship payments by sponsor (Treasurer and Commercial Officer can read them, migration 20261136):
   // who has paid (SPE-15) and whose bank transfer receipt is waiting to be checked (SPE-7)
-  const [sponsorPayments, setSponsorPayments] = useState<{ paid: Set<string>; receipt: Set<string> }>(() => ({ paid: new Set(), receipt: new Set() }));
+  // SPP-2: and each sponsor's open invoice (sent before payment, migration 20261137's due_on; '*' so
+  // this still loads before that migration runs)
+  type OpenInvoice = { id: string; due_on: string; amount_cents: number; currency: string };
+  const [sponsorPayments, setSponsorPayments] = useState<{ paid: Set<string>; receipt: Set<string>; invoice: Map<string, OpenInvoice> }>(
+    () => ({ paid: new Set(), receipt: new Set(), invoice: new Map() }));
+  const [paymentsLoaded, setPaymentsLoaded] = useState(0);
+  const reloadPayments = () => setPaymentsLoaded(n => n + 1);
   useEffect(() => {
-    getSupabaseClient()?.from('payments').select('sponsor_id, status')
-      .eq('club_id', club.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review'])
+    getSupabaseClient()?.from('payments').select('*')
+      .eq('club_id', club.id).eq('kind', 'sponsorship').in('status', ['paid', 'awaiting_review', 'pending'])
       .then(({ data }) => {
-        const rows = (data || []) as { sponsor_id: string | null; status: string }[];
+        const rows = (data || []) as { id: string; sponsor_id: string | null; status: string; due_on?: string | null; amount_cents: number; currency: string; created_at: string }[];
+        const invoice = new Map<string, OpenInvoice>();
+        rows.filter(r => r.status === 'pending' && r.due_on && r.sponsor_id).sort((a, b) => a.created_at.localeCompare(b.created_at))
+          .forEach(r => invoice.set(r.sponsor_id!, { id: r.id, due_on: r.due_on!, amount_cents: r.amount_cents, currency: r.currency }));
         setSponsorPayments({
           paid: new Set(rows.filter(r => r.status === 'paid' && r.sponsor_id).map(r => r.sponsor_id!)),
           receipt: new Set(rows.filter(r => r.status === 'awaiting_review' && r.sponsor_id).map(r => r.sponsor_id!)),
+          invoice,
         });
       });
-  }, [club.id]);
+  }, [club.id, paymentsLoaded]);
+
+  // The club's packages: the Package choice in a sponsor's details (SPP-4), and what an invoice or
+  // recorded payment is for
+  const [packages, setPackages] = useState<SponsorshipPackage[]>([]);
+  useEffect(() => {
+    getSupabaseClient()?.from('sponsorship_packages').select('*').eq('club_id', club.id).order('sort_order')
+      .then(({ data }) => setPackages((data || []) as SponsorshipPackage[]));
+  }, [club.id, tab]);
+  const pricedPackages = packages.filter(p => p.is_active && p.price_cents > 0);
+  const packageFor = (sp: Sponsor) => pricedPackages.find(p => p.id === sp.package_id) || matchSponsorPackage(sp, pricedPackages);
+  // sponsors.package_id needs migration 20261137; the Package choice stays hidden until it runs
+  const [packageIdReady, setPackageIdReady] = useState(false);
+  useEffect(() => {
+    getSupabaseClient()?.from('sponsors').select('package_id').limit(1).then(({ error }) => setPackageIdReady(!error));
+  }, []);
+
+  // SPP-2: an invoice before payment, emailed to the sponsor (app/api/sponsors/invoice)
+  const sendInvoice = async (sp: Sponsor, resend = false) => {
+    setLinkResult({ sponsorId: sp.id, busy: true });
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/sponsors/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, sponsorId: sp.id, resend }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return setLinkResult({ sponsorId: sp.id, note: json.error || 'The invoice could not be sent.' });
+      setLinkResult({ sponsorId: sp.id, link: json.link, emailed: json.emailed, note: json.note || (json.emailed ? undefined : 'The invoice is ready. Copy the link and send it to them.') });
+      reloadPayments();
+    } catch {
+      setLinkResult({ sponsorId: sp.id, note: 'The invoice could not be sent. Check your connection and try again.' });
+    }
+  };
+
+  // SPP-3: money that came in outside the app (app/api/sponsors/record-payment)
+  const [recording, setRecording] = useState<{ sponsor: Sponsor; amount: string; method: string; paidOn: string; until: string; busy?: boolean; error?: string } | null>(null);
+  const openRecord = (sp: Sponsor) => {
+    const today = localDateISO();
+    const invoice = sponsorPayments.invoice.get(sp.id);
+    const first = !sponsorPayments.paid.has(sp.id);
+    const cents = invoice?.amount_cents ?? (Number(sp.package_value) > 0 ? Math.round(Number(sp.package_value) * 100) : packageFor(sp)?.price_cents);
+    setRecording({
+      sponsor: sp,
+      amount: cents ? (cents / 100).toFixed(2) : '',
+      method: 'bank_transfer',
+      paidOn: today,
+      // As fulfil_payment works it out: a first payment keeps an end date still ahead, else a year
+      until: first ? (sp.ends_on && sp.ends_on >= today ? sp.ends_on : renewedEndDate(today)) : renewedEndDate(sp.ends_on),
+    });
+  };
+  const saveRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recording) return;
+    const cents = parseMoneyToCents(recording.amount);
+    if (cents === null || cents <= 0) return setRecording({ ...recording, error: 'Enter the amount they paid, e.g. 1500' });
+    setRecording({ ...recording, busy: true, error: undefined });
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/sponsors/record-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, sponsorId: recording.sponsor.id, amountCents: cents, method: recording.method, paidOn: recording.paidOn, until: renewalsReady ? recording.until : undefined }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return setRecording({ ...recording, busy: false, error: json.error || 'The payment could not be recorded.' });
+      const sp = recording.sponsor;
+      updateSponsor(sp.id, { package_status: 'paid', package_value: (json.amount_cents ?? cents) / 100, ...(json.ends_on ? { ends_on: json.ends_on } : {}) });
+      setRecording(null);
+      setLinkResult({ sponsorId: sp.id, note: `Payment recorded${json.sent ? `. ${sp.name} was emailed a thank-you with their invoice` : '. Their invoice is on their sponsor page'}${isSponsorOnSite(sp) ? '' : '. Tap Put on site when they\'re ready'}.` });
+      reloadPayments();
+    } catch {
+      setRecording({ ...recording, busy: false, error: 'The payment could not be recorded. Check your connection and try again.' });
+    }
+  };
   // SPE-15: bringing back or renewing a sponsor who paid keeps them Paid
   const backOnStatus = (sp: Sponsor): SponsorPackageStatus => (sponsorPayments.paid.has(sp.id) ? 'paid' : 'confirmed');
   const endSponsorship = async (sp: Sponsor) => {
@@ -298,6 +384,8 @@ export default function AdminSponsorsPage({
     season: defaultSponsorSeason(seasons.filter(se => se.club_id === club.id), defaultSeasonLabel()),
     // The end of the club's season (Seasons), or a year from today
     ends_on: seasonEnd,
+    // SPP-4: the package they hold, if any
+    package_id: '',
   };
 
   const [form, setForm] = useState(blankForm);
@@ -330,6 +418,7 @@ export default function AdminSponsorsPage({
       package_status: s.package_status || 'confirmed',
       season: s.season || defaultSeasonLabel(),
       ends_on: s.ends_on || '',
+      package_id: s.package_id || '',
     });
     setWebsiteError(null);
     setModalOpen(true);
@@ -347,9 +436,11 @@ export default function AdminSponsorsPage({
       return;
     }
 
-    const { scope, label, ends_on, ...rest } = form;
+    const { scope, label, ends_on, package_id, ...rest } = form;
     const payload = {
       ...rest,
+      // Only sent once the column exists (migration 20261137)
+      ...(packageIdReady ? { package_id: package_id || null } : {}),
       website_url: website,
       // Only sent once the column exists (migration 20261132); blank means no end date
       ...(renewalsReady ? { ends_on: ends_on || null } : {}),
@@ -598,7 +689,16 @@ export default function AdminSponsorsPage({
           const result = linkResult?.sponsorId === sponsor.id ? linkResult : null;
           // SPE-7: they paid by bank transfer and the receipt is waiting for the treasurer
           const receiptWaiting = sponsor.package_status === 'prospect' && sponsorPayments.receipt.has(sponsor.id);
+          // SPP-2: an invoice sent before payment, and whether it's past its due date
+          const invoice = sponsorPayments.invoice.get(sponsor.id);
+          const overdue = !!invoice && invoice.due_on < localDateISO();
+          // Something to pay for: not paid yet, or a renewal that is due (or an invoice already out)
+          const payable = !receiptWaiting && sponsor.package_status !== 'cancelled'
+            && (!!invoice || sponsor.package_status !== 'paid' || canPayRenewal(sponsor))
+            // A deal agreed in goods or services has no money to come in
+            && (!!invoice || !(sponsor.package_status === 'confirmed' && inKind(sponsor)));
           const statusText = receiptWaiting ? 'Receipt to check'
+            : invoice ? (overdue ? 'Invoice overdue' : `Invoice due ${formatEndDate(invoice.due_on)}`)
             : stage === 'new' && sponsor.package_status === 'prospect' ? 'Not paid yet'
             : sponsor.package_status === 'confirmed' && inKind(sponsor) ? 'Agreed, in kind'
             : sponsor.package_status ? PACKAGE_STATUS_LABEL[sponsor.package_status] : '';
@@ -681,8 +781,8 @@ export default function AdminSponsorsPage({
                     )}
                     {sponsor.package_status && (
                       <span className="badge" style={{
-                        backgroundColor: receiptWaiting ? 'rgba(245, 158, 11, 0.15)' : sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                        color: receiptWaiting ? 'var(--c-amber)' : sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
+                        backgroundColor: receiptWaiting || invoice ? 'rgba(245, 158, 11, 0.15)' : sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                        color: overdue ? 'var(--c-red)' : receiptWaiting || invoice ? 'var(--c-amber)' : sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
                         fontSize: '0.7rem',
                       }}>
                         {statusText}
@@ -803,6 +903,19 @@ export default function AdminSponsorsPage({
                 {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
                   <button type="button" onClick={() => renew(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}>
                     <RefreshCw size={14} /> Renew
+                  </button>
+                )}
+                {/* SPP-2: for businesses that only pay against an invoice */}
+                {payable && sponsor.access_key && (invoice || packageFor(sponsor)) && (
+                  <button type="button" disabled={result?.busy} onClick={() => sendInvoice(sponsor, !!invoice)} className="btn btn-secondary btn-sm" style={actionStyle}
+                    title={invoice ? 'Email them the same invoice again' : `An invoice due in 14 days${packageFor(sponsor) ? ` for ${packageFor(sponsor)!.name}` : ''}`}>
+                    <FileText size={14} /> {invoice ? 'Send invoice again' : 'Send invoice'}
+                  </button>
+                )}
+                {/* SPP-3: cash, cheque or a direct deposit the treasurer saw in the bank */}
+                {payable && (
+                  <button type="button" onClick={() => openRecord(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <Banknote size={14} /> Record a payment
                   </button>
                 )}
                 {sponsor.access_key && !(stage === 'new' && sponsor.package_status === 'prospect') && (
@@ -1217,6 +1330,24 @@ export default function AdminSponsorsPage({
                 <h4 style={sectionHeading}><DollarSign size={14} color="var(--club-primary)" /> Deal</h4>
                 <p style={{ ...hint, marginTop: '-0.5rem', marginBottom: '1rem' }}>Only admins see this.</p>
 
+                {packageIdReady && packages.length > 0 && (
+                  <div className="form-group">
+                    <label htmlFor="sponsors-package" className="form-label">Package</label>
+                    <select id="sponsors-package" className="form-select" value={form.package_id}
+                      onChange={e => {
+                        const pkg = packages.find(p => p.id === e.target.value);
+                        // The package sets the tier, and the value when none is typed yet
+                        setForm({ ...form, package_id: e.target.value, ...(pkg ? { tier: pkg.tier, package_value: form.package_value === '' && pkg.price_cents > 0 ? pkg.price_cents / 100 : form.package_value } : {}) });
+                      }}>
+                      <option value="">No package</option>
+                      {packages.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}{p.price_cents > 0 ? ` (${formatMoney(p.price_cents, currency)})` : ''}{p.is_active ? '' : ' (not offered now)'}</option>
+                      ))}
+                    </select>
+                    <p style={hint}>Invoices and payment links are for this package. It counts towards the package&apos;s limit, if it has one.</p>
+                  </div>
+                )}
+
                 {renewalsReady && (
                   <div className="form-group">
                     <label htmlFor="sponsors-ends-on" className="form-label">Ends on</label>
@@ -1228,7 +1359,7 @@ export default function AdminSponsorsPage({
                     />
                     <p style={hint}>
                       {form.ends_on
-                        ? 'The day after, they come off the site and move to Ended. Needs you reminds you 30 days before.'
+                        ? 'The day after, they come off the site and move to Ended. Needs you reminds you 30 days before, and with Sponsor renewal reminders on (Email Notifications) they are emailed the renewal link.'
                         : 'No end date: they stay on the site until you end the sponsorship.'}
                       {form.ends_on !== seasonEnd && (
                         <>
@@ -1316,6 +1447,78 @@ export default function AdminSponsorsPage({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* SPP-3: Record a payment (cash, cheque or a direct deposit) */}
+      {recording && (
+        <div role="dialog" aria-modal="true" aria-labelledby="record-payment-title"
+          onKeyDown={e => { if (e.key === 'Escape') setRecording(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
+          <form onSubmit={saveRecord} className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)', padding: '1.5rem' }}>
+            <div className="section-head" style={{ marginBottom: '0.35rem' }}>
+              <h3 id="record-payment-title" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>Record a payment</h3>
+              <button type="button" onClick={() => setRecording(null)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-meta" style={{ margin: '0 0 1.1rem' }}>
+              Money {recording.sponsor.name} paid outside the website. They&apos;re marked Paid, it goes in Finance, and their invoice shows on their sponsor page.
+            </p>
+            {sponsorPayments.invoice.get(recording.sponsor.id) ? (
+              <div className="form-group">
+                <span className="form-label">Amount</span>
+                <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {formatMoney(sponsorPayments.invoice.get(recording.sponsor.id)!.amount_cents, sponsorPayments.invoice.get(recording.sponsor.id)!.currency)}
+                  <span className="text-meta" style={{ fontWeight: 500 }}> · pays the invoice you sent them</span>
+                </div>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label htmlFor="record-amount" className="form-label">Amount ({currency})</label>
+                <input id="record-amount" className="form-input" inputMode="decimal" required value={recording.amount}
+                  onChange={e => setRecording({ ...recording, amount: e.target.value, error: undefined })} placeholder="e.g. 1500" />
+              </div>
+            )}
+            <div className="form-group">
+              <span id="record-method" className="form-label">How they paid</span>
+              <div role="group" aria-labelledby="record-method" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                {([['bank_transfer', 'Direct deposit'], ['cash', 'Cash'], ['cheque', 'Cheque'], ['other', 'Other']] as const).map(([value, text]) => (
+                  <button key={value} type="button" aria-pressed={recording.method === value} onClick={() => setRecording({ ...recording, method: value })}
+                    className="btn btn-sm"
+                    style={{
+                      justifyContent: 'center',
+                      background: recording.method === value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
+                      border: recording.method === value ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                      color: recording.method === value ? 'var(--c-green)' : 'var(--text-secondary)',
+                    }}>
+                    {text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-row-2" style={{ gap: '1rem' }}>
+              <div className="form-group">
+                <label htmlFor="record-paid-on" className="form-label">Date received</label>
+                <input id="record-paid-on" type="date" className="form-input" required max={localDateISO()} value={recording.paidOn}
+                  onChange={e => setRecording({ ...recording, paidOn: e.target.value, error: undefined })} />
+              </div>
+              {renewalsReady && (
+                <div className="form-group">
+                  <label htmlFor="record-until" className="form-label">Sponsorship runs until</label>
+                  <input id="record-until" type="date" className="form-input" required min={recording.paidOn} value={recording.until}
+                    onChange={e => setRecording({ ...recording, until: e.target.value, error: undefined })} />
+                </div>
+              )}
+            </div>
+            {recording.error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>{recording.error}</p>}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button type="button" onClick={() => setRecording(null)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+              <button type="submit" disabled={recording.busy} className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
+                {recording.busy ? 'Saving…' : 'Record payment'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

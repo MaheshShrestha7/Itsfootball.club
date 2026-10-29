@@ -20,6 +20,8 @@ export interface AttentionCounts {
   sponsorSignups?: number;
   /** Sponsors on the site whose end date is in the next 30 days */
   sponsorsEndingSoon?: number;
+  /** Sponsors whose end date passed in the last 14 days, so they came off the site by themselves */
+  sponsorsLapsed?: number;
   /** Unpaid website sign-ups older than 60 days, for the admin to clear */
   staleSponsorSignups?: number;
   /** Sponsors who sent a new logo or website from their own page, to check */
@@ -69,6 +71,7 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   if (counts.sponsorsToPutOnSite) items.push({ key: 'sponsors-paid', area: 'sponsors', count: counts.sponsorsToPutOnSite, text: `${plural(counts.sponsorsToPutOnSite, 'paid sponsor', 'paid sponsors')} waiting to go on the site`, href: `${base}/sponsors?view=new`, tone: 'urgent' });
   if (counts.sponsorSignups) items.push({ key: 'sponsors-new', area: 'sponsors', count: counts.sponsorSignups, text: `${plural(counts.sponsorSignups, 'new sponsor sign-up', 'new sponsor sign-ups')} not paid yet`, href: `${base}/sponsors?view=new`, tone: 'normal' });
   if (counts.sponsorChanges) items.push({ key: 'sponsors-sent', area: 'sponsors', count: counts.sponsorChanges, text: `${counts.sponsorChanges === 1 ? '1 sponsor sent' : `${counts.sponsorChanges} sponsors sent`} a new logo or website to check`, href: `${base}/sponsors`, tone: 'normal' });
+  if (counts.sponsorsLapsed) items.push({ key: 'sponsors-lapsed', area: 'sponsors', count: counts.sponsorsLapsed, text: `${counts.sponsorsLapsed === 1 ? '1 sponsorship' : `${counts.sponsorsLapsed} sponsorships`} ended in the last 2 weeks and came off the site`, href: `${base}/sponsors?view=ended`, tone: 'urgent' });
   if (counts.sponsorsEndingSoon) items.push({ key: 'sponsors-ending', area: 'sponsors', count: counts.sponsorsEndingSoon, text: `${counts.sponsorsEndingSoon === 1 ? '1 sponsorship ends' : `${counts.sponsorsEndingSoon} sponsorships end`} in the next 30 days`, href: `${base}/sponsors?view=ending`, tone: 'normal' });
   if (counts.staleSponsorSignups) items.push({ key: 'sponsors-stale', area: 'sponsors', count: counts.staleSponsorSignups, text: `${plural(counts.staleSponsorSignups, 'unpaid sponsor sign-up', 'unpaid sponsor sign-ups')} older than 60 days`, href: `${base}/sponsors?view=new`, tone: 'normal' });
   if (counts.ordersToHandOut) items.push({ key: 'orders', area: 'shop', count: counts.ordersToHandOut, text: `${plural(counts.ordersToHandOut, 'shop order', 'shop orders')} to hand out`, href: `${base}/shop#orders`, tone: 'normal' });

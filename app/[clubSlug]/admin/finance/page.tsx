@@ -154,7 +154,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
         <Overview {...shared} payments={seasonPayments} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)}
           sponsors={sponsors.filter(s => s.club_id === club.id)} onReview={() => setTab('income')} />
       )}
-      {tab === 'income' && <IncomeTab {...shared} payments={seasonPayments} plans={plans} members={members.filter(m => m.club_id === club.id)} />}
+      {tab === 'income' && <IncomeTab {...shared} payments={seasonPayments} plans={plans} members={members.filter(m => m.club_id === club.id)}
+        sponsors={sponsors.filter(s => s.club_id === club.id).map(s => ({ id: s.id, name: s.name, package_value: s.package_value }))} />}
       {tab === 'expenses' && <ExpensesTab {...shared} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)} />}
       {tab === 'settings' && <SettingsTab {...shared} settings={settings} plans={plans} />}
     </div>
@@ -285,13 +286,14 @@ function Bars({ title, rows, money, color }: { title: string; rows: { label: str
 }
 
 // ------------------------------------------------------------------------------------------------
-function IncomeTab({ club, db, currency, money, load, flash, payments, plans, members }: Shared & {
+function IncomeTab({ club, db, currency, money, load, flash, payments, plans, members, sponsors }: Shared & {
+  sponsors: { id: string; name: string; package_value?: number | null }[];
   payments: Payment[]; plans: MembershipPlan[]; members: MemberLite[];
 }) {
   const [status, setStatus] = useState('all');
   const [kind, setKind] = useState('all');
   const [adding, setAdding] = useState(false);
-  const blank = { type: 'other', category: 'match_fees', description: '', amount: '', method: 'cash', payer_name: '', member_id: '', plan_id: '', date: today() };
+  const blank = { type: 'other', category: 'match_fees', description: '', amount: '', method: 'cash', payer_name: '', member_id: '', plan_id: '', sponsor_id: '', date: today() };
   const [form, setForm] = useState(blank);
 
   const rows = payments.filter(p => (status === 'all' || p.status === status) && (kind === 'all' || p.kind === kind));
@@ -326,11 +328,20 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     load();
   };
   const reject = async (p: Payment) => {
+    // SPP-2: an invoice sent before payment, with nothing paid against it yet: cancelling it is quiet
+    if (p.status === 'pending' && p.due_on) {
+      if (!(await confirmAction({ title: 'Cancel this invoice?', message: 'Use this if they won\'t be paying it. It stays in your records as cancelled, and they can ask for a new one.', confirmLabel: 'Cancel invoice', danger: true }))) return;
+      const { error } = await db!.from('payments').update({ status: 'rejected', rejection_reason: 'Invoice cancelled', reviewed_at: new Date().toISOString() }).eq('id', p.id);
+      if (error) return flash('error', error.message);
+      flash('ok', 'Invoice cancelled.');
+      return load();
+    }
     // SPE-8: a sponsor is emailed the reason with a link to pay again; for anyone else it stays with the club
     const sponsorship = p.kind === 'sponsorship';
     const reason = await askText({ title: 'Reject this transfer?', message: sponsorship ? 'The payment is marked rejected. The sponsor is emailed your note with a link to pay again.' : 'The payment is marked rejected. Your reason is only shown to the club\'s finance team.', label: sponsorship ? 'Note to the sponsor' : 'Reason', placeholder: 'e.g. No money received yet', confirmLabel: 'Reject transfer', danger: true });
     if (reason === null) return;
-    const { error } = await db!.from('payments').update({ status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() }).eq('id', p.id);
+    // SPP-2: turning down a receipt for an invoice the club sent leaves the invoice due (same number)
+    const { error } = await db!.from('payments').update({ status: p.due_on ? 'pending' : 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() }).eq('id', p.id);
     if (error) return flash('error', error.message);
     if (sponsorship) {
       const res = await fetch('/api/payments/tickets-email', {
@@ -349,6 +360,21 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     e.preventDefault();
     const cents = parseMoneyToCents(form.amount);
     if (cents === null) return flash('error', 'Enter a valid amount, e.g. 25 or 25.50');
+    // SPP-3: a sponsor's payment goes against their sponsorship: Paid, end date, invoice (app/api/sponsors/record-payment)
+    if (form.type === 'sponsorship') {
+      if (!form.sponsor_id) return flash('error', 'Choose the sponsor.');
+      const res = await fetch('/api/sponsors/record-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, sponsorId: form.sponsor_id, amountCents: cents, method: form.method, paidOn: form.date }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return flash('error', json.error || 'Could not record the payment.');
+      flash('ok', json.sent ? 'Payment recorded. The sponsor was emailed a thank-you with their invoice on their sponsor page.' : 'Payment recorded. Their invoice is on their sponsor page.');
+      setForm(blank);
+      setAdding(false);
+      return load();
+    }
     const isMembership = form.type === 'membership';
     if (isMembership && (!form.member_id || !form.plan_id)) return flash('error', 'Choose the member and plan.');
     const plan = plans.find(p => p.id === form.plan_id);
@@ -401,9 +427,25 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
             <select id="inc-type" className="form-select" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
               <option value="other">General income</option>
               <option value="membership">Membership payment (extends expiry)</option>
+              <option value="sponsorship">Sponsorship payment (marks the sponsor paid)</option>
             </select>
           </div>
-          {form.type === 'membership' ? (
+          {form.type === 'sponsorship' ? (
+            <>
+              <div className="form-group">
+                <label className="form-label" htmlFor="inc-sponsor">Sponsor</label>
+                <select id="inc-sponsor" className="form-select" value={form.sponsor_id}
+                  onChange={e => { const sp = sponsors.find(x => x.id === e.target.value); setForm({ ...form, sponsor_id: e.target.value, amount: sp?.package_value ? Number(sp.package_value).toFixed(2) : form.amount }); }}>
+                  <option value="">Choose…</option>
+                  {[...sponsors].sort((a, b) => a.name.localeCompare(b.name)).map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="inc-sp-date">Date received</label>
+                <input id="inc-sp-date" type="date" className="form-input" max={today()} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+              </div>
+            </>
+          ) : form.type === 'membership' ? (
             <>
               <div className="form-group">
                 <label className="form-label" htmlFor="inc-member">Member</label>
@@ -439,10 +481,12 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
               </div>
             </>
           )}
-          <div className="form-group">
-            <label className="form-label" htmlFor="inc-desc">Description</label>
-            <input id="inc-desc" className="form-input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-          </div>
+          {form.type !== 'sponsorship' && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="inc-desc">Description</label>
+              <input id="inc-desc" className="form-input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label" htmlFor="inc-amount">Amount ({currency})</label>
             <input id="inc-amount" className="form-input" inputMode="decimal" required value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
@@ -452,6 +496,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
             <select id="inc-method" className="form-select" value={form.method} onChange={e => setForm({ ...form, method: e.target.value })}>
               <option value="cash">Cash</option>
               <option value="bank_transfer">Bank transfer</option>
+              {form.type === 'sponsorship' && <option value="cheque">Cheque</option>}
               <option value="other">Other</option>
             </select>
           </div>
@@ -475,7 +520,10 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                 <td style={cell}>{PAYMENT_METHOD_LABEL[p.method]}</td>
                 <td style={{ ...cell, fontWeight: 800 }}>{formatMoney(p.amount_cents, p.currency)}</td>
                 <td style={cell}>
-                  <span style={{ color: STATUS_COLOR[p.status], fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>{p.status.replace('_', ' ')}</span>
+                  <span style={{ color: STATUS_COLOR[p.status], fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>
+                    {/* SPP-2: an invoice sent before payment */}
+                    {p.status === 'pending' && p.due_on ? `invoice due ${p.due_on}` : p.status.replace('_', ' ')}
+                  </span>
                   {p.rejection_reason && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{p.rejection_reason}</div>}
                 </td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
@@ -489,8 +537,8 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                   )}
                   {(p.status === 'awaiting_review' || (p.status === 'pending' && p.method !== 'stripe')) && (
                     <>
-                      <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> Verify</button>
-                      <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => reject(p)}><XCircle size={14} /> Reject</button>
+                      <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> {p.status === 'pending' && p.due_on ? 'Mark paid' : 'Verify'}</button>
+                      <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => reject(p)}><XCircle size={14} /> {p.status === 'pending' && p.due_on ? 'Cancel invoice' : 'Reject'}</button>
                     </>
                   )}
                 </td>

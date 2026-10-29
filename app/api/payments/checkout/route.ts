@@ -28,11 +28,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This club does not take card payments yet. Please use bank transfer.' }, { status: 400 });
   }
 
-  const { data: payment, error } = await db
-    .from('payments')
-    .insert({ ...draft.row, method: 'stripe', status: 'pending' })
-    .select('id')
-    .single();
+  // SPP-2: paying an invoice the club sent pays that same row, so its invoice number stays the same
+  const { data: payment, error } = draft.invoiceId
+    ? await db.from('payments').update({ method: 'stripe' }).eq('id', draft.invoiceId).eq('status', 'pending').select('id').single()
+    : await db.from('payments').insert({ ...draft.row, method: 'stripe', status: 'pending' }).select('id').single();
   if (error || !payment) return NextResponse.json({ error: 'Could not start the payment.' }, { status: 500 });
 
   const origin = new URL(req.url).origin;
@@ -78,7 +77,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error('Stripe checkout error:', err);
-    await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
+    // An invoice stays open to pay another way; anything else is marked failed
+    await db.from('payments').update(draft.invoiceId ? { method: 'bank_transfer' } : { status: 'failed' }).eq('id', payment.id);
     return NextResponse.json({ error: 'Card payment could not be started. Please try again.' }, { status: 502 });
   }
 }
