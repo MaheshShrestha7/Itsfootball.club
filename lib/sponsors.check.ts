@@ -255,6 +255,11 @@ assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'checkin_screen', { now: NOW }), [], 'nobody has the tick');
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand', 'gold-paid']);
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', max: 2, now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand']);
+  // The thank-you poster has room for every ticked sponsor, not just a row of five
+  const many = Array.from({ length: 12 }, (_, i) => ({ ...base, id: `t${i}`, tier: 'gold' as const, package_id: 'p-thanks', display_order: i }));
+  const thanks = [{ id: 'p-thanks', tier: 'gold' as const, price_cents: 100000, includes: ['thanks_poster'] }];
+  assert.equal(groundSponsorList(many, thanks, 'thanks_poster', { now: NOW }).length, 12);
+  assert.equal(groundSponsorList(many, thanks.map(p => ({ ...p, includes: ['checkin_posters'] })), 'checkin_posters', { now: NOW }).length, 5);
 }
 
 console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices, offline places OK');

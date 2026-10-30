@@ -335,14 +335,17 @@ export const PACKAGE_INCLUDES = [
   { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics', group: 'site' },
   { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news', group: 'site' },
   { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages', group: 'site' },
-  { key: 'checkin_posters', admin: 'Match check-in posters', card: 'Logo on the printed check-in poster at the gate', group: 'ground' },
+  { key: 'checkin_posters', admin: 'Check-in posters (matches and events)', card: 'Logo on the printed check-in posters at the gate', group: 'ground' },
   { key: 'event_tickets', admin: 'Event tickets and ticket emails', card: 'Logo on event tickets and ticket emails', group: 'ground' },
   { key: 'checkin_screen', admin: 'Check-in screen at the gate', card: 'Logo on the screen fans see when they check in', group: 'ground' },
+  { key: 'thanks_poster', admin: 'Sponsor thank-you poster', card: 'Logo on the club\'s printed "Thank you to our sponsors" poster', group: 'ground' },
 ] as const;
 
 /** A place at the ground or in print that only sponsors with the tick appear on */
-export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen';
-export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen'];
+export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen' | 'thanks_poster';
+export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen', 'thanks_poster'];
+/** How many sponsors a place has room for: a row of logos, or the whole thank-you poster */
+export const GROUND_PLACE_MAX: Record<GroundPlace, number> = { checkin_posters: 5, event_tickets: 5, checkin_screen: 5, thanks_poster: 30 };
 export const isGroundPlace = (v: unknown): v is GroundPlace => GROUND_PLACES.includes(v as GroundPlace);
 
 const INCLUDE_KEYS = new Set<string>(PACKAGE_INCLUDES.map(i => i.key));
@@ -437,5 +440,5 @@ export function groundSponsorList<
     && !!sponsorPackageFor(s, packages)?.includes?.includes(place));
   const own = sortSponsorsByTier(ticked.filter(s => opts.eventId && s.event_id === opts.eventId));
   const club = sortSponsorsByTier(ticked.filter(s => !s.event_id));
-  return [...own, ...club].slice(0, opts.max ?? 5);
+  return [...own, ...club].slice(0, opts.max ?? GROUND_PLACE_MAX[place]);
 }

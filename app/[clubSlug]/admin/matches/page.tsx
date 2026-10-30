@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, use, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -15,8 +14,7 @@ import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import MatchShareButton from '@/components/MatchShareButton';
-import { QRCodeSVG } from 'qrcode.react';
-import { useGroundSponsors } from '@/components/GroundSponsors';
+import CheckinPoster from '@/components/admin/CheckinPoster';
 import {
   Calendar,
   Clock,
@@ -75,11 +73,6 @@ const FLYER_PRESETS = [
     url: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&auto=format&fit=crop&q=80'
   }
 ];
-
-type PosterPaper = 'A5' | 'A4' | 'A3';
-const POSTER_PAPERS: [PosterPaper, string][] = [['A5', 'Table card'], ['A4', 'Home printer'], ['A3', 'Gate or fence']];
-// How much to enlarge the on-screen poster (540px wide) to fill each page inside 12mm margins
-const POSTER_ZOOM: Record<PosterPaper, number> = { A5: 0.82, A4: 1.18, A3: 1.7 };
 
 export default function AdminMatchesPage({
   params,
@@ -148,8 +141,6 @@ export default function AdminMatchesPage({
   const editOpenedWithRef = useRef<{ status: MatchStatus; home_score: number; away_score: number } | null>(null);
   const [qrModalMatch, setQrModalMatch] = useState<Match | null>(null);
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
-  const [posterPaper, setPosterPaper] = useState<PosterPaper>('A4');
-  const [posterShowSponsors, setPosterShowSponsors] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form State
@@ -525,8 +516,6 @@ export default function AdminMatchesPage({
 
   // Only one of the QR modal / gate poster is open at a time
   const doorMatch = qrModalMatch || printPosterMatch;
-  // Sponsors whose package includes "Match check-in posters" (Admin, Sponsors, Packages)
-  const posterSponsors = useGroundSponsors(printPosterMatch ? club.id : undefined, 'checkin_posters');
   const doorCheckinUrl = useDoorCheckinUrl(doorMatch ? `/${club.slug}/match/${doorMatch.id}/checkin` : null, doorMatch?.id);
 
   return (
@@ -1765,160 +1754,16 @@ export default function AdminMatchesPage({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. PRINTABLE GATE POSTER MODAL                                            */}
+      {/* 3. PRINTABLE GATE POSTER                                                  */}
       {/* ========================================================================= */}
-      {printPosterMatch && createPortal(
-        <div
-          className="checkin-poster-overlay"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            background: 'rgba(0, 0, 0, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1.5rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPrintPosterMatch(null);
-          }}
-        >
-          <style>{`
-            @media print {
-              @page { size: ${posterPaper} portrait; margin: 12mm; }
-              :root { color-scheme: light !important; }
-              html, body { background: #fff !important; }
-              body::before, body::after { display: none !important; }
-              body > :not(.checkin-poster-overlay) { display: none !important; }
-              .checkin-poster-overlay { position: static !important; background: none !important; padding: 0 !important; display: block !important; overflow: visible !important; }
-              .checkin-poster-overlay .no-print { display: none !important; }
-              .checkin-poster { box-shadow: none !important; border-radius: 0 !important; margin: 0 auto !important; zoom: ${POSTER_ZOOM[posterPaper]}; break-inside: avoid; }
-            }
-          `}</style>
-          <div
-            className="checkin-poster"
-            style={{
-              margin: 'auto',
-              background: '#FFFFFF',
-              color: '#0F172A',
-              padding: '3rem',
-              borderRadius: '16px',
-              maxWidth: '540px',
-              width: '100%',
-              textAlign: 'center',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.6)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }} className="no-print">
-              <button
-                type="button"
-                onClick={() => setPrintPosterMatch(null)}
-                style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Printable Poster Content */}
-            <div style={{ textTransform: 'uppercase', fontWeight: 900, color: club.primary_color || 'var(--c-green)', letterSpacing: '0.1em', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-              {club.name} • Check In Here
-            </div>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: '0.5rem' }}>
-              {printPosterMatch.title || `${printPosterMatch.home_team_name} vs ${printPosterMatch.away_team_name}`}
-            </h1>
-            <p style={{ color: '#475569', fontSize: '1rem', fontWeight: 600, marginBottom: '2rem' }}>
-              {printPosterMatch.venue} • {new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at {printPosterMatch.match_time || '15:00'}
-            </p>
-
-            <div style={{ display: 'inline-block', padding: '1rem', border: '3px solid #0F172A', borderRadius: '16px', marginBottom: '1.75rem' }}>
-              {doorCheckinUrl ? (
-                <QRCodeSVG
-                  value={doorCheckinUrl}
-                  size={260}
-                  level="H"
-                  includeMargin={false}
-                />
-              ) : (
-                <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
-                  Generating check-in code...
-                </div>
-              )}
-            </div>
-
-            <div style={{ background: '#F1F5F9', borderRadius: '12px', padding: '1rem', marginBottom: '2rem' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0F172A', marginBottom: '0.2rem' }}>
-                SCAN WITH MOBILE CAMERA
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#64748B' }}>
-                Validate your Member Pass or check in as a Guest Supporter at the gate.
-              </div>
-            </div>
-
-            {posterShowSponsors && !!posterSponsors?.length && (
-              <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.18em', color: '#64748B', marginBottom: '0.6rem' }}>OUR SPONSORS</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.6rem' }}>
-                  {posterSponsors.map(sp => (
-                    <div key={sp.id} style={{ height: 56, minWidth: 96, maxWidth: 150, padding: '0.4rem 0.75rem', border: '1px solid #E2E8F0', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {sp.logo_url
-                        ? <img src={sp.logo_url} alt={sp.name} style={{ maxHeight: 40, maxWidth: '100%', objectFit: 'contain' }} />
-                        : <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#0F172A' }}>{sp.name}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="no-print" style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.4rem' }}>Paper size</div>
-              <div role="group" aria-label="Paper size" style={{ display: 'flex', gap: '0.4rem' }}>
-                {POSTER_PAPERS.map(([size, hint]) => (
-                  <button key={size} type="button" aria-pressed={posterPaper === size} onClick={() => setPosterPaper(size)}
-                    style={{ flex: 1, padding: '0.5rem 0.25rem', borderRadius: 10, cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem',
-                      border: `2px solid ${posterPaper === size ? (club.primary_color || '#10B981') : '#E2E8F0'}`, background: posterPaper === size ? '#F1F5F9' : '#fff', color: '#0F172A' }}>
-                    {size}
-                    <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#64748B' }}>{hint}</span>
-                  </button>
-                ))}
-              </div>
-              {posterSponsors !== null && (
-                posterSponsors.length ? (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.85rem', color: '#334155', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={posterShowSponsors} onChange={e => setPosterShowSponsors(e.target.checked)} style={{ width: 17, height: 17 }} />
-                    Show sponsors ({posterSponsors.length})
-                  </label>
-                ) : (
-                  <p style={{ margin: '0.75rem 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                    No sponsors on this poster yet. Tick &quot;Match check-in posters&quot; on a package in Sponsors, Packages.
-                  </p>
-                )
-              )}
-            </div>
-
-            <div className="no-print" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="btn btn-primary"
-                style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                <Printer size={16} />
-                <span>Print Poster</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintPosterMatch(null)}
-                className="btn btn-secondary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
+      {printPosterMatch && (
+        <CheckinPoster
+          club={club}
+          title={printPosterMatch.title || `${printPosterMatch.home_team_name} vs ${printPosterMatch.away_team_name}`}
+          details={`${printPosterMatch.venue} • ${new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${printPosterMatch.match_time || '15:00'}`}
+          checkinUrl={doorCheckinUrl}
+          onClose={() => setPrintPosterMatch(null)}
+        />
       )}
     </div>
   );
