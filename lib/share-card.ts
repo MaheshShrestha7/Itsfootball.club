@@ -48,6 +48,8 @@ export interface CardOptions {
   sponsors?: CardSponsor[];
   /** The heading over the sponsor strip ("OUR SPONSORS" unless given) */
   sponsorsLabel?: string;
+  /** The Player of the Match card's one sponsor ("Supported by"), in place of the quiet date line */
+  motmSponsor?: { src?: string; name: string };
   /** A photo behind the card (the free result graphic maker): darkened by `dim` (0–1), with
    *  `focusY` (0 top – 1 bottom) choosing which part of a tall photo shows. Panels turn to frosted glass over it */
   background?: { src: string; focusY?: number; dim?: number };
@@ -163,22 +165,29 @@ function sponsorRow(ctx: CanvasRenderingContext2D, items: { img: HTMLImageElemen
   const tileW = Math.min(maxTileW, (W - M * 2 - gap * (items.length - 1)) / items.length);
   let x = W / 2 - (tileW * items.length + gap * (items.length - 1)) / 2;
   const y = top + rowH - tileH;
-  for (const { img, name } of items) {
-    roundRect(ctx, x, y, tileW, tileH, 18);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
-    ctx.fill();
-    const pad = Math.round(tileH * 0.14);
-    if (img) {
-      const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      ctx.drawImage(img, x + (tileW - w) / 2, y + (tileH - h) / 2, w, h);
-    } else {
-      ctx.fillStyle = BASE;
-      fit(ctx, name.toUpperCase(), 800, Math.round(tileH * 0.3), tileW - pad * 2, heading, 14);
-      ctx.fillText(ellipsize(ctx, name.toUpperCase(), tileW - pad * 2), x + tileW / 2, y + tileH / 2 + 1);
-    }
+  for (const item of items) {
+    sponsorTile(ctx, item, x, y, tileW, tileH, heading);
     x += tileW + gap;
+  }
+}
+
+/** One sponsor on a white tile: the logo fitted inside, or the name when there is no logo */
+function sponsorTile(ctx: CanvasRenderingContext2D, { img, name }: { img: HTMLImageElement | null; name: string }, x: number, y: number,
+  tileW: number, tileH: number, heading: string) {
+  roundRect(ctx, x, y, tileW, tileH, Math.min(18, tileH / 3));
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.fill();
+  const pad = Math.round(tileH * 0.14);
+  if (img) {
+    const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    ctx.drawImage(img, x + (tileW - w) / 2, y + (tileH - h) / 2, w, h);
+  } else {
+    ctx.fillStyle = BASE;
+    ctx.textAlign = 'center';
+    fit(ctx, name.toUpperCase(), 800, Math.round(tileH * 0.3), tileW - pad * 2, heading, 14);
+    ctx.fillText(ellipsize(ctx, name.toUpperCase(), tileW - pad * 2), x + tileW / 2, y + tileH / 2 + 1);
   }
 }
 
@@ -1089,7 +1098,26 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     ctx.fillText(score, W / 2, mid + 2);
     const { day } = kickoff(match);
     const when = [day, match.venue].filter(Boolean).join(' · ');
-    if (when && !square && opts.icons) {
+    const [motmSponsor] = opts.motmSponsor ? await loadSponsors([opts.motmSponsor], 1) : [];
+    if (motmSponsor) {
+      // "SUPPORTED BY" and the sponsor's logo on a white tile, in one glass pill under the result
+      const pillH = by(84, 66, 64);
+      const pillY = by(1600, 1236, 984) - pillH / 2;
+      const tileH = pillH - 20;
+      const tileW = by(250, 210, 200);
+      ctx.font = `700 ${by(22, 19, 19)}px ${body}`;
+      spaced(ctx, 4);
+      const labelW = ctx.measureText('SUPPORTED BY').width;
+      const pillW = 28 + labelW + 22 + tileW + 10;
+      const pillX = (W - pillW) / 2;
+      glass(ctx, pillX, pillY, pillW, pillH, pillH / 2, backdrop);
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = 'left';
+      ctx.fillText('SUPPORTED BY', pillX + 28, pillY + pillH / 2 + 1);
+      spaced(ctx, 0);
+      sponsorTile(ctx, motmSponsor, pillX + 28 + labelW + 22, pillY + 10, tileW, tileH, heading);
+      ctx.textAlign = 'center';
+    } else if (when && !square && opts.icons) {
       iconRow(ctx, [{ icon: 'calendar', text: day }, { icon: 'pin', text: match.venue || '' }], stripY + stripH + by(60, 48, 48),
         by(30, 26, 26), 600, body, W - M * 2, MUTED, ink);
     } else if (when && !square) {

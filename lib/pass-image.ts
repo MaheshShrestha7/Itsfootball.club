@@ -1,21 +1,26 @@
 import { Club, ClubMember } from '@/lib/supabase/types';
 import { evaluateColorContrast } from '@/lib/theme-utils';
 import { DATE_LOCALE } from '@/lib/dates';
+import { corsCopy } from '@/lib/image-color';
 
 /**
- * Draws the member pass as a phone-sized PNG (1080x1350) so it can be kept in the photo
+ * Draws the member pass as a phone-sized PNG (1080x1350, taller with a sponsor row) so it can be kept in the photo
  * library and shown at the gate without signing in. The QR is copied from a canvas the
  * card already rendered, so the image carries exactly the token the gate scanner reads.
- * Logos and photos are left out: a cross-origin image would block exporting the canvas.
+ * The crest and member photo are left out: a cross-origin image would block exporting the canvas.
+ * A sponsor logo is drawn only when it loads with CORS, like the share graphics' logos.
  */
 export async function renderPassImage(
   club: Club,
   member: ClubMember,
   qrCanvas: HTMLCanvasElement,
-  statusLabel: string
+  statusLabel: string,
+  /** The pass's one sponsor (Admin, Sponsors): a "Supported by" row under the QR, on a taller image */
+  sponsor?: { name: string; logoUrl?: string | null } | null
 ): Promise<Blob> {
   const W = 1080;
-  const H = 1350;
+  const logo = sponsor?.logoUrl ? await loadLogo(sponsor.logoUrl) : null;
+  const H = sponsor ? 1470 : 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -74,6 +79,46 @@ export async function renderPassImage(
   fitText(`${statusLabel}${expires ? ` • Valid until ${expires}` : ''}`, 700, 36, W - 120, 1222, statusLabel === 'ACTIVE' ? '#34D399' : '#FBBF24');
   fitText('Show this QR code at the gate', 500, 30, W - 120, 1285, '#94A3B8');
 
+  if (sponsor) {
+    // "SUPPORTED BY" and the sponsor's logo on a white tile (or their name without one)
+    const tileW = 260;
+    const tileH = 84;
+    ctx.font = font(800, 24);
+    const label = 'SUPPORTED BY';
+    const labelW = ctx.measureText(label).width + 11 * 2;
+    const x0 = (W - (labelW + 28 + tileW)) / 2;
+    const cy = 1385;
+    ctx.fillStyle = '#94A3B8';
+    ctx.textAlign = 'left';
+    ctx.letterSpacing = '2px';
+    ctx.fillText(label, x0, cy);
+    ctx.letterSpacing = '0px';
+    const tx = x0 + labelW + 28;
+    ctx.fillStyle = '#FFFFFF';
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(tx, cy - tileH / 2, tileW, tileH, 14);
+      ctx.fill();
+    } else {
+      ctx.fillRect(tx, cy - tileH / 2, tileW, tileH);
+    }
+    ctx.imageSmoothingEnabled = true;
+    if (logo) {
+      const scale = Math.min((tileW - 28) / logo.naturalWidth, (tileH - 20) / logo.naturalHeight);
+      const w = logo.naturalWidth * scale;
+      const h = logo.naturalHeight * scale;
+      ctx.drawImage(logo, tx + (tileW - w) / 2, cy - h / 2, w, h);
+    } else {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0E1420';
+      let size = 30;
+      ctx.font = font(800, size);
+      while (size > 16 && ctx.measureText(sponsor.name).width > tileW - 24) ctx.font = font(800, (size -= 2));
+      ctx.fillText(sponsor.name, tx + tileW / 2, cy + 1);
+    }
+    ctx.textAlign = 'center';
+  }
+
   return new Promise((resolve, reject) => {
     canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Could not create the image'))), 'image/png');
   });
@@ -104,4 +149,16 @@ export async function savePassImage(blob: Blob, fileName: string): Promise<boole
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return true;
+}
+
+/** A sponsor logo that can be drawn and still exported: fetched with CORS (as the share graphics do),
+ *  so a logo the browser can't load that way is left out rather than blocking the save */
+function loadLogo(src: string): Promise<HTMLImageElement | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = corsCopy(src);
+  });
 }

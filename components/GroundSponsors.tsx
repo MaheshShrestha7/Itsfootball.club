@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { GroundPlace } from '@/lib/sponsors';
+import { ONE_SPONSOR_PLACES, oneSponsorFor, type GroundPlace } from '@/lib/sponsors';
+import type { ClubConfig } from '@/lib/supabase/types';
 import type { GroundSponsor } from '@/lib/sponsor-ground-server';
 import SponsorTrackedLink from './SponsorTrackedLink';
 import SponsorLogo from './SponsorLogo';
@@ -21,6 +22,14 @@ export function useGroundSponsors(clubId: string | undefined, place: GroundPlace
     return () => { stopped = true; };
   }, [clubId, place, eventId]);
   return list;
+}
+
+/** The one sponsor for the member pass or the Player of the Match graphic: the admin's choice in
+ *  Admin, Sponsors (clubs.config), else the biggest sponsor with the tick. null while loading or none. */
+export function useOneSponsor(club: { id: string; config?: ClubConfig | null } | undefined, place: (typeof ONE_SPONSOR_PLACES)[number]['place']): GroundSponsor | null {
+  const list = useGroundSponsors(club?.id, place);
+  const key = ONE_SPONSOR_PLACES.find(p => p.place === place)!.configKey;
+  return oneSponsorFor(list || [], club?.config?.[key]);
 }
 
 /** A row of sponsor logos on white tiles under a small spaced heading. On a phone screen (tickets,

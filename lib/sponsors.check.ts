@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, groundSponsorList, sponsorPackageFor, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, groundSponsorList, oneSponsorFor, sponsorPackageFor, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -255,6 +255,18 @@ assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'checkin_screen', { now: NOW }), [], 'nobody has the tick');
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand', 'gold-paid']);
   assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', max: 2, now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand']);
+  // The thank-you poster has room for every ticked sponsor, not just a row of five
+  const many = Array.from({ length: 12 }, (_, i) => ({ ...base, id: `t${i}`, tier: 'gold' as const, package_id: 'p-thanks', display_order: i }));
+  const thanks = [{ id: 'p-thanks', tier: 'gold' as const, price_cents: 100000, includes: ['thanks_poster'] }];
+  assert.equal(groundSponsorList(many, thanks, 'thanks_poster', { now: NOW }).length, 12);
+  assert.equal(groundSponsorList(many, thanks.map(p => ({ ...p, includes: ['checkin_posters'] })), 'checkin_posters', { now: NOW }).length, 5);
+  // One-sponsor places: the admin's pick while it still has the tick, else the biggest, or nobody
+  const ticked = [{ id: 'big' }, { id: 'small' }];
+  assert.equal(oneSponsorFor(ticked, 'small')?.id, 'small');
+  assert.equal(oneSponsorFor(ticked, undefined)?.id, 'big', 'nobody picked: the biggest');
+  assert.equal(oneSponsorFor(ticked, 'gone')?.id, 'big', 'picked sponsor lost the tick');
+  assert.equal(oneSponsorFor(ticked, 'none'), null);
+  assert.equal(oneSponsorFor([], undefined), null);
 }
 
 console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices, offline places OK');

@@ -7,6 +7,11 @@ import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
 import { useClub } from '@/lib/club-context';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
+import { useOneSponsor } from './GroundSponsors';
+import { Kaushan_Script } from 'next/font/google';
+
+// The Player of the Match name in the same brush script as the free Player of the Match maker
+const motmFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 'swap' });
 
 // "Share" on a match page (and on each fixture in Admin > Matches): previews the matchday graphic as a
 // story or a post, then hands it to the phone's share sheet (Instagram, Facebook, WhatsApp...) or
@@ -14,12 +19,14 @@ import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 // hideScore: the team hides its scores publicly (junior grassroots rules), so the card never shows one
 // events: the match's events with public names (junior players shortened); goals list the scorers
 // photos: player photos by member id for the lineup pitch, as the public site shows them
-export default function MatchShareButton({ match, club, hideScore = false, events, photos, trigger }: {
+// motm: the Player of the Match, as the public site names them: adds a Player of the Match card
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, motm, trigger }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
   events?: CardOptions['events'];
   photos?: CardOptions['photos'];
+  motm?: { name: string; photo?: string | null };
   /** Draws the button that opens the dialog, for places with their own button style */
   trigger?: (open: () => void) => React.ReactNode;
 }) {
@@ -35,9 +42,15 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const sponsorKey = JSON.stringify(sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)))
     .slice(0, 5).map(s => [s.logo_url || '', s.name]));
   const cardSponsors = useMemo(() => (JSON.parse(sponsorKey) as [string, string][]).map(([src, name]) => ({ src: src || undefined, name })), [sponsorKey]);
+  // One sponsor on the Player of the Match card (a package with the "Player of the Match graphic" tick),
+  // looked up once the dialog opens: Admin, Matches has a Share button on every fixture
+  const potmSponsor = useOneSponsor(open ? club : undefined, 'potm_graphic');
+  const motmName = motm?.name || '';
+  const motmPhoto = motm?.photo || undefined;
+  const hasMotm = !!motmName && match.status === 'completed';
   const hasLineup = ((match.is_club_home ?? true) ? match.home_lineup_coords : match.away_lineup_coords)?.length;
   const onPitch = lineupHasPositions(match);
-  const fileName = `${club.slug}-${kind !== 'score' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
+  const fileName = `${club.slug}-${kind === 'motm' ? 'player-of-the-match' : kind !== 'score' ? 'lineup' : match.status === 'completed' && !hideScore ? 'result' : 'fixture'}-${format}.png`;
 
   // Only the goals matter here, and the caller may pass a new array on every render (a live match
   // ticks), so the graphic redraws when a goal changes, not on every render
@@ -45,6 +58,9 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     .map(e => [e.team_side, e.player_name, e.minute, e.added_minute || 0, e.event_type]));
   const goals = useMemo(() => JSON.parse(goalsKey).map(([team_side, player_name, minute, added_minute, event_type]: [MatchEvent['team_side'], string, number, number, MatchEvent['event_type']]) =>
     ({ team_side, player_name, minute, added_minute, event_type })) as NonNullable<CardOptions['events']>, [goalsKey]);
+  // "2 goals" under the Player of the Match's name, from the goals they scored
+  const motmGoals = motmName && !hideScore ? goals.filter(g => g.event_type !== 'own_goal' && g.player_name === motmName).length : 0;
+  const motmLine = motmGoals ? `${motmGoals} goal${motmGoals === 1 ? '' : 's'}` : undefined;
 
   // Redrawn when opened, when the card type or size changes and when the score moves
   useEffect(() => {
@@ -53,7 +69,13 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     let stale = false;
     setError(null);
     setImage(null);
-    drawMatchCard(match, club, kind, shareLink(club), {
+    const card: CardKind = kind === 'motm' && !hasMotm ? 'score' : kind;
+    drawMatchCard(match, club, card, shareLink(club), card === 'motm' ? {
+      // As the free Player of the Match maker draws it: the name in a brush script, a stats line with icons
+      hideScore, format, icons: true,
+      motm: { name: motmName, photo: motmPhoto, line: motmLine, nameFont: motmFont.style.fontFamily },
+      ...(showSponsors && potmSponsor ? { motmSponsor: { src: potmSponsor.logo_url || undefined, name: potmSponsor.name } } : {}),
+    } : {
       hideScore, format, events: hideScore ? undefined : goals, photos,
       ...(showSponsors && cardSponsors.length ? { sponsors: cardSponsors, sponsorsLabel: 'CLUB SPONSORS' } : {}),
     })
@@ -64,7 +86,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, format, match, club, hideScore, goals, photos, showSponsors, cardSponsors]);
+  }, [open, kind, format, match, club, hideScore, goals, photos, showSponsors, cardSponsors, hasMotm, motmName, motmPhoto, motmLine, potmSponsor]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -128,7 +150,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-          {hasLineup ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{onPitch && tab('lineup', 'Starting XI')}{tab('lineup-list', onPitch ? 'Team list' : 'Starting XI')}</div> : <span />}
+          {hasLineup || hasMotm ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{hasMotm && tab('motm', 'Player of the Match')}{hasLineup && onPitch && tab('lineup', 'Starting XI')}{hasLineup && tab('lineup-list', onPitch ? 'Team list' : 'Starting XI')}</div> : <span />}
           <div role="group" aria-label="Size" style={{ display: 'flex', gap: '0.5rem' }}>
             {sizeTab('story', 'Story', 'Instagram or Facebook story, WhatsApp status')}
             {sizeTab('post', 'Post', 'Instagram feed, Facebook group, WhatsApp chat')}
@@ -141,7 +163,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
             : <p className="text-note" role="status">Drawing your graphic…</p>}
         </div>
 
-        {cardSponsors.length > 0 && (
+        {(kind === 'motm' && hasMotm ? !!potmSponsor : cardSponsors.length > 0) && (
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.88rem', color: 'var(--text-secondary)', cursor: 'pointer', minHeight: 36 }}>
             <input type="checkbox" checked={showSponsors} onChange={e => setShowSponsors(e.target.checked)} style={{ width: 18, height: 18 }} />
             Show sponsors

@@ -9,6 +9,7 @@ import { ClubEvent, EventCategory } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
+import CheckinPoster from '@/components/admin/CheckinPoster';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import {
   Calendar,
@@ -21,6 +22,7 @@ import {
   X,
   Sparkles,
   ImageIcon,
+  Printer,
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
@@ -50,6 +52,7 @@ export default function AdminEventsPage({
 
   const [scannerEvent, setScannerEvent] = useState<ClubEvent | null>(null);
   const [qrModalEvent, setQrModalEvent] = useState<ClubEvent | null>(null);
+  const [printPosterEvent, setPrintPosterEvent] = useState<ClubEvent | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -82,7 +85,9 @@ export default function AdminEventsPage({
     getSupabaseClient()?.from('events').select('flyer_url').limit(1).then(({ error }) => setFlyersReady(!error));
   }, []);
 
-  const doorCheckinUrl = useDoorCheckinUrl(qrModalEvent ? `/${club.slug}/events/${qrModalEvent.id}/checkin` : null, qrModalEvent?.id);
+  // The QR popup and the printable poster both carry the door code
+  const doorEvent = qrModalEvent || printPosterEvent;
+  const doorCheckinUrl = useDoorCheckinUrl(doorEvent ? `/${club.slug}/events/${doorEvent.id}/checkin` : null, doorEvent?.id);
 
   const filteredEvents = clubEvents.filter(e => {
     if (seasonFilter === 'ALL') return true;
@@ -671,6 +676,32 @@ export default function AdminEventsPage({
           checkinUrl={doorCheckinUrl}
           disabledNotice={!qrModalEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.' : undefined}
           onClose={() => setQrModalEvent(null)}
+          extraActions={
+            <button
+              type="button"
+              onClick={() => {
+                const target = qrModalEvent;
+                setQrModalEvent(null);
+                setPrintPosterEvent(target);
+              }}
+              className="btn btn-primary btn-sm row"
+            >
+              <Printer size={14} />
+              <span>Print Door Poster</span>
+            </button>
+          }
+        />
+      )}
+
+      {printPosterEvent && (
+        <CheckinPoster
+          club={club}
+          title={printPosterEvent.title}
+          details={`${printPosterEvent.location} • ${new Date(printPosterEvent.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(printPosterEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}`}
+          checkinUrl={doorCheckinUrl}
+          eventId={printPosterEvent.id}
+          disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}
+          onClose={() => setPrintPosterEvent(null)}
         />
       )}
 

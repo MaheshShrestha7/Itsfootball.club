@@ -12,9 +12,11 @@ import {
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
+import SponsorThanksPoster from '@/components/admin/SponsorThanksPoster';
+import OneSponsorSpots from '@/components/admin/OneSponsorSpots';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
@@ -105,6 +107,7 @@ export default function AdminSponsorsPage({
 
   // Sponsor list or Packages (?tab=packages, from the admin menu and Finance)
   const [tab, setTab] = useUrlTab(['list', 'packages'] as const);
+  const [thanksPosterOpen, setThanksPosterOpen] = useState(false);
   // Which sponsors the list shows (?view=new opens New sign-ups, from "Needs you")
   // (replaceState with no state of its own keeps useSearchParams in sync, as in useUrlTab)
   const searchParams = useSearchParams();
@@ -534,11 +537,18 @@ export default function AdminSponsorsPage({
           </p>
         </div>
 
-        <button onClick={handleOpenAdd} className="btn btn-primary row">
-          <Plus size={16} />
-          <span>Add New Sponsor</span>
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <button type="button" onClick={() => setThanksPosterOpen(true)} className="btn btn-secondary row">
+            <Printer size={16} />
+            <span>Print thank-you poster</span>
+          </button>
+          <button onClick={handleOpenAdd} className="btn btn-primary row">
+            <Plus size={16} />
+            <span>Add New Sponsor</span>
+          </button>
+        </div>
       </div>
+      {thanksPosterOpen && <SponsorThanksPoster club={club} onClose={() => setThanksPosterOpen(false)} />}
 
       <div className="sponsor-tabs" role="tablist" aria-label="Sponsors" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
         {([['list', 'Sponsor List', Shield], ['packages', 'Packages', Package]] as const).map(([id, label, Icon]) => (
@@ -550,6 +560,8 @@ export default function AdminSponsorsPage({
       </div>
 
       {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : (<>
+
+      <OneSponsorSpots club={club} />
 
       {/* Top Banner & Live Preview Toggle */}
       <div style={{

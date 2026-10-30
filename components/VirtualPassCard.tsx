@@ -7,6 +7,9 @@ import confetti from 'canvas-confetti';
 import { Club, ClubMember, ClubTeam, Match, isPlayerMember } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import { renderPassImage, savePassImage } from '@/lib/pass-image';
+import { useOneSponsor } from './GroundSponsors';
+import SponsorTrackedLink from './SponsorTrackedLink';
+import SponsorLogo from './SponsorLogo';
 import { hexToRgb, getRelativeLuminance } from '@/lib/theme-utils';
 import {
   Shield,
@@ -91,6 +94,8 @@ function BackPanel({ depth, style, children }: { depth: number; style?: React.CS
 export default function VirtualPassCard({ club, member, teams = [], nextMatch, onRenew }: VirtualPassCardProps) {
   // Hidden by default so a screenshot of the pass doesn't carry it
   const [showEmergency, setShowEmergency] = useState(false);
+  // One sponsor on the pass (Admin, Sponsors: a package with the "Member pass" tick)
+  const passSponsor = useOneSponsor(club, 'member_pass');
   const [isFlipped, setIsFlipped] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -184,7 +189,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
 
     try {
       const status = isSuspended ? 'SUSPENDED' : isExpired ? 'EXPIRED' : 'ACTIVE';
-      const blob = await renderPassImage(club, member, qrCanvasRef.current, status);
+      const blob = await renderPassImage(club, member, qrCanvasRef.current, status, passSponsor ? { name: passSponsor.name, logoUrl: passSponsor.logo_url } : null);
       const namePart = member.full_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'member';
       const saved = await savePassImage(blob, `${club.slug}-pass-${namePart}.png`);
       if (!saved) return; // share sheet cancelled
@@ -617,6 +622,16 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
             )}
 
             <div style={{ marginTop: 'auto', textAlign: 'center', position: 'relative', zIndex: 3 }}>
+              {passSponsor && (
+                <span onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.55rem', marginBottom: '0.45rem' }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.16em', color: GLASS_MUTED }}>SUPPORTED BY</span>
+                  <SponsorTrackedLink clubId={club.id} sponsorId={passSponsor.id} placement="member_pass" href={passSponsor.website_url || ''}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 30, minWidth: 64, maxWidth: 120, padding: '0.2rem 0.5rem', borderRadius: 7, background: '#fff' }}>
+                    <SponsorLogo src={passSponsor.logo_url} name={passSponsor.name} height={22} style={{ maxWidth: '100%' }} />
+                    <span className="sr-only">{passSponsor.name}</span>
+                  </SponsorTrackedLink>
+                </span>
+              )}
               {(club.motto || club.founded_year) && (
                 <div style={{ fontSize: '0.78rem', color: GLASS_TEXT, fontStyle: club.motto ? 'italic' : 'normal' }}>
                   {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(' · ')}

@@ -250,6 +250,7 @@ export const PLACEMENT_LABELS: Record<string, string> = {
   supported_by: 'Match reports and news',
   event_tickets: 'Event tickets',
   checkin_screen: 'Check-in screen at the gate',
+  member_pass: 'Member pass',
 };
 
 export const placementName = (placement: string | null | undefined) =>
@@ -335,14 +336,33 @@ export const PACKAGE_INCLUDES = [
   { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics', group: 'site' },
   { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news', group: 'site' },
   { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages', group: 'site' },
-  { key: 'checkin_posters', admin: 'Match check-in posters', card: 'Logo on the printed check-in poster at the gate', group: 'ground' },
+  { key: 'checkin_posters', admin: 'Check-in posters (matches and events)', card: 'Logo on the printed check-in posters at the gate', group: 'ground' },
   { key: 'event_tickets', admin: 'Event tickets and ticket emails', card: 'Logo on event tickets and ticket emails', group: 'ground' },
   { key: 'checkin_screen', admin: 'Check-in screen at the gate', card: 'Logo on the screen fans see when they check in', group: 'ground' },
+  { key: 'thanks_poster', admin: 'Sponsor thank-you poster', card: 'Logo on the club\'s printed "Thank you to our sponsors" poster', group: 'ground' },
+  { key: 'member_pass', admin: 'Member pass (one sponsor)', card: '"Supported by" on every member\'s pass', group: 'ground' },
+  { key: 'potm_graphic', admin: 'Player of the Match graphic (one sponsor)', card: '"Supported by" on the Player of the Match graphic', group: 'ground' },
 ] as const;
 
 /** A place at the ground or in print that only sponsors with the tick appear on */
-export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen';
-export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen'];
+export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen' | 'thanks_poster' | 'member_pass' | 'potm_graphic';
+export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen', 'thanks_poster', 'member_pass', 'potm_graphic'];
+/** How many sponsors a place has room for: a row of logos, or the whole thank-you poster. The
+ *  one-sponsor places list everyone with the tick, for the admin to choose from (oneSponsorFor) */
+export const GROUND_PLACE_MAX: Record<GroundPlace, number> = { checkin_posters: 5, event_tickets: 5, checkin_screen: 5, thanks_poster: 30, member_pass: 30, potm_graphic: 30 };
+
+/** The places with room for one sponsor, and where the admin's choice is kept (clubs.config) */
+export const ONE_SPONSOR_PLACES = [
+  { place: 'member_pass', configKey: 'pass_sponsor_id', label: 'Member pass', hint: 'On the back of every member\'s pass and the saved pass image.' },
+  { place: 'potm_graphic', configKey: 'potm_sponsor_id', label: 'Player of the Match graphic', hint: '"Supported by" on the Player of the Match card in Share.' },
+] as const;
+
+/** The one sponsor for a place: the admin's choice ('none' for nobody) while their package still has
+ *  the tick, else the first in the list (the biggest tier). `ticked` is groundSponsorList's order. */
+export function oneSponsorFor<S extends { id: string }>(ticked: S[], chosen: unknown): S | null {
+  if (chosen === 'none') return null;
+  return ticked.find(s => s.id === chosen) ?? ticked[0] ?? null;
+}
 export const isGroundPlace = (v: unknown): v is GroundPlace => GROUND_PLACES.includes(v as GroundPlace);
 
 const INCLUDE_KEYS = new Set<string>(PACKAGE_INCLUDES.map(i => i.key));
@@ -437,5 +457,5 @@ export function groundSponsorList<
     && !!sponsorPackageFor(s, packages)?.includes?.includes(place));
   const own = sortSponsorsByTier(ticked.filter(s => opts.eventId && s.event_id === opts.eventId));
   const club = sortSponsorsByTier(ticked.filter(s => !s.event_id));
-  return [...own, ...club].slice(0, opts.max ?? 5);
+  return [...own, ...club].slice(0, opts.max ?? GROUND_PLACE_MAX[place]);
 }
