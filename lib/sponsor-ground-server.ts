@@ -13,17 +13,23 @@ export interface GroundSponsor {
 
 const COLUMNS = 'id, event_id, name, logo_url, website_url, tier, display_order, is_active, package_status, package_value, ends_on';
 
-/** The sponsors for a place at the ground (groundSponsorList), read with the service role: the
- *  public sponsors_public view leaves out package_id and package_value, which decide who goes on.
- *  An empty list while the package migrations haven't run. */
-export async function loadGroundSponsors(db: SupabaseClient, clubId: string, place: GroundPlace, eventId?: string | null): Promise<GroundSponsor[]> {
+/** The club's active sponsors and its packages, as groundSponsorList takes them, read with the
+ *  service role: the public sponsors_public view leaves out package_id and package_value, which decide
+ *  who goes on. Empty lists while the package migrations haven't run. */
+export async function loadGroundInputs(db: SupabaseClient, clubId: string): Promise<{ sponsors: Sponsor[]; packages: SponsorshipPackage[] }> {
   // package_id arrives with migration 20261137; before that, every sponsor is matched by tier and price
   const withPackage = await db.from('sponsors').select(`${COLUMNS}, package_id`).eq('club_id', clubId).eq('is_active', true);
   const sponsors = withPackage.error
     ? (await db.from('sponsors').select(COLUMNS).eq('club_id', clubId).eq('is_active', true)).data
     : withPackage.data;
   const { data: packages } = await db.from('sponsorship_packages').select('id, tier, price_cents, includes').eq('club_id', clubId);
-  if (!sponsors?.length || !packages?.length) return [];
-  return groundSponsorList(sponsors as unknown as Sponsor[], packages as SponsorshipPackage[], place, { eventId })
+  return { sponsors: (sponsors || []) as unknown as Sponsor[], packages: (packages || []) as SponsorshipPackage[] };
+}
+
+/** The sponsors for a place at the ground (groundSponsorList) */
+export async function loadGroundSponsors(db: SupabaseClient, clubId: string, place: GroundPlace, eventId?: string | null): Promise<GroundSponsor[]> {
+  const { sponsors, packages } = await loadGroundInputs(db, clubId);
+  if (!sponsors.length || !packages.length) return [];
+  return groundSponsorList(sponsors, packages, place, { eventId })
     .map(s => ({ id: s.id, name: s.name, logo_url: s.logo_url, website_url: s.website_url || null, tier: s.tier }));
 }

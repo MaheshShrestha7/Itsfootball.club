@@ -460,3 +460,20 @@ export function groundSponsorList<
   const club = sortSponsorsByTier(ticked.filter(s => !s.event_id));
   return [...own, ...club].slice(0, opts.max ?? GROUND_PLACE_MAX[place]);
 }
+
+/** The places at the ground and in print a sponsor is on now, for their report: in a place's list
+ *  (groundSponsorList, so the row of five has room for them), or the admin's pick for a one-sponsor
+ *  place (oneSponsorFor). `config` is the club's config, where those picks are kept. */
+export function groundPlacesFor<
+  S extends Parameters<typeof groundSponsorList>[0][number],
+  P extends Parameters<typeof groundSponsorList>[1][number],
+>(sponsor: S, sponsors: S[], packages: P[], config?: Record<string, unknown> | null, now?: number): GroundPlace[] {
+  return GROUND_PLACES.filter(place => {
+    const one = ONE_SPONSOR_PLACES.find(o => o.place === place);
+    // The pass, the Player of the Match card and the thank-you poster are club-wide, so an event's own
+    // sponsor is never on them
+    const clubWide = !!one || place === 'thanks_poster';
+    const list = groundSponsorList(sponsors, packages, place, { eventId: clubWide ? null : sponsor.event_id, now });
+    return one ? oneSponsorFor(list, config?.[one.configKey])?.id === sponsor.id : list.some(s => s.id === sponsor.id);
+  });
+}

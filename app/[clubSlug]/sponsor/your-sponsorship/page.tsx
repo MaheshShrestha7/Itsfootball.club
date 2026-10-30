@@ -7,7 +7,7 @@ import { ArrowLeft, CheckCircle2, AlertCircle, Hourglass, Upload, FileText, Prin
 import { useClub } from '@/lib/club-context';
 import { formatMoney } from '@/lib/finance';
 import { formatDate } from '@/lib/dates';
-import { TIER_BADGE, formatEndDate, isPastEndDate, sponsorHref, sponsorLabel, typedWebsite } from '@/lib/sponsors';
+import { PACKAGE_INCLUDES, TIER_BADGE, formatEndDate, isPastEndDate, sponsorHref, sponsorLabel, typedWebsite } from '@/lib/sponsors';
 import SponsorLogo from '@/components/SponsorLogo';
 import type { PortalData } from '@/lib/sponsor-portal-server';
 
@@ -134,6 +134,13 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
   }
 
   const { sponsor, results, payments } = data;
+  // Older servers (before OSE-9) send no atGround
+  const atGround = data.atGround ?? { places: [], checkins: null, tickets: null, passMembers: null };
+  const groundCounts = ([
+    [atGround.checkins, 'Check-ins at the gate, with your logo on the poster or screen'],
+    [atGround.tickets, 'Event tickets issued with your logo'],
+    [atGround.passMembers, 'Members with your logo on their pass'],
+  ] as const).filter(([value]) => value !== null);
   const maxSeen = Math.max(1, ...results.byPlacement.map(p => p.seen));
   const pendingNote = sponsor.pending_sent_at && (sponsor.pending_logo_url || sponsor.pending_website_url);
   const sentWhat = [sponsor.pending_logo_url && 'New logo', sponsor.pending_website_url && (sponsor.pending_logo_url ? 'website' : 'New website')].filter(Boolean).join(' and ');
@@ -281,6 +288,34 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
             <p className="text-note" style={{ margin: '0 0 1rem' }}>
               People are counted by device, so someone on their phone and laptop counts twice.
             </p>
+
+            {/* OSE-9: at the ground and in print, only the places their package includes now */}
+            {atGround.places.length > 0 && (
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem' }}>At the ground and in print</h3>
+                <p className="text-meta" style={{ margin: '0 0 0.75rem' }}>Your logo is on:</p>
+                <ul style={{ margin: '0 0 1rem', paddingLeft: '1.2rem', display: 'grid', gap: '0.3rem' }} className="text-body">
+                  {atGround.places.map(place => (
+                    <li key={place}>{PACKAGE_INCLUDES.find(i => i.key === place)?.card ?? place}</li>
+                  ))}
+                </ul>
+                {groundCounts.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    {groundCounts.map(([value, label]) => (
+                      <div key={label} className="glass-panel" style={{ padding: '1rem' }}>
+                        <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.7rem', fontWeight: 900, color: 'var(--text-primary)' }}>{Number(value).toLocaleString('en-AU')}</div>
+                        <div className="text-meta">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-note" style={{ margin: 0 }}>
+                  {(atGround.checkins !== null || atGround.tickets !== null) && <>Check-ins and tickets are since {formatDate(results.since)}. </>}
+                  {atGround.places.some(p => p === 'event_tickets' || p === 'member_pass' || p === 'checkin_screen') && <>Times your logo was seen on tickets, passes and the check-in screen are counted in &quot;Where people saw you&quot; above. </>}
+                  {atGround.places.some(p => p === 'checkin_posters' || p === 'thanks_poster' || p === 'event_flyers' || p === 'potm_graphic') && <>Posters, flyers and shared graphics aren&apos;t counted, because nobody can tell how many people looked at them.</>}
+                </p>
+              </div>
+            )}
             <button type="button" className="btn btn-secondary sponsor-no-print" onClick={() => window.print()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
               <Printer size={15} /> Save as PDF
             </button>
