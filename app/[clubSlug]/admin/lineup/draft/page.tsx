@@ -110,12 +110,18 @@ export default function DraftLineupPage() {
     return clubSidePlayers(activeMatch, teamSideIn(activeMatch, activeGroup.participant.name), squad, tournamentParticipants, internalTeams) ?? squad;
   }, [allSquadPlayers, activeMatch, clubTeams, clubTeamMembers, activeGroup, tournamentParticipants, internalTeams]);
 
-  // Only players marked "available" for this fixture (any of a tournament team's games) can be picked.
-  // If attendance was never tracked, use the full squad.
-  const squadPlayers = useMemo(() => {
-    if (matchAvailabilities.length === 0) return teamSquad;
-    const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
-    return teamSquad.filter(p => attendingIds.has(p.id));
+  // The whole squad can be picked: players who said In first, then Maybe, no reply yet, and Out last (the bench
+  // shows each one's answer). Only the In players go into the default XI; with no answers at all, everyone does.
+  const { squadPlayers, starterPool, answerOf } = useMemo(() => {
+    const best = new Map<string, 'available' | 'maybe' | 'unavailable'>();
+    for (const st of ['unavailable', 'maybe', 'available'] as const) {
+      matchAvailabilities.filter(a => a.status === st).forEach(a => best.set(a.member_id, st));
+    }
+    const answer = (id: string) => best.get(id) || 'pending';
+    if (matchAvailabilities.length === 0) return { squadPlayers: teamSquad, starterPool: teamSquad, answerOf: answer };
+    const rank = { available: 0, maybe: 1, pending: 2, unavailable: 3 } as const;
+    const ordered = [...teamSquad].sort((a, b) => rank[answer(a.id)] - rank[answer(b.id)]);
+    return { squadPlayers: ordered, starterPool: ordered.filter(p => answer(p.id) === 'available'), answerOf: answer };
   }, [teamSquad, matchAvailabilities]);
 
   const currentDraft = draftLineups.find(d => d.match_id === activeMatch?.id);
@@ -136,8 +142,8 @@ export default function DraftLineupPage() {
     const presetKey = publishedFormation && FORMAT_PRESETS[fmt]?.[publishedFormation]
       ? publishedFormation
       : defaultPresetFor(fmt);
-    return { format: fmt, formation: presetKey, coords: buildLineupForPreset(squadPlayers, presetKey), notes: '' };
-  }, [activeMatch, currentDraft, squadPlayers, activeGroup]);
+    return { format: fmt, formation: presetKey, coords: buildLineupForPreset(starterPool, presetKey), notes: '' };
+  }, [activeMatch, currentDraft, starterPool, activeGroup]);
   const sourceKey = source ? `${activeMatch?.id}|${JSON.stringify(source)}` : '';
 
   const [matchFormat, setMatchFormat] = useState<MatchFormat>('11v11');
@@ -205,14 +211,14 @@ export default function DraftLineupPage() {
   }
 
   // Across a tournament team's games: the best answer the player gave
-  const getPlayerAvailability = (memberId: string) => {
-    const given = matchAvailabilities.filter(a => a.member_id === memberId).map(a => a.status);
-    return (['available', 'maybe', 'unavailable'] as const).find(st => given.includes(st)) || 'pending';
-  };
+  const getPlayerAvailability = answerOf;
 
   const starterCount = lineupCoords.filter(p => p.member_id).length;
   const benchIdsFor = (coords: PitchPosition[]) =>
-    squadPlayers.filter(p => !coords.some(pos => pos.member_id === p.id)).map(p => p.id);
+    // Published substitutes: players not starting who didn't say they're out (anyone, when nobody answered)
+    squadPlayers.filter(p => !coords.some(pos => pos.member_id === p.id))
+      .filter(p => matchAvailabilities.length === 0 || ['available', 'maybe'].includes(answerOf(p.id)))
+      .map(p => p.id);
 
   const persistDraft = (formationName: string, coords: PitchPosition[]) => {
     saveDraftLineup({

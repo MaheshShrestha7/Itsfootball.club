@@ -44,7 +44,7 @@ import { TIME_ZONE } from '@/lib/email/format';
 import GettingThere from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
-import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden, withTeamSide } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 import { matchForParam } from '@/lib/slugs';
 
@@ -76,7 +76,9 @@ export default function MatchCenterPage({
   // Same rule as AdminGuard, so the shortcut only appears for people who can actually open the admin area
   const { user, hasClubAdminAccess } = useAuth();
   const isClubAdmin = !!club && !!user && (hasClubAdminAccess(club.id) || (!!club.owner_id && club.owner_id === user.id));
-  const storedMatch = club ? matchForParam(matches.filter(m => m.club_id === club.id), resolvedParams.matchId) : undefined;
+  const foundMatch = club ? matchForParam(matches.filter(m => m.club_id === club.id), resolvedParams.matchId) : undefined;
+  // A junior or reserve game names our side after its team ("Rovers U12")
+  const storedMatch = useMemo(() => (foundMatch && club ? withTeamSide(foundMatch, club, clubTeams) : foundMatch), [foundMatch, club, clubTeams]);
   // Saved lineups keep each player's name: shortened for juniors (every name, in a junior team's fixture)
   const juniorFixture = !!storedMatch && isJuniorFixture(storedMatch, clubTeams);
   const match = useMemo(() => {

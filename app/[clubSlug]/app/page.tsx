@@ -14,7 +14,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import LocalTime from '@/components/LocalTime';
-import { juniorMemberIds, publicScoreHidden } from '@/lib/teams';
+import { juniorMemberIds, publicScoreHidden, teamOfMatch, teamsOfMember, withTeamSide } from '@/lib/teams';
 import { clubPlaysIn, clubResult, latestFirst, publicFixtures } from '@/lib/fixtures';
 import { defaultSeasonLabel } from '@/lib/season';
 import ResultChip from '@/components/ResultChip';
@@ -120,9 +120,20 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
 
   // The club's last result (a game against another club or a cup, not an in-house one), and a
   // player's own season. Their public page and card are only for adults (juniors never get one).
+  // A player sees their own teams' games, a supporter the main team's (parents keep them all: their
+  // children's teams aren't always visible here). Games with no team (cups, in-house) are for everyone.
+  const myTeamIds = new Set(me && player ? teamsOfMember(clubTeamMembers, clubTeams, me.id).map(t => t.id) : []);
+  const forMe = (m: (typeof matches)[number]) => {
+    if (kids.length > 0) return true;
+    const team = teamOfMatch(m, clubTeams);
+    if (!team) return true;
+    if (player) return myTeamIds.size === 0 || myTeamIds.has(team.id);
+    return !supporterOnly || !!team.is_default;
+  };
   const clubGames = matches.filter(m => m.club_id === club.id);
-  const lastResult = publicFixtures(clubGames.filter(m => m.status === 'completed' && clubPlaysIn(m, tournamentParticipants, club.name)), clubGames)
+  const lastPlayed = publicFixtures(clubGames.filter(m => m.status === 'completed' && clubPlaysIn(m, tournamentParticipants, club.name) && forMe(m)), clubGames)
     .sort(latestFirst)[0];
+  const lastResult = lastPlayed && withTeamSide(lastPlayed, club, clubTeams);
   const lastOutcome = lastResult ? clubResult(lastResult) : null;
   const seasonName = getActiveSeason?.(club.id)?.name || defaultSeasonLabel();
   const myStats = player && me ? playerStats.find(st => st.member_id === me.id && st.season === seasonName) : undefined;
@@ -141,6 +152,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       .filter(m => !m.tournament_id)
       // An in-house game is for the squad: a supporter (or a visitor) isn't shown Reds v Blues
       .filter(m => player || kids.length > 0 || m.match_type !== 'internal')
+      .filter(forMe)
+      .map(m => withTeamSide(m, club, clubTeams))
       .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m as typeof m | undefined, gameIds: [m.id], href: matchPath(club.slug, m), price: 0 }));
     // A tournament is one card and one answer for all its games (each player is only asked about
     // their own team's games, below), not a card per game

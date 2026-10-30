@@ -3,7 +3,7 @@
 import React, { useState, use, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
+import { Match, MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import {
@@ -45,7 +45,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { squadForMatch } from '@/lib/teams';
-import { defaultFixture, matchKind, type MatchKind } from '@/lib/fixtures';
+import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import { alertFor, type MatchState } from '@/lib/match-alerts';
 import { getAccessToken } from '@/lib/supabase/client';
@@ -59,6 +59,12 @@ const PERIOD_LABEL: Partial<Record<MatchPeriod, string>> = {
   pre_match: 'Back to before kick-off', first_half: 'First half started', halftime: 'Half time',
   second_half: 'Second half started', extra_time: 'Extra time started', penalties: 'Penalty shootout', full_time: 'Full time',
 };
+
+// Fixture picker order: live, upcoming, postponed, results, cancelled
+const STATUS_ORDER: Record<string, number> = { live: 0, halftime: 0, upcoming: 1, postponed: 2, completed: 3, cancelled: 4 };
+// Event player chips: by shirt number, players without one last
+const byShirtNumber = (a: { jersey_number?: number | null; full_name: string }, b: { jersey_number?: number | null; full_name: string }) =>
+  (a.jersey_number || 999) - (b.jersey_number || 999) || a.full_name.localeCompare(b.full_name);
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -128,7 +134,11 @@ export default function AdminMatchCenterControllerPage({
   // Club games, tournament games and in-house games each get their own list, so a tournament's
   // dozens of games don't bury Sunday's league match. The open game decides which list shows.
   const kind: MatchKind = match ? matchKind(match) : 'club';
-  const kindGames = (k: MatchKind) => filteredMatches.filter(m => matchKind(m) === k);
+  // Live first, then what's coming up (soonest first), then results (newest first), as on admin Fixtures
+  const pickerOrder = (a: Match, b: Match) =>
+    (STATUS_ORDER[a.status] ?? 1) - (STATUS_ORDER[b.status] ?? 1) ||
+    ((STATUS_ORDER[a.status] ?? 1) < 3 ? kickoff(a) - kickoff(b) : kickoff(b) - kickoff(a));
+  const kindGames = (k: MatchKind) => filteredMatches.filter(m => matchKind(m) === k).sort(pickerOrder);
   const isLiveGame = (m: { status: string }) => m.status === 'live' || m.status === 'halftime';
   const pickGame = (pool: typeof filteredMatches) => {
     const next = defaultFixture(pool, tournamentParticipants, club.name);
@@ -1136,7 +1146,7 @@ export default function AdminMatchCenterControllerPage({
               .map(p => p.member_id).filter((id): id is string => !!id);
             const chipPlayers = !selectedSquad || eventType === 'sub' || eventType === 'commentary' || eventType === 'whistle' ? []
               : sideLineupIds.length ? sideLineupIds.map(id => selectedSquad.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p)
-              : selectedSquad.length <= 20 ? selectedSquad : [];
+              : selectedSquad.length <= 20 ? [...selectedSquad].sort(byShirtNumber) : [];
 
             const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
               { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },

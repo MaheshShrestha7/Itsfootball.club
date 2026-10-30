@@ -445,18 +445,40 @@ export default function AdminMatchesPage({
     setIsFormModalOpen(false);
   };
 
-  // 1-Click Status Switcher (Upcoming <-> Completed)
-  const handleToggleCompleted = (m: Match) => {
-    const nextStatus: MatchStatus = m.status === 'completed' ? 'upcoming' : 'completed';
-    updateMatch(m.id, {
-      status: nextStatus,
-      ...(nextStatus === 'completed' ? { period: 'full_time' } : {})
+  // Full time: the result is only published with a score typed in (a one-tap "completed" used to post a 0-0)
+  const [resultMatch, setResultMatch] = useState<Match | null>(null);
+  const [resultScore, setResultScore] = useState({ ours: '', theirs: '' });
+  const openResult = (m: Match) => {
+    const ours = m.is_club_home ? m.home_score : m.away_score;
+    const theirs = m.is_club_home ? m.away_score : m.home_score;
+    // Scores logged in Match Centre are kept; a game nobody scored starts blank
+    const logged = m.status === 'live' || m.status === 'halftime' || !!(m.home_score || m.away_score);
+    setResultScore({ ours: logged ? String(ours ?? 0) : '', theirs: logged ? String(theirs ?? 0) : '' });
+    setResultMatch(m);
+  };
+  const saveResult = () => {
+    if (!resultMatch) return;
+    const ours = Number(resultScore.ours), theirs = Number(resultScore.theirs);
+    updateMatch(resultMatch.id, {
+      status: 'completed',
+      period: 'full_time',
+      home_score: resultMatch.is_club_home ? ours : theirs,
+      away_score: resultMatch.is_club_home ? theirs : ours,
     });
-    if (nextStatus === 'completed') {
-      showToast(`Marked "${m.title || m.opponent_name || 'Match'}" as Completed. Hidden from live site upcoming view.`);
-    } else {
-      showToast(`Restored "${m.title || m.opponent_name || 'Match'}" to Upcoming Fixtures.`);
-    }
+    showToast(`Result saved: ${club.name} ${ours} - ${theirs} ${resultMatch.opponent_name || ''}`.trim());
+    setResultMatch(null);
+  };
+
+  // Back to Upcoming (a result entered by mistake): asks first, since it takes the result off the public site
+  const handleMarkUpcoming = async (m: Match) => {
+    const ok = await confirmAction({
+      title: 'Move back to upcoming?',
+      message: 'The result comes off the public Results list until it is entered again.',
+      confirmLabel: 'Move to upcoming',
+    });
+    if (!ok) return;
+    updateMatch(m.id, { status: 'upcoming', period: 'pre_match' });
+    showToast(`Restored "${m.title || m.opponent_name || 'Match'}" to Upcoming Fixtures.`);
   };
 
   // 1-Click Hero Slider Pin Toggle
@@ -1062,16 +1084,16 @@ export default function AdminMatchesPage({
                     )}
                   />
 
-                  {/* Status Toggle (Upcoming <-> Completed) */}
-                  {!cupHref && <button
+                  {/* Result: only once kickoff has passed, and it asks for the score */}
+                  {!cupHref && (isCompleted || kickoff(m) <= Date.now()) && <button
                     type="button"
-                    onClick={() => handleToggleCompleted(m)}
+                    onClick={() => (isCompleted ? handleMarkUpcoming(m) : openResult(m))}
                     style={{
                       padding: '0.45rem 0.75rem',
                       borderRadius: 'var(--radius-sm)',
-                      border: isCompleted ? '1px solid rgba(var(--tint-rgb), 0.2)' : '1px solid #10B981',
-                      background: isCompleted ? 'rgba(var(--tint-rgb), 0.06)' : 'rgba(16, 185, 129, 0.15)',
-                      color: isCompleted ? 'var(--text-muted)' : 'var(--c-green)',
+                      border: '1px solid rgba(var(--tint-rgb), 0.2)',
+                      background: 'rgba(var(--tint-rgb), 0.06)',
+                      color: isCompleted ? 'var(--text-muted)' : 'var(--text-primary)',
                       fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -1082,7 +1104,7 @@ export default function AdminMatchesPage({
                     }}
                   >
                     <CheckCircle2 size={13} />
-                    <span>{isCompleted ? 'Mark as Upcoming' : 'Mark as Completed'}</span>
+                    <span>{isCompleted ? 'Mark as Upcoming' : 'Enter result'}</span>
                   </button>}
 
                   {/* Live Controller Quick Shortcut */}
@@ -1734,6 +1756,44 @@ export default function AdminMatchesPage({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {resultMatch && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setResultMatch(null); }}
+        >
+          <form
+            className="glass-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="result-title"
+            onSubmit={e => { e.preventDefault(); saveResult(); }}
+            style={{ maxWidth: '420px', width: '100%', padding: '1.5rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-medium)', background: 'var(--bg-surface-elevated)' }}
+          >
+            <h2 id="result-title" style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>Final score</h2>
+            <p className="text-note" style={{ marginBottom: '1.25rem' }}>
+              vs {resultMatch.opponent_name} · <LocalTime value={resultMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />. This shows on the public Results straight away.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'end', marginBottom: '1.5rem' }}>
+              <div>
+                <label className="form-label" htmlFor="result-ours">{club.short_name || club.name}</label>
+                <input id="result-ours" className="form-input" type="number" inputMode="numeric" min={0} max={99} required autoFocus
+                  value={resultScore.ours} onChange={e => setResultScore(s => ({ ...s, ours: e.target.value }))} style={{ textAlign: 'center', fontSize: '1.4rem', fontWeight: 800 }} />
+              </div>
+              <span style={{ fontWeight: 800, paddingBottom: '0.7rem' }}>-</span>
+              <div>
+                <label className="form-label" htmlFor="result-theirs">{resultMatch.opponent_short_name || resultMatch.opponent_name}</label>
+                <input id="result-theirs" className="form-input" type="number" inputMode="numeric" min={0} max={99} required
+                  value={resultScore.theirs} onChange={e => setResultScore(s => ({ ...s, theirs: e.target.value }))} style={{ textAlign: 'center', fontSize: '1.4rem', fontWeight: 800 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setResultMatch(null)}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ fontWeight: 800 }}>Save result</button>
+            </div>
+          </form>
         </div>
       )}
 

@@ -16,6 +16,7 @@ import {
   Smartphone,
   Monitor
 } from 'lucide-react';
+import { fillSlots } from '@/lib/pitch-positions';
 
 export interface TacticalPitchProps {
   players: ClubMember[];
@@ -334,6 +335,10 @@ export function buildLineupForPreset(players: ClubMember[], presetKey: string, c
   const onPitch = new Set(kept.map(p => p.member_id).filter(Boolean));
   const reserves = players.filter(p => !onPitch.has(p.id));
 
+  // New slots go to the best-suited reserve by position, not simply the next name in the list
+  const open = preset.coords.map((_, idx) => idx).filter(idx => !kept[idx]);
+  const pick = fillSlots(open.map(idx => preset.coords[idx].position), reserves);
+
   return preset.coords.map((coord, idx) => {
     const slot = kept[idx];
     if (slot) {
@@ -341,10 +346,10 @@ export function buildLineupForPreset(players: ClubMember[], presetKey: string, c
         ? { ...slot, x: coord.x, y: coord.y, role: coord.role, position: coord.position }
         : { ...slot, x: coord.x, y: coord.y, role: coord.role };
     }
-    const reserve = reserves.shift();
+    const reserve = pick[open.indexOf(idx)];
     const base = { id: uniqueSlotId(taken, idx), x: coord.x, y: coord.y, role: coord.role };
     return reserve
-      ? { ...base, ...occupantOf(reserve), position: reserve.player_position || coord.position }
+      ? { ...base, ...occupantOf(reserve), position: coord.position }
       : { ...base, member_id: undefined, name: '', number: 0, position: coord.position, is_captain: false };
   });
 }
