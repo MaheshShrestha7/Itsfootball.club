@@ -117,20 +117,20 @@ const MUTED = 'rgba(248, 250, 252, 0.68)';
 const FAINT = 'rgba(248, 250, 252, 0.42)';
 
 /** A colour taken `k` of the way to white */
-const mixWhite = (c: string, k: number) => {
+export const mixWhite = (c: string, k: number) => {
   const m = /^#([0-9a-f]{6})$/i.exec(c);
   if (!m) return c;
   const n = parseInt(m[1], 16);
   const ch = (v: number) => Math.round(v + (255 - v) * k);
   return `#${[ch((n >> 16) & 255), ch((n >> 8) & 255), ch(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('')}`;
 };
-const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
+export const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
 const rgba = (c: string, a: number) => {
   const n = parseInt(c.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 };
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous'; // without CORS the canvas would be tainted and couldn't be exported
@@ -192,12 +192,12 @@ function sponsorTile(ctx: CanvasRenderingContext2D, { img, name }: { img: HTMLIm
 }
 
 /** A crest, or the neutral shield when it's missing or its host doesn't allow CORS */
-async function crest(src: string | undefined) {
+export async function crest(src: string | undefined) {
   return (src && (await loadImage(src))) || loadImage(DEFAULT_CREST);
 }
 
 /** Largest font size (down to `min`) at which `text` fits `maxWidth` */
-function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxWidth: number, family: string, min = 24) {
+export function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxWidth: number, family: string, min = 24) {
   for (; size > min; size -= 2) {
     ctx.font = `${weight} ${size}px ${family}`;
     if (ctx.measureText(text).width <= maxWidth) return size;
@@ -207,7 +207,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: 
 }
 
 /** `text` cut with "…" to fit `maxWidth` at the current font */
-function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+export function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
@@ -238,7 +238,7 @@ function wrapTwo(ctx: CanvasRenderingContext2D, text: string, weight: number, si
   ctx.fillText(lines[1], x, y + s * 0.55);
 }
 
-function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null, cx: number, cy: number, box: number) {
+export function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null, cx: number, cy: number, box: number) {
   if (!img) return;
   const scale = Math.min(box / (img.naturalWidth || box), box / (img.naturalHeight || box));
   const w = (img.naturalWidth || box) * scale;
@@ -247,7 +247,7 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null
 }
 
 /** Fills the box with the image, cropped to fit; `focusY` picks which part of a tall image shows */
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focusY = 0.5, zoom = 1, focusX = 0.5) {
+export function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focusY = 0.5, zoom = 1, focusX = 0.5) {
   const scale = Math.max(w / (img.naturalWidth || w), h / (img.naturalHeight || h)) * Math.max(1, zoom);
   const iw = (img.naturalWidth || w) * scale;
   const ih = (img.naturalHeight || h) * scale;
@@ -353,7 +353,7 @@ function initialsOf(name: string) {
   return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r);
   else ctx.rect(x, y, w, h);
@@ -387,7 +387,7 @@ function glass(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 }
 
 /** Letter-spaced text where the browser supports it (small caps labels) */
-function spaced(ctx: CanvasRenderingContext2D, px: number) {
+export function spaced(ctx: CanvasRenderingContext2D, px: number) {
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${px}px`;
 }
 
