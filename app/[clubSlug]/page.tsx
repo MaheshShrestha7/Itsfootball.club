@@ -49,7 +49,7 @@ import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch } from '@/lib/teams';
+import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch, withTeamSide } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
 
@@ -173,7 +173,8 @@ export default function ClubPublicPage({
   const squadPlayers = publicMembers.filter(m => isPlayerMember(m) && (!mainSquadIds?.size || mainSquadIds.has(m.id)));
   // 99 is "no order set"; 0 is a real position (e.g. the President first)
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
-  const clubMatches = matches.filter(m => m.club_id === clubId);
+  // A junior or reserve game names our side after its team ("Rovers U12"), not the club
+  const clubMatches = matches.filter(m => m.club_id === clubId).map(m => (club ? withTeamSide(m, club, clubTeams) : m));
   const liveMatch = publicFixtures(clubMatches).find(m => m.status === 'live');
 
   const resolvedSeasonName = fixturesSeasonFilter === 'CURRENT'
@@ -197,12 +198,21 @@ export default function ClubPublicPage({
   // What's coming up never hides behind a season label: the current view lists every future game
   const ourAllMatches = publicFixtures(clubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || '')), clubMatches);
   const upcomingSource = fixturesSeasonFilter === 'CURRENT' ? ourAllMatches : ourMatches;
-  const upcomingMatches = upcomingSource.filter(m => m.status === 'upcoming').sort(soonestFirst);
+  // The hero and matchday strip lead with the main team's games (as the Fixtures list below does);
+  // another team's game only when the main team has nothing coming up
+  const mainTeamFirst = (a: typeof clubMatches[number], b: typeof clubMatches[number]) => {
+    const otherTeam = (m: typeof clubMatches[number]) => {
+      const team = teamOfMatch(m, clubTeams);
+      return Number(!!mainTeam && !!team && team.id !== mainTeam.id);
+    };
+    return otherTeam(a) - otherTeam(b);
+  };
+  const upcomingMatches = upcomingSource.filter(m => m.status === 'upcoming').sort((a, b) => mainTeamFirst(a, b) || soonestFirst(a, b));
   // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
   const upcomingFixtures = upcomingSource.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
   const pastMatches = ourMatches.filter(m => m.status === 'completed').sort(latestFirst);
   // Matchday strip: the latest result of any season, so it never empties when a season rolls over
-  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort(latestFirst)[0];
+  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort((a, b) => mainTeamFirst(a, b) || latestFirst(a, b))[0];
   // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
   const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
   const inFixturesTeam = (m: typeof clubMatches[number]) => {
@@ -301,7 +311,7 @@ export default function ClubPublicPage({
     if (activePins.length > 0) {
       const pinnedSlides: HomeHeroSlide[] = activePins.map((item, idx) => {
         if (item.type === 'fixture') {
-          const matchItem = matches.find(m => m.id === item.target_id) || liveMatch || upcomingMatches[0];
+          const matchItem = clubMatches.find(m => m.id === item.target_id) || liveMatch || upcomingMatches[0];
           const isLive = matchItem?.status === 'live';
           const compClean = (!matchItem?.competition || matchItem.competition === 'Premier Regional League')
             ? (matchItem?.match_type ? `${matchItem.match_type.charAt(0).toUpperCase() + matchItem.match_type.slice(1)} Match` : 'Club Friendly')

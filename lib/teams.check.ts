@@ -1,13 +1,13 @@
 // Self-check for club team helpers.
 // Run: npx esbuild lib/teams.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import type { ClubTeam, ClubTeamMember } from './supabase/types';
+import type { ClubTeam, ClubTeamMember, Match } from './supabase/types';
 import {
   AGE_GROUPS, ageGroupAge, clubTeamsOf, defaultTeamOf, hasMultipleTeams, isTeamFixture, suggestedFormat,
   squadForMatch, teamMemberIds, teamOfMatch, teamSlug, teamsOfMember, uniqueTeamSlug,
   ageGroupCutoff, ageGroupFit, ageOnDate, isJuniorAgeGroup, isJuniorFixture, isJuniorMember, juniorMemberIds,
   juniorPublicName, publicMember, safeguardingCheckStatus, goalScoringSide, suggestJuniorTeam, matchTypeForCompetition,
-  nextFixtureOf, playerIdsByName, publicPlayerIds,
+  nextFixtureOf, playerIdsByName, publicPlayerIds, clubSideName, withTeamSide,
 } from './teams';
 
 const team = (id: string, extra: Partial<ClubTeam> = {}): ClubTeam => ({
@@ -191,6 +191,26 @@ assert.equal(matchTypeForCompetition('Cupcake Social'), null);
   }) as unknown as Parameters<typeof nextFixtureOf>[0][number];
   assert.equal(nextFixtureOf([fx('bibs', 1, { match_type: 'internal' }), fx('league', 4)], 'c1', 'A', [], [], [])?.id, 'league');
   assert.equal(nextFixtureOf([fx('bibs', 1, { match_type: 'internal' })], 'c1', 'A', [], [], [])?.id, 'bibs');
+}
+
+// Our side is named after its team on another team's fixture ("Rovers U12"); the main team keeps the club name
+{
+  const club = { name: 'Riverside Rovers FC', short_name: 'Rovers' };
+  const teams = [team('main', { is_default: true }), team('u12', { name: 'Under 12s', short_name: 'U12' }), team('res', { name: 'Rovers Reserves' })];
+  const game = (extra: Partial<Match>) => ({
+    id: 'm', club_id: 'c1', match_type: 'friendly', is_club_home: true, home_team_name: club.name, away_team_name: 'Hills U12', match_date: '2026-10-31', venue: 'x', competition: 'x',
+    ...extra,
+  }) as Match;
+  assert.equal(clubSideName(game({ team_id: 'u12' }), club, teams), 'Rovers U12');
+  assert.equal(clubSideName(game({ team_id: 'res' }), club, teams), 'Rovers Reserves');
+  assert.equal(clubSideName(game({ team_id: 'main' }), club, teams), club.name);
+  assert.equal(clubSideName(game({}), club, teams), club.name);
+  assert.equal(clubSideName(game({ team_id: 'u12', match_type: 'internal' }), club, teams), club.name);
+  assert.equal(withTeamSide(game({ team_id: 'u12' }), club, teams).home_team_name, 'Rovers U12');
+  const away = withTeamSide(game({ team_id: 'u12', is_club_home: false, home_team_name: 'Hills U12', away_team_name: club.name }), club, teams);
+  assert.deepEqual([away.home_team_name, away.away_team_name], ['Hills U12', 'Rovers U12']);
+  // A name the admin typed in stays
+  assert.equal(withTeamSide(game({ team_id: 'u12', home_team_name: 'Rovers Gold' }), club, teams).home_team_name, 'Rovers Gold');
 }
 
 console.log('teams.check: ok');

@@ -5,7 +5,7 @@
 // has one main team (is_default). While a club has only that one team, every screen behaves as
 // it did before teams existed: team pickers, filters and labels only appear once there are two.
 // ==============================================================================
-import type { ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
+import type { Club, ClubMember, ClubTeam, ClubTeamFormat, ClubTeamGender, ClubTeamMember, ClubTeamRole, ClubTeamType, Match, TournamentParticipant } from './supabase/types';
 import { isPlayerMember } from './supabase/types';
 import { clubPlaysIn, kickoff, matchKind, soonestFirst } from './fixtures';
 
@@ -373,4 +373,29 @@ export function nextFixtureOf(
     })
     // A game against another club (or a cup) comes before a training game between the club's own sides
     .sort((a, b) => Number(matchKind(a) === 'inhouse') - Number(matchKind(b) === 'inhouse') || soonestFirst(a, b))[0];
+}
+
+/** Our side's name on a fixture for one of the club's other teams ("Rovers U12"), so a junior or reserve
+ *  game doesn't read as the first team's. The main team, internal and cup games keep the club's name. */
+export function clubSideName(
+  m: Pick<Match, 'club_id' | 'team_id' | 'match_type' | 'tournament_id'>,
+  club: Pick<Club, 'name' | 'short_name'>,
+  teams: ClubTeam[],
+): string {
+  const team = m.team_id ? teamOfMatch(m, teams) : undefined;
+  if (!team || team.is_default || !isTeamFixture(m)) return club.name;
+  const label = teamLabel(team);
+  const short = (club.short_name || club.name).trim();
+  return label.toLowerCase().includes(short.toLowerCase()) ? label : `${short} ${label}`;
+}
+
+/** The fixture with our side named after its team (display only: never save the result back). Only a
+ *  side still carrying the club's own name changes; a name the admin typed in stays as it is. */
+export function withTeamSide<M extends Match>(m: M, club: Pick<Club, 'name' | 'short_name'>, teams: ClubTeam[]): M {
+  const ours = clubSideName(m, club, teams);
+  if (ours === club.name) return m;
+  const home = m.is_club_home !== false;
+  if (home && m.home_team_name === club.name) return { ...m, home_team_name: ours };
+  if (!home && m.away_team_name === club.name) return { ...m, away_team_name: ours };
+  return m;
 }
