@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { DATE_LOCALE, SITE_TIME_ZONE } from '@/lib/dates';
+import { DATE_LOCALE, SITE_TIME_ZONE, dayOptions } from '@/lib/dates';
 
 const subscribeNothing = () => () => {};
 
@@ -15,10 +15,10 @@ export default function LocalTime({
   value,
   format = 'date',
   locale,
-  options,
+  options: given,
 }: {
   value: string | number | Date;
-  /** Date only, time of day only, or both */
+  /** Date only, time of day only, or both. A date with no options reads "Tue, 27 Oct" (year only when it isn't this one). */
   format?: 'date' | 'time' | 'both';
   locale?: string;
   options?: Intl.DateTimeFormatOptions;
@@ -27,6 +27,7 @@ export default function LocalTime({
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   const loc = locale ?? DATE_LOCALE;
+  const options = given ?? (format === 'date' ? dayOptions(date) : undefined);
   const opts = hydrated ? options : { ...options, timeZone: SITE_TIME_ZONE };
   const text =
     format === 'time' ? date.toLocaleTimeString(loc, opts)

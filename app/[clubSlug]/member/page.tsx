@@ -1501,20 +1501,25 @@ export default function MemberPortalPage({
             )}
 
             {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop opens one directly, e.g. from a message email) */}
-            <div role="tablist" aria-label="Member area" style={{
-              display: 'flex',
-              gap: '0.75rem',
-              marginBottom: '2rem',
-              borderBottom: '1px solid var(--border-subtle)',
-              paddingBottom: '0.75rem',
-              flexWrap: 'wrap',
-            }}>
+            {/* One even row on every screen; phones get the short labels so nothing wraps onto its own line */}
+            <style>{`
+              .member-tabs { display: grid; grid-template-columns: repeat(${shopOpen ? 4 : 3}, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; }
+              .member-tabs button { justify-content: center; min-width: 0; }
+              .member-tab-short { display: none; }
+              @media (max-width: 599px) {
+                .member-tabs button { padding: 0.6rem 0.35rem !important; font-size: 0.8rem !important; gap: 0.3rem !important; }
+                .member-tab-long { display: none; }
+                .member-tab-short { display: inline; }
+              }
+              @media (min-width: 760px) { .member-tabs { display: flex; gap: 0.75rem; } }
+            `}</style>
+            <div role="tablist" aria-label="Member area" className="member-tabs">
               {([
-                { id: 'pass', label: 'Member Pass', Icon: CreditCard },
-                { id: 'stats', label: 'Season Stats', Icon: Activity },
-                { id: 'messages', label: 'Messages', Icon: MessageSquare },
-                ...(shopOpen ? [{ id: 'shop' as const, label: 'Club Shop', Icon: ShoppingBag }] : []),
-              ] as const).map(({ id, label, Icon }) => {
+                { id: 'pass', label: 'Member Pass', short: 'Pass', Icon: CreditCard },
+                { id: 'stats', label: 'Season Stats', short: 'Stats', Icon: Activity },
+                { id: 'messages', label: 'Messages', short: 'Messages', Icon: MessageSquare },
+                ...(shopOpen ? [{ id: 'shop' as const, label: 'Club Shop', short: 'Shop', Icon: ShoppingBag }] : []),
+              ] as const).map(({ id, label, short, Icon }) => {
                 const selected = activeClubhouseTab === id;
                 return (
                   <button
@@ -1539,7 +1544,8 @@ export default function MemberPortalPage({
                     }}
                   >
                     <Icon size={17} color={selected ? 'var(--club-primary)' : undefined} />
-                    <span>{label}</span>
+                    <span className="member-tab-long">{label}</span>
+                    <span className="member-tab-short">{short}</span>
                     {id === 'messages' && memberMessagesList.length > 0 && (
                       <span style={{
                         background: 'var(--club-primary)',
@@ -1987,7 +1993,7 @@ export default function MemberPortalPage({
                                   : `👤 You (${activeMember.full_name})`}
                               </span>
                               <span className="text-meta">
-                                {new Date(msg.created_at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(msg.created_at).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}
                               </span>
                             </div>
 

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { Club, ClubMember, MemberMessage } from '@/lib/supabase/types';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 interface Conversation {
   memberId: string;
@@ -147,7 +147,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                 )}
                 {c.unread > 0
                   ? <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{c.unread} NEW</span>
-                  : <span className="text-meta">{c.latest ? new Date(c.latest.created_at).toLocaleDateString(DATE_LOCALE) : 'New'}</span>}
+                  : <span className="text-meta">{c.latest ? formatShortDay(c.latest.created_at) : 'New'}</span>}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--c-sky)', fontWeight: 600, marginBottom: '0.2rem' }}>
                 {c.latest?.subject || 'New message'}

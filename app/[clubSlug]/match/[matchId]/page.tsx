@@ -593,7 +593,7 @@ export default function MatchCenterPage({
             )}
             <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <Calendar size={12} />
-              <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
+              <LocalTime value={match.match_date} />
               {match.match_time && (
                 <>
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />

@@ -32,6 +32,7 @@ import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
+import { isCountedMember } from '@/lib/people';
 
 /** A dashboard card that links to its admin page, or a plain card when this person can't open that page */
 function KpiCard({ href, allowed, style, children }: { href: string; allowed: boolean; style: React.CSSProperties; children: React.ReactNode }) {
@@ -61,7 +62,9 @@ export default function AdminDashboardPage({
     loadClubAnalytics(club.id);
   }, [club.id, loadClubAnalytics]);
 
-  const clubMembers = members.filter(m => m.club_id === club.id);
+  // Headcounts leave out applications still waiting (shown on their own) and rejected ones, as People does
+  const clubMembers = members.filter(m => m.club_id === club.id && isCountedMember(m));
+  const waitingCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
   const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const liveMatch = clubMatches.find(m => m.status === 'live' || m.status === 'halftime');
@@ -158,7 +161,7 @@ export default function AdminDashboardPage({
             {squadPlayers.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            {clubMembers.length} members in total
+            {clubMembers.length} members in total{waitingCount > 0 && ` · ${waitingCount} waiting to join`}
           </div>
         </div>
 

@@ -10,7 +10,7 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
 import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles } from 'lucide-react';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 export default function AdminContentPage({
   params,
@@ -192,7 +192,7 @@ export default function AdminContentPage({
                     </span>
                   )}
                   <span className="text-meta">
-                    {new Date(article.published_at).toLocaleDateString(DATE_LOCALE)} • {article.author_name}
+                    {formatShortDay(article.published_at)} • {article.author_name}
                   </span>
                 </div>
 

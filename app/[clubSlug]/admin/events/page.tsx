@@ -33,7 +33,7 @@ import TrainingAttendance from '@/components/TrainingAttendance';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
 import { toDateTimeLocal } from '@/lib/tournament-engine';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 const MAX_REPEAT_WEEKS = 26;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -375,7 +375,7 @@ export default function AdminEventsPage({
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 <span className="row row-tight">
                   <Calendar size={14} color="var(--club-primary)" />
-                  {new Date(evt.start_time).toLocaleString(DATE_LOCALE, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {formatShortDay(evt.start_time, true)}
                 </span>
                 <span className="row row-tight">
                   <MapPin size={14} color="var(--club-primary)" />
@@ -684,7 +684,7 @@ export default function AdminEventsPage({
         <DoorCheckinQrModal
           badgeLabel="SELF CHECK-IN STATION"
           title={qrModalEvent.title}
-          subtitle={`${qrModalEvent.location} • ${new Date(qrModalEvent.start_time).toLocaleDateString(DATE_LOCALE)} at ${new Date(qrModalEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}`}
+          subtitle={`${qrModalEvent.location} • ${formatShortDay(qrModalEvent.start_time, true)}`}
           checkinUrl={doorCheckinUrl}
           disabledNotice={!qrModalEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.' : undefined}
           onClose={() => setQrModalEvent(null)}
@@ -709,7 +709,7 @@ export default function AdminEventsPage({
         <CheckinPoster
           club={club}
           title={printPosterEvent.title}
-          details={`${printPosterEvent.location} • ${new Date(printPosterEvent.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(printPosterEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}`}
+          details={`${printPosterEvent.location} • ${new Date(printPosterEvent.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(printPosterEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}`}
           checkinUrl={doorCheckinUrl}
           eventId={printPosterEvent.id}
           disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}

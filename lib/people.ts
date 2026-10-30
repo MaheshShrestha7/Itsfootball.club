@@ -103,3 +103,9 @@ export function matchesSearch(m: ClubMember, query: string): boolean {
     m.jersey_number != null ? `#${m.jersey_number} ${m.jersey_number}` : '',
   ].filter(Boolean).join(' ').toLowerCase().includes(q);
 }
+
+/** Who counts in a club's headcount (dashboard, home page "Members" / "Players", People "Everyone"):
+ *  everyone except applications still waiting and rejected ones. One rule, so the numbers agree. */
+export function isCountedMember(m: Pick<ClubMember, 'membership_status'>): boolean {
+  return m.membership_status !== 'pending' && m.membership_status !== 'rejected';
+}

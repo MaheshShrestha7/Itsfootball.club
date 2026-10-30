@@ -15,6 +15,7 @@ import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMembe
 import { publicScoreHidden } from '@/lib/teams';
 import { latestFirst } from '@/lib/fixtures';
 import { isSponsorOnSite } from '@/lib/sponsors';
+import { isCountedMember } from '@/lib/people';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -106,7 +107,8 @@ export default function ClubIdentitySection({
 
   // Compute immediate raw arithmetic values from context dataset as ground truth
   const clubId = club.id;
-  const rawClubMembers = members.filter(m => m.club_id === clubId);
+  // Waiting and rejected applications don't count (lib/people.ts), as on the dashboard and People
+  const rawClubMembers = members.filter(m => m.club_id === clubId && isCountedMember(m));
   const rawTotalMembers = rawClubMembers.length;
   // Players by their role only (a supporter with a position set isn't a player), as the server counts
   const rawTotalPlayers = rawClubMembers.filter(isPlayerMember).length;
