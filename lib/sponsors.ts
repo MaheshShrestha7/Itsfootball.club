@@ -366,6 +366,28 @@ export function oneSponsorFor<S extends { id: string }>(ticked: S[], chosen: unk
 }
 export const isGroundPlace = (v: unknown): v is GroundPlace => GROUND_PLACES.includes(v as GroundPlace);
 
+/** The printed places: each Print press and each scan of their QR is counted for the sponsors on them */
+export type PosterPlace = 'checkin_posters' | 'thanks_poster' | 'event_flyers';
+export const isPosterPlace = (v: unknown): v is PosterPlace => v === 'checkin_posters' || v === 'thanks_poster' || v === 'event_flyers';
+
+/** A door check-in link's path as useDoorCheckinUrl makes it: /{club}/match|events/{id}/checkin?code=...
+ *  The only thing a poster QR may forward to, so the tracked link can't send people anywhere else */
+export const isCheckinPath = (path: unknown): path is string =>
+  typeof path === 'string' && /^\/[a-z0-9-]+\/(match|events)\/[A-Za-z0-9-]+\/checkin\?code=[A-Za-z0-9_-]+$/.test(path);
+
+/** The QR on a printed poster or flyer with sponsors on it: a tracked link that counts the scan for
+ *  those sponsors, then forwards to the check-in page (`checkinUrl`), the Become a Sponsor page
+ *  (thank-you poster) or the event page (flyer) */
+export function posterQrLink(origin: string, clubId: string, place: PosterPlace, opts: { eventId?: string | null; checkinUrl?: string } = {}): string {
+  const q = new URLSearchParams({ c: clubId, p: place });
+  if (opts.eventId) q.set('e', opts.eventId);
+  if (opts.checkinUrl) {
+    const u = new URL(opts.checkinUrl);
+    q.set('to', u.pathname + u.search);
+  }
+  return `${origin.replace(/\/$/, '')}/api/sponsors/qr?${q}`;
+}
+
 const INCLUDE_KEYS = new Set<string>(PACKAGE_INCLUDES.map(i => i.key));
 
 /** A package's ticks split into the fixed places (in PACKAGE_INCLUDES order) and the club's own extras */

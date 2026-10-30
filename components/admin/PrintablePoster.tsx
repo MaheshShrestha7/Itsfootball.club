@@ -12,8 +12,10 @@ const PAPERS: [PosterPaper, string][] = [['A5', 'Table card'], ['A4', 'Home prin
  * scaled by `zoom` to fill the page inside 12mm margins (the popup is a direct child of body, so
  * everything else can be hidden). `children` is the poster; `controls` sit under the paper size.
  */
-export default function PrintablePoster({ accent, zoom, onClose, controls, children }: {
+export default function PrintablePoster({ accent, zoom, onClose, onPrint, controls, children }: {
   accent: string;
+  /** Called on each Print press (counted for the sponsors on the poster) */
+  onPrint?: () => void;
   /** How much to enlarge the on-screen poster (540px wide) on each paper size */
   zoom: Record<PosterPaper, number>;
   onClose: () => void;
@@ -73,7 +75,7 @@ export default function PrintablePoster({ accent, zoom, onClose, controls, child
         </div>
 
         <div className="no-print" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-          <button type="button" onClick={() => window.print()} className="btn btn-primary" style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button type="button" onClick={() => { onPrint?.(); window.print(); }} className="btn btn-primary" style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Printer size={16} />
             <span>Print Poster</span>
           </button>

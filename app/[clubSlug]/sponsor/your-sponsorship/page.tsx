@@ -135,12 +135,14 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
 
   const { sponsor, results, payments } = data;
   // Older servers (before OSE-9) send no atGround
-  const atGround = data.atGround ?? { places: [], checkins: null, tickets: null, passMembers: null };
+  const atGround = data.atGround ?? { places: [], checkins: null, tickets: null, passMembers: null, posterPrints: null, posterScans: null };
   const groundCounts = ([
     [atGround.checkins, 'Check-ins at the gate, with your logo on the poster or screen'],
     [atGround.tickets, 'Event tickets issued with your logo'],
     [atGround.passMembers, 'Members with your logo on their pass'],
-  ] as const).filter(([value]) => value !== null);
+    [atGround.posterPrints, 'Times a poster or flyer with your logo was printed'],
+    [atGround.posterScans, 'Scans of the QR code on those posters and flyers'],
+  ] as const).filter(([value]) => value !== null && value !== undefined);
   const maxSeen = Math.max(1, ...results.byPlacement.map(p => p.seen));
   const pendingNote = sponsor.pending_sent_at && (sponsor.pending_logo_url || sponsor.pending_website_url);
   const sentWhat = [sponsor.pending_logo_url && 'New logo', sponsor.pending_website_url && (sponsor.pending_logo_url ? 'website' : 'New website')].filter(Boolean).join(' and ');
@@ -310,9 +312,10 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                   </div>
                 )}
                 <p className="text-note" style={{ margin: 0 }}>
-                  {(atGround.checkins !== null || atGround.tickets !== null) && <>Check-ins and tickets are since {formatDate(results.since)}. </>}
+                  {groundCounts.some(([value, label]) => value !== null && !label.startsWith('Members')) && <>Counts are since {formatDate(results.since)}. </>}
                   {atGround.places.some(p => p === 'event_tickets' || p === 'member_pass' || p === 'checkin_screen') && <>Times your logo was seen on tickets, passes and the check-in screen are counted in &quot;Where people saw you&quot; above. </>}
-                  {atGround.places.some(p => p === 'checkin_posters' || p === 'thanks_poster' || p === 'event_flyers' || p === 'potm_graphic') && <>Posters, flyers and shared graphics aren&apos;t counted, because nobody can tell how many people looked at them.</>}
+                  {atGround.places.some(p => p === 'checkin_posters' || p === 'thanks_poster' || p === 'event_flyers') && <>For posters and flyers we count prints and QR scans only, because nobody can tell how many people walked past them. </>}
+                  {atGround.places.includes('potm_graphic') && <>Shared Player of the Match graphics aren&apos;t counted.</>}
                 </p>
               </div>
             )}

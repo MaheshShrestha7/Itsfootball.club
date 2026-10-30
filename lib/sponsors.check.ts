@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, groundPlacesFor, groundSponsorList, oneSponsorFor, sponsorPackageFor, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, groundPlacesFor, isCheckinPath, posterQrLink, groundSponsorList, oneSponsorFor, sponsorPackageFor, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -277,6 +277,15 @@ assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.
   assert.deepEqual(groundPlacesFor(two[1], two, pass, { pass_sponsor_id: 'b' }, NOW), ['thanks_poster', 'member_pass'], 'the admin picked them');
   const eventOwn = { ...base, id: 'ev-own', tier: 'platinum' as const, package_id: 'p-pass', event_id: 'ev1' };
   assert.deepEqual(groundPlacesFor(eventOwn, [eventOwn, ...two], pass, null, NOW), [], 'an event\'s own sponsor is never on the pass or the thank-you poster');
+  // Poster QRs count the scan, then forward only to the club's own door check-in page
+  const link = new URL(posterQrLink('https://rovers.com.au', 'c1', 'checkin_posters', { eventId: 'e1', checkinUrl: 'https://rovers.com.au/rovers/events/e1/checkin?code=ab12' }));
+  assert.equal(link.pathname, '/api/sponsors/qr');
+  assert.deepEqual(Object.fromEntries(link.searchParams), { c: 'c1', p: 'checkin_posters', e: 'e1', to: '/rovers/events/e1/checkin?code=ab12' });
+  assert.equal(isCheckinPath(link.searchParams.get('to')), true);
+  assert.equal(isCheckinPath('/rovers/match/m1/checkin?code=ab12'), true);
+  assert.equal(isCheckinPath('//evil.com/x/match/m1/checkin?code=a'), false, 'no other sites');
+  assert.equal(isCheckinPath('/rovers/admin?code=a'), false, 'no other pages');
+  assert.equal(isCheckinPath('/rovers/match/m1/checkin'), false, 'needs the door code');
 }
 
 console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices, offline places OK');

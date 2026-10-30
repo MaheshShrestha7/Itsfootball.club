@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGroundSponsors } from '@/components/GroundSponsors';
+import { countPosterPrint, useGroundSponsors } from '@/components/GroundSponsors';
+import { posterQrLink } from '@/lib/sponsors';
 import PrintablePoster, { PrintSponsorTile } from './PrintablePoster';
 
 const ZOOM = { A5: 0.82, A4: 1.18, A3: 1.7 };
@@ -23,9 +24,15 @@ export default function CheckinPoster({ club, title, details, checkinUrl, eventI
   const sponsors = useGroundSponsors(club.id, 'checkin_posters', eventId);
   const [showSponsors, setShowSponsors] = useState(true);
   const accent = club.primary_color || '#10B981';
+  // With sponsors on it, the QR goes through a tracked link that counts the scan for them, then on
+  // to the same check-in page
+  const withSponsors = showSponsors && !!sponsors?.length;
+  const qrValue = checkinUrl && withSponsors ? posterQrLink(window.location.origin, club.id, 'checkin_posters', { eventId, checkinUrl }) : checkinUrl;
 
   return (
-    <PrintablePoster accent={accent} zoom={ZOOM} onClose={onClose} controls={sponsors !== null && (
+    <PrintablePoster accent={accent} zoom={ZOOM} onClose={onClose}
+      onPrint={withSponsors ? () => countPosterPrint(club.id, 'checkin_posters', eventId) : undefined}
+      controls={sponsors !== null && (
       sponsors.length ? (
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.85rem', color: '#334155', cursor: 'pointer' }}>
           <input type="checkbox" checked={showSponsors} onChange={e => setShowSponsors(e.target.checked)} style={{ width: 17, height: 17 }} />
@@ -49,8 +56,8 @@ export default function CheckinPoster({ club, title, details, checkinUrl, eventI
       <p style={{ color: '#475569', fontSize: '1rem', fontWeight: 600, marginBottom: '2rem' }}>{details}</p>
 
       <div style={{ display: 'inline-block', padding: '1rem', border: '3px solid #0F172A', borderRadius: '16px', marginBottom: '1.75rem' }}>
-        {checkinUrl ? (
-          <QRCodeSVG value={checkinUrl} size={260} level="H" includeMargin={false} />
+        {qrValue ? (
+          <QRCodeSVG value={qrValue} size={260} level="H" includeMargin={false} />
         ) : (
           <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
             Generating check-in code...
@@ -65,7 +72,7 @@ export default function CheckinPoster({ club, title, details, checkinUrl, eventI
         </div>
       </div>
 
-      {showSponsors && !!sponsors?.length && (
+      {withSponsors && sponsors && (
         <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.18em', color: '#64748B', marginBottom: '0.6rem' }}>
             {eventId ? 'THIS EVENT IS SUPPORTED BY' : 'OUR SPONSORS'}

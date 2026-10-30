@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Download, ImagePlus, Printer, X } from 'lucide-react';
-import { useGroundSponsors } from '@/components/GroundSponsors';
+import { countPosterPrint, useGroundSponsors } from '@/components/GroundSponsors';
+import { posterQrLink } from '@/lib/sponsors';
 import { uploadImage } from '@/components/ImageUploadZone';
 import { drawEventFlyer, type FlyerSize } from '@/lib/event-flyer';
 import { savePassImage } from '@/lib/pass-image';
@@ -46,6 +47,9 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
   const shortLink = eventUrl.replace(/^https?:\/\//, '').replace(/\/events\/.*$/, '/events');
   const size = sizeOf(choice);
   const sponsorKey = JSON.stringify(showSponsors ? (sponsors || []).map(s => [s.logo_url || '', s.name]) : []);
+  // With sponsors on it, the QR goes through a tracked link that counts the scan for them, then on to the event
+  const withSponsors = showSponsors && !!sponsors?.length;
+  const qrValue = withSponsors ? posterQrLink(window.location.origin, club.id, 'event_flyers', { eventId: event.id }) : eventUrl;
 
   useEffect(() => {
     if (sponsors === null) return;
@@ -67,7 +71,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [event, club, size, showPrice, price, showQr, shortLink, sponsorKey, sponsors, photo]);
+  }, [event, club, size, showPrice, price, showQr, shortLink, sponsorKey, sponsors, photo, qrValue]);
 
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
 
@@ -120,7 +124,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
         }
       `}</style>
       {/* Hidden QR, drawn into the flyer */}
-      <QRCodeCanvas ref={qrRef} value={eventUrl} size={640} level="M" marginSize={0} style={{ display: 'none' }} aria-hidden="true" />
+      <QRCodeCanvas ref={qrRef} value={qrValue} size={640} level="M" marginSize={0} style={{ display: 'none' }} aria-hidden="true" />
 
       <div className="flyer-maker-layout" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'center', alignItems: 'flex-start', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ flex: '1 1 340px', maxWidth: 560, display: 'flex', justifyContent: 'center' }}>
@@ -169,7 +173,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
 
           <div style={{ display: 'grid', gap: '0.6rem', marginTop: '1.5rem' }}>
             {size === 'paper' ? (
-              <button type="button" className="btn btn-primary" disabled={!image} onClick={() => window.print()}
+              <button type="button" className="btn btn-primary" disabled={!image} onClick={() => { if (withSponsors) countPosterPrint(club.id, 'event_flyers', event.id); window.print(); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 800 }}>
                 <Printer size={16} /> Print or save {choice} PDF
               </button>
