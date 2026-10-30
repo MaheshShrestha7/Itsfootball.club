@@ -2,14 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
 import { fetchPaged } from '@/lib/paged';
 import { cleanAbn, invoiceIsTax } from '@/lib/invoice';
-import { canPayRenewal, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type SponsorResults } from '@/lib/sponsors';
+import { canPayRenewal, groundPlacesFor, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type GroundPlace, type SponsorResults } from '@/lib/sponsors';
+import { loadGroundInputs } from '@/lib/sponsor-ground-server';
 import type { Sponsor } from '@/lib/supabase/types';
 
 // A sponsor's own private page (/{club}/sponsor/your-sponsorship?k=...), read on the server with
 // the service role. The link's secret (sponsors.access_key, migration 20261132) is the only key:
 // nothing here is readable from the browser's own Supabase session.
 
-export type PortalClub = ClubBrandRow & { contact_email: string | null; stadium_address: string | null };
+export type PortalClub = ClubBrandRow & { contact_email: string | null; stadium_address: string | null; config?: Record<string, unknown> | null };
 
 export interface PortalSponsorRow extends Sponsor {
   access_key: string;
@@ -20,7 +21,7 @@ export async function findSponsorByKey(db: SupabaseClient, key: unknown): Promis
   if (!isSponsorKey(key)) return null;
   const { data: sponsor } = await db.from('sponsors').select('*').eq('access_key', key).maybeSingle();
   if (!sponsor) return null;
-  const { data: club } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email, stadium_address`).eq('id', sponsor.club_id).maybeSingle();
+  const { data: club } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email, stadium_address, config`).eq('id', sponsor.club_id).maybeSingle();
   if (!club) return null;
   return { sponsor: sponsor as PortalSponsorRow, club: club as PortalClub };
 }
@@ -64,6 +65,8 @@ export interface PortalData {
   /** False until migration 20261133 adds the pending columns: the page then hides the upload */
   canSend: boolean;
   results: SponsorResults & { since: string };
+  /** OSE-9: where their logo is at the ground and in print now, with the real counts behind it */
+  atGround: AtGround;
   payments: PortalPayment[];
   /** The club is registered for GST and has an ABN: its invoices are tax invoices */
   taxInvoice: boolean;
@@ -75,6 +78,47 @@ export interface PortalData {
   receiptWaiting: boolean;
   /** SPP-2: they can ask for an invoice to pay against (something to pay, and no invoice open yet) */
   canInvoice: boolean;
+}
+
+export interface AtGround {
+  /** The places at the ground and in print their logo is on now (package ticks, see groundPlacesFor) */
+  places: GroundPlace[];
+  /** Gate check-ins since the results start, when they're on the check-in posters or screen */
+  checkins: number | null;
+  /** Event tickets issued since the results start, when they're on the tickets */
+  tickets: number | null;
+  /** Members whose pass carries their logo, when they're the pass sponsor */
+  passMembers: number | null;
+}
+
+/** Where a sponsor is at the ground now, and the counts the app records for those places: gate
+ *  check-ins (gate_scans), tickets issued (paid ticket rows) and members holding a pass. An event's own
+ *  sponsor counts only that event. Posters and flyers are paper, so nothing is claimed for them. */
+export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config: Record<string, unknown> | null | undefined, since: string): Promise<AtGround> {
+  const { sponsors, packages } = await loadGroundInputs(db, sponsor.club_id);
+  const self = sponsors.find(s => s.id === sponsor.id);
+  const places = self ? groundPlacesFor(self, sponsors, packages, config) : [];
+  const from = `${since}T00:00:00Z`;
+  const count = async (q: PromiseLike<{ count: number | null; error: unknown }>) => {
+    const { count: n, error } = await q;
+    return error ? null : n ?? 0;
+  };
+  const [checkins, tickets, passMembers] = await Promise.all([
+    places.includes('checkin_posters') || places.includes('checkin_screen')
+      ? count(sponsor.event_id
+        ? db.from('gate_scans').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('valid', true).eq('event_id', sponsor.event_id).gte('scanned_at', from)
+        : db.from('gate_scans').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('valid', true).in('scan_type', ['match_checkin', 'event_checkin']).gte('scanned_at', from))
+      : null,
+    places.includes('event_tickets')
+      ? count(sponsor.event_id
+        ? db.from('event_attendees').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('event_id', sponsor.event_id).not('payment_id', 'is', null).neq('checkin_status', 'cancelled').gte('created_at', from)
+        : db.from('event_attendees').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).not('payment_id', 'is', null).neq('checkin_status', 'cancelled').gte('created_at', from))
+      : null,
+    places.includes('member_pass')
+      ? count(db.from('club_members').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('membership_status', 'approved'))
+      : null,
+  ]);
+  return { places, checkins, tickets, passMembers };
 }
 
 const DAY = 24 * 3600 * 1000;
@@ -95,7 +139,7 @@ export function resultsSince(sponsor: { ends_on?: string | null; created_at?: st
 
 export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, club: PortalClub): Promise<PortalData> {
   const since = resultsSince(sponsor);
-  const [{ data: events }, { data: payments }, { data: packages }, { data: settings }] = await Promise.all([
+  const [{ data: events }, { data: payments }, { data: packages }, { data: settings }, atGround] = await Promise.all([
     fetchPaged<{ event_type: string; placement: string | null; visitor_hash: string | null }>(
       (from, to) => db.from('sponsor_analytics').select('event_type, placement, visitor_hash')
         .eq('sponsor_id', sponsor.id).gte('created_at', `${since}T00:00:00Z`).order('id').range(from, to),
@@ -108,6 +152,7 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
     db.from('sponsorship_packages').select('id, name, tier, price_cents, is_active').eq('club_id', sponsor.club_id),
     // abn and gst_registered are from migration 20261133; before it runs this errors and data is null
     db.from('club_payment_settings').select('abn, gst_registered').eq('club_id', sponsor.club_id).maybeSingle(),
+    loadAtGround(db, sponsor, club.config, since),
   ]);
 
   // A 'pending' row is an abandoned card checkout, unless it's an invoice the club sent (due_on, SPP-2)
@@ -138,6 +183,7 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
     },
     canSend: 'pending_sent_at' in sponsor,
     results: { ...summariseSponsorEvents(events), since },
+    atGround,
     payments: shown.map(p => ({
       id: p.id,
       description: p.description,
