@@ -1789,6 +1789,7 @@ export default function AdminMatchesPage({
           <style>{`
             @media print {
               @page { size: ${posterPaper} portrait; margin: 12mm; }
+              :root { color-scheme: light !important; }
               html, body { background: #fff !important; }
               body::before, body::after { display: none !important; }
               body > :not(.checkin-poster-overlay) { display: none !important; }

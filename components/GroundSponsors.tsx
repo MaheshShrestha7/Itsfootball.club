@@ -38,9 +38,9 @@ export default function GroundSponsors({ clubId, place, eventId, heading, classN
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.6rem' }}>
         {sponsors.map(s => (
           <SponsorTrackedLink key={s.id} clubId={clubId} sponsorId={s.id} placement={place} href={s.website_url || ''}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 116, height: 56, padding: '0.45rem', borderRadius: 10,
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 104, height: 52, padding: '0.4rem', borderRadius: 10,
               background: s.logo_url ? '#fff' : 'rgba(var(--tint-rgb), 0.06)', border: '1px solid var(--border-subtle)' }}>
-            <SponsorLogo src={s.logo_url} name={s.name} height={38} style={{ maxWidth: '100%' }} />
+            <SponsorLogo src={s.logo_url} name={s.name} height={36} style={{ maxWidth: '100%' }} />
             <span className="sr-only">{s.name}</span>
           </SponsorTrackedLink>
         ))}
