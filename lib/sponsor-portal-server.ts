@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
 import { fetchPaged } from '@/lib/paged';
 import { cleanAbn, invoiceIsTax } from '@/lib/invoice';
-import { canPayRenewal, groundPlacesFor, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type GroundPlace, type SponsorResults } from '@/lib/sponsors';
+import { canPayRenewal, groundPlacesFor, isPosterPlace, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type GroundPlace, type SponsorResults } from '@/lib/sponsors';
 import { loadGroundInputs } from '@/lib/sponsor-ground-server';
 import type { Sponsor } from '@/lib/supabase/types';
 
@@ -89,11 +89,15 @@ export interface AtGround {
   tickets: number | null;
   /** Members whose pass carries their logo, when they're the pass sponsor */
   passMembers: number | null;
+  /** Times the club printed a poster or flyer with their logo, and scans of its QR (migration 20261139) */
+  posterPrints: number | null;
+  posterScans: number | null;
 }
 
 /** Where a sponsor is at the ground now, and the counts the app records for those places: gate
- *  check-ins (gate_scans), tickets issued (paid ticket rows) and members holding a pass. An event's own
- *  sponsor counts only that event. Posters and flyers are paper, so nothing is claimed for them. */
+ *  check-ins (gate_scans), tickets issued (paid ticket rows), members holding a pass, and Print presses
+ *  and QR scans of the posters and flyers they're on (app/api/sponsors/qr). An event's own sponsor
+ *  counts only that event. Nobody can count who looked at paper, so nothing more is claimed for it. */
 export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config: Record<string, unknown> | null | undefined, since: string): Promise<AtGround> {
   const { sponsors, packages } = await loadGroundInputs(db, sponsor.club_id);
   const self = sponsors.find(s => s.id === sponsor.id);
@@ -103,7 +107,10 @@ export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config:
     const { count: n, error } = await q;
     return error ? null : n ?? 0;
   };
-  const [checkins, tickets, passMembers] = await Promise.all([
+  const onPaper = places.some(p => isPosterPlace(p));
+  const printed = (type: 'print' | 'scan') =>
+    count(db.from('sponsor_analytics').select('id', { count: 'exact', head: true }).eq('sponsor_id', sponsor.id).eq('event_type', type).gte('created_at', from));
+  const [checkins, tickets, passMembers, posterPrints, posterScans] = await Promise.all([
     places.includes('checkin_posters') || places.includes('checkin_screen')
       ? count(sponsor.event_id
         ? db.from('gate_scans').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('valid', true).eq('event_id', sponsor.event_id).gte('scanned_at', from)
@@ -117,8 +124,10 @@ export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config:
     places.includes('member_pass')
       ? count(db.from('club_members').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('membership_status', 'approved'))
       : null,
+    onPaper ? printed('print') : null,
+    onPaper ? printed('scan') : null,
   ]);
-  return { places, checkins, tickets, passMembers };
+  return { places, checkins, tickets, passMembers, posterPrints, posterScans };
 }
 
 const DAY = 24 * 3600 * 1000;

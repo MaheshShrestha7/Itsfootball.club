@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGroundSponsors } from '@/components/GroundSponsors';
+import { countPosterPrint, useGroundSponsors } from '@/components/GroundSponsors';
+import { posterQrLink } from '@/lib/sponsors';
 import { SITE_URL } from '@/lib/seo';
 import { shareLink } from '@/lib/share-card';
 import type { Club } from '@/lib/supabase/types';
@@ -37,7 +38,9 @@ export default function SponsorThanksPoster({ club, onClose }: {
   }
 
   return (
-    <PrintablePoster accent={accent} zoom={ZOOM} onClose={onClose} controls={sponsors !== null && !sponsors.length && (
+    <PrintablePoster accent={accent} zoom={ZOOM} onClose={onClose}
+      onPrint={sponsors?.length ? () => countPosterPrint(club.id, 'thanks_poster') : undefined}
+      controls={sponsors !== null && !sponsors.length && (
       <p style={{ margin: '0.75rem 0 0', fontSize: '0.8rem', color: '#64748B' }}>
         No sponsors on this poster yet. Tick &quot;Sponsor thank-you poster&quot; on a package in Sponsors, Packages.
       </p>
@@ -69,7 +72,7 @@ export default function SponsorThanksPoster({ club, onClose }: {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', textAlign: 'left', background: '#F1F5F9', borderRadius: 12, padding: '0.9rem 1rem', marginBottom: '1.75rem' }}>
         <div style={{ background: '#fff', padding: 6, borderRadius: 8, lineHeight: 0, flexShrink: 0 }}>
-          <QRCodeSVG value={signupUrl} size={88} level="M" />
+          <QRCodeSVG value={sponsors?.length ? posterQrLink(window.location.origin, club.id, 'thanks_poster') : signupUrl} size={88} level="M" />
         </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A' }}>Want your business here?</div>

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ONE_SPONSOR_PLACES, oneSponsorFor, type GroundPlace } from '@/lib/sponsors';
+import { ONE_SPONSOR_PLACES, oneSponsorFor, type GroundPlace, type PosterPlace } from '@/lib/sponsors';
+import { getAccessToken } from '@/lib/supabase/client';
 import type { ClubConfig } from '@/lib/supabase/types';
 import type { GroundSponsor } from '@/lib/sponsor-ground-server';
 import SponsorTrackedLink from './SponsorTrackedLink';
@@ -22,6 +23,20 @@ export function useGroundSponsors(clubId: string | undefined, place: GroundPlace
     return () => { stopped = true; };
   }, [clubId, place, eventId]);
   return list;
+}
+
+/** Counts a Print press (or a flyer download) for the sponsors on that poster, in their results.
+ *  Fire and forget: printing never waits on it or fails because of it. */
+export function countPosterPrint(clubId: string, place: PosterPlace, eventId?: string | null) {
+  getAccessToken().then(token => {
+    if (!token) return;
+    fetch('/api/sponsors/qr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ club: clubId, place, event: eventId || null }),
+      keepalive: true,
+    }).catch(() => {});
+  }).catch(() => {});
 }
 
 /** The one sponsor for the member pass or the Player of the Match graphic: the admin's choice in
