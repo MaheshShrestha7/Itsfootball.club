@@ -10,6 +10,7 @@ import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import CheckinPoster from '@/components/admin/CheckinPoster';
+import EventFlyerMaker from '@/components/admin/EventFlyerMaker';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import {
   Calendar,
@@ -23,6 +24,7 @@ import {
   Sparkles,
   ImageIcon,
   Printer,
+  FileImage,
 } from 'lucide-react';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
@@ -53,6 +55,7 @@ export default function AdminEventsPage({
   const [scannerEvent, setScannerEvent] = useState<ClubEvent | null>(null);
   const [qrModalEvent, setQrModalEvent] = useState<ClubEvent | null>(null);
   const [printPosterEvent, setPrintPosterEvent] = useState<ClubEvent | null>(null);
+  const [flyerEvent, setFlyerEvent] = useState<ClubEvent | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -422,6 +425,15 @@ export default function AdminEventsPage({
               </button>
 
               <button
+                onClick={() => setFlyerEvent(evt)}
+                className="btn btn-secondary btn-sm row"
+                title={`Make a printable flyer for ${evt.title}`}
+              >
+                <FileImage size={14} />
+                <span>Make a Flyer</span>
+              </button>
+
+              <button
                 onClick={() => setScannerEvent(evt)}
                 className="btn btn-primary btn-sm row"
               >
@@ -702,6 +714,21 @@ export default function AdminEventsPage({
           eventId={printPosterEvent.id}
           disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}
           onClose={() => setPrintPosterEvent(null)}
+        />
+      )}
+
+      {flyerEvent && (
+        <EventFlyerMaker
+          club={club}
+          event={flyerEvent}
+          price={(flyerEvent.ticket_price_cents ?? 0) > 0 ? formatMoney(flyerEvent.ticket_price_cents ?? 0, currency) : undefined}
+          canSaveFlyer={flyersReady === true}
+          onSaveFlyer={url => {
+            updateEvent(flyerEvent.id, { flyer_url: url });
+            setToastMessage(`✓ Flyer saved to "${flyerEvent.title}"`);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          onClose={() => setFlyerEvent(null)}
         />
       )}
 

@@ -342,14 +342,15 @@ export const PACKAGE_INCLUDES = [
   { key: 'thanks_poster', admin: 'Sponsor thank-you poster', card: 'Logo on the club\'s printed "Thank you to our sponsors" poster', group: 'ground' },
   { key: 'member_pass', admin: 'Member pass (one sponsor)', card: '"Supported by" on every member\'s pass', group: 'ground' },
   { key: 'potm_graphic', admin: 'Player of the Match graphic (one sponsor)', card: '"Supported by" on the Player of the Match graphic', group: 'ground' },
+  { key: 'event_flyers', admin: 'Event flyers', card: 'Logo on the club\'s printed and shared event flyers', group: 'ground' },
 ] as const;
 
 /** A place at the ground or in print that only sponsors with the tick appear on */
-export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen' | 'thanks_poster' | 'member_pass' | 'potm_graphic';
-export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen', 'thanks_poster', 'member_pass', 'potm_graphic'];
+export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen' | 'thanks_poster' | 'member_pass' | 'potm_graphic' | 'event_flyers';
+export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen', 'thanks_poster', 'member_pass', 'potm_graphic', 'event_flyers'];
 /** How many sponsors a place has room for: a row of logos, or the whole thank-you poster. The
  *  one-sponsor places list everyone with the tick, for the admin to choose from (oneSponsorFor) */
-export const GROUND_PLACE_MAX: Record<GroundPlace, number> = { checkin_posters: 5, event_tickets: 5, checkin_screen: 5, thanks_poster: 30, member_pass: 30, potm_graphic: 30 };
+export const GROUND_PLACE_MAX: Record<GroundPlace, number> = { checkin_posters: 5, event_tickets: 5, checkin_screen: 5, thanks_poster: 30, member_pass: 30, potm_graphic: 30, event_flyers: 5 };
 
 /** The places with room for one sponsor, and where the admin's choice is kept (clubs.config) */
 export const ONE_SPONSOR_PLACES = [
