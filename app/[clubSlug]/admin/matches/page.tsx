@@ -93,6 +93,7 @@ export default function AdminMatchesPage({
     matchEvents,
     members,
     clubTeamMembers,
+    activityLogs,
   } = useClub();
 
   const { can } = useAuth();
@@ -119,6 +120,14 @@ export default function AdminMatchesPage({
   // The share graphic is public: lineup names and photos follow the match page's junior rules
   const juniorIds = useMemo(() => juniorMemberIds(members, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false }), [members, clubTeams, clubTeamMembers]);
   const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, publicMember(m, juniorIds).photo_url])), [members, juniorIds]);
+  // Each fixture's Player of the Match (from the verified stats), named as the match page shows them
+  const motmByMatch = useMemo(() => {
+    const byId = new Map(members.map(m => [m.id, m]));
+    return new Map(activityLogs.filter(l => l.event_type === 'match_motm' && l.reference_id && byId.has(l.member_id)).map(l => {
+      const m = publicMember(byId.get(l.member_id)!, juniorIds);
+      return [l.reference_id!, { name: m.full_name, photo: m.photo_url }];
+    }));
+  }, [activityLogs, members, juniorIds]);
   const publicMatches = useMemo(() => new Map(clubMatches.map(m => {
     const juniorFixture = isJuniorFixture(m, clubTeams);
     if (!juniorFixture && juniorIds.size === 0) return [m.id, m];
@@ -1026,6 +1035,7 @@ export default function AdminMatchesPage({
                     hideScore={publicScoreHidden(m, clubTeams)}
                     events={goalsByMatch.get(m.id)}
                     photos={memberPhotos}
+                    motm={motmByMatch.get(m.id)}
                     trigger={open => (
                       <button
                         type="button"

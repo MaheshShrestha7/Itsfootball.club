@@ -13,6 +13,7 @@ import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
 import SponsorThanksPoster from '@/components/admin/SponsorThanksPoster';
+import OneSponsorSpots from '@/components/admin/OneSponsorSpots';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
 import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer } from 'lucide-react';
@@ -559,6 +560,8 @@ export default function AdminSponsorsPage({
       </div>
 
       {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : (<>
+
+      <OneSponsorSpots club={club} />
 
       {/* Top Banner & Live Preview Toggle */}
       <div style={{
