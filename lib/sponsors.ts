@@ -248,6 +248,8 @@ export const PLACEMENT_LABELS: Record<string, string> = {
   match_center_marquee: 'Match pages',
   event_page: 'Event pages',
   supported_by: 'Match reports and news',
+  event_tickets: 'Event tickets',
+  checkin_screen: 'Check-in screen at the gate',
 };
 
 export const placementName = (placement: string | null | undefined) =>
@@ -323,15 +325,25 @@ export function typedWebsite(input: string | null | undefined): string | undefin
 }
 
 /** The places a package can say it includes (sponsorship_packages.includes keys), in plain words:
- *  `admin` is the short tick label in the package editor, `card` the line on the public package card */
+ *  `admin` is the short tick label in the package editor, `card` the line on the public package card.
+ *  `site` ticks are promises only (SPE-20). `ground` ticks decide who appears there: only sponsors
+ *  whose package has the tick (see groundSponsorList). */
 export const PACKAGE_INCLUDES = [
-  { key: 'home_page', admin: 'Home page', card: 'Logo on the home page' },
-  { key: 'footer', admin: 'Every page footer', card: 'Logo in the footer of every page' },
-  { key: 'match_pages', admin: 'Match pages', card: 'Logo on every match page' },
-  { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics' },
-  { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news' },
-  { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages' },
+  { key: 'home_page', admin: 'Home page', card: 'Logo on the home page', group: 'site' },
+  { key: 'footer', admin: 'Every page footer', card: 'Logo in the footer of every page', group: 'site' },
+  { key: 'match_pages', admin: 'Match pages', card: 'Logo on every match page', group: 'site' },
+  { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics', group: 'site' },
+  { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news', group: 'site' },
+  { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages', group: 'site' },
+  { key: 'checkin_posters', admin: 'Match check-in posters', card: 'Logo on the printed check-in poster at the gate', group: 'ground' },
+  { key: 'event_tickets', admin: 'Event tickets and ticket emails', card: 'Logo on event tickets and ticket emails', group: 'ground' },
+  { key: 'checkin_screen', admin: 'Check-in screen at the gate', card: 'Logo on the screen fans see when they check in', group: 'ground' },
 ] as const;
+
+/** A place at the ground or in print that only sponsors with the tick appear on */
+export type GroundPlace = 'checkin_posters' | 'event_tickets' | 'checkin_screen';
+export const GROUND_PLACES: readonly GroundPlace[] = ['checkin_posters', 'event_tickets', 'checkin_screen'];
+export const isGroundPlace = (v: unknown): v is GroundPlace => GROUND_PLACES.includes(v as GroundPlace);
 
 const INCLUDE_KEYS = new Set<string>(PACKAGE_INCLUDES.map(i => i.key));
 
@@ -402,4 +414,28 @@ export function sponsorClickHref(url: string | undefined, clubSlug: string | und
   parsed.searchParams.set('utm_medium', 'sponsor');
   parsed.searchParams.set('utm_campaign', clubSlug);
   return parsed.href;
+}
+
+/** The package a sponsor is on: the one they signed up or paid for (package_id), else, for a sponsor
+ *  an admin added by hand, the package with the same tier and price, as renewals do
+ *  (matchSponsorPackage). null shows "Not on a package" in Admin, Sponsors. */
+export function sponsorPackageFor<P extends Pick<SponsorshipPackage, 'id' | 'tier' | 'price_cents'>>(
+  sponsor: Pick<Sponsor, 'tier' | 'package_value'> & { package_id?: string | null }, packages: P[]
+): P | null {
+  return (sponsor.package_id && packages.find(p => p.id === sponsor.package_id)) || matchSponsorPackage(sponsor, packages);
+}
+
+/** Who goes on a place at the ground (poster, tickets, check-in screen): sponsors on the site whose
+ *  package has that tick. For an event, its own sponsors first, then the club's; a match never shows
+ *  another event's sponsors. Biggest tier first, at most `max`. */
+export function groundSponsorList<
+  S extends Pick<Sponsor, 'id' | 'tier' | 'display_order' | 'is_active' | 'package_status' | 'package_value'> & { ends_on?: string | null; package_id?: string | null; event_id?: string | null },
+  P extends Pick<SponsorshipPackage, 'id' | 'tier' | 'price_cents' | 'includes'>,
+>(sponsors: S[], packages: P[], place: GroundPlace, opts: { eventId?: string | null; max?: number; now?: number } = {}): S[] {
+  const ticked = sponsors.filter(s => isSponsorOnSite(s, opts.now)
+    && (!s.event_id || s.event_id === opts.eventId)
+    && !!sponsorPackageFor(s, packages)?.includes?.includes(place));
+  const own = sortSponsorsByTier(ticked.filter(s => opts.eventId && s.event_id === opts.eventId));
+  const club = sortSponsorsByTier(ticked.filter(s => !s.event_id));
+  return [...own, ...club].slice(0, opts.max ?? 5);
 }

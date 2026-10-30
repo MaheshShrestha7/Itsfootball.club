@@ -1,7 +1,7 @@
 // Self-check for sponsor link filtering and badge labels.
 // Run: npx esbuild lib/sponsors.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildPackageIncludes, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
+import { buildPackageIncludes, groundSponsorList, sponsorPackageFor, canPayRenewal, hasRecentlyLapsed, holdsPackageSpot, isOpenInvoice, packageSpotsLeft, sponsorClickHref, chartBuckets, daysUntilEnd, isSponsorKey, packageIncludeLines, packageIncludes, placementName, topTierSponsors, typedWebsite, sponsorPageUrl, summariseSponsorEvents, defaultSponsorEnd, defaultSponsorSeason, sponsorshipPaidFor, isEndingSoon, isPastEndDate, isStaleSignup, isSponsorOnSite, localDateISO, matchSponsorPackage, renewedEndDate, reorderSponsors, safeLinkHref, sponsorHref, sponsorLabel, sponsorSignupStage, sponsorTierLabel } from './sponsors';
 
 assert.equal(sponsorHref('https://acme.com/x?y=1'), 'https://acme.com/x?y=1');
 assert.equal(sponsorHref('http://acme.com'), 'http://acme.com/');
@@ -233,4 +233,28 @@ assert.equal(sponsorClickHref('https://acme.com.au/?utm_source=footy', 'rfc'), '
 assert.equal(sponsorClickHref('javascript:alert(1)', 'rfc'), undefined);
 assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.com.au/');
 
-console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices OK');
+// Offline places: only sponsors whose package has the tick, matched by tier and price when added by hand
+{
+  const pkgs = [
+    { id: 'p-gold', tier: 'gold' as const, price_cents: 150000, includes: ['home_page', 'checkin_posters', 'event_tickets'] },
+    { id: 'p-silver', tier: 'silver' as const, price_cents: 50000, includes: ['home_page'] },
+  ];
+  const base = { is_active: true, package_status: 'paid' as const, ends_on: null, event_id: null, package_id: null, package_value: null, display_order: 0 };
+  const sponsors = [
+    { ...base, id: 'gold-paid', tier: 'gold' as const, package_id: 'p-gold', display_order: 2 },
+    { ...base, id: 'gold-by-hand', tier: 'gold' as const, package_value: 1500, display_order: 1 },
+    { ...base, id: 'silver', tier: 'silver' as const, package_id: 'p-silver' },
+    { ...base, id: 'platinum-no-pkg', tier: 'platinum' as const, package_value: 9000 },
+    { ...base, id: 'gold-ended', tier: 'gold' as const, package_id: 'p-gold', package_status: 'expired' as const },
+    { ...base, id: 'event-own', tier: 'silver' as const, package_id: 'p-gold', event_id: 'ev1' },
+    { ...base, id: 'event-other', tier: 'gold' as const, package_id: 'p-gold', event_id: 'ev2' },
+  ];
+  assert.equal(sponsorPackageFor(sponsors[1], pkgs)?.id, 'p-gold', 'added by hand: same tier and price');
+  assert.equal(sponsorPackageFor(sponsors[3], pkgs), null, 'Not on a package');
+  assert.deepEqual(groundSponsorList(sponsors, pkgs, 'checkin_posters', { now: NOW }).map(s => s.id), ['gold-by-hand', 'gold-paid']);
+  assert.deepEqual(groundSponsorList(sponsors, pkgs, 'checkin_screen', { now: NOW }), [], 'nobody has the tick');
+  assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand', 'gold-paid']);
+  assert.deepEqual(groundSponsorList(sponsors, pkgs, 'event_tickets', { eventId: 'ev1', max: 2, now: NOW }).map(s => s.id), ['event-own', 'gold-by-hand']);
+}
+
+console.log('sponsors: link filtering, labels, on-site and sign-up stages, chart bars, end dates, renewals, reordering, results, package ticks, package limits, invoices, offline places OK');

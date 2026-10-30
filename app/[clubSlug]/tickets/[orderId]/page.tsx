@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, Calendar, MapPin, Ticket, Loader2, AlertCircle } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import LocalTime from '@/components/LocalTime';
+import GroundSponsors from '@/components/GroundSponsors';
 
 interface Order {
   status: string;
@@ -99,6 +100,10 @@ export default function TicketsPage({ params }: { params: Promise<{ clubSlug: st
             </li>
           ))}
         </ol>
+        {order.event && (
+          <GroundSponsors clubId={club.id} place="event_tickets" eventId={order.event.id} heading="This event is supported by"
+            className="glass-panel" style={{ marginTop: '1.5rem', padding: '1.1rem 1rem' }} />
+        )}
       </>
     );
   }
