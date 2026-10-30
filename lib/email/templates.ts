@@ -37,6 +37,8 @@ interface EmailContent {
   image?: string | null;
   /** Footer unsubscribe link (club emails other than sign-in) */
   unsubscribeUrl?: string | null;
+  /** Sponsor logos (or names) at the bottom of the card, under a small heading */
+  sponsors?: { heading: string; list: { name: string; logoUrl?: string | null; url?: string | null }[] };
 }
 
 const PLATFORM: EmailBrand = { name: 'itsfootball.club', logoUrl: `${SITE_URL}/logo-96.png`, color: '#047857', url: SITE_URL };
@@ -76,6 +78,21 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
     : '';
   const image = absolute(c.image);
 
+  const sponsorCell = (sp: { name: string; logoUrl?: string | null; url?: string | null }) => {
+    const src = absolute(sp.logoUrl);
+    const inner = src
+      ? `<img src="${esc(src)}" height="40" alt="${esc(sp.name)}" style="display:block;height:40px;max-width:120px;width:auto;margin:0 auto">`
+      : `<span style="font:800 13px ${font};color:#0F172A">${esc(sp.name)}</span>`;
+    const href = sp.url && /^https?:\/\//.test(sp.url) ? sp.url : null;
+    return `<td style="padding:4px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" style="height:52px;min-width:96px;padding:6px 12px;border:1px solid #E2E8F0;border-radius:8px;background:#FFFFFF">${href ? `<a href="${esc(href)}" target="_blank" style="text-decoration:none">${inner}</a>` : inner}</td></tr></table></td>`;
+  };
+  const sponsors = c.sponsors?.list.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-top:1px solid #E2E8F0"><tr><td align="center" style="padding-top:16px">
+<p style="margin:0 0 10px;font:800 11px ${font};color:#64748B;text-transform:uppercase;letter-spacing:0.16em">${esc(c.sponsors.heading)}</p>
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>${c.sponsors.list.map(sponsorCell).join('')}</tr></table>
+</td></tr></table>`
+    : '';
+
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(c.subject)}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9">
@@ -96,6 +113,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
   ${details}
   ${cta}
   ${c.note ? `<p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">${esc(c.note)}</p>` : ''}
+  ${sponsors}
 </td></tr>
 <tr><td style="padding:20px 8px;font:12px/1.6 ${font};color:#64748B;text-align:center">
   ${esc(c.reason)}<br>
@@ -116,6 +134,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
     ...(c.details?.length ? [...c.details.map(([k, v]) => `${k}: ${v}`), ''] : []),
     ...(c.cta ? [`${c.cta.label}: ${c.cta.url}`, ''] : []),
     ...(c.note ? [c.note, ''] : []),
+    ...(c.sponsors?.list.length ? [`${c.sponsors.heading}: ${c.sponsors.list.map(sp => sp.name).join(', ')}`, ''] : []),
     '--',
     c.reason,
     ...(c.unsubscribeUrl ? [`Unsubscribe: ${c.unsubscribeUrl}`] : []),
@@ -297,7 +316,7 @@ export function eventReminder(p: ClubEmailExtras & { brand: EmailBrand; attendee
 }
 
 /** Sent once a ticket order is paid: transactional, so no unsubscribe link */
-export function ticketsEmail(p: { brand: EmailBrand; buyerName: string; event: string; quantity: number; when: string; venue: string; link: string }): RenderedEmail {
+export function ticketsEmail(p: { brand: EmailBrand; buyerName: string; event: string; quantity: number; when: string; venue: string; link: string; sponsors?: { name: string; logoUrl?: string | null; url?: string | null }[] }): RenderedEmail {
   const tickets = `${p.quantity} ticket${p.quantity === 1 ? '' : 's'}`;
   return renderEmail({
     brand: p.brand,
@@ -309,6 +328,8 @@ export function ticketsEmail(p: { brand: EmailBrand; buyerName: string; event: s
     cta: { label: 'Show my tickets', url: p.link },
     note: 'Each ticket has its own QR code and can be scanned once at the door. Anyone with this link can use your tickets, so keep it to yourself.',
     reason: `You're receiving this because you bought tickets from ${p.brand.name}.`,
+    // Sponsors whose package includes event tickets (Admin, Sponsors, Packages)
+    sponsors: p.sponsors?.length ? { heading: 'This event is supported by', list: p.sponsors } : undefined,
   });
 }
 

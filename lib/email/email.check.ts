@@ -1,7 +1,7 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
@@ -126,7 +126,22 @@ async function main() {
   assert.equal(formatMatchWhen('2026-10-17'), 'Sat, 17 Oct');
   assert.equal(formatMatchWhen('not a date'), '');
   assert.equal(formatMatchWhen('2026-10-17T04:00:00Z', '09:00'), formatWhen('2026-10-17T04:00:00Z'));
-  console.log('email: webhook signatures, unsubscribe tokens and templates OK');
+  // Tickets email: sponsors whose package includes event tickets, at the bottom of the card
+{
+  const base = { brand: { name: 'Riverside Rovers FC', url: 'https://itsfootball.club/rrfc' }, buyerName: 'Jess Lee', event: 'Presentation Night', quantity: 2, when: 'Fri 21 Nov, 7:00 pm', venue: 'Clubrooms', link: 'https://itsfootball.club/rrfc/tickets/1' };
+  const plain = ticketsEmail(base);
+  assert.ok(!plain.html.includes('supported by') && !plain.text.includes('supported by'), 'no sponsors, no row');
+  const withSponsors = ticketsEmail({ ...base, sponsors: [
+    { name: 'Harbour Physio', logoUrl: 'https://cdn.example.com/hp.png', url: 'https://harbourphysio.com.au/' },
+    { name: 'Corner <Cafe>', logoUrl: 'javascript:alert(1)', url: 'javascript:alert(1)' },
+  ] });
+  assert.ok(withSponsors.html.includes('This event is supported by'));
+  assert.ok(withSponsors.html.includes('src="https://cdn.example.com/hp.png"') && withSponsors.html.includes('href="https://harbourphysio.com.au/"'));
+  assert.ok(withSponsors.html.includes('Corner &lt;Cafe&gt;') && !withSponsors.html.includes('javascript:'), 'unsafe logo and link left out, name escaped');
+  assert.ok(withSponsors.text.includes('This event is supported by: Harbour Physio, Corner <Cafe>'));
+}
+
+console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

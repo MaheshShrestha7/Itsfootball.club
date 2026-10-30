@@ -23,6 +23,7 @@ import {
   LogIn
 } from 'lucide-react';
 import { DATE_LOCALE } from '@/lib/dates';
+import GroundSponsors from '@/components/GroundSponsors';
 
 export default function EventDoorCheckinPage({
   params,
@@ -307,6 +308,9 @@ export default function EventDoorCheckinPage({
             <p style={{ color: 'var(--c-green)', fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.5rem' }}>
               {result.message}
             </p>
+
+            <GroundSponsors clubId={club.id} place="checkin_screen" eventId={event.id} heading="This event is supported by"
+              style={{ background: 'rgba(var(--shade-rgb), 0.4)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '1rem', marginBottom: '1.5rem' }} />
 
             <div
               style={{

@@ -21,21 +21,27 @@ function IncludesEditor({ row, set }: { row: SponsorshipPackage; set: SetRow }) 
   return (
     <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
       <legend className="form-label">What&apos;s included</legend>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 190px), 1fr))', gap: '0.35rem 1rem' }}>
-        {PACKAGE_INCLUDES.map(i => (
-          <label key={i.key} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', color: 'var(--text-secondary)', minHeight: 32, cursor: 'pointer' }}>
-            <input type="checkbox" checked={places.includes(i.key)} style={{ width: 17, height: 17 }}
-              onChange={e => set({ includes: buildPackageIncludes(e.target.checked ? [...places, i.key] : places.filter(k => k !== i.key), text) })} />
-            {i.admin}
-          </label>
-        ))}
-      </div>
+      {([
+        ['site', 'On the website', 'Shown on your public package. Where a logo appears on the site still follows the sponsor\'s tier and Logo size.'],
+        ['ground', 'At the ground and in print', 'These ticks decide who appears there: only sponsors on a package with the tick.'],
+      ] as const).map(([group, heading, hint]) => (
+        <div key={group} style={{ marginBottom: '0.6rem' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: group === 'ground' ? '0.4rem' : 0 }}>{heading}</div>
+          <p className="text-meta" style={{ margin: '0.15rem 0 0.25rem' }}>{hint}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 190px), 1fr))', gap: '0.35rem 1rem' }}>
+            {PACKAGE_INCLUDES.filter(i => i.group === group).map(i => (
+              <label key={i.key} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', color: 'var(--text-secondary)', minHeight: 32, cursor: 'pointer' }}>
+                <input type="checkbox" checked={places.includes(i.key)} style={{ width: 17, height: 17 }}
+                  onChange={e => set({ includes: buildPackageIncludes(e.target.checked ? [...places, i.key] : places.filter(k => k !== i.key), text) })} />
+                {i.admin}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
       <label className="form-label" htmlFor="pkg-extras" style={{ marginTop: '0.6rem' }}>Extras (one per line)</label>
       <textarea id="pkg-extras" className="form-textarea" rows={2} placeholder={'Matchday banner at the ground\nLogo on the training kit'} value={text}
         onChange={e => { setText(e.target.value); set({ includes: buildPackageIncludes(places, e.target.value) }); }} />
-      <p className="text-meta" style={{ margin: '0.3rem 0 0' }}>
-        The ticks show on your public package. Where a logo actually appears still follows the sponsor&apos;s tier and Logo size.
-      </p>
     </fieldset>
   );
 }

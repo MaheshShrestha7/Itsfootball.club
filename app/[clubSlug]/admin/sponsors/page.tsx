@@ -7,7 +7,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import {
   daysUntilEnd, defaultSponsorEnd, defaultSponsorSeason, formatEndDate, isEndingSoon, isPastEndDate, isSponsorOnSite, isStaleSignup,
   hasSentChange, LOGO_SIZE_LABEL, renewedEndDate, reorderSponsors, sortSponsorsByTier, sponsorHref, sponsorLabel, sponsorTierLabel, typedWebsite,
-  canPayRenewal, localDateISO, matchSponsorPackage,
+  canPayRenewal, localDateISO, matchSponsorPackage, sponsorPackageFor,
 } from '@/lib/sponsors';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
@@ -801,6 +801,12 @@ export default function AdminSponsorsPage({
                       </span>
                     )}
                     {stage !== 'ended' && onSiteBadge(sponsor)}
+                    {stage !== 'ended' && packages.length > 0 && !sponsorPackageFor(sponsor, packages) && (
+                      <span className="badge" title="Posters, tickets and the check-in screen only show sponsors on a package. Pick their package in Edit, or give them the tier and price of one."
+                        style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-muted)', border: '1px dashed var(--border-medium)', fontSize: '0.7rem' }}>
+                        Not on a package
+                      </span>
+                    )}
                     {endingSoon && daysLeft !== null && (
                       <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.7rem' }}>
                         {daysLeft === 0 ? 'Last day today' : `Ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`}
