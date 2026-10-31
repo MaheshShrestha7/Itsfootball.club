@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Club, Sponsor } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { toCsv } from '@/lib/finance';
-import { isSponsorOnSite } from '@/lib/sponsors';
-import { getAccessToken } from '@/lib/supabase/client';
+import { isSponsorOnSite, localDateISO } from '@/lib/sponsors';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import {
   Eye, MousePointerClick, Globe2, Download, Search, Users2, Smartphone, Layers, Info, Trophy, Copy, Check, ChevronDown,
 } from 'lucide-react';
@@ -72,6 +72,20 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   }, [club.id, loadFrom, loadSponsorAnalytics]);
 
   const data = getSponsorAnalytics(club.id, { since, until });
+
+  // Member perk uses in the same dates, per sponsor (perk_use_counts, migration 20261142); empty before it runs
+  const [perkUses, setPerkUses] = useState<Map<string, number>>(() => new Map());
+  useEffect(() => {
+    getSupabaseClient()?.rpc('perk_use_counts', {
+      p_club_id: club.id, p_since: since ? localDateISO(since.getTime()) : null, p_until: until ? localDateISO(until.getTime()) : null,
+    }).then(({ data: counts }) => {
+      const bySponsor = new Map<string, number>();
+      for (const c of (counts || []) as { sponsor_id: string | null; uses: number }[]) {
+        if (c.sponsor_id) bySponsor.set(c.sponsor_id, (bySponsor.get(c.sponsor_id) || 0) + Number(c.uses));
+      }
+      setPerkUses(bySponsor);
+    });
+  }, [club.id, since, until]);
 
   const rows = useMemo(() => {
     const seen = new Set(clubSponsors.map(s => s.id));
@@ -311,6 +325,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                   <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.82rem' }}>
                     <span><strong className="text-primary">{num(stats?.impressions || 0)}</strong> <span className="text-muted">seen</span></span>
                     <span><strong className="text-primary">{num(stats?.clicks || 0)}</strong> <span className="text-muted">{stats?.clicks === 1 ? 'click' : 'clicks'}</span></span>
+                    {perkUses.has(sponsor.id) && <span><strong className="text-primary">{num(perkUses.get(sponsor.id)!)}</strong> <span className="text-muted">{perkUses.get(sponsor.id) === 1 ? 'perk use' : 'perk uses'}</span></span>}
                   </div>
                   {sponsor.package_status !== 'prospect' && (
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyTheirLink(sponsor)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 36 }}>

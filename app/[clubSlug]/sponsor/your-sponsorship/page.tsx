@@ -135,7 +135,7 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
 
   const { sponsor, results, payments } = data;
   // Older servers (before OSE-9) send no atGround
-  const atGround = data.atGround ?? { places: [], checkins: null, tickets: null, passMembers: null, posterPrints: null, posterScans: null };
+  const atGround = data.atGround ?? { places: [], checkins: null, tickets: null, passMembers: null, posterPrints: null, posterScans: null, perkUses: null };
   const groundCounts = ([
     [atGround.checkins, 'Check-ins at the gate, with your logo on the poster or screen'],
     [atGround.tickets, 'Event tickets issued with your logo'],
@@ -316,6 +316,19 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                   {atGround.places.some(p => p === 'event_tickets' || p === 'member_pass' || p === 'checkin_screen') && <>Times your logo was seen on tickets, passes and the check-in screen are counted in &quot;Where people saw you&quot; above. </>}
                   {atGround.places.some(p => p === 'checkin_posters' || p === 'thanks_poster' || p === 'event_flyers') && <>For posters and flyers we count prints and QR scans only, because nobody can tell how many people walked past them. </>}
                   {atGround.places.includes('potm_graphic') && <>Shared Player of the Match graphics aren&apos;t counted.</>}
+                </p>
+              </div>
+            )}
+            {/* Member perk (migration 20261142): the business taps Mark as used when they check a pass */}
+            {atGround.perkUses !== null && atGround.perkUses !== undefined && (
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Your member perk</h3>
+                <div className="glass-panel" style={{ padding: '1rem', maxWidth: 260, marginBottom: '0.75rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.7rem', fontWeight: 900, color: 'var(--text-primary)' }}>{atGround.perkUses.toLocaleString('en-AU')}</div>
+                  <div className="text-meta">Times members used your offer</div>
+                </div>
+                <p className="text-note" style={{ margin: 0 }}>
+                  Since {formatDate(results.since)}. A use counts when you tap Mark as used after scanning a member&apos;s pass, once per member a day.
                 </p>
               </div>
             )}

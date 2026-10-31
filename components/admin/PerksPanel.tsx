@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, Gift, Pencil, Plus, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { perkBusiness, perkHiddenReason } from '@/lib/perks';
-import { formatEndDate, sponsorHref } from '@/lib/sponsors';
+import { formatEndDate, localDateISO, sponsorHref } from '@/lib/sponsors';
 import { confirmAction } from '@/components/ConfirmDialog';
 import type { ClubPerk, Sponsor } from '@/lib/supabase/types';
 
@@ -146,6 +146,8 @@ export default function PerksPanel({ club, sponsors }: { club: { id: string; slu
   const [perks, setPerks] = useState<ClubPerk[]>([]);
   // null until loaded; false when the migration hasn't run
   const [ready, setReady] = useState<boolean | null>(null);
+  // Mark as used taps in the last 12 months, per perk (perk_use_counts, migration 20261142)
+  const [uses, setUses] = useState<Map<string, number>>(() => new Map());
   const [editing, setEditing] = useState<ClubPerk | 'new' | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
   const flash = (type: 'ok' | 'error', text: string) => {
@@ -156,13 +158,15 @@ export default function PerksPanel({ club, sponsors }: { club: { id: string; slu
 
   const load = useCallback(async () => {
     if (!db) return;
-    const [{ data, error }, { data: codes }] = await Promise.all([
+    const [{ data, error }, { data: codes }, { data: counts }] = await Promise.all([
       db.from('club_perks').select('*').eq('club_id', club.id).order('sort_order'),
       db.from('club_perk_codes').select('perk_id, code').eq('club_id', club.id),
+      db.rpc('perk_use_counts', { p_club_id: club.id, p_since: localDateISO(Date.now() - 365 * 24 * 3600 * 1000) }),
     ]);
     if (error) return setReady(false);
     const byPerk = new Map(((codes || []) as { perk_id: string; code: string }[]).map(c => [c.perk_id, c.code]));
     setPerks(((data || []) as ClubPerk[]).map(p => ({ ...p, code: byPerk.get(p.id) ?? '' })));
+    setUses(new Map(((counts || []) as { perk_id: string; uses: number }[]).map(c => [c.perk_id, Number(c.uses)])));
     setReady(true);
   }, [db, club.id]);
   useEffect(() => { load(); }, [load]);
@@ -221,6 +225,7 @@ export default function PerksPanel({ club, sponsors }: { club: { id: string; slu
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                   {p.code && <span>Code: <code style={{ fontFamily: 'var(--font-mono)' }}>{p.code}</code></span>}
                   {p.ends_on && <span>Until {formatEndDate(p.ends_on)}</span>}
+                  <span>Used {uses.get(p.id) || 0} {uses.get(p.id) === 1 ? 'time' : 'times'} in the last 12 months</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.25rem' }}>
                   <span className="text-meta" style={{ marginRight: 'auto', fontWeight: 700, color: hidden ? 'var(--c-amber)' : 'var(--c-green)' }}>{hidden || 'Showing to members'}</span>

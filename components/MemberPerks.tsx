@@ -6,10 +6,23 @@ import { perkBusiness } from '@/lib/perks';
 import { sponsorHref, formatEndDate } from '@/lib/sponsors';
 import type { ClubPerk } from '@/lib/supabase/types';
 
+type Redeemed = { success: boolean; message: string };
+
 /** The club's member perks: in the member area (with codes and links), or on the verify page for
- *  the business checking a pass (`forBusiness`: what to give, no codes) */
-export default function MemberPerks({ perks, clubName, forBusiness = false }: { perks: ClubPerk[]; clubName: string; forBusiness?: boolean }) {
+ *  the business checking a pass (`forBusiness`: what to give, no codes, and a Mark as used button
+ *  when `redeem` is given) */
+export default function MemberPerks({ perks, clubName, forBusiness = false, redeem }: {
+  perks: ClubPerk[]; clubName: string; forBusiness?: boolean; redeem?: (perkId: string) => Promise<Redeemed>;
+}) {
   const [copied, setCopied] = useState<string | null>(null);
+  // Mark as used: 'busy' while it saves, then what the server said
+  const [used, setUsed] = useState<Record<string, Redeemed | 'busy'>>({});
+  const markUsed = async (perk: ClubPerk) => {
+    if (!redeem) return;
+    setUsed(u => ({ ...u, [perk.id]: 'busy' }));
+    const result = await redeem(perk.id);
+    setUsed(u => ({ ...u, [perk.id]: result }));
+  };
   const copy = async (perk: ClubPerk) => {
     try { await navigator.clipboard?.writeText(perk.code || ''); setCopied(perk.id); } catch { /* the code is on screen to type */ }
   };
@@ -50,6 +63,21 @@ export default function MemberPerks({ perks, clubName, forBusiness = false }: { 
                 )}
               </div>
             )}
+            {forBusiness && redeem && (() => {
+              const state = used[perk.id];
+              const done = state && state !== 'busy' && state.success;
+              return (<>
+                {state && state !== 'busy' && (
+                  <p role="status" style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: state.success ? 'var(--c-green)' : 'var(--c-red)' }}>{state.success ? '✓ ' : ''}{state.message}</p>
+                )}
+                {/* Stays after a failed save, so they can try again */}
+                {!done && (
+                  <button type="button" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} disabled={state === 'busy'} onClick={() => markUsed(perk)}>
+                    <Check size={14} /> {state === 'busy' ? 'Saving…' : 'Mark as used'}
+                  </button>
+                )}
+              </>);
+            })()}
             {perk.ends_on && <span className="text-meta">Until {formatEndDate(perk.ends_on)}</span>}
           </li>
         );
