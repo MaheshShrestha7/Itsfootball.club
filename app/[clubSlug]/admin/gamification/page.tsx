@@ -258,7 +258,6 @@ export default function AdminGamificationPage({
     <div className="stack" style={{ gap: '1.5rem', paddingBottom: '2rem' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
         <div style={{ minWidth: 0 }}>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>FANS & ENGAGEMENT • CLUBSCORE</span>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <Flame size={30} /> ClubScore
           </h1>

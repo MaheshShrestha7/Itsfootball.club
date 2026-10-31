@@ -113,7 +113,6 @@ export default function AdminInquiriesPage({
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>INBOX</span>
         <h1 className="stat-value">Inbox</h1>
         <p className="text-body">
           Messages from signed-in members, and enquiries sent through your public contact form.

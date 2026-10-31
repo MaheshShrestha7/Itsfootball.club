@@ -1,0 +1,383 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: brand · redesign: full
+ * paper: the club secondary over oklch(15% 0.004 250) · accent: the club primary · display: Outfit · body: Plus Jakarta Sans
+ * nav: the project's sidebar, kept and quietened; phones: one admin bar on top, the club tab bar below · signature: the Needs you queue beside the next match · states: loading, empty, error, full
+ * axes: club-tinted-dark/geometric-sans/club-primary · posture: queue-first, matchday-first while live on phones · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 · weakest: S, a stat row is still a stat row; set it as one ruled strip of figures under the queue instead of five icon cards on top */
+
+:root {
+  /* The raw values the admin's tokens mix from (this file only loads on admin pages) */
+  --adm-dark-paper: oklch(15% 0.004 250);
+  --adm-dark-paper-2: oklch(18% 0.004 250);
+  --adm-dark-paper-3: oklch(23% 0.004 250);
+  --adm-dark-sidebar: oklch(13% 0.004 250);
+  --adm-dark-ink: oklch(97% 0 0);
+  --adm-dark-ink-2: oklch(81% 0 0);
+  --adm-dark-muted: oklch(71% 0 0);
+  --adm-dark-rule: oklch(30% 0.004 250);
+  --adm-dark-rule-strong: oklch(39% 0.004 250);
+  --adm-on-accent: oklch(15% 0.02 250);
+  --adm-dark-danger: oklch(70% 0.17 25);
+  --adm-dark-danger-wash: oklch(70% 0.17 25 / 0.14);
+  --adm-dark-warn: oklch(82% 0.14 78);
+  --adm-dark-warn-wash: oklch(82% 0.14 78 / 0.14);
+  --adm-dark-scrim: oklch(10% 0.01 250 / 0.6);
+  --adm-dark-shadow: oklch(8% 0.01 250 / 0.5);
+  --adm-light-paper: oklch(98.5% 0.002 250);
+  --adm-light-paper-2: oklch(99.6% 0.002 250);
+  --adm-light-paper-3: oklch(95.5% 0.002 250);
+  --adm-light-sidebar: oklch(97% 0.002 250);
+  --adm-light-ink: oklch(20% 0 0);
+  --adm-light-ink-2: oklch(38% 0 0);
+  --adm-light-muted: oklch(47% 0 0);
+  --adm-light-rule: oklch(89.5% 0.002 250);
+  --adm-light-rule-strong: oklch(82% 0.002 250);
+  --adm-light-danger: oklch(53% 0.2 25);
+  --adm-light-danger-wash: oklch(53% 0.2 25 / 0.1);
+  --adm-light-warn: oklch(55% 0.14 70);
+  --adm-light-warn-wash: oklch(70% 0.14 70 / 0.14);
+  --adm-light-scrim: oklch(20% 0.01 250 / 0.4);
+  --adm-light-shadow: oklch(20% 0.01 250 / 0.15);
+  --adm-pill-shadow: oklch(8% 0.01 250 / 0.25);
+}
+
+/* The admin's system. Everything is scoped to .admin-shell, so the public site is untouched. The club's
+   colours arrive from .club-theme-root (ClubLayoutClient): --club-primary, -secondary, -accent,
+   --club-primary-contrast and the readable --club-ink-dark / --club-ink-light. */
+.admin-shell {
+  --admin-nav-h: 75px; /* ClubNavbar above the admin on desks: one 74px row and its border */
+  --sidebar: 252px;
+  --rail: 64px;
+  --control: 36px;
+
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --dur-micro: 120ms; --dur-short: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --radius-card: 10px; --radius-control: 8px; --radius-pill: 999px;
+  --z-sticky: 200; --z-modal: 400; --z-tooltip: 600;
+
+  /* Dark is the app's default. Surfaces are a near-black tinted by the club's secondary, the sidebar most */
+  --base-dark: var(--adm-dark-paper);
+  --color-paper: color-mix(in oklab, var(--club-secondary) 12%, var(--base-dark));
+  --color-paper-2: color-mix(in oklab, var(--club-secondary) 16%, var(--adm-dark-paper-2));
+  --color-paper-3: color-mix(in oklab, var(--club-secondary) 20%, var(--adm-dark-paper-3));
+  --color-sidebar: color-mix(in oklab, var(--club-secondary) 34%, var(--adm-dark-sidebar));
+  --color-ink: color-mix(in oklab, var(--club-secondary) 4%, var(--adm-dark-ink));
+  --color-ink-2: color-mix(in oklab, var(--club-secondary) 8%, var(--adm-dark-ink-2));
+  --color-muted: color-mix(in oklab, var(--club-secondary) 10%, var(--adm-dark-muted));
+  --color-rule: color-mix(in oklab, var(--club-secondary) 18%, var(--adm-dark-rule));
+  --color-rule-strong: color-mix(in oklab, var(--club-secondary) 18%, var(--adm-dark-rule-strong));
+  /* Primary: fills (the main button, the current page, progress); its ink is the readable version for text */
+  --color-accent: var(--club-primary);
+  --color-on-accent: var(--club-primary-contrast, var(--adm-on-accent));
+  --color-accent-ink: var(--club-ink-dark, var(--club-primary));
+  --color-accent-wash: color-mix(in oklab, var(--club-primary) 18%, transparent);
+  /* The club's accent: the one mark on the club's own game (the Matchday panel) */
+  --color-club-accent: var(--club-accent);
+  --color-danger: var(--adm-dark-danger);
+  --color-danger-wash: var(--adm-dark-danger-wash);
+  --color-warn: var(--adm-dark-warn);
+  --color-warn-wash: var(--adm-dark-warn-wash);
+  --color-scrim: var(--adm-dark-scrim);
+  --shadow-drawer: 0 0 0 1px var(--color-rule), 12px 0 32px var(--adm-dark-shadow);
+
+  /* The app's own tokens, re-pointed so every admin screen takes the club's scheme without a rewrite */
+  --bg-pitch: var(--color-paper);
+  --bg-surface: var(--color-paper-2);
+  --bg-surface-elevated: var(--color-paper-2);
+  --bg-card: var(--color-paper-2);
+  --bg-card-hover: var(--color-paper-3);
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-2);
+  --text-muted: var(--color-muted);
+  --border-subtle: var(--color-rule);
+  --border-medium: var(--color-rule-strong);
+  --border-focus: var(--color-accent-ink);
+  --club-ink: var(--color-accent-ink);
+  --text-on-primary: var(--color-on-accent);
+
+  position: relative; /* paints above the body's fixed turf wash without starting a stacking context */
+  display: grid;
+  grid-template-columns: var(--sidebar) minmax(0, 1fr);
+  min-height: calc(100dvh - var(--admin-nav-h));
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+[data-theme='light'] .admin-shell,
+.admin-shell[data-theme='light'] {
+  --color-paper: color-mix(in oklab, var(--club-secondary) 4%, var(--adm-light-paper));
+  --color-paper-2: color-mix(in oklab, var(--club-secondary) 1%, var(--adm-light-paper-2));
+  --color-paper-3: color-mix(in oklab, var(--club-secondary) 7%, var(--adm-light-paper-3));
+  --color-sidebar: color-mix(in oklab, var(--club-secondary) 7%, var(--adm-light-sidebar));
+  --color-ink: color-mix(in oklab, var(--club-secondary) 14%, var(--adm-light-ink));
+  --color-ink-2: color-mix(in oklab, var(--club-secondary) 12%, var(--adm-light-ink-2));
+  --color-muted: color-mix(in oklab, var(--club-secondary) 10%, var(--adm-light-muted));
+  --color-rule: color-mix(in oklab, var(--club-secondary) 10%, var(--adm-light-rule));
+  --color-rule-strong: color-mix(in oklab, var(--club-secondary) 12%, var(--adm-light-rule-strong));
+  --color-accent-ink: var(--club-ink-light, var(--club-primary));
+  --color-accent-wash: color-mix(in oklab, var(--club-primary) 14%, transparent);
+  --color-danger: var(--adm-light-danger);
+  --color-danger-wash: var(--adm-light-danger-wash);
+  --color-warn: var(--adm-light-warn);
+  --color-warn-wash: var(--adm-light-warn-wash);
+  --color-scrim: var(--adm-light-scrim);
+  --shadow-drawer: 0 0 0 1px var(--color-rule), 12px 0 32px var(--adm-light-shadow);
+}
+/* Touch screens: every target at least 44px */
+@media (pointer: coarse) { .admin-shell { --control: 44px; } }
+.admin-shell.is-rail { grid-template-columns: var(--rail) minmax(0, 1fr); }
+
+/* ---------- Sidebar ---------- */
+.admin-sidebar {
+  position: sticky;
+  top: var(--admin-nav-h);
+  align-self: start;
+  height: calc(100dvh - var(--admin-nav-h));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-sm);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-sidebar);
+  border-right: 1px solid var(--color-rule);
+}
+.admin-club { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs); }
+.admin-crest { width: 36px; height: 36px; flex: none; border-radius: var(--radius-control); object-fit: cover; background: var(--color-paper-3); }
+.admin-crest.is-small { width: 28px; height: 28px; }
+.admin-club-name { flex: 1; min-width: 0; font-weight: 600; color: var(--color-ink); line-height: 1.25; }
+.admin-club-name > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-club-name small { display: block; font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); }
+.admin-search { margin-bottom: calc(var(--space-md) * -1); } /* AdminSearch brings its own bottom margin */
+.admin-search .form-input { font-size: max(16px, var(--text-sm)) !important; height: var(--control) !important; }
+
+.admin-fold-all { align-self: flex-end; display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: 28px; padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; cursor: pointer; }
+
+.admin-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
+.admin-nav-group-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-xs); min-height: 28px; padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; text-align: left; cursor: pointer; }
+.admin-nav-group-toggle .admin-chevron { transition: transform var(--dur-micro) var(--ease-out); }
+.admin-nav-group-toggle[aria-expanded='false'] .admin-chevron { transform: rotate(-90deg); }
+.admin-nav-list { display: flex; flex-direction: column; gap: 1px; }
+.admin-nav-link { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-sm); min-height: var(--control); padding: 0 var(--space-xs); border-radius: var(--radius-control); color: var(--color-ink-2); font-size: var(--text-sm); font-weight: 500; text-decoration: none; -webkit-tap-highlight-color: transparent; transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.admin-nav-link svg { flex: none; color: var(--color-muted); }
+.admin-nav-link:active { background: var(--color-rule); }
+.admin-nav-link[aria-current='page'] { background: var(--color-accent-wash); color: var(--color-ink); font-weight: 600; }
+.admin-nav-link[aria-current='page'] svg { color: var(--color-accent-ink); }
+.admin-nav-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-count { flex: none; min-width: 20px; padding: 0 var(--space-xs); border-radius: var(--radius-pill); font-size: var(--text-xs); font-weight: 600; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; background: var(--color-danger-wash); color: var(--color-danger); }
+.admin-count.is-note { background: var(--color-paper-3); color: var(--color-muted); }
+
+.admin-nav-parent { display: flex; align-items: stretch; gap: var(--space-3xs); }
+.admin-nav-expand { flex: none; display: inline-grid; place-items: center; width: 32px; min-height: var(--control); padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); cursor: pointer; }
+.admin-nav-expand .admin-chevron { transition: transform var(--dur-micro) var(--ease-out); }
+.admin-nav-expand[aria-expanded='false'] .admin-chevron { transform: rotate(-90deg); }
+.admin-nav-children { display: flex; flex-direction: column; gap: 1px; margin: var(--space-3xs) 0 var(--space-2xs) 20px; padding-left: var(--space-sm); border-left: 1px solid var(--color-rule); }
+.admin-nav-child { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); min-height: max(32px, var(--control) - 4px); padding: 0 var(--space-xs); border-radius: var(--radius-control); color: var(--color-ink-2); font-size: var(--text-sm); text-decoration: none; transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.admin-nav-child[aria-current='page'] { color: var(--color-accent-ink); font-weight: 600; background: var(--color-accent-wash); }
+
+.admin-sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--space-2xs); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); }
+.admin-me { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs); }
+.admin-avatar { width: 32px; height: 32px; flex: none; border-radius: var(--radius-pill); object-fit: cover; background: var(--color-paper-3); color: var(--color-ink); display: grid; place-items: center; font-size: var(--text-xs); font-weight: 600; }
+.admin-me-name { flex: 1; min-width: 0; line-height: 1.25; font-weight: 600; color: var(--color-ink); }
+.admin-me-name > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-me-name small { display: block; font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); }
+
+.admin-icon-btn { flex: none; display: inline-grid; place-items: center; width: var(--control); height: var(--control); padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.admin-icon-btn:active { background: var(--color-rule); }
+.admin-quiet-btn { display: flex; align-items: center; gap: var(--space-sm); min-height: var(--control); padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-ink-2); font: inherit; font-size: var(--text-sm); font-weight: 500; text-decoration: none; text-align: left; cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.admin-quiet-btn svg { flex: none; color: var(--color-muted); }
+
+/* Rail: the collapsed desktop menu. Labels stay in each link for screen readers and show as a tooltip */
+.is-rail .admin-sidebar { padding-inline: var(--space-xs); align-items: center; }
+.is-rail .admin-club { flex-direction: column; }
+.is-rail .admin-nav-group + .admin-nav-group { border-top: 1px solid var(--color-rule); padding-top: var(--space-xs); }
+.is-rail .admin-nav-link { justify-content: center; width: 44px; flex: none; padding: 0; }
+.is-rail .admin-nav-label,
+.is-rail .admin-nav-link .admin-count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.is-rail .admin-nav-link.has-count::after { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--color-danger); }
+.is-rail .admin-sidebar-foot { align-items: center; }
+.is-rail .admin-me { flex-direction: column; }
+.is-rail .admin-quiet-btn { justify-content: center; width: 44px; padding: 0; }
+.admin-tip { position: fixed; z-index: var(--z-tooltip); padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-control); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; pointer-events: none; transform: translateY(-50%); }
+
+/* ---------- Phones and tablets: one admin bar on top, the menu in a drawer, the club tab bar below ---------- */
+.admin-topbar, .admin-drawer, .admin-scrim { display: none; }
+@media (max-width: 60rem) {
+  .admin-shell, .admin-shell.is-rail { grid-template-columns: minmax(0, 1fr); min-height: 100dvh; }
+  .admin-shell > .admin-sidebar { display: none; }
+  .admin-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-2xs); padding: var(--space-2xs) var(--space-xs); padding-top: max(var(--space-2xs), env(safe-area-inset-top)); background: var(--color-sidebar); border-bottom: 1px solid var(--color-rule); }
+  .admin-topbar-menu { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: var(--control); padding: 0 var(--space-xs); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); background: var(--color-paper-2); color: var(--color-ink); cursor: pointer; }
+  .admin-topbar-title { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-xs); font-weight: 600; color: var(--color-ink); line-height: 1.2; text-align: center; }
+  .admin-topbar-title > span { min-width: 0; }
+  .admin-topbar-title span span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .admin-topbar-title small { display: block; font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .admin-drawer { position: fixed; inset: 0 auto 0 0; z-index: var(--z-modal); width: min(320px, 86%); height: 100dvh; display: flex; padding-top: max(var(--space-md), env(safe-area-inset-top)); padding-bottom: max(var(--space-md), env(safe-area-inset-bottom)); box-shadow: var(--shadow-drawer); transform: translateX(-104%); visibility: hidden; transition: transform var(--dur-short) var(--ease-out), visibility 0s linear var(--dur-short); }
+  .admin-drawer > .admin-sidebar { position: static; flex: 1; min-height: 0; height: auto; border: 0; }
+  .admin-drawer.is-open { transform: none; visibility: visible; transition: transform var(--dur-short) var(--ease-out), visibility 0s; }
+  .admin-scrim.is-open { display: block; position: fixed; inset: 0; z-index: calc(var(--z-modal) - 1); background: var(--color-scrim); }
+  .admin-main { padding-bottom: var(--space-md); }
+  /* The club navbar would be a second menu on top: the admin bar and the club tab bar carry the way back */
+  .club-theme-root[data-admin] .club-navbar { display: none; }
+}
+body.admin-drawer-open { overflow: clip; }
+
+/* ---------- Page ---------- */
+.admin-main { min-width: 0; }
+.admin-page { max-width: 1120px; margin-inline: auto; padding: var(--space-xl) var(--space-xl) var(--space-2xl); }
+@media (max-width: 60rem) { .admin-page { padding: var(--space-md) var(--space-md) var(--space-xl); } }
+.admin-notice { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-md); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper-2); color: var(--color-ink-2); font-size: var(--text-sm); }
+.admin-locked { max-width: 520px; margin: var(--space-2xl) auto; padding: var(--space-xl); display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); text-align: center; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper-2); }
+.admin-locked h2 { font-size: var(--text-lg); font-weight: 600; text-wrap: balance; }
+.admin-locked p { color: var(--color-ink-2); }
+
+/* Every screen's heading, whatever inline size it was given: one scale, one weight */
+.admin-page h1 { font-family: var(--font-heading) !important; font-size: var(--text-2xl) !important; font-weight: 600 !important; letter-spacing: -0.01em !important; line-height: 1.15 !important; overflow-wrap: break-word; min-width: 0; }
+.admin-page h1 svg { width: 24px; height: 24px; color: var(--color-accent-ink); }
+@media (max-width: 60rem) { .admin-page h1 { font-size: var(--text-xl) !important; } }
+
+/* ---------- The app's shared components, in the admin's system ---------- */
+.admin-shell .glass-panel { background: var(--color-paper-2); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.admin-shell .glass-panel:hover { border-color: var(--color-rule); }
+.admin-shell .btn { min-height: var(--control); border-radius: var(--radius-control); font-size: var(--text-sm); box-shadow: none; transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out); }
+.admin-shell .btn:active { transform: translateY(1px); }
+.admin-shell .btn-sm { min-height: max(32px, var(--control) - 4px); }
+.admin-shell .btn-primary { background: var(--color-accent); color: var(--color-on-accent); border: 1px solid var(--color-accent); }
+.admin-shell .btn-secondary { background: var(--color-paper-2); color: var(--color-ink); border: 1px solid var(--color-rule-strong); }
+.admin-shell .btn-outline { background: transparent; color: var(--color-accent-ink); border: 1px solid var(--color-accent); }
+.admin-shell .btn-danger { background: var(--color-danger-wash); color: var(--color-danger); border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent); }
+.admin-shell .btn:disabled,
+.admin-shell .btn[aria-disabled='true'] { opacity: 1; background: var(--color-paper-3); color: var(--color-muted); border-color: var(--color-rule); cursor: not-allowed; transform: none; }
+.admin-shell .badge { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.admin-shell .badge-primary { background: var(--color-accent-wash); color: var(--color-accent-ink); border: 1px solid color-mix(in oklab, var(--color-accent) 30%, transparent); }
+.admin-shell .badge-live { background: var(--color-danger-wash); color: var(--color-danger); border: 1px solid color-mix(in oklab, var(--color-danger) 35%, transparent); }
+.admin-shell .badge-gold { background: var(--color-warn-wash); color: var(--color-warn); border: 1px solid color-mix(in oklab, var(--color-warn) 35%, transparent); }
+.admin-shell .form-input,
+.admin-shell .form-select,
+.admin-shell .form-textarea { background: var(--color-paper); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); color: var(--color-ink); }
+.admin-shell .form-input:focus,
+.admin-shell .form-select:focus,
+.admin-shell .form-textarea:focus { border-color: var(--color-accent); box-shadow: none; }
+.admin-shell .admin-save-banner.is-error { background: var(--color-danger-wash); border: 1px solid color-mix(in oklab, var(--color-danger) 50%, transparent); }
+.admin-shell .admin-save-banner.is-waiting { background: var(--color-warn-wash); border: 1px solid color-mix(in oklab, var(--color-warn) 50%, transparent); }
+.admin-shell .admin-save-pill { background: var(--color-paper-2); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--color-rule-strong); box-shadow: 0 6px 20px var(--adm-pill-shadow); }
+
+/* Hover only where a pointer can hover, so a tap doesn't leave a row lit */
+@media (hover: hover) {
+  .admin-fold-all:hover,
+  .admin-nav-group-toggle:hover,
+  .admin-nav-expand:hover { color: var(--color-ink); }
+  .admin-nav-link:hover,
+  .admin-nav-child:hover,
+  .admin-quiet-btn:hover,
+  .admin-icon-btn:hover { background: var(--color-paper-3); color: var(--color-ink); }
+  .admin-icon-btn.is-danger:hover { color: var(--color-danger); }
+  .admin-shell .glass-panel-interactive:hover { transform: none; box-shadow: none; border-color: var(--color-rule-strong); background: var(--color-paper-3); }
+  .admin-shell .btn-primary:hover { transform: none; box-shadow: none; filter: none; background: color-mix(in oklab, var(--color-accent) 86%, var(--color-ink)); border-color: transparent; }
+  .admin-shell .btn-secondary:hover { transform: none; background: var(--color-paper-3); border-color: var(--color-muted); }
+  .admin-shell .btn-outline:hover { box-shadow: none; background: var(--color-accent-wash); }
+  .admin-shell .btn-danger:hover { background: var(--color-danger); color: var(--color-paper); }
+  .admin-dash-queue a:hover { background: var(--color-paper-3); }
+  .admin-dash-queue a:hover .admin-dash-go { color: var(--color-accent-ink); }
+  .admin-dash-link:hover,
+  .admin-dash-figures a:hover { text-decoration: underline; }
+  .admin-setup-steps a:hover { border-color: var(--color-accent); }
+}
+
+/* ---------- Dashboard ---------- */
+.admin-dash { display: flex; flex-direction: column; gap: var(--space-lg); }
+@media (max-width: 60rem) { .admin-dash { gap: var(--space-md); } }
+.admin-dash-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-md); }
+.admin-dash-head p { margin-top: var(--space-2xs); color: var(--color-ink-2); font-size: var(--text-sm); }
+.admin-dash-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+/* Scanning passes is a phone job: there it is the main button and comes first; on a desk it sits beside the rest */
+@media (max-width: 60rem) {
+  .admin-dash-head { gap: var(--space-sm); }
+  .admin-dash-head p { display: none; }
+  .admin-dash-actions { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+  .admin-shell .admin-dash-scan { order: -1; background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+}
+
+.admin-panel { min-width: 0; background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-card); }
+.admin-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-md) var(--space-md) var(--space-sm); }
+.admin-panel-head h2 { margin: 0; font-family: var(--font-body); font-size: var(--text-md); font-weight: 600; letter-spacing: 0; line-height: 1.3; color: var(--color-ink); }
+.admin-panel-head .admin-meta { color: var(--color-muted); font-size: var(--text-xs); font-weight: 500; }
+.admin-dash-link { color: var(--color-accent-ink); font-size: var(--text-xs); font-weight: 600; text-decoration: none; padding-block: var(--space-xs); }
+
+.admin-dash-lead { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-lg); align-items: start; }
+.admin-dash-lead > :only-child { grid-column: 1 / -1; }
+@media (max-width: 70rem) {
+  .admin-dash-lead { grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+  /* While a match is live the score and Match Centre come first */
+  .admin-dash-lead.is-live .admin-matchday { order: -1; }
+}
+
+/* Needs you: the signature */
+.admin-dash-queue { list-style: none; margin: 0; padding: 0 var(--space-xs) var(--space-xs); }
+.admin-dash-queue li + li { border-top: 1px solid var(--color-rule); }
+.admin-dash-queue a { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); min-height: 48px; padding: var(--space-xs); border-radius: var(--radius-control); color: var(--color-ink); text-decoration: none; font-size: var(--text-sm); -webkit-tap-highlight-color: transparent; transition: background-color var(--dur-micro) var(--ease-out); }
+.admin-dash-queue a:active { background: var(--color-paper-3); }
+.admin-dash-mark { display: grid; place-items: center; color: var(--color-muted); }
+.admin-dash-queue .is-urgent .admin-dash-mark { color: var(--color-danger); }
+.admin-dash-go { color: var(--color-muted); font-size: var(--text-xs); font-weight: 600; }
+
+/* Matchday */
+.admin-matchday { border-top: 3px solid var(--color-club-accent); }
+.admin-matchday.is-live { border-color: var(--color-danger); }
+.admin-match { padding: 0 var(--space-md) var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); }
+.admin-kicker { font-size: var(--text-xs); color: var(--color-muted); }
+.admin-fixture { margin: 0; font-family: var(--font-heading); font-size: var(--text-xl); font-weight: 600; line-height: 1.15; color: var(--color-ink); overflow-wrap: anywhere; }
+.admin-fixture .admin-vs { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 500; color: var(--color-muted); }
+.admin-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); gap: var(--space-sm); margin: 0; }
+.admin-facts dt { font-size: var(--text-xs); color: var(--color-muted); }
+.admin-facts dd { margin: 0; font-weight: 600; color: var(--color-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.admin-match-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+@media (max-width: 40rem) { .admin-match-actions { display: grid; grid-template-columns: minmax(0, 1fr); } }
+.admin-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-md); padding: var(--space-md) 0; border-block: 1px solid var(--color-rule); }
+.admin-score-side { font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+.admin-score-side small { display: block; font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); }
+.admin-score-side:last-child { text-align: right; }
+.admin-goals { font-family: var(--font-heading); font-size: var(--text-3xl); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--color-ink); white-space: nowrap; }
+.admin-live-tag { color: var(--color-danger); font-size: var(--text-xs); font-weight: 600; }
+
+/* Figures: one ruled strip */
+.admin-dash-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); margin: 0; }
+.admin-dash-figures > div { min-width: 0; display: flex; flex-direction: column; gap: var(--space-2xs); padding: var(--space-md); box-shadow: -1px 0 0 var(--color-rule), 0 -1px 0 var(--color-rule); }
+.admin-dash-figures dt { font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); }
+.admin-dash-figures dd { margin: 0; font-family: var(--font-heading); font-size: var(--text-2xl); font-weight: 600; line-height: 1.1; color: var(--color-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.admin-dash-figures dd.is-live { color: var(--color-danger); }
+.admin-dash-figures .admin-note { font-size: var(--text-xs); color: var(--color-ink-2); }
+.admin-dash-figures a { margin-top: auto; padding-block: var(--space-2xs); color: var(--color-accent-ink); font-size: var(--text-xs); font-weight: 600; text-decoration: none; }
+.admin-dash-figures-wrap { overflow: hidden; } /* the strip's outer edge rules fall under the panel border */
+
+.admin-log { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.admin-log th { padding: 0 var(--space-md) var(--space-xs); text-align: left; font-size: var(--text-xs); font-weight: 500; color: var(--color-muted); }
+.admin-log th:last-child { text-align: right; }
+.admin-log td { padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--color-rule); color: var(--color-ink); vertical-align: top; }
+.admin-log td.admin-when { color: var(--color-muted); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+/* Phones: each entry on two lines instead of a squeezed table */
+@media (max-width: 40rem) {
+  .admin-log thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .admin-log tr { display: flex; flex-direction: column; gap: var(--space-3xs); padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--color-rule); }
+  .admin-log td { padding: 0; border: 0; }
+  .admin-log td.admin-when { text-align: left; font-size: var(--text-xs); }
+}
+
+.admin-empty { padding: var(--space-lg) var(--space-md); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); color: var(--color-ink-2); font-size: var(--text-sm); }
+
+/* Getting started */
+.admin-setup { padding: 0 var(--space-md) var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+.admin-setup-bar { height: 6px; border-radius: var(--radius-pill); background: var(--color-paper-3); overflow: hidden; }
+.admin-setup-bar > span { display: block; height: 100%; background: var(--color-accent); transform-origin: left; transition: transform var(--dur-short) var(--ease-out); }
+.admin-setup-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--space-xs); }
+.admin-setup-steps li > a,
+.admin-setup-steps li > div { display: flex; align-items: center; gap: var(--space-sm); min-height: 56px; height: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-rule); border-radius: var(--radius-control); color: var(--color-ink); text-decoration: none; transition: border-color var(--dur-micro) var(--ease-out); }
+.admin-setup-steps svg { flex: none; color: var(--color-muted); }
+.admin-setup-steps .is-done svg { color: var(--color-accent-ink); }
+.admin-setup-steps b { display: block; font-weight: 600; font-size: var(--text-sm); }
+.admin-setup-steps .is-done b { color: var(--color-muted); font-weight: 500; text-decoration: line-through; }
+.admin-setup-steps small { display: block; font-size: var(--text-xs); color: var(--color-muted); }
+.admin-setup-steps .admin-step-text { flex: 1; min-width: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell *, .admin-shell *::before, .admin-shell *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

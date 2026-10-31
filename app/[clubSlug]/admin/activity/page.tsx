@@ -79,7 +79,6 @@ export default function AdminActivityPage({ params }: { params: Promise<{ clubSl
   return (
     <div className="stack">
       <div>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>CLUB SETTINGS • RECORDS</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <History size={30} /> Activity Log
         </h1>

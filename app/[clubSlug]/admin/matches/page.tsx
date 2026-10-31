@@ -627,9 +627,9 @@ export default function AdminMatchesPage({
 
       {/* On a phone the five tiles are one line, so the fixtures start on the first screen */}
       <p className="admin-kpi-line text-meta">
-        {totalCount} fixtures · <strong style={{ color: 'var(--c-green)' }}>{upcomingCount} upcoming</strong> · {completedCount} played
-        {heroFeaturedCount > 0 && <> · {heroFeaturedCount} on home page</>}
-        {qrEnabledCount > 0 && <> · {qrEnabledCount} with door QR</>}
+        {totalCount} fixtures, <strong style={{ color: 'var(--club-ink)' }}>{upcomingCount} upcoming</strong>, {completedCount} played
+        {heroFeaturedCount > 0 && <>, {heroFeaturedCount} on home page</>}
+        {qrEnabledCount > 0 && <>, {qrEnabledCount} with door QR</>}
       </p>
 
       {/* KPI Metric Cards */}

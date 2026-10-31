@@ -168,7 +168,6 @@ export default function AdminScannerPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>MATCHDAY</span>
         <h1 className="stat-value">
           Pass Scanner & Check-In
         </h1>

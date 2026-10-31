@@ -1893,215 +1893,6 @@ textarea {
   }
 }
 
-/* Admin Layout Mobile Adaptations */
-.admin-layout-container {
-  display: flex;
-  min-height: calc(100vh - 120px);
-  background: var(--bg-pitch);
-  position: relative;
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-.admin-desktop-sidebar {
-  width: 290px;
-  border-right: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1.5rem 1rem;
-  flex-shrink: 0;
-  transition: width 0.2s ease, padding 0.2s ease;
-}
-
-/* Collapsed desktop sidebar: an icon rail, labels shown as tooltips */
-.admin-desktop-sidebar.is-collapsed {
-  width: 76px;
-  padding: 1.25rem 0.6rem;
-}
-
-.admin-sidebar-toggle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.admin-sidebar-toggle:hover,
-.admin-sidebar-toggle:focus-visible {
-  color: var(--text-primary);
-  border-color: var(--border-medium);
-}
-
-/* Menu group heading that folds its links away */
-.admin-nav-section-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 0.5rem;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  text-align: left;
-  color: var(--text-muted);
-  padding: 0.35rem 0.65rem;
-  margin-bottom: 0.15rem;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.admin-nav-section-toggle:hover,
-.admin-nav-section-toggle:focus-visible {
-  color: var(--text-primary);
-  background: rgba(var(--tint-rgb), 0.04);
-}
-
-.admin-nav-chevron {
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.admin-nav-chevron.is-closed {
-  transform: rotate(-90deg);
-}
-
-.admin-nav-fold-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  padding: 0.3rem 0.4rem;
-  border-radius: var(--radius-sm);
-}
-
-.admin-nav-fold-all:hover,
-.admin-nav-fold-all:focus-visible {
-  color: var(--text-primary);
-}
-
-/* Something in this (folded or icon-only) entry needs attention */
-.admin-nav-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #EF4444;
-  box-shadow: 0 0 0 2px var(--bg-surface);
-  flex-shrink: 0;
-}
-
-/* Sub-items (a page's tabs or sections) under the menu item you're on */
-.admin-nav-parent {
-  display: flex;
-  align-items: stretch;
-  gap: 0.2rem;
-}
-
-.admin-nav-expand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 32px;
-  min-height: 42px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.admin-nav-expand:hover,
-.admin-nav-expand:focus-visible {
-  color: var(--text-primary);
-  background: rgba(var(--tint-rgb), 0.04);
-}
-
-.admin-nav-children {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  margin: 0.1rem 0 0.35rem 1.45rem;
-  padding-left: 0.6rem;
-  border-left: 1px solid var(--border-subtle);
-}
-
-.admin-nav-child {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-height: 36px;
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.admin-nav-child:hover,
-.admin-nav-child:focus-visible {
-  color: var(--text-primary);
-  background: rgba(var(--tint-rgb), 0.04);
-}
-
-.admin-nav-child.is-active {
-  color: var(--club-ink);
-  font-weight: 700;
-  background: rgba(var(--tint-rgb), 0.04);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .admin-desktop-sidebar,
-  .admin-nav-chevron {
-    transition: none;
-  }
-}
-
-.admin-mobile-subbar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: rgba(var(--dk-14-20-30), 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-subtle);
-  position: relative;
-  z-index: 30;
-  width: 100%;
-}
-
-/* Smallest phones: the menu button drops its text so the page title has room */
-@media (max-width: 359px) {
-  .admin-subbar-menu-label {
-    display: none;
-  }
-}
-
 .admin-match-center-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2168,7 +1959,7 @@ textarea {
 .mc-badge-muted { background: rgba(var(--tint-rgb), 0.06); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
 .mc-context-note { font-size: 0.78rem; color: var(--text-muted); }
 .mc-pitch-board-wrap { margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--border-subtle); }
-.mc-pitch-board-title { display: block; margin-bottom: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.mc-pitch-board-title { display: block; margin-bottom: 0.5rem; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); }
 .mc-pitch-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.5rem; }
 .mc-pitch-card {
   display: flex;
@@ -2185,7 +1976,7 @@ textarea {
 }
 .mc-pitch-card.is-open { border-color: #F59E0B; background: rgba(245, 158, 11, 0.08); }
 .mc-pitch-card.is-next { border-style: dashed; }
-.mc-pitch-card-top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.mc-pitch-card-top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); }
 .mc-pitch-card-min { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--c-red); }
 .mc-pitch-card-min .pulse-dot { width: 6px; height: 6px; }
 .mc-pitch-card-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; }
@@ -2205,7 +1996,7 @@ textarea {
   text-align: left;
   cursor: pointer;
 }
-.mc-next-game-when { display: block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-amber); }
+.mc-next-game-when { display: block; font-size: 0.7rem; font-weight: 800; color: var(--c-amber); }
 .mc-next-game-teams { display: block; margin-top: 0.15rem; font-weight: 700; font-size: 0.9rem; }
 @media (max-width: 640px) {
   .mc-kind-switch { max-width: none; }
@@ -2253,16 +2044,6 @@ textarea {
 /* Edit-level admin pages: deleting needs Full */
 .admin-no-delete [data-needs-full] {
   display: none !important; /* beats the buttons' own inline display */
-}
-
-.admin-main-canvas {
-  flex: 1;
-  padding: 2.5rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 /* Admin: background save state (components/admin/AdminSaveStatus.tsx) */
@@ -2340,27 +2121,6 @@ textarea {
 }
 
 @media (max-width: 900px) {
-  .admin-layout-container {
-    flex-direction: column;
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  .admin-desktop-sidebar {
-    display: none !important;
-  }
-
-  .admin-mobile-subbar {
-    display: flex !important;
-    gap: 0.5rem;
-  }
-
-  .admin-main-canvas {
-    padding: 1.25rem 0.75rem !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-  }
-
   .admin-match-card-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
@@ -3123,7 +2883,7 @@ dialog.form-dialog::backdrop {
 
 /* Month */
 .admin-cal-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-card); }
-.admin-cal-dow { padding: 0.55rem 0.6rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); }
+.admin-cal-dow { padding: 0.55rem 0.6rem; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); }
 .admin-cal-day { min-height: 112px; padding: 6px 7px; border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); min-width: 0; overflow: hidden; }
 .admin-cal-day:nth-child(7n) { border-right: 0; }
 .admin-cal-day.is-out { background: rgba(var(--shade-rgb), 0.18); }
@@ -3138,7 +2898,7 @@ dialog.form-dialog::backdrop {
 .admin-cal-week-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-card); }
 .admin-cal-week { display: grid; grid-template-columns: 52px repeat(7, minmax(110px, 1fr)); min-width: 820px; }
 .admin-cal-wh { padding: 0.5rem; text-align: center; border-left: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
-.admin-cal-wh small { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.admin-cal-wh small { display: block; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); }
 .admin-cal-wh span { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
 .admin-cal-wh.is-today { background: rgba(var(--club-primary-rgb), 0.06); }
 .admin-cal-wh.is-today span { color: var(--club-ink); }
@@ -3171,7 +2931,7 @@ dialog.form-dialog::backdrop {
 .admin-cal-pop h3 { font-family: var(--font-heading); font-size: 1.05rem; margin: 0.4rem 1.5rem 0.6rem 0; }
 .admin-cal-pop p { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.35rem; font-size: 0.82rem; color: var(--text-secondary); }
 .admin-cal-pop-status { justify-content: space-between; }
-.admin-cal-pop-tag { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); background: color-mix(in srgb, var(--k) 18%, transparent); color: var(--text-primary); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.admin-cal-pop-tag { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); background: color-mix(in srgb, var(--k) 18%, transparent); color: var(--text-primary); font-size: 0.66rem; font-weight: 700; }
 .admin-cal-pop-x { position: absolute; top: 0.6rem; right: 0.6rem; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 4px; }
 .admin-cal-pop-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .admin-cal-pop-links .btn { flex: 1; justify-content: center; }
@@ -4281,82 +4041,6 @@ dialog.form-dialog::backdrop {
   color: var(--club-ink);
 }
 
-/* ===== Admin dashboard: "Needs you" card ===== */
-.needs-you {
-  padding: 1.25rem 1.25rem 1rem;
-  margin-bottom: 1.5rem;
-  border-color: rgba(var(--club-primary-rgb), 0.4);
-  box-shadow: 0 0 0 1px rgba(var(--club-primary-rgb), 0.12), var(--shadow-sm);
-}
-.needs-you-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-.needs-you-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
-}
-.needs-you-title svg { color: var(--club-ink); }
-.needs-you-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.needs-you-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 48px;
-  padding: 0.6rem 0.85rem;
-  border-radius: 10px;
-  background: rgba(var(--shade-rgb), 0.25);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.needs-you-row:hover { border-color: rgba(var(--club-primary-rgb), 0.45); }
-.needs-you-row-urgent { border-left: 3px solid var(--club-primary); }
-.needs-you-count {
-  flex-shrink: 0;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 0.4rem;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  background: rgba(var(--club-primary-rgb), 0.16);
-  color: var(--club-ink);
-}
-.needs-you-text { flex: 1; min-width: 0; }
-.needs-you-arrow { flex-shrink: 0; color: var(--text-muted); }
-
-/* Phone Admin Menu button: a dot when something in the menu needs attention */
-.admin-menu-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--c-red);
-  box-shadow: 0 0 0 2px var(--bg-surface);
-}
-
 /* ===== Match page before kick-off ===== */
 .prematch {
   display: grid;
@@ -4455,8 +4139,6 @@ dialog.form-dialog::backdrop {
 .admin-fixture-heading {
   font-size: 0.78rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--club-ink);
   margin: 0.5rem 0 -0.25rem;
 }
@@ -4472,8 +4154,6 @@ dialog.form-dialog::backdrop {
 .admin-match-date-type {
   font-size: 0.62rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--text-muted);
   text-align: center;
   max-width: 76px;

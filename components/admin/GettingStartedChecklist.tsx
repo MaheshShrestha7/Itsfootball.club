@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, Copy, X, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle, Copy, X } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
@@ -92,64 +92,54 @@ export default function GettingStartedChecklist({ clubId, clubSlug }: { clubId: 
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const row = (done: boolean, children: React.ReactNode, key: string) => (
-    <li key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.7rem', padding: '0.7rem 0.85rem', borderRadius: '10px', background: 'rgba(var(--tint-rgb), 0.03)', border: '1px solid var(--border-subtle)', opacity: done ? 0.7 : 1 }}>
-      <span style={{ color: done ? 'var(--c-green)' : 'var(--text-muted)', flexShrink: 0, marginTop: '0.1rem' }}>
-        {done ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-      </span>
-      {children}
-    </li>
-  );
-
   return (
-    <section className="glass-panel" aria-labelledby="getting-started-title" style={{ padding: '1.5rem', marginBottom: '2rem', borderColor: 'var(--club-primary)' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+    <section className="admin-panel" aria-labelledby="getting-started-title">
+      <div className="admin-panel-head">
         <div>
-          <h2 id="getting-started-title" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            Get your club ready
-          </h2>
-          <p className="text-meta" style={{ marginTop: '0.25rem' }}>
-            {doneCount} of {total} done. Each step ticks itself off when it&apos;s set up.
-          </p>
+          <h2 id="getting-started-title">Get your club ready</h2>
+          <p className="admin-meta">{doneCount} of {total} done. Each step ticks itself off when it&apos;s set up.</p>
         </div>
         <button
           type="button"
           onClick={() => { writeFlag(DISMISS_KEY(clubId)); setDismissed(true); }}
-          className="btn btn-secondary btn-sm"
+          className="admin-quiet-btn"
           aria-label="Hide the getting-started list"
-          title="Hide this list"
         >
-          <X size={14} /> Hide
+          <X size={14} aria-hidden="true" /> Hide
         </button>
       </div>
 
-      <div role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={doneCount} aria-label="Setup progress"
-        style={{ height: '6px', borderRadius: '99px', background: 'rgba(var(--tint-rgb), 0.08)', overflow: 'hidden', marginBottom: '1rem' }}>
-        <div style={{ width: `${(doneCount / total) * 100}%`, height: '100%', background: 'var(--club-primary)', transition: 'width 0.4s ease' }} />
-      </div>
+      <div className="admin-setup">
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={doneCount} aria-label="Setup progress" className="admin-setup-bar">
+          <span style={{ transform: `scaleX(${doneCount / total})` }} />
+        </div>
 
-      <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.5rem' }}>
-        {steps.map(s => row(s.done, (
-          <Link href={s.href} style={{ flex: 1, minWidth: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-            <span>
-              <span style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', textDecoration: s.done ? 'line-through' : 'none' }}>{s.label}</span>
-              <span className="text-meta">{s.hint}</span>
-            </span>
-            {!s.done && <ArrowRight size={16} color="var(--club-ink)" style={{ flexShrink: 0 }} />}
-          </Link>
-        ), s.label))}
-        {row(shared, (
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span>
-              <span style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', textDecoration: shared ? 'line-through' : 'none' }}>Share your club link</span>
-              <span className="text-meta">Send it to players and parents so they can join.</span>
-            </span>
-            <button type="button" onClick={shareLink} className="btn btn-secondary btn-sm">
-              <Copy size={14} /> {copied ? 'Copied' : 'Copy link'}
-            </button>
-          </div>
-        ), 'share')}
-      </ol>
+        <ol className="admin-setup-steps">
+          {steps.map(s => (
+            <li key={s.label} className={s.done ? 'is-done' : undefined}>
+              <Link href={s.href}>
+                {s.done ? <CheckCircle2 size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}
+                <span className="admin-step-text">
+                  <b>{s.label}{s.done && <span className="sr-only"> (done)</span>}</b>
+                  <small>{s.hint}</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+          <li className={shared ? 'is-done' : undefined}>
+            <div>
+              {shared ? <CheckCircle2 size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}
+              <span className="admin-step-text">
+                <b>Share your club link{shared && <span className="sr-only"> (done)</span>}</b>
+                <small>Send it to players and parents so they can join.</small>
+              </span>
+              <button type="button" onClick={shareLink} className="btn btn-secondary btn-sm">
+                <Copy size={14} aria-hidden="true" /> {copied ? 'Copied' : 'Copy link'}
+              </button>
+            </div>
+          </li>
+        </ol>
+      </div>
     </section>
   );
 }

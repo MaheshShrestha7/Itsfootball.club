@@ -109,7 +109,6 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>CLUB GOVERNANCE • FINANCE</span>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <Wallet size={30} /> Finance
           </h1>

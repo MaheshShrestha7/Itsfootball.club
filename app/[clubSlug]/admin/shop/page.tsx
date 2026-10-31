@@ -65,7 +65,6 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
   return (
     <div className="stack">
       <div>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>FINANCE • MERCHANDISE</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <ShoppingBag size={30} /> Club Shop
         </h1>

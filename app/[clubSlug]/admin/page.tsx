@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect } from 'react';
+import { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
@@ -11,35 +11,12 @@ import { defaultFixture } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import { isPlayerMember } from '@/lib/supabase/types';
-import {
-  Users,
-  Radio,
-  Calendar,
-  CreditCard,
-  TrendingUp,
-  Award,
-  Settings,
-  ArrowRight,
-  Shield,
-  QrCode,
-  Activity,
-  Plus,
-  Sparkles,
-  CalendarDays,
-  Trophy
-} from 'lucide-react';
+import { Calendar, QrCode } from 'lucide-react';
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isCountedMember } from '@/lib/people';
-
-/** A dashboard card that links to its admin page, or a plain card when this person can't open that page */
-function KpiCard({ href, allowed, style, children }: { href: string; allowed: boolean; style: React.CSSProperties; children: React.ReactNode }) {
-  return allowed
-    ? <Link href={href} className="glass-panel glass-panel-interactive" style={{ ...style, textDecoration: 'none' }}>{children}</Link>
-    : <div className="glass-panel" style={style}>{children}</div>;
-}
 
 export default function AdminDashboardPage({
   params,
@@ -47,7 +24,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, events, sponsors, news, tournaments, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants } = useClub();
+  const { clubs, selectClubBySlug, members, matches, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const { can, isClubSuperUser } = useAuth();
   // Shortcuts only for the areas this person's roles cover (a Treasurer has no fixtures or scanner)
@@ -69,7 +46,6 @@ export default function AdminDashboardPage({
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const liveMatch = clubMatches.find(m => m.status === 'live' || m.status === 'halftime');
   const analytics = getClubAnalytics(club.id);
-  const clubEvents = events.filter(e => e.club_id === club.id);
   const recentActivity = activityLogs
     .filter(l => l.club_id === club.id)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -81,372 +57,139 @@ export default function AdminDashboardPage({
   const nextMatch = nextFixture?.status === 'upcoming' ? nextFixture : undefined;
 
   return (
-    <div>
-      {/* Top Banner / Greeting */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
-      }}>
+    <div className="admin-dash">
+      <div className="admin-dash-head">
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ADMIN CONSOLE</span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-            {club.name} Dashboard
-          </h1>
-          <p className="text-body">
-            Everything for running your club: matches, members, and your public website.
-          </p>
+          <h1>{club.name} dashboard</h1>
+          <p>Everything for running your club: matches, members, and your public website.</p>
         </div>
 
         {(canEditFixtures || canScan) && (
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="admin-dash-actions">
             {canEditFixtures && (
-              <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Calendar size={16} />
-                <span>Schedule Matches</span>
+              <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">
+                <Calendar size={16} aria-hidden="true" />
+                <span>Schedule matches</span>
               </Link>
             )}
             {canScan && (
-              <Link href={`/${club.slug}/admin/scanner`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <QrCode size={16} />
-                <span>Scan Passes</span>
+              <Link href={`/${club.slug}/admin/scanner`} className="btn btn-secondary admin-dash-scan">
+                <QrCode size={16} aria-hidden="true" />
+                <span>Scan passes</span>
               </Link>
             )}
           </div>
         )}
       </div>
 
-      <NeedsYouCard items={attention} />
-
       {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
 
-      {/* KPI Cards Row */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
-        gap: '1.25rem',
-        marginBottom: '2.5rem',
-      }}>
-        {/* KPI 0: Active Season */}
-        <KpiCard href={`/${club.slug}/admin/seasons`} allowed={canSeasons} style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-green)', textTransform: 'uppercase' }}>
-              Active Season
-            </span>
-            <div style={{ color: 'var(--c-green)' }}><CalendarDays size={20} /></div>
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {activeSeason?.name || defaultSeasonLabel()}
-          </div>
-          {canSeasons && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <span>Manage seasons</span>
-              <ArrowRight size={12} />
-            </div>
-          )}
-        </KpiCard>
+      {/* What's waiting on the committee, beside the club's next (or live) game; on phones the live game comes first */}
+      <div className={liveMatch ? 'admin-dash-lead is-live' : 'admin-dash-lead'}>
+        <NeedsYouCard items={attention} />
 
-        {/* KPI 1: Squad Members */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Players
-            </span>
-            <div style={{ color: 'var(--club-ink)' }}><Users size={20} /></div>
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {squadPlayers.length}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            {clubMembers.length} members in total{waitingCount > 0 && ` · ${waitingCount} waiting to join`}
-          </div>
-        </div>
-
-        {/* KPI 2: Live Match or Fixtures */}
-        <KpiCard
-          href={`/${club.slug}/admin/matches`}
-          allowed={canFixtures}
-          style={{ padding: '1.5rem', border: liveMatch ? '1px solid #EF4444' : '1px solid var(--border-subtle)' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)', textTransform: 'uppercase' }}>
-              {liveMatch ? 'LIVE MATCH' : 'FIXTURES'}
-            </span>
-            <div style={{ color: liveMatch ? 'var(--c-red)' : 'var(--text-muted)' }}><Radio size={20} /></div>
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {liveMatch ? `${liveMatch.home_score} - ${liveMatch.away_score}` : `${clubMatches.length} ${clubMatches.length === 1 ? 'Fixture' : 'Fixtures'}`}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: liveMatch ? 'var(--c-red)' : 'var(--text-secondary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}' in progress`) : canFixtures ? 'Manage fixtures' : 'This season'}</span>
-            {canFixtures && <ArrowRight size={12} />}
-          </div>
-        </KpiCard>
-
-        {/* KPI 3: Member Passes Issued & Gate Scans */}
-        <KpiCard href={`/${club.slug}/admin/scanner`} allowed={canScan} style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Member Passes
-            </span>
-            <div style={{ color: 'var(--c-amber)' }}><CreditCard size={20} /></div>
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {clubMembers.length}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--c-amber)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span>{analytics.gateScansCount.toLocaleString()} {analytics.gateScansCount === 1 ? 'pass scanned' : 'passes scanned'} at the gate</span>
-            {canScan && <ArrowRight size={12} />}
-          </div>
-        </KpiCard>
-
-        {/* KPI 4: Live Public Page Visits */}
-        <KpiCard href={`/${club.slug}/admin/analytics`} allowed={canAnalytics} style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span className="pulse-dot" style={{ background: '#10B981' }} />
-              <span>Public Page Visits</span>
-            </span>
-            <div style={{ color: 'var(--c-blue)' }}><TrendingUp size={20} /></div>
-          </div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-            {analytics.totalVisits.toLocaleString()}
-          </div>
-          {canAnalytics && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--c-green)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <span>See visitor stats</span>
-              <ArrowRight size={12} />
-            </div>
-          )}
-        </KpiCard>
-      </div>
-
-      {/* Quick Actions Panel */}
-      <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>
-          Quick Links
-        </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem' }}>
-          {can(club.id, 'match-center') && (
-          <Link
-            href={`/${club.slug}/admin/match-center`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)' }}>
-              <Radio size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Match Centre</div>
-              <div className="text-meta">Score & live events</div>
-            </div>
-          </Link>
-          )}
-
-          {can(club.id, 'branding') && (
-          <Link
-            href={`/${club.slug}/admin/branding`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }}>
-              <Settings size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Branding</div>
-              <div className="text-meta">Colours, crest & domain</div>
-            </div>
-          </Link>
-          )}
-
-          {can(club.id, 'squad') && (
-          <Link
-            href={`/${club.slug}/admin/people`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)' }}>
-              <Users size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>People</div>
-              <div className="text-meta">Players, members & stats</div>
-            </div>
-          </Link>
-          )}
-
-          {can(club.id, 'events') && (
-          <Link
-            href={`/${club.slug}/admin/events`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)' }}>
-              <Calendar size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Club Events</div>
-              <div className="text-meta">Trainings & social</div>
-            </div>
-          </Link>
-          )}
-
-          {can(club.id, 'hero-slider') && (
-          <Link
-            href={`/${club.slug}/admin/hero-slider`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)' }}>
-              <Sparkles size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Homepage Slider</div>
-              <div className="text-meta">Pick the slides</div>
-            </div>
-          </Link>
-          )}
-
-          {can(club.id, 'tournaments') && (
-          <Link
-            href={`/${club.slug}/admin/tournaments`}
-            className="glass-panel glass-panel-interactive"
-            style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}
-          >
-            <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)' }}>
-              <Trophy size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Tournaments & Cups</div>
-              <div className="text-meta">Brackets & draws</div>
-            </div>
-          </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Two Column Section: Live Match Ops + Recent Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem' }}>
-        {/* Live Match Operation Overview */}
-        <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Matchday
-            </h3>
+        <section className={liveMatch ? 'admin-panel admin-matchday is-live' : 'admin-panel admin-matchday'} aria-labelledby="matchday-title">
+          <div className="admin-panel-head">
+            <h2 id="matchday-title">Matchday</h2>
             {liveMatch ? (
-              <span className="badge badge-live">{liveMatch.status === 'halftime' ? 'LIVE • HT' : <>LIVE • <LiveMinute match={liveMatch} />&apos;</>}</span>
+              <span className="admin-live-tag">{liveMatch.status === 'halftime' ? 'Live, half time' : <>Live, <LiveMinute match={liveMatch} />&prime;</>}</span>
             ) : (
-              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>NO LIVE MATCH</span>
+              <span className="admin-meta">No live match</span>
             )}
           </div>
 
           {liveMatch ? (
-            <div>
-              <div style={{
-                background: 'rgba(var(--shade-rgb), 0.3)',
-                padding: '1.25rem',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.75rem',
-                marginBottom: '1.25rem',
-              }}>
-                <div className="text-center" style={{ flex: '1 1 0', minWidth: 0, overflowWrap: 'anywhere' }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.home_team_name}</div>
-                  <div className="text-meta">Home</div>
-                </div>
-
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {liveMatch.home_score} : {liveMatch.away_score}
-                </div>
-
-                <div className="text-center" style={{ flex: '1 1 0', minWidth: 0, overflowWrap: 'anywhere' }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{liveMatch.away_team_name}</div>
-                  <div className="text-meta">Away</div>
-                </div>
+            <div className="admin-match">
+              <div className="admin-score">
+                <div className="admin-score-side">{liveMatch.home_team_name}<small>Home</small></div>
+                <div className="admin-goals" aria-label={`${liveMatch.home_score} to ${liveMatch.away_score}`}>{liveMatch.home_score} : {liveMatch.away_score}</div>
+                <div className="admin-score-side">{liveMatch.away_team_name}<small>Away</small></div>
               </div>
-
               {canMatchCentre && (
-                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary" style={{ width: '100%' }}>
-                  Open Match Centre &rarr;
-                </Link>
+                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary">Open Match Centre</Link>
               )}
+            </div>
+          ) : nextMatch ? (
+            <div className="admin-match">
+              <div>
+                <p className="admin-kicker">Next match</p>
+                <p className="admin-fixture">{nextMatch.home_team_name} <span className="admin-vs">vs</span> {nextMatch.away_team_name}</p>
+              </div>
+              <dl className="admin-facts">
+                <div><dt>Date</dt><dd><LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></dd></div>
+                <div><dt>Kick-off</dt><dd><LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>
+                {nextMatch.venue && <div><dt>Venue</dt><dd>{nextMatch.venue}</dd></div>}
+              </dl>
+              <div className="admin-match-actions">
+                {canMatchCentre && (
+                  <Link href={`/${club.slug}/admin/match-center?match=${nextMatch.id}`} className="btn btn-primary">Start match in Match Centre</Link>
+                )}
+                <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary">Public match page</Link>
+              </div>
             </div>
           ) : (
-            nextMatch ? (
-              <div>
-                <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '1rem 1.25rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                  <div className="text-meta" style={{ textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Next match</div>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>
-                    {nextMatch.home_team_name} vs {nextMatch.away_team_name}
-                  </div>
-                  <div className="text-meta" style={{ marginTop: '0.2rem' }}>
-                    <LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />
-                    {' · '}<LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                    {nextMatch.venue ? ` · ${nextMatch.venue}` : ''}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {canMatchCentre && (
-                    <Link href={`/${club.slug}/admin/match-center?match=${nextMatch.id}`} className="btn btn-primary btn-sm">
-                      Start match in Match Centre
-                    </Link>
-                  )}
-                  <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary btn-sm">
-                    Public match page
-                  </Link>
-                </div>
-              </div>
-            ) : (
-            <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-              <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>No match is live and nothing is scheduled.</p>
-              {canEditFixtures && (
-                <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm">
-                  Schedule a match
-                </Link>
-              )}
+            <div className="admin-empty">
+              <p>No match is live and nothing is scheduled.</p>
+              {canEditFixtures && <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">Schedule a match</Link>}
             </div>
-            )
           )}
-        </div>
-
-        {/* Recent Platform Activities */}
-        <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
-            Recent Activity
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {recentActivity.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.825rem', textAlign: 'center', padding: '1rem' }}>
-                No activity yet.
-              </div>
-            )}
-            {recentActivity.map(act => (
-              <div
-                key={act.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px',
-                  background: 'rgba(var(--tint-rgb), 0.02)',
-                  fontSize: '0.825rem',
-                }}
-              >
-                <div className="text-primary">{act.description}</div>
-                <div className="text-meta">{new Date(act.created_at).toLocaleString(DATE_LOCALE)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
       </div>
+
+      {/* The club's figures, one ruled strip */}
+      <section className="admin-panel admin-dash-figures-wrap" aria-label="Club figures">
+        <dl className="admin-dash-figures">
+          <div>
+            <dt>Active season</dt>
+            <dd>{activeSeason?.name || defaultSeasonLabel()}</dd>
+            {canSeasons && <Link href={`/${club.slug}/admin/seasons`}>Manage seasons</Link>}
+          </div>
+          <div>
+            <dt>Players</dt>
+            <dd>{squadPlayers.length}</dd>
+            <span className="admin-note">{clubMembers.length} members in total{waitingCount > 0 && `, ${waitingCount} waiting to join`}</span>
+          </div>
+          <div>
+            <dt>{liveMatch ? 'Live match' : 'Fixtures'}</dt>
+            <dd className={liveMatch ? 'is-live' : undefined}>{liveMatch ? `${liveMatch.home_score} : ${liveMatch.away_score}` : clubMatches.length}</dd>
+            <span className="admin-note">{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}′ in progress`) : 'This season'}</span>
+            {canFixtures && <Link href={`/${club.slug}/admin/matches`}>Manage fixtures</Link>}
+          </div>
+          <div>
+            <dt>Member passes</dt>
+            <dd>{clubMembers.length}</dd>
+            <span className="admin-note">{analytics.gateScansCount.toLocaleString()} {analytics.gateScansCount === 1 ? 'pass scanned' : 'passes scanned'} at the gate</span>
+            {canScan && <Link href={`/${club.slug}/admin/scanner`}>Open the gate scanner</Link>}
+          </div>
+          <div>
+            <dt>Public page visits</dt>
+            <dd>{analytics.totalVisits.toLocaleString()}</dd>
+            {canAnalytics && <Link href={`/${club.slug}/admin/analytics`}>See visitor stats</Link>}
+          </div>
+        </dl>
+      </section>
+
+      <section className="admin-panel" aria-labelledby="activity-title">
+        <div className="admin-panel-head">
+          <h2 id="activity-title">Recent activity</h2>
+          {can(club.id, 'activity') && <Link href={`/${club.slug}/admin/activity`} className="admin-dash-link">Activity log</Link>}
+        </div>
+        {recentActivity.length === 0 ? (
+          <p className="admin-empty">No activity yet.</p>
+        ) : (
+          <table className="admin-log">
+            <thead><tr><th scope="col">What happened</th><th scope="col">When</th></tr></thead>
+            <tbody>
+              {recentActivity.map(act => (
+                <tr key={act.id}>
+                  <td>{act.description}</td>
+                  <td className="admin-when">{new Date(act.created_at).toLocaleString(DATE_LOCALE)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </div>
   );
 }

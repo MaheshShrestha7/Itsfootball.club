@@ -81,10 +81,13 @@ export default function ClubLayoutClient({
   // The home page has its own sponsor showcase and match pages their Club Sponsors strip,
   // so the footer's sponsor block would show every sponsor twice there
   const ownSponsorBlock = pathname === `/${club.slug}` || pathname === '/' || /^\/[^/]+\/match\//.test(pathname || '');
+  const isAdmin = /^\/[^/]+\/admin(\/|$)/.test(pathname || '');
 
   return (
     <div
       className="club-theme-root"
+      // Admin pages: on phones the admin's own bar replaces the club navbar (admin.css)
+      data-admin={isAdmin ? '' : undefined}
       style={{
         ...clubInkVars(club.primary_color),
         minHeight: '100vh',
@@ -105,7 +108,7 @@ export default function ClubLayoutClient({
         {children}
       </div>
       {/* Admin pages get a slim footer: the public sponsors block and site links only made them longer */}
-      <Footer club={club} sponsors={ownSponsorBlock ? undefined : clubSponsors} compact={/^\/[^/]+\/admin(\/|$)/.test(pathname || '')} />
+      <Footer club={club} sponsors={ownSponsorBlock ? undefined : clubSponsors} compact={isAdmin} />
       <ClubTabBar club={club} />
     </div>
   );

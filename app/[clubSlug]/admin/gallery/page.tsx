@@ -126,7 +126,6 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <div>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>WEBSITE & MARKETING • GALLERY</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <Images size={30} /> Photo Gallery
         </h1>
