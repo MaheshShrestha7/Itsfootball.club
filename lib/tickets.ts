@@ -9,6 +9,8 @@ const SALES_GRACE_MS = 6 * 3600 * 1000;
 export interface TicketedEvent {
   is_public: boolean;
   ticket_price_cents: number;
+  /** Migration 20261143; blank = members pay ticket_price_cents */
+  ticket_member_price_cents?: number | null;
   start_time: string;
   end_time?: string | null;
 }

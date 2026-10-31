@@ -51,4 +51,13 @@ assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/gallery/${photo}.jpg`, 'ga
 assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/gallery/${photo}.jpg`), null); // a gallery photo is not a shop photo
 assert.equal(clubPhotoKey(club, `${cdn}/clubs/${club}/shop/${photo}.jpg`, 'gallery'), null);
 
-console.log('shop: cart pricing, sizes, parsing and photo keys OK');
+// Member prices (migration 20261143): only when the server says the payer is a member
+const memberShirt = { ...shirt, member_price_cents: 3500 };
+const asMember = priceCart([{ productId: 'shirt', size: 'M', quantity: 2 }, { productId: 'scarf', size: '', quantity: 1 }], [memberShirt, scarf], true);
+assert.ok(asMember.ok && asMember.totalCents === 2 * 3500 + 1500 && asMember.items[0].unit_cents === 3500, 'member price, and full price where there is none');
+const asGuest = priceCart([{ productId: 'shirt', size: 'M', quantity: 2 }], [memberShirt], false);
+assert.ok(asGuest.ok && asGuest.totalCents === 9000, 'guests pay the full price');
+const byDefault = priceCart([{ productId: 'shirt', size: 'M', quantity: 1 }], [memberShirt]);
+assert.ok(byDefault.ok && byDefault.totalCents === 4500, 'full price unless the caller says member');
+
+console.log('shop: cart pricing, member prices, sizes, parsing and photo keys OK');

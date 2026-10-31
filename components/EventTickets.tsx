@@ -8,12 +8,18 @@ import { formatMoney, paymentReference } from '@/lib/finance';
 import { MAX_TICKETS_PER_ORDER, salesOpen } from '@/lib/tickets';
 import type { ClubEvent } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
+import MemberPriceTag from '@/components/MemberPriceTag';
+import { ticketUnitCents } from '@/lib/member-prices';
+import { useIsActiveMember } from '@/lib/use-active-member';
 
 // "Buy tickets" on a paid event's page. The server re-checks everything (lib/payments-server.ts);
 // this only keeps buyers from starting an order that can't go through.
 export default function EventTickets({ event, onContact }: { event: ClubEvent; onContact?: () => void }) {
   const { user } = useAuth();
-  const price = event.ticket_price_cents ?? 0;
+  const fullPrice = event.ticket_price_cents ?? 0;
+  // What this buyer pays each: the member price for an active member (the server decides what's charged)
+  const isMember = useIsActiveMember(event.club_id);
+  const price = ticketUnitCents({ ticket_price_cents: fullPrice, ticket_member_price_cents: event.ticket_member_price_cents }, isMember);
   const [left, setLeft] = useState<number | null | undefined>(undefined); // null = no limit
   const [currency, setCurrency] = useState('AUD');
   // How tickets can be paid (card, bank transfer); with neither, say so before the buyer fills anything in
@@ -41,7 +47,7 @@ export default function EventTickets({ event, onContact }: { event: ClubEvent; o
     if (user) setBuyer(b => ({ name: b.name && b.name !== user.email.split('@')[0] ? b.name : user.full_name || '', email: b.email || user.email || '' }));
   }, [user]);
 
-  if (!(price > 0)) return null;
+  if (!(fullPrice > 0)) return null;
   const max = Math.min(MAX_TICKETS_PER_ORDER, left ?? MAX_TICKETS_PER_ORDER);
   const open = salesOpen(event);
 
@@ -52,7 +58,8 @@ export default function EventTickets({ event, onContact }: { event: ClubEvent; o
           <Ticket size={18} aria-hidden="true" /> Tickets
         </h2>
         <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--club-ink)' }}>
-          {formatMoney(price, currency)} <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>each</span>
+          <MemberPriceTag cents={fullPrice} memberCents={event.ticket_member_price_cents} isMember={isMember} currency={currency}
+            suffix={<span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}> each</span>} />
         </span>
       </div>
 

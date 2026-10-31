@@ -161,6 +161,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
     name: product.name,
     description: product.description || '',
     price: (product.price_cents / 100).toFixed(2),
+    memberPrice: product.member_price_cents ? (product.member_price_cents / 100).toFixed(2) : '',
     sizes: product.sizes.join(', '),
     is_active: product.is_active,
   });
@@ -169,15 +170,22 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const id = product.id;
+  // select('*') only returns member_price_cents once migration 20261143 has run; until then it's hidden
+  const memberPricesReady = 'member_price_cents' in product;
 
   const save = async () => {
     const cents = parseMoneyToCents(draft.price);
     if (cents === null) return notify('Enter a valid price, e.g. 25 or 24.99');
     if (!draft.name.trim()) return notify('Give the product a name.');
+    // Blank = members pay the full price
+    const memberCents = draft.memberPrice.trim() ? parseMoneyToCents(draft.memberPrice) : null;
+    if (memberCents !== null && (memberCents <= 0 || memberCents > cents)) return notify('The member price must be more than 0 and no more than the price. Leave it blank for no member price.');
+    if (draft.memberPrice.trim() && memberCents === null) return notify('Enter a valid member price, e.g. 20 or 19.99');
     const { error } = await db.from('shop_products').update({
       name: draft.name.trim().slice(0, 120),
       description: draft.description.trim() || null,
       price_cents: cents,
+      ...(memberPricesReady ? { member_price_cents: memberCents } : {}),
       sizes: parseSizes(draft.sizes),
       is_active: draft.is_active,
     }).eq('id', id);
@@ -261,6 +269,14 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
           <label className="form-label" htmlFor={`shop-price-${id}`}>Price ({currency})</label>
           <input id={`shop-price-${id}`} className="form-input" inputMode="decimal" value={draft.price} onChange={e => setDraft({ ...draft, price: e.target.value })} />
         </div>
+        {memberPricesReady && (
+          <div className="form-group">
+            <label className="form-label" htmlFor={`shop-member-price-${id}`}>Member price</label>
+            <input id={`shop-member-price-${id}`} className="form-input" inputMode="decimal" placeholder="Same price" aria-describedby={`shop-member-price-hint-${id}`}
+              value={draft.memberPrice} onChange={e => setDraft({ ...draft, memberPrice: e.target.value })} />
+            <div id={`shop-member-price-hint-${id}`} className="text-meta" style={{ marginTop: '0.25rem' }}>For signed-in members with an active membership.</div>
+          </div>
+        )}
         <div className="form-group">
           <label className="form-label" htmlFor={`shop-sizes-${id}`}>Sizes</label>
           <input id={`shop-sizes-${id}`} className="form-input" placeholder="S, M, L" aria-describedby={`shop-sizes-hint-${id}`} value={draft.sizes} onChange={e => setDraft({ ...draft, sizes: e.target.value })} />

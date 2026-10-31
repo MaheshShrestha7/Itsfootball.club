@@ -9,10 +9,15 @@ import { formatMoney } from '@/lib/finance';
 import { MAX_QUANTITY, type CartLine } from '@/lib/shop';
 import type { Club, ShopProduct } from '@/lib/supabase/types';
 import PaymentStep from '@/components/PaymentStep';
+import MemberPriceTag from '@/components/MemberPriceTag';
+import { productUnitCents } from '@/lib/member-prices';
+import { useIsActiveMember } from '@/lib/use-active-member';
 
 /** The club shop: its own page (/{slug}/shop), or `embedded` as the member page's Club Shop tab */
 export default function ClubShop({ club, embedded = false }: { club: Club; embedded?: boolean }) {
   const { user } = useAuth();
+  // Member prices show for an active member; the server decides what's charged
+  const isMember = useIsActiveMember(club.id);
 
   const [products, setProducts] = useState<ShopProduct[] | null>(null);
   const [currency, setCurrency] = useState('AUD');
@@ -40,7 +45,8 @@ export default function ClubShop({ club, embedded = false }: { club: Club; embed
 
   const product = (id: string) => products?.find(p => p.id === id);
   const lines = cart.filter(l => product(l.productId));
-  const total = lines.reduce((n, l) => n + product(l.productId)!.price_cents * l.quantity, 0);
+  const unit = (p: ShopProduct) => productUnitCents(p, isMember);
+  const total = lines.reduce((n, l) => n + unit(product(l.productId)!) * l.quantity, 0);
   const itemCount = lines.reduce((n, l) => n + l.quantity, 0);
 
   // On phones the order panel sits below every product: a floating bar leads to it while it's off screen
@@ -99,7 +105,7 @@ export default function ClubShop({ club, embedded = false }: { club: Club; embed
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
             <div style={{ flex: '3 1 460px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', minWidth: 0 }}>
-              {products.map(p => <ProductCard key={p.id} product={p} currency={currency} onAdd={size => { add(p.id, size); setCheckout(false); }} />)}
+              {products.map(p => <ProductCard key={p.id} product={p} currency={currency} isMember={isMember} onAdd={size => { add(p.id, size); setCheckout(false); }} />)}
             </div>
 
             <aside ref={orderRef} className="glass-panel" style={{ flex: '1 1 300px', padding: '1.25rem', position: 'sticky', top: '6rem', scrollMarginTop: '6rem' }} aria-label="Your order">
@@ -114,7 +120,7 @@ export default function ClubShop({ club, embedded = false }: { club: Club; embed
                       <div key={`${l.productId}:${l.size}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}{l.size && ` (${l.size})`}</div>
-                          <div className="text-meta">{formatMoney(p.price_cents * l.quantity, currency)}</div>
+                          <div className="text-meta">{formatMoney(unit(p) * l.quantity, currency)}</div>
                         </div>
                         {!checkout && (
                           <>
@@ -177,7 +183,7 @@ export default function ClubShop({ club, embedded = false }: { club: Club; embed
   );
 }
 
-function ProductCard({ product: p, currency, onAdd }: { product: ShopProduct; currency: string; onAdd: (size: string) => void }) {
+function ProductCard({ product: p, currency, isMember, onAdd }: { product: ShopProduct; currency: string; isMember: boolean; onAdd: (size: string) => void }) {
   const [photo, setPhoto] = useState(0);
   const [size, setSize] = useState('');
   const [added, setAdded] = useState(false);
@@ -211,7 +217,7 @@ function ProductCard({ product: p, currency, onAdd }: { product: ShopProduct; cu
       )}
       <div>
         <div style={{ fontWeight: 900, color: 'var(--text-primary)' }}>{p.name}</div>
-        <div style={{ fontWeight: 800, color: 'var(--club-ink)' }}>{formatMoney(p.price_cents, currency)}</div>
+        <div style={{ fontWeight: 800, color: 'var(--club-ink)' }}><MemberPriceTag cents={p.price_cents} memberCents={p.member_price_cents} isMember={isMember} currency={currency} /></div>
       </div>
       {p.description && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{p.description}</div>}
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
