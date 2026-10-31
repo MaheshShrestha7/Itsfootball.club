@@ -43,6 +43,7 @@ import {
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
 import AdminSearch from '@/components/AdminSearch';
+import ThemeToggle from '@/components/ThemeToggle';
 import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
@@ -709,6 +710,7 @@ export default function AdminLayout({
           <button type="button" className="admin-icon-btn" onClick={e => openDrawer('search', e.currentTarget)} aria-label="Search players, matches and events">
             <Search size={18} aria-hidden="true" />
           </button>
+          <ThemeToggle className="admin-icon-btn" />
           <Link href={`/${club.slug}`} className="admin-icon-btn" aria-label="Public site">
             <ExternalLink size={18} aria-hidden="true" />
           </Link>
