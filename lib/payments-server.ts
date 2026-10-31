@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describeItems, parseCart, priceCart, type OrderItem, type PricedProduct } from './shop';
 import { ticketOrderError, type TicketedEvent } from './tickets';
+import { hasActiveMembership, siteToday, ticketUnitCents, type MembershipRow } from './member-prices';
 import { canPayRenewal } from './sponsors';
 import { openSponsorInvoice, packageIsFull, PACKAGE_TAKEN } from './sponsor-invoice-server';
 
@@ -77,7 +78,25 @@ export function readPaymentInput(get: (key: string) => unknown) {
  *                       so renewing an existing sponsorship also needs the secret key from the club's renewal link
  *   shop_order          anyone: it pays for new goods, never for someone else's record
  *   event_ticket        anyone: new tickets for a public event, priced from the event row
+ * Shop orders and tickets cost the member price (migration 20261143) only when the signed-in payer is an
+ * active member of the club, or the guardian of one (payerIsActiveMember); everyone else pays the full price.
  */
+/** The signed-in payer is an approved, unsuspended, in-date member of the club, or the guardian of one
+ *  (`email` is their confirmed sign-in email). Signed out = not a member. */
+export async function payerIsActiveMember(db: SupabaseClient, clubId: string, userId: string | null, email: string | null): Promise<boolean> {
+  if (!userId && !email) return false;
+  const columns = 'user_id, guardian_email, membership_status, status, membership_expires_at';
+  const mail = email?.trim().toLowerCase() || '';
+  const [own, children] = await Promise.all([
+    userId ? db.from('club_members').select(columns).eq('club_id', clubId).eq('user_id', userId) : Promise.resolve({ data: [] }),
+    // ilike only narrows (guardian emails typed by an admin may not be lower case); hasActiveMembership
+    // compares the whole address
+    mail ? db.from('club_members').select(columns).eq('club_id', clubId).ilike('guardian_email', mail) : Promise.resolve({ data: [] }),
+  ]);
+  const rows = [...(own.data || []), ...(children.data || [])] as MembershipRow[];
+  return hasActiveMembership(rows, userId, mail || null, siteToday());
+}
+
 export async function preparePayment(
   db: SupabaseClient,
   input: ReturnType<typeof readPaymentInput>,
@@ -104,9 +123,12 @@ export async function preparePayment(
   if (input.kind === 'shop_order') {
     if (!input.cart) return bad('Your cart is empty.');
     if (!input.buyerName || !EMAIL_RE.test(input.buyerEmail)) return bad('Enter your name and a valid email.');
-    const { data: products } = await db.from('shop_products').select('id, name, price_cents, sizes, is_active')
-      .eq('club_id', club.id).in('id', input.cart.map(l => l.productId).filter(id => UUID_RE.test(id)));
-    const priced = priceCart(input.cart, (products || []) as PricedProduct[]);
+    // '*': member_price_cents only exists after migration 20261143, and orders must work before it
+    const [{ data: products }, isMember] = await Promise.all([
+      db.from('shop_products').select('*').eq('club_id', club.id).in('id', input.cart.map(l => l.productId).filter(id => UUID_RE.test(id))),
+      payerIsActiveMember(db, club.id, payerUserId, payerEmail),
+    ]);
+    const priced = priceCart(input.cart, (products || []) as PricedProduct[], isMember);
     if (!priced.ok) return bad(priced.error);
     return {
       ok: true,
@@ -129,14 +151,18 @@ export async function preparePayment(
   if (input.kind === 'event_ticket') {
     if (!input.eventId) return bad('Event not found.', 404);
     if (!input.buyerName || !EMAIL_RE.test(input.buyerEmail)) return bad('Enter your name and a valid email.');
-    const [{ data: event }, { data: left }] = await Promise.all([
-      db.from('events').select('id, title, is_public, ticket_price_cents, start_time, end_time').eq('id', input.eventId).eq('club_id', club.id).maybeSingle(),
+    // '*': ticket_member_price_cents only exists after migration 20261143
+    const [{ data: event }, { data: left }, isMember] = await Promise.all([
+      db.from('events').select('*').eq('id', input.eventId).eq('club_id', club.id).maybeSingle(),
       db.rpc('tickets_left', { p_event_id: input.eventId }),
+      payerIsActiveMember(db, club.id, payerUserId, payerEmail),
     ]);
+    // ponytail: the member price covers every ticket in the order (up to MAX_TICKETS_PER_ORDER), so a member can
+    // buy cheap tickets for friends. Cap member-priced tickets per order if a club complains.
     // ponytail: capacity is checked here, not held: two buyers racing for the last seats can both pay. Reserve seats if clubs sell out often.
     const problem = ticketOrderError(event as TicketedEvent | null, input.quantity, typeof left === 'number' ? left : null);
     if (problem) return bad(problem, problem === 'Event not found.' ? 404 : 400);
-    const item: OrderItem = { product_id: event!.id, name: `Ticket: ${event!.title}`, size: null, quantity: input.quantity, unit_cents: event!.ticket_price_cents };
+    const item: OrderItem = { product_id: event!.id, name: `Ticket: ${event!.title}`, size: null, quantity: input.quantity, unit_cents: ticketUnitCents(event!, isMember) };
     return {
       ok: true,
       draft: {

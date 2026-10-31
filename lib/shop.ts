@@ -1,5 +1,6 @@
 // Club shop: cart pricing shared by the shop page (display) and the payment routes (the real price).
 // The server only trusts product ids, sizes and quantities; names and prices come from shop_products.
+import { productUnitCents } from './member-prices';
 
 export const MAX_CART_LINES = 20;
 export const MAX_QUANTITY = 20;
@@ -10,7 +11,8 @@ export interface CartLine { productId: string; size: string; quantity: number }
 /** Snapshot stored on the payments row, so later price or name changes never rewrite an order */
 export interface OrderItem { product_id: string; name: string; size: string | null; quantity: number; unit_cents: number }
 
-export interface PricedProduct { id: string; name: string; price_cents: number; sizes: string[]; is_active: boolean }
+/** member_price_cents: migration 20261143; blank = members pay price_cents */
+export interface PricedProduct { id: string; name: string; price_cents: number; member_price_cents?: number | null; sizes: string[]; is_active: boolean }
 
 type Priced = { ok: true; items: OrderItem[]; totalCents: number } | { ok: false; error: string };
 
@@ -30,7 +32,8 @@ export function parseCart(raw: unknown): CartLine[] | null {
   return lines;
 }
 
-export function priceCart(lines: CartLine[], products: PricedProduct[]): Priced {
+/** `isMember`: the server found the signed-in payer is an active member, so member prices apply */
+export function priceCart(lines: CartLine[], products: PricedProduct[], isMember = false): Priced {
   const byId = new Map(products.map(p => [p.id, p]));
   const items: OrderItem[] = [];
   for (const line of lines) {
@@ -39,7 +42,7 @@ export function priceCart(lines: CartLine[], products: PricedProduct[]): Priced 
     if (line.quantity < 1 || line.quantity > MAX_QUANTITY) return { ok: false, error: `Quantity must be between 1 and ${MAX_QUANTITY}.` };
     const size = p.sizes.length ? line.size : '';
     if (p.sizes.length && !p.sizes.includes(size)) return { ok: false, error: `Choose a size for ${p.name}.` };
-    items.push({ product_id: p.id, name: p.name, size: size || null, quantity: line.quantity, unit_cents: p.price_cents });
+    items.push({ product_id: p.id, name: p.name, size: size || null, quantity: line.quantity, unit_cents: productUnitCents(p, isMember) });
   }
   const totalCents = items.reduce((n, i) => n + i.unit_cents * i.quantity, 0);
   if (totalCents <= 0) return { ok: false, error: 'Your cart has nothing to pay.' };

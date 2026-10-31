@@ -22,10 +22,23 @@ const SHIRT_WANTER = '00000000-0000-4000-8000-000000000808';
 const SHIRT_PKG = '00000000-0000-4000-8000-000000000701';
 const inDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 const KEY = 'a'.repeat(64);
+// Member prices (migration 20261143)
+const SHIRT = '00000000-0000-4000-8000-000000000901';
+const SCARF = '00000000-0000-4000-8000-000000000902';
+const EVENT = '00000000-0000-4000-8000-000000000903';
+const EXPIRED_USER = '99999999-9999-4999-8999-000000000003';
+const SUSPENDED_USER = '99999999-9999-4999-8999-000000000004';
+const PENDING_USER = '99999999-9999-4999-8999-000000000005';
+const OTHER_CLUB = '00000000-0000-4000-8000-00000000000b';
 
 const tables: Record<string, Record<string, unknown>[]> = {
   clubs: [{ id: CLUB, slug: 'alpha', name: 'Alpha FC', is_active: true }],
   club_payment_settings: [{ club_id: CLUB, currency: 'AUD' }],
+  shop_products: [
+    { id: SHIRT, club_id: CLUB, name: 'Home shirt', price_cents: 6000, member_price_cents: 4500, sizes: ['M'], is_active: true },
+    { id: SCARF, club_id: CLUB, name: 'Scarf', price_cents: 2000, member_price_cents: null, sizes: [], is_active: true },
+  ],
+  events: [{ id: EVENT, club_id: CLUB, title: 'Gala night', is_public: true, ticket_price_cents: 3000, ticket_member_price_cents: 2000, start_time: new Date(Date.now() + 7 * 864e5).toISOString(), end_time: null }],
   membership_plans: [{ id: PLAN, club_id: CLUB, name: 'U10', price_cents: 9000, is_active: true }],
   sponsorship_packages: [
     { id: PKG, club_id: CLUB, name: 'Gold Package', price_cents: 150000, is_active: true },
@@ -50,6 +63,11 @@ const tables: Record<string, Record<string, unknown>[]> = {
   club_members: [
     { id: KID, club_id: CLUB, user_id: null, full_name: 'Kid One', email: '', guardian_name: 'Pat Parent', guardian_email: 'Pat@X.test', membership_status: 'approved' },
     { id: ADULT, club_id: CLUB, user_id: ADULT_USER, full_name: 'Al Adult', email: 'al@x.test', guardian_name: null, guardian_email: null, membership_status: 'approved' },
+    { id: 'm-exp', club_id: CLUB, user_id: EXPIRED_USER, guardian_email: null, membership_status: 'approved', status: 'active', membership_expires_at: inDays(-1) },
+    { id: 'm-sus', club_id: CLUB, user_id: SUSPENDED_USER, guardian_email: null, membership_status: 'approved', status: 'suspended', membership_expires_at: null },
+    { id: 'm-pen', club_id: CLUB, user_id: PENDING_USER, guardian_email: null, membership_status: 'pending', status: 'active', membership_expires_at: null },
+    // A member of another club only
+    { id: 'm-oth', club_id: OTHER_CLUB, user_id: PARENT_USER, guardian_email: null, membership_status: 'approved', status: 'active', membership_expires_at: null },
   ],
 };
 
@@ -62,6 +80,8 @@ function fakeDb(): SupabaseClient {
       select: () => q,
       eq: (col: string, val: unknown) => { filters.push(r => r[col] === val); return q; },
       in: (col: string, vals: unknown[]) => { filters.push(r => vals.includes(r[col])); return q; },
+      // Only used with a plain address (no wildcards): equal, ignoring case
+      ilike: (col: string, val: string) => { filters.push(r => String(r[col] ?? '').toLowerCase() === val.toLowerCase()); return q; },
       not: (col: string) => { filters.push(r => r[col] != null); return q; },
       order: () => q,
       limit: () => q,
@@ -70,7 +90,9 @@ function fakeDb(): SupabaseClient {
     };
     return q;
   };
-  return { from } as unknown as SupabaseClient;
+  // tickets_left: no capacity limit
+  const rpc = async () => ({ data: null, error: null });
+  return { from, rpc } as unknown as SupabaseClient;
 }
 
 const input = (memberId: string, kind = 'membership_renewal') =>
@@ -139,7 +161,39 @@ async function main() {
   const holderRenews = await shirtPay(SHIRT_HOLDER, '1'.repeat(64));
   assert.ok(holderRenews.ok, 'the sponsor holding the package renews it');
 
-  console.log('payments-server: renewal by member or guardian, sponsorship sign-up and renewal, invoices and package limits OK');
+  // Member prices: only a signed-in active member of this club (or a guardian of one) pays them
+  const shop = (userId: string | null, email: string | null) => preparePayment(db, readPaymentInput(k => ({
+    clubId: CLUB, kind: 'shop_order', buyerName: 'Buyer', buyerEmail: 'b@x.test',
+    items: JSON.stringify([{ productId: SHIRT, size: 'M', quantity: 2 }, { productId: SCARF, size: '', quantity: 1 }]),
+  } as Record<string, unknown>)[k]), userId, email);
+  const tickets = (userId: string | null, email: string | null) => preparePayment(db, readPaymentInput(k => ({
+    clubId: CLUB, kind: 'event_ticket', eventId: EVENT, quantity: 3, buyerName: 'Buyer', buyerEmail: 'b@x.test',
+  } as Record<string, unknown>)[k]), userId, email);
+  const amount = (r: Awaited<ReturnType<typeof preparePayment>>) => (r.ok ? r.draft.row.amount_cents : `error: ${r.error}`);
+  const units = (r: Awaited<ReturnType<typeof preparePayment>>) => (r.ok ? r.draft.lines?.map(l => l.unit_cents) : []);
+
+  // Member: shirt at 45.00 (x2), scarf has no member price so 20.00; tickets 20.00 x3
+  assert.equal(amount(await shop(ADULT_USER, 'al@x.test')), 2 * 4500 + 2000, 'member pays member prices in the shop');
+  assert.deepEqual(units(await shop(ADULT_USER, 'al@x.test')), [4500, 2000], 'lines carry the price charged; blank member price = full price');
+  assert.equal(amount(await tickets(ADULT_USER, 'al@x.test')), 3 * 2000, 'member pays the member ticket price');
+  // Guardian of an active child, matched on their confirmed email whatever its case
+  assert.equal(amount(await shop(PARENT_USER, 'PAT@x.test')), 2 * 4500 + 2000, "a child's guardian pays member prices");
+  assert.equal(amount(await tickets(null, 'pat@x.test')), 3 * 2000, 'guardian matched on email alone');
+  // Everyone else pays full price
+  for (const [who, userId, email] of [
+    ['signed out', null, null], ['expired member', EXPIRED_USER, 'e@x.test'], ['suspended member', SUSPENDED_USER, 's@x.test'],
+    ['pending applicant', PENDING_USER, 'p@x.test'], ["another club's member", PARENT_USER, 'nobody@x.test'],
+  ] as const) {
+    assert.equal(amount(await shop(userId, email)), 2 * 6000 + 2000, `${who} pays full shop prices`);
+    assert.equal(amount(await tickets(userId, email)), 3 * 3000, `${who} pays the full ticket price`);
+  }
+  // A buyer email typed into the form is not a sign-in: a guardian's address, signed out, pays full price
+  const typedEmail = await preparePayment(db, readPaymentInput(k => ({
+    clubId: CLUB, kind: 'shop_order', buyerName: 'Pat', buyerEmail: 'pat@x.test', items: JSON.stringify([{ productId: SHIRT, size: 'M', quantity: 1 }]),
+  } as Record<string, unknown>)[k]), null, null);
+  assert.equal(amount(typedEmail), 6000, 'the typed buyer email never unlocks member prices');
+
+  console.log('payments-server: renewal by member or guardian, sponsorship sign-up and renewal, invoices, package limits and member prices OK');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

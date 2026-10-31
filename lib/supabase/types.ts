@@ -332,6 +332,8 @@ export interface ClubEvent {
   door_qr_checkin_enabled?: boolean;
   /** > 0: a paid, ticketed event (supabase/migrations/20261018_event_tickets.sql) */
   ticket_price_cents?: number;
+  /** What an active member pays per ticket (migration 20261143); blank = ticket_price_cents */
+  ticket_member_price_cents?: number | null;
   /** Flyer / poster image; '' or missing = none (supabase/migrations/20261115_event_flyers.sql) */
   flyer_url?: string;
   created_at?: string;
@@ -966,6 +968,8 @@ export interface ShopProduct {
   photos: string[];
   sizes: string[];
   price_cents: number;
+  /** What an active member pays (migration 20261143); blank = price_cents */
+  member_price_cents?: number | null;
   is_active: boolean;
   sort_order: number;
 }

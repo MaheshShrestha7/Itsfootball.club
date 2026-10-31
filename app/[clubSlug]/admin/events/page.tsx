@@ -87,6 +87,11 @@ export default function AdminEventsPage({
   useEffect(() => {
     getSupabaseClient()?.from('events').select('flyer_url').limit(1).then(({ error }) => setFlyersReady(!error));
   }, []);
+  // Member ticket prices need migration 20261143; hidden (and never sent) until it runs
+  const [memberPricesReady, setMemberPricesReady] = useState(false);
+  useEffect(() => {
+    getSupabaseClient()?.from('events').select('ticket_member_price_cents').limit(1).then(({ error }) => setMemberPricesReady(!error));
+  }, []);
 
   // The QR popup and the printable poster both carry the door code
   const doorEvent = qrModalEvent || printPosterEvent;
@@ -143,6 +148,7 @@ export default function AdminEventsPage({
     is_public: true,
     door_qr_checkin_enabled: true,
     ticket_price: '',
+    ticket_member_price: '',
     flyer_url: '',
     repeat_weeks: 1,
   });
@@ -161,6 +167,7 @@ export default function AdminEventsPage({
       is_public: true,
       door_qr_checkin_enabled: true,
       ticket_price: '',
+      ticket_member_price: '',
       flyer_url: '',
       repeat_weeks: 1,
     });
@@ -191,6 +198,7 @@ export default function AdminEventsPage({
       is_public: evt.is_public,
       door_qr_checkin_enabled: evt.door_qr_checkin_enabled ?? true,
       ticket_price: evt.ticket_price_cents ? (evt.ticket_price_cents / 100).toFixed(2) : '',
+      ticket_member_price: evt.ticket_member_price_cents ? (evt.ticket_member_price_cents / 100).toFixed(2) : '',
       flyer_url: evt.flyer_url || '',
       repeat_weeks: 1,
     });
@@ -203,8 +211,16 @@ export default function AdminEventsPage({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
-    const { ticket_price, repeat_weeks, flyer_url, ...fields } = form;
+    const { ticket_price, ticket_member_price, repeat_weeks, flyer_url, ...fields } = form;
     const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
+    // Blank = members pay the full price. Only sent once the column exists (migration 20261143)
+    const memberCents = ticket_member_price.trim() && ticket_price_cents > 0 ? Math.round((Number(ticket_member_price) || 0) * 100) : null;
+    if (memberCents !== null && (memberCents <= 0 || memberCents > ticket_price_cents)) {
+      setToastMessage('The member ticket price must be more than 0 and no more than the ticket price. Leave it blank for none.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+    const memberPrice = memberPricesReady ? { ticket_member_price_cents: memberCents } : {};
     if (ticket_price_cents > 0 && canSell === false && !(await confirmAction({
       title: 'No way to pay yet',
       message: 'Nobody can buy tickets for this event until card payments or bank details are set up in Finance, Settings. Save it anyway?',
@@ -222,6 +238,7 @@ export default function AdminEventsPage({
         ...flyer,
         start_time: new Date(start).toISOString(),
         ticket_price_cents,
+        ...memberPrice,
       });
     } else {
       // Weekly sessions are separate events, so one can be moved or cancelled without touching the rest
@@ -239,6 +256,7 @@ export default function AdminEventsPage({
           is_public: form.is_public,
           door_qr_checkin_enabled: form.door_qr_checkin_enabled,
           ticket_price_cents,
+          ...memberPrice,
           ...flyer,
         });
       }
@@ -632,6 +650,17 @@ export default function AdminEventsPage({
                   <p id="events-ticket-price-hint" className="text-note" style={{ margin: '0.3rem 0 0' }}>
                     A price sells tickets on the public event page, up to the capacity: by card, or by bank transfer once the treasurer verifies the receipt in Finance. Only ticket holders get in.
                   </p>
+                  {memberPricesReady && Number(form.ticket_price) > 0 && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <label htmlFor="events-ticket-member-price" className="form-label">Member ticket price ({currency})</label>
+                      <input id="events-ticket-member-price" type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="Same price" className="form-input"
+                        value={form.ticket_member_price} onChange={e => setForm({ ...form, ticket_member_price: e.target.value })}
+                        aria-describedby="events-ticket-member-price-hint" />
+                      <p id="events-ticket-member-price-hint" className="text-note" style={{ margin: '0.3rem 0 0' }}>
+                        For signed-in members with an active membership, on every ticket they buy.
+                      </p>
+                    </div>
+                  )}
                   {canSell === false && Number(form.ticket_price) > 0 && (
                     <p role="alert" style={{ margin: '0.4rem 0 0', padding: '0.5rem 0.7rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
                       Card payments and bank details aren&apos;t set up yet, so tickets can&apos;t be bought.{' '}
