@@ -10,7 +10,7 @@ import { SITE_URL } from '@/lib/slugs';
 import { readableClubInk } from '@/lib/theme-utils';
 import { juniorPublicName } from '@/lib/teams';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatClock } from '@/lib/dates';
 
 /** score: fixture or result; lineup: the XI on the pitch; lineup-list: the XI as a numbered list;
  *  motm: Player of the Match (the free result graphic maker) */
@@ -397,7 +397,7 @@ function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale: string = D
   if (isNaN(d.getTime())) return { day: '', time: m.match_time || '' };
   const dateOnly = !!m.match_time && d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
   const day = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', ...(dateOnly ? { timeZone: 'UTC' } : {}) });
-  const time = m.match_time || d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const time = m.match_time ? formatClock(m.match_time) : d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   return { day, time };
 }
 

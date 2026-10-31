@@ -49,7 +49,7 @@ import { todayIso } from '@/lib/finance';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatClock, formatShortDay } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
 import LocalTime from '@/components/LocalTime';
@@ -972,11 +972,11 @@ export default function AdminMatchesPage({
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     <span className="row row-inline row-tight">
                       <Calendar size={13} color="var(--club-primary)" />
-                      {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      {formatShortDay(m.match_date)}
                     </span>
                     <span className="row row-inline row-tight">
                       <Clock size={13} color="var(--club-primary)" />
-                      {m.match_time || new Date(m.match_date).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })}
+                      {m.match_time ? formatClock(m.match_time) : new Date(m.match_date).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}
                     </span>
                     <span className="row row-inline row-tight">
                       <MapPin size={13} color="var(--club-primary)" />
@@ -1803,7 +1803,7 @@ export default function AdminMatchesPage({
       {qrModalMatch && (
         <DoorCheckinQrModal
           title={qrModalMatch.title || `${qrModalMatch.home_team_name} vs ${qrModalMatch.away_team_name}`}
-          subtitle={`${qrModalMatch.venue} • ${new Date(qrModalMatch.match_date).toLocaleDateString(DATE_LOCALE)} at ${qrModalMatch.match_time || '15:00'}`}
+          subtitle={`${qrModalMatch.venue} • ${formatShortDay(qrModalMatch.match_date)} at ${formatClock(qrModalMatch.match_time || '15:00')}`}
           checkinUrl={doorCheckinUrl}
           onClose={() => setQrModalMatch(null)}
           extraActions={
@@ -1830,7 +1830,7 @@ export default function AdminMatchesPage({
         <CheckinPoster
           club={club}
           title={printPosterMatch.title || `${printPosterMatch.home_team_name} vs ${printPosterMatch.away_team_name}`}
-          details={`${printPosterMatch.venue} • ${new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${printPosterMatch.match_time || '15:00'}`}
+          details={`${printPosterMatch.venue} • ${new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${formatClock(printPosterMatch.match_time || '15:00')}`}
           checkinUrl={doorCheckinUrl}
           onClose={() => setPrintPosterMatch(null)}
         />

@@ -22,7 +22,7 @@ import {
   ExternalLink,
   Camera
 } from 'lucide-react';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatClock } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
 import GroundSponsors from '@/components/GroundSponsors';
 
@@ -95,7 +95,7 @@ export default function MatchDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({
@@ -134,7 +134,7 @@ export default function MatchDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({
@@ -233,7 +233,7 @@ export default function MatchDoorCheckinPage({
               </span>
               <span className="row row-inline row-tight">
                 <Clock size={13} color="var(--club-primary)" />
-                {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />}
+                {match.match_time ? formatClock(match.match_time) : <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />}
               </span>
               <span className="row row-inline row-tight">
                 <MapPin size={13} color="var(--club-primary)" />

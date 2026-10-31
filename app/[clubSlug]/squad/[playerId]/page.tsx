@@ -1,9 +1,10 @@
 'use client';
 
-import React, { use, useMemo } from 'react';
+import React, { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { publicPlayerIds, teamsOfMember } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubResult, latestFirst } from '@/lib/fixtures';
@@ -36,15 +37,30 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   const total = (k: 'appearances' | 'goals' | 'assists' | 'motm_awards') => career.reduce((n, s) => n + (s[k] || 0), 0);
   const teams = player ? teamsOfMember(clubTeamMembers, clubTeams.filter(t => t.club_id === club.id && !t.is_junior), player.id) : [];
 
-  // Finished games they were picked for, newest first
+  // Their last finished games from the stats saved at full time (public_player_games, migration
+  // 20261140), with goals, assists and Player of the Match. Before that migration runs, or for games
+  // with no stats saved, the published line-ups they were in.
+  const [statGames, setStatGames] = useState<{ match_id: string; goals: number; assists: number; motm: boolean }[] | null>(null);
+  const playerKey = player?.id;
+  useEffect(() => {
+    if (!playerKey) return;
+    let live = true;
+    getSupabaseClient()?.rpc('public_player_games', { p_member_id: playerKey, p_limit: 5 })
+      .then(({ data, error }) => { if (live) setStatGames(error ? [] : (data || [])); });
+    return () => { live = false; };
+  }, [playerKey]);
   const recent = useMemo(() => {
     if (!player) return [];
-    return matches
-      .filter(m => m.club_id === club.id && m.status === 'completed' &&
-        [...(m.home_lineup_coords || []), ...(m.away_lineup_coords || [])].some(p => p.member_id === player.id))
+    const done = matches.filter(m => m.club_id === club.id && m.status === 'completed');
+    const byStats = new Map((statGames || []).map(g => [g.match_id, g]));
+    const inLineup = (m: (typeof done)[number]) =>
+      [...(m.home_lineup_coords || []), ...(m.away_lineup_coords || [])].some(p => p.member_id === player.id);
+    return done
+      .filter(m => byStats.has(m.id) || inLineup(m))
       .sort(latestFirst)
-      .slice(0, 5);
-  }, [matches, club.id, player]);
+      .slice(0, 5)
+      .map(m => ({ match: m, line: byStats.get(m.id) }));
+  }, [matches, club.id, player, statGames]);
 
   const back = (
     <Link href={`/${club.slug}/squad`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -112,10 +128,11 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
         <section aria-labelledby="player-recent" style={{ marginTop: '2rem' }}>
           <h2 id="player-recent" className="prematch-label" style={{ marginBottom: '0.75rem' }}>Recent games</h2>
           {recent.length === 0 ? (
-            <p className="glass-panel text-note" style={{ padding: '1rem 1.25rem', margin: 0 }}>No games in a published line-up yet.</p>
+            <p className="glass-panel text-note" style={{ padding: '1rem 1.25rem', margin: 0 }}>No finished games yet.</p>
           ) : (
             <div className="stack stack-sm">
-              {recent.map(m => {
+              {recent.map(({ match: m, line }) => {
+                const did = line ? [line.goals && `${line.goals} goal${line.goals === 1 ? '' : 's'}`, line.assists && `${line.assists} assist${line.assists === 1 ? '' : 's'}`, line.motm && 'Player of the Match'].filter(Boolean).join(' · ') : '';
                 const r = clubResult(m);
                 const opponent = m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name);
                 return (
@@ -125,7 +142,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem', overflowWrap: 'anywhere' }}>
                         {m.match_type === 'internal' ? `${m.home_team_name} vs ${m.away_team_name}` : `${m.is_club_home ? 'vs' : 'at'} ${opponent}`}
                       </div>
-                      <div className="text-meta"><LocalTime value={m.match_date} options={{ day: 'numeric', month: 'short', year: 'numeric' }} /></div>
+                      <div className="text-meta"><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{did && ` · ${did}`}</div>
                     </div>
                     <span className="player-game-score">{r.us} - {r.them}</span>
                     <ChevronRight size={16} color="var(--text-muted)" aria-hidden="true" />

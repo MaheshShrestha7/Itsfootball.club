@@ -7,6 +7,7 @@ import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
 import { downloadMatchIcs, directionsUrl } from '@/lib/match-ics';
 import LocalTime from '@/components/LocalTime';
+import { formatClock } from '@/lib/dates';
 import KickoffCountdown from '@/components/KickoffCountdown';
 import ResultChip from '@/components/ResultChip';
 
@@ -16,9 +17,15 @@ const competitionOf = (m: Match) => (m.competition && m.competition !== 'Premier
 /** Date (and kick-off time when the fixture has one) in the site's style */
 export function When({ m }: { m: Match }) {
   if (!hasKickoffTime(m)) {
-    return <><LocalTime value={`${m.match_date.slice(0, 10)}T12:00:00`} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{m.match_time ? ` · ${m.match_time}` : ''}</>;
+    return <><LocalTime value={`${m.match_date.slice(0, 10)}T12:00:00`} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{m.match_time ? ` · ${formatClock(m.match_time)}` : ''}</>;
   }
-  return <><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{' · '}<LocalTime value={m.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>;
+  return <><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{' · '}<KickoffTime m={m} /></>;
+}
+
+/** Kick-off time alone in the site's style ("3:00 pm"), or nothing when the fixture has none */
+export function KickoffTime({ m }: { m: Pick<Match, 'match_date' | 'match_time'> }) {
+  if (hasKickoffTime(m)) return <LocalTime value={m.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />;
+  return m.match_time ? <>{formatClock(m.match_time)}</> : null;
 }
 
 /**

@@ -10,9 +10,9 @@ import ContactModal from '@/components/ContactModal';
 import ClubContactSection from '@/components/ClubContactSection';
 import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
-import MatchdayStrip, { When as MatchWhen } from '@/components/MatchdayStrip';
+import MatchdayStrip, { When as MatchWhen, KickoffTime } from '@/components/MatchdayStrip';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { clubPlaysIn, kickoff, latestFirst, publicFixtures, soonestFirst } from '@/lib/fixtures';
+import { clubPlaysIn, hasKickoffTime, kickoff, latestFirst, publicFixtures, soonestFirst } from '@/lib/fixtures';
 import SponsorLogo from '@/components/SponsorLogo';
 import CoverImage from '@/components/CoverImage';
 import SponsorTrackedLink from '@/components/SponsorTrackedLink';
@@ -1118,7 +1118,7 @@ export default function ClubPublicPage({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                           <div className="row">
                             <Calendar size={15} color="var(--club-primary)" />
-                            <span><LocalTime value={activeSlideEvent.start_time} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} /></span>
+                            <span><LocalTime value={activeSlideEvent.start_time} /></span>
                           </div>
                           <div className="row">
                             <MapPin size={15} color="var(--club-primary)" />
@@ -1587,7 +1587,7 @@ export default function ClubPublicPage({
                     <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {match.match_time || <LocalTime value={match.match_date} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />} • {match.venue}
+                    <KickoffTime m={match} />{(hasKickoffTime(match) || match.match_time) && match.venue ? ' · ' : ''}{match.venue}
                   </div>
                 </div>
 
@@ -1883,7 +1883,7 @@ export default function ClubPublicPage({
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                   <div className="row">
                     <Calendar size={14} color="var(--club-primary)" />
-                    <span className="text-primary"><LocalTime value={evt.start_time} options={{ month: 'short', day: 'numeric', year: 'numeric' }} /></span>
+                    <span className="text-primary"><LocalTime value={evt.start_time} /></span>
                   </div>
                   <div className="row">
                     <MapPin size={14} color="var(--club-primary)" />

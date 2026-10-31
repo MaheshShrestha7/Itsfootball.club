@@ -68,7 +68,7 @@ export default function AdminScannerPage({
   const processToken = async (token: string) => {
     if (!token.trim()) return;
 
-    const timeStr = new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
     if (mode === 'match_checkin') {
       const selectedMatch = clubMatches.find(m => m.id === selectedMatchId);
@@ -129,7 +129,7 @@ export default function AdminScannerPage({
             && s.member_id === res.member!.id && new Date(s.scanned_at).toDateString() === today)
         : undefined;
       const repeatAt = earlier
-        ? new Date(earlier.scanned_at).toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit' })
+        ? new Date(earlier.scanned_at).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })
         : undefined;
       const result = repeatAt
         ? { ...res, repeatAt, message: `Already scanned today at ${repeatAt}. Check the photo matches the person before letting them in.` }

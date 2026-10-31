@@ -154,7 +154,7 @@ export default function EventDetailsPage({
               <div>
                 <div className="text-meta">Date</div>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  <LocalTime value={event.start_time} options={{ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }} />
+                  <LocalTime value={event.start_time} />
                 </div>
               </div>
             </div>

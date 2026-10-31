@@ -247,7 +247,7 @@ function AvailabilityHub() {
       ? `🏆 ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)} (${groupGames.length} games)\n`
       : `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n`) +
     `📍 ${targetMatch?.venue}\n` +
-    `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}\n\n` +
+    `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}\n\n` +
     `Please tap In, Maybe or Out:\n` +
     `${shareableUrl}`
   );

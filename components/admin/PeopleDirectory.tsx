@@ -75,6 +75,21 @@ function seasonLine(t: Totals | null): string {
   return parts.slice(0, 3).join(' · ');
 }
 
+type PeopleSort = 'surname' | 'first' | 'number' | 'games' | 'newest';
+const surnameOf = (m: ClubMember) => (m.last_name?.trim() || m.full_name.trim().split(/\s+/).pop() || '').toLowerCase();
+const byName = (a: ClubMember, b: ClubMember) => a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' });
+
+/** The directory order: surname A–Z by default (ties by full name), or the order picked in Sort */
+function comparePeople(a: ClubMember, b: ClubMember, sort: PeopleSort, games: (m: ClubMember) => number): number {
+  switch (sort) {
+    case 'first': return byName(a, b);
+    case 'number': return (a.jersey_number ?? 999) - (b.jersey_number ?? 999) || byName(a, b);
+    case 'games': return games(b) - games(a) || byName(a, b);
+    case 'newest': return (b.created_at || '').localeCompare(a.created_at || '') || byName(a, b);
+    default: return surnameOf(a).localeCompare(surnameOf(b)) || byName(a, b);
+  }
+}
+
 export default function PeopleDirectory({
   clubSlug,
   actions,
@@ -148,6 +163,7 @@ export default function PeopleDirectory({
   const [teamFilter, setTeamFilter] = useState('all');
   const [membershipFilter, setMembershipFilter] = useState('any');
   const [checksFilter, setChecksFilter] = useState('any');
+  const [sortBy, setSortBy] = useState<PeopleSort>('surname');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   useEffect(() => {
     try {
@@ -173,7 +189,8 @@ export default function PeopleDirectory({
     }
     return true;
   };
-  const filtered = people.filter(m => inGroup(group, m, isJunior(m), today) && passesFilters(m));
+  const filtered = people.filter(m => inGroup(group, m, isJunior(m), today) && passesFilters(m))
+    .sort((a, b) => comparePeople(a, b, sortBy, m => totalsFor(m)?.appearances ?? 0));
   const countOf = (g: PeopleGroup) => people.filter(m => inGroup(g, m, isJunior(m), today)).length;
   const filtersActive = query.trim() !== '' || teamFilter !== 'all' || membershipFilter !== 'any' || checksFilter !== 'any' || group !== 'everyone';
   const clearFilters = () => { setQuery(''); setGroup('everyone'); setTeamFilter('all'); setMembershipFilter('any'); setChecksFilter('any'); };
@@ -186,6 +203,8 @@ export default function PeopleDirectory({
   return (
     <div>
       <style>{`
+        .ppl-filter { flex: 1 1 150px; min-width: 0; }
+        @media (max-width: 599px) { .ppl-filter { flex-basis: 100%; } }
         .ppl-chips { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
         .ppl-chip { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; min-height: 40px; padding: 0 0.9rem; border-radius: 999px; border: 1px solid var(--border-medium); background: var(--bg-surface); color: var(--text-secondary); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
         .ppl-chip[aria-pressed="true"] { background: var(--club-primary); border-color: var(--club-primary); color: var(--club-primary-contrast, #090D16); }
@@ -316,26 +335,33 @@ export default function PeopleDirectory({
         </div>
         <div className="row row-wrap" style={{ gap: '0.6rem', alignItems: 'center' }}>
           {teams.length > 1 && (
-            <select data-view-ok aria-label="Team" className="form-select" value={teamFilter} onChange={e => setTeamFilter(e.target.value)} style={{ flex: '1 1 150px', minWidth: 0 }}>
+            <select data-view-ok aria-label="Team" className="form-select ppl-filter" value={teamFilter} onChange={e => setTeamFilter(e.target.value)}>
               <option value="all">All teams</option>
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               <option value="none">Not in a team</option>
             </select>
           )}
-          <select data-view-ok aria-label="Membership" className="form-select" value={membershipFilter} onChange={e => setMembershipFilter(e.target.value)} style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <select data-view-ok aria-label="Membership" className="form-select ppl-filter" value={membershipFilter} onChange={e => setMembershipFilter(e.target.value)}>
             <option value="any">Any membership</option>
             <option value="active">Active</option>
             <option value="expiring">Expiring soon</option>
             <option value="expired">Expired</option>
             <option value="suspended">Suspended</option>
           </select>
-          <select data-view-ok aria-label="Checks" className="form-select" value={checksFilter} onChange={e => setChecksFilter(e.target.value)} style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <select data-view-ok aria-label="Checks" className="form-select ppl-filter" value={checksFilter} onChange={e => setChecksFilter(e.target.value)}>
             <option value="any">Any checks</option>
             <option value="needs">Something to check</option>
             <option value="safeguarding">Background check due</option>
             <option value="photo">Photo consent not asked</option>
             <option value="guardian">No parent contact</option>
             <option value="emergency">No emergency contact</option>
+          </select>
+          <select data-view-ok aria-label="Sort" className="form-select ppl-filter" value={sortBy} onChange={e => setSortBy(e.target.value as PeopleSort)}>
+            <option value="surname">Surname A–Z</option>
+            <option value="first">First name A–Z</option>
+            <option value="number">Shirt number</option>
+            <option value="games">Most games this season</option>
+            <option value="newest">Newest first</option>
           </select>
           {filtersActive && (
             <button type="button" data-view-ok onClick={clearFilters} className="btn btn-secondary btn-sm row" style={{ gap: '0.3rem' }}>

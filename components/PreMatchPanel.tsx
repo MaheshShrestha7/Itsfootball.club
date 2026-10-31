@@ -7,6 +7,7 @@ import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime, kickoff, latestFirst } from '@/lib/fixtures';
 import { downloadMatchIcs, directionsUrl } from '@/lib/match-ics';
 import LocalTime from '@/components/LocalTime';
+import { formatClock } from '@/lib/dates';
 import KickoffCountdown from '@/components/KickoffCountdown';
 import ResultChip from '@/components/ResultChip';
 
@@ -48,7 +49,7 @@ export default function PreMatchPanel({ club, match, previous, previousScoreHidd
         ) : hasKickoffTime(match) ? (
           <KickoffCountdown kickoff={kickoff(match)} fallback={<LocalTime value={match.match_date} format="both" options={{ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }} />} />
         ) : (
-          <div className="text-note">{match.match_time ? `Kick-off ${match.match_time}` : 'Kick-off time to be confirmed'}</div>
+          <div className="text-note">{match.match_time ? `Kick-off ${formatClock(match.match_time)}` : 'Kick-off time to be confirmed'}</div>
         )}
         <div className="matchday-actions">
           {!postponed && (
@@ -92,7 +93,7 @@ export default function PreMatchPanel({ club, match, previous, previousScoreHidd
             </div>
           </div>
           <div className="text-meta">
-            <LocalTime value={prev.match_date} options={{ day: 'numeric', month: 'short', year: 'numeric' }} />
+            <LocalTime value={prev.match_date} />
             {prev.venue ? ` · ${prev.venue}` : ''}
           </div>
           <span className="matchday-link">Match report <ChevronRight size={14} aria-hidden="true" /></span>

@@ -17,7 +17,7 @@ import {
   RotateCw,
   Download
 } from 'lucide-react';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatClock } from '@/lib/dates';
 
 interface VirtualPassCardProps {
   club: Club;
@@ -575,7 +575,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                       </>
                     )}
                     <div style={{ color: GLASS_MUTED }}>
-                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${nextMatch.match_time.slice(0, 5)}` : ''}
+                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${formatClock(nextMatch.match_time)}` : ''}
                     </div>
                   </>
                 ) : (

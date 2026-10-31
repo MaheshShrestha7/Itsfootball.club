@@ -7,6 +7,7 @@ import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime } from '@/lib/fixtures';
 import LocalTime from '@/components/LocalTime';
 import ResultChip from '@/components/ResultChip';
+import { formatClock } from '@/lib/dates';
 
 /** One fixture or result as a row linking to its match page (team pages, /club/fixtures).
  *  A date tile on the left, the opponent and details in the middle, and on the right the
@@ -21,7 +22,7 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { 
   const when = timed ? match.match_date : `${match.match_date?.slice(0, 10)}T12:00:00`;
   const kickoffTime = timed
     ? <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-    : match.match_time || null;
+    : match.match_time ? formatClock(match.match_time) : null;
   return (
     <Link href={matchPath(clubSlug, match)} className="glass-panel glass-panel-interactive fixture-row" style={{ color: 'inherit', textDecoration: 'none' }}>
       <div className="fixture-row-date" aria-hidden="true">

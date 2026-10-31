@@ -20,7 +20,7 @@ import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, Ey
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   prospect: 'Prospect (In Talks)',
@@ -1293,7 +1293,7 @@ export default function AdminSponsorsPage({
                       <option value="">Select an event…</option>
                       {clubEvents.map(evt => (
                         <option key={evt.id} value={evt.id}>
-                          {evt.title} ({new Date(evt.start_time).toLocaleDateString(DATE_LOCALE)})
+                          {evt.title} ({formatShortDay(evt.start_time)})
                         </option>
                       ))}
                     </select>

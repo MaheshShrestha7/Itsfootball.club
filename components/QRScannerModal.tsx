@@ -117,7 +117,7 @@ export default function QRScannerModal({
     setScanResult({ status: 'idle', message: '' });
 
     const currentTimeStr = new Date().toLocaleTimeString(DATE_LOCALE, {
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
     });

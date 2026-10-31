@@ -138,7 +138,7 @@ export default function EventDoorCheckinPage({
         success: true,
         message: res.message,
         attendeeName: res.attendeeName,
-        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        checkedInAt: new Date().toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
       });
     } else {
       setResult({ success: false, message: res.message });
@@ -241,7 +241,7 @@ export default function EventDoorCheckinPage({
             </span>
             <span className="row row-inline row-tight">
               <Clock size={13} color="var(--club-primary)" />
-              <LocalTime value={event.start_time} format="time" options={{ hour: '2-digit', minute: '2-digit' }} />
+              <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
             </span>
             <span className="row row-inline row-tight">
               <MapPin size={13} color="var(--club-primary)" />
