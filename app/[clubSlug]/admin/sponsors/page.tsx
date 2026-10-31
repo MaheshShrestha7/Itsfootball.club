@@ -17,7 +17,7 @@ import SponsorThanksPoster from '@/components/admin/SponsorThanksPoster';
 import OneSponsorSpots from '@/components/admin/OneSponsorSpots';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer, Gift } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer, Gift } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
@@ -60,17 +60,17 @@ const SECTIONS = [['business', 'Business'], ['shows', 'How it shows'], ['deal', 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-      style={{ flexShrink: 0, width: 48, height: 28, padding: 0, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.1)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
-      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s ease' }} />
+      style={{ flexShrink: 0, width: 48, height: 28, padding: 0, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
+      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--color-print)', transition: 'left 0.2s ease' }} />
     </button>
   );
 }
 
 const onSiteBadge = (s: Sponsor) => isSponsorOnSite(s)
-  ? <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '0.7rem' }}>● On site</span>
-  : <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-muted)', border: '1px dashed var(--border-medium)', fontSize: '0.7rem' }}>Hidden from site</span>;
+  ? <span className="admin-pill is-ok">On the site</span>
+  : <span className="admin-pill">Hidden from the site</span>;
 
-const sectionHeading: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
+const sectionHeading: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
 const sectionBox: React.CSSProperties = { borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '0.5rem' };
 const hint: React.CSSProperties = { fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' };
 
@@ -520,41 +520,29 @@ export default function AdminSponsorsPage({
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
-      }}>
+      <div className="admin-head">
         <div>
-          <h1 className="stat-value">
-            Club Sponsors & Commercial Partners
-          </h1>
-          <p className="text-body">
-            Manage your kit sponsors, ground naming rights and community sponsors.
-          </p>
+          <h1>Sponsors</h1>
+          <p>Kit sponsors, ground naming rights and community sponsors, their packages and the perks they give members.</p>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="admin-head-actions">
           <button type="button" onClick={() => setThanksPosterOpen(true)} className="btn btn-secondary row">
-            <Printer size={16} />
+            <Printer size={16} aria-hidden="true" />
             <span>Print thank-you poster</span>
           </button>
-          <button onClick={handleOpenAdd} className="btn btn-primary row">
-            <Plus size={16} />
-            <span>Add New Sponsor</span>
+          <button type="button" onClick={handleOpenAdd} className="btn btn-primary row">
+            <Plus size={16} aria-hidden="true" />
+            <span>Add a sponsor</span>
           </button>
         </div>
       </div>
       {thanksPosterOpen && <SponsorThanksPoster club={club} onClose={() => setThanksPosterOpen(false)} />}
 
-      <div className="sponsor-tabs" role="tablist" aria-label="Sponsors" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {([['list', 'Sponsor List', Shield], ['packages', 'Packages', Package], ['perks', 'Member Perks', Gift]] as const).map(([id, label, Icon]) => (
-          <button key={id} type="button" role="tab" aria-selected={tab === id} data-view-ok onClick={() => setTab(id)}
-            className={`btn btn-sm ${tab === id ? 'btn-primary' : 'btn-secondary'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Icon size={14} /> {label}
+      <div className="admin-tabs" role="tablist" aria-label="Sponsors">
+        {([['list', 'Sponsors', Shield], ['packages', 'Packages', Package], ['perks', 'Member perks', Gift]] as const).map(([id, label, Icon]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} data-view-ok onClick={() => setTab(id)} className="admin-tab">
+            <Icon size={14} aria-hidden="true" /> {label}
           </button>
         ))}
       </div>
@@ -564,23 +552,11 @@ export default function AdminSponsorsPage({
       <OneSponsorSpots club={club} />
 
       {/* Top Banner & Live Preview Toggle */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '0.75rem 1rem',
-        padding: '0.85rem 1.25rem',
-        background: 'rgba(var(--tint-rgb), 0.03)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '12px',
-        marginBottom: '1.5rem',
-      }}>
+      <div className="admin-notice" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
         {/* One paragraph that wraps as a whole, not three side-by-side columns on a phone */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 260px', minWidth: 0 }}>
-          <Sparkles size={16} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Bigger tiers get bigger logos. </strong>
+            <strong style={{ color: 'var(--text-primary)' }}>Bigger tiers get bigger logos. </strong>
             Platinum shows biggest, then Gold, Silver, Bronze and Grassroots. Change one sponsor&apos;s size with Logo size when you edit them.
           </p>
         </div>
@@ -588,10 +564,9 @@ export default function AdminSponsorsPage({
           type="button"
           onClick={() => setShowLivePreview(!showLivePreview)}
           className="btn btn-secondary btn-sm"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
         >
-          <Eye size={13} />
-          <span>{showLivePreview ? 'Hide Live Preview' : 'Show Public Preview'}</span>
+          <Eye size={13} aria-hidden="true" />
+          <span>{showLivePreview ? 'Hide the preview' : 'Preview what fans see'}</span>
         </button>
       </div>
 
@@ -600,13 +575,13 @@ export default function AdminSponsorsPage({
         <div style={{
           marginBottom: '2rem',
           padding: '1.25rem',
-          background: 'rgba(var(--shade-rgb), 0.25)',
+          background: 'color-mix(in oklab, var(--color-sidebar) 25%, transparent)',
           border: '1px solid var(--border-subtle)',
           borderRadius: '14px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <LayoutGrid size={14} /> What fans see
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <LayoutGrid size={14} aria-hidden="true" /> What fans see
             </span>
             <span className="text-meta">
               Only sponsors that are on the site, at the size fans see them
@@ -624,23 +599,14 @@ export default function AdminSponsorsPage({
                   key={`prev-${sponsor.id}`}
                   style={{
                     padding: isXL ? '1rem 1.5rem' : isLG ? '0.85rem 1.25rem' : isMD ? '0.7rem 1rem' : '0.5rem 0.8rem',
-                    background: isXL
-                      ? 'radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.15), rgba(var(--dk-30-41-59), 0.7))'
-                      : isLG
-                      ? 'rgba(245, 158, 11, 0.06)'
-                      : 'rgba(var(--tint-rgb), 0.03)',
-                    border: isXL
-                      ? '1px solid rgba(245, 158, 11, 0.5)'
-                      : isLG
-                      ? '1px solid rgba(245, 158, 11, 0.25)'
-                      : '1px solid var(--border-subtle)',
+                    background: isXL || isLG ? 'var(--color-paper-3)' : 'var(--color-paper-2)',
+                    border: isXL || isLG ? '1px solid var(--color-rule-strong)' : '1px solid var(--border-subtle)',
                     borderRadius: '10px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: isXL ? '1rem' : isLG ? '0.75rem' : '0.5rem',
                     minWidth: isXL ? '280px' : isLG ? '220px' : isMD ? '170px' : '130px',
                     flex: isXL ? '2 1 280px' : isLG ? '1.5 1 220px' : '1 1 160px',
-                    boxShadow: isXL ? '0 6px 24px rgba(245, 158, 11, 0.12)' : 'none',
                   }}
                 >
                   <SponsorLogo
@@ -650,20 +616,13 @@ export default function AdminSponsorsPage({
                     style={{ maxWidth: isXL ? '130px' : isLG ? '100px' : isMD ? '80px' : '65px' }}
                   />
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
+                    <div style={{ fontWeight: 600, fontSize: isXL ? '1rem' : isLG ? '0.88rem' : '0.78rem', color: 'var(--text-primary)' }}>
                       {sponsor.name}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.2rem 0.35rem', marginTop: '2px' }}>
-                      <span className="badge" style={{
-                        fontSize: '0.7rem',
-                        // SPE-24: the badge stays on one line; the logo size moves under it instead
-                        whiteSpace: 'nowrap',
-                        backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(var(--tint-rgb), 0.08)',
-                        color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-muted)',
-                      }}>
-                        {sponsorLabel(sponsor).toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: isXL ? 'var(--c-amber)' : 'var(--text-muted)', fontWeight: 600 }}>
+                      {/* SPE-24: the pill stays on one line; the logo size moves under it instead */}
+                      <span className="admin-pill">{sponsorLabel(sponsor)}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                         {LOGO_SIZE_LABEL[scale]} logo
                       </span>
                     </div>
@@ -676,20 +635,11 @@ export default function AdminSponsorsPage({
       )}
 
       {/* Which sponsors to list */}
-      <div className="row row-wrap" role="group" aria-label="Show" style={{ gap: '0.4rem', marginBottom: '1.25rem', padding: '0.3rem', borderRadius: '12px', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', width: 'fit-content', maxWidth: '100%' }}>
+      <div className="admin-chips" role="group" aria-label="Show" style={{ marginBottom: 'var(--space-md)' }}>
         {VIEWS.filter(v => v.id !== 'ending' || renewalsReady).map(v => (
-          <button key={v.id} type="button" data-view-ok aria-pressed={view === v.id} onClick={() => setView(v.id)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', borderRadius: '9px', cursor: 'pointer',
-              border: 'none', fontSize: '0.8rem', fontWeight: 700,
-              background: view === v.id ? 'rgba(var(--tint-rgb), 0.1)' : 'transparent',
-              color: view === v.id ? 'var(--text-primary)' : 'var(--text-muted)',
-              boxShadow: view === v.id ? 'inset 0 -2px 0 var(--club-primary)' : 'none',
-            }}>
+          <button key={v.id} type="button" data-view-ok className="admin-chip" aria-pressed={view === v.id} onClick={() => setView(v.id)}>
             {v.label}
-            <span style={{ fontSize: '0.7rem', padding: '0 0.45rem', borderRadius: 999,
-              background: v.id === 'new' && viewCounts.new > 0 ? 'rgba(59, 130, 246, 0.25)' : v.id === 'ending' && viewCounts.ending > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
-              color: v.id === 'new' && viewCounts.new > 0 ? 'var(--c-blue)' : v.id === 'ending' && viewCounts.ending > 0 ? 'var(--c-amber)' : 'var(--text-secondary)' }}>
+            <span className="num" style={(v.id === 'new' || v.id === 'ending') && viewCounts[v.id] > 0 ? { color: 'var(--color-warn)', fontWeight: 600 } : undefined}>
               {viewCounts[v.id]}
             </span>
           </button>
@@ -744,10 +694,6 @@ export default function AdminSponsorsPage({
                 justifyContent: 'space-between',
                 gap: '1rem',
                 opacity: stage === 'ended' ? 0.75 : undefined,
-                borderLeft: stage === 'new' && sponsor.package_status === 'paid' ? '4px solid #10B981'
-                  : stage === 'ended' ? undefined
-                  : endingSoon ? '4px solid #F59E0B'
-                  : scale === 'xl' ? '4px solid #F59E0B' : scale === 'lg' ? '4px solid #EAB308' : undefined,
               }}
             >
               {/* On a phone the details move under the logo instead of squeezing into a narrow column */}
@@ -775,52 +721,36 @@ export default function AdminSponsorsPage({
                   height={scale === 'xl' ? 46 : 38}
                   style={{
                     width: scale === 'xl' ? '70px' : '55px',
-                    background: 'rgba(var(--tint-rgb), 0.05)',
+                    background: 'color-mix(in oklab, var(--color-ink) 5%, transparent)',
                     padding: '4px',
                     borderRadius: '6px',
                   }}
                 />
                 <div style={{ flex: '1 1 240px', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{sponsor.name}</span>
-                    <span className="badge" style={{
-                      backgroundColor: sponsor.tier === 'platinum' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.08)',
-                      color: sponsor.tier === 'platinum' ? 'var(--c-amber)' : 'var(--text-secondary)',
-                    }}>
-                      {sponsor.tier.toUpperCase()}
-                    </span>
+                    <span style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{sponsor.name}</span>
+                    <span className="admin-pill" style={{ textTransform: 'capitalize' }}>{sponsor.tier}</span>
                     {sponsor.label?.trim() && <span className="text-meta">Shown as &ldquo;{sponsor.label.trim()}&rdquo;</span>}
                     {stage !== 'new' && stage !== 'ended' && (
-                      <span className="badge" style={{
-                        backgroundColor: scale === 'xl' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                        color: scale === 'xl' ? 'var(--c-amber)' : 'var(--text-muted)',
-                        fontSize: '0.7rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}>
-                        <Maximize2 size={10} />
+                      <span className="admin-pill">
+                        <Maximize2 size={10} aria-hidden="true" />
                         Logo size: {LOGO_SIZE_LABEL[scale]}{!isCustomScale && ' (by tier)'}
                       </span>
                     )}
                     {sponsor.package_status && (
-                      <span className="badge" style={{
-                        backgroundColor: receiptWaiting || invoice ? 'rgba(245, 158, 11, 0.15)' : sponsor.package_status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : sponsor.package_status === 'prospect' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                        color: overdue ? 'var(--c-red)' : receiptWaiting || invoice ? 'var(--c-amber)' : sponsor.package_status === 'paid' ? 'var(--c-green)' : sponsor.package_status === 'prospect' ? 'var(--c-blue)' : 'var(--text-muted)',
-                        fontSize: '0.7rem',
-                      }}>
+                      <span className={`admin-pill${overdue ? ' is-danger' : receiptWaiting || invoice ? ' is-warn' : sponsor.package_status === 'paid' ? ' is-ok' : ''}`}>
                         {statusText}
                       </span>
                     )}
                     {stage !== 'ended' && onSiteBadge(sponsor)}
                     {stage !== 'ended' && packages.length > 0 && !sponsorPackageFor(sponsor, packages) && (
-                      <span className="badge" title="Posters, tickets and the check-in screen only show sponsors on a package. Pick their package in Edit, or give them the tier and price of one."
-                        style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-muted)', border: '1px dashed var(--border-medium)', fontSize: '0.7rem' }}>
+                      <span title="Posters, tickets and the check-in screen only show sponsors on a package. Pick their package in Edit, or give them the tier and price of one."
+                        className="admin-pill">
                         Not on a package
                       </span>
                     )}
                     {endingSoon && daysLeft !== null && (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.7rem' }}>
+                      <span className="admin-pill is-warn">
                         {daysLeft === 0 ? 'Last day today' : `Ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`}
                       </span>
                     )}
@@ -840,7 +770,7 @@ export default function AdminSponsorsPage({
                     {sponsor.package_value != null && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         {formatMoney(Math.round(sponsor.package_value * 100), currency)}
-                        {sponsor.season ? ` • ${sponsor.season}` : ''}
+                        {sponsor.season ? `, ${sponsor.season}` : ''}
                       </span>
                     )}
                     {sponsor.ends_on && (
@@ -881,12 +811,12 @@ export default function AdminSponsorsPage({
 
               {/* A new logo or website they sent from their own page */}
               {hasSentChange(sponsor) && (
-                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem 1rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem 1rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'var(--color-warn-wash)', border: '1px solid var(--color-warn-line)' }}>
                   {sponsor.pending_logo_url && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={40} style={{ width: 64, background: '#fff', padding: 4, borderRadius: 6 }} />
+                      <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={40} style={{ width: 64, background: 'var(--color-print)', padding: 4, borderRadius: 6 }} />
                       <span aria-hidden="true" className="text-muted">→</span>
-                      <img src={sponsor.pending_logo_url} alt={`New logo from ${sponsor.name}`} style={{ height: 40, width: 64, objectFit: 'contain', background: '#fff', padding: 4, borderRadius: 6 }} />
+                      <img src={sponsor.pending_logo_url} alt={`New logo from ${sponsor.name}`} style={{ height: 40, width: 64, objectFit: 'contain', background: 'var(--color-print)', padding: 4, borderRadius: 6 }} />
                     </div>
                   )}
                   <div style={{ flex: '1 1 200px', minWidth: 0, fontSize: '0.82rem' }}>
@@ -975,7 +905,7 @@ export default function AdminSponsorsPage({
 
               {/* What happened to the payment or renewal link */}
               {result && !result.busy && (
-                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 0.85rem', padding: '0.65rem 0.85rem', borderRadius: '10px', background: 'rgba(var(--shade-rgb), 0.3)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
+                <div role="status" style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 0.85rem', padding: '0.65rem 0.85rem', borderRadius: '10px', background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
                   {result.emailed
                     ? <span style={{ color: 'var(--c-green)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Check size={14} /> Emailed to {sponsor.contact_email}</span>
                     : <span style={{ color: result.link && result.page ? 'var(--text-secondary)' : result.link ? 'var(--c-amber)' : 'var(--c-red)', fontWeight: 700 }}>{result.note}</span>}
@@ -1004,7 +934,7 @@ export default function AdminSponsorsPage({
         };
 
         const heading = (icon: React.ReactNode, text: string) => (
-          <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             {icon} {text}
           </h3>
         );
@@ -1083,7 +1013,7 @@ export default function AdminSponsorsPage({
 
             {eventGroups.map(({ event, list }) => (
               <div key={event.id}>
-                {heading(<Calendar size={14} />, `Event Sponsors • ${event.title}`)}
+                {heading(<Calendar size={14} />, `Event sponsors, ${event.title}`)}
                 {reorderHint(list)}
                 <div className="stack">{movable(list)}</div>
               </div>
@@ -1118,7 +1048,7 @@ export default function AdminSponsorsPage({
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           zIndex: 999,
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -1136,8 +1066,8 @@ export default function AdminSponsorsPage({
           }}>
             <div style={{ position: 'sticky', top: '-1rem', zIndex: 2, background: 'var(--bg-surface-elevated)', padding: '1.5rem 0 0', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0' }}>
               <div className="section-head" style={{ marginBottom: '0.5rem' }}>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  {editingId ? 'Edit Sponsor' : 'Add Club Sponsor'}
+                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {editingId ? 'Edit sponsor' : 'Add a sponsor'}
                 </h3>
                 <button type="button" onClick={() => setModalOpen(false)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={20} />
@@ -1146,7 +1076,7 @@ export default function AdminSponsorsPage({
               <nav aria-label="Sections" style={{ display: 'flex', gap: '1.1rem', borderBottom: '1px solid var(--border-subtle)' }}>
                 {SECTIONS.map(([id, label]) => (
                   <button key={id} type="button" onClick={e => jumpTo(id, e.timeStamp)}
-                    style={{ padding: '0.55rem 0.1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', color: section === id ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: section === id ? 'inset 0 -2px 0 var(--club-primary)' : 'none' }}>
+                    style={{ padding: '0.55rem 0.1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', color: section === id ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: section === id ? 'inset 0 -2px 0 var(--color-accent)' : 'none' }}>
                     {label}
                   </button>
                 ))}
@@ -1154,9 +1084,9 @@ export default function AdminSponsorsPage({
             </div>
 
             <form onSubmit={handleSave} style={{ paddingTop: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.85rem', marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid rgba(var(--club-primary-rgb), 0.45)', background: 'rgba(var(--club-primary-rgb), 0.08)' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.85rem', marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid var(--color-accent-line)', background: 'var(--color-accent-wash)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div id="sponsors-on-site" style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Show on the club site</div>
+                  <div id="sponsors-on-site" style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Show on the club site</div>
                   <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                     {form.is_active
                       ? `On: fans see this sponsor on your club pages${renewalsReady && form.ends_on ? ` until ${formatEndDate(form.ends_on)}` : ''}.`
@@ -1169,7 +1099,7 @@ export default function AdminSponsorsPage({
 
               {/* ---------- Business ---------- */}
               <section id="sponsor-sec-business" data-section="business" style={{ scrollMarginTop: '7rem' }}>
-                <h4 style={sectionHeading}><Shield size={14} color="var(--club-primary)" /> Business</h4>
+                <h4 style={sectionHeading}><Shield size={14} color="var(--color-accent-ink)" /> Business</h4>
 
                 <div className="form-group">
                   <label htmlFor="sponsors-sponsor-partner-name" className="form-label">Sponsor / Partner Name *</label>
@@ -1254,7 +1184,7 @@ export default function AdminSponsorsPage({
 
               {/* ---------- How it shows ---------- */}
               <section id="sponsor-sec-shows" data-section="shows" style={{ ...sectionBox, scrollMarginTop: '7rem' }}>
-                <h4 style={sectionHeading}><Eye size={14} color="var(--club-primary)" /> How it shows</h4>
+                <h4 style={sectionHeading}><Eye size={14} aria-hidden="true" /> How it shows</h4>
 
                 <div className="form-group">
                   <label className="form-label">Where it shows</label>
@@ -1262,15 +1192,9 @@ export default function AdminSponsorsPage({
                     {([['club', Shield, 'Whole club'], ['event', Calendar, 'One event']] as const).map(([value, Icon, text]) => (
                       <button key={value} type="button" aria-pressed={form.scope === value}
                         onClick={() => setForm({ ...form, scope: value, event_id: value === 'club' ? '' : form.event_id })}
-                        className="btn btn-sm"
-                        style={{
-                          justifyContent: 'center',
-                          gap: '0.4rem',
-                          background: form.scope === value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                          border: form.scope === value ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                          color: form.scope === value ? 'var(--c-green)' : 'var(--text-secondary)',
-                        }}>
-                        <Icon size={14} /> {text}
+                        className="btn btn-secondary btn-sm"
+                        style={{ justifyContent: 'center', gap: '0.4rem' }}>
+                        <Icon size={14} aria-hidden="true" /> {text}
                       </button>
                     ))}
                   </div>
@@ -1340,15 +1264,15 @@ export default function AdminSponsorsPage({
 
                 <div className="form-group">
                   <span id="sponsors-logo-size" className="form-label">Logo size</span>
-                  <div role="group" aria-labelledby="sponsors-logo-size" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)' }}>
+                  <div role="group" aria-labelledby="sponsors-logo-size" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px', background: 'color-mix(in oklab, var(--color-sidebar) 35%, transparent)', border: '1px solid var(--border-subtle)' }}>
                     {(['auto', 'xl', 'lg', 'md', 'sm'] as SponsorSizeScale[]).map(size => (
                       <button key={size} type="button" aria-pressed={form.size_scale === size} onClick={() => setForm({ ...form, size_scale: size })}
                         style={{
                           flex: 1, padding: '0.5rem 0.2rem', borderRadius: '9px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
                           border: 'none',
-                          background: form.size_scale === size ? 'rgba(var(--club-primary-rgb), 0.2)' : 'transparent',
+                          background: form.size_scale === size ? 'color-mix(in oklab, var(--color-accent) 20%, transparent)' : 'transparent',
                           color: form.size_scale === size ? 'var(--text-primary)' : 'var(--text-muted)',
-                          boxShadow: form.size_scale === size ? 'inset 0 0 0 1px rgba(var(--club-primary-rgb), 0.6)' : 'none',
+                          boxShadow: form.size_scale === size ? 'inset 0 0 0 1px color-mix(in oklab, var(--color-accent) 60%, transparent)' : 'none',
                         }}>
                         {LOGO_SIZE_LABEL[size]}
                       </button>
@@ -1362,7 +1286,7 @@ export default function AdminSponsorsPage({
 
               {/* ---------- Deal ---------- */}
               <section id="sponsor-sec-deal" data-section="deal" style={{ ...sectionBox, scrollMarginTop: '7rem' }}>
-                <h4 style={sectionHeading}><DollarSign size={14} color="var(--club-primary)" /> Deal</h4>
+                <h4 style={sectionHeading}><DollarSign size={14} color="var(--color-accent-ink)" /> Deal</h4>
                 <p style={{ ...hint, marginTop: '-0.5rem', marginBottom: '1rem' }}>Only admins see this.</p>
 
                 {packageIdReady && packages.length > 0 && (
@@ -1489,10 +1413,10 @@ export default function AdminSponsorsPage({
       {recording && (
         <div role="dialog" aria-modal="true" aria-labelledby="record-payment-title"
           onKeyDown={e => { if (e.key === 'Escape') setRecording(null); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'var(--color-scrim)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
           <form onSubmit={saveRecord} className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)', padding: '1.5rem' }}>
             <div className="section-head" style={{ marginBottom: '0.35rem' }}>
-              <h3 id="record-payment-title" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>Record a payment</h3>
+              <h3 id="record-payment-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>Record a payment</h3>
               <button type="button" onClick={() => setRecording(null)} aria-label="Close" title="Close (Esc)" className="touch-target" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -1505,7 +1429,7 @@ export default function AdminSponsorsPage({
                 <span className="form-label">Amount</span>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
                   {formatMoney(sponsorPayments.invoice.get(recording.sponsor.id)!.amount_cents, sponsorPayments.invoice.get(recording.sponsor.id)!.currency)}
-                  <span className="text-meta" style={{ fontWeight: 500 }}> · pays the invoice you sent them</span>
+                  <span className="text-meta" style={{ fontWeight: 500 }}>, pays the invoice you sent them</span>
                 </div>
               </div>
             ) : (
@@ -1520,13 +1444,8 @@ export default function AdminSponsorsPage({
               <div role="group" aria-labelledby="record-method" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
                 {([['bank_transfer', 'Direct deposit'], ['cash', 'Cash'], ['cheque', 'Cheque'], ['other', 'Other']] as const).map(([value, text]) => (
                   <button key={value} type="button" aria-pressed={recording.method === value} onClick={() => setRecording({ ...recording, method: value })}
-                    className="btn btn-sm"
-                    style={{
-                      justifyContent: 'center',
-                      background: recording.method === value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.05)',
-                      border: recording.method === value ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      color: recording.method === value ? 'var(--c-green)' : 'var(--text-secondary)',
-                    }}>
+                    className="btn btn-secondary btn-sm"
+                    style={{ justifyContent: 'center' }}>
                     {text}
                   </button>
                 ))}

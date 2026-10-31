@@ -6,7 +6,6 @@ import { useClub } from '@/lib/club-context';
 import { HeroSliderPinnedItem, HeroPinType, ClubEvent, Match, NewsArticle } from '@/lib/supabase/types';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import {
-  Sparkles,
   Calendar,
   Radio,
   FileText,
@@ -165,7 +164,7 @@ export default function AdminHeroSliderPage({
       is_active: true,
       order: pinnedItems.length + 1,
     };
-    persistPinnedItems([...pinnedItems, newPin], `✓ Live: Pinned event "${evt.title}" to Hero Slider!`);
+    persistPinnedItems([...pinnedItems, newPin], `Pinned "${evt.title}" to the home page`);
   };
 
   // Pin a fixture/match
@@ -188,7 +187,7 @@ export default function AdminHeroSliderPage({
       is_active: true,
       order: pinnedItems.length + 1,
     };
-    persistPinnedItems([...pinnedItems, newPin], `✓ Live: Pinned fixture "${m.home_team_name} vs ${m.away_team_name}" to Hero Slider!`);
+    persistPinnedItems([...pinnedItems, newPin], `Pinned ${m.home_team_name} vs ${m.away_team_name} to the home page`);
   };
 
   // Pin a news article
@@ -210,7 +209,7 @@ export default function AdminHeroSliderPage({
       is_active: true,
       order: pinnedItems.length + 1,
     };
-    persistPinnedItems([...pinnedItems, newPin], `✓ Live: Pinned story "${article.title}" to Hero Slider!`);
+    persistPinnedItems([...pinnedItems, newPin], `Pinned "${article.title}" to the home page`);
   };
 
   // Add custom image banner
@@ -229,12 +228,12 @@ export default function AdminHeroSliderPage({
       is_active: true,
       order: pinnedItems.length + 1,
     };
-    persistPinnedItems([...pinnedItems, newPin], `✓ Live: Added custom banner "${newPin.title}"!`);
+    persistPinnedItems([...pinnedItems, newPin], `Added the banner "${newPin.title}"`);
   };
 
   // Save changes to ClubContext explicitly
   const handleSave = () => {
-    persistPinnedItems(pinnedItems, '✓ All pins successfully published and synced to public portal!');
+    persistPinnedItems(pinnedItems, 'Saved. The home page shows these slides now.');
   };
 
   // Active items for live preview
@@ -243,109 +242,39 @@ export default function AdminHeroSliderPage({
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
-      {/* Page Header */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
-        paddingBottom: '1.5rem',
-        borderBottom: '1px solid var(--border-subtle)'
-      }}>
+      <div className="admin-head">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-            <span className="badge badge-primary row row-tight">
-              <Sparkles size={12} />
-              <span>HERO SLIDER SPOTLIGHT</span>
-            </span>
-            <span className="text-note">
-              {pinnedItems.length} items pinned ({activePinned.length} active)
-            </span>
-          </div>
-          <h1 className="stat-value">
-            Hero Slider & Pinned Content Manager
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px' }}>
-            Choose the events, fixtures, news and image banners that rotate at the top of your club&apos;s home page.
-          </p>
+          <h1>Hero slider</h1>
+          <p>The events, fixtures, news and banners that rotate at the top of your home page. {activePinned.length} of {pinnedItems.length} pinned slides are showing.</p>
         </div>
 
-        <div className="row row-loose row-wrap">
+        <div className="admin-head-actions">
           <Link
             href={`/${club.slug}`}
             target="_blank"
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            <Eye size={16} />
-            <span>Preview Public Portal</span>
-            <ExternalLink size={14} />
+            <Eye size={16} aria-hidden="true" />
+            <span>View the home page</span>
+            <ExternalLink size={14} aria-hidden="true" />
           </Link>
 
           <button
+            type="button"
             onClick={handleSave}
-            className={`btn ${savedSuccess ? 'btn-success' : hasUnsavedChanges ? 'btn-primary' : 'btn-secondary'}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.65rem 1.4rem',
-              fontWeight: 800,
-              cursor: 'pointer'
-            }}
+            className={`btn ${hasUnsavedChanges ? 'btn-primary' : 'btn-secondary'}`}
           >
-            {savedSuccess ? <CheckCircle2 size={16} color="var(--text-primary)" /> : <Save size={16} />}
-            <span>{savedSuccess ? 'Pins Live & Synced' : hasUnsavedChanges ? 'Save & Publish Pins' : 'All Pins Live & Synced'}</span>
+            {savedSuccess ? <CheckCircle2 size={16} aria-hidden="true" /> : <Save size={16} aria-hidden="true" />}
+            <span>{savedSuccess ? 'Saved' : hasUnsavedChanges ? 'Save slides' : 'All saved'}</span>
           </button>
         </div>
       </div>
 
       {/* Floating Live Toast Notification */}
       {toastMessage && (
-        <div role="status" className="admin-save-toast" style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          padding: '1rem 1.4rem',
-          background: 'rgba(var(--dk-15-23-42), 0.96)',
-          border: '1.5px solid #10B981',
-          borderRadius: '12px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: 'var(--text-primary)',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          backdropFilter: 'blur(10px)',
-          animation: 'fadeIn 0.2s ease-out'
-        }}>
-          <Sparkles size={18} color="var(--c-green)" />
+        <div role="status" className="admin-save-toast">
+          <CheckCircle2 size={18} aria-hidden="true" />
           <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Saved Success Notification */}
-      {savedSuccess && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          padding: '1rem 1.25rem',
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: '2rem',
-          color: 'var(--c-green)',
-          animation: 'fadeIn 0.3s ease-out'
-        }}>
-          <CheckCircle2 size={20} />
-          <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-            Hero slider pinned configuration successfully saved! All pinned events, fixtures, news, and banners are now live on your club homepage.
-          </div>
         </div>
       )}
 
@@ -356,15 +285,15 @@ export default function AdminHeroSliderPage({
         borderRadius: 'var(--radius-xl)',
         padding: '1.5rem',
         marginBottom: '2.5rem',
-        boxShadow: '0 12px 36px rgba(0,0,0,0.4)'
+        boxShadow: 'var(--shadow-pop)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div className="row">
-            <Sliders size={18} color="var(--club-primary)" />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Live Carousel Simulator
+            <Sliders size={18} aria-hidden="true" />
+            <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Preview
             </h2>
-            <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)', color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
+            <span className="admin-pill">
               Slide {activePinned.length > 0 ? previewIndex + 1 : 0} of {activePinned.length}
             </span>
           </div>
@@ -398,7 +327,7 @@ export default function AdminHeroSliderPage({
           overflow: 'hidden',
           minHeight: '260px',
           background: 'rgb(var(--dk-10-14-23))',
-          border: '1px solid rgba(var(--tint-rgb), 0.1)',
+          border: '1px solid color-mix(in oklab, var(--color-ink) 10%, transparent)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-end',
@@ -419,35 +348,34 @@ export default function AdminHeroSliderPage({
               <div style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(to top, rgb(var(--dk-10-14-23)) 15%, rgba(var(--dk-10-14-23),0.7) 60%, transparent 100%)'
+                background: 'linear-gradient(to top, rgb(var(--dk-10-14-23)) 15%, color-mix(in oklab, var(--color-sidebar) 70%, transparent) 60%, transparent 100%)'
               }} />
 
               {/* Slide Content */}
               <div style={{ position: 'relative', zIndex: 2, maxWidth: '720px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
                   <span className="badge" style={{
-                    background: currentPreview.type === 'fixture' ? 'rgba(239, 68, 68, 0.2)' :
-                                currentPreview.type === 'event' ? 'rgba(16, 185, 129, 0.2)' :
-                                currentPreview.type === 'news' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    background: currentPreview.type === 'fixture' ? 'var(--color-danger-wash)' :
+                                currentPreview.type === 'event' ? 'var(--color-accent-wash)' :
+                                currentPreview.type === 'news' ? 'var(--color-paper-3)' : 'var(--color-warn-wash)',
                     color: currentPreview.type === 'fixture' ? 'var(--c-red)' :
                            currentPreview.type === 'event' ? 'var(--c-green)' :
                            currentPreview.type === 'news' ? 'var(--c-sky)' : 'var(--c-amber)',
                     border: '1px solid currentColor',
                     fontSize: '0.75rem',
-                    fontWeight: 800,
-                    letterSpacing: '0.05em'
+                    fontWeight: 800
                   }}>
                     {currentPreview.badge || currentPreview.type.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'rgba(var(--tint-rgb), 0.5)', fontWeight: 600 }}>
-                    PINNED {currentPreview.type.toUpperCase()}
+                  <span style={{ fontSize: '0.75rem', color: 'color-mix(in oklab, var(--color-ink) 50%, transparent)', fontWeight: 600 }}>
+                    Pinned {currentPreview.type}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', textShadow: '0 2px 8px var(--color-shadow)' }}>
                   {currentPreview.title}
                 </h3>
-                <p style={{ fontSize: '0.95rem', color: 'rgba(var(--tint-rgb), 0.85)', marginBottom: '1.25rem', lineHeight: 1.5, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                <p style={{ fontSize: '0.95rem', color: 'color-mix(in oklab, var(--color-ink) 85%, transparent)', marginBottom: '1.25rem', lineHeight: 1.5, textShadow: '0 1px 4px var(--color-shadow)' }}>
                   {currentPreview.subtitle}
                 </p>
 
@@ -489,14 +417,14 @@ export default function AdminHeroSliderPage({
                   borderRadius: '9999px',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  background: previewIndex === idx ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                  color: previewIndex === idx ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-                  border: previewIndex === idx ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+                  background: previewIndex === idx ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 6%, transparent)',
+                  color: previewIndex === idx ? 'var(--color-on-accent)' : 'var(--text-secondary)',
+                  border: previewIndex === idx ? '1px solid color-mix(in oklab, var(--color-ink) 20%, transparent)' : '1px solid transparent',
                   cursor: 'pointer',
-                  transition: 'all 0.15s'
+                  transition: 'background-color 0.15s, color 0.15s'
                 }}
               >
-                #{idx + 1} {(item.title || 'Slide').length > 25 ? `${(item.title || 'Slide').substring(0, 25)}...` : (item.title || 'Slide')}
+                {idx + 1}. {(item.title || 'Slide').length > 25 ? `${(item.title || 'Slide').substring(0, 25)}…` : (item.title || 'Slide')}
               </button>
             ))}
           </div>
@@ -518,7 +446,7 @@ export default function AdminHeroSliderPage({
             <button
               onClick={() => {
                 const defaults = getDefaultHeroPinnedItems(club, matches, news, events);
-                persistPinnedItems(defaults, '✓ Reset to recommended starter hero slides');
+                persistPinnedItems(defaults, 'Back to the starter slides');
               }}
               className="btn btn-secondary btn-sm"
               style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem' }}
@@ -538,12 +466,11 @@ export default function AdminHeroSliderPage({
                 textAlign: 'center',
                 color: 'var(--text-muted)'
               }}>
-                <Info size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                  No Items Pinned Yet
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                  Nothing pinned yet
                 </div>
                 <div style={{ fontSize: '0.85rem' }}>
-                  Use the library on the right to pin multiple events, fixtures, news stories, or custom banner images.
+                  Pin events, fixtures, news stories or your own banner images from the library.
                 </div>
               </div>
             ) : (
@@ -555,16 +482,16 @@ export default function AdminHeroSliderPage({
                   <div
                     key={item.id}
                     style={{
-                      background: item.is_active ? 'var(--bg-surface)' : 'rgba(var(--tint-rgb), 0.02)',
+                      background: item.is_active ? 'var(--bg-surface)' : 'color-mix(in oklab, var(--color-ink) 2%, transparent)',
                       border: '1px solid',
-                      borderColor: item.is_active ? 'var(--border-subtle)' : 'rgba(var(--tint-rgb), 0.05)',
+                      borderColor: item.is_active ? 'var(--border-subtle)' : 'color-mix(in oklab, var(--color-ink) 5%, transparent)',
                       borderRadius: 'var(--radius-md)',
                       padding: '1rem',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.75rem',
                       opacity: item.is_active ? 1 : 0.6,
-                      transition: 'all 0.15s'
+                      transition: 'opacity 0.15s'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
@@ -573,7 +500,7 @@ export default function AdminHeroSliderPage({
                           width: '24px',
                           height: '24px',
                           borderRadius: '6px',
-                          background: 'rgba(var(--tint-rgb), 0.1)',
+                          background: 'color-mix(in oklab, var(--color-ink) 10%, transparent)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -584,17 +511,8 @@ export default function AdminHeroSliderPage({
                           {index + 1}
                         </span>
 
-                        <span className="badge" style={{
-                          background: item.type === 'fixture' ? 'rgba(239, 68, 68, 0.15)' :
-                                      item.type === 'event' ? 'rgba(16, 185, 129, 0.15)' :
-                                      item.type === 'news' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                          color: item.type === 'fixture' ? 'var(--c-red)' :
-                                 item.type === 'event' ? 'var(--c-green)' :
-                                 item.type === 'news' ? 'var(--c-sky)' : 'var(--c-amber)',
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                        }}>
-                          {item.type.toUpperCase()}
+                        <span className="admin-pill" style={{ textTransform: 'capitalize' }}>
+                          {item.type}
                         </span>
 
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -611,8 +529,8 @@ export default function AdminHeroSliderPage({
                             padding: '0.25rem 0.5rem',
                             borderRadius: '4px',
                             border: '1px solid',
-                            borderColor: item.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(var(--tint-rgb), 0.1)',
-                            background: item.is_active ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                            borderColor: item.is_active ? 'var(--color-accent-line)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)',
+                            background: item.is_active ? 'var(--color-accent-wash)' : 'transparent',
                             color: item.is_active ? 'var(--c-green)' : 'var(--text-muted)',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -669,7 +587,7 @@ export default function AdminHeroSliderPage({
                       gridTemplateColumns: '1fr 1fr',
                       gap: '0.5rem',
                       paddingTop: '0.5rem',
-                      borderTop: '1px solid rgba(var(--tint-rgb), 0.05)',
+                      borderTop: '1px solid color-mix(in oklab, var(--color-ink) 5%, transparent)',
                       fontSize: '0.75rem'
                     }}>
                       <div>
@@ -689,7 +607,7 @@ export default function AdminHeroSliderPage({
                           }}
                           onBlur={() => {
                             if (hasUnsavedChanges) {
-                              persistPinnedItems(pinnedItems, '✓ Live: Slide tag badge updated');
+                              persistPinnedItems(pinnedItems, 'Slide tag saved');
                             }
                           }}
                           placeholder="e.g. SPECIAL EVENT"
@@ -713,7 +631,7 @@ export default function AdminHeroSliderPage({
                           }}
                           onBlur={() => {
                             if (hasUnsavedChanges) {
-                              persistPinnedItems(pinnedItems, '✓ Live: Slide CTA button updated');
+                              persistPinnedItems(pinnedItems, 'Slide button saved');
                             }
                           }}
                           placeholder="e.g. RSVP Now"
@@ -767,20 +685,20 @@ export default function AdminHeroSliderPage({
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     background: isActive ? 'var(--club-primary)' : 'transparent',
-                    color: isActive ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
+                    color: isActive ? 'var(--color-on-accent)' : 'var(--text-secondary)',
                     border: 'none',
                     cursor: 'pointer',
-                    transition: 'all 0.15s'
+                    transition: 'background-color 0.15s, color 0.15s'
                   }}
                 >
-                  <Icon size={14} />
+                  <Icon size={14} aria-hidden="true" />
                   <span>{tab.label}</span>
                   {tab.count !== null && (
                     <span style={{
                       fontSize: '0.7rem',
                       padding: '0.1rem 0.35rem',
                       borderRadius: '9999px',
-                      background: isActive ? 'rgba(var(--shade-rgb), 0.25)' : 'rgba(var(--tint-rgb), 0.08)'
+                      background: isActive ? 'color-mix(in oklab, var(--color-sidebar) 25%, transparent)' : 'color-mix(in oklab, var(--color-ink) 8%, transparent)'
                     }}>
                       {tab.count}
                     </span>
@@ -804,7 +722,7 @@ export default function AdminHeroSliderPage({
                       style={{
                         background: 'var(--bg-surface)',
                         border: '1px solid',
-                        borderColor: isPinned ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)',
+                        borderColor: isPinned ? 'var(--color-accent-line)' : 'var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
                         padding: '1rem',
                         display: 'flex',
@@ -815,7 +733,7 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className="badge badge-primary" style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                          <span className="admin-pill" style={{ textTransform: 'capitalize' }}>
                             {evt.category}
                           </span>
                           <span className="text-meta">
@@ -826,7 +744,7 @@ export default function AdminHeroSliderPage({
                           {evt.title}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {evt.location} • {evt.rsvp_count}{evt.max_capacity > 0 ? `/${evt.max_capacity}` : ''} checked in
+                          {evt.location}, {evt.rsvp_count}{evt.max_capacity > 0 ? `/${evt.max_capacity}` : ''} checked in
                         </p>
                       </div>
 
@@ -839,7 +757,7 @@ export default function AdminHeroSliderPage({
                           gap: '0.35rem',
                           flexShrink: 0,
                           fontSize: '0.75rem',
-                          borderColor: isPinned ? '#10B981' : undefined,
+                          borderColor: isPinned ? 'var(--color-accent)' : undefined,
                           color: isPinned ? 'var(--c-green)' : undefined
                         }}
                       >
@@ -868,7 +786,7 @@ export default function AdminHeroSliderPage({
                       style={{
                         background: 'var(--bg-surface)',
                         border: '1px solid',
-                        borderColor: isPinned ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-subtle)',
+                        borderColor: isPinned ? 'var(--color-danger-line)' : 'var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
                         padding: '1rem',
                         display: 'flex',
@@ -879,8 +797,8 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className={`badge ${isLive ? 'badge-live' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
-                            {isLive ? `LIVE ${getLiveMinute(m)}'` : m.status.toUpperCase()}
+                          <span className={isLive ? 'admin-pill is-danger' : 'admin-pill'} style={{ textTransform: 'capitalize' }}>
+                            {isLive ? `Live, ${getLiveMinute(m)}′` : m.status}
                           </span>
                           <span className="text-meta">
                             {m.competition}
@@ -890,7 +808,7 @@ export default function AdminHeroSliderPage({
                           {m.home_team_name} vs {m.away_team_name}
                         </h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          {m.venue} • {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { month: 'short', day: 'numeric' })}
+                          {m.venue}, {new Date(m.match_date).toLocaleDateString(DATE_LOCALE, { month: 'short', day: 'numeric' })}
                         </p>
                       </div>
 
@@ -903,7 +821,7 @@ export default function AdminHeroSliderPage({
                           gap: '0.35rem',
                           flexShrink: 0,
                           fontSize: '0.75rem',
-                          borderColor: isPinned ? '#EF4444' : undefined,
+                          borderColor: isPinned ? 'var(--color-danger)' : undefined,
                           color: isPinned ? 'var(--c-red)' : undefined
                         }}
                       >
@@ -931,7 +849,7 @@ export default function AdminHeroSliderPage({
                       style={{
                         background: 'var(--bg-surface)',
                         border: '1px solid',
-                        borderColor: isPinned ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-subtle)',
+                        borderColor: isPinned ? 'var(--color-rule-strong)' : 'var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
                         padding: '1rem',
                         display: 'flex',
@@ -942,7 +860,7 @@ export default function AdminHeroSliderPage({
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', fontSize: '0.7rem' }}>
+                          <span className="badge" style={{ background: 'var(--color-paper-3)', color: 'var(--c-sky)', fontSize: '0.7rem' }}>
                             {n.tags[0] || 'NEWS'}
                           </span>
                           <span className="text-meta">
@@ -966,7 +884,7 @@ export default function AdminHeroSliderPage({
                           gap: '0.35rem',
                           flexShrink: 0,
                           fontSize: '0.75rem',
-                          borderColor: isPinned ? '#60A5FA' : undefined,
+                          borderColor: isPinned ? 'var(--color-rule-strong)' : undefined,
                           color: isPinned ? 'var(--c-sky)' : undefined
                         }}
                       >

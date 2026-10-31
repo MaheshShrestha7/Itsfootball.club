@@ -72,7 +72,7 @@ function Switch({ checked, onChange, label, disabled }: { checked: boolean; onCh
         height: '28px',
         borderRadius: '999px',
         border: '1px solid var(--border-medium)',
-        background: checked ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.1)',
+        background: checked ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)',
         position: 'relative',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
@@ -86,8 +86,8 @@ function Switch({ checked, onChange, label, disabled }: { checked: boolean; onCh
         width: '20px',
         height: '20px',
         borderRadius: '50%',
-        background: '#FFFFFF',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        background: 'var(--color-print)',
+        boxShadow: 'var(--shadow-pop)',
         transition: 'left 0.2s var(--ease-out)',
       }} />
     </button>
@@ -131,8 +131,8 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     .slice(0, 30), [news, club.id]);
 
   const options: { id: string; label: string }[] =
-    kind === 'match' ? upcomingMatches.map(m => ({ id: m.id, label: `${fmtDate(m.match_date)} · ${m.home_team_name} vs ${m.away_team_name}` }))
-    : kind === 'event' ? upcomingEvents.map(e => ({ id: e.id, label: `${fmtDate(e.start_time)} · ${e.title}` }))
+    kind === 'match' ? upcomingMatches.map(m => ({ id: m.id, label: `${fmtDate(m.match_date)}, ${m.home_team_name} vs ${m.away_team_name}` }))
+    : kind === 'event' ? upcomingEvents.map(e => ({ id: e.id, label: `${fmtDate(e.start_time)}, ${e.title}` }))
     : kind === 'news' ? articles.map(n => ({ id: n.id, label: n.title }))
     : [];
 
@@ -186,22 +186,23 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
   return (
     <div style={{ maxWidth: '960px' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="stat-value">Email Notifications</h1>
-        <p className="text-body">
-          Automatic reminders and one-off notices to your members, sent from {club.name} via itsfootball.club.
-        </p>
+      <div className="admin-head">
+        <div>
+          <h1>Emails</h1>
+          <p>Automatic reminders and one-off notices to your members, sent from {club.name} through itsfootball.club.</p>
+        </div>
       </div>
 
       {loadError && (
-        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', border: '1px solid rgba(239, 68, 68, 0.4)', color: 'var(--c-red)' }}>
-          {loadError}
+        <div role="alert" className="admin-flash is-error">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>{loadError}</span>
         </div>
       )}
 
       {notReady && (
-        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
-          <AlertTriangle size={20} color="var(--c-amber)" style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', border: '1px solid var(--color-warn-line)' }}>
+          <AlertTriangle size={20} aria-hidden="true" color="var(--color-warn)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             <strong className="text-primary">Email isn&apos;t fully set up yet.</strong>{' '}
             {!ready.database && 'The email tables haven\'t been added to the database. '}
@@ -213,7 +214,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
       {/* Automatic reminders */}
       <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>Automatic reminders</h2>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>Automatic reminders</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
           Sent every morning at about 8 am. Each person gets each reminder once. All are off until you switch them on.
         </p>
@@ -237,7 +238,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
       {/* Manual notice */}
       <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>Send a notice</h2>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>Send a notice</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
           Preview first: you&apos;ll see who it goes to and exactly what they&apos;ll receive. Nobody gets the same notice twice.
         </p>
@@ -258,12 +259,12 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
                   padding: '0.85rem',
                   borderRadius: 'var(--radius-md)',
                   border: `1px solid ${active ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
-                  background: active ? 'rgba(var(--club-primary-rgb), 0.1)' : 'rgba(var(--tint-rgb), 0.02)',
+                  background: active ? 'color-mix(in oklab, var(--color-accent) 10%, transparent)' : 'color-mix(in oklab, var(--color-ink) 2%, transparent)',
                   color: 'var(--text-primary)',
                   cursor: 'pointer',
                 }}
               >
-                <Icon size={18} style={{ marginBottom: '0.35rem', color: active ? 'var(--club-primary)' : 'var(--text-secondary)' }} />
+                <Icon size={18} aria-hidden="true" style={{ marginBottom: '0.35rem', color: active ? 'var(--color-accent-ink)' : 'var(--text-secondary)' }} />
                 <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{t.label}</div>
               </button>
             );
@@ -276,7 +277,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
             <label className="form-label" htmlFor="notice-ref">{kind === 'match' ? 'Match' : kind === 'event' ? 'Event' : 'Article'}</label>
             {options.length ? (
               <select id="notice-ref" className="form-select" value={refId} onChange={e => setRefId(e.target.value)}>
-                <option value="">Choose...</option>
+                <option value="">Choose…</option>
                 {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             ) : (
@@ -326,8 +327,8 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         </div>
 
         {feedback && (
-          <div role="status" style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.9rem', color: feedback.type === 'success' ? 'var(--c-green)' : 'var(--c-red)' }}>
-            {feedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />} {feedback.text}
+          <div role="status" className={feedback.type === 'success' ? 'admin-flash' : 'admin-flash is-error'} style={{ marginTop: '1rem', marginBottom: 0 }}>
+            {feedback.type === 'success' ? <CheckCircle2 size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />} <span>{feedback.text}</span>
           </div>
         )}
 
@@ -344,10 +345,10 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
             </div>
             {preview.preview && (
               <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                <div style={{ padding: '0.6rem 0.9rem', fontSize: '0.85rem', background: 'rgba(var(--tint-rgb), 0.04)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                <div style={{ padding: '0.6rem 0.9rem', fontSize: '0.85rem', background: 'color-mix(in oklab, var(--color-ink) 4%, transparent)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
                   <strong className="text-primary">Subject:</strong> {preview.preview.subject}
                 </div>
-                <iframe title="Email preview" sandbox="" srcDoc={preview.preview.html} style={{ width: '100%', height: '640px', border: 0, background: '#F1F5F9', display: 'block' }} />
+                <iframe title="Email preview" sandbox="" srcDoc={preview.preview.html} style={{ width: '100%', height: '640px', border: 0, background: 'var(--color-print-2)', display: 'block' }} />
               </div>
             )}
           </div>
@@ -356,7 +357,7 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
       {/* History */}
       <section className="glass-panel" style={{ padding: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <History size={18} /> Recently sent
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>

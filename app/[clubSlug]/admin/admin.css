@@ -20,6 +20,8 @@
   --adm-dark-danger-wash: oklch(70% 0.17 25 / 0.14);
   --adm-dark-warn: oklch(82% 0.14 78);
   --adm-dark-warn-wash: oklch(82% 0.14 78 / 0.14);
+  --adm-dark-ok: oklch(76% 0.15 155);
+  --adm-dark-ok-wash: oklch(76% 0.15 155 / 0.14);
   --adm-dark-scrim: oklch(10% 0.01 250 / 0.6);
   --adm-dark-shadow: oklch(8% 0.01 250 / 0.5);
   --adm-light-paper: oklch(98.5% 0.002 250);
@@ -35,9 +37,14 @@
   --adm-light-danger-wash: oklch(53% 0.2 25 / 0.1);
   --adm-light-warn: oklch(55% 0.14 70);
   --adm-light-warn-wash: oklch(70% 0.14 70 / 0.14);
+  --adm-light-ok: oklch(48% 0.13 155);
+  --adm-light-ok-wash: oklch(60% 0.13 155 / 0.12);
   --adm-light-scrim: oklch(20% 0.01 250 / 0.4);
   --adm-light-shadow: oklch(20% 0.01 250 / 0.15);
   --adm-pill-shadow: oklch(8% 0.01 250 / 0.25);
+  /* Paper that stays white in both themes: logos, the email preview, text over photos */
+  --adm-print: oklch(100% 0 0);
+  --adm-print-2: oklch(96.8% 0.007 248);
 }
 
 /* The admin's system. Everything is scoped to .admin-shell, so the public site is untouched. The club's
@@ -78,8 +85,19 @@
   --color-danger-wash: var(--adm-dark-danger-wash);
   --color-warn: var(--adm-dark-warn);
   --color-warn-wash: var(--adm-dark-warn-wash);
+  /* Pass and fail at the gate: a steward reads green as in, whatever the club's colours */
+  --color-ok: var(--adm-dark-ok);
+  --color-ok-wash: var(--adm-dark-ok-wash);
   --color-scrim: var(--adm-dark-scrim);
   --shadow-drawer: 0 0 0 1px var(--color-rule), 12px 0 32px var(--adm-dark-shadow);
+  --color-shadow: var(--adm-dark-shadow);
+  --shadow-pop: 0 10px 30px var(--color-shadow);
+  /* Outlines for the tinted states: the wash's edge */
+  --color-accent-line: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  --color-danger-line: color-mix(in oklab, var(--color-danger) 40%, transparent);
+  --color-warn-line: color-mix(in oklab, var(--color-warn) 40%, transparent);
+  --color-print: var(--adm-print);
+  --color-print-2: var(--adm-print-2);
 
   /* The app's own tokens, re-pointed so every admin screen takes the club's scheme without a rewrite */
   --bg-pitch: var(--color-paper);
@@ -95,6 +113,12 @@
   --border-focus: var(--color-accent-ink);
   --club-ink: var(--color-accent-ink);
   --text-on-primary: var(--color-on-accent);
+  /* The app's status colours: positive is the club's own primary, information is quiet ink */
+  --c-green: var(--color-accent-ink);
+  --c-red: var(--color-danger);
+  --c-amber: var(--color-warn);
+  --c-blue: var(--color-ink-2);
+  --c-sky: var(--color-ink-2);
 
   position: relative; /* paints above the body's fixed turf wash without starting a stacking context */
   display: grid;
@@ -120,8 +144,11 @@
   --color-danger-wash: var(--adm-light-danger-wash);
   --color-warn: var(--adm-light-warn);
   --color-warn-wash: var(--adm-light-warn-wash);
+  --color-ok: var(--adm-light-ok);
+  --color-ok-wash: var(--adm-light-ok-wash);
   --color-scrim: var(--adm-light-scrim);
   --shadow-drawer: 0 0 0 1px var(--color-rule), 12px 0 32px var(--adm-light-shadow);
+  --color-shadow: var(--adm-light-shadow);
 }
 /* Touch screens: every target at least 44px */
 @media (pointer: coarse) { .admin-shell { --control: 44px; } }
@@ -312,6 +339,20 @@ body.admin-drawer-open { overflow: clip; }
 .admin-flash svg { flex: none; color: var(--color-accent-ink); }
 .admin-flash.is-error { border-color: color-mix(in oklab, var(--color-danger) 45%, transparent); background: var(--color-danger-wash); }
 .admin-flash.is-error svg { color: var(--color-danger); }
+
+/* A chip that goes somewhere, and a dashboard link that does something */
+a.admin-chip { text-decoration: none; }
+button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-family: inherit; text-align: left; cursor: pointer; }
+
+/* A toggle drawn as a button (Feature, Pin) says its state with aria-pressed */
+.admin-shell .btn[aria-pressed='true'] { border-color: var(--color-accent); background: var(--color-accent-wash); color: var(--color-ink); }
+.admin-shell .btn-danger { background: var(--color-danger-wash); border-color: var(--color-danger-line); color: var(--color-danger); }
+
+/* The save toast: bottom right on desks; globals.css stretches it along the bottom on phones */
+.admin-save-toast { position: fixed; right: var(--space-lg); bottom: var(--space-lg); z-index: var(--z-tooltip); display: flex; align-items: center; gap: var(--space-xs); max-width: min(420px, calc(100vw - 2rem)); padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-accent-line); border-radius: var(--radius-card); background: var(--color-paper-2); color: var(--color-ink); box-shadow: var(--shadow-pop); font-size: var(--text-sm); font-weight: 600; }
+.admin-save-toast svg { flex: none; color: var(--color-accent-ink); }
+.admin-save-toast.is-error { border-color: var(--color-danger-line); }
+.admin-save-toast.is-error svg { color: var(--color-danger); }
 
 /* A choice drawn as a card: a radio or checkbox and its explanation */
 .admin-option { display: flex; align-items: flex-start; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); cursor: pointer; transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }

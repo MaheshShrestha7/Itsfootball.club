@@ -66,35 +66,22 @@ export default function AdminCommitteePage({
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
-        <div style={{ minWidth: 0 }}>
-          <h1 className="stat-value">
-            Executive Committee Appointments
-          </h1>
-          <p className="text-body">
-            Appoint club members and players to leadership posts (President, Secretary, Head Coach, Treasurer).
-          </p>
+      <div className="admin-head">
+        <div>
+          <h1>Committee</h1>
+          <p>Appoint members and players to club posts: president, secretary, head coach, treasurer.</p>
         </div>
-        <button type="button" className="btn btn-primary row" onClick={openAppointForm}>
-          <Plus size={16} />
-          <span>Appoint Member</span>
-        </button>
+        <div className="admin-head-actions">
+          <button type="button" className="btn btn-primary row" onClick={openAppointForm}>
+            <Plus size={16} aria-hidden="true" />
+            <span>Appoint a member</span>
+          </button>
+        </div>
       </div>
 
       {feedback && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid #10B981',
-          padding: '0.85rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          color: 'var(--c-green)',
-          fontWeight: 700,
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          <CheckCircle2 size={18} />
+        <div role="status" className="admin-flash">
+          <CheckCircle2 size={16} aria-hidden="true" />
           <span>{feedback}</span>
         </div>
       )}
@@ -105,7 +92,7 @@ export default function AdminCommitteePage({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(var(--dk-4-6-9), 0.88)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
@@ -120,48 +107,48 @@ export default function AdminCommitteePage({
         aria-modal="true"
         aria-labelledby="committee-appoint-title"
         style={{
-          background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-          border: '1px solid rgba(var(--tint-rgb), 0.12)',
-          borderRadius: '16px',
+          background: 'var(--color-paper-2)',
+          border: '1px solid var(--color-rule-strong)',
+          borderRadius: 'var(--radius-card)',
           width: '100%',
           maxWidth: '680px',
           maxHeight: '92vh',
           overflowY: 'auto',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)',
+          boxShadow: 'var(--shadow-pop)',
           color: 'var(--text-primary)',
         }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <h3 id="committee-appoint-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Award size={18} color="var(--c-amber)" /> Appoint Member to Committee
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid color-mix(in oklab, var(--color-ink) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <h3 id="committee-appoint-title" style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={18} aria-hidden="true" /> Appoint to the committee
           </h3>
           <button
             type="button"
             onClick={() => setShowAppointForm(false)}
             aria-label="Close"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            className="admin-icon-btn"
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleAppoint} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Select Member</label>
+              <label className="form-label" htmlFor="committee-select-member">Member</label>
               <PlayerSearchSelect
                 id="committee-select-member"
                 players={clubMembers}
                 value={selectedMemberId}
                 onChange={setSelectedMemberId}
-                placeholder="Search members by name..."
+                placeholder="Search members by name"
                 optionLabel={m => `${m.full_name} (${m.is_executive ? m.executive_title : m.player_position || 'Staff'})`}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="committee-executive-role-title" className="form-label">Executive Role / Title</label>
+              <label htmlFor="committee-executive-role-title" className="form-label">Post</label>
               <input id="committee-executive-role-title"
                 type="text"
                 required
@@ -173,7 +160,7 @@ export default function AdminCommitteePage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="committee-tenure-season" className="form-label">Tenure Season</label>
+              <label htmlFor="committee-tenure-season" className="form-label">Season</label>
               <select id="committee-tenure-season"
                 className="form-select"
                 value={selectedSeason}
@@ -181,7 +168,7 @@ export default function AdminCommitteePage({
               >
                 {clubSeasons.map(s => (
                   <option key={s.id} value={s.name}>
-                    {s.name} {s.is_current ? '(Active Season)' : ''}
+                    {s.name} {s.is_current ? '(current)' : ''}
                   </option>
                 ))}
                 {!clubSeasons.some(s => s.name === selectedSeason) && (
@@ -191,7 +178,7 @@ export default function AdminCommitteePage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="committee-display-priority-order" className="form-label">Display Priority Order</label>
+              <label htmlFor="committee-display-priority-order" className="form-label">Order on the committee page</label>
               <input id="committee-display-priority-order"
                 type="number"
                 className="form-input"
@@ -202,11 +189,11 @@ export default function AdminCommitteePage({
           </div>
 
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label htmlFor="committee-executive-bio-statement" className="form-label">Executive Bio & Statement</label>
+            <label htmlFor="committee-executive-bio-statement" className="form-label">About them</label>
             <textarea id="committee-executive-bio-statement"
               rows={3}
               className="form-textarea"
-              placeholder="Background, achievements, and club responsibilities..."
+              placeholder="Background, achievements and what they look after at the club"
               value={bio}
               onChange={e => setBio(e.target.value)}
             />
@@ -217,8 +204,8 @@ export default function AdminCommitteePage({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary row" disabled={!selectedMemberId}>
-              <Award size={16} />
-              <span>Confirm Appointment</span>
+              <Award size={16} aria-hidden="true" />
+              <span>Appoint</span>
             </button>
           </div>
         </form>
@@ -230,56 +217,30 @@ export default function AdminCommitteePage({
       <div className="glass-panel" style={{ padding: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Executive Committee Board ({filteredExecutiveMembers.length})
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
+              The committee ({filteredExecutiveMembers.length})
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Appointed leadership governance and board appointments categorized by campaign season.
+              Who holds each post, season by season.
             </p>
           </div>
 
-          {/* Season Filter Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button data-view-ok
-              onClick={() => setSeasonFilter('ALL')}
-              style={{
-                padding: '0.35rem 0.85rem',
-                borderRadius: '6px',
-                border: 'none',
-                background: seasonFilter === 'ALL' ? 'var(--club-primary)' : 'transparent',
-                color: seasonFilter === 'ALL' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              All Seasons
+          <div className="admin-chips" role="group" aria-label="Season">
+            <button data-view-ok type="button" className="admin-chip" aria-pressed={seasonFilter === 'ALL'} onClick={() => setSeasonFilter('ALL')}>
+              All seasons
             </button>
             {clubSeasons.map(s => (
-              <button data-view-ok
-                key={s.id}
-                onClick={() => setSeasonFilter(s.name)}
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: seasonFilter === s.name ? 'var(--club-primary)' : 'transparent',
-                  color: seasonFilter === s.name ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                {s.name} {s.is_current ? '★' : ''}
+              <button data-view-ok type="button" className="admin-chip" key={s.id} aria-pressed={seasonFilter === s.name} onClick={() => setSeasonFilter(s.name)}>
+                {s.name}{s.is_current && <span className="num">current</span>}
               </button>
             ))}
           </div>
         </div>
 
         {filteredExecutiveMembers.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2.5rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '10px' }}>
-            <p className="text-body">
-              {seasonFilter === 'ALL' ? 'No committee members yet. Use Appoint Member to add your first one.' : `No committee members for the ${seasonFilter} season.`}
+          <div className="admin-empty">
+            <p style={{ margin: 0 }}>
+              {seasonFilter === 'ALL' ? 'No committee members yet. Appoint a member to add your first one.' : `No committee members for the ${seasonFilter} season.`}
             </p>
           </div>
         ) : (
@@ -294,7 +255,7 @@ export default function AdminCommitteePage({
                   justifyContent: 'space-between',
                   padding: '1rem 1.25rem',
                   borderRadius: '10px',
-                  background: 'rgba(var(--shade-rgb), 0.25)',
+                  background: 'var(--color-paper)',
                   border: '1px solid var(--border-subtle)',
                   gap: '1rem',
                 }}
@@ -304,20 +265,20 @@ export default function AdminCommitteePage({
                     photoUrl={exec.photo_url}
                     name={exec.full_name}
                     size={48}
-                    style={{ border: '2px solid var(--club-primary)' }}
+                    style={{ border: '2px solid var(--color-accent)' }}
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem' }}>{exec.full_name}</span>
-                      <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
-                        #{exec.executive_order}
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1.05rem' }}>{exec.full_name}</span>
+                      <span className="admin-pill" title="Order on the committee page">
+                        No. {exec.executive_order}
                       </span>
-                      <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <CalendarDays size={10} />
-                        {exec.executive_season || activeSeason?.name || defaultSeasonLabel()} Tenure
+                      <span className="admin-pill">
+                        <CalendarDays size={10} aria-hidden="true" />
+                        {exec.executive_season || activeSeason?.name || defaultSeasonLabel()}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--club-ink)', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-accent-ink)', fontWeight: 600 }}>
                       {exec.executive_title}
                     </div>
                     {exec.executive_bio && (
@@ -329,11 +290,12 @@ export default function AdminCommitteePage({
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handleRevoke(exec.id)}
                   className="btn btn-secondary btn-sm"
-                  style={{ color: 'var(--c-red)' }}
+                  style={{ color: 'var(--color-danger)' }}
                 >
-                  Revoke Role
+                  Remove from the post
                 </button>
               </div>
             ))}
