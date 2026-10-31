@@ -21,7 +21,6 @@ import {
   MessageSquare,
   Check,
   X,
-  Sparkles,
   Calendar,
   RotateCw,
   Lock,
@@ -165,10 +164,10 @@ export default function MembersWorkspace({
       const { data: fresh } = await client.from('club_members').select('membership_status').eq('id', member.id).maybeSingle();
       outcome = fresh?.membership_status === 'approved' ? 'approved' : 'paid';
       if (outcome === 'approved' || !thenApprove) showToast(outcome === 'approved'
-        ? `✓ Payment verified and ${member.full_name} approved.`
+        ? `Payment verified and ${member.full_name} approved.`
         : can(club.id, 'members', 'edit')
-          ? `✓ Payment verified for ${member.full_name}. You can approve them now.`
-          : `✓ Payment verified for ${member.full_name}. Someone who manages Members can approve them now.`);
+          ? `Payment verified for ${member.full_name}. You can approve them now.`
+          : `Payment verified for ${member.full_name}. Someone who manages Members can approve them now.`);
       if (outcome === 'approved') await refreshMemberRow(member.id);
     } finally {
       setReviewing(null);
@@ -194,7 +193,7 @@ export default function MembersWorkspace({
   const [sendingRenewal, setSendingRenewal] = useState<string | null>(null);
   const sendRenewal = async (member: ClubMember) => {
     if (await sendRenewalEmail(club, member, sending => setSendingRenewal(sending ? member.id : null))) {
-      showToast(`✓ Renewal email sent to ${member.full_name}.`);
+      showToast(`Renewal email sent to ${member.full_name}.`);
     }
   };
 
@@ -238,8 +237,8 @@ export default function MembersWorkspace({
       const res = await approveMemberApplication(member.id, user?.full_name || 'Club Committee', teamId ? { teamId } : undefined);
       if (!res.success) return notify('Not approved', res.message);
       showToast(res.emailed
-        ? `✓ Approved ${member.full_name}. We've emailed them how to sign in.`
-        : `✓ Approved ${member.full_name}. The email to them didn't go out, so let them know they can sign in.`);
+        ? `Approved ${member.full_name}. We've emailed them how to sign in.`
+        : `Approved ${member.full_name}. The email to them didn't go out, so let them know they can sign in.`);
     } finally {
       setReviewing(null);
     }
@@ -274,8 +273,8 @@ export default function MembersWorkspace({
       );
       if (!res.success) return notify('Not approved', res.message);
       showToast(res.emailed
-        ? `✓ Approved ${member.full_name} (fee waived). We've emailed them how to sign in.`
-        : `✓ Approved ${member.full_name} (fee waived). Let them know they can sign in.`);
+        ? `Approved ${member.full_name} (fee waived). We've emailed them how to sign in.`
+        : `Approved ${member.full_name} (fee waived). Let them know they can sign in.`);
       setWaiveModalMember(null);
       setWaiveReason('');
     } finally {
@@ -305,10 +304,10 @@ export default function MembersWorkspace({
       autoApproved = !!res.autoApproved;
       setSignupPayments(prev => ({ ...prev, [member.id]: 'paid' }));
       setPayModalMember(null);
-      if (autoApproved) showToast(`✓ Payment recorded and ${member.full_name} approved (your club approves paid applications automatically).`);
+      if (autoApproved) showToast(`Payment recorded and ${member.full_name} approved (your club approves paid applications automatically).`);
       else if (!approve) showToast(can(club.id, 'members', 'edit')
-        ? `✓ Payment recorded for ${member.full_name}. You can approve them now.`
-        : `✓ Payment recorded for ${member.full_name}. Someone who manages Members can approve them now.`);
+        ? `Payment recorded for ${member.full_name}. You can approve them now.`
+        : `Payment recorded for ${member.full_name}. Someone who manages Members can approve them now.`);
     } finally {
       setReviewing(null);
     }
@@ -344,8 +343,8 @@ export default function MembersWorkspace({
           right: '2rem',
           background: 'rgb(var(--dk-15-23-42))',
           color: 'var(--text-primary)',
-          border: '1px solid #10B981',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          border: '1px solid var(--color-accent)',
+          boxShadow: 'var(--shadow-drawer)',
           padding: '0.85rem 1.4rem',
           borderRadius: '12px',
           zIndex: 9999,
@@ -356,7 +355,7 @@ export default function MembersWorkspace({
           fontSize: '0.9rem',
           animation: 'fadeIn 0.3s ease',
         }}>
-          <Sparkles size={18} color="var(--c-green)" />
+          <CheckCircle2 size={18} color="var(--color-accent-ink)" aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -376,20 +375,19 @@ export default function MembersWorkspace({
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '0.75rem',
-              borderLeft: '4px solid var(--club-primary)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <CreditCard size={18} color="var(--club-primary)" />
               <div>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Signup Payment Policy:{' '}
+                  Sign-up payment policy:{' '}
                 </span>
                 <strong style={{ color: 'var(--text-primary)', fontSize: '0.86rem' }}>
                   {currentPolicy.title}
                 </strong>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
-                  — {currentPolicy.description}
+                  ({currentPolicy.description})
                 </span>
               </div>
             </div>
@@ -399,7 +397,7 @@ export default function MembersWorkspace({
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem' }}
             >
               <Settings size={13} />
-              <span>Configure Policy</span>
+              <span>Change policy</span>
             </Link>
           </div>
         );
@@ -426,18 +424,11 @@ export default function MembersWorkspace({
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input data-view-ok aria-label="Search members"
               type="text"
-              placeholder="Search by name, email..."
+              placeholder="Search by name or email"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem 0.5rem 2.2rem',
-                borderRadius: '8px',
-                background: 'rgba(var(--tint-rgb), 0.05)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-              }}
+              className="form-input"
+              style={{ paddingLeft: '2.2rem' }}
             />
           </div>
         )}
@@ -476,7 +467,6 @@ export default function MembersWorkspace({
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      borderLeft: `4px solid ${isPending ? '#F59E0B' : isApproved ? '#10B981' : '#EF4444'}`,
                       position: 'relative',
                       ...(member.id === focusMemberId ? { boxShadow: '0 0 0 2px var(--club-primary)' } : {}),
                     }}
@@ -491,22 +481,13 @@ export default function MembersWorkspace({
                               {member.full_name}
                             </h3>
                             <div className="text-meta">
-                              {isPlayerMember(member) ? `Player • ${member.player_position || 'Roster'}` : 'Supporter Member'}
+                              {isPlayerMember(member) ? `Player, ${member.player_position || 'no position yet'}` : 'Supporter'}
                             </div>
                           </div>
                         </div>
 
-                        <span
-                          className="badge"
-                          style={{
-                            background: isPending ? 'rgba(245, 158, 11, 0.15)' : isApproved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: isPending ? 'var(--c-amber)' : isApproved ? 'var(--c-green)' : 'var(--c-red)',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            padding: '0.2rem 0.55rem',
-                          }}
-                        >
-                          {isPending ? '⏳ PENDING REVIEW' : isApproved ? '✓ APPROVED & ACTIVE' : '✕ REJECTED'}
+                        <span className={`admin-pill ${isPending ? 'is-warn' : isApproved ? 'is-ok' : 'is-danger'}`}>
+                          {isPending ? 'To review' : isApproved ? 'Active' : 'Rejected'}
                         </span>
                       </div>
 
@@ -545,26 +526,26 @@ export default function MembersWorkspace({
                             const isWaived = !!member.fee_waived_at;
 
                             if (isWaived) {
-                              return <span className="badge" style={{ background: 'rgba(99,102,241,0.2)', color: '#818CF8' }}>✓ FEE WAIVED</span>;
+                              return <span className="admin-pill is-ok">Fee waived</span>;
                             }
                             if (isPaid) {
-                              return <span className="badge" style={{ background: 'rgba(16,185,129,0.2)', color: 'var(--c-green)' }}>✓ PAID</span>;
+                              return <span className="admin-pill is-ok">Paid</span>;
                             }
                             if (isAwaiting) {
                               return (
-                                <Link href={`/${clubSlug}/admin/finance?tab=income`} className="badge" style={{ background: 'rgba(245,158,11,0.2)', color: 'var(--c-amber)', textDecoration: 'none' }} title="Check the receipt in Finance -> Income">
-                                  ⏳ RECEIPT TO CHECK
+                                <Link href={`/${clubSlug}/admin/finance?tab=income`} className="admin-pill is-warn" title="Check the receipt in Finance, Income">
+                                  Receipt to check
                                 </Link>
                               );
                             }
                             if (hasFee) {
-                              return <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--c-red)' }}>✕ UNPAID ({formatMoney(planPrice, currency)})</span>;
+                              return <span className="admin-pill is-danger">Unpaid, {formatMoney(planPrice, currency)}</span>;
                             }
-                            return <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>FREE TIER</span>;
+                            return <span className="admin-pill">Free plan</span>;
                           })()}
                         </div>
                         {member.fee_waived_at && (
-                          <div style={{ fontSize: '0.74rem', color: '#818CF8', background: 'rgba(99,102,241,0.08)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', background: 'var(--color-accent-wash)', padding: 'var(--space-2xs) var(--space-xs)', borderRadius: 'var(--radius-control)' }}>
                             Fee waived by {member.fee_waived_by || 'Committee'}: &ldquo;{member.fee_waiver_reason || 'Fee waiver'}&rdquo;
                           </div>
                         )}
@@ -584,10 +565,10 @@ export default function MembersWorkspace({
                                 <>
                                   <span>Team: <strong>{team.name}</strong> <span style={{ color: 'var(--text-muted)' }}>(joins it when approved)</span></span>
                                   {fit === 'too_old' && (
-                                    <span style={{ color: 'var(--c-amber)' }}>⚠ Too old for {team.age_group} on the season&apos;s cut-off date: check the team before approving.</span>
+                                    <span style={{ color: 'var(--c-amber)' }}>Too old for {team.age_group} on the season&apos;s cut-off date: check the team before approving.</span>
                                   )}
                                   {team.is_junior && !member.date_of_birth && (
-                                    <span style={{ color: 'var(--c-amber)' }}>⚠ No date of birth given for a junior team.</span>
+                                    <span style={{ color: 'var(--c-amber)' }}>No date of birth given for a junior team.</span>
                                   )}
                                 </>
                               );
@@ -597,9 +578,9 @@ export default function MembersWorkspace({
                               if (!check) return null;
                               const picked = teamPick[member.id] ?? check.suggested?.id ?? '';
                               return (
-                                <div data-junior-check style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.6rem 0.7rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                <div data-junior-check style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.6rem 0.7rem', borderRadius: '8px', background: 'var(--color-warn-wash)', border: '1px solid color-mix(in oklab, var(--color-warn) 35%, transparent)' }}>
                                   <span style={{ color: 'var(--c-amber)', fontWeight: 700 }}>
-                                    ⚠ {check.age !== null ? `Age ${check.age}` : 'Under 18 (parent or guardian applied)'}, but would join {check.target.name}, which isn&apos;t a junior team.
+                                    {check.age !== null ? `Age ${check.age}` : 'Under 18 (parent or guardian applied)'}, but would join {check.target.name}, which isn&apos;t a junior team.
                                   </span>
                                   {check.juniors.length > 0 ? (
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -627,7 +608,7 @@ export default function MembersWorkspace({
                               </span>
                             )}
                             {(member.guardian_name || member.guardian_email || member.guardian_phone) && (
-                              <span>Parent / guardian: <strong>{[member.guardian_name, member.guardian_phone, member.guardian_email].filter(Boolean).join(' · ')}</strong></span>
+                              <span>Parent / guardian: <strong>{[member.guardian_name, member.guardian_phone, member.guardian_email].filter(Boolean).join(', ')}</strong></span>
                             )}
                             {member.photo_consent != null && (
                               <span>Photo consent: <strong>{member.photo_consent ? 'Yes, photos can be shown publicly' : 'No public photos'}</strong></span>
@@ -635,7 +616,7 @@ export default function MembersWorkspace({
                             {member.emergency_contact && <span>Emergency contact: <strong>{member.emergency_contact}</strong></span>}
                             <MedicalNote text={health.notes[member.id]} className="" />
                             {member.terms_accepted_at && <span style={{ color: 'var(--text-muted)' }}>Accepted terms {formatDate(member.terms_accepted_at)}</span>}
-                            {member.guardian_consent_at && <span style={{ color: 'var(--c-green)' }}>✓ Parent / guardian consent given</span>}
+                            {member.guardian_consent_at && <span style={{ color: 'var(--c-green)' }}>Parent or guardian consent given</span>}
                           </div>
                         )}
 
@@ -690,12 +671,12 @@ export default function MembersWorkspace({
                         <div style={{
                           fontSize: '0.78rem',
                           color: 'var(--c-red)',
-                          background: 'rgba(239, 68, 68, 0.08)',
+                          background: 'var(--color-danger-wash)',
                           padding: '0.5rem 0.75rem',
                           borderRadius: '6px',
                           marginBottom: '1rem',
                         }}>
-                          <strong>Rejection Note:</strong> {member.rejection_reason}
+                          <strong>Reason:</strong> {member.rejection_reason}
                         </div>
                       )}
                     </div>
@@ -738,8 +719,8 @@ export default function MembersWorkspace({
                                     gap: '0.35rem',
                                     opacity: 0.7,
                                     cursor: 'not-allowed',
-                                    background: 'rgba(239, 68, 68, 0.08)',
-                                    borderColor: 'rgba(239, 68, 68, 0.25)',
+                                    background: 'var(--color-danger-wash)',
+                                    borderColor: 'color-mix(in oklab, var(--color-danger) 35%, transparent)',
                                     color: 'var(--c-red)',
                                   }}
                                   title="Member must pay their membership fee before approval can be granted"
@@ -756,13 +737,13 @@ export default function MembersWorkspace({
                               const canBoth = can(club.id, 'finance', 'edit') && can(club.id, 'members', 'edit');
                               return (
                                 <div data-view-ok data-application-receipt style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '6px', padding: '0.45rem 0.6rem' }}>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'var(--color-warn-wash)', border: '1px solid color-mix(in oklab, var(--color-warn) 35%, transparent)', borderRadius: '6px', padding: '0.45rem 0.6rem' }}>
                                     <strong style={{ color: 'var(--c-amber)' }}>Receipt to check:</strong>{' '}
                                     {receipt.method === 'bank_transfer' ? 'Bank transfer' : receipt.method === 'cash' ? 'Cash' : 'Payment'}
                                     {typeof receipt.amountCents === 'number' && <> of <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(receipt.amountCents, currency)}</strong></>}
-                                    {receipt.reference && <> · Ref <code>{receipt.reference}</code></>}
+                                    {receipt.reference && <>, ref <code>{receipt.reference}</code></>}
                                     {typeof receipt.amountCents === 'number' && receipt.amountCents !== planPrice && (
-                                      <span style={{ display: 'block', color: 'var(--c-amber)' }}>⚠ The plan costs {formatMoney(planPrice, currency)}: check the amount before verifying.</span>
+                                      <span style={{ display: 'block', color: 'var(--c-amber)' }}>The plan costs {formatMoney(planPrice, currency)}: check the amount before verifying.</span>
                                     )}
                                   </div>
                                   {preview && (
@@ -847,11 +828,11 @@ export default function MembersWorkspace({
                                 onClick={() => { setWaiveModalMember(member); setWaiveReason(''); }}
                                 disabled={reviewing === member.id}
                                 className="btn btn-secondary btn-sm"
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: '#818CF8' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                                 title="Waive membership fee for hardship, life member, or committee discretion"
                               >
                                 <Gift size={14} />
-                                <span>Waive Fee &amp; Approve</span>
+                                <span>Waive the fee and approve</span>
                               </button>
                             )}
 
@@ -939,8 +920,7 @@ export default function MembersWorkspace({
           inset: 0,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
-          background: 'rgba(0, 0, 0, 0.8)',
-          backdropFilter: 'blur(5px)',
+          background: 'var(--color-scrim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1000,10 +980,9 @@ export default function MembersWorkspace({
                 type="button"
                 onClick={handleRejectConfirm}
                 disabled={!!reviewing}
-                className="btn btn-sm"
-                style={{ background: '#EF4444', color: '#FFFFFF', border: 'none' }}
+                className="btn btn-danger btn-sm"
               >
-                {reviewing ? 'Rejecting...' : 'Confirm Rejection'}
+                {reviewing ? 'Rejecting…' : 'Reject application'}
               </button>
             </div>
           </div>
@@ -1017,8 +996,7 @@ export default function MembersWorkspace({
           inset: 0,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
-          background: 'rgba(0, 0, 0, 0.8)',
-          backdropFilter: 'blur(5px)',
+          background: 'var(--color-scrim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1028,8 +1006,8 @@ export default function MembersWorkspace({
           <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Gift size={20} color="#818CF8" />
-                <span>Waive Fee &amp; Approve</span>
+                <Gift size={20} color="var(--color-accent-ink)" aria-hidden="true" />
+                <span>Waive the fee and approve</span>
               </h3>
               <button
                 type="button"
@@ -1078,10 +1056,9 @@ export default function MembersWorkspace({
                 type="button"
                 onClick={handleWaiveConfirm}
                 disabled={!!reviewing}
-                className="btn btn-sm"
-                style={{ background: '#6366F1', color: '#FFFFFF', border: 'none' }}
+                className="btn btn-primary btn-sm"
               >
-                {reviewing ? 'Approving...' : 'Confirm Waiver & Approve'}
+                {reviewing ? 'Approving…' : 'Waive the fee and approve'}
               </button>
             </div>
           </div>
@@ -1107,8 +1084,7 @@ export default function MembersWorkspace({
             inset: 0,
             overflowY: 'auto',
             overscrollBehavior: 'contain',
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(5px)',
+            background: 'var(--color-scrim)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

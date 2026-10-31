@@ -1,7 +1,7 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
-import { Wallet, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
+import { Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useUrlTab } from '@/lib/use-url-tab';
@@ -31,11 +31,12 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'expenses', label: 'Expenses' },
   { id: 'settings', label: 'Settings' },
 ];
-const STATUS_COLOR: Record<string, string> = {
-  paid: 'var(--c-green)', awaiting_review: 'var(--c-amber)', pending: 'var(--text-secondary)', rejected: 'var(--c-red)', refunded: 'var(--c-purple)', failed: 'var(--c-red)',
+const STATUS_TONE: Record<string, string> = {
+  paid: 'is-ok', awaiting_review: 'is-warn', pending: '', rejected: 'is-danger', refunded: '', failed: 'is-danger',
 };
+/** "Awaiting review", "Paid", ... */
+const statusText = (status: string) => status.replace('_', ' ').replace(/^./, c => c.toUpperCase());
 const today = () => new Date().toISOString().slice(0, 10);
-const cell: React.CSSProperties = { padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left', verticalAlign: 'top' };
 
 export default function FinancePage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
@@ -107,42 +108,35 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="admin-head">
         <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Wallet size={30} /> Finance
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
-            Membership and sponsorship payments, other income, expenses and receipts, all in one place.
-          </p>
+          <h1>Finance</h1>
+          <p>Membership and sponsorship payments, other income, expenses and receipts.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="admin-head-actions">
           <label className="form-label m-0" htmlFor="finance-season">Season</label>
           <select data-view-ok id="finance-season" className="form-select" style={{ width: 'auto' }} value={season} onChange={e => setSeason(e.target.value)}>
             <option value="all">All seasons</option>
             {seasons.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} /> CSV</button>
+          <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} aria-hidden="true" /> Export CSV</button>
         </div>
       </div>
 
       {feedback && (
-        <div role="status" style={{
-          background: feedback.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-          border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
-          color: feedback.type === 'error' ? 'var(--c-red)' : 'var(--c-green)',
-          padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontWeight: 700,
-        }}>{feedback.text}</div>
+        <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}>
+          {feedback.type === 'error' ? <XCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
+          <span>{feedback.text}</span>
+        </div>
       )}
 
-      <div role="tablist" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
+      <div role="tablist" aria-label="Finance" className="admin-tabs">
         {TABS.map(t => (
-          <button data-view-ok key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-            className={`btn btn-sm ${tab === t.id ? 'btn-primary' : 'btn-secondary'}`}>
+          <button data-view-ok key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="admin-tab">
             {t.label}
             {t.id === 'income' && payments.some(p => p.status === 'awaiting_review') && (
-              <span className="badge" style={{ marginLeft: '0.4rem', background: '#F59E0B', color: '#000' }}>
-                {payments.filter(p => p.status === 'awaiting_review').length}
+              <span className="admin-count">
+                <span className="sr-only">, </span>{payments.filter(p => p.status === 'awaiting_review').length}<span className="sr-only"> to check</span>
               </span>
             )}
           </button>
@@ -200,87 +194,105 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
   const pledges = sponsors.filter(s => (s.package_status === 'confirmed' || s.package_status === 'prospect')
     && Number(s.package_value) > 0 && !receiptFrom.has(s.id));
 
-  const stat = (label: string, value: string, color: string) => (
-    <div className="glass-panel" style={{ padding: '1.1rem 1.25rem' }}>
-      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ fontSize: '1.6rem', fontWeight: 900, color }}>{value}</div>
-    </div>
-  );
+  const owedTotal = owedToMembers.reduce((n, e) => n + e.amount_cents, 0);
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
-        {stat('Income', money(income), 'var(--c-green)')}
-        {stat('Expenses', money(spent), 'var(--c-red)')}
-        {stat('Net', money(income - spent), income - spent >= 0 ? 'var(--c-green)' : 'var(--c-red)')}
-        {stat('Receipts to check', String(toReview.length), toReview.length ? 'var(--c-amber)' : 'var(--text-secondary)')}
-      </div>
-
-      {toReview.length > 0 && (
-        <button type="button" className="btn btn-primary" onClick={onReview} style={{ alignSelf: 'flex-start' }}>
-          Review {toReview.length} bank transfer{toReview.length === 1 ? '' : 's'}
-        </button>
+    <div className="admin-stack">
+      {(toReview.length > 0 || owedToMembers.length > 0) && (
+        <section className="admin-panel" aria-labelledby="fin-todo-title">
+          <div className="admin-panel-head"><h2 id="fin-todo-title">Needs you</h2></div>
+          <ul className="admin-dash-queue">
+            {toReview.length > 0 && (
+              <li className="is-urgent">
+                <button type="button" onClick={onReview} className="admin-queue-row">
+                  <span className="admin-dash-mark"><span className="sr-only">Urgent: </span><FileText size={18} aria-hidden="true" /></span>
+                  <span>{plural(toReview.length, 'bank transfer receipt')} to check</span>
+                  <span className="admin-dash-go" aria-hidden="true">Review</span>
+                </button>
+              </li>
+            )}
+            {owedToMembers.length > 0 && (
+              <li>
+                <div className="admin-queue-row">
+                  <span className="admin-dash-mark"><UserCheck size={18} aria-hidden="true" /></span>
+                  <span>{plural(owedToMembers.length, 'expense')} to reimburse to members, {money(owedTotal)}</span>
+                  <span />
+                </div>
+              </li>
+            )}
+          </ul>
+        </section>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
-        <Bars title="Income by category" rows={byCategory(paid, INCOME_CATEGORIES)} money={money} color="var(--c-green)" />
-        <Bars title="Expenses by category" rows={byCategory(expenses, EXPENSE_CATEGORIES)} money={money} color="var(--c-red)" />
+      <section className="admin-panel admin-dash-figures-wrap" aria-label="This season's money">
+        <dl className="admin-dash-figures">
+          <div><dt>Income</dt><dd>{money(income)}</dd><span className="admin-note">Paid payments</span></div>
+          <div><dt>Expenses</dt><dd>{money(spent)}</dd></div>
+          <div><dt>Net</dt><dd className={income - spent < 0 ? 'is-live' : undefined}>{money(income - spent)}</dd></div>
+          <div><dt>Receipts to check</dt><dd>{toReview.length}</dd></div>
+        </dl>
+      </section>
+
+      <div className="admin-two">
+        <Bars title="Income by category" rows={byCategory(paid, INCOME_CATEGORIES)} money={money} />
+        <Bars title="Expenses by category" rows={byCategory(expenses, EXPENSE_CATEGORIES)} money={money} spend />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Memberships due ({expiring.length})</h3>
-          {expiring.length === 0 ? <p className="text-note">Nobody expires in the next 30 days.</p> : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
-              {expiring.map(m => (
-                <li key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <span>{m.full_name}</span>
-                  <span style={{ color: m.days < 0 ? 'var(--c-red)' : 'var(--c-amber)', fontWeight: 700 }}>{m.days < 0 ? `expired ${-m.days}d ago` : `in ${m.days}d`}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Unpaid sponsorships ({pledges.length})</h3>
-          {pledges.length === 0 ? <p className="text-note">No outstanding sponsor deals.</p> : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {pledges.map(s => (
-                <li key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', fontSize: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <span>{s.name} <span className="text-muted">({s.package_status === 'prospect' ? 'not paid yet' : 'agreed'})</span></span>
-                  <span style={{ fontWeight: 700 }}>{s.package_value ? money(Math.round(s.package_value * 100)) : '-'}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {owedToMembers.length > 0 && (
-            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--c-amber)' }}>
-              {owedToMembers.length} expense{owedToMembers.length === 1 ? '' : 's'} still to reimburse to members
-              ({money(owedToMembers.reduce((n, e) => n + e.amount_cents, 0))}).
-            </p>
-          )}
-        </div>
+      <div className="admin-two">
+        <section className="admin-panel" aria-labelledby="fin-due-title">
+          <div className="admin-panel-head"><h2 id="fin-due-title">Memberships due</h2><span className="admin-meta">{plural(expiring.length, 'member')} in 30 days</span></div>
+          <div className="admin-section">
+            {expiring.length === 0 ? <p className="admin-table-foot" style={{ margin: 0 }}>Nobody expires in the next 30 days.</p> : (
+              <ul className="admin-list" style={{ maxHeight: 280, overflowY: 'auto' }}>
+                {expiring.map(m => (
+                  <li key={m.id}>
+                    <span>{m.full_name}</span>
+                    <span className={m.days < 0 ? 'is-danger' : 'is-warn'}>{m.days < 0 ? `expired ${plural(-m.days, 'day')} ago` : m.days === 0 ? 'today' : `in ${plural(m.days, 'day')}`}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+        <section className="admin-panel" aria-labelledby="fin-pledge-title">
+          <div className="admin-panel-head"><h2 id="fin-pledge-title">Unpaid sponsorships</h2><span className="admin-meta">{plural(pledges.length, 'deal')}</span></div>
+          <div className="admin-section">
+            {pledges.length === 0 ? <p className="admin-table-foot" style={{ margin: 0 }}>No outstanding sponsor deals.</p> : (
+              <ul className="admin-list">
+                {pledges.map(s => (
+                  <li key={s.id}>
+                    <span>{s.name} <span style={{ color: 'var(--color-muted)' }}>({s.package_status === 'prospect' ? 'not paid yet' : 'agreed'})</span></span>
+                    <span>{s.package_value ? money(Math.round(s.package_value * 100)) : '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function Bars({ title, rows, money, color }: { title: string; rows: { label: string; value: number }[]; money: (c: number) => string; color: string }) {
+function Bars({ title, rows, money, spend }: { title: string; rows: { label: string; value: number }[]; money: (c: number) => string; spend?: boolean }) {
   const max = Math.max(1, ...rows.map(r => r.value));
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem' }}>
-      <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>{title}</h3>
-      {rows.length === 0 ? <p className="text-note">Nothing recorded yet.</p> : rows.map(r => (
-        <div key={r.label} style={{ marginBottom: '0.6rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
-            <span>{r.label}</span><strong>{money(r.value)}</strong>
+    <section className="admin-panel" aria-label={title}>
+      <div className="admin-panel-head"><h2>{title}</h2></div>
+      <div className="admin-section">
+        {rows.length === 0 ? <p className="admin-table-foot" style={{ margin: 0 }}>Nothing recorded yet.</p> : (
+          <div className={spend ? 'admin-bars is-spend' : 'admin-bars'}>
+            {rows.map(r => (
+              <div key={r.label}>
+                <div className="admin-bar-row"><span>{r.label}</span><b>{money(r.value)}</b></div>
+                <div className="admin-bar-track"><span style={{ transform: `scaleX(${r.value / max})` }} /></div>
+              </div>
+            ))}
           </div>
-          <div style={{ height: 8, borderRadius: 4, background: 'rgba(var(--tint-rgb), 0.06)' }}>
-            <div style={{ width: `${(r.value / max) * 100}%`, height: '100%', borderRadius: 4, background: color }} />
-          </div>
-        </div>
-      ))}
-    </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -407,16 +419,16 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
 
   return (
     <div className="stack">
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-        <select data-view-ok className="form-select" style={{ width: 'auto' }} value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
+      <div className="admin-toolbar" style={{ marginBottom: 0 }}>
+        <select data-view-ok className="form-select" value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
           <option value="all">All statuses</option>
-          {Object.keys(STATUS_COLOR).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+          {Object.keys(STATUS_TONE).map(s => <option key={s} value={s}>{statusText(s)}</option>)}
         </select>
-        <select data-view-ok className="form-select" style={{ width: 'auto' }} value={kind} onChange={e => setKind(e.target.value)} aria-label="Filter by type">
+        <select data-view-ok className="form-select" value={kind} onChange={e => setKind(e.target.value)} aria-label="Filter by type">
           <option value="all">All types</option>
           {Object.entries(PAYMENT_KIND_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => setAdding(a => !a)}><Plus size={16} /> Record income</button>
+        <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => setAdding(a => !a)} aria-expanded={adding}><Plus size={16} aria-hidden="true" /> Record income</button>
       </div>
 
       {adding && (
@@ -503,41 +515,44 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
         </form>
       )}
 
-      <div className="glass-panel admin-table-container">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="admin-panel admin-table-wrap">
+        <table className="admin-table">
           <thead>
-            <tr>{['Date', 'Type', 'Description', 'Payer', 'Method', 'Amount', 'Status', ''].map(h => <th key={h} style={{ ...cell, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>{h}</th>)}</tr>
+            <tr>
+              <th scope="col">Date</th><th scope="col">Type</th><th scope="col">Description</th><th scope="col">Payer</th>
+              <th scope="col">Method</th><th scope="col" className="is-num">Amount</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th>
+            </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={8} style={{ ...cell, color: 'var(--text-muted)' }}>No payments yet.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8}>No payments yet.</td></tr>}
             {rows.map(p => (
               <tr key={p.id}>
-                <td style={cell}>{(p.paid_at || p.created_at).slice(0, 10)}</td>
-                <td style={cell}>{p.kind === 'income_other' ? INCOME_CATEGORIES[p.category] : PAYMENT_KIND_LABEL[p.kind]}</td>
-                <td style={cell}>{p.description}{p.reference && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Ref {p.reference}</div>}</td>
-                <td style={cell}>{p.payer_name}{p.payer_email && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{p.payer_email}</div>}</td>
-                <td style={cell}>{PAYMENT_METHOD_LABEL[p.method]}</td>
-                <td style={{ ...cell, fontWeight: 800 }}>{formatMoney(p.amount_cents, p.currency)}</td>
-                <td style={cell}>
-                  <span style={{ color: STATUS_COLOR[p.status], fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>
-                    {/* SPP-2: an invoice sent before payment */}
-                    {p.status === 'pending' && p.due_on ? `invoice due ${p.due_on}` : p.status.replace('_', ' ')}
+                <td className="is-num" style={{ textAlign: 'left' }}>{(p.paid_at || p.created_at).slice(0, 10)}</td>
+                <td>{p.kind === 'income_other' ? INCOME_CATEGORIES[p.category] : PAYMENT_KIND_LABEL[p.kind]}</td>
+                <td className="is-strong">{p.description}{p.reference && <small>Ref {p.reference}</small>}</td>
+                <td>{p.payer_name}{p.payer_email && <small>{p.payer_email}</small>}</td>
+                <td>{PAYMENT_METHOD_LABEL[p.method]}</td>
+                <td className="is-num is-strong">{formatMoney(p.amount_cents, p.currency)}</td>
+                <td>
+                  {/* SPP-2: an invoice sent before payment */}
+                  <span className={`admin-pill ${p.status === 'pending' && p.due_on ? 'is-warn' : STATUS_TONE[p.status] || ''}`}>
+                    {p.status === 'pending' && p.due_on ? `Invoice due ${p.due_on}` : statusText(p.status)}
                   </span>
-                  {p.rejection_reason && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{p.rejection_reason}</div>}
+                  {p.rejection_reason && <small>{p.rejection_reason}</small>}
                 </td>
-                <td style={{ ...cell, whiteSpace: 'nowrap' }}>
-                  {p.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} /> Receipt</button>}
+                <td className="is-actions">
+                  {p.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('payment', p.id)} title="View receipt"><FileText size={14} aria-hidden="true" /> Receipt</button>}
                   {/* A pending cash or bank payment (e.g. one whose fulfilment failed) can be finished here too */}
                   {/* The same application's card in Members: verify and approve there in one go */}
                   {p.kind === 'membership_signup' && p.member_id && members.find(m => m.id === p.member_id)?.membership_status === 'pending' && (
-                    <Link data-view-ok href={`/${club.slug}/admin/people?tab=applications&member=${p.member_id}`} className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Open this application in People">
-                      <UserCheck size={14} /> Application
+                    <Link data-view-ok href={`/${club.slug}/admin/people?tab=applications&member=${p.member_id}`} className="btn btn-secondary btn-sm" title="Open this application in People">
+                      <UserCheck size={14} aria-hidden="true" /> Application
                     </Link>
                   )}
                   {(p.status === 'awaiting_review' || (p.status === 'pending' && p.method !== 'stripe')) && (
                     <>
-                      <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 4 }} onClick={() => verify(p)}><CheckCircle2 size={14} /> {p.status === 'pending' && p.due_on ? 'Mark paid' : 'Verify'}</button>
-                      <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => reject(p)}><XCircle size={14} /> {p.status === 'pending' && p.due_on ? 'Cancel invoice' : 'Reject'}</button>
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => verify(p)}><CheckCircle2 size={14} aria-hidden="true" /> {p.status === 'pending' && p.due_on ? 'Mark paid' : 'Verify'}</button>
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => reject(p)}><XCircle size={14} aria-hidden="true" /> {p.status === 'pending' && p.due_on ? 'Cancel invoice' : 'Reject'}</button>
                     </>
                   )}
                 </td>
@@ -546,7 +561,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
           </tbody>
         </table>
       </div>
-      <p className="text-note">
+      <p className="admin-table-foot">
         Total shown (paid): {money(rows.filter(p => p.status === 'paid').reduce((n, p) => n + p.amount_cents, 0))}. Card refunds are made in your Stripe dashboard and update here automatically.
       </p>
     </div>
@@ -604,7 +619,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
 
   return (
     <div className="stack">
-      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setOpen(o => !o); }}><Plus size={16} /> Add expense</button>
+      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setOpen(o => !o); }} aria-expanded={open}><Plus size={16} aria-hidden="true" /> Add expense</button>
 
       {open && (
         <form onSubmit={save} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
@@ -662,38 +677,41 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
         </form>
       )}
 
-      <div className="glass-panel admin-table-container">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="admin-panel admin-table-wrap">
+        <table className="admin-table">
           <thead>
-            <tr>{['Date', 'Category', 'Description', 'Paid to', 'Amount', ''].map(h => <th key={h} style={{ ...cell, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>{h}</th>)}</tr>
+            <tr>
+              <th scope="col">Date</th><th scope="col">Category</th><th scope="col">Description</th><th scope="col">Paid to</th>
+              <th scope="col" className="is-num">Amount</th><th scope="col"><span className="sr-only">Actions</span></th>
+            </tr>
           </thead>
           <tbody>
-            {expenses.length === 0 && <tr><td colSpan={6} style={{ ...cell, color: 'var(--text-muted)' }}>No expenses yet.</td></tr>}
+            {expenses.length === 0 && <tr><td colSpan={6}>No expenses yet.</td></tr>}
             {expenses.map(e => (
               <tr key={e.id}>
-                <td style={cell}>{e.spent_on}</td>
-                <td style={cell}>{EXPENSE_CATEGORIES[e.category] || e.category}</td>
-                <td style={cell}>
+                <td className="is-num" style={{ textAlign: 'left' }}>{e.spent_on}</td>
+                <td>{EXPENSE_CATEGORIES[e.category] || e.category}</td>
+                <td className="is-strong">
                   {e.description}
                   {e.paid_by_member_id && (
-                    <div style={{ fontSize: '0.75rem', color: e.reimbursed ? 'var(--text-muted)' : 'var(--c-amber)' }}>
+                    <small style={e.reimbursed ? undefined : { color: 'var(--color-warn)' }}>
                       Paid by {members.find(m => m.id === e.paid_by_member_id)?.full_name || 'member'}: {e.reimbursed ? 'reimbursed' : 'to reimburse'}
-                    </div>
+                    </small>
                   )}
                 </td>
-                <td style={cell}>{e.vendor}</td>
-                <td style={{ ...cell, fontWeight: 800 }}>{formatMoney(e.amount_cents, e.currency)}</td>
-                <td style={{ ...cell, whiteSpace: 'nowrap' }}>
-                  {e.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('expense', e.id)}><FileText size={14} /></button>}
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} onClick={() => edit(e)}>Edit</button>
-                  <button data-needs-full type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => remove(e)} aria-label="Delete expense"><Trash2 size={14} /></button>
+                <td>{e.vendor}</td>
+                <td className="is-num is-strong">{formatMoney(e.amount_cents, e.currency)}</td>
+                <td className="is-actions">
+                  {e.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('expense', e.id)} aria-label="View receipt"><FileText size={14} aria-hidden="true" /></button>}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => edit(e)}>Edit</button>
+                  <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={() => remove(e)} aria-label="Delete expense"><Trash2 size={14} aria-hidden="true" /></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-note">Total shown: {money(expenses.reduce((n, e) => n + e.amount_cents, 0))}</p>
+      <p className="admin-table-foot">Total shown: {money(expenses.reduce((n, e) => n + e.amount_cents, 0))}</p>
     </div>
   );
 }
@@ -734,8 +752,8 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
     <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
-          <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-            Membership Signup & Payment Policy
+          <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+            Membership sign-up and payment
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem' }}>
             Control whether applicants can be approved before paying, permit committee fee waivers, or auto-approve on payment.
@@ -747,47 +765,12 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
         {MEMBERSHIP_PAYMENT_POLICIES.map(p => {
           const isSelected = policy === p.id;
           return (
-            <label
-              key={p.id}
-              style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'flex-start',
-                padding: '0.85rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                background: isSelected ? 'rgba(16, 185, 129, 0.08)' : 'rgba(var(--shade-rgb), 0.2)',
-                border: `1.5px solid ${isSelected ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <input
-                type="radio"
-                name="membership-payment-policy"
-                checked={isSelected}
-                onChange={() => setPolicy(p.id)}
-                style={{ marginTop: '0.25rem', accentColor: 'var(--club-primary)' }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.92rem' }}>{p.title}</strong>
-                  <span
-                    className="badge"
-                    style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      padding: '0.1rem 0.45rem',
-                      background: isSelected ? 'var(--club-primary)' : 'rgba(255,255,255,0.08)',
-                      color: isSelected ? '#fff' : 'var(--text-muted)',
-                    }}
-                  >
-                    {p.badge}
-                  </span>
-                </div>
-                <span style={{ display: 'block', fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  {p.description}
-                </span>
-              </div>
+            <label key={p.id} className="admin-option">
+              <input type="radio" name="membership-payment-policy" checked={isSelected} onChange={() => setPolicy(p.id)} />
+              <span>
+                <b>{p.title} <span className={isSelected ? 'admin-pill is-ok' : 'admin-pill'} style={{ display: 'inline-flex', marginTop: 0 }}>{p.badge}</span></b>
+                <span>{p.description}</span>
+              </span>
             </label>
           );
         })}
@@ -800,16 +783,14 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
         onClick={save}
         disabled={!dirty}
       >
-        <Save size={16} /> Save Policy
+        <Save size={16} aria-hidden="true" /> Save policy
       </button>
 
-      <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', cursor: savingFree ? 'wait' : 'pointer',
-        background: 'rgba(var(--shade-rgb), 0.2)', border: `1.5px solid ${autoFree ? 'var(--club-primary)' : 'var(--border-subtle)'}` }}>
-        <input type="checkbox" checked={autoFree} disabled={savingFree} onChange={toggleAutoFree}
-          style={{ marginTop: '0.25rem', accentColor: 'var(--club-primary)' }} />
+      <label className="admin-option">
+        <input type="checkbox" checked={autoFree} disabled={savingFree} onChange={toggleAutoFree} />
         <span>
-          <strong style={{ color: 'var(--text-primary)', fontSize: '0.92rem' }}>Approve free supporter sign-ups straight away</strong>
-          <span style={{ display: 'block', fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+          <b>Approve free supporter sign-ups straight away</b>
+          <span>
             Adults joining as a supporter on a $0 plan get their member pass as soon as they sign up. Players, juniors and paid plans still come to you for approval.
           </span>
         </span>
@@ -847,12 +828,11 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
   };
 
   const option = (value: RenewalMode, title: string, desc: string) => (
-    <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.75rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-      border: `1px solid ${mode === value ? 'var(--club-primary)' : 'var(--border-subtle)'}` }}>
-      <input type="radio" name="renewal-mode" checked={mode === value} onChange={() => setMode(value)} style={{ marginTop: '0.2rem' }} />
+    <label className="admin-option">
+      <input type="radio" name="renewal-mode" checked={mode === value} onChange={() => setMode(value)} />
       <span>
-        <strong style={{ color: 'var(--text-primary)' }}>{title}</strong>
-        <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{desc}</span>
+        <b>{title}</b>
+        <span>{desc}</span>
       </span>
     </label>
   );
