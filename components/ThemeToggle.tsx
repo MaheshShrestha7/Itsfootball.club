@@ -4,7 +4,8 @@ import { Moon, Sun } from 'lucide-react';
 
 /** Flips <html data-theme> and remembers it in a cookie, which app/layout.tsx reads on the server
  *  so the next page load paints in the right theme. Which icon shows is decided by CSS (globals.css). */
-export default function ThemeToggle({ style }: { style?: React.CSSProperties }) {
+/** A className replaces the default look (the admin passes its own icon-button class). */
+export default function ThemeToggle({ style, className }: { style?: React.CSSProperties; className?: string }) {
   const toggle = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
@@ -18,8 +19,8 @@ export default function ThemeToggle({ style }: { style?: React.CSSProperties }) 
       onClick={toggle}
       aria-label="Switch between light and dark mode"
       title="Switch between light and dark mode"
-      className="touch-target"
-      style={{
+      className={className ?? 'touch-target'}
+      style={className ? style : {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
