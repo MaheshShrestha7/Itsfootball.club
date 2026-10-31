@@ -3,7 +3,8 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useClub } from '@/lib/club-context';
+import { useClub, passTokenFrom } from '@/lib/club-context';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { Shield, CheckCircle2, XCircle, AlertTriangle, ArrowLeft, CreditCard, RefreshCw } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import MemberPerks from '@/components/MemberPerks';
@@ -23,6 +24,10 @@ export default function VerifyPassPage({
 
   const [inputToken, setInputToken] = useState(token);
   const [rawResult, setResult] = useState<any>(null);
+  // The pass the result is for: Mark as used sends it with the perk (redeem_perk, migration 20261142).
+  // `n` counts the checks, so each one (even of the same pass) starts with fresh Mark as used buttons
+  const [checked, setChecked] = useState({ token: '', n: 0 });
+  const check = (raw: string) => setChecked(c => ({ token: passTokenFrom(raw), n: c.n + 1 }));
   // Checked at render so it also holds once the club finishes loading: a pass from another club is not valid here
   const result = rawResult?.member && club && rawResult.member.club_id !== club.id
     ? { valid: false, message: `This pass belongs to a different club, not ${club.name}.` }
@@ -30,12 +35,20 @@ export default function VerifyPassPage({
 
   const [checking, setChecking] = useState(false);
   const { perks } = useClubPerks(club?.id || '');
+  const redeem = async (perkId: string) => {
+    const db = getSupabaseClient();
+    if (!db) return { success: false, message: 'Not saved. Please try again.' };
+    const { data, error } = await db.rpc('redeem_perk', { p_token: checked.token, p_perk_id: perkId });
+    const row = Array.isArray(data) ? data[0] : null;
+    return error || !row ? { success: false, message: 'Not saved. Please try again.' } : row as { success: boolean; message: string };
+  };
 
   useEffect(() => {
     if (!token) return;
     setChecking(true);
     verifyMemberPassPublic(token).then(res => {
       setResult(res);
+      check(token);
       setChecking(false);
     });
   }, [token, verifyMemberPassPublic]);
@@ -45,6 +58,7 @@ export default function VerifyPassPage({
     if (!inputToken.trim()) return;
     setChecking(true);
     setResult(await verifyMemberPassPublic(inputToken));
+    check(inputToken);
     setChecking(false);
   };
 
@@ -173,7 +187,7 @@ export default function VerifyPassPage({
               {result.valid && perks.length > 0 && (
                 <div className="stack" style={{ marginTop: '1.25rem' }}>
                   <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>Member perks</h4>
-                  <MemberPerks perks={perks} clubName={club.name} forBusiness />
+                  <MemberPerks key={checked.n} perks={perks} clubName={club.name} forBusiness redeem={redeem} />
                 </div>
               )}
             </div>

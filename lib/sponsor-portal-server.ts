@@ -92,6 +92,9 @@ export interface AtGround {
   /** Times the club printed a poster or flyer with their logo, and scans of its QR (migration 20261139) */
   posterPrints: number | null;
   posterScans: number | null;
+  /** Times members used their member perk since the results start (migration 20261142); null when
+   *  they have no perk */
+  perkUses?: number | null;
 }
 
 /** Where a sponsor is at the ground now, and the counts the app records for those places: gate
@@ -110,7 +113,13 @@ export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config:
   const onPaper = places.some(p => isPosterPlace(p));
   const printed = (type: 'print' | 'scan') =>
     count(db.from('sponsor_analytics').select('id', { count: 'exact', head: true }).eq('sponsor_id', sponsor.id).eq('event_type', type).gte('created_at', from));
-  const [checkins, tickets, passMembers, posterPrints, posterScans] = await Promise.all([
+  // Their member perks (any state: uses count after a perk is hidden or ended)
+  const perkUses = async () => {
+    const { data: perks, error } = await db.from('club_perks').select('id').eq('club_id', sponsor.club_id).eq('sponsor_id', sponsor.id);
+    if (error || !perks?.length) return null;
+    return count(db.from('perk_redemptions').select('id', { count: 'exact', head: true }).in('perk_id', perks.map(p => p.id)).gte('redeemed_on', since));
+  };
+  const [checkins, tickets, passMembers, posterPrints, posterScans, perkUsed] = await Promise.all([
     places.includes('checkin_posters') || places.includes('checkin_screen')
       ? count(sponsor.event_id
         ? db.from('gate_scans').select('id', { count: 'exact', head: true }).eq('club_id', sponsor.club_id).eq('valid', true).eq('event_id', sponsor.event_id).gte('scanned_at', from)
@@ -126,8 +135,9 @@ export async function loadAtGround(db: SupabaseClient, sponsor: Sponsor, config:
       : null,
     onPaper ? printed('print') : null,
     onPaper ? printed('scan') : null,
+    perkUses(),
   ]);
-  return { places, checkins, tickets, passMembers, posterPrints, posterScans };
+  return { places, checkins, tickets, passMembers, posterPrints, posterScans, perkUses: perkUsed };
 }
 
 const DAY = 24 * 3600 * 1000;
