@@ -12,11 +12,12 @@ import {
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useSearchParams } from 'next/navigation';
 import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
+import PerksPanel from '@/components/admin/PerksPanel';
 import SponsorThanksPoster from '@/components/admin/SponsorThanksPoster';
 import OneSponsorSpots from '@/components/admin/OneSponsorSpots';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer } from 'lucide-react';
+import { DollarSign, Plus, Edit2, ExternalLink, X, Sparkles, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer, Gift } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
@@ -105,8 +106,8 @@ export default function AdminSponsorsPage({
   // The preview shows what fans see: club-wide sponsors that are on the site
   const previewSponsors = sortSponsorsByTier(clubWideSponsors.filter(sp => isSponsorOnSite(sp)));
 
-  // Sponsor list or Packages (?tab=packages, from the admin menu and Finance)
-  const [tab, setTab] = useUrlTab(['list', 'packages'] as const);
+  // Sponsor list, Packages (?tab=packages, from the admin menu and Finance) or Member Perks (?tab=perks)
+  const [tab, setTab] = useUrlTab(['list', 'packages', 'perks'] as const);
   const [thanksPosterOpen, setThanksPosterOpen] = useState(false);
   // Which sponsors the list shows (?view=new opens New sign-ups, from "Needs you")
   // (replaceState with no state of its own keeps useSearchParams in sync, as in useUrlTab)
@@ -551,7 +552,7 @@ export default function AdminSponsorsPage({
       {thanksPosterOpen && <SponsorThanksPoster club={club} onClose={() => setThanksPosterOpen(false)} />}
 
       <div className="sponsor-tabs" role="tablist" aria-label="Sponsors" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {([['list', 'Sponsor List', Shield], ['packages', 'Packages', Package]] as const).map(([id, label, Icon]) => (
+        {([['list', 'Sponsor List', Shield], ['packages', 'Packages', Package], ['perks', 'Member Perks', Gift]] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} data-view-ok onClick={() => setTab(id)}
             className={`btn btn-sm ${tab === id ? 'btn-primary' : 'btn-secondary'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
             <Icon size={14} /> {label}
@@ -559,7 +560,7 @@ export default function AdminSponsorsPage({
         ))}
       </div>
 
-      {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : (<>
+      {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : tab === 'perks' ? <PerksPanel club={club} sponsors={clubSponsors} /> : (<>
 
       <OneSponsorSpots club={club} />
 

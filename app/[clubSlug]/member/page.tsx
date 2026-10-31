@@ -15,6 +15,8 @@ import PaymentStep from '@/components/PaymentStep';
 import { formatMoney, membershipTermEnd, todayIso } from '@/lib/finance';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
+import { useClubPerks } from '@/lib/use-club-perks';
+import MemberPerks from '@/components/MemberPerks';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
@@ -45,6 +47,7 @@ import {
   Send,
   MessageSquare,
   ShoppingBag,
+  Gift,
   LogOut,
   Clock,
   AlertCircle,
@@ -105,7 +108,7 @@ const guessRole = (tier: string): 'player' | 'supporter' =>
 /** Short, readable application reference ('3F9A21C0' rather than a full database id) */
 const applicationRef = (id: string) => id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
-const CLUBHOUSE_TABS = ['pass', 'stats', 'messages', 'shop'] as const;
+const CLUBHOUSE_TABS = ['pass', 'stats', 'messages', 'perks', 'shop'] as const;
 type ClubhouseTab = (typeof CLUBHOUSE_TABS)[number];
 
 export default function MemberPortalPage({
@@ -286,6 +289,9 @@ export default function MemberPortalPage({
   // Season shown on the Season Stats tab ('' = the club's active season)
   const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
+  // Perks tab: only when the club has live perks; codes come back only for an active member
+  const { perks } = useClubPerks(club.id, true);
+  const perksOpen = perks.length > 0;
 
   // Messaging Form State
   const [messageSubject, setMessageSubject] = useState('');
@@ -1503,7 +1509,7 @@ export default function MemberPortalPage({
             {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop opens one directly, e.g. from a message email) */}
             {/* One even row on every screen; phones get the short labels so nothing wraps onto its own line */}
             <style>{`
-              .member-tabs { display: grid; grid-template-columns: repeat(${shopOpen ? 4 : 3}, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; }
+              .member-tabs { display: grid; grid-template-columns: repeat(${3 + Number(shopOpen) + Number(perksOpen)}, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; }
               .member-tabs button { justify-content: center; min-width: 0; }
               .member-tab-short { display: none; }
               @media (max-width: 599px) {
@@ -1518,6 +1524,7 @@ export default function MemberPortalPage({
                 { id: 'pass', label: 'Member Pass', short: 'Pass', Icon: CreditCard },
                 { id: 'stats', label: 'Season Stats', short: 'Stats', Icon: Activity },
                 { id: 'messages', label: 'Messages', short: 'Messages', Icon: MessageSquare },
+                ...(perksOpen ? [{ id: 'perks' as const, label: 'Member Perks', short: 'Perks', Icon: Gift }] : []),
                 ...(shopOpen ? [{ id: 'shop' as const, label: 'Club Shop', short: 'Shop', Icon: ShoppingBag }] : []),
               ] as const).map(({ id, label, short, Icon }) => {
                 const selected = activeClubhouseTab === id;
@@ -1565,6 +1572,14 @@ export default function MemberPortalPage({
 
             {/* SUB-TAB: CLUB SHOP (the same shop as /{slug}/shop, kept inside the clubhouse) */}
             {activeClubhouseTab === 'shop' && shopOpen && <ClubShop club={club} embedded />}
+
+            {/* SUB-TAB: MEMBER PERKS (club_perks_public; codes only for an active member) */}
+            {activeClubhouseTab === 'perks' && perksOpen && (
+              <section aria-labelledby="member-tab-perks" className="stack">
+                <p className="text-note" style={{ margin: 0 }}>Offers for {club.name} members. Show your member pass, or use the code where there is one.</p>
+                <MemberPerks perks={perks} clubName={club.name} />
+              </section>
+            )}
 
             {/* SUB-TAB 1: VIRTUAL PASS */}
             {activeClubhouseTab === 'pass' && (
