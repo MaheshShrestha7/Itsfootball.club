@@ -13,7 +13,7 @@ import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff, ShieldAlert, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const COLOR_PRESETS = ['#10B981', '#2563EB', '#EF4444', '#F59E0B', '#8B5CF6', '#06B6D4', '#334155'];
 
@@ -68,12 +68,12 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   useEscapeToClose(true, () => onClose());
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+      style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="glass-panel" role="dialog" aria-label={title} style={{ width: '100%', maxWidth: 'min(640px, calc(100vw - 2rem))', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h3>
+          <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h3>
           <button data-view-ok type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
@@ -84,16 +84,16 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-const CHECK_LABELS: Record<SafeguardingCheckStatus, { text: string; color: string; bg: string }> = {
-  valid: { text: 'Check valid', color: 'var(--c-green)', bg: 'rgba(16, 185, 129, 0.15)' },
-  expiring: { text: 'Check expiring', color: 'var(--c-amber, #F59E0B)', bg: 'rgba(245, 158, 11, 0.15)' },
-  expired: { text: 'Check expired', color: 'var(--c-red)', bg: 'rgba(239, 68, 68, 0.15)' },
-  missing: { text: 'No check', color: 'var(--c-red)', bg: 'rgba(239, 68, 68, 0.15)' },
+const CHECK_LABELS: Record<SafeguardingCheckStatus, { text: string; tone: string }> = {
+  valid: { text: 'Check valid', tone: 'is-ok' },
+  expiring: { text: 'Check expiring', tone: 'is-warn' },
+  expired: { text: 'Check expired', tone: 'is-danger' },
+  missing: { text: 'No check', tone: 'is-danger' },
 };
 
 function CheckBadge({ status }: { status: SafeguardingCheckStatus }) {
   const l = CHECK_LABELS[status];
-  return <span className="badge" style={{ marginLeft: 6, background: l.bg, color: l.color }}>{l.text}</span>;
+  return <span className={`admin-pill ${l.tone}`} style={{ marginLeft: 6 }}>{l.text}</span>;
 }
 
 export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
@@ -336,35 +336,33 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
 
   return (
     <div>
-      <div className="row row-wrap" style={{ justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="admin-head">
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>Club Teams</h2>
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            Your first team, reserves, academy and youth age groups. Each team has its own squad, staff and fixtures.
-          </p>
+          <h1>Teams</h1>
+          <p>Your first team, reserves, academy and youth age groups. Each team has its own squad, staff and fixtures.</p>
         </div>
-        <div className="row row-wrap">
-          <button onClick={openJunior} data-view-ok className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={16} />
+        <div className="admin-head-actions">
+          <button type="button" onClick={openJunior} data-view-ok className="btn btn-secondary">
+            <ShieldCheck size={16} aria-hidden="true" />
             <span>Junior settings</span>
           </button>
-          <button onClick={openNew} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={16} />
-            <span>Add Team</span>
+          <button type="button" onClick={openNew} className="btn btn-primary">
+            <Plus size={16} aria-hidden="true" />
+            <span>Add a team</span>
           </button>
         </div>
       </div>
 
       {feedback && (
-        <div role="status" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.35)', color: 'var(--c-green)', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem', fontWeight: 700, fontSize: '0.85rem' }}>
-          {feedback}
+        <div role="status" className="admin-flash">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>{feedback}</span>
         </div>
       )}
 
       {teams.length === 0 ? (
-        <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem' }}>
-          <Users size={36} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
-          <p className="text-body" style={{ margin: 0 }}>No teams yet. Your main team appears here once the club has loaded.</p>
+        <div className="admin-panel admin-empty">
+          <p style={{ margin: 0 }}>No teams yet. Your main team appears here once the club has loaded.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '1.25rem' }}>
@@ -379,21 +377,21 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 <div style={{ padding: '1.1rem 1.25rem', flex: 1 }}>
                   <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                     <div className="min-w-0">
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>{team.name}</h3>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{team.name}</h3>
                       <div className="text-meta" style={{ marginTop: '0.2rem' }}>
                         {typeLabel}
-                        {team.age_group ? ` · ${team.age_group}` : ''}
-                        {` · ${TEAM_GENDERS.find(g => g.value === team.gender)?.label || team.gender}`}
-                        {` · ${team.match_format}`}
+                        {team.age_group ? `, ${team.age_group}` : ''}
+                        {`, ${TEAM_GENDERS.find(g => g.value === team.gender)?.label || team.gender}`}
+                        {`, ${team.match_format}`}
                       </div>
                     </div>
                     <div className="row row-tight shrink-0">
-                      <button onClick={() => openEdit(team)} className="btn btn-secondary btn-sm" title="Edit team" aria-label={`Edit ${team.name}`}>
-                        <Edit2 size={13} />
+                      <button type="button" onClick={() => openEdit(team)} className="btn btn-secondary btn-sm" title="Edit team" aria-label={`Edit ${team.name}`}>
+                        <Edit2 size={13} aria-hidden="true" />
                       </button>
                       {!team.is_default && (
-                        <button data-needs-full onClick={() => removeTeam(team)} className="btn btn-secondary btn-sm" title="Delete team" aria-label={`Delete ${team.name}`} style={{ color: 'var(--c-red)' }}>
-                          <Trash2 size={13} />
+                        <button type="button" data-needs-full onClick={() => removeTeam(team)} className="btn btn-secondary btn-sm" title="Delete team" aria-label={`Delete ${team.name}`} style={{ color: 'var(--color-danger)' }}>
+                          <Trash2 size={13} aria-hidden="true" />
                         </button>
                       )}
                     </div>
@@ -401,31 +399,31 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
 
                   <div className="row row-wrap row-tight" style={{ marginTop: '0.75rem' }}>
                     {team.is_default && (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber, #F59E0B)' }}>
-                        <Star size={11} style={{ marginRight: 3 }} />Main team
+                      <span className="admin-pill">
+                        <Star size={11} aria-hidden="true" />Main team
                       </span>
                     )}
                     {team.is_junior && (
-                      <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--c-purple)' }}>
-                        <Baby size={11} style={{ marginRight: 3 }} />Junior
+                      <span className="admin-pill">
+                        <Baby size={11} aria-hidden="true" />Junior
                       </span>
                     )}
                     {team.hide_public_scores && (
-                      <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>
-                        <EyeOff size={11} style={{ marginRight: 3 }} />Scores hidden
+                      <span className="admin-pill">
+                        <EyeOff size={11} aria-hidden="true" />Scores hidden
                       </span>
                     )}
-                    {!team.is_active && <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.06)' }}>Inactive</span>}
+                    {!team.is_active && <span className="admin-pill">Inactive</span>}
                   </div>
 
                   <div className="text-note" style={{ marginTop: '0.85rem' }}>
                     <strong className="text-primary">{players.length}</strong> {players.length === 1 ? 'player' : 'players'}
                     {staff.length > 0 && (
-                      <> · {staff.map(r => `${memberById.get(r.member_id)?.full_name} (${TEAM_ROLE_LABELS[r.team_role]})`).join(', ')}</>
+                      <>, {staff.map(r => `${memberById.get(r.member_id)?.full_name} (${TEAM_ROLE_LABELS[r.team_role]})`).join(', ')}</>
                     )}
                   </div>
                   {uncheckedStaff.length > 0 && (
-                    <div className="row" role="note" style={{ marginTop: '0.6rem', color: 'var(--c-amber, #F59E0B)', fontSize: '0.8rem', fontWeight: 600, alignItems: 'flex-start' }}>
+                    <div className="row" role="note" style={{ marginTop: '0.6rem', color: 'var(--color-warn)', fontSize: '0.8rem', fontWeight: 600, alignItems: 'flex-start' }}>
                       <ShieldAlert size={14} className="shrink-0" style={{ marginTop: 2 }} />
                       <span>
                         No valid safeguarding check: {Array.from(new Set(uncheckedStaff.map(r => memberById.get(r.member_id)?.full_name))).join(', ')}
@@ -509,7 +507,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
               <div className="row row-wrap">
                 {COLOR_PRESETS.map(c => (
                   <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} aria-label={`Colour ${c}`}
-                    style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', border: form.color === c ? '3px solid var(--text-primary)' : '2px solid rgba(0,0,0,0.3)' }} />
+                    style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', border: form.color === c ? '3px solid var(--text-primary)' : '2px solid var(--color-scrim)' }} />
                 ))}
                 <input type="color" aria-label="Custom team colour" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} style={{ width: 28, height: 28, border: 'none', background: 'transparent', cursor: 'pointer' }} />
               </div>
@@ -595,7 +593,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
               </div>
               <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
                 <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input data-view-ok aria-label="Search members" className="form-input" placeholder="Search members..." value={rosterSearch} onChange={e => setRosterSearch(e.target.value)} style={{ paddingLeft: '2.2rem' }} />
+                <input data-view-ok aria-label="Search members" className="form-input" placeholder="Search members" value={rosterSearch} onChange={e => setRosterSearch(e.target.value)} style={{ paddingLeft: '2.2rem' }} />
               </div>
               <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                 {filteredMembers.length === 0 && <div className="text-note" style={{ padding: '0.75rem' }}>No members found.</div>}
@@ -605,10 +603,10 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                     <PlayerAvatar name={m.full_name} photoUrl={m.photo_url} size={26} />
                     <span className="min-w-0" style={{ flex: 1, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                       {m.full_name}
-                      {!isPlayerLike(m) && <span className="text-meta"> · {m.role}</span>}
+                      {!isPlayerLike(m) && <span className="text-meta">, {m.role}</span>}
                     </span>
                     {rosterTeam.age_group && ageGroupFit(m.date_of_birth, rosterTeam.age_group, cutoff) === 'too_old' && (
-                      <span className="badge" title={`Too old for ${rosterTeam.age_group} on the season's cut-off date`} style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber, #F59E0B)' }}>
+                      <span className="admin-pill is-warn" title={`Too old for ${rosterTeam.age_group} on the season's cut-off date`}>
                         Over {rosterTeam.age_group}
                       </span>
                     )}
@@ -635,7 +633,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
               ))}
               <div className="row row-wrap" style={{ marginTop: '0.5rem' }}>
                 <select aria-label="Staff member" className="form-input" style={{ flex: '2 1 180px' }} value={newStaffId} onChange={e => setNewStaffId(e.target.value)}>
-                  <option value="">Choose a member...</option>
+                  <option value="">Choose a member…</option>
                   {clubMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                 </select>
                 <select aria-label="Staff role" className="form-input" style={{ flex: '1 1 130px' }} value={newStaffRole} onChange={e => setNewStaffRole(e.target.value as ClubTeamRole)}>

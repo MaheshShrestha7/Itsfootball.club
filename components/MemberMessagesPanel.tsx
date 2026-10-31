@@ -105,7 +105,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
       {/* Conversations */}
       <div className="glass-panel" style={{ padding: '1.25rem', height: '620px', display: 'flex', flexDirection: 'column' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <MessageSquare size={18} color="var(--c-blue)" />
           <span>Conversations ({conversations.length})</span>
         </h3>
@@ -133,8 +133,8 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                 textAlign: 'left',
                 padding: '0.85rem',
                 borderRadius: '8px',
-                background: selectedId === c.memberId ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--shade-rgb), 0.25)',
-                border: selectedId === c.memberId || c.unread ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
+                background: selectedId === c.memberId ? 'var(--color-accent-wash)' : 'color-mix(in oklab, var(--color-sidebar) 25%, transparent)',
+                border: selectedId === c.memberId || c.unread ? '1px solid var(--color-accent-line)' : '1px solid var(--border-subtle)',
                 cursor: 'pointer',
                 color: 'inherit',
                 font: 'inherit',
@@ -143,10 +143,10 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
                 <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{c.name}</span>
                 {c.guardian && (
-                  <span className="badge" style={{ fontSize: '0.62rem', marginRight: 'auto' }} title={`Sent by ${c.guardian}, their parent or guardian`}>FROM PARENT</span>
+                  <span className="admin-pill" style={{ marginRight: 'auto' }} title={`Sent by ${c.guardian}, their parent or guardian`}>From a parent</span>
                 )}
                 {c.unread > 0
-                  ? <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{c.unread} NEW</span>
+                  ? <span className="admin-count">{c.unread}<span className="sr-only"> new</span></span>
                   : <span className="text-meta">{c.latest ? formatShortDay(c.latest.created_at) : 'New'}</span>}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--c-sky)', fontWeight: 600, marginBottom: '0.2rem' }}>
@@ -166,7 +166,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
         {selected ? (
           <>
             <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{selected.name}</h3>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{selected.name}</h3>
               {selected.guardian ? (
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
                   Messages from {selected.guardian}, their parent or guardian{selected.member?.guardian_email ? ` (${selected.member.guardian_email})` : ''}. Your replies go to them.
@@ -192,13 +192,13 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                       maxWidth: '85%',
                       padding: '0.75rem 0.9rem',
                       borderRadius: '10px',
-                      background: mine ? 'rgba(16, 185, 129, 0.12)' : 'rgba(var(--tint-rgb), 0.04)',
-                      border: `1px solid ${mine ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
+                      background: mine ? 'var(--color-accent-wash)' : 'color-mix(in oklab, var(--color-ink) 4%, transparent)',
+                      border: `1px solid ${mine ? 'var(--color-accent-line)' : 'var(--border-subtle)'}`,
                     }}
                   >
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                      {m.sender_name} · {new Date(m.created_at).toLocaleString(DATE_LOCALE)}
-                      {m.subject ? ` · ${m.subject}` : ''}
+                      {m.sender_name}, {new Date(m.created_at).toLocaleString(DATE_LOCALE)}
+                      {m.subject ? `, ${m.subject}` : ''}
                     </div>
                     <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>
                   </div>
@@ -208,7 +208,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
 
             <form onSubmit={handleSend} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
               <label htmlFor="member-reply" style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.4rem' }}>
-                {sent ? '✓ Sent to their member area' : `Reply as ${adminName}:`}
+                {sent ? 'Sent to their member area' : `Reply as ${adminName}:`}
               </label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <textarea
@@ -219,7 +219,7 @@ export default function MemberMessagesPanel({ club, adminName, startMemberId }: 
                   placeholder={`Write to ${selected.name}...`}
                   style={{
                     flex: 1,
-                    background: 'rgba(var(--shade-rgb), 0.4)',
+                    background: 'color-mix(in oklab, var(--color-sidebar) 40%, transparent)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: '8px',
                     padding: '0.6rem 0.8rem',

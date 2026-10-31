@@ -2,7 +2,7 @@
 
 import React, { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { KeyRound, Plus, Save, Trash2, Lock, Users } from 'lucide-react';
+import { Plus, Save, Trash2, Lock, Users } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -130,38 +130,38 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
 
   return (
     <div className="stack">
-      <div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <KeyRound size={30} /> Roles &amp; Permissions
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '720px', marginTop: '0.2rem' }}>
-          Decide what each role can do in this admin area, and add your own roles. Give someone a role on the{' '}
-          <Link href={`/${club.slug}/admin/people`}>People</Link> page. Someone with several roles gets the
-          highest level any of them gives.
-        </p>
+      <div className="admin-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1>Roles and access</h1>
+          <p>
+            Decide what each role can do in this admin area, and add your own roles. Give someone a role on the{' '}
+            <Link href={`/${club.slug}/admin/people`} style={{ color: 'var(--color-accent-ink)' }}>People</Link> page. Someone with several roles gets the
+            highest level any of them gives.
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div role="alert" className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #EF4444' }}>
+        <div role="alert" className="admin-flash is-error">
           Could not load the roles: {error}
         </div>
       )}
 
       {/* Role picker */}
       <div className="glass-panel" style={{ padding: '1.25rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {loading && <span className="text-meta">Loading roles...</span>}
+        <div className="admin-chips" role="group" aria-label="Roles" style={{ flexWrap: 'wrap' }}>
+          {loading && <span className="text-meta">Loading roles…</span>}
           {roles.map(r => (
             <button
               key={r.id}
               type="button"
               onClick={() => setSelectedId(r.id)}
-              className={selected?.id === r.id ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+              className="admin-chip"
               aria-pressed={selected?.id === r.id}
             >
-              {r.is_super && <Lock size={12} />}
+              {r.is_super && <Lock size={12} aria-hidden="true" />}
               <span>{r.name}</span>
-              <span style={{ opacity: 0.7 }}>({holders[r.id]?.length || 0})</span>
+              <span className="num">{holders[r.id]?.length || 0}</span>
             </button>
           ))}
         </div>
@@ -179,7 +179,7 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
             </select>
           </div>
           <button type="submit" className="btn btn-primary" disabled={!newName.trim()}>
-            <Plus size={16} /> <span>Add role</span>
+            <Plus size={16} aria-hidden="true" /> <span>Add role</span>
           </button>
         </form>
       </div>
@@ -206,21 +206,21 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
           </div>
 
           <div className="text-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0.9rem 0' }}>
-            <Users size={14} />
+            <Users size={14} aria-hidden="true" />
             {holders[selected.id]?.length
               ? <span>Held by {holders[selected.id].join(', ')}</span>
               : <span>Nobody holds this role yet.</span>}
           </div>
 
           {selected.is_super ? (
-            <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', background: 'rgba(var(--tint-rgb), 0.04)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', background: 'color-mix(in oklab, var(--color-ink) 4%, transparent)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               <strong>Club Admin is the super user role.</strong> It has full access to every area, can manage these roles and
               decides who holds them. It can&apos;t be renamed, restricted or deleted. The club Owner always has the same access.
             </div>
           ) : (
             <>
               <p className="text-meta" style={{ marginBottom: '0.5rem' }}>
-                {ACCESS_LEVELS.map(l => `${l.label}: ${l.desc.toLowerCase()}`).join(' · ')}
+                {ACCESS_LEVELS.map(l => `${l.label}: ${l.desc.toLowerCase()}`).join('. ')}.
               </p>
               <div className="admin-table-container">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -228,7 +228,7 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
                     {groups.map(group => (
                       <React.Fragment key={group}>
                         <tr>
-                          <th colSpan={2} style={{ ...cell, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', paddingTop: '1rem' }}>{group}</th>
+                          <th colSpan={2} style={{ ...cell, color: 'var(--text-primary)', fontSize: '0.84rem', fontWeight: 600, paddingTop: '1rem' }}>{group}</th>
                         </tr>
                         {ACCESS_AREAS.filter(a => a.group === group).map(a => (
                           <tr key={a.key}>
@@ -258,11 +258,11 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.5rem', marginTop: '1rem' }}>
             {!selected.is_super ? (
               <button type="button" className="btn btn-secondary" onClick={remove}>
-                <Trash2 size={16} /> <span>Delete role</span>
+                <Trash2 size={16} aria-hidden="true" /> <span>Delete role</span>
               </button>
             ) : <span />}
             <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || saving}>
-              <Save size={16} /> <span>{saving ? 'Saving...' : 'Save changes'}</span>
+              <Save size={16} aria-hidden="true" /> <span>{saving ? 'Saving…' : 'Save changes'}</span>
             </button>
           </div>
         </div>

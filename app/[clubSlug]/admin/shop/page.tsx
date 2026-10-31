@@ -2,7 +2,7 @@
 
 import React, { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Plus, Save, Trash2, ImagePlus, X, PackageCheck, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Plus, Save, Trash2, ImagePlus, X, PackageCheck, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -64,36 +64,36 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
 
   return (
     <div className="stack">
-      <div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <ShoppingBag size={30} /> Club Shop
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
-          Sell club merch online. Buyers pay by card and collect from the club. Public page:{' '}
-          <Link href={`/${club.slug}/shop`}>/{club.slug}/shop</Link>
-        </p>
+      <div className="admin-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1>Club shop</h1>
+          <p>
+            Sell club merch online. Buyers pay by card and collect from the club. Public page:{' '}
+            <Link href={`/${club.slug}/shop`} style={{ color: 'var(--color-accent-ink)' }}>/{club.slug}/shop</Link>
+          </p>
+        </div>
       </div>
 
       {/* Saved state, not unsaved ticks: this is what members actually see */}
       {products && products.length > 0 && !products.some(p => p.is_active) && (
-        <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #F59E0B' }}>
+        <div role="status" className="admin-notice" style={{ display: 'block', margin: 0 }}>
           <strong>Your shop is hidden.</strong> No product is on sale, so members and visitors don&apos;t see the Shop link yet.
           Tick <strong>On sale</strong> on a product and click <strong>Save</strong>.
         </div>
       )}
 
       {!cardsOn && (
-        <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #F59E0B' }}>
+        <div role="status" className="admin-notice" style={{ display: 'block', margin: 0 }}>
           The shop takes card payments only, and card payments aren&apos;t set up yet. Connect Stripe in{' '}
-          <Link href={`/${club.slug}/admin/finance?tab=settings`}>Finance → Settings</Link> before putting products on sale.
+          <Link href={`/${club.slug}/admin/finance?tab=settings`} style={{ color: 'var(--color-accent-ink)' }}>Finance, Settings</Link> before putting products on sale.
         </div>
       )}
 
       {/* Orders (the admin menu's Club Shop sub-items jump here) */}
       <div id="orders" className="glass-panel" style={{ padding: '1.25rem', scrollMarginTop: '5rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
-            Orders {open.length > 0 && <span className="badge" style={{ marginLeft: '0.4rem', background: '#F59E0B', color: '#000' }}>{open.length} open</span>}
+          <h2 style={{ fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            Orders {open.length > 0 && <span className="admin-pill is-warn">{open.length} open</span>}
           </h2>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
             <input data-view-ok type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> Show handed out &amp; refunded
@@ -102,7 +102,7 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
         <div className="admin-table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['Date', 'Buyer', 'Items', 'Amount', 'Status', ''].map(h => <th key={h} style={{ ...cell, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>{h}</th>)}</tr>
+              <tr>{['Date', 'Buyer', 'Items', 'Amount', 'Status', ''].map(h => <th key={h} scope="col" style={{ ...cell, color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {shownOrders.length === 0 && <tr><td colSpan={6} style={{ ...cell, color: 'var(--text-muted)' }}>{showAll ? 'No orders yet.' : 'Nothing waiting to be handed out.'}</td></tr>}
@@ -115,22 +115,22 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
                       ? o.items.map((i, n) => <div key={n}>{i.quantity}× {i.name}{i.size && ` (${i.size})`}</div>)
                       : o.description}
                   </td>
-                  <td style={{ ...cell, fontWeight: 800 }}>{formatMoney(o.amount_cents, o.currency)}</td>
+                  <td style={{ ...cell, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(o.amount_cents, o.currency)}</td>
                   <td style={cell}>
                     {o.status === 'refunded' ? (
-                      <span style={{ color: '#A855F7', fontWeight: 800, fontSize: '0.78rem' }}>REFUNDED</span>
+                      <span className="admin-pill is-danger">Refunded</span>
                     ) : o.fulfilled_at ? (
-                      <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.78rem' }}>HANDED OUT {o.fulfilled_at.slice(0, 10)}</span>
+                      <span className="admin-pill">Handed out {o.fulfilled_at.slice(0, 10)}</span>
                     ) : (
-                      <span style={{ color: 'var(--c-green)', fontWeight: 800, fontSize: '0.78rem' }}>PAID</span>
+                      <span className="admin-pill is-ok">Paid</span>
                     )}
                   </td>
                   <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                     {o.status === 'paid' && !o.fulfilled_at && (
-                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-primary btn-sm" onClick={() => handOut(o, true)}><PackageCheck size={14} /> Handed out</button>
+                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-primary btn-sm" onClick={() => handOut(o, true)}><PackageCheck size={14} aria-hidden="true" /> Handed out</button>
                     )}
                     {o.fulfilled_at && (
-                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-secondary btn-sm" onClick={() => handOut(o, false)}><Undo2 size={14} /> Undo</button>
+                      <button type="button" data-view-ok={canHandOut || undefined} className="btn btn-secondary btn-sm" onClick={() => handOut(o, false)}><Undo2 size={14} aria-hidden="true" /> Undo</button>
                     )}
                   </td>
                 </tr>
@@ -143,8 +143,8 @@ export default function ShopAdminPage({ params }: { params: Promise<{ clubSlug: 
       {/* Products (the admin menu's Club Shop sub-items jump here) */}
       <div id="products" className="glass-panel" style={{ padding: '1.25rem', scrollMarginTop: '5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Products</h2>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={addProduct}><Plus size={14} /> Add product</button>
+          <h2 style={{ fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--text-primary)' }}>Products</h2>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addProduct}><Plus size={14} aria-hidden="true" /> Add product</button>
         </div>
         {products === null ? <p className="text-note">Loading…</p> : products.length === 0 && <p className="text-note">No products yet. Add your first one: the Shop link appears for members once a product is on sale.</p>}
         <div className="stack">
@@ -239,9 +239,9 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
         {photos.map((src, i) => (
           <div key={src} style={{ position: 'relative', width: 88, height: 88, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
             <img src={src} alt={`${draft.name} photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            {i === 0 && <span className="badge badge-primary" style={{ position: 'absolute', left: 4, bottom: 4, fontSize: '0.6rem' }}>Main</span>}
+            {i === 0 && <span className="admin-pill" style={{ position: 'absolute', left: 4, bottom: 4, background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}>Main</span>}
             <button type="button" onClick={() => removePhoto(src)} aria-label={`Remove photo ${i + 1}`}
-              style={{ position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.7)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              style={{ position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'var(--color-scrim)', color: 'var(--color-print)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={14} />
             </button>
           </div>
@@ -260,7 +260,7 @@ function ProductEditor({ product, db, clubId, currency, onChange }: { product: S
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           <label className="form-label" htmlFor={`shop-name-${id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             Name
-            {!product.is_active && <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)' }}>Hidden from shop</span>}
+            {!product.is_active && <span className="admin-pill is-warn">Hidden from the shop</span>}
           </label>
           <input id={`shop-name-${id}`} className="form-input" maxLength={120} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} />
         </div>

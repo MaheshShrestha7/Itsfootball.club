@@ -119,6 +119,8 @@
   --c-amber: var(--color-warn);
   --c-blue: var(--color-ink-2);
   --c-sky: var(--color-ink-2);
+  --c-purple: var(--color-ink-2);
+  --c-gold: var(--color-warn);
 
   position: relative; /* paints above the body's fixed turf wash without starting a stacking context */
   display: grid;

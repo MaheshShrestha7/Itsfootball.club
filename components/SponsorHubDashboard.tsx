@@ -7,7 +7,7 @@ import { toCsv } from '@/lib/finance';
 import { isSponsorOnSite, localDateISO } from '@/lib/sponsors';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import {
-  Eye, MousePointerClick, Globe2, Download, Search, Users2, Smartphone, Layers, Info, Trophy, Copy, Check, ChevronDown,
+  Globe2, Download, Search, Smartphone, Layers, Info, Copy, Check, ChevronDown,
 } from 'lucide-react';
 
 // The admin Sponsor Report (SP-U5, 28 Oct 2026 sponsors review), in plain words for volunteers.
@@ -25,8 +25,8 @@ function startOfQuarter(now: Date): Date {
   return new Date(now.getFullYear(), q, 1);
 }
 
-const statusColor = (status?: Sponsor['package_status']) =>
-  status === 'paid' || status === 'confirmed' ? '#10B981' : status === 'prospect' ? '#F59E0B' : '#EF4444';
+const statusTone = (status?: Sponsor['package_status']) =>
+  status === 'paid' || status === 'confirmed' ? 'is-ok' : status === 'prospect' ? 'is-warn' : 'is-danger';
 
 const statusLabel = (status?: Sponsor['package_status']) => {
   if (status === 'paid') return 'Paid';
@@ -37,7 +37,7 @@ const statusLabel = (status?: Sponsor['package_status']) => {
   return 'Active';
 };
 
-const panelTitle: React.CSSProperties = { fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' };
+const panelTitle: React.CSSProperties = { fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' };
 const cell: React.CSSProperties = { padding: '0.65rem 0.6rem', color: 'var(--text-secondary)' };
 const num = (n: number) => n.toLocaleString('en-AU');
 
@@ -105,10 +105,10 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
   const perWeek = data.byDay.length > 0 && data.byDay[0].day.startsWith('w/c');
 
   const kpiCards = [
-    { key: 'seen', label: 'Times sponsors were seen', icon: Eye, value: num(data.totals.impressions), color: 'var(--c-green)' },
-    { key: 'people', label: 'People who saw a sponsor (estimate)', icon: Users2, value: num(data.totals.uniqueReach), color: 'var(--c-blue)' },
-    { key: 'clicks', label: 'Clicks to sponsor websites', icon: MousePointerClick, value: num(data.totals.clicks), color: 'var(--c-amber)' },
-    { key: 'best', label: 'Best page', icon: Trophy, value: bestPage?.label || '—', color: 'var(--c-purple)' },
+    { key: 'seen', label: 'Times sponsors were seen', value: num(data.totals.impressions) },
+    { key: 'people', label: 'People who saw a sponsor (estimate)', value: num(data.totals.uniqueReach) },
+    { key: 'clicks', label: 'Clicks to sponsor websites', value: num(data.totals.clicks) },
+    { key: 'best', label: 'Best page', value: bestPage?.label || 'None yet' },
   ];
 
   // Their own private page (SP-F1/F3/F4): their results, a new logo, invoices. The link's secret
@@ -160,7 +160,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       {/* Header toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.75rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)' }}>Sponsor Report</h2>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>Sponsor report</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             How often people saw and clicked your sponsors on {club.name}&apos;s site. Handy for renewal chats.
           </p>
@@ -168,24 +168,19 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
         <div className="row row-loose row-wrap">
           {range === 'custom' && (
             <div className="row">
-              <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
+              <input aria-label="From date" type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'color-mix(in oklab, var(--color-ink) 3%, transparent)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
-              <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
+              <input aria-label="To date" type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'color-mix(in oklab, var(--color-ink) 3%, transparent)', color: 'var(--text-primary)', fontSize: '0.75rem' }} />
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(var(--tint-rgb), 0.03)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.3rem' }}>
+          <div className="admin-chips" role="group" aria-label="Dates">
             {([['30d', 'Last 30 days'], ['qtd', 'This quarter'], ['custom', 'Pick dates']] as [DateRange, string][]).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
+                className="admin-chip"
                 aria-pressed={range === key}
                 onClick={() => setRange(key)}
-                style={{
-                  padding: '0.45rem 0.8rem', borderRadius: '7px', border: 'none', cursor: 'pointer',
-                  fontSize: '0.78rem', fontWeight: 700,
-                  background: range === key ? 'var(--club-primary)' : 'transparent',
-                  color: range === key ? '#04120b' : 'var(--text-secondary)',
-                }}
               >
                 {label}
               </button>
@@ -195,16 +190,12 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       </div>
 
       {clubSponsors.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+        <div className="admin-panel admin-empty" style={{ marginBottom: '2rem' }}>
           No sponsors on your site yet. Add one on the Sponsors page and their views and clicks show here.
         </div>
       ) : !data.hasAnyData ? (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: '0.6rem', padding: '1.25rem',
-          borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.35)', background: 'rgba(59, 130, 246, 0.08)',
-          marginBottom: '2rem', fontSize: '0.82rem', color: 'var(--c-sky)',
-        }}>
-          <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+        <div className="admin-notice" style={{ alignItems: 'flex-start', marginBottom: '2rem' }}>
+          <Info size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
           <span>
             Nothing recorded for these dates yet. Every time someone sees or clicks a sponsor logo on your home page,
             footer, match pages or event pages, it&apos;s counted here.
@@ -215,19 +206,12 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
       {clubSponsors.length > 0 && (
         <>
           {/* Headline numbers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem', marginBottom: '0.75rem' }}>
-            {kpiCards.map(card => {
-              const Icon = card.icon;
-              return (
-                <div key={card.key} className="glass-panel" style={{ padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>{card.label}</span>
-                    <Icon size={16} color={card.color} style={{ flexShrink: 0 }} />
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: card.key === 'best' ? '1.25rem' : '1.6rem', fontWeight: 900, color: 'var(--text-primary)' }}>{card.value}</div>
-                </div>
-              );
-            })}
+          <div className="admin-panel admin-dash-figures-wrap" style={{ marginBottom: '0.75rem' }}>
+            <dl className="admin-dash-figures">
+              {kpiCards.map(card => (
+                <div key={card.key}><dt>{card.label}</dt><dd style={card.key === 'best' ? { fontSize: 'var(--text-lg)' } : undefined}>{card.value}</dd></div>
+              ))}
+            </dl>
           </div>
           <p className="text-note" style={{ margin: '0 0 2rem' }}>
             People are counted by device: someone on their phone and their laptop counts twice.
@@ -247,13 +231,13 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                   return (
                     <div
                       key={d.day}
-                      title={`${d.day}: seen ${num(d.impressions)} times · ${num(d.clicks)} clicks`}
+                      title={`${d.day}: seen ${num(d.impressions)} times, ${num(d.clicks)} clicks`}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: 'default' }}
                     >
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>{d.clicks > 0 && data.byDay.length <= 14 ? `${d.clicks} clicks` : ''}</span>
                       <div style={{
                         width: '100%', maxWidth: '34px', height: `${heightPct}%`,
-                        background: 'linear-gradient(180deg, var(--club-primary), rgba(16,185,129,0.35))',
+                        background: 'var(--color-accent)',
                         borderRadius: '5px 5px 0 0',
                       }} />
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', whiteSpace: 'nowrap', minHeight: '1em' }}>{i % labelEvery === 0 ? d.day : ''}</span>
@@ -275,10 +259,10 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.82rem', marginBottom: '0.3rem' }}>
                         <span className="text-primary">{p.label}</span>
                         <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>
-                          {num(p.seen)}{p.clicks > 0 && ` · ${num(p.clicks)} ${p.clicks === 1 ? 'click' : 'clicks'}`}
+                          {num(p.seen)}{p.clicks > 0 && `, ${num(p.clicks)} ${p.clicks === 1 ? 'click' : 'clicks'}`}
                         </span>
                       </div>
-                      <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '6px', background: 'color-mix(in oklab, var(--color-ink) 6%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{ width: `${Math.max(3, Math.round((p.seen / maxPlacement) * 100))}%`, height: '100%', background: 'var(--club-primary)' }} />
                       </div>
                     </div>
@@ -300,8 +284,8 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                 <input aria-label="Search sponsors"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search sponsor..."
-                  style={{ padding: '0.4rem 0.7rem 0.4rem 1.8rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-primary)', fontSize: '0.78rem' }}
+                  placeholder="Search sponsors"
+                  style={{ padding: '0.4rem 0.7rem 0.4rem 1.8rem', borderRadius: '7px', border: '1px solid var(--border-subtle)', background: 'color-mix(in oklab, var(--color-ink) 3%, transparent)', color: 'var(--text-primary)', fontSize: '0.78rem' }}
                 />
               </div>
             </div>
@@ -316,7 +300,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                   <div style={{ flex: '1 1 180px', minWidth: 0 }}>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       {sponsor.name}
-                      <span className="badge" style={{ background: `${statusColor(sponsor.package_status)}22`, color: statusColor(sponsor.package_status), border: `1px solid ${statusColor(sponsor.package_status)}55`, fontSize: '0.68rem' }}>
+                      <span className={`admin-pill ${statusTone(sponsor.package_status)}`}>
                         {statusLabel(sponsor.package_status)}
                       </span>
                     </div>
@@ -402,7 +386,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                             <span className="text-primary">{c.country}</span>
                             <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{num(c.count)}</span>
                           </div>
-                          <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '6px', background: 'color-mix(in oklab, var(--color-ink) 6%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{ width: `${pct}%`, height: '100%', background: 'var(--club-primary)' }} />
                           </div>
                         </div>
@@ -423,7 +407,7 @@ export default function SponsorHubDashboard({ club, sponsors }: SponsorHubDashbo
                         <span className="text-primary">{dev.name}</span>
                         <span style={{ color: dev.color, fontWeight: 700 }}>{dev.percentage}</span>
                       </div>
-                      <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '6px', background: 'color-mix(in oklab, var(--color-ink) 6%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{ width: dev.percentage, height: '100%', background: dev.color }} />
                       </div>
                     </div>

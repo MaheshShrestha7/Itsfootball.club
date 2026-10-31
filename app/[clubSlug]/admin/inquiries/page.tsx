@@ -112,14 +112,14 @@ export default function AdminInquiriesPage({
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="stat-value">Inbox</h1>
-        <p className="text-body">
-          Messages from signed-in members, and enquiries sent through your public contact form.
-        </p>
+      <div className="admin-head">
+        <div>
+          <h1>Inbox</h1>
+          <p>Messages from signed-in members, and enquiries sent through your public contact form.</p>
+        </div>
       </div>
 
-      <div data-view-ok role="tablist" className="row" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
+      <div data-view-ok role="tablist" aria-label="Inbox" className="admin-tabs">
         {([
           { key: 'members' as const, label: 'Member messages', icon: MessageSquare, unread: unreadMemberMessages },
           { key: 'contact' as const, label: 'Contact form', icon: Inbox, unread: unreadEnquiries },
@@ -130,23 +130,11 @@ export default function AdminInquiriesPage({
             role="tab"
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: tab === t.key ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: tab === t.key ? 'var(--text-primary)' : 'var(--text-secondary)',
-              padding: '0.6rem 0.9rem',
-              fontWeight: 700,
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-            }}
+            className="admin-tab"
           >
-            <t.icon size={15} />
+            <t.icon size={15} aria-hidden="true" />
             <span>{t.label}</span>
-            {t.unread > 0 && <span className="badge badge-live" style={{ fontSize: '0.65rem' }}>{t.unread} NEW</span>}
+            {t.unread > 0 && <span className="admin-count">{t.unread}<span className="sr-only"> new</span></span>}
           </button>
         ))}
       </div>
@@ -155,13 +143,14 @@ export default function AdminInquiriesPage({
         <MemberMessagesPanel club={club} adminName={adminName} startMemberId={startMemberId} />
       ) : (
       <>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div className="admin-chips" role="group" aria-label="Show" style={{ marginBottom: 'var(--space-md)' }}>
         {filters.map(f => (
           <button data-view-ok
             key={f}
             type="button"
+            aria-pressed={filter === f}
             onClick={() => setFilter(f)}
-            className={filter === f ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+            className="admin-chip"
             style={{ textTransform: 'capitalize' }}
           >
             {f}
@@ -170,7 +159,7 @@ export default function AdminInquiriesPage({
       </div>
 
       {clubInquiries.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div className="admin-panel admin-empty">
           No messages here yet.
         </div>
       ) : (
@@ -179,16 +168,16 @@ export default function AdminInquiriesPage({
             <div
               key={item.id}
               className="glass-panel"
-              style={{ padding: '1.25rem', borderLeft: item.status === 'unread' ? '3px solid #10B981' : '3px solid transparent' }}
+              style={{ padding: '1.25rem', borderColor: item.status === 'unread' ? 'var(--color-accent-line)' : undefined }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                 <div>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.sender_name}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.sender_name}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {item.inquiry_type} · {item.created_at ? new Date(item.created_at).toLocaleString(DATE_LOCALE) : ''}
+                    {item.inquiry_type}, {item.created_at ? new Date(item.created_at).toLocaleString(DATE_LOCALE) : ''}
                   </div>
                 </div>
-                <span className="badge" style={{ textTransform: 'uppercase', alignSelf: 'flex-start' }}>{item.status}</span>
+                <span className={item.status === 'unread' ? 'admin-pill is-ok' : 'admin-pill'} style={{ textTransform: 'capitalize', alignSelf: 'flex-start' }}>{item.status}</span>
               </div>
 
               {(() => {
@@ -196,8 +185,8 @@ export default function AdminInquiriesPage({
                 return (
                   <>
                     {about && (
-                      <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
-                        <CalendarDays size={12} /> About: {about}
+                      <span className="admin-pill" style={{ marginTop: '0.25rem' }}>
+                        <CalendarDays size={12} aria-hidden="true" /> About: {about}
                       </span>
                     )}
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: '0.5rem 0 1rem' }}>
@@ -208,18 +197,18 @@ export default function AdminInquiriesPage({
               })()}
 
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}><Mail size={13} />{item.sender_email}</span>
+                <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}><Mail size={13} aria-hidden="true" />{item.sender_email}</span>
                 {item.sender_phone && (
-                  <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}><Phone size={13} />{item.sender_phone}</span>
+                  <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}><Phone size={13} aria-hidden="true" />{item.sender_phone}</span>
                 )}
               </div>
 
               {replies.some(r => r.inquiry_id === item.id) && (
                 <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
                   {replies.filter(r => r.inquiry_id === item.id).map(r => (
-                    <div key={r.id} style={{ marginLeft: '1rem', padding: '0.7rem 0.9rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                    <div key={r.id} style={{ marginLeft: '1rem', padding: '0.7rem 0.9rem', borderRadius: '10px', background: 'var(--color-paper-3)', border: '1px solid var(--color-rule)' }}>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                        Reply from {r.sent_by_name || club.name} · {new Date(r.created_at).toLocaleString(DATE_LOCALE)} · {r.emailed ? 'Emailed' : 'Not emailed'}
+                        Reply from {r.sent_by_name || club.name}, {new Date(r.created_at).toLocaleString(DATE_LOCALE)}, {r.emailed ? 'Emailed' : 'Not emailed'}
                       </div>
                       <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{r.body}</p>
                     </div>
@@ -228,10 +217,10 @@ export default function AdminInquiriesPage({
               )}
 
               {replyNote?.id === item.id && (
-                <div role="status" style={{ marginBottom: '0.75rem', padding: '0.6rem 0.85rem', borderRadius: '8px', fontSize: '0.82rem', border: `1px solid ${replyNote.ok ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.5)'}`, background: replyNote.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
+                <div role="status" style={{ marginBottom: '0.75rem', padding: '0.6rem 0.85rem', borderRadius: '8px', fontSize: '0.82rem', border: `1px solid ${replyNote.ok ? 'var(--color-accent-line)' : 'var(--color-warn-line)'}`, background: replyNote.ok ? 'var(--color-accent-wash)' : 'var(--color-warn-wash)', color: 'var(--text-primary)' }}>
                   {replyNote.text}
                   {unsentBody?.id === item.id && (
-                    <> <a href={mailtoFor(item, unsentBody.body)} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Open in mail app</a></>
+                    <> <a href={mailtoFor(item, unsentBody.body)} style={{ color: 'var(--color-accent-ink)', fontWeight: 600 }}>Open in mail app</a></>
                   )}
                 </div>
               )}
@@ -250,7 +239,7 @@ export default function AdminInquiriesPage({
                   />
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn-primary btn-sm" disabled={replySending || !replyText.trim()} onClick={() => sendReply(item)}>
-                      <Send size={14} /> {replySending ? 'Sending...' : 'Send Reply'}
+                      <Send size={14} aria-hidden="true" /> {replySending ? 'Sending…' : 'Send reply'}
                     </button>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setReplyingTo(null); setReplyText(''); }}>
                       Cancel
@@ -266,7 +255,7 @@ export default function AdminInquiriesPage({
                     className="btn btn-primary btn-sm"
                     onClick={() => { setReplyingTo(item.id); setReplyText(''); setReplyNote(null); }}
                   >
-                    <Reply size={14} /> Reply
+                    <Reply size={14} aria-hidden="true" /> Reply
                   </button>
                 )}
                 <a
@@ -274,16 +263,16 @@ export default function AdminInquiriesPage({
                   className="btn btn-secondary btn-sm"
                   onClick={() => updateInquiryStatus(item.id, 'replied')}
                 >
-                  <Mail size={14} /> Use mail app
+                  <Mail size={14} aria-hidden="true" /> Use mail app
                 </a>
                 {item.status === 'unread' && (
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => updateInquiryStatus(item.id, 'read')}>
-                    <CheckCheck size={14} /> Mark read
+                    <CheckCheck size={14} aria-hidden="true" /> Mark read
                   </button>
                 )}
                 {item.status !== 'archived' && (
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => updateInquiryStatus(item.id, 'archived')}>
-                    <Archive size={14} /> Archive
+                    <Archive size={14} aria-hidden="true" /> Archive
                   </button>
                 )}
               </div>
