@@ -336,6 +336,7 @@ export const PACKAGE_INCLUDES = [
   { key: 'match_graphics', admin: 'Match graphics', card: 'Logo on match result graphics', group: 'site' },
   { key: 'reports_news', admin: 'Match reports and news', card: '"Supported by" on match reports and news', group: 'site' },
   { key: 'event_pages', admin: 'Event pages', card: 'Logo on event pages', group: 'site' },
+  { key: 'member_perk', admin: 'Member perk listing', card: 'Your offer listed in every member\'s Perks and on the Join page', group: 'site' },
   { key: 'checkin_posters', admin: 'Check-in posters (matches and events)', card: 'Logo on the printed check-in posters at the gate', group: 'ground' },
   { key: 'event_tickets', admin: 'Event tickets and ticket emails', card: 'Logo on event tickets and ticket emails', group: 'ground' },
   { key: 'checkin_screen', admin: 'Check-in screen at the gate', card: 'Logo on the screen fans see when they check in', group: 'ground' },

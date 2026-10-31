@@ -17,6 +17,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { useShopOpen } from '@/lib/use-shop-open';
 import { useClubPerks } from '@/lib/use-club-perks';
 import MemberPerks from '@/components/MemberPerks';
+import { perkBusiness } from '@/lib/perks';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
@@ -1176,6 +1177,21 @@ export default function MemberPortalPage({
                         ))}
                       </div>
                     </fieldset>
+
+                    {/* Member perks sell the membership: every plan gets every perk, so one list under the plans */}
+                    {perksOpen && (
+                      <div className="glass-panel" style={{ padding: '0.85rem 1rem', margin: '0 0 1.1rem 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          <Gift size={16} aria-hidden="true" style={{ color: 'var(--club-ink)' }} /> Every membership includes
+                        </div>
+                        <ul style={{ margin: '0.45rem 0 0', paddingLeft: '1.1rem', display: 'grid', gap: '0.2rem', fontSize: '0.83rem', color: 'var(--text-secondary)' }}>
+                          {perks.slice(0, 4).map(p => (
+                            <li key={p.id}><strong style={{ color: 'var(--text-primary)' }}>{p.title}</strong> · {perkBusiness(p, club.name)}</li>
+                          ))}
+                          {perks.length > 4 && <li style={{ listStyle: 'none', marginLeft: '-1.1rem' }}>+{perks.length - 4} more member perks</li>}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* Joining as: decides the squad role, so it's asked, not guessed from the tier name */}
                     <fieldset style={{ border: 'none', padding: 0, margin: '0 0 1rem 0' }}>
