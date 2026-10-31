@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { Shield, CheckCircle2, XCircle, AlertTriangle, ArrowLeft, CreditCard, RefreshCw } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import MemberPerks from '@/components/MemberPerks';
+import { useClubPerks } from '@/lib/use-club-perks';
 
 export default function VerifyPassPage({
   params,
@@ -27,6 +29,7 @@ export default function VerifyPassPage({
     : rawResult;
 
   const [checking, setChecking] = useState(false);
+  const { perks } = useClubPerks(club?.id || '');
 
   useEffect(() => {
     if (!token) return;
@@ -163,6 +166,14 @@ export default function VerifyPassPage({
                       Valid Thru: {result.member.membership_expires_at}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* For a business checking the pass: what this member can claim (never the codes) */}
+              {result.valid && perks.length > 0 && (
+                <div className="stack" style={{ marginTop: '1.25rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>Member perks</h4>
+                  <MemberPerks perks={perks} clubName={club.name} forBusiness />
                 </div>
               )}
             </div>

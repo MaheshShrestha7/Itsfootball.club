@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Users, UserPlus, QrCode, CreditCard, MessageSquare, Send, CheckCircle2, Clock, AlertCircle, HeartPulse, Save } from 'lucide-react';
+import { Users, UserPlus, QrCode, CreditCard, MessageSquare, Send, CheckCircle2, Clock, AlertCircle, HeartPulse, Save, Gift } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import PaymentStep from '@/components/PaymentStep';
 import VirtualPassCard from '@/components/VirtualPassCard';
@@ -13,6 +13,8 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { clubTeamsOf, teamsOfMember, nextFixtureOf } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useMemberHealth } from '@/lib/use-member-health';
+import { useClubPerks } from '@/lib/use-club-perks';
+import MemberPerks from '@/components/MemberPerks';
 
 // A parent or guardian's view of the children they look after at this club (my_children RPC,
 // matched on their confirmed sign-in email = club_members.guardian_email): each child's application
@@ -75,6 +77,9 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
   const [drafts, setDrafts] = useState<Record<string, { subject: string; content: string }>>({});
   const [sentFor, setSentFor] = useState<string | null>(null);
   const paidPlans = plans.filter(p => p.price_cents > 0);
+  // Member perks, once a child is an active member (my_perk_codes checks the same on the server)
+  const hasActiveChild = childMembers.some(c => c.status !== 'suspended' && statusOf(c).label === 'Active member');
+  const { perks } = useClubPerks(club.id, hasActiveChild);
 
   // Arriving from a child's renewal email: open that child's renewal once the plans are in
   const renewLinkOpened = useRef(false);
@@ -311,6 +316,15 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
           );
         })}
       </div>
+      {hasActiveChild && perks.length > 0 && (
+        <div className="stack" style={{ marginTop: '1.5rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Gift size={18} aria-hidden="true" /> Member perks
+          </h3>
+          <p className="text-note" style={{ margin: 0 }}>Offers for {club.name} families. Show your child&apos;s pass, or use the code where there is one.</p>
+          <MemberPerks perks={perks} clubName={club.name} />
+        </div>
+      )}
     </section>
   );
 }

@@ -882,6 +882,28 @@ export interface MembershipPlan {
   sort_order: number;
 }
 
+/** An offer members get, usually from a sponsor (migration 20261141). Admins edit club_perks;
+ *  everyone else reads club_perks_public, which only has the live ones */
+export interface ClubPerk {
+  id: string;
+  club_id: string;
+  sponsor_id?: string | null;
+  title: string;
+  details?: string | null;
+  /** Typed by the admin when there's no sponsor; club_perks_public fills it from the sponsor */
+  business_name?: string | null;
+  url?: string | null;
+  /** Last day it shows (YYYY-MM-DD); blank means no end date */
+  ends_on?: string | null;
+  /** Admin rows only (club_perks_public leaves it out: every row there is live) */
+  is_active?: boolean;
+  sort_order: number;
+  /** club_perks_public only: the sponsor's logo */
+  logo_url?: string | null;
+  /** From club_perk_codes (admins) or my_perk_codes (active members); never public */
+  code?: string | null;
+}
+
 export interface SponsorshipPackage {
   id: string;
   club_id: string;
