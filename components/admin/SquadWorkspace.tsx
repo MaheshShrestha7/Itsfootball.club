@@ -11,6 +11,7 @@ import { useAccessRoles } from '@/lib/access-roles';
 import { membershipTermEnd, todayIso } from '@/lib/finance';
 import { ClubMember, PlayerPosition, PlayerStatus, ClubRole } from '@/lib/supabase/types';
 import {
+  Check,
   CheckCircle2,
   X,
   Shield,
@@ -485,19 +486,8 @@ export default function SquadWorkspace({
     <div>
       {/* Success Feedback Alert */}
       {feedback && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          padding: '0.85rem 1.25rem',
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid #10B981',
-          borderRadius: 'var(--radius-md)',
-          color: 'var(--c-green)',
-          fontWeight: 700,
-          marginBottom: '1.5rem',
-        }}>
-          <CheckCircle2 size={18} />
+        <div role="status" className="admin-flash">
+          <CheckCircle2 size={16} aria-hidden="true" />
           <span>{feedback}</span>
         </div>
       )}
@@ -518,7 +508,7 @@ export default function SquadWorkspace({
           position: 'fixed',
           inset: 0,
           zIndex: 1100, // above the People page's person panel
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -539,8 +529,8 @@ export default function SquadWorkspace({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  {editingMember ? 'Edit Club Member' : 'Register New Club Member'}
+                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                  {editingMember ? 'Edit member' : 'Add a member'}
                 </h3>
                 <span className="text-note">
                   Details, roles and photo
@@ -549,26 +539,16 @@ export default function SquadWorkspace({
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
+                className="admin-icon-btn"
+                aria-label="Close"
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
             {formError && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1rem',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid #EF4444',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--c-red)',
-                fontSize: '0.85rem',
-                marginBottom: '1.25rem',
-              }}>
-                <AlertCircle size={16} />
+              <div role="alert" className="admin-flash is-error">
+                <AlertCircle size={16} aria-hidden="true" />
                 <span>{formError}</span>
               </div>
             )}
@@ -577,9 +557,9 @@ export default function SquadWorkspace({
               {/* 1. CLOUDFLARE R2 PHOTO UPLOAD ZONE */}
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Member Photo</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--c-green)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <Cloud size={12} /> Stored securely
+                  <span>Photo</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Cloud size={12} aria-hidden="true" /> Stored securely
                   </span>
                 </label>
 
@@ -588,7 +568,7 @@ export default function SquadWorkspace({
                   alignItems: 'center',
                   gap: '1.25rem',
                   padding: '1rem',
-                  background: 'rgba(var(--shade-rgb), 0.3)',
+                  background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
                   border: '1px dashed var(--border-medium)',
                   borderRadius: 'var(--radius-lg)',
                 }}>
@@ -605,7 +585,7 @@ export default function SquadWorkspace({
                         width: '100%',
                         height: '100%',
                         borderRadius: '12px',
-                        background: 'rgba(var(--tint-rgb), 0.06)',
+                        background: 'color-mix(in oklab, var(--color-ink) 6%, transparent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -618,13 +598,13 @@ export default function SquadWorkspace({
                       <div data-theme="dark" style={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'rgba(0,0,0,0.7)',
+                        background: 'var(--color-scrim)',
                         borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}>
-                        <Loader2 size={24} className="animate-spin" color="var(--club-primary)" />
+                        <Loader2 size={24} className="animate-spin" color="var(--color-accent-ink)" />
                       </div>
                     )}
                   </div>
@@ -793,14 +773,14 @@ export default function SquadWorkspace({
                           padding: '0.85rem 0.65rem',
                           borderRadius: 'var(--radius-md)',
                           border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
-                          background: isSelected ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--tint-rgb), 0.03)',
+                          background: isSelected ? 'var(--color-accent-wash)' : 'color-mix(in oklab, var(--color-ink) 3%, transparent)',
                           cursor: locked ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '0.35rem',
                           textAlign: 'center',
-                          transition: 'all 0.15s ease',
+                          transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
                         }}
                       >
                         {isSelected && (
@@ -812,18 +792,18 @@ export default function SquadWorkspace({
                             height: '16px',
                             borderRadius: '50%',
                             background: 'var(--club-primary)',
-                            color: 'var(--club-primary-contrast, #090D16)',
+                            color: 'var(--color-on-accent)',
                             fontSize: '0.7rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 900,
                           }}>
-                            ✓
+                            <Check size={11} strokeWidth={3} aria-hidden="true" />
                           </span>
                         )}
-                        <Icon size={20} color={isSelected ? 'var(--club-primary)' : 'var(--text-muted)'} />
-                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        <Icon size={20} aria-hidden="true" color={isSelected ? 'var(--color-accent-ink)' : 'var(--text-muted)'} />
+                        <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {r.label}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>
@@ -839,13 +819,13 @@ export default function SquadWorkspace({
               {form.roles.includes('Player') && (
                 <div style={{
                   padding: '1.25rem',
-                  background: 'rgba(var(--shade-rgb), 0.35)',
-                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
+                  background: 'color-mix(in oklab, var(--color-sidebar) 35%, transparent)',
+                  border: '1px solid color-mix(in oklab, var(--color-ink) 8%, transparent)',
                   borderRadius: 'var(--radius-lg)',
                   marginBottom: '1.25rem',
                 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Shield size={14} /> Player Positioning & Kit Specifications
+                  <div style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Shield size={14} aria-hidden="true" /> Position and shirt number
                   </div>
 
                   <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
@@ -858,11 +838,10 @@ export default function SquadWorkspace({
                         className="form-select"
                         value={form.player_position}
                         onChange={e => handlePrimaryPositionChange(e.target.value as PlayerPosition)}
-                        style={{ fontWeight: 700 }}
                       >
                         {ALL_POSITIONS.map(pos => (
                           <option key={pos.value} value={pos.value}>
-                            {pos.value} — {pos.desc}
+                            {pos.value}, {pos.desc}
                           </option>
                         ))}
                       </select>
@@ -917,16 +896,16 @@ export default function SquadWorkspace({
                               padding: '0.35rem 0.65rem',
                               borderRadius: 'var(--radius-sm)',
                               border: isSelected ? '1px solid var(--club-primary)' : '1px solid var(--border-subtle)',
-                              background: isSelected ? 'var(--club-primary)' : isMaxReached ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
-                              color: isSelected ? 'var(--club-primary-contrast, #090D16)' : isMaxReached ? 'var(--text-muted)' : 'var(--text-secondary)',
-                              fontWeight: isSelected ? 800 : 500,
+                              background: isSelected ? 'var(--club-primary)' : isMaxReached ? 'color-mix(in oklab, var(--color-ink) 2%, transparent)' : 'color-mix(in oklab, var(--color-ink) 6%, transparent)',
+                              color: isSelected ? 'var(--color-on-accent)' : isMaxReached ? 'var(--text-muted)' : 'var(--text-secondary)',
+                              fontWeight: isSelected ? 600 : 500,
                               fontSize: '0.75rem',
                               cursor: isMaxReached ? 'not-allowed' : 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem',
                               opacity: isMaxReached ? 0.45 : 1,
-                              transition: 'all 0.15s ease',
+                              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
                             }}
                           >
                             <span>{pos.value}</span>
@@ -944,9 +923,9 @@ export default function SquadWorkspace({
 
               {/* 6. CONDITIONAL EXECUTIVE COMMITTEE TITLE (If Executive Committee is selected) */}
               {form.roles.includes('Executive Committee') && (
-                <div className="form-group" style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
-                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ color: 'var(--c-amber)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Award size={14} /> Executive Committee Title / Post
+                <div className="form-group" style={{ marginBottom: '1.25rem', padding: '1rem', background: 'var(--color-paper-3)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-md)' }}>
+                  <label htmlFor="squad-executive-committee-title-post" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Award size={14} aria-hidden="true" /> Committee title
                   </label>
                   <input id="squad-executive-committee-title-post"
                     type="text"
@@ -963,7 +942,7 @@ export default function SquadWorkspace({
                 open={editingMember ? isJuniorMember(editingMember, clubTeams, clubTeamMembers) || !!form.safeguarding_check_type : false}>
                 <summary data-view-ok style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                   Junior &amp; safeguarding
-                  {editingMember && isJuniorMember(editingMember, clubTeams, clubTeamMembers) && <span className="badge" style={{ marginLeft: 8, background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6' }}>Junior</span>}
+                  {editingMember && isJuniorMember(editingMember, clubTeams, clubTeamMembers) && <span className="admin-pill" style={{ marginLeft: 8 }}>Junior</span>}
                 </summary>
                 <p className="text-note" style={{ margin: '0.5rem 0 0.85rem 0' }}>Private to the club&apos;s admins. Juniors are shown publicly as first name and initial, with no photo unless a guardian allows it.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
@@ -1011,7 +990,7 @@ export default function SquadWorkspace({
 
               {/* 7. MEMBER STATUS (ACTIVE / INACTIVE) */}
               <div className="form-group" style={{ marginBottom: '1.75rem' }}>
-                <label className="form-label">Member Status *</label>
+                <label className="form-label">Status *</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <button
                     type="button"
@@ -1019,8 +998,8 @@ export default function SquadWorkspace({
                     style={{
                       padding: '0.75rem',
                       borderRadius: 'var(--radius-md)',
-                      border: form.status === 'active' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
-                      background: form.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      border: form.status === 'active' ? '1px solid var(--color-accent)' : '1px solid var(--border-subtle)',
+                      background: form.status === 'active' ? 'var(--color-accent-wash)' : 'color-mix(in oklab, var(--color-ink) 3%, transparent)',
                       color: form.status === 'active' ? 'var(--c-green)' : 'var(--text-muted)',
                       fontWeight: 700,
                       fontSize: '0.85rem',
@@ -1031,8 +1010,8 @@ export default function SquadWorkspace({
                       gap: '0.4rem',
                     }}
                   >
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'active' ? '#10B981' : 'var(--text-muted)' }} />
-                    <span>Active (Eligible & Enrolled)</span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'active' ? 'var(--color-accent)' : 'var(--text-muted)' }} />
+                    <span>Active</span>
                   </button>
 
                   <button
@@ -1041,8 +1020,8 @@ export default function SquadWorkspace({
                     style={{
                       padding: '0.75rem',
                       borderRadius: 'var(--radius-md)',
-                      border: form.status === 'inactive' ? '1px solid #EF4444' : '1px solid var(--border-subtle)',
-                      background: form.status === 'inactive' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
+                      border: form.status === 'inactive' ? '1px solid var(--color-danger)' : '1px solid var(--border-subtle)',
+                      background: form.status === 'inactive' ? 'var(--color-danger-wash)' : 'color-mix(in oklab, var(--color-ink) 3%, transparent)',
                       color: form.status === 'inactive' ? 'var(--c-red)' : 'var(--text-muted)',
                       fontWeight: 700,
                       fontSize: '0.85rem',
@@ -1053,8 +1032,8 @@ export default function SquadWorkspace({
                       gap: '0.4rem',
                     }}
                   >
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'inactive' ? '#EF4444' : 'var(--text-muted)' }} />
-                    <span>Inactive (Suspended / Lapsed)</span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: form.status === 'inactive' ? 'var(--color-danger)' : 'var(--text-muted)' }} />
+                    <span>Inactive</span>
                   </button>
                 </div>
               </div>
@@ -1092,7 +1071,7 @@ export default function SquadWorkspace({
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           zIndex: 1100, // above the People page's person panel
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -1110,13 +1089,13 @@ export default function SquadWorkspace({
           }}>
             <div className="section-head">
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  Update Player Stats
+                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Player stats
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--club-ink)' }}>{editingMember.full_name}</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{editingMember.full_name}</span>
               </div>
-              <button onClick={() => setStatsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+              <button type="button" onClick={() => setStatsModalOpen(false)} className="admin-icon-btn" aria-label="Close">
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 

@@ -167,57 +167,29 @@ export default function AdminScannerPage({
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 className="stat-value">
-          Pass Scanner & Check-In
-        </h1>
-        <p className="text-body">
-          Scan members&apos; digital passes to check they&apos;re valid and check people in to events.
-        </p>
+      <div className="admin-head">
+        <div>
+          <h1>Pass scanner</h1>
+          <p>Scan members&apos; digital passes to check they&apos;re valid, and check people in at the gate or an event.</p>
+        </div>
       </div>
 
       {/* Mode Selector: Member Verification vs Event Check-In */}
       <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <button data-view-ok
-              onClick={() => { setMode('verify'); setCurrentResult(null); }}
-              className="btn btn-sm"
-              style={{
-                background: mode === 'verify' ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                color: mode === 'verify' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-              }}
-            >
-              <span>Member Pass Verification</span>
-            </button>
-
-            <button
-              onClick={() => { setMode('match_checkin'); setCurrentResult(null); }}
-              className="btn btn-sm"
-              style={{
-                background: mode === 'match_checkin' ? '#10B981' : 'rgba(255,255,255,0.06)',
-                color: mode === 'match_checkin' ? '#FFFFFF' : 'var(--text-secondary)',
-              }}
-            >
-              <span>Matchday Gate Check-In</span>
-            </button>
-
-            <button
-              onClick={() => { setMode('checkin'); setCurrentResult(null); }}
-              className="btn btn-sm"
-              style={{
-                background: mode === 'checkin' ? '#3B82F6' : 'rgba(255,255,255,0.06)',
-                color: mode === 'checkin' ? '#FFFFFF' : 'var(--text-secondary)',
-              }}
-            >
-              <span>Event &amp; Ticket Check-In</span>
-            </button>
+          <div className="admin-chips" role="group" aria-label="What you're scanning for" style={{ flexWrap: 'wrap' }}>
+            {([['verify', 'Check a pass'], ['match_checkin', 'Matchday gate'], ['checkin', 'Event or ticket']] as const).map(([id, label]) => (
+              <button data-view-ok key={id} type="button" className="admin-chip" aria-pressed={mode === id}
+                onClick={() => { setMode(id); setCurrentResult(null); }}>
+                {label}
+              </button>
+            ))}
           </div>
 
           {mode === 'match_checkin' && (
             <div className="row row-loose row-wrap">
-              <span className="text-note">Target Match:</span>
-              <select aria-label="Target match"
+              <span className="text-note">Match</span>
+              <select aria-label="Match"
                 className="form-select"
                 style={{ width: 'auto', minWidth: 'min(240px, 100%)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedMatchId}
@@ -234,8 +206,8 @@ export default function AdminScannerPage({
 
           {mode === 'checkin' && (
             <div className="row row-loose row-wrap">
-              <span className="text-note">Target Event:</span>
-              <select aria-label="Target event"
+              <span className="text-note">Event</span>
+              <select aria-label="Event"
                 className="form-select"
                 style={{ width: 'auto', minWidth: 'min(240px, 100%)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 value={selectedEventId}
@@ -262,53 +234,17 @@ export default function AdminScannerPage({
         {/* Left: Camera Scanner Reticle / Manual Input */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           {/* Scanner Tab Switcher */}
-          <div style={{
-            display: 'flex',
-            background: 'rgba(var(--shade-rgb), 0.3)',
-            padding: '4px',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '1.5rem',
-          }}>
-            <button data-view-ok
+          <div className="admin-tabs" role="tablist" aria-label="Scan with">
+            <button data-view-ok type="button" role="tab" className="admin-tab" aria-selected={activeTab === 'camera'}
               onClick={() => setActiveTab('camera')}
-              style={{
-                flex: 1,
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: activeTab === 'camera' ? 'var(--club-primary)' : 'transparent',
-                color: activeTab === 'camera' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-              }}
             >
-              <Camera size={16} /> Live Scanner
+              <Camera size={16} aria-hidden="true" /> Camera
             </button>
 
-            <button data-view-ok
+            <button data-view-ok type="button" role="tab" className="admin-tab" aria-selected={activeTab === 'manual'}
               onClick={() => setActiveTab('manual')}
-              style={{
-                flex: 1,
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: activeTab === 'manual' ? 'var(--club-primary)' : 'transparent',
-                color: activeTab === 'manual' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-              }}
             >
-              <Search size={16} /> Token Manual Lookup
+              <Search size={16} aria-hidden="true" /> Type the code
             </button>
           </div>
 
@@ -323,9 +259,9 @@ export default function AdminScannerPage({
           ) : (
             <form onSubmit={handleManualSubmit} style={{ marginBottom: '1.5rem' }}>
               <div className="form-group">
-                <label className="form-label">Enter or Paste QR Code Token</label>
+                <label className="form-label" htmlFor="scanner-token">The code under the QR</label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input data-view-ok aria-label="Pass token"
+                  <input data-view-ok id="scanner-token"
                     type="text"
                     className="form-input"
                     placeholder="e.g. apex-player-pass-10"
@@ -346,25 +282,25 @@ export default function AdminScannerPage({
             <div style={{
               marginTop: '1.5rem',
               background: currentResult.valid && !currentResult.repeatAt
-                ? 'rgba(16, 185, 129, 0.15)'
+                ? 'var(--color-ok-wash)'
                 : currentResult.member
-                ? 'rgba(245, 158, 11, 0.15)'
-                : 'rgba(239, 68, 68, 0.15)',
-              border: `2px solid ${currentResult.valid && !currentResult.repeatAt ? '#10B981' : currentResult.member ? '#F59E0B' : '#EF4444'}`,
+                ? 'var(--color-warn-wash)'
+                : 'var(--color-danger-wash)',
+              border: `2px solid ${currentResult.valid && !currentResult.repeatAt ? 'var(--color-ok)' : currentResult.member ? 'var(--color-warn)' : 'var(--color-danger)'}`,
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem',
               animation: 'fadeIn 0.3s ease',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                {currentResult.valid && !currentResult.repeatAt ? <CheckCircle2 size={24} color="var(--c-green)" /> : <AlertTriangle size={24} color="var(--c-amber)" />}
+                {currentResult.valid && !currentResult.repeatAt ? <CheckCircle2 size={24} aria-hidden="true" color="var(--color-ok)" /> : <AlertTriangle size={24} aria-hidden="true" color={currentResult.member ? 'var(--color-warn)' : 'var(--color-danger)'} />}
                 <div>
                   <div style={{
                     fontWeight: 800,
                     fontSize: '1rem',
-                    color: currentResult.valid && !currentResult.repeatAt ? 'var(--c-green)' : 'var(--c-amber)',
+                    color: currentResult.valid && !currentResult.repeatAt ? 'var(--color-ok)' : currentResult.member ? 'var(--color-warn)' : 'var(--color-danger)',
                     marginBottom: '0.2rem',
                   }}>
-                    {currentResult.repeatAt ? 'ALREADY SCANNED TODAY' : currentResult.valid ? 'VALIDATION APPROVED' : 'ACCESS WARNING'}
+                    {currentResult.repeatAt ? 'Already scanned today' : currentResult.valid ? 'Valid pass' : 'Not valid'}
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                     {currentResult.message}
@@ -380,7 +316,7 @@ export default function AdminScannerPage({
                     <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{currentResult.member.full_name}</div>
                     <div className="text-meta">
                       {currentResult.member.is_executive ? currentResult.member.executive_title : currentResult.member.membership_tier}
-                      {currentResult.member.jersey_number ? ` • Jersey No. ${currentResult.member.jersey_number}` : ''}
+                      {currentResult.member.jersey_number ? `, shirt ${currentResult.member.jersey_number}` : ''}
                     </div>
                     {!currentResult.member.photo_url && (
                       <div className="text-meta">No photo on file: ask for ID if unsure.</div>
@@ -395,19 +331,19 @@ export default function AdminScannerPage({
         {/* Right: Realtime Scan Log Stream */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div className="section-head">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <History size={18} color="var(--club-primary)" />
-              <span>Scans This Session</span>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <History size={18} aria-hidden="true" />
+              <span>Scans this session</span>
             </h3>
             <span className="text-meta">
-              {scanLogs.length} scans this session
+              {scanLogs.length} {scanLogs.length === 1 ? 'scan' : 'scans'}
             </span>
           </div>
 
           <div className="stack stack-sm">
             {scanLogs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Awaiting scans. Click any test member chip or position camera over a member pass.
+                No scans yet. Point the camera at a member’s pass, or type the code under it.
               </div>
             ) : (
               scanLogs.map(log => (
@@ -419,17 +355,17 @@ export default function AdminScannerPage({
                     justifyContent: 'space-between',
                     padding: '0.75rem 1rem',
                     borderRadius: '8px',
-                    background: 'rgba(var(--shade-rgb), 0.3)',
+                    background: 'var(--color-paper)',
                     border: '1px solid var(--border-subtle)',
                   }}
                 >
                   <div>
                     <div className="row">
-                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                         {log.memberName || log.token}
                       </span>
                       {log.tier && (
-                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
+                        <span className="admin-pill">
                           {log.tier}
                         </span>
                       )}
@@ -440,11 +376,8 @@ export default function AdminScannerPage({
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <span className="badge" style={{
-                      backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: log.status === 'valid' ? 'var(--c-green)' : 'var(--c-red)',
-                    }}>
-                      {log.status.toUpperCase()}
+                    <span className="admin-pill" style={log.status === 'valid' ? { background: 'var(--color-ok-wash)', color: 'var(--color-ok)' } : { background: 'var(--color-danger-wash)', color: 'var(--color-danger)' }}>
+                      {log.status === 'valid' ? 'Valid' : 'Not valid'}
                     </span>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {log.timestamp}

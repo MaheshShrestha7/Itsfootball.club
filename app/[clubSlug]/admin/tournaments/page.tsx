@@ -7,7 +7,7 @@ import { Tournament } from '@/lib/supabase/types';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
 import { ADMIN_HASH_EVENT } from '@/lib/permissions';
-import { Trophy, Swords, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, Shield } from 'lucide-react';
+import { Trophy, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, CheckCircle2, ExternalLink } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
@@ -71,7 +71,7 @@ export default function AdminTournamentsPage({
   const handleDeleteTourn = async (tournId: string, tournName: string) => {
     if (await confirmAction({ title: `Delete "${tournName}"?`, message: 'The tournament and all its fixtures will be removed.', confirmLabel: 'Delete tournament', danger: true })) {
       deleteTournament(tournId);
-      setFeedback(`✓ Deleted ${tournName}`);
+      setFeedback(`Deleted ${tournName}`);
       setTimeout(() => setFeedback(null), 3000);
     }
   };
@@ -83,100 +83,36 @@ export default function AdminTournamentsPage({
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
-      {/* Page Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1.5rem',
-        }}
-      >
+      <div className="admin-head">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                color: 'var(--c-green)',
-                background: 'rgba(16, 185, 129, 0.12)',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                textTransform: 'uppercase',
-              }}
-            >
-              Cups &amp; Leagues
-            </span>
-            {activeSeason && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Season {activeSeason.name}
-              </span>
-            )}
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-            Tournaments & Cups
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.25rem 0 0 0' }}>
-            Run knockout cups, round-robin leagues and group-stage tournaments, with points tables that update as results come in.
-          </p>
+          <h1>Tournaments</h1>
+          <p>Run knockout cups, round-robin leagues and group-stage tournaments, with points tables that update as results come in.{activeSeason && ` Season ${activeSeason.name}.`}</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            onClick={handleOpenWizard}
-            className="btn btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontWeight: 800,
-              padding: '0.75rem 1.25rem',
-              borderRadius: '10px',
-              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-            }}
-          >
-            <Trophy size={18} />
-            <span>Setup Tournament</span>
+        <div className="admin-head-actions">
+          <button type="button" onClick={handleOpenWizard} className="btn btn-primary">
+            <Trophy size={18} aria-hidden="true" />
+            <span>Set up a tournament</span>
           </button>
         </div>
       </div>
 
       {feedback && (
-        <div
-          style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: 'var(--c-green)',
-            padding: '0.85rem 1.25rem',
-            borderRadius: '10px',
-            marginBottom: '1.5rem',
-            fontWeight: 700,
-            fontSize: '0.88rem',
-          }}
-        >
-          {feedback}
+        <div role="status" className="admin-flash">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>{feedback}</span>
         </div>
       )}
 
-      <div data-view-ok role="tablist" className="row" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
-        {([['list', 'Tournaments'], ['sides', 'Tournament Sides']] as const).map(([key, label]) => (
+      <div data-view-ok role="tablist" aria-label="Tournaments" className="admin-tabs">
+        {([['list', 'Tournaments'], ['sides', 'Tournament sides']] as const).map(([key, label]) => (
           <button
             key={key}
+            type="button"
             role="tab"
             aria-selected={tab === key}
             onClick={() => selectTab(key)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderBottom: tab === key ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: tab === key ? 'var(--text-primary)' : 'var(--text-secondary)',
-              padding: '0.6rem 0.9rem',
-              fontWeight: 700,
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-            }}
+            className="admin-tab"
           >
             {label}
           </button>
@@ -186,43 +122,17 @@ export default function AdminTournamentsPage({
       {tab === 'sides' ? <InternalTeamsManager clubSlug={club.slug} /> : (
       <>
 
-      {/* KPI Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
-          gap: '1rem',
-          marginBottom: '1.75rem',
-        }}
-      >
-        <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Total Tournaments</span>
-            <Trophy size={18} color="var(--c-amber)" />
+      <div className="admin-panel admin-dash-figures-wrap" style={{ marginBottom: 'var(--space-lg)' }}>
+        <dl className="admin-dash-figures">
+          <div><dt>Tournaments</dt><dd>{totalTournaments}</dd><span className="admin-note">{activeTournaments} running now</span></div>
+          <div>
+            <dt>Tournament sides</dt><dd>{clubInternalTeams.length}</dd>
+            {/* Says what's counted: the club's own sides, not the teams entered in a cup */}
+            <span className="admin-note">Picked from your members</span>
+            <button type="button" onClick={() => selectTab('sides')} className="admin-dash-link" style={{ marginTop: 'auto' }}>Manage sides</button>
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{totalTournaments}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--c-green)' }}>{activeTournaments} Currently Active</span>
-        </div>
-
-        {/* Opens the Tournament Sides tab */}
-        <button type="button" onClick={() => selectTab('sides')} style={{ display: 'block', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer', color: 'inherit', background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Tournament Sides</span>
-            <Shield size={18} color="var(--c-blue)" />
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{clubInternalTeams.length}</div>
-          {/* Says what's counted: the club's own sides, not the teams entered in a cup ("8 Teams Enrolled") */}
-          <span style={{ fontSize: '0.75rem', color: 'var(--c-blue)' }}>Picked from your members · Manage →</span>
-        </button>
-
-        <div style={{ background: 'rgba(var(--dk-15-23-42), 0.75)', border: '1px solid rgba(var(--tint-rgb), 0.08)', borderRadius: '12px', padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Tournament Matches</span>
-            <Swords size={18} color="var(--c-green)" />
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-primary)' }}>{totalMatchesInTourneys}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Tiesheet & Bracket Fixtures</span>
-        </div>
+          <div><dt>Tournament fixtures</dt><dd>{totalMatchesInTourneys}</dd></div>
+        </dl>
       </div>
 
       {/* Tournaments List */}
@@ -230,28 +140,27 @@ export default function AdminTournamentsPage({
           {clubTournaments.length === 0 ? (
             <div
               style={{
-                background: 'rgba(var(--tint-rgb), 0.02)',
-                border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                borderRadius: '16px',
+                background: 'var(--color-paper-2)',
+                border: '1px solid var(--color-rule)',
+                borderRadius: 'var(--radius-card)',
                 padding: '3.5rem 1.5rem',
                 textAlign: 'center',
                 color: 'var(--text-secondary)',
               }}
             >
-              <Trophy size={42} style={{ opacity: 0.3, margin: '0 auto 1rem auto' }} />
-              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
-                No Tournaments Scheduled Yet
+              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 600 }}>
+                No tournaments yet
               </h3>
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem' }}>
-                Launch your first single elimination cup, league, or group stage championship with automated tiesheet generation.
+                Set up a knockout cup, a league or a group stage, and the fixtures are drawn for you.
               </p>
               <button
+                type="button"
                 onClick={handleOpenWizard}
                 className="btn btn-primary"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
               >
-                <Plus size={16} />
-                <span>Launch First Tournament</span>
+                <Plus size={16} aria-hidden="true" />
+                <span>Set up the first tournament</span>
               </button>
             </div>
           ) : (
@@ -269,18 +178,18 @@ export default function AdminTournamentsPage({
 
                 const formatLabel =
                   tourn.format === 'knockout'
-                    ? 'Single-Elimination Knockout'
+                    ? 'Knockout cup'
                     : tourn.format === 'league'
-                    ? 'Round-Robin League'
-                    : 'Group Stage + Knockout';
+                    ? 'League, everyone plays everyone'
+                    : 'Groups, then a knockout';
 
                 return (
                   <div
                     key={tourn.id}
                     style={{
-                      background: 'linear-gradient(145deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                      borderRadius: '14px',
+                      background: 'var(--color-paper-2)',
+                      border: '1px solid var(--color-rule)',
+                      borderRadius: 'var(--radius-card)',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
@@ -290,7 +199,7 @@ export default function AdminTournamentsPage({
                     <div
                       data-theme="dark" style={{
                         height: '110px',
-                        background: `linear-gradient(rgba(var(--dk-15-23-42), 0.4), rgba(var(--dk-15-23-42), 0.95)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
+                        background: `linear-gradient(color-mix(in oklab, var(--color-sidebar) 40%, transparent), color-mix(in oklab, var(--color-sidebar) 95%, transparent)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         padding: '1rem',
@@ -300,77 +209,55 @@ export default function AdminTournamentsPage({
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span
-                          style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            background:
-                              tourn.status === 'ongoing'
-                                ? 'rgba(16, 185, 129, 0.25)'
-                                : tourn.status === 'completed'
-                                ? 'rgba(59, 130, 246, 0.25)'
-                                : 'rgba(var(--tint-rgb), 0.15)',
-                            color:
-                              tourn.status === 'ongoing'
-                                ? '#10B981'
-                                : tourn.status === 'completed'
-                                ? '#3B82F6'
-                                : '#CBD5E1',
-                            border:
-                              tourn.status === 'ongoing'
-                                ? '1px solid #10B981'
-                                : '1px solid rgba(var(--tint-rgb), 0.2)',
-                            textTransform: 'uppercase',
-                          }}
-                        >
+                        <span className={tourn.status === 'ongoing' ? 'admin-pill is-ok' : 'admin-pill'} style={{ textTransform: 'capitalize' }}>
                           {tourn.status}
                         </span>
 
                         <div style={{ display: 'flex', gap: '0.35rem' }}>
                         <button
+                          type="button"
                           onClick={() => setFormTarget(tourn)}
                           data-theme="dark" style={{
-                            background: 'rgba(0, 0, 0, 0.5)',
+                            background: 'var(--color-scrim)',
                             border: 'none',
-                            color: '#FFFFFF',
+                            color: 'var(--color-print)',
                             padding: '0.35rem',
                             borderRadius: '6px',
                             cursor: 'pointer',
                           }}
-                          title="Edit Tournament"
+                          title="Edit the tournament"
                           aria-label={`Edit ${tourn.name}`}
                         >
-                          <Pencil size={14} />
+                          <Pencil size={14} aria-hidden="true" />
                         </button>
                         <button data-needs-full
+                          type="button"
                           onClick={() => handleDeleteTourn(tourn.id, tourn.name)}
                           data-theme="dark" style={{
-                            background: 'rgba(0, 0, 0, 0.5)',
+                            background: 'var(--color-scrim)',
                             border: 'none',
                             color: 'var(--c-red)',
                             padding: '0.35rem',
                             borderRadius: '6px',
                             cursor: 'pointer',
                           }}
-                          title="Delete Tournament"
+                          title="Delete the tournament"
                           aria-label={`Delete ${tourn.name}`}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={14} aria-hidden="true" />
                         </button>
                         </div>
                       </div>
 
                       <div className="row">
-                        <Trophy size={16} color="var(--c-amber)" />
+                        <Trophy size={16} aria-hidden="true" />
                         <h3
                           style={{
                             margin: 0,
                             fontSize: '1.05rem',
-                            fontWeight: 900,
+                            fontWeight: 600,
                             color: 'var(--text-primary)',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                            textShadow: '0 2px 4px var(--color-shadow)',
                           }}
                         >
                           {tourn.name}
@@ -380,12 +267,12 @@ export default function AdminTournamentsPage({
 
                     {/* Details Body */}
                     <div style={{ padding: '1rem 1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--c-green)', fontWeight: 700 }}>
-                        <Layers size={14} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        <Layers size={14} aria-hidden="true" />
                         <span>{formatLabel}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        <Calendar size={13} />
+                        <Calendar size={13} aria-hidden="true" />
                         <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                       </div>
 
@@ -395,7 +282,7 @@ export default function AdminTournamentsPage({
 
                       <div
                         style={{
-                          background: 'rgba(var(--shade-rgb), 0.3)',
+                          background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
                           borderRadius: '8px',
                           padding: '0.65rem 0.85rem',
                           display: 'grid',
@@ -418,8 +305,8 @@ export default function AdminTournamentsPage({
                           </div>
                         </div>
                         <div>
-                          <div className="text-muted">Completed</div>
-                          <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.9rem' }}>
+                          <div className="text-muted">Played</div>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                             {completedMatches}
                           </div>
                         </div>
@@ -430,8 +317,8 @@ export default function AdminTournamentsPage({
                     <div
                       style={{
                         padding: '0.75rem 1.25rem',
-                        background: 'rgba(var(--shade-rgb), 0.3)',
-                        borderTop: '1px solid rgba(var(--tint-rgb), 0.06)',
+                        background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
+                        borderTop: '1px solid color-mix(in oklab, var(--color-ink) 6%, transparent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -440,26 +327,17 @@ export default function AdminTournamentsPage({
                       <Link
                         href={`/${club.slug}/tournaments/${tourn.id}`}
                         target="_blank"
-                        style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textDecoration: 'none' }}
+                        style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                       >
-                        Public Spectator View ↗
+                        Public page <ExternalLink size={12} aria-hidden="true" />
                       </Link>
 
                       <Link
                         href={`/${club.slug}/admin/tournaments/${tourn.id}`}
                         className="btn btn-sm btn-primary"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          fontWeight: 700,
-                          fontSize: '0.8rem',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
-                        }}
                       >
-                        <span>Manage Bracket</span>
-                        <ArrowRight size={13} />
+                        <span>Manage the draw</span>
+                        <ArrowRight size={13} aria-hidden="true" />
                       </Link>
                     </div>
                   </div>

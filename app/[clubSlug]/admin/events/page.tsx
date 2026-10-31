@@ -21,7 +21,7 @@ import {
   QrCode,
   MapPin,
   X,
-  Sparkles,
+  Pin,
   ImageIcon,
   Printer,
   FileImage,
@@ -130,7 +130,7 @@ export default function AdminEventsPage({
           order: existing.length + 1,
         }
       ];
-      setToastMessage(`✓ Live: Pinned "${evt.title}" to Hero Slider!`);
+      setToastMessage(`Pinned "${evt.title}" to the home page`);
     }
     updated.forEach((item, idx) => (item.order = idx + 1));
     updateClubBranding(club.id, { hero_pinned_items: updated });
@@ -261,7 +261,7 @@ export default function AdminEventsPage({
         });
       }
       if (repeat_weeks > 1) {
-        setToastMessage(`✓ Scheduled ${repeat_weeks} weekly sessions of "${form.title}"`);
+        setToastMessage(`Scheduled ${repeat_weeks} weekly sessions of "${form.title}"`);
         setTimeout(() => setToastMessage(null), 3500);
       }
     }
@@ -271,74 +271,37 @@ export default function AdminEventsPage({
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
-      }}>
+      <div className="admin-head">
         <div>
-          <h1 className="stat-value">
-            Club Events & Trainings Management
-          </h1>
-          <p className="text-body">
-            Schedule fixtures, training sessions, AGMs and trials, and check people in with QR codes.
-          </p>
+          <h1>Events and training</h1>
+          <p>Training sessions, AGMs, trials and socials, with QR check-in at the door.</p>
         </div>
 
-        <div className="row row-loose row-wrap">
-          {/* Season Filter Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(var(--tint-rgb), 0.04)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button data-view-ok
-              onClick={() => setSeasonFilter('ALL')}
-              style={{
-                padding: '0.35rem 0.85rem',
-                borderRadius: '6px',
-                border: 'none',
-                background: seasonFilter === 'ALL' ? 'var(--club-primary)' : 'transparent',
-                color: seasonFilter === 'ALL' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              All Seasons
-            </button>
-            {clubSeasons.map(s => (
-              <button data-view-ok
-                key={s.id}
-                onClick={() => setSeasonFilter(s.name)}
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: seasonFilter === s.name ? 'var(--club-primary)' : 'transparent',
-                  color: seasonFilter === s.name ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                {s.name} {s.is_current ? '★' : ''}
-              </button>
-            ))}
-          </div>
-
-          <button onClick={() => handleOpenAdd()} className="btn btn-primary row">
-            <Plus size={16} />
-            <span>Add New Event</span>
+        <div className="admin-head-actions">
+          <button type="button" onClick={() => handleOpenAdd()} className="btn btn-primary row">
+            <Plus size={16} aria-hidden="true" />
+            <span>Add an event</span>
           </button>
         </div>
+      </div>
+
+      <div className="admin-chips" role="group" aria-label="Season" style={{ marginBottom: 'var(--space-md)' }}>
+        <button data-view-ok type="button" className="admin-chip" aria-pressed={seasonFilter === 'ALL'} onClick={() => setSeasonFilter('ALL')}>
+          All seasons
+        </button>
+        {clubSeasons.map(s => (
+          <button data-view-ok type="button" className="admin-chip" key={s.id} aria-pressed={seasonFilter === s.name} onClick={() => setSeasonFilter(s.name)}>
+            {s.name}{s.is_current && <span className="num">current</span>}
+          </button>
+        ))}
       </div>
 
       {/* Events Table / Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {filteredEvents.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(var(--shade-rgb), 0.2)', borderRadius: '12px' }}>
-            <p className="text-secondary">
-              {seasonFilter === 'ALL' ? 'No events yet. Use Add New Event to create your first one.' : `No events in the ${seasonFilter} season.`}
+          <div className="admin-panel admin-empty">
+            <p style={{ margin: 0 }}>
+              {seasonFilter === 'ALL' ? 'No events yet. Add an event to create your first one.' : `No events in the ${seasonFilter} season.`}
             </p>
           </div>
         ) : (
@@ -358,31 +321,28 @@ export default function AdminEventsPage({
             >
               <div style={{ flex: 1, minWidth: 'min(260px, 100%)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                  <span className="badge" style={{
-                    backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.2)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                    color: evt.category === 'training' ? 'var(--c-green)' : evt.category === 'social' ? 'var(--c-amber)' : 'var(--c-blue)',
-                  }}>
-                    {evt.category.toUpperCase()}
+                  <span className="admin-pill" style={{ textTransform: 'capitalize' }}>
+                    {evt.category}
                   </span>
-                  <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.7rem' }}>
+                  <span className="admin-pill">
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
                   <span className="text-meta">
                     Checked in: {evt.rsvp_count}{evt.max_capacity > 0 ? ` / ${evt.max_capacity}` : ''}
                   </span>
                   {(evt.ticket_price_cents ?? 0) > 0 && (
-                    <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', fontSize: '0.7rem' }}>
-                      {formatMoney(evt.ticket_price_cents ?? 0, currency)} ticket · {ticketsSold[evt.id] || 0} sold
+                    <span className="admin-pill">
+                      {formatMoney(evt.ticket_price_cents ?? 0, currency)} ticket, {ticketsSold[evt.id] || 0} sold
                     </span>
                   )}
                   {evt.flyer_url && (
-                    <span className="badge row row-tight" style={{ backgroundColor: 'rgba(var(--club-primary-rgb), 0.15)', color: 'var(--club-ink)', fontSize: '0.7rem' }}>
-                      <ImageIcon size={11} /> Flyer
+                    <span className="admin-pill">
+                      <ImageIcon size={11} aria-hidden="true" /> Flyer
                     </span>
                   )}
                 </div>
 
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem', overflowWrap: 'anywhere' }}>
                 {evt.title}
               </h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
@@ -391,11 +351,11 @@ export default function AdminEventsPage({
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 <span className="row row-tight">
-                  <Calendar size={14} color="var(--club-primary)" />
+                  <Calendar size={14} aria-hidden="true" />
                   {formatShortDay(evt.start_time, true)}
                 </span>
                 <span className="row row-tight">
-                  <MapPin size={14} color="var(--club-primary)" />
+                  <MapPin size={14} aria-hidden="true" />
                   {evt.location}
                 </span>
               </div>
@@ -407,68 +367,60 @@ export default function AdminEventsPage({
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
                 return (
                   <button
+                    type="button"
                     onClick={() => handleTogglePinEvent(evt)}
                     className="btn btn-secondary btn-sm"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      borderColor: isPinned ? '#10B981' : undefined,
-                      color: isPinned ? 'var(--c-green)' : 'var(--text-secondary)',
-                      background: isPinned ? 'rgba(16, 185, 129, 0.1)' : undefined
-                    }}
-                    title={isPinned ? 'Pinned to Hero Slider (Click to unpin)' : 'Pin to Hero Slider'}
+                    aria-pressed={!!isPinned}
+                    title={isPinned ? 'On the home page slider. Select to take it off' : 'Show it in the home page slider'}
                   >
-                    <Sparkles size={14} color={isPinned ? '#10B981' : 'var(--text-muted)'} />
-                    <span>{isPinned ? 'Hero Pinned' : 'Pin to Hero'}</span>
+                    <Pin size={14} aria-hidden="true" />
+                    <span>{isPinned ? 'On the home page' : 'Pin to the home page'}</span>
                   </button>
                 );
               })()}
 
               <button
+                type="button"
                 onClick={() => setQrModalEvent(evt)}
                 className="btn btn-secondary btn-sm"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  borderColor: evt.door_qr_checkin_enabled ? '#3B82F6' : undefined,
-                  color: evt.door_qr_checkin_enabled ? 'var(--c-blue)' : 'var(--text-secondary)',
-                }}
-                title="Self Check-In QR Code"
+                title="The QR code people scan to check themselves in"
               >
-                <QrCode size={14} />
-                <span>Self Check-In QR</span>
+                <QrCode size={14} aria-hidden="true" />
+                <span>Door QR</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setFlyerEvent(evt)}
                 className="btn btn-secondary btn-sm row"
                 title={`Make a printable flyer for ${evt.title}`}
               >
-                <FileImage size={14} />
-                <span>Make a Flyer</span>
+                <FileImage size={14} aria-hidden="true" />
+                <span>Make a flyer</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setScannerEvent(evt)}
                 className="btn btn-primary btn-sm row"
               >
-                <CheckCircle2 size={14} />
-                <span>Manual Check-In</span>
+                <CheckCircle2 size={14} aria-hidden="true" />
+                <span>Check people in</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => handleOpenEdit(evt)}
                 title={`Edit ${evt.title}`}
                 aria-label={`Edit ${evt.title}`}
                 className="btn btn-secondary btn-sm"
                 style={{ minWidth: '40px', minHeight: '40px' }}
               >
-                <Edit2 size={14} />
+                <Edit2 size={14} aria-hidden="true" />
               </button>
 
               <button data-needs-full
+                type="button"
                 onClick={async () => {
                   if (await confirmAction({ title: `Delete "${evt.title}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete event', danger: true })) {
                     deleteEvent(evt.id);
@@ -479,7 +431,7 @@ export default function AdminEventsPage({
                 className="btn btn-danger btn-sm"
                 style={{ minWidth: '40px', minHeight: '40px' }}
               >
-                <Trash2 size={14} />
+                <Trash2 size={14} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -496,7 +448,7 @@ export default function AdminEventsPage({
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           zIndex: 999,
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -513,11 +465,11 @@ export default function AdminEventsPage({
             padding: '2rem',
           }}>
             <div className="section-head">
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {editingEventId ? 'Edit Club Event' : 'Add New Club Event'}
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {editingEventId ? 'Edit event' : 'Add an event'}
               </h3>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+              <button type="button" onClick={() => setModalOpen(false)} className="admin-icon-btn" aria-label="Close">
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
@@ -661,7 +613,7 @@ export default function AdminEventsPage({
                     </div>
                   )}
                   {canSell === false && Number(form.ticket_price) > 0 && (
-                    <p role="alert" style={{ margin: '0.4rem 0 0', padding: '0.5rem 0.7rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--text-primary)' }}>
+                    <p role="alert" style={{ margin: '0.4rem 0 0', padding: '0.5rem 0.7rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid var(--color-warn-line)', background: 'var(--color-warn-wash)', color: 'var(--text-primary)' }}>
                       Card payments and bank details aren&apos;t set up yet, so tickets can&apos;t be bought.{' '}
                       <a href={`/${club.slug}/admin/finance?tab=settings`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Set up payments</a>
                     </p>
@@ -712,7 +664,7 @@ export default function AdminEventsPage({
         <DoorCheckinQrModal
           badgeLabel="SELF CHECK-IN STATION"
           title={qrModalEvent.title}
-          subtitle={`${qrModalEvent.location} • ${formatShortDay(qrModalEvent.start_time, true)}`}
+          subtitle={`${qrModalEvent.location}, ${formatShortDay(qrModalEvent.start_time, true)}`}
           checkinUrl={doorCheckinUrl}
           disabledNotice={!qrModalEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event. Enable it in Edit Event to let this QR code work.' : undefined}
           onClose={() => setQrModalEvent(null)}
@@ -737,7 +689,7 @@ export default function AdminEventsPage({
         <CheckinPoster
           club={club}
           title={printPosterEvent.title}
-          details={`${printPosterEvent.location} • ${new Date(printPosterEvent.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(printPosterEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}`}
+          details={`${printPosterEvent.location}, ${new Date(printPosterEvent.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(printPosterEvent.start_time).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}`}
           checkinUrl={doorCheckinUrl}
           eventId={printPosterEvent.id}
           disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}
@@ -753,7 +705,7 @@ export default function AdminEventsPage({
           canSaveFlyer={flyersReady === true}
           onSaveFlyer={url => {
             updateEvent(flyerEvent.id, { flyer_url: url });
-            setToastMessage(`✓ Flyer saved to "${flyerEvent.title}"`);
+            setToastMessage(`Flyer saved to "${flyerEvent.title}"`);
             setTimeout(() => setToastMessage(null), 3500);
           }}
           onClose={() => setFlyerEvent(null)}
@@ -772,26 +724,8 @@ export default function AdminEventsPage({
 
       {/* Floating Live Toast Notification */}
       {toastMessage && (
-        <div role="status" className="admin-save-toast" style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          padding: '1rem 1.4rem',
-          background: 'rgba(var(--dk-15-23-42), 0.96)',
-          border: '1.5px solid #10B981',
-          borderRadius: '12px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: 'var(--text-primary)',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          backdropFilter: 'blur(10px)',
-          animation: 'fadeIn 0.2s ease-out'
-        }}>
-          <Sparkles size={18} color="var(--c-green)" />
+        <div role="status" className="admin-save-toast">
+          <CheckCircle2 size={18} aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}

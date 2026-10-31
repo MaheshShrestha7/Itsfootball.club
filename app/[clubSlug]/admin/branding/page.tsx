@@ -19,6 +19,7 @@ import {
   Shield,
   MapPin,
   Sparkles,
+  ArrowRight,
   AlertCircle,
   Eye,
   ExternalLink,
@@ -228,13 +229,11 @@ export default function AdminBrandingPage({
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-          Club Configuration & Visual Interface
-        </h1>
-        <p className="text-body">
-          Your club name, founding year, home ground, colors and web address. Changes show straight away on your public site and member passes.
-        </p>
+      <div className="admin-head">
+        <div>
+          <h1>Club and branding</h1>
+          <p>Your club name, founding year, home ground, colours and web address. Changes show straight away on your public site and member passes.</p>
+        </div>
       </div>
 
       {/* Save feedback: a fixed toast, because the Save button sits at the bottom of this long form
@@ -243,38 +242,23 @@ export default function AdminBrandingPage({
         <div
           role="status"
           aria-live="polite"
-          className="admin-save-toast"
-          style={{
-            position: 'fixed',
-            bottom: '2rem',
-            right: '2rem',
-            zIndex: 9999,
-            maxWidth: 'min(420px, calc(100vw - 2rem))',
-            background: 'var(--bg-surface-elevated, #121a26)',
-            border: `1px solid ${saveError ? '#EF4444' : redirectNotice ? '#F59E0B' : '#10B981'}`,
-            borderRadius: 'var(--radius-lg)',
-            padding: '0.9rem 1.2rem',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.65rem',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
+          className={saveError ? 'admin-save-toast is-error' : 'admin-save-toast'}
+          style={{ alignItems: 'flex-start' }}
         >
           {saveError
-            ? <AlertTriangle size={20} color="var(--c-red)" style={{ flexShrink: 0 }} />
+            ? <AlertTriangle size={20} aria-hidden="true" />
             : redirectNotice
-            ? <Sparkles size={20} color="var(--c-amber)" style={{ flexShrink: 0 }} />
-            : <CheckCircle2 size={20} color="var(--c-green)" style={{ flexShrink: 0 }} />}
+            ? <ArrowRight size={20} aria-hidden="true" />
+            : <CheckCircle2 size={20} aria-hidden="true" />}
           <div>
-            <div style={{ fontWeight: 800, color: saveError ? 'var(--c-red)' : redirectNotice ? 'var(--c-amber)' : 'var(--c-green)', fontSize: '0.9rem' }}>
+            <div>
               {saveError || redirectNotice || 'Branding saved'}
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 400, color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
               {saveError
                 ? 'Fix the highlighted Club URL field, then save again.'
                 : redirectNotice
-                ? 'Moving you to the new club address...'
+                ? 'Moving you to the new club address…'
                 : 'Your changes are live on the public club site.'}
             </div>
           </div>
@@ -285,32 +269,24 @@ export default function AdminBrandingPage({
         {/* SECTION 1: CLUB COLORS & READABILITY */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Palette size={20} color={formData.primary_color} /> Club Colors
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Palette size={20} aria-hidden="true" color={formData.primary_color} /> Club colours
             </h3>
             <span
               title={`Contrast ${contrastInfo.ratioFormatted} (WCAG 2.2 AA needs 4.5:1 for normal text)`}
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '0.25rem 0.6rem',
-                borderRadius: '6px',
-                background: contrastInfo.isWcagAA ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                color: contrastInfo.isWcagAA ? 'var(--c-green)' : 'var(--c-amber)',
-                border: `1px solid ${contrastInfo.isWcagAA ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-              }}
+              className={contrastInfo.isWcagAA ? 'admin-pill is-ok' : 'admin-pill is-warn'}
             >
-              {contrastInfo.isWcagAA ? 'TEXT EASY TO READ' : 'HARD TO READ IN SMALL TEXT'}
+              {contrastInfo.isWcagAA ? 'Text is easy to read' : 'Small text is hard to read'}
             </span>
           </div>
 
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            These colors are used across your public site, match scoreboard, member passes and buttons. Text on top of them switches between light and dark so it stays easy to read.
+            These colours are used across your public site, match scoreboard, member passes and buttons. Text on top of them switches between light and dark so it stays easy to read.
           </p>
 
           {/* Quick Football Color Palettes */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <label className="form-label" style={{ fontSize: '0.78rem' }}>Football Palette Presets</label>
+            <label className="form-label" style={{ fontSize: '0.78rem' }}>Ready-made colour pairs</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {FOOTBALL_COLOR_PALETTES.map((p, idx) => (
                 <button
@@ -323,12 +299,12 @@ export default function AdminBrandingPage({
                     gap: '0.45rem',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '8px',
-                    border: formData.primary_color === p.primary ? '2px solid #FFFFFF' : '1px solid var(--border-subtle)',
-                    background: 'rgba(var(--tint-rgb), 0.04)',
+                    border: formData.primary_color === p.primary ? '2px solid var(--color-ink)' : '1px solid var(--border-subtle)',
+                    background: 'color-mix(in oklab, var(--color-ink) 4%, transparent)',
                     cursor: 'pointer',
                     fontSize: '0.78rem',
                     color: 'var(--text-primary)',
-                    transition: 'all 0.15s ease',
+                    transition: 'border-color 0.15s ease',
                   }}
                 >
                   <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: p.primary }} />
@@ -404,7 +380,7 @@ export default function AdminBrandingPage({
           {/* Live Preview Box */}
           <div style={{
             marginTop: '1.75rem',
-            background: 'rgba(var(--shade-rgb), 0.45)',
+            background: 'color-mix(in oklab, var(--color-sidebar) 45%, transparent)',
             padding: '1.25rem',
             borderRadius: '12px',
             border: `2px solid ${formData.primary_color}`,
@@ -425,7 +401,7 @@ export default function AdminBrandingPage({
                     fontWeight: 700,
                     padding: '0.15rem 0.5rem',
                     borderRadius: '4px',
-                    background: 'rgba(var(--tint-rgb), 0.08)',
+                    background: 'color-mix(in oklab, var(--color-ink) 8%, transparent)',
                     color: 'var(--text-secondary)',
                     border: '1px solid var(--border-subtle)',
                   }}
@@ -467,7 +443,7 @@ export default function AdminBrandingPage({
           {/* Interactive Kit Customizer & Vector Jersey Showcase */}
           <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <Shirt size={18} color="var(--club-primary)" />
+              <Shirt size={18} color="var(--color-accent-ink)" />
               <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                 Live Matchwear & Jersey Kit Customizer
               </h4>
@@ -486,8 +462,8 @@ export default function AdminBrandingPage({
 
         {/* SECTION 2: IDENTITY & MEDIA ASSETS */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Shield size={20} color="var(--club-primary)" /> Club Identity & Media Assets
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Shield size={20} aria-hidden="true" /> Name, crest and photos
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
@@ -518,7 +494,7 @@ export default function AdminBrandingPage({
 
             <div className="form-group">
               <label htmlFor="branding-club-establishment-year" className="form-label row">
-                <Calendar size={15} color="var(--club-primary)" />
+                <Calendar size={15} color="var(--color-accent-ink)" />
                 <span>Club Establishment Year *</span>
               </label>
               <input id="branding-club-establishment-year"
@@ -541,7 +517,7 @@ export default function AdminBrandingPage({
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
                 <label className="form-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Link2 size={15} color="var(--club-primary)" />
+                  <Link2 size={15} color="var(--color-accent-ink)" />
                   <span>Club Web Slug & Live URL *</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -565,7 +541,7 @@ export default function AdminBrandingPage({
               <div className="row">
                 <span style={{
                   padding: '0.7rem 0.85rem',
-                  background: 'rgba(var(--tint-rgb), 0.05)',
+                  background: 'color-mix(in oklab, var(--color-ink) 5%, transparent)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-md)',
                   color: 'var(--text-muted)',
@@ -582,7 +558,7 @@ export default function AdminBrandingPage({
                   className="form-input"
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    borderColor: slugValidation.valid ? 'rgba(16, 185, 129, 0.5)' : '#EF4444',
+                    borderColor: slugValidation.valid ? 'var(--color-accent-line)' : 'var(--color-danger)',
                   }}
                   value={formData.slug}
                   onChange={e => {
@@ -600,7 +576,7 @@ export default function AdminBrandingPage({
                 {slugValidation.valid ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-green)' }}>
                     <CheckCircle2 size={13} />
-                    <span>Live Portal Path: <strong>/{slugValidation.cleanSlug}</strong></span>
+                    <span>Your address: <strong>/{slugValidation.cleanSlug}</strong></span>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-red)' }}>
@@ -616,18 +592,18 @@ export default function AdminBrandingPage({
                   marginTop: '0.75rem',
                   padding: '0.75rem 1rem',
                   borderRadius: '8px',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  background: 'var(--color-warn-wash)',
+                  border: '1px solid var(--color-warn-line)',
                   fontSize: '0.8rem',
-                  color: 'var(--c-amber)',
+                  color: 'var(--text-primary)',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.6rem',
                   lineHeight: 1.5,
                 }}>
-                  <Sparkles size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <ArrowRight size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <strong>URL Slug Migration:</strong> When you save, your club URL will change from <code>/{club.slug}</code> to <code>/{slugValidation.cleanSlug}</code>. The admin room and public portal will automatically route to the new URL, and previous links will redirect seamlessly.
+                    <strong>Your address changes:</strong> When you save, your club URL will change from <code>/{club.slug}</code> to <code>/{slugValidation.cleanSlug}</code>. The admin and the public site move to the new address, and old links still work.
                   </div>
                 </div>
               )}
@@ -678,7 +654,7 @@ export default function AdminBrandingPage({
           <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-                <ImageIcon size={15} color="var(--club-primary)" />
+                <ImageIcon size={15} color="var(--color-accent-ink)" />
                 <span>Multi-Slide Hero Images (Optional, one image URL per line)</span>
               </label>
               <Link
@@ -707,8 +683,8 @@ export default function AdminBrandingPage({
 
         {/* SECTION 2B: CLUB STORY (the About page) */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BookOpen size={20} color="var(--club-primary)" /> Club Story
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BookOpen size={20} aria-hidden="true" /> Club story
           </h3>
           <p className="text-note" style={{ marginBottom: '1.25rem' }}>
             Shown on your <Link href={`/${club?.slug || resolvedParams.clubSlug}/about`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>About page</Link>: how the club started, what it stands for, its proudest moments. Add pictures and YouTube videos from the toolbar.
@@ -733,8 +709,8 @@ export default function AdminBrandingPage({
 
         {/* SECTION 3: HOME GROUND & VENUE SPECS */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <MapPin size={20} color="var(--club-primary)" /> Home Ground & Matchday Venue
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MapPin size={20} aria-hidden="true" /> Home ground
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
@@ -795,8 +771,8 @@ export default function AdminBrandingPage({
 
         {/* SECTION 4: PUBLIC CONTACT DETAILS */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Mail size={20} color="var(--club-primary)" /> Club Contact Details
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Mail size={20} aria-hidden="true" /> Contact details
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
             Shown in your club site&apos;s footer and in replies to people who contact the club.
@@ -805,7 +781,7 @@ export default function AdminBrandingPage({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
               <label htmlFor="branding-official-secretariat-email" className="form-label row">
-                <Mail size={14} color="var(--club-primary)" />
+                <Mail size={14} color="var(--color-accent-ink)" />
                 <span>Club Contact Email</span>
               </label>
               <input id="branding-official-secretariat-email"
@@ -820,7 +796,7 @@ export default function AdminBrandingPage({
 
             <div className="form-group">
               <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label row">
-                <Phone size={14} color="var(--club-primary)" />
+                <Phone size={14} color="var(--color-accent-ink)" />
                 <span>Club Contact Phone</span>
               </label>
               <input id="branding-secretariat-phone-matchday-hotline"
@@ -851,7 +827,7 @@ export default function AdminBrandingPage({
           </a>
           <button type="submit" className="btn btn-primary btn-lg row">
             <Save size={18} />
-            <span>Save Branding Configuration</span>
+            <span>Save changes</span>
           </button>
         </div>
       </form>

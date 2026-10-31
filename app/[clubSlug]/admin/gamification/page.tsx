@@ -43,9 +43,9 @@ const BONUS_PRESETS = [
 type StreakStatus = 'iron' | 'fire' | 'building' | 'inactive';
 
 const STATUS: Record<StreakStatus, { label: string; color: string }> = {
-  iron: { label: 'Iron Man', color: 'var(--c-green)' },
-  fire: { label: 'On Fire', color: 'var(--c-red)' },
-  building: { label: 'Building', color: 'var(--c-amber)' },
+  iron: { label: 'Never misses', color: 'var(--color-accent-ink)' },
+  fire: { label: 'On a run', color: 'var(--color-warn)' },
+  building: { label: 'Building', color: 'var(--text-secondary)' },
   inactive: { label: 'Inactive', color: 'var(--text-muted)' },
 };
 
@@ -68,7 +68,7 @@ function timeAgo(dateStr?: string): string {
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(var(--dk-4-6-9), 0.88)',
+  background: 'color-mix(in oklab, var(--color-sidebar) 88%, transparent)',
   backdropFilter: 'blur(8px)',
   display: 'flex',
   alignItems: 'center',
@@ -78,19 +78,19 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const dialogStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-  border: '1px solid rgba(var(--tint-rgb), 0.12)',
-  borderRadius: '16px',
+  background: 'var(--color-paper-2)',
+  border: '1px solid var(--color-rule-strong)',
+  borderRadius: 'var(--radius-card)',
   width: '100%',
   maxHeight: '92vh',
   overflowY: 'auto',
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)',
+  boxShadow: 'var(--shadow-pop)',
   color: 'var(--text-primary)',
 };
 
 const dialogHeaderStyle: React.CSSProperties = {
   padding: '1.25rem 1.5rem',
-  borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
+  borderBottom: '1px solid var(--color-rule)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -256,16 +256,12 @@ export default function AdminGamificationPage({
 
   return (
     <div className="stack" style={{ gap: '1.5rem', paddingBottom: '2rem' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Flame size={30} /> ClubScore
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
-            Keep an eye on attendance streaks, award coach bonuses and set how many points players earn.
-          </p>
+      <div className="admin-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1>ClubScore</h1>
+          <p>Keep an eye on attendance streaks, award coach bonuses and set how many points players earn.</p>
         </div>
-        <div className="row row-wrap">
+        <div className="admin-head-actions">
           {clubSeasons.length > 0 && (
             <select aria-label="Season" className="form-select" style={{ width: 'auto' }}
               value={seasonName}
@@ -286,41 +282,24 @@ export default function AdminGamificationPage({
       </div>
 
       {(awardSuccess || rulesSaved) && (
-        <div role="status" style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid #10B981',
-          padding: '0.85rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          color: 'var(--c-green)',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          <CheckCircle2 size={18} />
+        <div role="status" className="admin-flash" style={{ marginBottom: 0 }}>
+          <CheckCircle2 size={16} aria-hidden="true" />
           <span>{awardSuccess || 'Points rules saved'}</span>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 96px), 1fr))', gap: 'clamp(0.5rem, 2vw, 1rem)' }}>
-        <div className="stat-tile">
-          <div className="eyebrow">Players on a 3+ week streak</div>
-          <div className="stat-value" style={{ color: 'var(--c-red)' }}>{activeStreaksCount}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="eyebrow">Points this season</div>
-          <div className="stat-value" style={{ color: 'var(--club-ink)' }}>{totalClubPoints.toLocaleString()}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="eyebrow">Players tracked</div>
-          <div className="stat-value">{squadPlayers.length}</div>
-        </div>
+      <div className="admin-panel admin-dash-figures-wrap">
+        <dl className="admin-dash-figures">
+          <div><dt>On a 3-week streak or more</dt><dd>{activeStreaksCount}</dd></div>
+          <div><dt>Points this season</dt><dd>{totalClubPoints.toLocaleString()}</dd></div>
+          <div><dt>Players tracked</dt><dd>{squadPlayers.length}</dd></div>
+        </dl>
       </div>
 
       <div className="split-main-side">
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
-          <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            <Flame size={18} /> Streak monitor
+          <h3 className="row" style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <Flame size={18} aria-hidden="true" /> Streaks
           </h3>
           <p className="text-note" style={{ margin: '0.25rem 0 1rem' }}>
             Spot players about to lose their streak or drifting away from training.
@@ -331,18 +310,17 @@ export default function AdminGamificationPage({
             <input data-view-ok aria-label="Search players"
               type="search"
               className="form-input"
-              placeholder="Search by name or squad number..."
+              placeholder="Search by name or squad number"
               value={streakQuery}
               onChange={e => setStreakQuery(e.target.value)}
               style={{ paddingLeft: '2.1rem' }}
             />
           </div>
 
-          <div className="row row-wrap" style={{ marginBottom: '1rem' }}>
+          <div className="admin-chips" role="group" aria-label="Show" style={{ marginBottom: '1rem' }}>
             {(['all', 'iron', 'fire', 'building', 'inactive'] as const).map(s => (
-              <button data-view-ok key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}
-                className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}>
-                {s === 'all' ? 'All' : STATUS[s].label} ({s === 'all' ? streakRows.length : streakRows.filter(r => r.status === s).length})
+              <button data-view-ok key={s} type="button" className="admin-chip" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                {s === 'all' ? 'All' : STATUS[s].label} <span className="num">{s === 'all' ? streakRows.length : streakRows.filter(r => r.status === s).length}</span>
               </button>
             ))}
           </div>
@@ -360,7 +338,7 @@ export default function AdminGamificationPage({
                   gap: '0.5rem 0.75rem',
                   padding: '0.6rem 0.85rem',
                   borderRadius: 'var(--radius-md)',
-                  background: 'rgba(var(--shade-rgb), 0.2)',
+                  background: 'var(--color-paper)',
                   border: '1px solid var(--border-subtle)',
                   fontSize: '0.85rem',
                 }}>
@@ -368,20 +346,20 @@ export default function AdminGamificationPage({
                     <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
                     <div className="min-w-0">
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.full_name}</div>
-                      <div className="text-meta">#{player.jersey_number ?? '-'} • {profile?.total_points || 0} pts • {timeAgo(profile?.last_activity_date)}</div>
+                      <div className="text-meta">#{player.jersey_number ?? '-'}, {profile?.total_points || 0} pts, {timeAgo(profile?.last_activity_date)}</div>
                     </div>
                   </div>
                   <div className="row row-loose shrink-0" style={{ marginLeft: 'auto' }}>
-                    <span className="row row-tight" style={{ fontWeight: 800, color: streak >= 3 ? 'var(--c-red)' : 'var(--text-muted)' }}>
-                      {streak >= 3 && <Flame size={12} />}
+                    <span className="row row-tight" style={{ fontWeight: 600, color: streak >= 3 ? 'var(--color-warn)' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                      {streak >= 3 && <Flame size={12} aria-hidden="true" />}
                       {streak}w
                     </span>
-                    <span className="badge" style={{ color: STATUS[status].color, background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)' }}>
+                    <span className="admin-pill" style={{ color: STATUS[status].color }}>
                       {STATUS[status].label}
                     </span>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => openAward(player.id)} disabled={!rules.is_active}
                       aria-label={`Award bonus to ${player.full_name}`}>
-                      <Plus size={14} /> <span>Bonus</span>
+                      <Plus size={14} aria-hidden="true" /> <span>Bonus</span>
                     </button>
                   </div>
                 </li>
@@ -393,10 +371,10 @@ export default function AdminGamificationPage({
         <div className="stack" style={{ gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                <Sparkles size={18} /> Points rules
+              <h3 className="row" style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <Sparkles size={18} aria-hidden="true" /> Points rules
               </h3>
-              <span className="badge" style={{ color: rules.is_active ? 'var(--c-green)' : 'var(--text-muted)', background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge" style={{ color: rules.is_active ? 'var(--c-green)' : 'var(--text-muted)', background: 'color-mix(in oklab, var(--color-ink) 5%, transparent)', border: '1px solid var(--border-subtle)' }}>
                 {rules.is_active ? 'On' : 'Off'}
               </span>
             </div>
@@ -417,7 +395,7 @@ export default function AdminGamificationPage({
           </div>
 
           <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
-            <h3 className="row" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            <h3 className="row" style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>
               <History size={18} /> Recent coach bonuses
             </h3>
             {recentBonuses.length === 0 ? (
@@ -430,7 +408,7 @@ export default function AdminGamificationPage({
                     <li key={log.id} className="row" style={{ justifyContent: 'space-between', gap: '0.75rem', padding: '0.6rem 0', borderTop: '1px solid var(--border-subtle)', fontSize: '0.85rem' }}>
                       <div className="min-w-0">
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{player?.full_name || 'Former player'}</div>
-                        <div className="text-meta">{log.description} • {timeAgo(log.created_at)}</div>
+                        <div className="text-meta">{log.description}, {timeAgo(log.created_at)}</div>
                       </div>
                       <span style={{ fontWeight: 800, color: log.final_points < 0 ? 'var(--c-red)' : 'var(--c-green)', whiteSpace: 'nowrap' }}>
                         {log.final_points > 0 ? '+' : ''}{log.final_points}
@@ -482,7 +460,7 @@ export default function AdminGamificationPage({
               </div>
 
               {rulesError && (
-                <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 600 }}>
+                <div role="alert" style={{ background: 'var(--color-danger-wash)', border: '1px solid var(--color-danger-line)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 600 }}>
                   The rules could not be saved to the database. Your changes are still here, so try again.
                 </div>
               )}

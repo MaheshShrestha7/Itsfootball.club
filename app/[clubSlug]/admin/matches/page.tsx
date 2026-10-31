@@ -24,7 +24,6 @@ import {
   Edit2,
   CheckCircle2,
   QrCode,
-  Sparkles,
   Search,
   Filter,
   Star,
@@ -38,7 +37,6 @@ import {
   X,
   AlertTriangle,
   Info,
-  CalendarDays,
   Layers,
   ArrowRight,
   Share2
@@ -553,74 +551,33 @@ export default function AdminMatchesPage({
     <div style={{ paddingBottom: '4rem' }}>
       {/* Toast Notification */}
       {toastMessage && (
-        <div role="status" className="admin-save-toast"
-          style={{
-            position: 'fixed',
-            bottom: '2rem',
-            right: '2rem',
-            background: 'var(--bg-surface-elevated)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--club-primary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '0.85rem 1.4rem',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            animation: 'fadeIn 0.2s ease-out'
-          }}
-        >
-          <CheckCircle2 size={18} color="var(--club-primary)" />
+        <div role="status" className="admin-save-toast">
+          <CheckCircle2 size={18} aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Header Banner */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          marginBottom: '2rem'
-        }}
-      >
+      <div className="admin-head">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            <span className="badge badge-primary">MATCHDAY OPERATIONS</span>
-            <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)' }}>
-              {activeSeason?.name || defaultSeasonLabel()}
-            </span>
-          </div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.15 }}>
-            Match Fixtures & Scheduling Hub
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '650px', marginTop: '0.35rem' }}>
-            Add fixtures, set the match type, design match flyers, feature a match at the top of your home page, and set up QR check-in at the gate.
-          </p>
+          <h1>Fixtures</h1>
+          <p>Add fixtures, design match flyers, feature a match on the home page and set up QR check-in at the gate. Season {activeSeason?.name || defaultSeasonLabel()}.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="admin-head-actions">
           <Link
             href={`/${club.slug}/admin/match-center`}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            <Radio size={16} color="var(--c-red)" />
+            <Radio size={16} aria-hidden="true" />
             <span>Match Centre</span>
           </Link>
 
           <button
             onClick={() => handleOpenAddModal()}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
           >
-            <Plus size={18} />
-            <span>Schedule New Match</span>
+            <Plus size={18} aria-hidden="true" />
+            <span>Add a fixture</span>
           </button>
         </div>
       </div>
@@ -632,114 +589,42 @@ export default function AdminMatchesPage({
         {qrEnabledCount > 0 && <>, {qrEnabledCount} with door QR</>}
       </p>
 
-      {/* KPI Metric Cards */}
-      <div
-        className="admin-kpi-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem'
-        }}
-      >
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Matches</span>
-            <CalendarDays size={18} />
-          </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>{totalCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>All recorded fixtures</div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-green)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Upcoming</span>
-            <Calendar size={18} />
-          </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-green)' }}>{upcomingCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Live on public site view</div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Completed</span>
-            <CheckCircle2 size={18} />
-          </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>{completedCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Archived to past results</div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-amber)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Hero Spotlight</span>
-            <Sparkles size={18} />
-          </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-amber)' }}>{heroFeaturedCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Pinned to homepage hero</div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--c-blue)', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Door QR Check-in</span>
-            <QrCode size={18} />
-          </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 900, color: 'var(--c-blue)' }}>{qrEnabledCount}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Fixtures with door check-in on</div>
-        </div>
+      <div className="admin-panel admin-dash-figures-wrap admin-kpi-grid" style={{ marginBottom: 'var(--space-lg)' }}>
+        <dl className="admin-dash-figures">
+          <div><dt>Fixtures</dt><dd>{totalCount}</dd></div>
+          <div><dt>Coming up</dt><dd>{upcomingCount}</dd><span className="admin-note">On the public site</span></div>
+          <div><dt>Played</dt><dd>{completedCount}</dd></div>
+          <div><dt>On the home page</dt><dd>{heroFeaturedCount}</dd></div>
+          <div><dt>Door QR on</dt><dd>{qrEnabledCount}</dd></div>
+        </dl>
       </div>
 
       {/* Filter and Search Bar */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '1rem',
-          borderRadius: 'var(--radius-lg)',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem'
-        }}
-      >
-        {/* Status Tabs */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
+      <div className="admin-toolbar">
+        <div className="admin-chips" role="group" aria-label="Show">
           {(['all', 'upcoming', 'completed', 'live'] as const).map(tab => (
-            <button data-view-ok
+            <button data-view-ok type="button" className="admin-chip"
               key={tab}
+              aria-pressed={statusTab === tab}
               onClick={() => setStatusTab(tab)}
-              style={{
-                border: 'none',
-                background: statusTab === tab ? club.primary_color : 'transparent',
-                color: statusTab === tab ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-                padding: '0.45rem 0.9rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textTransform: 'capitalize',
-                whiteSpace: 'nowrap',
-                transition: 'background 0.2s'
-              }}
             >
-              {tab === 'all' ? 'All Fixtures' : tab === 'live' ? `Live (${liveCount})` : tab}
+              {tab === 'all' ? 'All' : tab === 'upcoming' ? 'Coming up' : tab === 'completed' ? 'Played' : <>Live <span className="num">{liveCount}</span></>}
             </button>
           ))}
         </div>
 
         {/* Filters and Search Input */}
-        <div className="row row-loose row-wrap">
+        <div className="admin-toolbar-end">
           {/* Match Type Dropdown */}
           <select data-view-ok aria-label="Match type"
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
-            <option value="ALL">All Match Types</option>
-            <option value="internal">Internal / Intra-Squad</option>
-            <option value="friendly">Friendly Fixture</option>
-            <option value="tournament">Tournament / Cup</option>
+            <option value="ALL">All match types</option>
+            <option value="internal">Internal, within the squad</option>
+            <option value="friendly">League or friendly</option>
+            <option value="tournament">Tournament or cup</option>
           </select>
 
           {/* Team Dropdown */}
@@ -748,9 +633,8 @@ export default function AdminMatchesPage({
               value={teamFilter}
               onChange={e => setTeamFilter(e.target.value)}
               className="form-input"
-              style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
-            >
-              <option value="ALL">All Teams</option>
+              >
+              <option value="ALL">All teams</option>
               {teams.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -762,25 +646,22 @@ export default function AdminMatchesPage({
             value={seasonFilter}
             onChange={e => setSeasonFilter(e.target.value)}
             className="form-input"
-            style={{ width: 'auto', flex: '1 1 160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
           >
-            <option value="ALL">All Seasons</option>
+            <option value="ALL">All seasons</option>
             {clubSeasons.map(s => (
-              <option key={s.id} value={s.name}>{s.name} {s.is_current ? '(Active)' : ''}</option>
+              <option key={s.id} value={s.name}>{s.name} {s.is_current ? '(active)' : ''}</option>
             ))}
           </select>
 
-          {/* Search Box */}
-          {/* Filters share the row evenly (same widths) and wrap together on a phone */}
-          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)', flex: '2 1 220px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <div style={{ position: 'relative', minWidth: 'min(220px, 100%)', flex: '1 1 220px' }}>
+            <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input data-view-ok aria-label="Search fixtures"
               type="text"
-              placeholder="Search fixtures..."
+              placeholder="Search fixtures"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: '2.2rem', fontSize: '0.82rem', padding: '0.45rem 0.75rem 0.45rem 2.2rem' }}
+              style={{ width: '100%', paddingLeft: '2.2rem' }}
             />
           </div>
         </div>
@@ -788,19 +669,16 @@ export default function AdminMatchesPage({
 
       {/* Matches Grid / List */}
       {filteredMatches.length === 0 ? (
-        <div className="glass-panel text-center" style={{ padding: '4rem 2rem' }}>
-          <Calendar size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem auto' }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-            No Matches Found
-          </h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+        <div className="admin-panel admin-empty">
+          <h2 style={{ margin: 0, fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--color-ink)' }}>No fixtures here</h2>
+          <p style={{ margin: 0 }}>
             {searchQuery || statusTab !== 'all' || typeFilter !== 'ALL'
-              ? 'Try changing your search keywords or clearing active filters.'
-              : 'Start by scheduling your first club fixture or friendly match.'}
+              ? 'Nothing matches these filters. Clear the search or pick another filter.'
+              : 'Add your first fixture or friendly.'}
           </p>
-          <button onClick={() => handleOpenAddModal()} className="btn btn-primary btn-sm">
-            <Plus size={14} style={{ marginRight: '4px' }} />
-            Schedule a Match
+          <button type="button" onClick={() => handleOpenAddModal()} className="btn btn-primary btn-sm">
+            <Plus size={14} aria-hidden="true" />
+            Add a fixture
           </button>
         </div>
       ) : (
@@ -829,7 +707,7 @@ export default function AdminMatchesPage({
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
-                  border: isLive ? '1px solid #EF4444' : m.featured_on_hero ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-medium)',
+                  border: isLive ? '1px solid var(--color-danger)' : '1px solid var(--border-subtle)',
                   position: 'relative'
                 }}
               >
@@ -841,7 +719,7 @@ export default function AdminMatchesPage({
                       <span className="fixture-row-day"><LocalTime value={when} options={{ day: 'numeric' }} /></span>
                       <span className="fixture-row-month"><LocalTime value={when} options={{ month: 'short' }} /></span>
                     </div>
-                    <span className="admin-match-date-type">{matchType}{m.is_club_home ? ' · home' : ''}</span>
+                    <span className="admin-match-date-type">{matchType}{m.is_club_home ? ', home' : ''}</span>
                   </div>
                 ) : (
                 <div
@@ -851,7 +729,7 @@ export default function AdminMatchesPage({
                     borderRadius: 'var(--radius-md)',
                     overflow: 'hidden',
                     position: 'relative',
-                    background: 'rgba(0,0,0,0.5)',
+                    background: 'var(--color-scrim)',
                     border: '1px solid var(--border-subtle)'
                   }}
                 >
@@ -868,11 +746,10 @@ export default function AdminMatchesPage({
                       left: '6px',
                       padding: '2px 6px',
                       borderRadius: '4px',
-                      background: 'rgba(0,0,0,0.75)',
+                      background: 'var(--color-scrim)',
                       fontSize: '0.7rem',
                       fontWeight: 800,
-                      color: '#FFFFFF',
-                      textTransform: 'uppercase'
+                      color: 'var(--color-print)'
                     }}
                   >
                     {matchType}
@@ -888,10 +765,10 @@ export default function AdminMatchesPage({
                         background: 'var(--club-primary)',
                         fontSize: '0.7rem',
                         fontWeight: 800,
-                        color: 'var(--club-primary-contrast, #090D16)'
+                        color: 'var(--color-on-accent)'
                       }}
                     >
-                      HOME
+                      Home
                     </div>
                   )}
                 </div>
@@ -900,70 +777,50 @@ export default function AdminMatchesPage({
                 {/* Match Details */}
                 <div className="min-w-0">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--club-ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-accent-ink)' }}>
                       {m.competition}
                     </span>
                     {multiTeam && (() => {
                       const team = teamOfMatch(m, clubTeams);
                       return team ? (
-                        <span className="badge" style={{ fontSize: '0.7rem', background: `${team.color || club.primary_color}22`, color: 'var(--text-primary)', border: `1px solid ${team.color || club.primary_color}66` }}>
+                        <span className="badge" style={{ fontSize: '0.7rem', background: `color-mix(in oklab, ${team.color || club.primary_color} 14%, transparent)`, color: 'var(--text-primary)', border: `1px solid color-mix(in oklab, ${team.color || club.primary_color} 40%, transparent)` }}>
                           {teamLabel(team)}
                         </span>
                       ) : null;
                     })()}
                     {m.season && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.06)' }}>
+                      <span className="admin-pill">
                         {m.season}
                       </span>
                     )}
 
                     {/* Status Badge */}
                     {m.status === 'live' ? (
-                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid #EF4444', fontWeight: 800 }}>
-                        <Radio size={10} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                        LIVE • <LiveMinute match={m} />&apos; IN PLAY
-                      </span>
+                      <span className="admin-pill is-danger"><Radio size={10} aria-hidden="true" /> Live, <LiveMinute match={m} />&prime;</span>
                     ) : m.status === 'halftime' ? (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--c-amber)', border: '1px solid #F59E0B', fontWeight: 800 }}>
-                        <Clock size={10} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                        HALF-TIME BREAK
-                      </span>
+                      <span className="admin-pill is-warn"><Clock size={10} aria-hidden="true" /> Half-time</span>
                     ) : isCompleted ? (
-                      <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-muted)' }}>
-                        COMPLETED
-                      </span>
+                      <span className="admin-pill">Played</span>
                     ) : m.status === 'postponed' ? (
-                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.2)', color: 'var(--c-amber)', border: '1px solid currentColor' }}>
-                        POSTPONED
-                      </span>
+                      <span className="admin-pill is-warn">Postponed</span>
                     ) : m.status === 'cancelled' ? (
-                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', border: '1px solid #EF4444' }}>
-                        CANCELLED
-                      </span>
+                      <span className="admin-pill is-danger">Cancelled</span>
                     ) : (
-                      <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', border: '1px solid #10B981' }}>
-                        UPCOMING FIXTURE
-                      </span>
+                      <span className="admin-pill is-ok">Coming up</span>
                     )}
 
                     {m.featured_on_hero && (
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', border: '1px solid #F59E0B' }}>
-                        <Star size={10} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
-                        HERO PINNED
-                      </span>
+                      <span className="admin-pill"><Star size={10} aria-hidden="true" /> On the home page</span>
                     )}
 
                     {m.door_qr_checkin_enabled && (
-                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', border: '1px solid #3B82F6' }}>
-                        <QrCode size={10} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
-                        DOOR QR ({m.checkin_count || 0})
-                      </span>
+                      <span className="admin-pill"><QrCode size={10} aria-hidden="true" /> Door QR, {m.checkin_count || 0} in</span>
                     )}
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', wordBreak: 'break-word' }}>
+                  <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem', overflowWrap: 'anywhere' }}>
                     {m.title ? (
-                      <span>{m.title} <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.95rem' }}>({m.home_team_name} vs {m.away_team_name})</span></span>
+                      <span>{m.title} <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: 'var(--text-sm)' }}>({m.home_team_name} vs {m.away_team_name})</span></span>
                     ) : (
                       `${m.home_team_name} vs ${m.away_team_name}`
                     )}
@@ -971,21 +828,21 @@ export default function AdminMatchesPage({
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     <span className="row row-inline row-tight">
-                      <Calendar size={13} color="var(--club-primary)" />
+                      <Calendar size={13} aria-hidden="true" />
                       {formatShortDay(m.match_date)}
                     </span>
                     <span className="row row-inline row-tight">
-                      <Clock size={13} color="var(--club-primary)" />
+                      <Clock size={13} aria-hidden="true" />
                       {m.match_time ? formatClock(m.match_time) : new Date(m.match_date).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}
                     </span>
                     <span className="row row-inline row-tight">
-                      <MapPin size={13} color="var(--club-primary)" />
+                      <MapPin size={13} aria-hidden="true" />
                       {m.venue}
                     </span>
                     {(isCompleted || isLive || (m.home_score !== undefined && m.home_score !== null && (m.home_score > 0 || m.away_score > 0))) && (
-                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {result?.outcome ? <ResultChip outcome={result.outcome} /> : <Trophy size={13} color="var(--club-primary)" />}
-                        Score: {m.home_score ?? 0} - {m.away_score ?? 0}
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {result?.outcome ? <ResultChip outcome={result.outcome} /> : <Trophy size={13} aria-hidden="true" />}
+                        {m.home_score ?? 0} to {m.away_score ?? 0}
                       </span>
                     )}
                   </div>
@@ -1004,24 +861,12 @@ export default function AdminMatchesPage({
                     <button
                       type="button"
                       onClick={() => handleToggleHeroSlider(m)}
-                      title={m.featured_on_hero ? 'Unpin from Homepage Hero Slider' : 'Spotlight on Homepage Hero Slider'}
-                      style={{
-                        flex: 1,
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: m.featured_on_hero ? '1px solid #F59E0B' : '1px solid var(--border-medium)',
-                        background: m.featured_on_hero ? 'rgba(245, 158, 11, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
-                        color: m.featured_on_hero ? 'var(--c-amber)' : 'var(--text-muted)',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem'
-                      }}
+                      aria-pressed={!!m.featured_on_hero}
+                      title={m.featured_on_hero ? 'Take it off the home page' : 'Feature it on the home page'}
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1 }}
                     >
-                      <Star size={13} fill={m.featured_on_hero ? '#F59E0B' : 'none'} />
+                      <Star size={13} aria-hidden="true" fill={m.featured_on_hero ? 'currentColor' : 'none'} />
                       <span>{m.featured_on_hero ? 'Featured' : 'Feature'}</span>
                     </button>
 
@@ -1030,23 +875,10 @@ export default function AdminMatchesPage({
                       type="button"
                       onClick={() => setQrModalMatch(m)}
                       title="Show the door check-in QR code"
-                      style={{
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: m.door_qr_checkin_enabled ? '1px solid #3B82F6' : '1px solid var(--border-medium)',
-                        background: m.door_qr_checkin_enabled ? 'rgba(59, 130, 246, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
-                        color: m.door_qr_checkin_enabled ? 'var(--c-blue)' : 'var(--text-muted)',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem'
-                      }}
+                      className="btn btn-secondary btn-sm"
                     >
-                      <QrCode size={13} />
-                      <span>QR Gate</span>
+                      <QrCode size={13} aria-hidden="true" />
+                      <span>Door QR</span>
                     </button>
                   </div>
 
@@ -1063,23 +895,10 @@ export default function AdminMatchesPage({
                         type="button"
                         onClick={open}
                         title="Make a story or post graphic for Instagram, Facebook and WhatsApp"
-                        style={{
-                          padding: '0.45rem 0.75rem',
-                          borderRadius: 'var(--radius-sm)',
-                          border: '1px solid color-mix(in srgb, var(--club-primary) 55%, transparent)',
-                          background: 'color-mix(in srgb, var(--club-primary) 14%, transparent)',
-                          color: 'var(--club-ink)',
-                          fontSize: '0.76rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.35rem'
-                        }}
+                        className="btn btn-secondary btn-sm"
                       >
-                        <Share2 size={13} />
-                        <span>{isCompleted && !publicScoreHidden(m, clubTeams) ? 'Share Result' : 'Share Matchday'}</span>
+                        <Share2 size={13} aria-hidden="true" />
+                        <span>{isCompleted && !publicScoreHidden(m, clubTeams) ? 'Share the result' : 'Share matchday'}</span>
                       </button>
                     )}
                   />
@@ -1088,46 +907,20 @@ export default function AdminMatchesPage({
                   {!cupHref && (isCompleted || kickoff(m) <= Date.now()) && <button
                     type="button"
                     onClick={() => (isCompleted ? handleMarkUpcoming(m) : openResult(m))}
-                    style={{
-                      padding: '0.45rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.2)',
-                      background: 'rgba(var(--tint-rgb), 0.06)',
-                      color: isCompleted ? 'var(--text-muted)' : 'var(--text-primary)',
-                      fontSize: '0.76rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem'
-                    }}
+                    className="btn btn-secondary btn-sm"
                   >
-                    <CheckCircle2 size={13} />
-                    <span>{isCompleted ? 'Mark as Upcoming' : 'Enter result'}</span>
+                    <CheckCircle2 size={13} aria-hidden="true" />
+                    <span>{isCompleted ? 'Mark as not played' : 'Enter result'}</span>
                   </button>}
 
                   {/* Live Controller Quick Shortcut */}
                   {isLive && (
                     <Link
                       href={`/${club.slug}/admin/match-center`}
-                      style={{
-                        padding: '0.45rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1px solid #EF4444',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: 'var(--c-red)',
-                        fontSize: '0.76rem',
-                        fontWeight: 800,
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.35rem'
-                      }}
+                      className="btn btn-danger btn-sm"
                     >
-                      <Radio size={13} className="animate-pulse" />
-                      <span>Live Controller</span>
+                      <Radio size={13} aria-hidden="true" />
+                      <span>Open Match Centre</span>
                     </Link>
                   )}
 
@@ -1137,10 +930,11 @@ export default function AdminMatchesPage({
                       href={matchPath(club.slug, m)}
                       target="_blank"
                       className="btn btn-secondary btn-sm"
-                      title="View Public Match Page"
+                      title="View the public match page"
+                      aria-label="View the public match page"
                       style={{ padding: '0.35rem 0.6rem' }}
                     >
-                      <ExternalLink size={13} />
+                      <ExternalLink size={13} aria-hidden="true" />
                     </Link>
 
                     {cupHref ? (
@@ -1158,20 +952,22 @@ export default function AdminMatchesPage({
                           type="button"
                           onClick={() => handleOpenEditModal(m)}
                           className="btn btn-secondary btn-sm"
-                          title="Edit Match Details"
+                          title="Edit the fixture"
+                          aria-label="Edit the fixture"
                           style={{ padding: '0.35rem 0.6rem' }}
                         >
-                          <Edit2 size={13} />
+                          <Edit2 size={13} aria-hidden="true" />
                         </button>
 
                         <button data-needs-full
                           type="button"
                           onClick={() => handleDeleteMatch(m)}
                           className="btn btn-secondary btn-sm"
-                          title="Delete Match"
-                          style={{ padding: '0.35rem 0.6rem', color: 'var(--c-red)' }}
+                          title="Delete the fixture"
+                          aria-label="Delete the fixture"
+                          style={{ padding: '0.35rem 0.6rem', color: 'var(--color-danger)' }}
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={13} aria-hidden="true" />
                         </button>
                       </>
                     )}
@@ -1192,7 +988,7 @@ export default function AdminMatchesPage({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'var(--color-scrim)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
@@ -1279,10 +1075,10 @@ export default function AdminMatchesPage({
                       style={{
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-md)',
-                        border: form.match_type === type ? `2px solid ${club.primary_color}` : '1px solid var(--border-medium)',
-                        background: form.match_type === type ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--shade-rgb), 0.3)',
+                        border: form.match_type === type ? '2px solid var(--color-accent)' : '1px solid var(--border-medium)',
+                        background: form.match_type === type ? 'var(--color-accent-wash)' : 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
                         color: form.match_type === type ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        fontWeight: 800,
+                        fontWeight: 600,
                         fontSize: '0.85rem',
                         cursor: 'pointer',
                         textTransform: 'capitalize',
@@ -1290,12 +1086,12 @@ export default function AdminMatchesPage({
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.4rem',
-                        transition: 'all 0.2s'
+                        transition: 'background-color 0.2s, border-color 0.2s, color 0.2s'
                       }}
                     >
-                      {type === 'internal' && <Users size={15} color="var(--club-primary)" />}
-                      {type === 'friendly' && <Shield size={15} color="var(--c-blue)" />}
-                      {type === 'tournament' && <Trophy size={15} color="var(--c-amber)" />}
+                      {type === 'internal' && <Users size={15} aria-hidden="true" />}
+                      {type === 'friendly' && <Shield size={15} aria-hidden="true" />}
+                      {type === 'tournament' && <Trophy size={15} aria-hidden="true" />}
                       <span>{type === 'friendly' ? 'League / Friendly' : type}</span>
                     </button>
                   ))}
@@ -1303,7 +1099,7 @@ export default function AdminMatchesPage({
 
                 {/* Internal Type Quick Presets */}
                 {form.match_type === 'internal' && (
-                  <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)', marginBottom: '0.4rem' }}>
                       Intra-Club Presets:
                     </div>
@@ -1438,7 +1234,7 @@ export default function AdminMatchesPage({
                     maxLength={8}
                     value={form.opponent_short_name}
                     onChange={e => setForm({ ...form, opponent_short_name: e.target.value.toUpperCase() })}
-                    style={{ textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}
+                    style={{ fontVariantNumeric: 'tabular-nums' }}
                   />
                 </div>
 
@@ -1553,8 +1349,8 @@ export default function AdminMatchesPage({
                         style={{
                           fontSize: '0.72rem',
                           padding: '0.3rem 0.6rem',
-                          border: form.match_flyer_url === preset.url ? `1px solid ${club.primary_color}` : '1px solid var(--border-subtle)',
-                          background: form.match_flyer_url === preset.url ? 'rgba(16, 185, 129, 0.15)' : undefined
+                          border: form.match_flyer_url === preset.url ? '1px solid var(--color-accent)' : '1px solid var(--border-subtle)',
+                          background: form.match_flyer_url === preset.url ? 'var(--color-accent-wash)' : undefined
                         }}
                       >
                         {preset.name}
@@ -1583,7 +1379,7 @@ export default function AdminMatchesPage({
               {/* Operational Controls & Progression Status Section */}
               <div
                 style={{
-                  background: 'rgba(var(--shade-rgb), 0.35)',
+                  background: 'color-mix(in oklab, var(--color-sidebar) 35%, transparent)',
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
                   border: '1px solid var(--border-medium)',
@@ -1594,13 +1390,13 @@ export default function AdminMatchesPage({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Match Status & Scoring
+                  <div style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Status and score
                   </div>
                   {(form.status === 'live' || form.status === 'halftime') && (
-                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid #EF4444', fontWeight: 800, fontSize: '0.72rem' }}>
-                      <Radio size={11} className="animate-pulse" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                      MATCH IN PROGRESS • LIVE SCORES PRESERVED
+                    <span className="admin-pill is-danger">
+                      <Radio size={11} aria-hidden="true" />
+                      In play, the live score is kept
                     </span>
                   )}
                 </div>
@@ -1608,7 +1404,7 @@ export default function AdminMatchesPage({
                 {/* Match Status Selector */}
                 <div className="form-group">
                   <label className="form-label" htmlFor="form-status">
-                    Fixture Progression Status *
+                    Status *
                   </label>
                   <select
                     id="form-status"
@@ -1623,15 +1419,15 @@ export default function AdminMatchesPage({
                       }));
                     }}
                     style={{
-                      background: form.status === 'live' ? 'rgba(239, 68, 68, 0.15)' : form.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : undefined,
-                      borderColor: form.status === 'live' ? '#EF4444' : form.status === 'completed' ? '#10B981' : undefined,
+                      background: form.status === 'live' ? 'var(--color-danger-wash)' : form.status === 'completed' ? 'var(--color-accent-wash)' : undefined,
+                      borderColor: form.status === 'live' ? 'var(--color-danger)' : form.status === 'completed' ? 'var(--color-accent)' : undefined,
                       fontWeight: 700
                     }}
                   >
-                    <option value="upcoming">Upcoming (Scheduled Fixture)</option>
-                    <option value="live">Live (Match In Play)</option>
-                    <option value="halftime">Half-Time Break</option>
-                    <option value="completed">Completed (Full-Time Final Result)</option>
+                    <option value="upcoming">Coming up</option>
+                    <option value="live">Live, in play</option>
+                    <option value="halftime">Half-time</option>
+                    <option value="completed">Played, full-time result</option>
                     <option value="postponed">Postponed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
@@ -1649,7 +1445,7 @@ export default function AdminMatchesPage({
                 <div style={{
                   padding: '0.85rem',
                   borderRadius: 'var(--radius-md)',
-                  background: 'rgba(var(--tint-rgb), 0.03)',
+                  background: 'color-mix(in oklab, var(--color-ink) 3%, transparent)',
                   border: '1px solid var(--border-subtle)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
@@ -1704,7 +1500,7 @@ export default function AdminMatchesPage({
                       type="checkbox"
                       checked={form.featured_on_hero}
                       onChange={e => setForm({ ...form, featured_on_hero: e.target.checked })}
-                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#F59E0B', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
                     />
                     <div style={{ flex: 1 }}>
                       <label htmlFor="toggle-hero" style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
@@ -1723,7 +1519,7 @@ export default function AdminMatchesPage({
                       type="checkbox"
                       checked={form.door_qr_checkin_enabled}
                       onChange={e => setForm({ ...form, door_qr_checkin_enabled: e.target.checked })}
-                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: '#3B82F6', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
                     />
                     <div style={{ flex: 1 }}>
                       <label htmlFor="toggle-door-qr" style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
@@ -1761,7 +1557,7 @@ export default function AdminMatchesPage({
 
       {resultMatch && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}
+          style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}
           onClick={(e) => { if (e.target === e.currentTarget) setResultMatch(null); }}
         >
           <form
@@ -1774,7 +1570,7 @@ export default function AdminMatchesPage({
           >
             <h2 id="result-title" style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>Final score</h2>
             <p className="text-note" style={{ marginBottom: '1.25rem' }}>
-              vs {resultMatch.opponent_name} · <LocalTime value={resultMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />. This shows on the public Results straight away.
+              vs {resultMatch.opponent_name}, <LocalTime value={resultMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />. This shows on the public Results straight away.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'end', marginBottom: '1.5rem' }}>
               <div>
@@ -1803,7 +1599,7 @@ export default function AdminMatchesPage({
       {qrModalMatch && (
         <DoorCheckinQrModal
           title={qrModalMatch.title || `${qrModalMatch.home_team_name} vs ${qrModalMatch.away_team_name}`}
-          subtitle={`${qrModalMatch.venue} • ${formatShortDay(qrModalMatch.match_date)} at ${formatClock(qrModalMatch.match_time || '15:00')}`}
+          subtitle={`${qrModalMatch.venue}, ${formatShortDay(qrModalMatch.match_date)} at ${formatClock(qrModalMatch.match_time || '15:00')}`}
           checkinUrl={doorCheckinUrl}
           onClose={() => setQrModalMatch(null)}
           extraActions={
@@ -1817,7 +1613,7 @@ export default function AdminMatchesPage({
               className="btn btn-primary btn-sm row"
             >
               <Printer size={14} />
-              <span>Print Gate Poster</span>
+              <span>Print the gate poster</span>
             </button>
           }
         />
@@ -1830,7 +1626,7 @@ export default function AdminMatchesPage({
         <CheckinPoster
           club={club}
           title={printPosterMatch.title || `${printPosterMatch.home_team_name} vs ${printPosterMatch.away_team_name}`}
-          details={`${printPosterMatch.venue} • ${new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${formatClock(printPosterMatch.match_time || '15:00')}`}
+          details={`${printPosterMatch.venue}, ${new Date(printPosterMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })} at ${formatClock(printPosterMatch.match_time || '15:00')}`}
           checkinUrl={doorCheckinUrl}
           onClose={() => setPrintPosterMatch(null)}
         />
