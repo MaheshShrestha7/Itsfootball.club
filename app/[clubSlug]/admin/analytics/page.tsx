@@ -31,7 +31,6 @@ export default function AdminAnalyticsPage({
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>AUDIENCE & CLUB ANALYTICS</span>
         <h1 className="stat-value">
           Club Public Page Analytics
         </h1>

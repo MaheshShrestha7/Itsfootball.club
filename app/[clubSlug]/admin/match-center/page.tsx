@@ -33,6 +33,12 @@ import {
   Trophy,
   ArrowLeftRight,
   ChevronRight,
+  Goal,
+  Target,
+  Undo2,
+  RectangleVertical,
+  Mic,
+  Megaphone,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -61,6 +67,21 @@ const PERIOD_LABEL: Partial<Record<MatchPeriod, string>> = {
 };
 
 // Fixture picker order: live, upcoming, postponed, results, cancelled
+/** The mark on each event button: a drawn icon per event type; cards are filled in their colour */
+function EventIcon({ type, size }: { type: MatchEventType; size: number }) {
+  if (type === 'yellow_card' || type === 'red_card') {
+    const fill = type === 'yellow_card' ? 'var(--color-warn)' : 'var(--color-danger)';
+    return <RectangleVertical size={size} fill={fill} color={fill} aria-hidden="true" />;
+  }
+  const Icon = type === 'goal' ? Goal
+    : type === 'penalty' ? Target
+    : type === 'own_goal' ? Undo2
+    : type === 'sub' ? ArrowLeftRight
+    : type === 'commentary' ? Mic
+    : Megaphone;
+  return <Icon size={size} aria-hidden="true" />;
+}
+
 const STATUS_ORDER: Record<string, number> = { live: 0, halftime: 0, upcoming: 1, postponed: 2, completed: 3, cancelled: 4 };
 // Event player chips: by shirt number, players without one last
 const byShirtNumber = (a: { jersey_number?: number | null; full_name: string }, b: { jersey_number?: number | null; full_name: string }) =>
@@ -550,9 +571,6 @@ export default function AdminMatchCenterControllerPage({
         marginBottom: '1.75rem',
       }}>
         <div style={{ minWidth: 0, maxWidth: '100%' }}>
-          <span className="badge badge-live mc-phone-hide" style={{ marginBottom: '0.4rem' }}>
-            <span className="pulse-dot" /> MATCHDAY
-          </span>
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.25 }}>
             Match Centre
           </h1>
@@ -1096,36 +1114,36 @@ export default function AdminMatchCenterControllerPage({
               return `${clubSides[0] === s ? 'Our Club' : 'Opponent'} - ${venue}`;
             };
 
-            type QuickAction = { key: string; label: string; emoji: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string; team?: string };
+            type QuickAction = { key: string; label: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string; team?: string };
             let quickActions: QuickAction[];
             if (clubSides.length === 1) {
               // A normal fixture: the club against an outside opponent
               const ourSide = clubSides[0];
               const oppSide: 'home' | 'away' = ourSide === 'home' ? 'away' : 'home';
               quickActions = [
-                { key: 'goal-us', label: 'Goal', emoji: '⚽', eventType: 'goal', side: ourSide, accent: '#10B981' },
-                { key: 'goal-opp', label: 'Opponent Goal', emoji: '🥅', eventType: 'goal', side: oppSide, accent: '#EF4444' },
-                { key: 'penalty-us', label: 'Penalty', emoji: '🎯', eventType: 'penalty', side: ourSide, accent: '#10B981' },
-                { key: 'penalty-opp', label: 'Opponent Penalty', emoji: '🎯', eventType: 'penalty', side: oppSide, accent: '#EF4444' },
+                { key: 'goal-us', label: 'Goal', eventType: 'goal', side: ourSide, accent: '#10B981' },
+                { key: 'goal-opp', label: 'Opponent Goal', eventType: 'goal', side: oppSide, accent: '#EF4444' },
+                { key: 'penalty-us', label: 'Penalty', eventType: 'penalty', side: ourSide, accent: '#10B981' },
+                { key: 'penalty-opp', label: 'Opponent Penalty', eventType: 'penalty', side: oppSide, accent: '#EF4444' },
                 // An own goal is logged on the side of the player who scored it; the goal counts for the other side
-                { key: 'og-opp', label: 'Opponent Own Goal', emoji: '🙃', eventType: 'own_goal', side: oppSide, accent: '#10B981' },
-                { key: 'og-us', label: 'Own Goal (ours)', emoji: '🙃', eventType: 'own_goal', side: ourSide, accent: '#EF4444' },
-                { key: 'yellow-us', label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
-                { key: 'yellow-opp', label: 'Opponent Yellow', emoji: '🟨', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
-                { key: 'red-us', label: 'Red Card', emoji: '🟥', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
-                { key: 'red-opp', label: 'Opponent Red', emoji: '🟥', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
-                { key: 'sub-us', label: 'Substitution', emoji: '🔄', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
-                { key: 'sub-opp', label: 'Opponent Sub', emoji: '🔄', eventType: 'sub', side: oppSide, accent: '#3B82F6' },
+                { key: 'og-opp', label: 'Opponent Own Goal', eventType: 'own_goal', side: oppSide, accent: '#10B981' },
+                { key: 'og-us', label: 'Own Goal (ours)', eventType: 'own_goal', side: ourSide, accent: '#EF4444' },
+                { key: 'yellow-us', label: 'Yellow Card', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
+                { key: 'yellow-opp', label: 'Opponent Yellow', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
+                { key: 'red-us', label: 'Red Card', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
+                { key: 'red-opp', label: 'Opponent Red', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
+                { key: 'sub-us', label: 'Substitution', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
+                { key: 'sub-opp', label: 'Opponent Sub', eventType: 'sub', side: oppSide, accent: '#3B82F6' },
               ];
             } else {
               // Both sides are the club's own teams (or both outside teams): the same actions for each, named per team
               const perSide: Omit<QuickAction, 'key' | 'side' | 'team'>[] = [
-                { label: 'Goal', emoji: '⚽', eventType: 'goal', accent: '#10B981' },
-                { label: 'Penalty', emoji: '🎯', eventType: 'penalty', accent: '#10B981' },
-                { label: 'Own Goal', emoji: '🙃', eventType: 'own_goal', accent: '#EF4444' },
-                { label: 'Yellow Card', emoji: '🟨', eventType: 'yellow_card', accent: '#F59E0B' },
-                { label: 'Red Card', emoji: '🟥', eventType: 'red_card', accent: '#EF4444' },
-                { label: 'Substitution', emoji: '🔄', eventType: 'sub', accent: '#3B82F6' },
+                { label: 'Goal', eventType: 'goal', accent: '#10B981' },
+                { label: 'Penalty', eventType: 'penalty', accent: '#10B981' },
+                { label: 'Own Goal', eventType: 'own_goal', accent: '#EF4444' },
+                { label: 'Yellow Card', eventType: 'yellow_card', accent: '#F59E0B' },
+                { label: 'Red Card', eventType: 'red_card', accent: '#EF4444' },
+                { label: 'Substitution', eventType: 'sub', accent: '#3B82F6' },
               ];
               quickActions = perSide.flatMap(a => (['home', 'away'] as const).map(side => ({
                 ...a, key: `${a.eventType}-${side}`, side, team: sideName(side),
@@ -1148,9 +1166,9 @@ export default function AdminMatchCenterControllerPage({
               : sideLineupIds.length ? sideLineupIds.map(id => selectedSquad.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p)
               : selectedSquad.length <= 20 ? [...selectedSquad].sort(byShirtNumber) : [];
 
-            const otherActions: { key: string; label: string; emoji: string; eventType: MatchEventType }[] = [
-              { key: 'commentary', label: 'Commentary', emoji: '🎙️', eventType: 'commentary' },
-              { key: 'whistle', label: 'Period Whistle', emoji: '📢', eventType: 'whistle' },
+            const otherActions: { key: string; label: string; eventType: MatchEventType }[] = [
+              { key: 'commentary', label: 'Commentary', eventType: 'commentary' },
+              { key: 'whistle', label: 'Period Whistle', eventType: 'whistle' },
             ];
 
             return (
@@ -1215,7 +1233,7 @@ export default function AdminMatchCenterControllerPage({
                               textAlign: 'center',
                             }}
                           >
-                            <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{a.emoji}</span>
+                            <EventIcon type={a.eventType} size={20} />
                             <span>{a.label}</span>
                             {a.team && (
                               <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1255,7 +1273,7 @@ export default function AdminMatchCenterControllerPage({
                               color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                             }}
                           >
-                            <span>{a.emoji}</span>
+                            <EventIcon type={a.eventType} size={16} />
                             <span>{a.label}</span>
                           </button>
                         );

@@ -226,9 +226,6 @@ export default function AdminSeasonsPage({
         marginBottom: '2rem',
       }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
-            CLUB GOVERNANCE • SEASONS
-          </span>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
             Season Management
           </h1>
@@ -324,8 +321,8 @@ export default function AdminSeasonsPage({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span>📅 From: <strong className="text-primary">{seasonDay(activeSeason.start_date)}</strong></span>
-                <span>🏁 Until: <strong className="text-primary">{seasonDay(activeSeason.end_date)}</strong></span>
+                <span>From <strong className="text-primary">{seasonDay(activeSeason.start_date)}</strong></span>
+                <span>Until <strong className="text-primary">{seasonDay(activeSeason.end_date)}</strong></span>
               </div>
             </div>
 

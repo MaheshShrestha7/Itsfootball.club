@@ -1,6 +1,7 @@
 import React from 'react';
 import { adminMetadata } from '@/lib/seo';
 import AdminLayoutClient from './AdminLayoutClient';
+import './admin.css';
 
 // Admin dashboard; each admin screen below sets its own title the same way
 export const generateMetadata = adminMetadata('Admin Dashboard', '', 'Run fixtures, squad, members, sponsors and branding');

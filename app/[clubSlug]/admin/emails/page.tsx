@@ -187,7 +187,6 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
   return (
     <div style={{ maxWidth: '960px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EMAIL</span>
         <h1 className="stat-value">Email Notifications</h1>
         <p className="text-body">
           Automatic reminders and one-off notices to your members, sent from {club.name} via itsfootball.club.

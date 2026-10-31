@@ -167,7 +167,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   ];
 
   return (
-    <header data-nav-fits={navFits ? undefined : 'false'} data-nav-drop={navFits && dropCount ? dropCount : undefined} style={{
+    <header className="club-navbar" data-nav-fits={navFits ? undefined : 'false'} data-nav-drop={navFits && dropCount ? dropCount : undefined} style={{
       position: 'sticky',
       top: 0,
       zIndex: 50,

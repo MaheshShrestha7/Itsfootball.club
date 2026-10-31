@@ -68,7 +68,6 @@ export default function AdminCommitteePage({
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
         <div style={{ minWidth: 0 }}>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>EXECUTIVE COMMITTEE</span>
           <h1 className="stat-value">
             Executive Committee Appointments
           </h1>

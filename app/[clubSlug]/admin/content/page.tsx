@@ -145,7 +145,6 @@ export default function AdminContentPage({
         marginBottom: '2rem',
       }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CONTENT & MEDIA CMS</span>
           <h1 className="stat-value">
             Content & Media Management
           </h1>

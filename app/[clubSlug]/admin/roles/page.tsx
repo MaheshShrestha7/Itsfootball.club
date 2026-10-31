@@ -131,7 +131,6 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
   return (
     <div className="stack">
       <div>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem', letterSpacing: '0.05em' }}>PEOPLE • ACCESS</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <KeyRound size={30} /> Roles &amp; Permissions
         </h1>

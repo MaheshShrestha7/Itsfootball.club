@@ -229,7 +229,6 @@ export default function AdminBrandingPage({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB CONFIGURATION & BRANDING</span>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
           Club Configuration & Visual Interface
         </h1>
@@ -688,7 +687,7 @@ export default function AdminBrandingPage({
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
               >
                 <Sparkles size={13} />
-                <span>⭐ Open Hero Slider Pins Manager</span>
+                <span>Open Hero Slider Pins Manager</span>
               </Link>
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>

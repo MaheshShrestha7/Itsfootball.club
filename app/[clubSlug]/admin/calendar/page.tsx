@@ -167,7 +167,6 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
     <div className="admin-cal" onClick={closeAll}>
       <div className="admin-cal-head">
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>FIXTURES & EVENTS</span>
           <h1 className="stat-value">Calendar</h1>
           <p className="text-body">Matches, training, events and tournaments in one place, past and upcoming.</p>
         </div>
@@ -516,8 +515,7 @@ function AddPopover({ day, time, rect, links, onClose }: {
   return (
     <div className="admin-cal-pop" role="dialog" aria-label={`Add on ${title}`} style={{ left, top, width }} onClick={e => e.stopPropagation()}>
       <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} /></button>
-      <span className="admin-cal-pop-tag" style={{ '--k': 'var(--club-primary)' } as React.CSSProperties}>Add</span>
-      <h3>{title}</h3>
+      <h3>Add on {title}</h3>
       <div className="admin-cal-pop-links admin-cal-pop-stack">
         {links.map(l => (
           <Link key={l.href} href={l.href} className="btn btn-sm btn-secondary"><Plus size={14} /> {l.text}</Link>
