@@ -19,8 +19,8 @@ import PlayerAvatar from '@/components/PlayerAvatar';
 import SquadRoster from '@/components/SquadRoster';
 import { canSendRenewal, sendRenewalEmail } from './renewalEmail';
 import {
-  Search, Plus, FileSpreadsheet, X, ChevronLeft, ChevronRight, Phone, Mail, Edit2, Activity, Trash2,
-  MessageSquare, List, LayoutGrid, Clock, AlertTriangle, CheckCircle2,
+  Search, Plus, FileSpreadsheet, X, ChevronLeft, Phone, Mail, Edit2, Activity, Trash2,
+  MessageSquare, List, LayoutGrid, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
 import { useMemberHealth } from '@/lib/use-member-health';
 import MedicalNote from '@/components/admin/MedicalNote';
@@ -43,17 +43,21 @@ const roleLine = (m: ClubMember, junior: boolean) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** "ACTIVE to 14 Mar 2027", "EXPIRES IN 12 DAYS", ... with its colour */
-function membershipLabel(info: MembershipInfo): [string, string] {
+type Tone = 'ok' | 'warn' | 'danger';
+
+/** "Active to 14 Mar 2027", "Expires in 12 days", ... with a short form for phones and its tone */
+function membershipLabel(info: MembershipInfo): { text: string; short: string; tone: Tone } {
   switch (info.state) {
-    case 'expiring': return [`EXPIRES IN ${plural(info.days ?? 0, 'DAY')}`, 'var(--c-amber)'];
-    case 'expired': return [`EXPIRED ${fmtDate(info.expires).toUpperCase()}`, 'var(--c-red)'];
-    case 'suspended': return ['SUSPENDED', 'var(--c-red)'];
-    case 'pending': return ['TO REVIEW', 'var(--c-amber)'];
-    case 'rejected': return ['REJECTED', 'var(--c-red)'];
-    default: return [info.expires ? `ACTIVE to ${fmtDate(info.expires)}` : 'ACTIVE', 'var(--c-green)'];
+    case 'expiring': return { text: `Expires in ${plural(info.days ?? 0, 'day')}`, short: `${plural(info.days ?? 0, 'day')} left`, tone: 'warn' };
+    case 'expired': return { text: `Expired ${fmtDate(info.expires)}`, short: 'Expired', tone: 'danger' };
+    case 'suspended': return { text: 'Suspended', short: 'Suspended', tone: 'danger' };
+    case 'pending': return { text: 'To review', short: 'To review', tone: 'warn' };
+    case 'rejected': return { text: 'Rejected', short: 'Rejected', tone: 'danger' };
+    default: return { text: info.expires ? `Active to ${fmtDate(info.expires)}` : 'Active', short: 'Active', tone: 'ok' };
   }
 }
+
+const Pill = ({ m }: { m: { text: string; tone: Tone } }) => <span className={`admin-pill is-${m.tone}`}>{m.text}</span>;
 
 /** One season's totals (a member can have more than one row for it) */
 function seasonTotals(rows: PlayerStats[]) {
@@ -65,14 +69,14 @@ function seasonTotals(rows: PlayerStats[]) {
 }
 type Totals = ReturnType<typeof seasonTotals>;
 
-/** "7 apps · 5 goals" (at most three things), or '—' */
+/** "7 apps, 5 goals" (at most three things), or '—' */
 function seasonLine(t: Totals | null): string {
   if (!t || (!t.appearances && !t.goals && !t.assists && !t.clean_sheets)) return '—';
   const parts = [plural(t.appearances, 'app')];
   if (t.goals) parts.push(plural(t.goals, 'goal'));
   if (t.clean_sheets) parts.push(plural(t.clean_sheets, 'clean sheet'));
   if (t.assists) parts.push(plural(t.assists, 'assist'));
-  return parts.slice(0, 3).join(' · ');
+  return parts.slice(0, 3).join(', ');
 }
 
 type PeopleSort = 'surname' | 'first' | 'number' | 'games' | 'newest';
@@ -138,7 +142,7 @@ export default function PeopleDirectory({
     const shirt = m.jersey_number != null ? `#${m.jersey_number}` : '';
     if (teams.length <= 1) return shirt || '—';
     if (!names.length && !shirt) return isPlayerRole(m) ? 'No team' : '—';
-    return [names.join(', ') || 'No team', shirt].filter(Boolean).join(' · ');
+    return [names.join(', ') || 'No team', shirt].filter(Boolean).join(', ');
   };
   const totalsFor = (m: ClubMember) => {
     const rows = playerStats.filter(s => s.member_id === m.id && inSeason(s.season, activeSeason, activeSeason));
@@ -205,70 +209,79 @@ export default function PeopleDirectory({
       <style>{`
         .ppl-filter { flex: 1 1 150px; min-width: 0; }
         @media (max-width: 599px) { .ppl-filter { flex-basis: 100%; } }
-        .ppl-chips { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-        .ppl-chip { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; min-height: 40px; padding: 0 0.9rem; border-radius: 999px; border: 1px solid var(--border-medium); background: var(--bg-surface); color: var(--text-secondary); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
-        .ppl-chip[aria-pressed="true"] { background: var(--club-primary); border-color: var(--club-primary); color: var(--club-primary-contrast, #090D16); }
-        .ppl-chip span { font-weight: 800; opacity: 0.75; }
-        .ppl-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
-        .ppl-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .ppl-table th { text-align: left; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 800; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border-subtle); }
-        .ppl-table td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; color: var(--text-secondary); }
-        .ppl-table tr.is-selected td { background: rgba(16, 185, 129, 0.10); }
-        .ppl-table tbody tr:hover td { background: rgba(var(--tint-rgb), 0.04); }
-        .ppl-name { display: flex; align-items: center; gap: 0.65rem; background: none; border: none; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 40px; }
-        .ppl-name strong { color: var(--text-primary); font-weight: 800; display: block; }
-        .ppl-sub { font-size: 0.75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; display: block; }
-        .ppl-pill { display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; padding: 0.15rem 0.45rem; border-radius: 6px; border: 1px solid currentColor; white-space: nowrap; }
-        .ppl-list { display: none; flex-direction: column; gap: 0.5rem; }
-        .ppl-item { display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: 60px; padding: 0.6rem 0.8rem; border-radius: 14px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+        .ppl-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); align-items: start; }
+        .ppl-table tr.is-selected td { background: var(--color-accent-wash); }
+        .ppl-name { display: flex; align-items: center; gap: var(--space-sm); min-height: 40px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+        .ppl-name strong { display: block; color: var(--color-ink); font-weight: 600; }
+        .ppl-name svg { margin-left: var(--space-2xs); vertical-align: -2px; }
+        .ppl-sub { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); color: var(--color-muted); }
+        .ppl-list { display: none; flex-direction: column; }
+        .ppl-item { display: flex; align-items: center; gap: var(--space-sm); width: 100%; min-height: 60px; padding: var(--space-xs) var(--space-sm); border: 0; border-top: 1px solid var(--color-rule); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+        .ppl-item:first-child { border-top: 0; }
         .ppl-item .ppl-sub { max-width: none; }
-        .ppl-panel { background: var(--bg-surface); border: 1px solid var(--border-medium); border-radius: var(--radius-lg); display: flex; flex-direction: column; }
-        .ppl-tabs { display: flex; gap: 4px; background: rgba(0, 0, 0, 0.25); padding: 4px; border-radius: 12px; }
-        .ppl-tabs button { flex: 1; min-height: 40px; border: none; border-radius: 9px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-        .ppl-tabs button[aria-selected="true"] { background: var(--club-primary); color: var(--club-primary-contrast, #090D16); font-weight: 800; }
-        .ppl-card { background: rgba(var(--tint-rgb), 0.04); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 0.7rem 0.85rem; }
-        .ppl-card-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; }
-        .ppl-card-value { font-weight: 800; color: var(--text-primary); margin-top: 2px; }
-        .ppl-card-note { font-size: 0.8rem; color: var(--text-secondary); }
-        .ppl-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
-        .ppl-quick > * { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.75rem; font-weight: 700; border-radius: 12px; border: 1px solid var(--border-medium); background: var(--bg-surface-elevated); color: var(--text-primary); text-decoration: none; cursor: pointer; font-family: inherit; }
-        .ppl-panel .ppl-table th, .ppl-panel .ppl-table td { padding: 0.5rem 0.45rem; }
+        .ppl-panel { display: flex; flex-direction: column; background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-card); }
+        .ppl-panel h2 { margin: 0; font-size: var(--text-lg); font-weight: 600; color: var(--color-ink); outline: none; }
+        .ppl-card { padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-control); background: var(--color-paper); }
+        .ppl-card-label { font-size: var(--text-xs); color: var(--color-muted); }
+        .ppl-card-value { margin-top: var(--space-3xs); font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+        .ppl-card-note { font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
+        .ppl-card-check { display: flex; align-items: center; gap: var(--space-2xs); margin-top: var(--space-2xs); font-size: var(--text-sm); font-weight: 600; color: var(--color-warn); }
+        .ppl-card-check.is-urgent { color: var(--color-danger); }
+        .ppl-card-check.is-clear { color: var(--color-accent-ink); font-weight: 500; }
+        .ppl-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
+        .ppl-quick > * { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3xs); min-height: 52px; border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); background: var(--color-paper); color: var(--color-ink); font: inherit; font-size: var(--text-xs); font-weight: 600; text-decoration: none; cursor: pointer; }
+        .ppl-quick > * svg { color: var(--color-accent-ink); }
+        .ppl-quick > .is-off { color: var(--color-muted); cursor: default; }
+        .ppl-quick > .is-off svg { color: var(--color-muted); }
+        .ppl-panel .admin-tabs { margin-bottom: 0; }
         .ppl-backdrop { display: none; }
         .ppl-back { display: none; }
-        .ppl-apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem; }
+        .ppl-apps { list-style: none; margin: 0; padding: 0 var(--space-xs) var(--space-xs); }
+        .ppl-apps li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-xs); border-top: 1px solid var(--color-rule); }
+        .ppl-apps li:first-child { border-top: 0; }
+        .ppl-apps strong { color: var(--color-ink); font-weight: 600; }
+        .ppl-apps .ppl-sub { max-width: none; }
+        .ppl-apps .ppl-warn { display: block; font-size: var(--text-xs); color: var(--color-warn); }
+        .ppl-layout-switch { display: inline-flex; padding: var(--space-3xs); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); }
+        .ppl-layout-switch button { display: grid; place-items: center; min-width: 40px; min-height: max(32px, var(--control) - 6px); border: 0; border-radius: calc(var(--radius-control) - 2px); background: none; color: var(--color-muted); cursor: pointer; }
+        .ppl-layout-switch button[aria-pressed="true"] { background: var(--color-accent-wash); color: var(--color-accent-ink); }
+        @media (hover: hover) {
+          .ppl-table tbody tr:hover td { background: var(--color-paper-3); }
+          .ppl-item:hover { background: var(--color-paper-3); }
+          .ppl-quick > a:hover, .ppl-quick > button:hover { border-color: var(--color-muted); }
+        }
         @media (min-width: 1500px) {
           .ppl-layout.has-panel { grid-template-columns: minmax(0, 1fr) 380px; }
-          .ppl-panel { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
+          .ppl-panel { position: sticky; top: calc(var(--admin-nav-h) + var(--space-md)); max-height: calc(100dvh - var(--admin-nav-h) - 2rem); overflow: auto; }
         }
         @media (max-width: 1499px) {
-          .ppl-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); z-index: 1000; overflow: auto; border-radius: 0; box-shadow: -10px 0 40px rgba(0, 0, 0, 0.45); }
-          .ppl-backdrop { display: block; position: fixed; inset: 0; z-index: 999; background: rgba(0, 0, 0, 0.5); border: none; }
+          .ppl-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); z-index: var(--z-modal); overflow: auto; border-radius: 0; box-shadow: var(--shadow-drawer); }
+          .ppl-backdrop { display: block; position: fixed; inset: 0; z-index: calc(var(--z-modal) - 1); border: 0; background: var(--color-scrim); }
         }
         @media (max-width: 759px) {
           .ppl-table-wrap { display: none; }
           .ppl-list { display: flex; }
-          .ppl-panel { width: 100%; border: none; }
+          .ppl-panel { width: 100%; border: 0; padding-top: env(safe-area-inset-top); }
           .ppl-back { display: inline-flex; }
           .ppl-close { display: none; }
           .ppl-desktop-only { display: none !important; }
-          .ppl-apps, .ppl-apps-more { display: none; }
         }
       `}</style>
 
       {/* Header */}
-      <div className="row row-wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', marginBottom: '1.25rem' }}>
-        <div style={{ minWidth: 0 }}>
-          <h1 className="stat-value" style={{ margin: 0 }}>People</h1>
-          <p className="text-body" style={{ margin: '0.25rem 0 0' }}>
+      <div className="admin-head">
+        <div>
+          <h1>People</h1>
+          <p>
             Everyone at the club in one place: players, juniors, supporters and staff. Tap someone to see their membership, teams and stats.
           </p>
         </div>
-        <div className="row row-wrap" style={{ gap: '0.5rem' }}>
-          <button type="button" onClick={actions.openBulk} className="btn btn-secondary row" style={{ gap: '0.45rem' }}>
-            <FileSpreadsheet size={16} color="var(--c-green)" /> <span>Import / Export</span>
+        <div className="admin-head-actions">
+          <button type="button" onClick={actions.openBulk} className="btn btn-secondary">
+            <FileSpreadsheet size={16} aria-hidden="true" /> <span>Import or export</span>
           </button>
-          <button type="button" onClick={actions.openAdd} className="btn btn-primary row" style={{ gap: '0.45rem' }}>
-            <Plus size={17} /> <span>Add person</span>
+          <button type="button" onClick={actions.openAdd} className="btn btn-primary">
+            <Plus size={17} aria-hidden="true" /> <span>Add person</span>
           </button>
         </div>
       </div>
@@ -277,59 +290,51 @@ export default function PeopleDirectory({
 
       {/* Applications waiting */}
       {canMembers && pending.length > 0 && (
-        <section aria-label="Applications waiting" className="glass-panel" style={{ padding: '0.9rem 1rem', marginBottom: '1rem', borderLeft: '4px solid var(--c-amber)' }}>
-          <div className="row row-wrap" style={{ justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.7rem' }}>
-            <strong className="row" style={{ gap: '0.45rem', color: 'var(--text-primary)' }}>
-              <Clock size={16} color="var(--c-amber)" /> {plural(pending.length, 'application')} waiting
-            </strong>
-            <button type="button" data-view-ok onClick={() => onReviewApplication()} className="btn btn-secondary btn-sm">
-              Review all
-            </button>
+        <section aria-labelledby="ppl-apps-title" className="admin-panel" style={{ marginBottom: 'var(--space-md)' }}>
+          <div className="admin-panel-head">
+            <h2 id="ppl-apps-title">{plural(pending.length, 'application')} waiting</h2>
+            <button type="button" data-view-ok onClick={() => onReviewApplication()} className="btn btn-secondary btn-sm">Review all</button>
           </div>
-          <div className="ppl-apps">
+          <ul className="ppl-apps">
             {pending.slice(0, 3).map(m => {
               const payment = signupPayments[m.id];
               const age = m.date_of_birth ? ageOn(m.date_of_birth, today) : null;
               const supporter = personRoles(m).some(r => r.toLowerCase() === 'supporter');
-              const badge = payment === 'paid' ? ['PAID', 'var(--c-green)'] : payment === 'awaiting_review' ? ['RECEIPT TO CHECK', 'var(--c-amber)'] : null;
               return (
-                <div key={m.id} data-application={m.full_name} className="ppl-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <div className="row" style={{ gap: '0.5rem', justifyContent: 'space-between' }}>
-                    <strong style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</strong>
-                    {badge && <span className="ppl-pill" style={{ color: badge[1] }}>{badge[0]}</span>}
-                  </div>
-                  <span className="ppl-card-note">
-                    {[supporter ? 'Supporter' : 'Player', m.membership_tier, age !== null ? `age ${age}` : '', m.guardian_name ? `parent ${m.guardian_name}` : ''].filter(Boolean).join(' · ')}
+                <li key={m.id} data-application={m.full_name}>
+                  <span style={{ minWidth: 0 }}>
+                    <strong>{m.full_name}</strong>{' '}
+                    {payment === 'paid' && <span className="admin-pill is-ok">Paid</span>}
+                    {payment === 'awaiting_review' && <span className="admin-pill is-warn">Receipt to check</span>}
+                    <span className="ppl-sub">
+                      {[supporter ? 'Supporter' : 'Player', m.membership_tier, age !== null ? `age ${age}` : '', m.guardian_name ? `parent ${m.guardian_name}` : ''].filter(Boolean).join(', ')}
+                    </span>
+                    {age !== null && age < 18 && !supporter && <span className="ppl-warn">Under 18: check their team when you approve</span>}
                   </span>
-                  {age !== null && age < 18 && !supporter && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)' }}>Under 18: check their team when you approve</span>
-                  )}
-                  <button type="button" data-view-ok onClick={() => onReviewApplication(m.id)} className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start', marginTop: '0.2rem' }}>
-                    Review
-                  </button>
-                </div>
+                  <button type="button" data-view-ok onClick={() => onReviewApplication(m.id)} className="btn btn-primary btn-sm">Review</button>
+                </li>
               );
             })}
-          </div>
+          </ul>
           {pending.length > 3 && (
-            <p className="ppl-apps-more" style={{ margin: '0.6rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>and {pending.length - 3} more on the Applications tab.</p>
+            <p className="admin-table-foot" style={{ padding: '0 var(--space-md) var(--space-md)', margin: 0 }}>and {pending.length - 3} more on the Applications tab.</p>
           )}
         </section>
       )}
 
       {/* Search and chips */}
-      <div className="glass-panel" style={{ padding: '0.9rem 1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div className="row row-wrap" style={{ gap: '0.75rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+        <div className="row row-wrap" style={{ gap: 'var(--space-sm)' }}>
           <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 0 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={15} color="var(--color-muted)" aria-hidden="true" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
             <input data-view-ok type="search" aria-label="Search people" className="form-input" placeholder="Search name, email, parent, shirt number"
               value={query} onChange={e => setQuery(e.target.value)} style={{ paddingLeft: '2.1rem' }} />
           </div>
         </div>
-        <div className="ppl-chips" role="group" aria-label="Show">
+        <div className="admin-chips" role="group" aria-label="Show">
           {CHIPS.map(c => (
-            <button key={c.id} type="button" data-view-ok className="ppl-chip" aria-pressed={group === c.id} onClick={() => setGroup(c.id)}>
-              {c.label} <span>{countOf(c.id)}</span>
+            <button key={c.id} type="button" data-view-ok className="admin-chip" aria-pressed={group === c.id} onClick={() => setGroup(c.id)}>
+              {c.label} <span className="num">{countOf(c.id)}</span>
             </button>
           ))}
         </div>
@@ -357,26 +362,24 @@ export default function PeopleDirectory({
             <option value="emergency">No emergency contact</option>
           </select>
           <select data-view-ok aria-label="Sort" className="form-select ppl-filter" value={sortBy} onChange={e => setSortBy(e.target.value as PeopleSort)}>
-            <option value="surname">Surname A–Z</option>
-            <option value="first">First name A–Z</option>
+            <option value="surname">Surname, A to Z</option>
+            <option value="first">First name, A to Z</option>
             <option value="number">Shirt number</option>
             <option value="games">Most games this season</option>
             <option value="newest">Newest first</option>
           </select>
           {filtersActive && (
-            <button type="button" data-view-ok onClick={clearFilters} className="btn btn-secondary btn-sm row" style={{ gap: '0.3rem' }}>
-              <X size={14} /> Clear
+            <button type="button" data-view-ok onClick={clearFilters} className="btn btn-secondary btn-sm">
+              <X size={14} aria-hidden="true" /> Clear
             </button>
           )}
-          <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            Showing <strong className="text-primary">{filtered.length}</strong> of {people.length}
+          <span style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
+            Showing <strong style={{ color: 'var(--color-ink)' }}>{filtered.length}</strong> of {people.length}
           </span>
-          <div role="group" aria-label="Layout" className="ppl-desktop-only" style={{ display: 'flex', background: 'rgba(var(--shade-rgb), 0.35)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '2px' }}>
+          <div role="group" aria-label="Layout" className="ppl-desktop-only ppl-layout-switch">
             {([['table', List, 'Table'], ['cards', LayoutGrid, 'Cards']] as const).map(([mode, Icon, label]) => (
-              <button key={mode} type="button" data-view-ok onClick={() => changeViewMode(mode)} aria-pressed={viewMode === mode} aria-label={label} title={label}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '40px', minHeight: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                  background: viewMode === mode ? 'var(--club-primary)' : 'transparent', color: viewMode === mode ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)' }}>
-                <Icon size={16} />
+              <button key={mode} type="button" data-view-ok onClick={() => changeViewMode(mode)} aria-pressed={viewMode === mode} aria-label={label} title={label}>
+                <Icon size={16} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -386,7 +389,7 @@ export default function PeopleDirectory({
       <div className={`ppl-layout${selected ? ' has-panel' : ''}`}>
         <div style={{ minWidth: 0 }}>
           {filtered.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <div className="admin-panel admin-empty" style={{ alignItems: 'center', textAlign: 'center' }}>
               {people.length === 0 ? 'No one here yet. Add people one by one, import a spreadsheet, or share your join link.' : 'No one matches. Try another search or clear the filters.'}
             </div>
           ) : viewMode === 'cards' ? (
@@ -395,24 +398,24 @@ export default function PeopleDirectory({
                 onStats={actions.openStats} onEdit={actions.openEdit} onDelete={actions.remove} />
             </div>
           ) : (
-            <div className="glass-panel ppl-table-wrap" style={{ padding: 0, overflowX: 'auto' }}>
-              <table className="ppl-table">
+            <div className="admin-panel admin-table-wrap ppl-table-wrap">
+              <table className="admin-table ppl-table">
                 <thead>
-                  <tr><th>Person</th><th>Role</th><th>{teams.length > 1 ? 'Team · #' : '#'}</th><th>Membership</th><th>{activeSeason}</th></tr>
+                  <tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col">{teams.length > 1 ? 'Team and number' : 'Number'}</th><th scope="col">Membership</th><th scope="col">{activeSeason}</th></tr>
                 </thead>
                 <tbody>
                   {filtered.map(m => {
-                    const [label, color] = membershipLabel(membershipInfo(m, today));
+                    const state = membershipLabel(membershipInfo(m, today));
                     const checks = checksOf(m);
                     return (
                       <tr key={m.id} data-person={m.full_name} className={m.id === selectedId ? 'is-selected' : undefined}>
                         <td>
                           <button type="button" data-view-ok className="ppl-name" onClick={() => select(m.id)} aria-label={`Open ${m.full_name}`}>
-                            <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={36} />
+                            <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={32} />
                             <span style={{ minWidth: 0 }}>
                               <strong>
                                 {m.full_name}
-                                {checks.length > 0 && <AlertTriangle size={13} color={checks.some(c => c.urgent) ? 'var(--c-red)' : 'var(--c-amber)'} style={{ marginLeft: 6, verticalAlign: '-2px' }} aria-label={checks.map(c => c.text).join(', ')} />}
+                                {checks.length > 0 && <AlertTriangle size={13} color={checks.some(c => c.urgent) ? 'var(--color-danger)' : 'var(--color-warn)'} aria-label={checks.map(c => c.text).join(', ')} />}
                               </strong>
                               <span className="ppl-sub">{isJunior(m) && m.guardian_email ? `Parent: ${m.guardian_email}` : m.email || m.phone || ''}</span>
                             </span>
@@ -420,7 +423,7 @@ export default function PeopleDirectory({
                         </td>
                         <td>{roleLine(m, isJunior(m))}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{teamLine(m)}</td>
-                        <td><span className="ppl-pill" style={{ color }}>{label}</span></td>
+                        <td><Pill m={state} /></td>
                         <td style={{ whiteSpace: 'nowrap' }}>{seasonLine(totalsFor(m))}</td>
                       </tr>
                     );
@@ -432,21 +435,20 @@ export default function PeopleDirectory({
 
           {/* Phones: one row per person */}
           {filtered.length > 0 && (
-            <div className="ppl-list">
+            <div className="admin-panel ppl-list">
               {filtered.map(m => {
-                const [label, color] = membershipLabel(membershipInfo(m, today));
-                const short = label.startsWith('ACTIVE') ? 'ACTIVE' : label.replace(/^EXPIRES IN /, '').replace(/ DAYS?$/, (d) => d.trim() === 'DAY' ? ' DAY LEFT' : ' DAYS LEFT');
+                const state = membershipLabel(membershipInfo(m, today));
                 return (
                   <button key={m.id} type="button" data-view-ok data-person-row={m.full_name} className="ppl-item" onClick={() => select(m.id)}>
                     <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={40} />
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <strong style={{ color: 'var(--text-primary)', display: 'block' }}>{m.full_name}</strong>
+                      <strong style={{ color: 'var(--color-ink)', fontWeight: 600, display: 'block' }}>{m.full_name}</strong>
                       <span className="ppl-sub">
                         {[teams.length > 1 ? teamRows(m).map(r => teamName(r.team_id)).filter(Boolean).join(', ') : '', m.jersey_number != null ? `#${m.jersey_number}` : '',
-                          isJunior(m) && m.guardian_name ? `parent ${m.guardian_name}` : roleLine(m, false).split(', ').filter(r => r.toLowerCase() !== 'player').join(', ')].filter(Boolean).join(' · ') || m.email}
+                          isJunior(m) && m.guardian_name ? `parent ${m.guardian_name}` : roleLine(m, false).split(', ').filter(r => r.toLowerCase() !== 'player').join(', ')].filter(Boolean).join(', ') || m.email}
                       </span>
                     </span>
-                    <span className="ppl-pill" style={{ color }}>{short}</span>
+                    <Pill m={{ text: state.short, tone: state.tone }} />
                   </button>
                 );
               })}
@@ -520,11 +522,11 @@ function PersonPanel({
   }, [onClose]);
 
   const info = membershipInfo(m);
-  const [label, color] = membershipLabel(info);
+  const state = membershipLabel(info);
   const seasons = [...new Set(seasonRows.map(r => r.season || activeSeason))].sort((a, b) => b.localeCompare(a));
   const thisSeason = seasonRows.filter(r => inSeason(r.season, activeSeason, activeSeason));
   const totals = thisSeason.length ? seasonTotals(thisSeason) : null;
-  const subline = [roleLine(m, junior), teamRows.map(r => r.name).join(', '), m.jersey_number != null ? `#${m.jersey_number}` : ''].filter(Boolean).join(' · ');
+  const subline = [roleLine(m, junior), teamRows.map(r => r.name).join(', '), m.jersey_number != null ? `#${m.jersey_number}` : ''].filter(Boolean).join(', ');
   const isApplication = m.membership_status === 'pending' || m.membership_status === 'rejected';
 
   const renewal = async () => {
@@ -536,77 +538,77 @@ function PersonPanel({
 
   return (
     <aside className="ppl-panel" aria-label={m.full_name} data-person-panel={m.full_name}>
-      <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-        <button type="button" data-view-ok className="ppl-back row" onClick={onClose} style={{ gap: '0.2rem', alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--club-ink, var(--c-green))', fontWeight: 800, fontSize: '0.95rem', minHeight: 44, padding: 0, cursor: 'pointer', font: 'inherit' }}>
-          <ChevronLeft size={18} /> People
+      <div style={{ padding: 'var(--space-md) var(--space-md) var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <button type="button" data-view-ok className="ppl-back admin-quiet-btn" onClick={onClose} style={{ alignSelf: 'flex-start', minHeight: 44 }}>
+          <ChevronLeft size={18} aria-hidden="true" /> People
         </button>
         <div className="row" style={{ gap: '0.8rem', alignItems: 'center' }}>
           <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={60} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 ref={headingRef} tabIndex={-1} style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', outline: 'none' }}>{m.full_name}</h2>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{subline || '—'}</div>
-            <span className="ppl-pill" style={{ color, marginTop: 4 }}>{label}</span>
+            <h2 ref={headingRef} tabIndex={-1}>{m.full_name}</h2>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', marginBottom: 'var(--space-2xs)' }}>{subline || '—'}</div>
+            <Pill m={state} />
           </div>
-          <button type="button" data-view-ok className="ppl-close touch-target" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', alignSelf: 'flex-start' }}>
-            <X size={20} />
+          <button type="button" data-view-ok className="ppl-close admin-icon-btn" onClick={onClose} aria-label="Close" style={{ alignSelf: 'flex-start' }}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         <div className="ppl-quick">
-          {m.phone ? <a href={`tel:${m.phone.replace(/\s+/g, '')}`}><Phone size={17} color="var(--c-green)" /> Call</a>
-            : junior && m.guardian_phone ? <a href={`tel:${m.guardian_phone.replace(/\s+/g, '')}`}><Phone size={17} color="var(--c-green)" /> Call parent</a>
-              : <span style={{ opacity: 0.45, cursor: 'default' }}><Phone size={17} /> No phone</span>}
+          {m.phone ? <a href={`tel:${m.phone.replace(/\s+/g, '')}`}><Phone size={17} aria-hidden="true" /> Call</a>
+            : junior && m.guardian_phone ? <a href={`tel:${m.guardian_phone.replace(/\s+/g, '')}`}><Phone size={17} aria-hidden="true" /> Call parent</a>
+              : <span className="is-off"><Phone size={17} aria-hidden="true" /> No phone</span>}
           {canInbox && m.user_id ? (
-            <Link href={`/${clubSlug}/admin/inquiries?member=${m.id}`}><MessageSquare size={17} color="var(--c-green)" /> Message</Link>
+            <Link href={`/${clubSlug}/admin/inquiries?member=${m.id}`}><MessageSquare size={17} aria-hidden="true" /> Message</Link>
           ) : (m.email || m.guardian_email) ? (
-            <a href={`mailto:${junior && m.guardian_email ? m.guardian_email : m.email}`}><Mail size={17} color="var(--c-green)" /> Email</a>
-          ) : <span style={{ opacity: 0.45, cursor: 'default' }}><Mail size={17} /> No email</span>}
-          <button type="button" onClick={() => actions.openEdit(m)}><Edit2 size={17} color="var(--c-green)" /> Edit</button>
+            <a href={`mailto:${junior && m.guardian_email ? m.guardian_email : m.email}`}><Mail size={17} aria-hidden="true" /> Email</a>
+          ) : <span className="is-off"><Mail size={17} aria-hidden="true" /> No email</span>}
+          <button type="button" onClick={() => actions.openEdit(m)}><Edit2 size={17} aria-hidden="true" /> Edit</button>
         </div>
 
-        <div className="ppl-tabs" role="tablist" aria-label="Details">
+        <div className="admin-tabs" role="tablist" aria-label="Details">
           {(['overview', 'membership', 'teams', 'stats'] as const).map(t => (
-            <button key={t} type="button" role="tab" data-view-ok aria-selected={tab === t} onClick={() => setTab(t)}>
+            <button key={t} type="button" role="tab" className="admin-tab" data-view-ok aria-selected={tab === t} onClick={() => setTab(t)}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
-      <div role="tabpanel" style={{ padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem' }}>
+      <div role="tabpanel" style={{ padding: '0 var(--space-md) var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', fontSize: 'var(--text-sm)' }}>
         {tab === 'overview' && (
           <>
             <div className="ppl-card">
               <div className="ppl-card-label">Membership</div>
-              <div className="ppl-card-value" style={{ color }}>{label}</div>
-              <div className="ppl-card-note">{m.membership_tier || 'No plan'}{m.fee_waived_at ? ' · fee waived' : ''}</div>
+              <div className="ppl-card-value"><Pill m={state} /></div>
+              <div className="ppl-card-note">{m.membership_tier || 'No plan'}{m.fee_waived_at ? ', fee waived' : ''}</div>
             </div>
             {(teamRows.length > 0 || m.player_position) && (
               <div className="ppl-card">
                 <div className="ppl-card-label">Team</div>
-                <div className="ppl-card-value">{[teamRows.map(r => r.name).join(', '), m.jersey_number != null ? `#${m.jersey_number}` : ''].filter(Boolean).join(' · ') || '—'}</div>
+                <div className="ppl-card-value">{[teamRows.map(r => r.name).join(', '), m.jersey_number != null ? `#${m.jersey_number}` : ''].filter(Boolean).join(', ') || '—'}</div>
                 {m.player_position && <div className="ppl-card-note">{[m.player_position, ...(m.secondary_positions || [])].join(', ')}</div>}
               </div>
             )}
             <div className="ppl-card">
               <div className="ppl-card-label">{activeSeason} season</div>
               <div className="ppl-card-value">{seasonLine(totals)}</div>
-              {totals && <div className="ppl-card-note">{totals.minutes_played} minutes{totals.motm_awards ? ` · ${plural(totals.motm_awards, 'Player of the Match')}` : ''}</div>}
+              {totals && <div className="ppl-card-note">{totals.minutes_played} minutes{totals.motm_awards ? `, ${plural(totals.motm_awards, 'Player of the Match')}` : ''}</div>}
             </div>
             <div className="ppl-card">
               <div className="ppl-card-label">Contact &amp; checks</div>
-              <div className="ppl-card-value" style={{ fontWeight: 700, wordBreak: 'break-word' }}>{[m.email, m.phone].filter(Boolean).join(' · ') || 'No contact details'}</div>
-              {junior && <div className="ppl-card-note">Parent: {[m.guardian_name, m.guardian_email, m.guardian_phone].filter(Boolean).join(' · ') || 'not set'}</div>}
+              <div className="ppl-card-value">{[m.email, m.phone].filter(Boolean).join(', ') || 'No contact details'}</div>
+              {junior && <div className="ppl-card-note">Parent: {[m.guardian_name, m.guardian_email, m.guardian_phone].filter(Boolean).join(', ') || 'not set'}</div>}
               {m.emergency_contact && <div className="ppl-card-note">Emergency contact: {m.emergency_contact}</div>}
               {junior && m.photo_consent != null && <div className="ppl-card-note">Photo consent: {m.photo_consent ? 'yes' : 'no'}</div>}
               <MedicalNote text={health.notes[m.id]} />
               {m.safeguarding_check_type && <div className="ppl-card-note">{m.safeguarding_check_type}{m.safeguarding_check_expiry_date ? ` to ${fmtDate(m.safeguarding_check_expiry_date)}` : ''}</div>}
               {checks.length > 0 ? checks.map(c => (
-                <div key={c.kind} className="row" style={{ gap: '0.35rem', marginTop: 4, fontSize: '0.8rem', fontWeight: 700, color: c.urgent ? 'var(--c-red)' : 'var(--c-amber)' }}>
-                  <AlertTriangle size={13} /> {c.text}
+                <div key={c.kind} className={c.urgent ? 'ppl-card-check is-urgent' : 'ppl-card-check'}>
+                  <AlertTriangle size={13} aria-hidden="true" /> {c.text}
                 </div>
               )) : (
-                <div className="row" style={{ gap: '0.35rem', marginTop: 4, fontSize: '0.8rem', color: 'var(--c-green)' }}><CheckCircle2 size={13} /> Nothing to check</div>
+                <div className="ppl-card-check is-clear"><CheckCircle2 size={13} aria-hidden="true" /> Nothing to check</div>
               )}
             </div>
           </>
@@ -616,7 +618,7 @@ function PersonPanel({
           <>
             <div className="ppl-card">
               <div className="ppl-card-label">Status</div>
-              <div className="ppl-card-value" style={{ color }}>{label}</div>
+              <div className="ppl-card-value"><Pill m={state} /></div>
               <div className="ppl-card-note">{m.membership_tier || 'No plan'}</div>
             </div>
             <div className="ppl-card">
@@ -639,11 +641,11 @@ function PersonPanel({
                   <>
                     {canSendRenewal(m) && (
                       <button type="button" className="btn btn-secondary btn-sm" onClick={renewal} disabled={sending || sent}>
-                        {sent ? '✓ Renewal email sent' : sending ? 'Sending…' : 'Send renewal email'}
+                        {sent ? 'Renewal email sent' : sending ? 'Sending…' : 'Send renewal email'}
                       </button>
                     )}
-                    <button type="button" data-view-ok className="btn btn-secondary btn-sm row" style={{ gap: '0.25rem' }} onClick={() => onOpenPass(m.id)}>
-                      Member pass <ChevronRight size={14} />
+                    <button type="button" data-view-ok className="btn btn-secondary btn-sm" onClick={() => onOpenPass(m.id)}>
+                      Open member pass
                     </button>
                   </>
                 )}
@@ -659,7 +661,7 @@ function PersonPanel({
             ) : teamRows.map(r => (
               <div key={r.team_id} className="ppl-card">
                 <div className="ppl-card-value">{r.name}</div>
-                <div className="ppl-card-note">{[r.team_role[0].toUpperCase() + r.team_role.slice(1), r.jersey_number != null ? `#${r.jersey_number}` : ''].filter(Boolean).join(' · ')}</div>
+                <div className="ppl-card-note">{[r.team_role[0].toUpperCase() + r.team_role.slice(1), r.jersey_number != null ? `#${r.jersey_number}` : ''].filter(Boolean).join(', ')}</div>
               </div>
             ))}
             <Link href={`/${clubSlug}/admin/teams`} className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }}>Manage teams</Link>
@@ -672,27 +674,27 @@ function PersonPanel({
               <div className="ppl-card ppl-card-note">No stats yet. They fill in when match stats are saved.</div>
             ) : (
               <div className="ppl-card" style={{ padding: 0, overflowX: 'auto' }}>
-                <table className="ppl-table" style={{ fontSize: '0.8rem' }}>
-                  <thead><tr><th>Season</th><th>Apps</th><th>Mins</th><th>Goals</th><th>Ast</th><th>CS</th><th>POTM</th></tr></thead>
+                <table className="admin-table" style={{ fontSize: 'var(--text-xs)' }}>
+                  <thead><tr><th scope="col">Season</th><th scope="col" className="is-num">Apps</th><th scope="col" className="is-num">Mins</th><th scope="col" className="is-num">Goals</th><th scope="col" className="is-num" title="Assists">Ast</th><th scope="col" className="is-num" title="Clean sheets">CS</th><th scope="col" className="is-num" title="Player of the Match">POTM</th></tr></thead>
                   <tbody>
                     {seasons.map(s => {
                       const t = seasonTotals(seasonRows.filter(r => (r.season || activeSeason) === s));
                       return (
-                        <tr key={s}><td style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{s}</td><td>{t.appearances}</td><td>{t.minutes_played}</td><td>{t.goals}</td><td>{t.assists}</td><td>{t.clean_sheets}</td><td>{t.motm_awards}</td></tr>
+                        <tr key={s}><td className="is-strong">{s}</td><td className="is-num">{t.appearances}</td><td className="is-num">{t.minutes_played}</td><td className="is-num">{t.goals}</td><td className="is-num">{t.assists}</td><td className="is-num">{t.clean_sheets}</td><td className="is-num">{t.motm_awards}</td></tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
             )}
-            <button type="button" className="btn btn-secondary btn-sm row" style={{ gap: '0.35rem', alignSelf: 'flex-start' }} onClick={() => actions.openStats(m)}>
-              <Activity size={14} /> Edit stats
+            <button type="button" className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => actions.openStats(m)}>
+              <Activity size={14} aria-hidden="true" /> Edit stats
             </button>
           </>
         )}
 
-        <button type="button" data-needs-full onClick={remove} className="btn btn-sm row" style={{ gap: '0.35rem', marginTop: '0.75rem', alignSelf: 'flex-start', background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.4)', color: 'var(--c-red)' }}>
-          <Trash2 size={14} /> Remove from club
+        <button type="button" data-needs-full onClick={remove} className="btn btn-danger btn-sm" style={{ marginTop: 'var(--space-sm)', alignSelf: 'flex-start' }}>
+          <Trash2 size={14} aria-hidden="true" /> Remove from club
         </button>
       </div>
     </aside>

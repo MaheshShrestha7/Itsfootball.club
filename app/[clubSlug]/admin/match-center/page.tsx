@@ -339,7 +339,7 @@ export default function AdminMatchCenterControllerPage({
             inset: 0,
             overflowY: 'auto',
             overscrollBehavior: 'contain',
-            background: 'rgba(0,0,0,0.8)',
+            background: 'var(--color-scrim)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -560,88 +560,43 @@ export default function AdminMatchCenterControllerPage({
   const statsDue = match.status === 'completed' && !match.is_audited;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div>
       {/* Header (trimmed on phones so the scoreboard is near the top) */}
-      <div className="mc-header" style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1.25rem',
-        marginBottom: '1.75rem',
-      }}>
-        <div style={{ minWidth: 0, maxWidth: '100%' }}>
-          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.25 }}>
-            Match Centre
-          </h1>
-          <p className="mc-phone-hide" style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
+      <div className="admin-head mc-header">
+        <div>
+          <h1>Match Centre</h1>
+          <p className="mc-phone-hide">
             Update the live score, added time, substitutions and team formation while a match is on.
           </p>
         </div>
 
-        <div className="admin-match-center-actions" data-more={moreActions ? 'open' : undefined}>
+        <div className="admin-head-actions admin-match-center-actions" data-more={moreActions ? 'open' : undefined}>
           {match.tournament_id && (
-            <Link
-              href={`/${club.slug}/admin/tournaments/${match.tournament_id}`}
-              className="btn btn-sm touch-target"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                background: 'rgba(245, 158, 11, 0.14)',
-                border: '1px solid rgba(245, 158, 11, 0.45)',
-                color: 'var(--c-amber)',
-                fontWeight: 800,
-              }}
-            >
-              <Trophy size={15} />
-              <span>Bracket &amp; Table</span>
+            <Link href={`/${club.slug}/admin/tournaments/${match.tournament_id}`} className="btn btn-secondary btn-sm touch-target">
+              <Trophy size={15} aria-hidden="true" />
+              <span>Bracket and table</span>
             </Link>
           )}
           {/* Gate check-in is for club games; tournament and in-house games keep it under More on phones */}
           <button
             type="button"
             onClick={() => setIsCheckinModalOpen(true)}
-            className={`btn btn-sm touch-target${kind === 'club' ? '' : ' mc-action-extra'}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              background: 'rgba(59, 130, 246, 0.16)',
-              border: '1px solid #3B82F6',
-              color: 'var(--c-blue)',
-              fontWeight: 800,
-            }}
+            className={`btn btn-secondary btn-sm touch-target${kind === 'club' ? '' : ' mc-action-extra'}`}
             title="Scan pass QR code via camera or enter token to check in attendees"
           >
-            <QrCode size={15} />
-            <span>Door Check-In ({match.checkin_count || 0})</span>
+            <QrCode size={15} aria-hidden="true" />
+            <span>Door check-in ({match.checkin_count || 0})</span>
           </button>
 
           <button
             type="button"
             onClick={() => (match.is_audited ? setIsFixModalOpen(true) : setIsAuditModalOpen(true))}
             title={match.is_audited ? 'Stats are saved: open them to fix a mistake' : undefined}
-            className="btn btn-sm touch-target"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              // Only a call to action once the game is over: before that it's a quiet button
-              background: match.is_audited
-                ? 'rgba(16, 185, 129, 0.15)'
-                : statsDue ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.06)',
-              color: match.is_audited ? 'var(--c-green)' : statsDue ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              border: match.is_audited ? '1px solid #10B981' : statsDue ? 'none' : '1px solid var(--border-medium)',
-              boxShadow: statsDue ? '0 4px 14px rgba(var(--club-primary-rgb), 0.4)' : 'none',
-            }}
+            // Only a call to action once the game is over: before that it's a quiet button
+            className={`btn btn-sm touch-target ${statsDue && !match.is_audited ? 'btn-primary' : 'btn-secondary'}`}
           >
-            <ShieldCheck size={15} />
-            <span>{match.is_audited ? 'Stats Saved ✓ · Fix' : 'Save Player Stats'}</span>
+            {match.is_audited ? <CheckCircle2 size={15} aria-hidden="true" /> : <ShieldCheck size={15} aria-hidden="true" />}
+            <span>{match.is_audited ? 'Stats saved, fix them' : 'Save player stats'}</span>
           </button>
 
           <button
@@ -657,39 +612,25 @@ export default function AdminMatchCenterControllerPage({
           <Link
             href={`/${club.slug}/admin/lineup/draft?match=${match.id}`}
             className="btn btn-secondary btn-sm touch-target mc-action-extra"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
           >
-            <Layers size={14} color="var(--c-amber)" />
-            <span>Draft Workbench</span>
+            <Layers size={14} aria-hidden="true" />
+            <span>Lineup workbench</span>
           </Link>
 
           <Link
             href={matchPath(club.slug, match)}
             target="_blank"
             className="btn btn-secondary btn-sm touch-target mc-action-extra"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: '1px solid rgba(var(--tint-rgb), 0.15)' }}
           >
-            <span>Public Match Centre</span>
-            <ExternalLink size={14} />
+            <ExternalLink size={14} aria-hidden="true" />
+            <span>Public match page</span>
           </Link>
         </div>
       </div>
 
       {/* Feedback Banner */}
       {feedback && (
-        <div style={{
-          background: feedback.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-          border: `1px solid ${feedback.type === 'error' ? '#EF4444' : '#10B981'}`,
-          padding: '0.85rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          color: feedback.type === 'error' ? 'var(--c-red)' : 'var(--c-green)',
-          fontWeight: 700,
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          animation: 'fadeIn 0.2s ease',
-        }}>
+        <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}>
           {feedback.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
           <span>{feedback.text}</span>
         </div>
@@ -704,19 +645,17 @@ export default function AdminMatchCenterControllerPage({
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
             {/* Season Filter Dropdown */}
             <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 'min(160px, 100%)' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-                <CalendarDays size={14} color="var(--club-primary)" /> Season:
-              </span>
+              <span className="form-label m-0" style={{ flexShrink: 0 }}>Season</span>
               <select data-view-ok aria-label="Season"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
                 value={seasonFilter}
                 onChange={e => setSeasonFilter(e.target.value)}
               >
-                <option value="ALL">All Seasons</option>
+                <option value="ALL">All seasons</option>
                 {clubSeasons.map(s => (
                   <option key={s.id} value={s.name}>
-                    {s.name} {s.is_current ? '★' : ''}
+                    {s.name}{s.is_current ? ' (current)' : ''}
                   </option>
                 ))}
               </select>
@@ -724,9 +663,7 @@ export default function AdminMatchCenterControllerPage({
 
             {kind === 'tournament' && kindTournaments.length > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                  Tournament:
-                </span>
+                <span className="form-label m-0" style={{ flexShrink: 0 }}>Tournament</span>
                 <select data-view-ok aria-label="Tournament"
                   className="form-select"
                   style={{ width: '100%', maxWidth: '100%' }}
@@ -741,9 +678,7 @@ export default function AdminMatchCenterControllerPage({
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                {kind === 'tournament' ? 'Game:' : 'Fixture:'}
-              </span>
+              <span className="form-label m-0" style={{ flexShrink: 0 }}>{kind === 'tournament' ? 'Game' : 'Fixture'}</span>
               <select data-view-ok aria-label="Fixture"
                 className="form-select"
                 style={{ width: '100%', maxWidth: '100%' }}
@@ -753,8 +688,8 @@ export default function AdminMatchCenterControllerPage({
                 {pickerGames.map(m => (
                   <option key={m.id} value={m.id}>
                     {kind === 'tournament'
-                      ? `${[tournamentMatchLabel(m), `${m.home_team_name} vs ${m.away_team_name}`, m.pitch_label].filter(Boolean).join(' · ')} [${m.status.toUpperCase()}]`
-                      : `${fixtureLabel(m, club.name)} (${m.season}) [${m.status.toUpperCase()}]`}
+                      ? `${[tournamentMatchLabel(m), `${m.home_team_name} vs ${m.away_team_name}`, m.pitch_label].filter(Boolean).join(', ')} (${m.status})`
+                      : `${fixtureLabel(m, club.name)}, ${m.season} (${m.status})`}
                   </option>
                 ))}
               </select>
@@ -762,24 +697,12 @@ export default function AdminMatchCenterControllerPage({
           </div>
 
           <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
-            <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-blue)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <CalendarDays size={12} /> {match.season}
-            </span>
-            <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-              Formation: {match[`${lineupSide}_formation`] || '4-3-3'}
-            </span>
-            {match.added_time > 0 && (
-              <span className="badge badge-gold" style={{ fontSize: '0.75rem' }}>
-                +{match.added_time}&apos; Stoppage
-              </span>
-            )}
-            <Link
-              href={`/${club.slug}/admin/matches`}
-              className="btn btn-primary btn-sm touch-target"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-            >
-              <CalendarDays size={14} />
-              <span>Schedule Fixture</span>
+            <span className="admin-pill">{match.season}</span>
+            <span className="admin-pill">Formation {match[`${lineupSide}_formation`] || '4-3-3'}</span>
+            {match.added_time > 0 && <span className="admin-pill is-warn">+{match.added_time}&prime; added time</span>}
+            <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm touch-target">
+              <CalendarDays size={14} aria-hidden="true" />
+              <span>Schedule a fixture</span>
             </Link>
           </div>
         </div>
@@ -790,7 +713,7 @@ export default function AdminMatchCenterControllerPage({
             <>
               <span className="badge badge-gold">
                 <Trophy size={12} aria-hidden="true" />
-                {[matchTournament?.name, match.tournament_group && `Group ${match.tournament_group}`, tournamentMatchLabel(match)].filter(Boolean).join(' · ')}
+                {[matchTournament?.name, match.tournament_group && `Group ${match.tournament_group}`, tournamentMatchLabel(match)].filter(Boolean).join(', ')}
               </span>
               {match.pitch_label && <span className="badge mc-badge-muted">{match.pitch_label}</span>}
             </>
@@ -843,42 +766,24 @@ export default function AdminMatchCenterControllerPage({
       </div>
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
-      <div className="scroll-pill-strip mc-tabs" style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '0.5rem',
-        marginBottom: '2rem',
-        borderBottom: '1px solid var(--border-subtle)',
-        paddingBottom: '0.75rem',
-        maxWidth: '100%',
-      }}>
+      <div role="tablist" aria-label="Match Centre" className="admin-tabs mc-tabs">
         {[
-          { id: 'events', label: 'Score & Events', short: 'Score', icon: Radio },
-          { id: 'tactics', label: 'Lineup & Formation', short: 'Lineup', icon: Move },
-          { id: 'clock', label: 'Clock & Added Time', short: 'Clock', icon: Timer },
+          { id: 'events', label: 'Score and events', short: 'Score', icon: Radio },
+          { id: 'tactics', label: 'Lineup and formation', short: 'Lineup', icon: Move },
+          { id: 'clock', label: 'Clock and added time', short: 'Clock', icon: Timer },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = adminTab === tab.id;
           return (
             <button data-view-ok
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setAdminTab(tab.id as any)}
-              className="btn btn-sm"
-              style={{
-                background: isActive ? 'rgba(var(--tint-rgb), 0.12)' : 'transparent',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: 800,
-                fontSize: '0.9rem',
-                border: '1px solid',
-                borderColor: isActive ? 'var(--border-medium)' : 'transparent',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.55rem 1rem',
-              }}
+              className="admin-tab"
             >
-              <Icon size={16} color={isActive ? club.primary_color : 'currentColor'} />
+              <Icon size={16} aria-hidden="true" />
               <span className="mc-phone-hide">{tab.label}</span>
               <span className="mc-phone-only">{tab.short}</span>
             </button>
@@ -890,7 +795,7 @@ export default function AdminMatchCenterControllerPage({
       {/* TAB 1: LIVE SCORE & EVENT CONSOLE */}
       {/* ========================================================================= */}
       {adminTab === 'events' && (
-        <div>
+        <div className="mc-console">
           {/* Phones: the score and clock stay in view while an event is logged further down */}
           {scoreboardOut && (
             <div className="mc-score-float glass-panel" data-theme="dark" aria-hidden="true">
@@ -901,62 +806,29 @@ export default function AdminMatchCenterControllerPage({
             </div>
           )}
 
-          {/* Main Scoreboard Command Hub */}
-          <div ref={scoreboardRef} className="glass-panel" data-theme="dark" style={{
-            padding: 'clamp(1rem, 2.5vw, 2rem)',
-            marginBottom: '2rem',
-            background: 'linear-gradient(180deg, #0e1624 0%, #080d15 100%)',
-            border: '2px solid rgba(var(--tint-rgb), 0.15)',
-            overflow: 'hidden',
-          }}>
-            {/* Quick Period & Minute Bar */}
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              marginBottom: '1.5rem',
-              borderBottom: '1px solid var(--border-subtle)',
-              paddingBottom: '1rem',
-            }}>
+          {/* The score and the clock */}
+          <section ref={scoreboardRef} className="glass-panel mc-scoreboard" aria-label="Score and clock">
+            <div className="mc-clock-bar">
               <div className="row row-loose row-wrap">
-                <div style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
-                  fontWeight: 900,
-                  color: match.status === 'live' ? 'var(--c-red)' : 'var(--text-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                }}>
-                  <Clock size={22} color={match.status === 'live' ? '#EF4444' : 'var(--text-muted)'} />
-                  <span><LiveMinute match={match} />&apos;</span>
-                  {match.added_time > 0 && (
-                    <span style={{ fontSize: '1rem', color: 'var(--c-amber)' }}>
-                      (+{match.added_time}&apos;)
-                    </span>
-                  )}
+                <div className={match.status === 'live' ? 'mc-clock is-live' : 'mc-clock'}>
+                  <Clock size={20} aria-hidden="true" />
+                  <span><LiveMinute match={match} />&prime;</span>
+                  {match.added_time > 0 && <small>+{match.added_time}&prime;</small>}
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  <button onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem' }} title="-1 minute">
-                    <Minus size={13} /> 1m
+                <div className="mc-clock-tools">
+                  <button type="button" onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" aria-label="Take a minute off the clock">
+                    <Minus size={13} aria-hidden="true" /> 1 min
                   </button>
-                  <button onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem' }} title="+1 minute">
-                    <Plus size={13} /> 1m
+                  <button type="button" onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" aria-label="Add a minute to the clock">
+                    <Plus size={13} aria-hidden="true" /> 1 min
                   </button>
                   {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
                     <button
+                      type="button"
                       onClick={handleTogglePause}
-                      className="btn btn-sm"
-                      style={{
-                        padding: '0.3rem 0.6rem',
-                        fontSize: '0.78rem',
-                        background: match.is_paused ? '#F59E0B' : 'rgba(255,255,255,0.06)',
-                        color: match.is_paused ? '#000000' : '#FFFFFF',
-                        fontWeight: 800,
-                      }}
+                      className={match.is_paused ? 'btn btn-secondary btn-sm mc-pause is-paused' : 'btn btn-secondary btn-sm mc-pause'}
+                      aria-pressed={!!match.is_paused}
                       title={match.is_paused ? 'Resume clock' : 'Pause clock (injury or stoppage)'}
                     >
                       {match.is_paused ? <><Play size={13} /> Resume</> : <><Pause size={13} /> Pause</>}
@@ -965,136 +837,42 @@ export default function AdminMatchCenterControllerPage({
                 </div>
               </div>
 
-              {/* Quick Period Status Indicators */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                <button
-                  onClick={() => handlePeriodTransition('first_half', 'live', 1)}
-                  className="btn btn-sm"
-                  style={{ background: match.period === 'first_half' ? '#047857' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'first_half' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                >
-                  1st Half
-                </button>
-                <button
-                  onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
-                  className="btn btn-sm"
-                  style={{ background: match.period === 'halftime' ? '#B45309' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'halftime' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                >
-                  HT (45&apos;)
-                </button>
-                <button
-                  onClick={() => handlePeriodTransition('second_half', 'live', 46)}
-                  className="btn btn-sm"
-                  style={{ background: match.period === 'second_half' ? '#047857' : 'rgba(var(--tint-rgb), 0.06)', color: match.period === 'second_half' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                >
-                  2nd Half
-                </button>
-                <button
-                  onClick={handleFullTime}
-                  className="btn btn-sm"
-                  style={{ background: match.status === 'completed' ? '#1D4ED8' : 'rgba(var(--tint-rgb), 0.06)', color: match.status === 'completed' ? '#FFF' : 'var(--text-primary)', padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                >
-                  FT (90&apos;)
-                </button>
+              {/* Quick period changes */}
+              <div className="mc-periods" role="group" aria-label="Period">
+                <button type="button" className="mc-period" aria-pressed={match.period === 'first_half'} onClick={() => handlePeriodTransition('first_half', 'live', 1)}>1st half</button>
+                <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}>Half time</button>
+                <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', 46)}>2nd half</button>
+                <button type="button" className="mc-period" aria-pressed={match.status === 'completed'} onClick={handleFullTime}>Full time</button>
               </div>
             </div>
 
-            {/* Live Score Controls Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              gap: 'clamp(0.4rem, 2vw, 1.5rem)',
-            }}>
-              {/* Home Team Score */}
-              <div style={{ textAlign: 'center', minWidth: 0 }}>
-                <div style={{
-                  fontWeight: 800,
-                  fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.4rem',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  lineHeight: 1.2,
-                }}>
-                  {match.home_team_name}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
-                  <button
-                    onClick={() => handleScoreAdjust('home', -1)}
-                    className="btn btn-secondary btn-sm touch-target"
-                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, flexShrink: 0 }}
-                    title="Subtract 1 goal"
-                  >
-                    <Minus size={15} />
-                  </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: 'var(--text-primary)', minWidth: '36px', textAlign: 'center' }}>
-                    {match.home_score}
-                  </span>
-                  <button
-                    onClick={() => handleScoreAdjust('home', 1)}
-                    className="btn btn-primary btn-sm touch-target"
-                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, background: club.primary_color, flexShrink: 0 }}
-                    title="Add 1 goal"
-                  >
-                    <Plus size={15} />
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', fontWeight: 900, color: 'var(--text-muted)', userSelect: 'none' }}>
-                :
-              </div>
-
-              {/* Away Team Score */}
-              <div style={{ textAlign: 'center', minWidth: 0 }}>
-                <div style={{
-                  fontWeight: 800,
-                  fontSize: 'clamp(0.9rem, 2.5vw, 1.25rem)',
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.4rem',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  lineHeight: 1.2,
-                }}>
-                  {match.away_team_name}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(0.35rem, 1.5vw, 0.75rem)', marginTop: '0.5rem' }}>
-                  <button
-                    onClick={() => handleScoreAdjust('away', -1)}
-                    className="btn btn-secondary btn-sm touch-target"
-                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, flexShrink: 0 }}
-                    title="Subtract 1 goal"
-                  >
-                    <Minus size={15} />
-                  </button>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, color: 'var(--text-primary)', minWidth: '36px', textAlign: 'center' }}>
-                    {match.away_score}
-                  </span>
-                  <button
-                    onClick={() => handleScoreAdjust('away', 1)}
-                    className="btn btn-primary btn-sm touch-target"
-                    style={{ borderRadius: '50%', width: 'clamp(34px, 4.5vw, 40px)', height: 'clamp(34px, 4.5vw, 40px)', padding: 0, background: '#3B82F6', flexShrink: 0 }}
-                    title="Add 1 goal"
-                  >
-                    <Plus size={15} />
-                  </button>
-                </div>
-              </div>
+            <div className="mc-score">
+              {(['home', 'away'] as const).map((side, i) => (
+                <React.Fragment key={side}>
+                  {i === 1 && <div className="mc-score-sep" aria-hidden="true">:</div>}
+                  <div className="mc-score-side">
+                    <div className="mc-score-name">{side === 'home' ? match.home_team_name : match.away_team_name}</div>
+                    <div className="mc-score-ctrl">
+                      <button type="button" onClick={() => handleScoreAdjust(side, -1)} className="btn btn-secondary" aria-label={`Take a goal off ${side === 'home' ? match.home_team_name : match.away_team_name}`}>
+                        <Minus size={15} aria-hidden="true" />
+                      </button>
+                      <span className="mc-goals">{side === 'home' ? match.home_score : match.away_score}</span>
+                      <button type="button" onClick={() => handleScoreAdjust(side, 1)} className="btn btn-primary" aria-label={`Add a goal for ${side === 'home' ? match.home_team_name : match.away_team_name}`}>
+                        <Plus size={15} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
-          </div>
+          </section>
 
           {/* Tournament day: straight on to the next game on this pitch */}
           {nextGameOnPitch && (
             <button data-view-ok type="button" className="glass-panel mc-next-game" onClick={() => setSelectedMatchId(nextGameOnPitch.id)}>
               <span style={{ minWidth: 0 }}>
                 <span className="mc-next-game-when">
-                  Next{nextGameOnPitch.pitch_label ? ` on ${nextGameOnPitch.pitch_label}` : ''}{nextGameOnPitch.match_time ? ` · ${nextGameOnPitch.match_time}` : ''}
+                  Next{nextGameOnPitch.pitch_label ? ` on ${nextGameOnPitch.pitch_label}` : ''}{nextGameOnPitch.match_time ? `, ${nextGameOnPitch.match_time}` : ''}
                 </span>
                 <span className="mc-next-game-teams">{nextGameOnPitch.home_team_name} vs {nextGameOnPitch.away_team_name}</span>
               </span>
@@ -1114,36 +892,36 @@ export default function AdminMatchCenterControllerPage({
               return `${clubSides[0] === s ? 'Our Club' : 'Opponent'} - ${venue}`;
             };
 
-            type QuickAction = { key: string; label: string; eventType: MatchEventType; side: 'home' | 'away'; accent: string; team?: string };
+            type QuickAction = { key: string; label: string; eventType: MatchEventType; side: 'home' | 'away'; tone: 'good' | 'bad' | 'card' | 'sub'; team?: string };
             let quickActions: QuickAction[];
             if (clubSides.length === 1) {
               // A normal fixture: the club against an outside opponent
               const ourSide = clubSides[0];
               const oppSide: 'home' | 'away' = ourSide === 'home' ? 'away' : 'home';
               quickActions = [
-                { key: 'goal-us', label: 'Goal', eventType: 'goal', side: ourSide, accent: '#10B981' },
-                { key: 'goal-opp', label: 'Opponent Goal', eventType: 'goal', side: oppSide, accent: '#EF4444' },
-                { key: 'penalty-us', label: 'Penalty', eventType: 'penalty', side: ourSide, accent: '#10B981' },
-                { key: 'penalty-opp', label: 'Opponent Penalty', eventType: 'penalty', side: oppSide, accent: '#EF4444' },
+                { key: 'goal-us', label: 'Goal', eventType: 'goal', side: ourSide, tone: 'good' },
+                { key: 'goal-opp', label: 'Opponent goal', eventType: 'goal', side: oppSide, tone: 'bad' },
+                { key: 'penalty-us', label: 'Penalty', eventType: 'penalty', side: ourSide, tone: 'good' },
+                { key: 'penalty-opp', label: 'Opponent penalty', eventType: 'penalty', side: oppSide, tone: 'bad' },
                 // An own goal is logged on the side of the player who scored it; the goal counts for the other side
-                { key: 'og-opp', label: 'Opponent Own Goal', eventType: 'own_goal', side: oppSide, accent: '#10B981' },
-                { key: 'og-us', label: 'Own Goal (ours)', eventType: 'own_goal', side: ourSide, accent: '#EF4444' },
-                { key: 'yellow-us', label: 'Yellow Card', eventType: 'yellow_card', side: ourSide, accent: '#F59E0B' },
-                { key: 'yellow-opp', label: 'Opponent Yellow', eventType: 'yellow_card', side: oppSide, accent: '#F59E0B' },
-                { key: 'red-us', label: 'Red Card', eventType: 'red_card', side: ourSide, accent: '#EF4444' },
-                { key: 'red-opp', label: 'Opponent Red', eventType: 'red_card', side: oppSide, accent: '#EF4444' },
-                { key: 'sub-us', label: 'Substitution', eventType: 'sub', side: ourSide, accent: '#3B82F6' },
-                { key: 'sub-opp', label: 'Opponent Sub', eventType: 'sub', side: oppSide, accent: '#3B82F6' },
+                { key: 'og-opp', label: 'Opponent own goal', eventType: 'own_goal', side: oppSide, tone: 'good' },
+                { key: 'og-us', label: 'Own goal (ours)', eventType: 'own_goal', side: ourSide, tone: 'bad' },
+                { key: 'yellow-us', label: 'Yellow card', eventType: 'yellow_card', side: ourSide, tone: 'card' },
+                { key: 'yellow-opp', label: 'Opponent yellow', eventType: 'yellow_card', side: oppSide, tone: 'card' },
+                { key: 'red-us', label: 'Red card', eventType: 'red_card', side: ourSide, tone: 'bad' },
+                { key: 'red-opp', label: 'Opponent red', eventType: 'red_card', side: oppSide, tone: 'bad' },
+                { key: 'sub-us', label: 'Substitution', eventType: 'sub', side: ourSide, tone: 'sub' },
+                { key: 'sub-opp', label: 'Opponent sub', eventType: 'sub', side: oppSide, tone: 'sub' },
               ];
             } else {
               // Both sides are the club's own teams (or both outside teams): the same actions for each, named per team
               const perSide: Omit<QuickAction, 'key' | 'side' | 'team'>[] = [
-                { label: 'Goal', eventType: 'goal', accent: '#10B981' },
-                { label: 'Penalty', eventType: 'penalty', accent: '#10B981' },
-                { label: 'Own Goal', eventType: 'own_goal', accent: '#EF4444' },
-                { label: 'Yellow Card', eventType: 'yellow_card', accent: '#F59E0B' },
-                { label: 'Red Card', eventType: 'red_card', accent: '#EF4444' },
-                { label: 'Substitution', eventType: 'sub', accent: '#3B82F6' },
+                { label: 'Goal', eventType: 'goal', tone: 'good' },
+                { label: 'Penalty', eventType: 'penalty', tone: 'good' },
+                { label: 'Own goal', eventType: 'own_goal', tone: 'bad' },
+                { label: 'Yellow card', eventType: 'yellow_card', tone: 'card' },
+                { label: 'Red card', eventType: 'red_card', tone: 'bad' },
+                { label: 'Substitution', eventType: 'sub', tone: 'sub' },
               ];
               quickActions = perSide.flatMap(a => (['home', 'away'] as const).map(side => ({
                 ...a, key: `${a.eventType}-${side}`, side, team: sideName(side),
@@ -1168,11 +946,11 @@ export default function AdminMatchCenterControllerPage({
 
             const otherActions: { key: string; label: string; eventType: MatchEventType }[] = [
               { key: 'commentary', label: 'Commentary', eventType: 'commentary' },
-              { key: 'whistle', label: 'Period Whistle', eventType: 'whistle' },
+              { key: 'whistle', label: 'Period whistle', eventType: 'whistle' },
             ];
 
             return (
-              <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)', marginBottom: '2.5rem' }}>
+              <section className="glass-panel mc-form" aria-labelledby="mc-form-title">
                 {inShootout && (
                   <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.04)' }}>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Penalty shootout</h3>
@@ -1198,9 +976,7 @@ export default function AdminMatchCenterControllerPage({
                   </div>
                 )}
 
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Radio size={18} color="var(--c-green)" /> Log a Match Event
-                </h3>
+                <h3 id="mc-form-title">Log an event</h3>
 
                 <form onSubmit={handleLogEvent}>
                   {/* Quick Action Buttons */}
@@ -1214,32 +990,14 @@ export default function AdminMatchCenterControllerPage({
                             key={a.key}
                             type="button"
                             onClick={() => { setEventType(a.eventType); chooseSide(a.side); }}
+                            aria-pressed={isActive}
+                            data-tone={a.tone}
                             // A folded button stays in view while it's the one picked
-                            className={`touch-target${PHONE_FIRST.has(a.key) || isActive ? '' : ' mc-more'}`}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.3rem',
-                              padding: '0.75rem 0.5rem',
-                              borderRadius: 'var(--radius-md)',
-                              border: `1.5px solid ${isActive ? a.accent : 'var(--border-subtle)'}`,
-                              background: isActive ? `${a.accent}22` : 'rgba(255, 255, 255, 0.03)',
-                              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              textAlign: 'center',
-                            }}
+                            className={`mc-event-btn${PHONE_FIRST.has(a.key) || isActive ? '' : ' mc-more'}`}
                           >
                             <EventIcon type={a.eventType} size={20} />
                             <span>{a.label}</span>
-                            {a.team && (
-                              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {a.team}
-                              </span>
-                            )}
+                            {a.team && <small>{a.team}</small>}
                           </button>
                         );
                       })}
@@ -1263,15 +1021,8 @@ export default function AdminMatchCenterControllerPage({
                             key={a.key}
                             type="button"
                             onClick={() => setEventType(a.eventType)}
-                            className="btn btn-sm touch-target"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              background: isActive ? 'rgba(var(--tint-rgb), 0.1)' : 'transparent',
-                              border: `1px solid ${isActive ? '#FFFFFF' : 'var(--border-subtle)'}`,
-                              color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                            }}
+                            aria-pressed={isActive}
+                            className="mc-event-btn is-inline"
                           >
                             <EventIcon type={a.eventType} size={16} />
                             <span>{a.label}</span>
@@ -1283,7 +1034,7 @@ export default function AdminMatchCenterControllerPage({
 
                   <div className="mc-side-minute" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
                     <div className="form-group m-0">
-                      <label htmlFor="match-center-team-side" className="form-label">Team Side</label>
+                      <label htmlFor="match-center-team-side" className="form-label">Team</label>
                       <select id="match-center-team-side"
                         className="form-select"
                         value={teamSide}
@@ -1295,7 +1046,7 @@ export default function AdminMatchCenterControllerPage({
                     </div>
 
                     <div className="form-group m-0">
-                      <label htmlFor="match-center-match-minute" className="form-label">Match Minute</label>
+                      <label htmlFor="match-center-match-minute" className="form-label">Minute</label>
                       <input id="match-center-match-minute"
                         type="number"
                         min={0}
@@ -1312,7 +1063,7 @@ export default function AdminMatchCenterControllerPage({
                     {isClubSelected ? (
                       <div className="form-group">
                         <label className="form-label">
-                          {eventType === 'sub' ? 'Player Coming ON *' : 'Squad Player Involved *'}
+                          {eventType === 'sub' ? 'Player coming on *' : 'Player *'}
                         </label>
                         {chipPlayers.length > 0 && (
                           <div className="mc-player-chips" role="group" aria-label="Tap a player">
@@ -1329,7 +1080,7 @@ export default function AdminMatchCenterControllerPage({
                           players={selectedSquad ?? []}
                           value={selectedPlayerId}
                           onChange={setSelectedPlayerId}
-                          extraOptions={[{ value: 'custom', label: '-- Custom Name / Other Player --' }]}
+                          extraOptions={[{ value: 'custom', label: 'Someone else (type a name)' }]}
                         />
 
                         {selectedPlayerId === 'custom' && (
@@ -1346,7 +1097,7 @@ export default function AdminMatchCenterControllerPage({
                       </div>
                     ) : (
                       <div className="form-group">
-                        <label htmlFor="match-center-opponent-player-name" className="form-label">Opponent Player Name *</label>
+                        <label htmlFor="match-center-opponent-player-name" className="form-label">Opponent player *</label>
                         <input id="match-center-opponent-player-name"
                           type="text"
                           required
@@ -1361,7 +1112,7 @@ export default function AdminMatchCenterControllerPage({
                     {/* If Substitution: Select player coming OFF */}
                     {eventType === 'sub' && isClubSelected ? (
                       <div className="form-group">
-                        <label className="form-label">Player Coming OFF *</label>
+                        <label className="form-label">Player coming off *</label>
                         <PlayerSearchSelect
                           id="player-sub-off-search"
                           players={selectedSquad ?? []}
@@ -1371,7 +1122,7 @@ export default function AdminMatchCenterControllerPage({
                       </div>
                     ) : (
                       <div className="form-group">
-                        <label className="form-label">{eventType === 'sub' ? 'Player Coming OFF (optional)' : 'Assist / Involved Secondary (Optional)'}</label>
+                        <label className="form-label">{eventType === 'sub' ? 'Player coming off (optional)' : 'Assist (optional)'}</label>
                         {isClubSelected ? (
                           <>
                             <PlayerSearchSelect
@@ -1380,8 +1131,8 @@ export default function AdminMatchCenterControllerPage({
                               value={selectedAssistId}
                               onChange={setSelectedAssistId}
                               extraOptions={[
-                                { value: 'none', label: '-- None --' },
-                                { value: 'custom', label: '-- Custom Name / Other Player --' },
+                                { value: 'none', label: 'None' },
+                                { value: 'custom', label: 'Someone else (type a name)' },
                               ]}
                             />
                             {selectedAssistId === 'custom' && (
@@ -1410,7 +1161,7 @@ export default function AdminMatchCenterControllerPage({
 
                   <details className="form-group mc-note" open={!!eventDetail || undefined}>
                     <summary className="form-label" style={{ cursor: 'pointer' }}>Add a note (optional)</summary>
-                    <label htmlFor="match-center-event-detail-tactical-notes" className="sr-only">Event Detail / Tactical Notes</label>
+                    <label htmlFor="match-center-event-detail-tactical-notes" className="sr-only">Note</label>
                     <input id="match-center-event-detail-tactical-notes"
                       type="text"
                       className="form-input"
@@ -1422,94 +1173,51 @@ export default function AdminMatchCenterControllerPage({
 
                   {/* Stays in reach on phones while the form scrolls */}
                   <div className="mc-log-submit" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                    <button type="submit" className="btn btn-primary touch-target" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: club.primary_color, minWidth: 'min(180px, 100%)' }}>
-                      <Send size={16} />
-                      <span>Log Event</span>
+                    <button type="submit" className="btn btn-primary touch-target" style={{ minWidth: 'min(180px, 100%)' }}>
+                      <Send size={16} aria-hidden="true" />
+                      <span>Log event</span>
                     </button>
                   </div>
                 </form>
-              </div>
+              </section>
             );
           })()}
 
-          {/* Logged Events List with Deletion */}
-          <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
-              Logged Match Events ({events.length})
-            </h3>
-
+          {/* The match log; deleting a goal takes it off the score too */}
+          <section className="glass-panel mc-log-panel" aria-labelledby="mc-log-title">
+            <h3 id="mc-log-title">Match log <small>{events.length} {events.length === 1 ? 'event' : 'events'}</small></h3>
             {events.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                No events recorded yet. Log goals, substitutions, and cards above.
-              </p>
+              <p className="admin-empty" style={{ padding: 0 }}>Nothing logged yet. Goals, cards and substitutions appear here as you log them.</p>
             ) : (
-              <div className="stack stack-sm">
+              <ol className="mc-log">
                 {events.map(evt => (
-                  <div
-                    key={evt.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: 'clamp(0.6rem, 2vw, 0.85rem) clamp(0.75rem, 2.5vw, 1.15rem)',
-                      borderRadius: '8px',
-                      background: 'rgba(var(--shade-rgb), 0.35)',
-                      border: '1px solid var(--border-subtle)',
-                      gap: '0.75rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
-                      <span className="badge" style={{
-                        // Deep enough shades for white text to read at 4.5:1; other events use the theme's own tint and text
-                        backgroundColor: evt.event_type === 'goal' ? '#047857' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#B91C1C' : 'rgba(var(--tint-rgb), 0.1)',
-                        color: evt.event_type === 'yellow_card' ? '#000000' : ['goal', 'red_card'].includes(evt.event_type) ? '#FFFFFF' : 'var(--text-primary)',
-                        fontWeight: 900,
-                        minWidth: '38px',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}>
-                        {evt.minute}&apos;
+                  <li key={evt.id}>
+                    <span className="mc-log-min">{evt.minute}&prime;</span>
+                    <div className="mc-log-what">
+                      <span className="mc-log-kind">
+                        <EventIcon type={evt.event_type} size={14} />
+                        {(EVENT_LABEL[evt.event_type] || evt.event_type.replace('_', ' ')).replace(/^./, c => c.toUpperCase())}
                       </span>
-
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                            {evt.event_type.toUpperCase().replace('_', ' ')}
-                          </span>
-                          <span className="text-note">•</span>
-                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                            {evt.player_name}
-                          </span>
-                          {evt.assist_player_name && (
-                            <span className="text-meta">
-                              (Ast: {evt.assist_player_name})
-                            </span>
-                          )}
-                          <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                            {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
-                          </span>
-                        </div>
-                        {evt.detail_text && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem', wordBreak: 'break-word' }}>
-                            {evt.detail_text}
-                          </div>
-                        )}
-                      </div>
+                      <b>{evt.player_name}</b>
+                      <small>
+                        {[evt.team_side === 'home' ? match.home_team_name : match.away_team_name, evt.assist_player_name && `assist ${evt.assist_player_name}`].filter(Boolean).join(', ')}
+                        {evt.detail_text && <><br />{evt.detail_text}</>}
+                      </small>
                     </div>
-
                     <button data-needs-full
+                      type="button"
                       onClick={() => handleDeleteEvent(evt.id, `${EVENT_LABEL[evt.event_type] || evt.event_type} (${evt.minute}')`)}
-                      className="btn btn-secondary btn-sm touch-target"
-                      style={{ padding: '0.35rem 0.65rem', color: 'var(--c-red)', borderColor: 'rgba(239, 68, 68, 0.3)', flexShrink: 0 }}
+                      className="admin-icon-btn is-danger"
+                      aria-label={`Delete ${EVENT_LABEL[evt.event_type] || evt.event_type} at ${evt.minute} minutes`}
                       title="Delete event and revert score if goal"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
             )}
-          </div>
+          </section>
         </div>
       )}
 
@@ -1517,19 +1225,13 @@ export default function AdminMatchCenterControllerPage({
       {/* TAB 2: TACTICAL PITCH & FREE-FORM FORMATIONS */}
       {/* ========================================================================= */}
       {adminTab === 'tactics' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="glass-panel" style={{ padding: 'clamp(1rem, 2.5vw, 1.5rem) clamp(1rem, 3vw, 2rem)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Move size={20} color="var(--c-amber)" /> Tactical Pitch & Free-Form Manager
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
-                  Coaches can choose a tactical preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or freely drag and drop any player node into custom shapes. Click &quot;Save Shape&quot; to publish directly to the live match centre.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="admin-stack">
+          <section className="glass-panel mc-form" aria-labelledby="mc-tactics-title">
+            <h3 id="mc-tactics-title">Lineup and formation</h3>
+            <p className="admin-table-foot" style={{ marginTop: 'calc(var(--space-sm) * -1)' }}>
+              Pick a preset (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-2-4-1) or drag players into your own shape, then Save Shape to show it on the live match page.
+            </p>
+          </section>
 
           {/* Interactive Tactical Pitch */}
           <div className="glass-panel" style={{ padding: 'clamp(0.75rem, 2vw, 1.75rem)' }}>
@@ -1551,145 +1253,62 @@ export default function AdminMatchCenterControllerPage({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: CLOCK & STOPPAGE TIME BOARD */}
+      {/* TAB 3: CLOCK & ADDED TIME */}
       {/* ========================================================================= */}
       {adminTab === 'clock' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '2rem' }}>
-          {/* Stoppage Time Board (4th Official LED) */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Timer size={18} color="var(--c-amber)" /> 4th Official Stoppage Board
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Select additional stoppage time indicated by the match referee.
-            </p>
-
-            {/* LED Display Box */}
-            <div style={{
-              background: 'rgb(var(--dk-4-6-9))',
-              border: '2px solid #F59E0B',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              textAlign: 'center',
-              marginBottom: '1.5rem',
-              boxShadow: '0 0 25px rgba(245, 158, 11, 0.3)',
-            }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--c-amber)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Official Stoppage Time
-              </span>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '3.5rem', fontWeight: 900, color: 'var(--c-amber)', marginTop: '0.2rem' }}>
-                +{match.added_time}&apos;
-              </div>
+        <div className="admin-two">
+          {/* Added time, as the fourth official shows it */}
+          <section className="glass-panel mc-form" aria-labelledby="mc-added-title">
+            <h3 id="mc-added-title">Added time</h3>
+            <div className="mc-added">
+              <span>Shown on the match page</span>
+              <b>+{match.added_time}&prime;</b>
             </div>
-
-            {/* Quick Added Time Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 48px), 1fr))', gap: '0.5rem' }}>
+            <div className="mc-added-picks" role="group" aria-label="Set added time">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 10].map(mins => (
-                <button
-                  key={mins}
-                  onClick={() => handleSetAddedTime(mins)}
-                  className="btn btn-sm"
-                  style={{
-                    background: match.added_time === mins ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)',
-                    color: match.added_time === mins ? '#000000' : '#FFFFFF',
-                    fontWeight: 800,
-                    border: '1px solid',
-                    borderColor: match.added_time === mins ? '#F59E0B' : 'var(--border-subtle)',
-                  }}
-                >
-                  +{mins}&apos;
+                <button key={mins} type="button" className="mc-period" aria-pressed={match.added_time === mins} onClick={() => handleSetAddedTime(mins)}>
+                  +{mins}&prime;
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* Period Transition Manager */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={18} color="var(--c-green)" /> Match Period Transition
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Trigger whistle transitions to control live status on supporter feeds.
-            </p>
-
+          {/* Period changes, in the order a game runs */}
+          <section className="glass-panel mc-form" aria-labelledby="mc-period-title">
+            <h3 id="mc-period-title">Periods</h3>
             {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
               <button
+                type="button"
                 onClick={handleTogglePause}
-                className="btn"
-                style={{
-                  width: '100%',
-                  justifyContent: 'space-between',
-                  padding: '0.85rem 1.25rem',
-                  marginBottom: '1rem',
-                  background: match.is_paused ? '#F59E0B' : 'rgba(255,255,255,0.06)',
-                  color: match.is_paused ? '#000000' : '#FFFFFF',
-                  fontWeight: 800,
-                }}
+                className={match.is_paused ? 'btn btn-secondary mc-pause is-paused mc-period-row' : 'btn btn-secondary mc-pause mc-period-row'}
+                aria-pressed={!!match.is_paused}
               >
                 <span className="row">
-                  {match.is_paused ? <Play size={16} /> : <Pause size={16} />}
-                  {match.is_paused ? 'Resume Clock' : 'Pause Clock (injury or stoppage)'}
+                  {match.is_paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+                  {match.is_paused ? 'Resume the clock' : 'Pause the clock (injury or stoppage)'}
                 </span>
-                {match.is_paused && <span className="badge" style={{ background: 'rgba(var(--shade-rgb), 0.2)', color: '#000' }}>PAUSED</span>}
+                {match.is_paused && <span className="admin-pill is-warn">Paused</span>}
               </button>
             )}
-
-            <div className="stack stack-sm">
-              <button
-                onClick={() => handlePeriodTransition('first_half', 'live', 1)}
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
-              >
-                <span>Kickoff (1st Half Start)</span>
-                <span className="badge badge-primary">1&apos;</span>
-              </button>
-
-              <button
-                onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
-              >
-                <span>Half Time Whistle</span>
-                <span className="badge badge-gold">HT 45&apos;</span>
-              </button>
-
-              <button
-                onClick={() => handlePeriodTransition('second_half', 'live', 46)}
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
-              >
-                <span>2nd Half Kickoff</span>
-                <span className="badge badge-primary">46&apos;</span>
-              </button>
-
-              <button
-                onClick={() => handlePeriodTransition('extra_time', 'live', 91)}
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
-              >
-                <span>Extra Time (Cup/Knockout)</span>
-                <span className="badge badge-primary">ET 91&apos;</span>
-              </button>
-
-              <button
-                onClick={() => handlePeriodTransition('penalties', 'live', 120)}
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}
-              >
-                <span>Penalty Shootout</span>
-                <span className="badge badge-gold">PSO</span>
-              </button>
-
-              <button
-                onClick={handleFullTime}
-                className="btn btn-primary"
-                style={{ justifyContent: 'space-between', padding: '0.85rem 1.25rem', background: '#3B82F6' }}
-              >
-                <span>Full Time &amp; Save Player Stats</span>
-                <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.2)', color: 'var(--text-primary)' }}>FT</span>
+            <div className="mc-period-list">
+              {([
+                { label: 'Kick-off, first half', mark: '1′', go: () => handlePeriodTransition('first_half', 'live', 1) },
+                { label: 'Half time whistle', mark: '45′', go: () => handlePeriodTransition('halftime', 'halftime', 45) },
+                { label: 'Kick-off, second half', mark: '46′', go: () => handlePeriodTransition('second_half', 'live', 46) },
+                { label: 'Extra time (cup or knockout)', mark: '91′', go: () => handlePeriodTransition('extra_time', 'live', 91) },
+                { label: 'Penalty shootout', mark: 'Pens', go: () => handlePeriodTransition('penalties', 'live', 120) },
+              ]).map(p => (
+                <button key={p.label} type="button" className="btn btn-secondary mc-period-row" onClick={p.go}>
+                  <span>{p.label}</span>
+                  <span className="admin-pill">{p.mark}</span>
+                </button>
+              ))}
+              <button type="button" className="btn btn-primary mc-period-row" onClick={handleFullTime}>
+                <span>Full time, then save player stats</span>
+                <span className="admin-pill">FT</span>
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
 
@@ -1735,7 +1354,7 @@ export default function AdminMatchCenterControllerPage({
           inset: 0,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
-          background: 'rgba(0, 0, 0, 0.8)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
@@ -1751,7 +1370,7 @@ export default function AdminMatchCenterControllerPage({
             borderRadius: '16px',
             border: '1px solid var(--border-subtle)',
             background: 'var(--bg-surface)',
-            boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-drawer)',
           }}>
             <div className="section-head">
               <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

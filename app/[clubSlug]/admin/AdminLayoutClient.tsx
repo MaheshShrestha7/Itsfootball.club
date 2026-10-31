@@ -703,7 +703,7 @@ export default function AdminLayout({
             <img loading="eager" decoding="async" width={28} height={28} src={club.logo_url || DEFAULT_CREST} alt="" className="admin-crest is-small" />
             <span>
               {!onDashboard && currentNavItem && currentChild && <small>{currentNavItem.label}</small>}
-              <span>{topbarTitle}</span>
+              <span title={topbarTitle}>{topbarTitle}</span>
             </span>
           </div>
           <button type="button" className="admin-icon-btn" onClick={e => openDrawer('search', e.currentTarget)} aria-label="Search players, matches and events">
