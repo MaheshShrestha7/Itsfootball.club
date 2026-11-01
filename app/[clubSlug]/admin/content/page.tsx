@@ -9,7 +9,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
-import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Sparkles } from 'lucide-react';
+import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Pin, CheckCircle2 } from 'lucide-react';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 export default function AdminContentPage({
@@ -54,7 +54,7 @@ export default function AdminContentPage({
           order: existing.length + 1,
         }
       ];
-      setToastMessage(`✓ Live: Pinned "${article.title}" to Hero Slider!`);
+      setToastMessage(`Pinned "${article.title}" to the home page`);
     }
     updated.forEach((item, idx) => (item.order = idx + 1));
     updateClubBranding(club.id, { hero_pinned_items: updated });
@@ -136,27 +136,18 @@ export default function AdminContentPage({
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        marginBottom: '2rem',
-      }}>
+      <div className="admin-head">
         <div>
-          <h1 className="stat-value">
-            Content & Media Management
-          </h1>
-          <p className="text-body">
-            Publish club news, match reports, match highlights, and video embeds.
-          </p>
+          <h1>News and video</h1>
+          <p>Club news, match reports, highlights and video embeds.</p>
         </div>
 
-        <button onClick={handleOpenAdd} className="btn btn-primary row">
-          <Plus size={16} />
-          <span>Publish Article / Video</span>
-        </button>
+        <div className="admin-head-actions">
+          <button type="button" onClick={handleOpenAdd} className="btn btn-primary row">
+            <Plus size={16} aria-hidden="true" />
+            <span>Write a story</span>
+          </button>
+        </div>
       </div>
 
       {/* News Articles List */}
@@ -184,18 +175,18 @@ export default function AdminContentPage({
               />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  {article.is_featured && <span className="badge badge-gold">FEATURED</span>}
+                  {article.is_featured && <span className="admin-pill is-ok">Featured</span>}
                   {article.video_embed_url && (
-                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)' }}>
-                      <Play size={10} /> VIDEO
+                    <span className="admin-pill">
+                      <Play size={10} aria-hidden="true" /> Video
                     </span>
                   )}
                   <span className="text-meta">
-                    {formatShortDay(article.published_at)} • {article.author_name}
+                    {formatShortDay(article.published_at)}, {article.author_name}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.3rem', overflowWrap: 'anywhere' }}>
                   {article.title}
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -209,33 +200,27 @@ export default function AdminContentPage({
                 const isPinned = club.hero_pinned_items?.some(p => p.type === 'news' && p.target_id === article.id);
                 return (
                   <button
+                    type="button"
                     onClick={() => handleTogglePinNews(article)}
                     className="btn btn-secondary btn-sm"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      borderColor: isPinned ? '#60A5FA' : undefined,
-                      color: isPinned ? 'var(--c-sky)' : 'var(--text-secondary)',
-                      background: isPinned ? 'rgba(59, 130, 246, 0.1)' : undefined
-                    }}
-                    title={isPinned ? 'Pinned to Hero Slider (Click to unpin)' : 'Pin to Hero Slider'}
+                    aria-pressed={!!isPinned}
+                    title={isPinned ? 'On the home page slider. Select to take it off' : 'Show it in the home page slider'}
                   >
-                    <Sparkles size={14} color={isPinned ? '#60A5FA' : 'var(--text-muted)'} />
-                    <span>{isPinned ? 'Hero Pinned' : 'Pin to Hero'}</span>
+                    <Pin size={14} aria-hidden="true" />
+                    <span>{isPinned ? 'On the home page' : 'Pin to the home page'}</span>
                   </button>
                 );
               })()}
 
               <button type="button" onClick={() => handleOpenEdit(article)} className="btn btn-secondary btn-sm" aria-label={`Edit ${article.title}`}>
-                <Edit2 size={14} />
+                <Edit2 size={14} aria-hidden="true" />
               </button>
               <button type="button" data-needs-full onClick={async () => {
                 if (await confirmAction({ title: `Delete "${article.title}"?`, message: 'The article will be removed from your club site. This cannot be undone.', confirmLabel: 'Delete article', danger: true })) {
                   deleteNewsArticle(article.id);
                 }
               }} className="btn btn-danger btn-sm" aria-label={`Delete ${article.title}`}>
-                <Trash2 size={14} />
+                <Trash2 size={14} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -248,7 +233,7 @@ export default function AdminContentPage({
           position: 'fixed',
           inset: 0,
           zIndex: 999,
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--color-scrim)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -266,17 +251,17 @@ export default function AdminContentPage({
             padding: '2rem',
           }}>
             <div className="section-head">
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {editingId ? 'Edit Article' : 'Publish New Story'}
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {editingId ? 'Edit story' : 'Write a story'}
               </h3>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+              <button type="button" onClick={() => setModalOpen(false)} className="admin-icon-btn" aria-label="Close">
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleSave}>
               <div className="form-group">
-                <label htmlFor="content-headline-title" className="form-label">Headline Title *</label>
+                <label htmlFor="content-headline-title" className="form-label">Headline *</label>
                 <input id="content-headline-title"
                   type="text"
                   required
@@ -287,7 +272,7 @@ export default function AdminContentPage({
               </div>
 
               <div className="form-group">
-                <label htmlFor="content-brief-summary-lead" className="form-label">Brief Summary / Lead</label>
+                <label htmlFor="content-brief-summary-lead" className="form-label">Summary</label>
                 <input id="content-brief-summary-lead"
                   type="text"
                   className="form-input"
@@ -297,7 +282,7 @@ export default function AdminContentPage({
               </div>
 
               <div className="form-group">
-                <label htmlFor="content-full-article-content" className="form-label">Full Article Content *</label>
+                <label htmlFor="content-full-article-content" className="form-label">Story *</label>
                 <RichTextEditor
                   key={editingId || 'new'}
                   id="content-full-article-content"
@@ -322,7 +307,7 @@ export default function AdminContentPage({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="content-video-link-youtube-or-mp4" className="form-label">Featured Video (YouTube or .mp4)</label>
+                  <label htmlFor="content-video-link-youtube-or-mp4" className="form-label">Video (YouTube or .mp4)</label>
                   <input id="content-video-link-youtube-or-mp4"
                     type="text"
                     className="form-input"
@@ -335,7 +320,7 @@ export default function AdminContentPage({
 
               <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
-                  <label htmlFor="content-author-name" className="form-label">Author Name</label>
+                  <label htmlFor="content-author-name" className="form-label">Author</label>
                   <input id="content-author-name"
                     type="text"
                     className="form-input"
@@ -383,26 +368,8 @@ export default function AdminContentPage({
 
       {/* Floating Live Toast Notification */}
       {toastMessage && (
-        <div role="status" className="admin-save-toast" style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          padding: '1rem 1.4rem',
-          background: 'rgba(var(--dk-15-23-42), 0.96)',
-          border: '1.5px solid #10B981',
-          borderRadius: '12px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.6), 0 0 24px rgba(16, 185, 129, 0.4)',
-          color: 'var(--text-primary)',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          backdropFilter: 'blur(10px)',
-          animation: 'fadeIn 0.2s ease-out'
-        }}>
-          <Sparkles size={18} color="var(--c-green)" />
+        <div role="status" className="admin-save-toast">
+          <CheckCircle2 size={18} aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}

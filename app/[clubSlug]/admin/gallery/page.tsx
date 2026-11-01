@@ -2,7 +2,7 @@
 
 import React, { use, useState } from 'react';
 import Link from 'next/link';
-import { Images, FolderPlus, ArrowLeft, UploadCloud, Trash2, Pencil, RefreshCw, Star } from 'lucide-react';
+import { FolderPlus, ArrowLeft, UploadCloud, Trash2, Pencil, RefreshCw, Star } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import type { MediaGalleryItem } from '@/lib/supabase/types';
 import { deleteUploadedPhoto, uploadImage } from '@/components/ImageUploadZone';
@@ -125,26 +125,26 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Images size={30} /> Photo Gallery
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '680px', marginTop: '0.2rem' }}>
-          Upload photos into albums for the club website. Public page:{' '}
-          <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--club-ink)' }}>/{club.slug}/gallery</Link>
-        </p>
+      <div className="admin-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1>Gallery</h1>
+          <p>
+            Upload photos into albums for the club website. Public page:{' '}
+            <Link href={`/${club.slug}/gallery`} style={{ color: 'var(--color-accent-ink)' }}>/{club.slug}/gallery</Link>
+          </p>
+        </div>
       </div>
 
       {!album ? (
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
           <div className="section-head row-wrap" style={{ gap: '0.75rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Albums</h3>
-              <p className="text-note">{albums.length} album{albums.length === 1 ? '' : 's'} • {photoCount(totalPhotos)}</p>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Albums</h3>
+              <p className="text-note">{albums.length} album{albums.length === 1 ? '' : 's'}, {photoCount(totalPhotos)}</p>
             </div>
             {newName === null ? (
               <button type="button" className="btn btn-primary" onClick={() => setNewName('')}>
-                <FolderPlus size={16} /> New album
+                <FolderPlus size={16} aria-hidden="true" /> New album
               </button>
             ) : (
               <form onSubmit={createAlbum} className="row row-wrap">
@@ -166,15 +166,15 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
       ) : (
         <div className="glass-panel" style={{ padding: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
           <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openAlbum(null)} style={{ marginBottom: '1rem' }}>
-            <ArrowLeft size={14} /> All albums
+            <ArrowLeft size={14} aria-hidden="true" /> All albums
           </button>
 
           <div className="section-head row-wrap" style={{ gap: '0.75rem' }}>
             {renameTo === null ? (
               <div className="min-w-0">
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{album.name}</h3>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{album.name}</h3>
                 <p className="text-note">
-                  {photoCount(album.photos.length)}{album.photos.length > 1 && ' • Use Make cover to choose the album cover'}
+                  {photoCount(album.photos.length)}{album.photos.length > 1 && '. Use Make cover to choose the album cover'}
                 </p>
               </div>
             ) : (
@@ -187,8 +187,8 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
             )}
             {renameTo === null && (
               <div className="row">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenameTo(album.name)}><Pencil size={14} /> Rename</button>
-                <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={deleteAlbum}><Trash2 size={14} /> Delete album</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenameTo(album.name)}><Pencil size={14} aria-hidden="true" /> Rename</button>
+                <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={deleteAlbum}><Trash2 size={14} aria-hidden="true" /> Delete album</button>
               </div>
             )}
           </div>
@@ -200,17 +200,17 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem',
               padding: '1.5rem', marginBottom: '1.5rem', textAlign: 'center',
-              border: `2px dashed ${dragging ? 'var(--club-primary)' : 'var(--border-subtle)'}`,
+              border: `2px dashed ${dragging ? 'var(--color-accent)' : 'var(--border-subtle)'}`,
               borderRadius: 'var(--radius-md)',
-              background: dragging ? 'rgba(var(--club-primary-rgb), 0.08)' : 'rgba(var(--shade-rgb), 0.2)',
+              background: dragging ? 'var(--color-accent-wash)' : 'var(--color-paper)',
               cursor: progress ? 'wait' : 'pointer',
             }}
           >
             <input type="file" multiple accept={IMAGE_TYPES.join(',')} disabled={!!progress} style={{ display: 'none' }}
               onChange={e => { upload(Array.from(e.target.files || [])); e.target.value = ''; }} />
-            {progress ? <RefreshCw size={22} className="animate-spin" color="var(--club-primary)" /> : <UploadCloud size={24} color="var(--club-primary)" />}
+            {progress ? <RefreshCw size={22} aria-hidden="true" className="animate-spin" color="var(--color-accent-ink)" /> : <UploadCloud size={24} aria-hidden="true" color="var(--color-accent-ink)" />}
             <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-              {progress ? `Uploading ${progress.done} of ${progress.total}...` : 'Choose photos or drag them here'}
+              {progress ? `Uploading ${progress.done} of ${progress.total}…` : 'Choose photos or drag them here'}
             </strong>
             <span className="text-meta">PNG, JPG, WebP or GIF. Select as many as you like.</span>
           </label>
@@ -220,13 +220,13 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
           ) : (
             <div className="gallery-grid">
               {album.photos.map(photo => (
-                <div key={photo.id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.2)' }}>
+                <div key={photo.id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--color-paper)' }}>
                   <div style={{ position: 'relative' }}>
                     <img src={photo.media_url} alt={photo.title || album.name} loading="lazy" decoding="async"
                       style={{ display: 'block', width: '100%', aspectRatio: '4 / 3', objectFit: 'cover' }} />
                     {album.cover?.id === photo.id && (
-                      <span className="badge badge-primary" style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #fff)' }}>
-                        <Star size={11} fill="currentColor" /> Cover
+                      <span className="admin-pill" style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}>
+                        <Star size={11} fill="currentColor" aria-hidden="true" /> Cover
                       </span>
                     )}
                   </div>
@@ -249,11 +249,11 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
                         aria-pressed={album.cover?.id === photo.id}
                         disabled={album.cover?.id === photo.id}
                         onClick={() => setCover(photo)}>
-                        <Star size={14} fill={album.cover?.id === photo.id ? 'currentColor' : 'none'} />
+                        <Star size={14} aria-hidden="true" fill={album.cover?.id === photo.id ? 'currentColor' : 'none'} />
                         {album.cover?.id === photo.id ? 'Cover' : 'Make cover'}
                       </button>
                       <button data-needs-full type="button" className="btn btn-danger btn-sm shrink-0" aria-label="Delete photo" title="Delete photo" onClick={() => deletePhoto(photo)}>
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </div>
                   </div>

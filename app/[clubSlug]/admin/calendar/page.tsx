@@ -160,19 +160,19 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
 
   const week = weekDays(anchor);
   const heading = view === 'week'
-    ? `${week[0].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })} – ${week[6].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}`
+    ? `${week[0].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short' })} to ${week[6].toLocaleDateString(DATE_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}`
     : fmtMonth(anchor);
 
   return (
     <div className="admin-cal" onClick={closeAll}>
-      <div className="admin-cal-head">
+      <div className="admin-head" style={{ marginBottom: 0 }}>
         <div>
-          <h1 className="stat-value">Calendar</h1>
-          <p className="text-body">Matches, training, events and tournaments in one place, past and upcoming.</p>
+          <h1>Calendar</h1>
+          <p>Matches, training, events and tournaments in one place, past and upcoming.</p>
         </div>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm row" onClick={e => addAt(view === 'week' || anchor.getMonth() !== today.getMonth() ? anchor : today, undefined, e)}>
-            <Plus size={16} /> Add
+            <Plus size={16} aria-hidden="true" /> Add
           </button>
         )}
       </div>
@@ -180,10 +180,10 @@ export default function AdminCalendarPage({ params }: { params: Promise<{ clubSl
       <div className="admin-cal-bar">
         <div className="admin-cal-nav">
           <button data-view-ok type="button" className="btn btn-secondary btn-sm" aria-label={view === 'week' ? 'Previous week' : 'Previous month'} onClick={() => step(-1)}>
-            <ChevronLeft size={16} />
+            <ChevronLeft size={16} aria-hidden="true" />
           </button>
           <button data-view-ok type="button" className="btn btn-secondary btn-sm" aria-label={view === 'week' ? 'Next week' : 'Next month'} onClick={() => step(1)}>
-            <ChevronRight size={16} />
+            <ChevronRight size={16} aria-hidden="true" />
           </button>
           <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={goToday}>Today</button>
           <h2 className="admin-cal-title">{heading}</h2>
@@ -368,7 +368,7 @@ function WeekView({ days, today, items, label, onItem, onAdd }: {
                     title={label(item)}
                   >
                     <strong>{label(item)}</strong>
-                    <small>{fmtTime(item.start)}{item.place ? ` · ${item.place}` : ''}{item.score ? ` · ${item.result ? `${item.result} ` : ''}${item.score}` : ''}</small>
+                    <small>{fmtTime(item.start)}{item.place ? `, ${item.place}` : ''}{item.score ? `, ${item.result ? `${item.result} ` : ''}${item.score}` : ''}</small>
                   </button>
                 );
               })}
@@ -400,9 +400,9 @@ function ListView({ anchor, today, items, label, onItem }: {
 
   if (!days.length) {
     return (
-      <div className="card admin-cal-empty">
-        <CalendarDays size={40} color="var(--text-muted)" />
-        <p className="text-body">Nothing on the calendar this month.</p>
+      <div className="admin-panel admin-empty" style={{ alignItems: 'center' }}>
+        <CalendarDays size={32} aria-hidden="true" color="var(--text-muted)" />
+        <p style={{ margin: 0 }}>Nothing on the calendar this month.</p>
       </div>
     );
   }
@@ -410,7 +410,7 @@ function ListView({ anchor, today, items, label, onItem }: {
     <div className="admin-cal-list">
       {days.map(({ day, list }) => (
         <div key={dayKey(day)} ref={focusKey && sameDay(day, focusKey) ? todayRef : undefined} className="admin-cal-listday">
-          <h3 className={sameDay(day, today) ? 'is-today' : undefined}>{sameDay(day, today) ? `Today · ${fmtDay(day)}` : fmtDay(day)}</h3>
+          <h3 className={sameDay(day, today) ? 'is-today' : undefined}>{sameDay(day, today) ? `Today, ${fmtDay(day)}` : fmtDay(day)}</h3>
           {list.map(i => (
             <button
               data-view-ok
@@ -464,8 +464,8 @@ function ItemPopover({ item, rect, title, teamName, clubSlug, can, onClose }: {
 
   const lastDay = addDays(item.end, -1);
   const when = item.allDay
-    ? sameDay(item.start, lastDay) || lastDay < item.start ? fmtDay(item.start) : `${fmtDay(item.start)} – ${fmtDay(lastDay)}`
-    : `${fmtDay(item.start)}, ${fmtTime(item.start)}${sameDay(item.start, item.end) ? `–${fmtTime(item.end)}` : ''}`;
+    ? sameDay(item.start, lastDay) || lastDay < item.start ? fmtDay(item.start) : `${fmtDay(item.start)} to ${fmtDay(lastDay)}`
+    : `${fmtDay(item.start)}, ${fmtTime(item.start)}${sameDay(item.start, item.end) ? ` to ${fmtTime(item.end)}` : ''}`;
   const status = item.status ? item.status[0].toUpperCase() + item.status.slice(1).replace(/_/g, ' ') : undefined;
 
   return (
@@ -476,11 +476,11 @@ function ItemPopover({ item, rect, title, teamName, clubSlug, can, onClose }: {
       style={{ '--k': KIND_COLOR[item.kind], left, top, width } as React.CSSProperties}
       onClick={e => e.stopPropagation()}
     >
-      <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} /></button>
-      <span className="admin-cal-pop-tag">{KIND_LABEL[item.kind]}{teamName ? ` · ${teamName}` : ''}</span>
+      <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} aria-hidden="true" /></button>
+      <span className="admin-cal-pop-tag">{KIND_LABEL[item.kind]}{teamName ? `, ${teamName}` : ''}</span>
       <h3>{title}</h3>
-      <p><Clock size={14} />{when}</p>
-      {item.place && <p><MapPin size={14} />{item.place}</p>}
+      <p><Clock size={14} aria-hidden="true" />{when}</p>
+      {item.place && <p><MapPin size={14} aria-hidden="true" />{item.place}</p>}
       {(status || item.score) && (
         <p className="admin-cal-pop-status">
           {status}
@@ -514,7 +514,7 @@ function AddPopover({ day, time, rect, links, onClose }: {
 
   return (
     <div className="admin-cal-pop" role="dialog" aria-label={`Add on ${title}`} style={{ left, top, width }} onClick={e => e.stopPropagation()}>
-      <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} /></button>
+      <button data-view-ok type="button" className="admin-cal-pop-x" aria-label="Close" onClick={onClose}><X size={16} aria-hidden="true" /></button>
       <h3>Add on {title}</h3>
       <div className="admin-cal-pop-links admin-cal-pop-stack">
         {links.map(l => (

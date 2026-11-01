@@ -1,7 +1,6 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useState } from 'react';
-import { History } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -78,37 +77,33 @@ export default function AdminActivityPage({ params }: { params: Promise<{ clubSl
 
   return (
     <div className="stack">
-      <div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <History size={30} /> Activity Log
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '720px', marginTop: '0.2rem' }}>
-          Who approved, rejected or removed members, waived fees, verified payments, or changed access and club settings, and when.
-          It is filled in automatically and nobody can edit it.
-        </p>
+      <div className="admin-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1>Activity log</h1>
+          <p>Who approved, rejected or removed members, waived fees, verified payments, or changed access and club settings, and when. It fills in by itself and nobody can edit it.</p>
+        </div>
       </div>
 
-      <div role="group" aria-label="Show" className="fixtures-team-chips" data-view-ok>
+      <div role="group" aria-label="Show" className="admin-chips" data-view-ok>
         {FILTERS.map(f => (
-          <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}
-            className={`btn btn-sm ${filter === f.key ? 'btn-primary' : 'btn-secondary'}`}>
+          <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)} className="admin-chip">
             {f.label}
           </button>
         ))}
       </div>
 
       {missing ? (
-        <p className="glass-panel text-note" style={{ padding: '1.25rem' }}>
+        <p className="admin-panel admin-empty" style={{ margin: 0 }}>
           The activity log starts once the latest database update (20261129_security_3) has been run.
         </p>
       ) : rows.length === 0 ? (
-        <p className="glass-panel text-note" style={{ padding: '1.25rem' }}>{loading ? 'Loading…' : 'Nothing recorded yet.'}</p>
+        <p className="admin-panel admin-empty" style={{ margin: 0 }}>{loading ? 'Loading…' : 'Nothing recorded yet.'}</p>
       ) : (
-        <ol className="glass-panel" style={{ listStyle: 'none', padding: 0, margin: 0, overflow: 'hidden' }}>
+        <ol className="admin-panel" style={{ listStyle: 'none', padding: 0, margin: 0, overflow: 'hidden' }}>
           {rows.map(r => (
             <li key={r.id} style={{ padding: '0.8rem 1.1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexWrap: 'wrap', gap: '0.25rem 1rem', justifyContent: 'space-between' }}>
               <div className="min-w-0">
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{r.summary}</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{r.summary}</div>
                 {reasonOf(r) && <div className="text-note">Reason: {reasonOf(r)}</div>}
                 <div className="text-note">by {r.actor_email || 'an account that has since been deleted'}</div>
               </div>

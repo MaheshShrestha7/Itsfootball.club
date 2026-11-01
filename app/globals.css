@@ -57,6 +57,9 @@
   --tint-rgb: 255, 255, 255;
   /* Recessed wells: black wash on dark, pale slate on light */
   --shade-rgb: 0, 0, 0;
+  /* WhatsApp's own green, on the Call-up button only */
+  --whatsapp: #25D366;
+  --whatsapp-ink: #062814;
   /* Accent text colours (a darker shade in light mode keeps them readable on white) */
   --c-green: #10B981;
   --c-amber: #F59E0B;
@@ -2886,10 +2889,10 @@ dialog.form-dialog::backdrop {
 .admin-cal-dow { padding: 0.55rem 0.6rem; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); }
 .admin-cal-day { min-height: 112px; padding: 6px 7px; border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); min-width: 0; overflow: hidden; }
 .admin-cal-day:nth-child(7n) { border-right: 0; }
-.admin-cal-day.is-out { background: rgba(var(--shade-rgb), 0.18); }
+.admin-cal-day.is-out { background: color-mix(in oklab, var(--bg-pitch) 60%, transparent); }
 .admin-cal-day.is-out .admin-cal-daynum { color: var(--text-muted); font-weight: 500; }
 .admin-cal-day.is-past { filter: none; }
-.admin-cal-day.is-today { background: rgba(var(--club-primary-rgb), 0.06); }
+.admin-cal-day.is-today { background: color-mix(in oklab, var(--club-primary) 6%, transparent); }
 .admin-cal-daynum { display: inline-grid; place-items: center; min-width: 24px; height: 24px; margin-bottom: 4px; padding: 0 4px; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
 .admin-cal-day.is-today .admin-cal-daynum { background: var(--club-primary); color: var(--text-on-primary); }
 .admin-cal-more { border: 0; background: transparent; color: var(--text-muted); font-size: 0.7rem; font-weight: 700; padding: 0 4px; cursor: pointer; }
@@ -2900,14 +2903,14 @@ dialog.form-dialog::backdrop {
 .admin-cal-wh { padding: 0.5rem; text-align: center; border-left: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
 .admin-cal-wh small { display: block; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); }
 .admin-cal-wh span { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
-.admin-cal-wh.is-today { background: rgba(var(--club-primary-rgb), 0.06); }
+.admin-cal-wh.is-today { background: color-mix(in oklab, var(--club-primary) 6%, transparent); }
 .admin-cal-wh.is-today span { color: var(--club-ink); }
 .admin-cal-allday-label { font-size: 0.65rem; color: var(--text-muted); text-align: right; padding: 6px 6px 0 0; border-bottom: 1px solid var(--border-subtle); }
 .admin-cal-allday { min-height: 30px; padding: 4px 4px 1px; border-left: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); min-width: 0; }
 .admin-cal-hours { padding-top: 6px; }
 .admin-cal-hours div { font-size: 0.66rem; color: var(--text-muted); text-align: right; padding-right: 6px; transform: translateY(-7px); }
 .admin-cal-col { position: relative; margin-top: 6px; border-left: 1px solid var(--border-subtle); background: repeating-linear-gradient(to bottom, var(--border-subtle) 0, var(--border-subtle) 1px, transparent 1px, transparent 44px); }
-.admin-cal-col.is-today { background-color: rgba(var(--club-primary-rgb), 0.04); }
+.admin-cal-col.is-today { background-color: color-mix(in oklab, var(--club-primary) 4%, transparent); }
 .admin-cal-block { position: absolute; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 1px; padding: 4px 6px; overflow: hidden; border: 0; border-left: 3px solid var(--k); border-radius: 7px; background: color-mix(in srgb, var(--k) 18%, var(--bg-surface)); color: var(--text-primary); text-align: left; font-size: 0.72rem; cursor: pointer; }
 .admin-cal-block strong { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-cal-block small { color: var(--text-secondary); font-size: 0.66rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2917,7 +2920,7 @@ dialog.form-dialog::backdrop {
 /* List */
 .admin-cal-list { display: flex; flex-direction: column; gap: 1rem; }
 .admin-cal-listday { scroll-margin-top: 80px; }
-.admin-cal-listday h3 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.45rem; }
+.admin-cal-listday h3 { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.45rem; }
 .admin-cal-listday h3.is-today { color: var(--club-ink); }
 .admin-cal-card { display: flex; align-items: center; gap: 0.8rem; width: 100%; margin-bottom: 0.4rem; padding: 0.7rem 0.8rem; border: 1px solid var(--border-subtle); border-left: 4px solid var(--k); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-primary); text-align: left; cursor: pointer; }
 .admin-cal-card-time { width: 52px; flex-shrink: 0; font-family: var(--font-heading); font-weight: 700; font-size: 0.82rem; color: var(--text-secondary); }
@@ -2936,10 +2939,9 @@ dialog.form-dialog::backdrop {
 .admin-cal-pop-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .admin-cal-pop-links .btn { flex: 1; justify-content: center; }
 .admin-cal-pop-stack { flex-direction: column; }
-.admin-cal-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
 @media (hover: hover) and (pointer: fine) {
   .admin-cal-day.is-addable { cursor: pointer; }
-  .admin-cal-day.is-addable:hover { background: rgba(var(--tint-rgb), 0.03); }
+  .admin-cal-day.is-addable:hover { background: color-mix(in oklab, var(--text-primary) 3%, transparent); }
   .admin-cal-col.is-addable { cursor: copy; }
 }
 

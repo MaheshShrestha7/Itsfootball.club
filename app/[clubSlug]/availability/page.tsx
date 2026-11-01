@@ -205,7 +205,7 @@ function AvailabilityHub() {
   if (!club) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading club...</p>
+        <p>Loading club…</p>
       </div>
     );
   }
@@ -217,7 +217,7 @@ function AvailabilityHub() {
     const player = squadPlayers.find(p => p.id === memberId);
     const existingNote = matchAvailabilities.find(a => a.member_id === memberId && a.note)?.note;
     groupGames.forEach(g => setPlayerAvailability(g.id, memberId, status, existingNote));
-    setFeedbackToast(`${player?.full_name || 'Player'} manually marked ${status.toUpperCase()} by admin${groupGames.length > 1 ? ` for all ${groupGames.length} games` : ''}`);
+    setFeedbackToast(`${player?.full_name || 'Player'} marked ${status} by an admin${groupGames.length > 1 ? ` for all ${groupGames.length} games` : ''}`);
     setTimeout(() => setFeedbackToast(null), 3500);
   };
 
@@ -270,9 +270,9 @@ function AvailabilityHub() {
 
   // The answers an admin can set from a roster row
   const overrideOptions: { value: AvailabilityStatus; label: string; title: string; icon: typeof CheckCircle2; color: string; border: string; bg: string }[] = [
-    { value: 'available', label: 'In', title: 'available', icon: CheckCircle2, color: 'var(--c-green)', border: '#10B981', bg: 'rgba(16, 185, 129, 0.2)' },
-    { value: 'maybe', label: 'Maybe', title: 'doubtful', icon: AlertCircle, color: 'var(--c-amber)', border: '#F59E0B', bg: 'rgba(245, 158, 11, 0.2)' },
-    { value: 'unavailable', label: 'Out', title: 'unavailable', icon: XCircle, color: 'var(--c-red)', border: '#EF4444', bg: 'rgba(239, 68, 68, 0.2)' },
+    { value: 'available', label: 'In', title: 'available', icon: CheckCircle2, color: 'var(--color-ok, var(--c-green))', border: 'var(--color-ok, var(--c-green))', bg: 'color-mix(in oklab, var(--color-ok, var(--c-green)) 20%, transparent)' },
+    { value: 'maybe', label: 'Maybe', title: 'doubtful', icon: AlertCircle, color: 'var(--c-amber)', border: 'var(--c-amber)', bg: 'color-mix(in oklab, var(--c-amber) 20%, transparent)' },
+    { value: 'unavailable', label: 'Out', title: 'unavailable', icon: XCircle, color: 'var(--c-red)', border: 'var(--c-red)', bg: 'color-mix(in oklab, var(--c-red) 20%, transparent)' },
   ];
   const rowButtonStyle: React.CSSProperties = {
     display: 'flex',
@@ -318,7 +318,7 @@ function AvailabilityHub() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: 'var(--text-primary)' }}>
+              <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Availability
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginTop: '0.35rem' }}>
@@ -333,8 +333,8 @@ function AvailabilityHub() {
                 className="btn btn-secondary btn-sm row"
                 title="Copy general availability link"
               >
-                {copiedLink ? <Check size={14} color="var(--c-green)" /> : <Copy size={14} />}
-                <span>{copiedLink ? 'Copied Link!' : 'Copy Team Link'}</span>
+                {copiedLink ? <Check size={14} aria-hidden="true" color="var(--color-ok, var(--c-green))" /> : <Copy size={14} aria-hidden="true" />}
+                <span>{copiedLink ? 'Link copied' : 'Copy the team link'}</span>
               </button>
 
               <a
@@ -342,10 +342,10 @@ function AvailabilityHub() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#25D366', color: '#062814', border: 'none' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--whatsapp)', color: 'var(--whatsapp-ink)', border: 'none' }}
               >
-                <Share2 size={14} />
-                <span>Call-Up via WhatsApp</span>
+                <Share2 size={14} aria-hidden="true" />
+                <span>Call up on WhatsApp</span>
               </a>
             </div>
           </div>
@@ -357,20 +357,20 @@ function AvailabilityHub() {
             position: 'fixed',
             bottom: '24px',
             right: '24px',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--color-ok, var(--c-green))',
             color: 'var(--text-primary)',
             padding: '0.85rem 1.4rem',
             borderRadius: '12px',
-            fontWeight: 800,
+            fontWeight: 600,
             fontSize: '0.9rem',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-md)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            animation: 'fadeIn 0.2s ease',
           }}>
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={18} aria-hidden="true" color="var(--color-ok, var(--c-green))" />
             <span>{feedbackToast}</span>
           </div>
         )}
@@ -402,7 +402,7 @@ function AvailabilityHub() {
                   >
                     {teamGroups.map(g => (
                       <option key={g.key} value={g.key}>
-                        {g.participant.name} · {tournamentName(g.tournamentId)} ({g.games.length} game{g.games.length === 1 ? '' : 's'})
+                        {g.participant.name}, {tournamentName(g.tournamentId)} ({g.games.length} game{g.games.length === 1 ? '' : 's'})
                       </option>
                     ))}
                   </select>
@@ -425,8 +425,8 @@ function AvailabilityHub() {
 
             {/* A tournament team's day: every game its answer covers */}
             {activeGroup && (
-              <div className="glass-panel" style={{ padding: '1.25rem', borderColor: 'rgba(245, 158, 11, 0.35)' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--c-amber)', marginBottom: '0.35rem' }}>
+              <div className="glass-panel" style={{ padding: '1.25rem', borderColor: 'color-mix(in oklab, var(--c-amber) 35%, transparent)' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--c-amber)', marginBottom: '0.35rem' }}>
                   {tournamentName(activeGroup.tournamentId)}
                 </div>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
@@ -438,7 +438,7 @@ function AvailabilityHub() {
                     return (
                       <li key={g.id} style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
                         <span className="min-w-0">vs {opp}</span>
-                        <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>{[g.match_time, g.pitch_label].filter(Boolean).join(' · ')}</span>
+                        <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>{[g.match_time, g.pitch_label].filter(Boolean).join(', ')}</span>
                       </li>
                     );
                   })}
@@ -454,7 +454,7 @@ function AvailabilityHub() {
                     {targetMatch.competition}
                   </span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--c-amber)', fontWeight: 800 }}>
-                    {periodLabel(targetMatch.period).toUpperCase()}
+                    {periodLabel(targetMatch.period)}
                   </span>
                 </div>
 
@@ -522,24 +522,24 @@ function AvailabilityHub() {
 
             {/* 4 Status KPI Counters */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-green)' }}>{confirmedCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-green)', textTransform: 'uppercase' }}>Confirmed</div>
+              <div style={{ background: 'color-mix(in oklab, var(--color-ok, var(--c-green)) 10%, transparent)', border: '1px solid color-mix(in oklab, var(--color-ok, var(--c-green)) 30%, transparent)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-ok, var(--c-green))' }}>{confirmedCount}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-ok, var(--c-green))' }}>Confirmed</div>
               </div>
 
-              <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+              <div style={{ background: 'color-mix(in oklab, var(--c-amber) 10%, transparent)', border: '1px solid color-mix(in oklab, var(--c-amber) 30%, transparent)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-amber)' }}>{maybeCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-amber)', textTransform: 'uppercase' }}>Doubtful</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--c-amber)' }}>Doubtful</div>
               </div>
 
-              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+              <div style={{ background: 'color-mix(in oklab, var(--c-red) 10%, transparent)', border: '1px solid color-mix(in oklab, var(--c-red) 30%, transparent)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-red)' }}>{unavailableCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--c-red)', textTransform: 'uppercase' }}>Out</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--c-red)' }}>Out</div>
               </div>
 
-              <div style={{ background: 'rgba(var(--tint-rgb), 0.05)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+              <div style={{ background: 'color-mix(in oklab, var(--text-primary) 5%, transparent)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-muted)' }}>{pendingCount}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pending</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pending</div>
               </div>
             </div>
 
@@ -551,7 +551,7 @@ function AvailabilityHub() {
                 className="btn btn-secondary btn-sm"
                 style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', width: '100%', marginBottom: '1rem' }}
               >
-                <Share2 size={14} />
+                <Share2 size={14} aria-hidden="true" />
                 <span>Nudge the {pendingCount} who haven&apos;t answered</span>
               </a>
             )}
@@ -561,13 +561,13 @@ function AvailabilityHub() {
               <input data-view-ok aria-label="Search players"
                 type="text"
                 className="form-input"
-                placeholder="Search player or position..."
+                placeholder="Search player or position"
                 value={searchFilter}
                 onChange={e => setSearchFilter(e.target.value)}
                 style={{ flex: 1, minWidth: '160px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
               />
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', background: 'color-mix(in oklab, var(--bg-pitch) 30%, transparent)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                 {['all', 'pending', 'available', 'maybe', 'unavailable'].map(st => (
                   <button data-view-ok
                     key={st}
@@ -578,8 +578,8 @@ function AvailabilityHub() {
                       fontWeight: 800,
                       borderRadius: '5px',
                       border: 'none',
-                      background: statusFilter === st ? club.primary_color : 'transparent',
-                      color: statusFilter === st ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
+                      background: statusFilter === st ? 'var(--club-primary)' : 'transparent',
+                      color: statusFilter === st ? 'var(--text-on-primary)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       textTransform: 'capitalize',
                     }}
@@ -599,10 +599,10 @@ function AvailabilityHub() {
               ) : (
                 filteredRoster.map(({ player, availability, mixedLabel }) => {
                   const statusColors = {
-                    available: { bg: 'rgba(16, 185, 129, 0.15)', text: 'var(--c-green)', border: 'rgba(16, 185, 129, 0.4)', icon: CheckCircle2, label: 'Available' },
-                    maybe: { bg: 'rgba(245, 158, 11, 0.15)', text: 'var(--c-amber)', border: 'rgba(245, 158, 11, 0.4)', icon: AlertCircle, label: 'Doubtful' },
-                    unavailable: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--c-red)', border: 'rgba(239, 68, 68, 0.4)', icon: XCircle, label: 'Out' },
-                    pending: { bg: 'rgba(var(--tint-rgb), 0.05)', text: 'var(--text-muted)', border: 'var(--border-subtle)', icon: HelpCircle, label: 'Pending' },
+                    available: { bg: 'color-mix(in oklab, var(--color-ok, var(--c-green)) 15%, transparent)', text: 'var(--color-ok, var(--c-green))', border: 'color-mix(in oklab, var(--color-ok, var(--c-green)) 40%, transparent)', icon: CheckCircle2, label: 'Available' },
+                    maybe: { bg: 'color-mix(in oklab, var(--c-amber) 15%, transparent)', text: 'var(--c-amber)', border: 'color-mix(in oklab, var(--c-amber) 40%, transparent)', icon: AlertCircle, label: 'Doubtful' },
+                    unavailable: { bg: 'color-mix(in oklab, var(--c-red) 15%, transparent)', text: 'var(--c-red)', border: 'color-mix(in oklab, var(--c-red) 40%, transparent)', icon: XCircle, label: 'Out' },
+                    pending: { bg: 'color-mix(in oklab, var(--text-primary) 5%, transparent)', text: 'var(--text-muted)', border: 'var(--border-subtle)', icon: HelpCircle, label: 'Pending' },
                   };
 
                   const cfg = statusColors[availability.status] || statusColors.pending;
@@ -617,7 +617,7 @@ function AvailabilityHub() {
                         justifyContent: 'space-between',
                         padding: '0.5rem 0.75rem',
                         borderRadius: '10px',
-                        background: 'rgba(var(--dk-15-23-42), 0.6)',
+                        background: 'color-mix(in oklab, var(--bg-pitch) 60%, transparent)',
                         border: '1px solid var(--border-subtle)',
                         borderLeft: `3px solid ${cfg.border}`,
                         gap: '0.4rem 0.75rem',
@@ -666,7 +666,7 @@ function AvailabilityHub() {
                               style={{
                                 ...rowButtonStyle,
                                 border: `1px solid ${active ? o.border : 'var(--border-subtle)'}`,
-                                background: active ? o.bg : 'rgba(var(--tint-rgb), 0.03)',
+                                background: active ? o.bg : 'color-mix(in oklab, var(--text-primary) 3%, transparent)',
                                 color: o.color,
                               }}
                             >
@@ -680,7 +680,7 @@ function AvailabilityHub() {
                           onClick={() => openNote(player.id, availability.note)}
                           title={`${availability.note ? 'Edit' : 'Add'} a note for ${player.full_name}`}
                           aria-label={`${availability.note ? 'Edit' : 'Add'} a note for ${player.full_name}`}
-                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: notePlayerId === player.id ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)' }}
+                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: notePlayerId === player.id ? 'color-mix(in oklab, var(--text-primary) 10%, transparent)' : 'color-mix(in oklab, var(--text-primary) 3%, transparent)', color: 'var(--text-secondary)' }}
                         >
                           <MessageSquare size={13} />
                           <span className="avail-row-label">Note</span>
@@ -691,7 +691,7 @@ function AvailabilityHub() {
                           disabled={!availability.response_token}
                           title={`Copy ${player.full_name}'s personal RSVP link`}
                           aria-label={`Copy ${player.full_name}'s personal RSVP link`}
-                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: 'rgba(var(--tint-rgb), 0.03)', color: 'var(--text-secondary)', opacity: availability.response_token ? 1 : 0.5, cursor: availability.response_token ? 'pointer' : 'not-allowed' }}
+                          style={{ ...rowButtonStyle, border: '1px solid var(--border-subtle)', background: 'color-mix(in oklab, var(--text-primary) 3%, transparent)', color: 'var(--text-secondary)', opacity: availability.response_token ? 1 : 0.5, cursor: availability.response_token ? 'pointer' : 'not-allowed' }}
                         >
                           {copiedPlayerId === player.id ? <Check size={13} color="var(--c-green)" /> : <Copy size={13} />}
                           <span className="avail-row-label">{copiedPlayerId === player.id ? 'Copied' : 'Link'}</span>
@@ -704,7 +704,7 @@ function AvailabilityHub() {
                           <input aria-label={`Note for ${player.full_name}`}
                             type="text"
                             className="form-input"
-                            placeholder="e.g. Can only play 2nd half, slight ankle sprain..."
+                            placeholder="e.g. Can only play 2nd half, slight ankle sprain"
                             value={noteDraft}
                             onChange={e => setNoteDraft(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleSaveNote(player.id, availability.status); }}
@@ -805,12 +805,12 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
   return (
     <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div className="glass-panel" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
-        {state === 'loading' && <p className="text-muted">Checking your link...</p>}
+        {state === 'loading' && <p className="text-muted">Checking your link…</p>}
 
         {state === 'invalid' && !token && (
           <div className="text-center">
             <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-              {isMember ? 'Opening your matches...' : 'Sign in to answer'}
+              {isMember ? 'Opening your matches…' : 'Sign in to answer'}
             </h2>
             {!isMember && (
               <>
@@ -843,7 +843,7 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
                 {match.home_team_name} vs {match.away_team_name}
                 <br />
-                {new Date(match.match_date).toLocaleString(DATE_LOCALE, { dateStyle: 'full', timeStyle: 'short' })} · {match.venue}
+                {new Date(match.match_date).toLocaleString(DATE_LOCALE, { dateStyle: 'full', timeStyle: 'short' })}, {match.venue}
                 {/* respond_availability answers the player's other games in the tournament too */}
                 {match.tournament_id && (
                   <>
