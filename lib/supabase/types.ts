@@ -274,6 +274,8 @@ export interface Match {
   away_lineup_coords?: PitchPosition[];
   match_format?: MatchFormat;
   is_audited?: boolean;
+  /** No push alerts to followers for this match (kick-off, goals, full time) */
+  alerts_muted?: boolean;
   audited_at?: string;
   // Tournament bracket & tiesheet fields
   tournament_id?: string;

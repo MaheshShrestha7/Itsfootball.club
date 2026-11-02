@@ -169,6 +169,8 @@ export default function AdminMatchesPage({
     is_completed: boolean;
     featured_on_hero: boolean;
     door_qr_checkin_enabled: boolean;
+    /** No follower push alerts for this match */
+    alerts_muted: boolean;
     home_score: number;
     away_score: number;
     team_id: string;
@@ -192,6 +194,7 @@ export default function AdminMatchesPage({
     is_completed: false,
     featured_on_hero: false,
     door_qr_checkin_enabled: true,
+    alerts_muted: false,
     home_score: 0,
     away_score: 0,
     team_id: '',
@@ -226,6 +229,7 @@ export default function AdminMatchesPage({
       is_completed: false,
       featured_on_hero: false,
       door_qr_checkin_enabled: true,
+      alerts_muted: false,
       home_score: 0,
       away_score: 0,
       team_id: prefillTeam || (teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId),
@@ -282,6 +286,7 @@ export default function AdminMatchesPage({
       is_completed: m.status === 'completed',
       featured_on_hero: !!m.featured_on_hero,
       door_qr_checkin_enabled: m.door_qr_checkin_enabled ?? true,
+      alerts_muted: !!m.alerts_muted,
       home_score: m.home_score ?? 0,
       away_score: m.away_score ?? 0,
       team_id: m.team_id || mainTeamId,
@@ -393,6 +398,7 @@ export default function AdminMatchesPage({
         description: cleanDescription,
         featured_on_hero: form.featured_on_hero,
         door_qr_checkin_enabled: form.door_qr_checkin_enabled,
+        ...(form.alerts_muted !== !!editingMatch?.alerts_muted ? { alerts_muted: form.alerts_muted } : {}),
         ...(teamId !== (editingMatch?.team_id ?? null) ? { team_id: teamId } : {}),
         ...(groundId !== (editingMatch?.ground_id ?? null) ? { ground_id: groundId } : {}),
         ...(pitchLabel !== (editingMatch?.pitch_label ?? null) ? { pitch_label: pitchLabel } : {}),
@@ -403,7 +409,7 @@ export default function AdminMatchesPage({
         ...(awayScore !== opened.away_score ? { away_score: awayScore } : {}),
         ...(resolvedStatus === 'completed' && opened.status !== 'completed' ? { period: 'full_time' } : {}),
       });
-      showToast(`Updated fixture: ${cleanTitle || cleanOpponent}`);
+      showToast(`Updated fixture: ${cleanTitle || cleanOpponent}.${form.alerts_muted ? ' Followers weren’t notified.' : ''}`);
     } else {
       // Add new match
       const created = addMatch({
@@ -474,10 +480,14 @@ export default function AdminMatchesPage({
       message: 'The result comes off the public Results list until it is entered again.',
       confirmLabel: 'Move to upcoming',
     });
-    if (!ok) return;
+    if (!ok) return false;
     updateMatch(m.id, { status: 'upcoming', period: 'pre_match' });
     showToast(`Restored "${m.title || m.opponent_name || 'Match'}" to Upcoming Fixtures.`);
+    return true;
   };
+  // The fixture open in the edit form; a finished one gets the "already completed" notice and its after-match tools
+  const editingMatch = editingMatchId ? clubMatches.find(x => x.id === editingMatchId) : undefined;
+  const editingCompleted = editingMatch?.status === 'completed';
 
   // 1-Click Hero Slider Pin Toggle
   const handleToggleHeroSlider = (m: Match) => {
@@ -903,14 +913,23 @@ export default function AdminMatchesPage({
                     )}
                   />
 
-                  {/* Result: only once kickoff has passed, and it asks for the score */}
-                  {!cupHref && (isCompleted || kickoff(m) <= Date.now()) && <button
+                  {/* Result: only once kickoff has passed, and it asks for the score. A played match is
+                      corrected in the edit form ("Mark as not played" lives there too) */}
+                  {!cupHref && canAddMatch && isCompleted && <button
                     type="button"
-                    onClick={() => (isCompleted ? handleMarkUpcoming(m) : openResult(m))}
+                    onClick={() => handleOpenEditModal(m)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    <Edit2 size={13} aria-hidden="true" />
+                    <span>Edit result</span>
+                  </button>}
+                  {!cupHref && !isCompleted && kickoff(m) <= Date.now() && <button
+                    type="button"
+                    onClick={() => openResult(m)}
                     className="btn btn-secondary btn-sm"
                   >
                     <CheckCircle2 size={13} aria-hidden="true" />
-                    <span>{isCompleted ? 'Mark as not played' : 'Enter result'}</span>
+                    <span>Enter result</span>
                   </button>}
 
                   {/* Live Controller Quick Shortcut */}
@@ -1030,6 +1049,18 @@ export default function AdminMatchesPage({
                 <X size={22} />
               </button>
             </div>
+
+            {editingCompleted && (
+              <div role="note" style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', padding: '0.85rem 1rem', marginBottom: '1.25rem', borderRadius: 'var(--radius-md)', background: 'var(--color-warn-wash)', border: '1px solid var(--color-warn-line)' }}>
+                <AlertTriangle size={18} aria-hidden="true" color="var(--color-warn)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <strong style={{ display: 'block', color: 'var(--text-primary)' }}>This match is already marked as completed</strong>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Full time: {editingMatch.home_team_name} {editingMatch.home_score ?? 0}–{editingMatch.away_score ?? 0} {editingMatch.away_team_name}. Changes update the public result, league table and player stats as soon as you save.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmitMatch}>
               {/* Field: Match Title */}
@@ -1530,7 +1561,53 @@ export default function AdminMatchesPage({
                       </p>
                     </div>
                   </div>
+
+                  {/* Follower push alerts (kick-off, goals, full time) for this match */}
+                  {editingMatchId && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <input
+                        id="toggle-notify"
+                        type="checkbox"
+                        checked={!form.alerts_muted}
+                        onChange={e => setForm({ ...form, alerts_muted: !e.target.checked })}
+                        style={{ width: '18px', height: '18px', marginTop: '3px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <label htmlFor="toggle-notify" style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer' }}>
+                          Notify followers about this match
+                        </label>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
+                          {form.alerts_muted
+                            ? 'Off: no kick-off, goal or full-time alerts go out for this match, even if it’s reopened.'
+                            : 'On: followers get kick-off, goal and full-time alerts as Match Centre records them.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* After full time: the tools that change a finished match */}
+                {editingCompleted && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)' }}>After full time</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <Link href={`/${club.slug}/admin/match-center?match=${editingMatch.id}`} className="btn btn-secondary btn-sm">
+                        <Radio size={13} aria-hidden="true" /> <span>Goals, cards, subs and player stats</span>
+                      </Link>
+                      <Link href={`/${club.slug}/admin/lineup/draft?match=${editingMatch.id}`} className="btn btn-secondary btn-sm">
+                        <Users size={13} aria-hidden="true" /> <span>Lineup and formation</span>
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: 'var(--color-danger)' }}
+                        onClick={async () => { if (await handleMarkUpcoming(editingMatch)) setIsFormModalOpen(false); }}
+                      >
+                        <CheckCircle2 size={13} aria-hidden="true" /> <span>Mark as not played</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Modal Buttons */}
