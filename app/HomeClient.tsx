@@ -25,6 +25,9 @@ import {
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
+import { newsPath } from '@/lib/slugs';
+import LocalTime from '@/components/LocalTime';
+import type { LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
 
 interface DugoutEvent {
   id: string;
@@ -212,11 +215,21 @@ const AUDIENCES = [
 
 const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
 
-export default function PlatformHomePage() {
+/** Club blocks shown before "See all clubs" takes the last slot */
+const HOME_CLUB_BLOCKS = 12;
+
+export default function PlatformHomePage({ latestNews = [], latestPhotos = [] }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[] }) {
   const router = useRouter();
-  const { clubs: allClubs, sponsors } = useClub();
+  const { clubs: allClubs, sponsors, matches } = useClub();
   // Tournament-only clubs (public tournament pages) aren't clubs to show off
   const clubs = useMemo(() => allClubs.filter(isListedClub), [allClubs]);
+  const liveClubIds = useMemo(() => new Set(matches.filter(m => m.status === 'live' || m.status === 'halftime').map(m => m.club_id)), [matches]);
+  // A full grid of blocks; past that, the last block links to the directory
+  const clubBlocks = clubs.length > HOME_CLUB_BLOCKS ? clubs.slice(0, HOME_CLUB_BLOCKS - 1) : clubs;
+  // News and photos only from clubs the page lists, 3 of each
+  const clubOf = (id: string) => clubs.find(c => c.id === id);
+  const homeNews = latestNews.filter(n => clubOf(n.club_id)).slice(0, 3);
+  const homePhotos = latestPhotos.filter(p => clubOf(p.club_id)).slice(0, 3);
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -1366,25 +1379,26 @@ export default function PlatformHomePage() {
                 Browse all clubs <ArrowRight size={16} />
               </Link>
             </div>
-            <div className="lp-clubs">
-              {clubs.slice(0, 6).map(club => (
+            <div className="lp-clubblocks">
+              {clubBlocks.map(club => (
                 <Link
                   key={club.id}
                   href={`/${club.slug}`}
-                  className="lp-clubcard lp-reveal"
+                  className="lp-clubblock lp-reveal"
                   style={{ '--cc': club.primary_color } as React.CSSProperties}
                 >
-                  <div className="lp-clubcard-banner">
-                    <img className="bg" src={club.banner_url || DEFAULT_BANNER} alt="" loading="lazy" decoding="async" />
-                  </div>
-                  <div className="lp-clubcard-body">
-                    <img className="lp-clubcard-crest" src={club.logo_url || DEFAULT_CREST} alt={`${club.name} crest`} width={56} height={56} loading="lazy" decoding="async" />
-                    <h3>{club.name}</h3>
-                    <div className="lp-clubcard-meta">{club.short_name} · Est. {club.founded_year}{club.stadium_name ? ` · ${club.stadium_name}` : ''}</div>
-                    <div className="lp-clubcard-url">{club.custom_domain || `itsfootball.club/${club.slug}`} <ArrowRight size={13} /></div>
-                  </div>
+                  {liveClubIds.has(club.id) && <span className="badge badge-live lp-clubblock-live"><span className="pulse-dot" /> LIVE</span>}
+                  <img className="lp-clubblock-crest" src={club.logo_url || DEFAULT_CREST} alt="" width={60} height={60} loading="lazy" decoding="async" />
+                  <h3>{club.name}</h3>
+                  {club.stadium_name && <div className="lp-clubblock-meta">{club.stadium_name}</div>}
                 </Link>
               ))}
+              {clubBlocks.length < clubs.length && (
+                <Link href="/clubs" className="lp-clubblock lp-clubblock-more lp-reveal">
+                  <span className="lp-clubblock-count">+{clubs.length - clubBlocks.length}</span>
+                  <span>See all clubs</span>
+                </Link>
+              )}
             </div>
 
             {allSponsors.length > 0 && (
@@ -1411,6 +1425,62 @@ export default function PlatformHomePage() {
                           <span className="text-meta">{club.short_name} · <span className="lp-sponsor-tier">{sponsor.tier}</span></span>
                         </div>
                       </a>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ================= FROM THE CLUBS: latest news and photos ================= */}
+      {(homeNews.length > 0 || homePhotos.length > 0) && (
+        <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-latest-h">
+          <div className="container">
+            <div className="lp-head lp-reveal">
+              <div className="lp-matchday-tag">From the clubs</div>
+              <h2 id="lp-latest-h" className="lp-h2">Latest news and photos.</h2>
+            </div>
+            {homeNews.length > 0 && (
+              <>
+                <h3 className="lp-subhead lp-latest-sub">Club news</h3>
+                <div className="lp-latest-grid">
+                  {homeNews.map(n => {
+                    const club = clubOf(n.club_id)!;
+                    return (
+                      <Link key={n.id} href={newsPath(club.slug, n.slug)} className="lp-newscard lp-reveal" style={{ '--cc': club.primary_color } as React.CSSProperties}>
+                        <div className="lp-newscard-cover">
+                          <img src={n.cover_image_url || club.banner_url || DEFAULT_BANNER} alt="" loading="lazy" decoding="async" />
+                        </div>
+                        <div className="lp-newscard-body">
+                          <div className="lp-latest-club">
+                            <img src={club.logo_url || DEFAULT_CREST} alt="" width={20} height={20} loading="lazy" decoding="async" />
+                            <span>{club.short_name || club.name} · <LocalTime value={n.published_at} /></span>
+                          </div>
+                          <h4>{n.title}</h4>
+                          {n.summary && <p>{n.summary}</p>}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            {homePhotos.length > 0 && (
+              <>
+                <h3 className="lp-subhead lp-latest-sub">From the gallery</h3>
+                <div className="lp-latest-grid">
+                  {homePhotos.map(p => {
+                    const club = clubOf(p.club_id)!;
+                    return (
+                      <Link key={p.id} href={`/${club.slug}/gallery`} className="lp-photo lp-reveal">
+                        <img src={p.thumbnail_url || p.media_url} alt={p.title || `${club.name} photo`} loading="lazy" decoding="async" />
+                        <span className="lp-latest-club lp-photo-cap">
+                          <img src={club.logo_url || DEFAULT_CREST} alt="" width={20} height={20} loading="lazy" decoding="async" />
+                          <span>{club.short_name || club.name}{p.album_name ? ` · ${p.album_name}` : ''}</span>
+                        </span>
+                      </Link>
                     );
                   })}
                 </div>

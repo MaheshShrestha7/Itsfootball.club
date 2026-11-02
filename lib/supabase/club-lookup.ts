@@ -332,6 +332,22 @@ export async function listClubNews(clubId: string, limit = 20): Promise<NewsMeta
   }
 }
 
+export interface LatestNewsRow extends NewsMetadataRow { club_id: string }
+export interface LatestPhotoRow { id: string; club_id: string; title: string | null; media_url: string; thumbnail_url: string | null; album_name: string | null; created_at: string }
+
+/**
+ * The newest published news and photos across every club, for the platform home page.
+ * Over-fetches so the page can drop rows of clubs it doesn't list (tournament-only clubs) and still show 3.
+ */
+export async function listLatestClubContent(limit = 12): Promise<{ news: LatestNewsRow[]; photos: LatestPhotoRow[] }> {
+  const now = `${new Date().toISOString().slice(0, 13)}:59:59Z`;
+  const [news, photos] = await Promise.all([
+    publicRows<LatestNewsRow>(`news_articles?select=id,club_id,title,slug,summary,cover_image_url,author_name,tags,published_at&published_at=lte.${now}&order=published_at.desc&limit=${limit}`, 300),
+    publicRows<LatestPhotoRow>(`media_gallery?select=id,club_id,title,media_url,thumbnail_url,album_name,created_at&media_type=eq.image&order=created_at.desc.nullslast&limit=${limit}`, 300),
+  ]);
+  return { news: news || [], photos: photos || [] };
+}
+
 export interface NewsArticleRow extends NewsMetadataRow {
   club_id: string;
   updated_at: string | null;
