@@ -61,3 +61,4 @@ CLAUDE.md
 # MediaPipe runtime, copied from node_modules by scripts/copy-mediapipe.mjs
 /public/vendor/mediapipe/wasm/
 .council-links.mjs
+AGENTS.md
