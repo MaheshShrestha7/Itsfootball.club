@@ -12,7 +12,8 @@ import type { ClubTeam, Match } from '@/lib/supabase/types';
 // Live-score alerts to the club's followers, sent by Match Centre as the match goes on.
 //   POST { clubId, matchId, kind: 'kickoff' | 'goal' | 'fulltime', home, away, minute? }
 // Admins running the match only. Each alert goes once (per score for goals), however often it's called.
-// Junior games whose scores the club keeps off its public pages get no alerts.
+// Junior games whose scores the club keeps off its public pages get no alerts, nor do matches
+// an admin muted (matches.alerts_muted).
 const KINDS: AlertKind[] = ['kickoff', 'goal', 'fulltime'];
 
 export async function POST(req: NextRequest) {
@@ -28,11 +29,13 @@ export async function POST(req: NextRequest) {
   if (!db || !pushConfigured()) return NextResponse.json({ pushed: 0, error: 'Notifications are not set up.' }, { status: 503 });
 
   const [{ data: match }, { data: club }, { data: teams }] = await Promise.all([
-    db.from('matches').select('id, slug, club_id, team_id, match_type, tournament_id, home_team_name, away_team_name').eq('id', body.matchId).eq('club_id', body.clubId).maybeSingle(),
+    db.from('matches').select('*').eq('id', body.matchId).eq('club_id', body.clubId).maybeSingle(),
     db.from('clubs').select('slug').eq('id', body.clubId).maybeSingle(),
     db.from('club_teams').select('*').eq('club_id', body.clubId),
   ]);
   if (!match || !club) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  // An admin turned follower alerts off for this match (e.g. correcting it after full time)
+  if (match.alerts_muted) return NextResponse.json({ pushed: 0, skipped: 'alerts muted' });
   if (publicScoreHidden(match as Match, (teams || []) as ClubTeam[])) return NextResponse.json({ pushed: 0, skipped: 'scores hidden' });
 
   const key = `match-push:${match.id}:${body.kind}${body.kind === 'goal' ? `:${home}-${away}` : ''}`;

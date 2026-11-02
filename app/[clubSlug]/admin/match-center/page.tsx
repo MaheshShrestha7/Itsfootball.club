@@ -39,6 +39,7 @@ import {
   RectangleVertical,
   Mic,
   Megaphone,
+  AlertTriangle,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -633,6 +634,34 @@ export default function AdminMatchCenterControllerPage({
         <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}>
           {feedback.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
           <span>{feedback.text}</span>
+        </div>
+      )}
+
+      {/* A finished match: edits here change the public result, so say so, and let the admin keep followers' phones quiet */}
+      {match.status === 'completed' && (
+        <div role="note" className="glass-panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.25rem', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.85rem 1rem', marginBottom: '1.25rem', background: 'var(--color-warn-wash)', border: '1px solid var(--color-warn-line)' }}>
+          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', flex: '1 1 320px', minWidth: 0 }}>
+            <AlertTriangle size={18} aria-hidden="true" color="var(--color-warn)" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <strong style={{ display: 'block', color: 'var(--text-primary)' }}>This match is already marked as completed</strong>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Edits to goals, cards, the lineup or player stats change the public result, league table and season stats straight away.
+              </span>
+            </div>
+          </div>
+          <label htmlFor="mc-notify" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>
+            <input
+              id="mc-notify"
+              type="checkbox"
+              checked={!match.alerts_muted}
+              onChange={e => {
+                updateMatch(match.id, { alerts_muted: !e.target.checked });
+                showFeedback(e.target.checked ? 'Follower alerts on for this match.' : 'Follower alerts off for this match.');
+              }}
+              style={{ width: '18px', height: '18px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+            />
+            Notify followers about this match
+          </label>
         </div>
       )}
 
