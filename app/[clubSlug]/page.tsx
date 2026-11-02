@@ -211,8 +211,9 @@ export default function ClubPublicPage({
   // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
   const upcomingFixtures = upcomingSource.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
   const pastMatches = ourMatches.filter(m => m.status === 'completed').sort(latestFirst);
-  // Matchday strip: the latest result of any season, so it never empties when a season rolls over
-  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort((a, b) => mainTeamFirst(a, b) || latestFirst(a, b))[0];
+  // Matchday strip: the latest result of any season and any team (a 35s game counts too),
+  // so it never empties when a season rolls over
+  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort(latestFirst)[0];
   // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
   const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
   const inFixturesTeam = (m: typeof clubMatches[number]) => {
