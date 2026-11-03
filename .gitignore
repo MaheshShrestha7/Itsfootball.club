@@ -62,3 +62,15 @@ CLAUDE.md
 /public/vendor/mediapipe/wasm/
 .council-links.mjs
 AGENTS.md
+.hallmark/shots/localhost-3100-ancc-admin-branding-375.png
+.hallmark/shots/localhost-3100-ancc-admin-branding-1920x1080.png
+.hallmark/shots/localhost-3100-ancc-admin-branding-1440x900.png
+.hallmark/shots/localhost-3100-ancc-admin-branding-1440-full.png
+.hallmark/shots/localhost-3100-ancc-admin-branding-1280x800.png
+.hallmark/before/localhost-3100-ancc-admin-branding-375.png
+.hallmark/before/localhost-3100-ancc-admin-branding-1920x1080.png
+.hallmark/before/localhost-3100-ancc-admin-branding-1440x900.png
+.hallmark/before/localhost-3100-ancc-admin-branding-1440-full.png
+.hallmark/before/localhost-3100-ancc-admin-branding-1280x800.png
+.hallmark/before.txt
+.hallmark/before.json
