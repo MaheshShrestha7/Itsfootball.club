@@ -10,18 +10,20 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import RichTextEditor from '@/components/RichTextEditor';
 import { isArticleEmpty } from '@/lib/article-text';
+import { confirmAction } from '@/components/ConfirmDialog';
+import type { Club } from '@/lib/supabase/types';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
 import {
   AlertTriangle,
   Palette,
   CheckCircle2,
+  Loader2,
+  ArrowRight,
   Save,
   Shield,
   MapPin,
   Sparkles,
-  ArrowRight,
   AlertCircle,
-  Eye,
   ExternalLink,
   Link2,
   Mail,
@@ -32,24 +34,9 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
-export default function AdminBrandingPage({
-  params,
-}: {
-  params: Promise<{ clubSlug: string }>;
-}) {
-  const router = useRouter();
-  const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, updateClubBranding, isHydrated, saveNow } = useClub();
-  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-
-  const [savedMessage, setSavedMessage] = useState(false);
-  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
-  // New club URL to move to once it's saved: the server 404s a slug the database doesn't have yet
-  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
-  const [autoSyncSlug, setAutoSyncSlug] = useState(true);
-  const [hasUserEdited, setHasUserEdited] = useState(false);
-
-  const [formData, setFormData] = useState({
+/** The form's values as the club has them saved: what the page loads, and what Discard puts back */
+function formFromClub(club: Club | undefined) {
+  return {
     name: club?.name || '',
     slug: club?.slug || '',
     short_name: club?.short_name || '',
@@ -68,7 +55,42 @@ export default function AdminBrandingPage({
     stadium_parking_info: club?.stadium_parking_info || '',
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
-  });
+  };
+}
+type BrandingForm = ReturnType<typeof formFromClub>;
+
+/** The page's sections and the fields each one saves, so the save bar can name what changed */
+const FORM_SECTIONS: [string, (keyof BrandingForm)[]][] = [
+  ['Club colours', ['primary_color', 'secondary_color', 'accent_color']],
+  ['Name, crest and photos', ['name', 'slug', 'short_name', 'founded_year', 'motto', 'logo_url', 'banner_url', 'slider_images_text']],
+  ['Home ground', ['stadium_name', 'stadium_pitch_type', 'stadium_address', 'stadium_parking_info', 'stadium_capacity']],
+  ['Contact details', ['contact_email', 'contact_phone']],
+];
+/** A field still as saved. Colours compare without case (a preset writes #10B981, the picker #10b981);
+ *  everything else exactly, so renaming "Ancc" to "ANCC" still counts as a change */
+const sameValue = (key: keyof BrandingForm, a: unknown, b: unknown) => key.endsWith('_color')
+  ? String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase()
+  : String(a ?? '') === String(b ?? '');
+
+export default function AdminBrandingPage({
+  params,
+}: {
+  params: Promise<{ clubSlug: string }>;
+}) {
+  const router = useRouter();
+  const resolvedParams = use(params);
+  const { clubs, selectClubBySlug, updateClubBranding, isHydrated, saveNow, syncStatus } = useClub();
+  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+
+  const [savedMessage, setSavedMessage] = useState(false);
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
+  // New club URL to move to once it's saved: the server 404s a slug the database doesn't have yet
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const [autoSyncSlug, setAutoSyncSlug] = useState(true);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState(() => formFromClub(club));
   // The club story is edited apart from formData: the editor reads its value once on mount, so it
   // is remounted (storyVersion) whenever the saved story is reloaded into the form
   const [story, setStory] = useState(club?.about_story || '');
@@ -77,26 +99,7 @@ export default function AdminBrandingPage({
   // Keep formData synchronized when club resolves or updates from storage
   useEffect(() => {
     if (club && !hasUserEdited) {
-      setFormData({
-        name: club.name || '',
-        slug: club.slug || '',
-        short_name: club.short_name || '',
-        motto: club.motto || '',
-        founded_year: club.founded_year || 2018,
-        primary_color: club.primary_color || '#10B981',
-        secondary_color: club.secondary_color || '#0F172A',
-        accent_color: club.accent_color || '#F59E0B',
-        logo_url: club.logo_url || '',
-        banner_url: club.banner_url || '',
-        slider_images_text: club.slider_images?.join('\n') || '',
-        stadium_name: club.stadium_name || '',
-        stadium_address: club.stadium_address || '',
-        stadium_capacity: club.stadium_capacity || 5000,
-        stadium_pitch_type: club.stadium_pitch_type || '',
-        stadium_parking_info: club.stadium_parking_info || '',
-        contact_email: club.contact_email || '',
-        contact_phone: club.contact_phone || '',
-      });
+      setFormData(formFromClub(club));
       setStory(club.about_story || '');
       setStoryVersion(v => v + 1);
     }
@@ -137,6 +140,7 @@ export default function AdminBrandingPage({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setHasUserEdited(true);
+    setSaveError(null);
     const { name, value } = e.target;
     if (name === 'founded_year') {
       const parsed = parseInt(value, 10);
@@ -160,7 +164,6 @@ export default function AdminBrandingPage({
   };
 
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +176,6 @@ export default function AdminBrandingPage({
       const slugInput = document.querySelector<HTMLInputElement>('input[name="slug"]');
       slugInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       slugInput?.focus({ preventScroll: true });
-      savedTimerRef.current = setTimeout(() => setSaveError(null), 5000);
       return;
     }
     setSaveError(null);
@@ -182,8 +184,7 @@ export default function AdminBrandingPage({
     const isSlugChanged = newSlug !== club.slug;
     if (isSlugChanged && !(await isClubSlugAvailable(newSlug, club.id))) {
       setSavedMessage(false);
-      setSaveError(`Not saved: the URL /${newSlug} is already taken by another club.`);
-      savedTimerRef.current = setTimeout(() => setSaveError(null), 5000);
+      setSaveError(`Not saved: the web address /${newSlug} is taken by another club.`);
       return;
     }
 
@@ -207,7 +208,7 @@ export default function AdminBrandingPage({
     setSavedMessage(true);
 
     if (isSlugChanged) {
-      setRedirectNotice(`Club URL updated to /${newSlug}! Saving, then redirecting...`);
+      setRedirectNotice(`Your web address is now /${newSlug}`);
       setPendingSlug(newSlug);
     }
 
@@ -227,6 +228,69 @@ export default function AdminBrandingPage({
     return () => { cancelled = true; };
   }, [pendingSlug, club?.slug, saveNow, router]);
 
+  // What differs from the saved club, by section: the save bar shows while anything does
+  const savedForm = useMemo(() => formFromClub(club), [club]);
+  const storyDirty = hasUserEdited && (isArticleEmpty(story) ? '' : story) !== (club?.about_story || '');
+  const changedSections = hasUserEdited
+    ? [
+        ...FORM_SECTIONS.filter(([, keys]) => keys.some(k => !sameValue(k, formData[k], savedForm[k]))).map(([name]) => name),
+        ...(storyDirty ? ['Club story'] : []),
+      ]
+    : [];
+  const isDirty = changedSections.length > 0;
+
+  // Puts every field back as it was last saved
+  const discardChanges = () => {
+    setFormData(formFromClub(club));
+    setStory(club?.about_story || '');
+    setStoryVersion(v => v + 1);
+    setAutoSyncSlug(true);
+    setSaveError(null);
+    setHasUserEdited(false);
+  };
+
+  // Leaving with unsaved changes asks first: the browser's own check for a reload or a closed tab,
+  // and ours for a link inside the app (a client-side move never fires beforeunload)
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    const onLinkClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+      const to = new URL(link.href, window.location.href);
+      if (to.origin !== window.location.origin || (to.pathname === window.location.pathname && to.search === window.location.search)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      confirmAction({
+        title: 'Leave without saving?',
+        message: `Your changes to ${changedSections.join(', ')} are not saved yet.`,
+        confirmLabel: 'Leave',
+        cancelLabel: 'Keep editing',
+        danger: true,
+      }).then(leave => { if (leave) router.push(`${to.pathname}${to.search}${to.hash}`); });
+    };
+    window.addEventListener('beforeunload', warn);
+    document.addEventListener('click', onLinkClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', warn);
+      document.removeEventListener('click', onLinkClick, true);
+    };
+  }, [isDirty, changedSections.join(), router]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The bar's state: a failed save first, then new unsaved changes (an edit right after a save
+  // counts at once), then a save in progress or just done
+  const savePhase = saveError ? 'error'
+    : isDirty ? 'dirty'
+    : savedMessage ? (syncStatus.phase === 'saving' || pendingSlug ? 'saving' : 'saved')
+    : null;
+  const goToSlug = () => {
+    const slugInput = document.querySelector<HTMLInputElement>('input[name="slug"]');
+    slugInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    slugInput?.focus({ preventScroll: true });
+  };
+  const siteHref = `/${club?.slug || 'clubs'}`;
+
   return (
     <div>
       <div className="admin-head">
@@ -234,40 +298,17 @@ export default function AdminBrandingPage({
           <h1>Club and branding</h1>
           <p>Your club name, founding year, home ground, colours and web address. Changes show straight away on your public site and member passes.</p>
         </div>
-      </div>
-
-      {/* Save feedback: a fixed toast, because the Save button sits at the bottom of this long form
-          and an inline banner at the top was scrolled out of view when it appeared */}
-      {(savedMessage || saveError) && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={saveError ? 'admin-save-toast is-error' : 'admin-save-toast'}
-          style={{ alignItems: 'flex-start' }}
-        >
-          {saveError
-            ? <AlertTriangle size={20} aria-hidden="true" />
-            : redirectNotice
-            ? <ArrowRight size={20} aria-hidden="true" />
-            : <CheckCircle2 size={20} aria-hidden="true" />}
-          <div>
-            <div>
-              {saveError || redirectNotice || 'Branding saved'}
-            </div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 400, color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-              {saveError
-                ? 'Fix the highlighted Club URL field, then save again.'
-                : redirectNotice
-                ? 'Moving you to the new club address…'
-                : 'Your changes are live on the public club site.'}
-            </div>
-          </div>
+        <div className="admin-head-actions">
+          <a href={siteHref} target="_blank" rel="noopener noreferrer" className="btn btn-secondary row">
+            <span>View your site</span>
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
         </div>
-      )}
+      </div>
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {/* SECTION 1: CLUB COLORS & READABILITY */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Palette size={20} aria-hidden="true" color={formData.primary_color} /> Club colours
@@ -285,30 +326,22 @@ export default function AdminBrandingPage({
           </p>
 
           {/* Quick Football Color Palettes */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <label className="form-label" style={{ fontSize: '0.78rem' }}>Ready-made colour pairs</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {FOOTBALL_COLOR_PALETTES.map((p, idx) => (
+          <div role="group" aria-labelledby="branding-ready-colours" style={{ marginBottom: 'var(--space-lg)' }}>
+            <span id="branding-ready-colours" className="form-label">Ready-made colours</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2xs)' }}>
+              {FOOTBALL_COLOR_PALETTES.map(p => (
                 <button
-                  key={idx}
+                  key={p.name}
                   type="button"
+                  className="admin-chip"
+                  aria-pressed={[p.primary, p.secondary, p.accent].join().toLowerCase() === [formData.primary_color, formData.secondary_color, formData.accent_color].join().toLowerCase()}
                   onClick={() => handleApplyPalette(p)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: '8px',
-                    border: formData.primary_color === p.primary ? '2px solid var(--color-ink)' : '1px solid var(--border-subtle)',
-                    background: 'color-mix(in oklab, var(--color-ink) 4%, transparent)',
-                    cursor: 'pointer',
-                    fontSize: '0.78rem',
-                    color: 'var(--text-primary)',
-                    transition: 'border-color 0.15s ease',
-                  }}
                 >
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: p.primary }} />
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: p.secondary }} />
+                  <span aria-hidden="true" style={{ display: 'inline-flex', gap: 'var(--space-3xs)' }}>
+                    {[p.primary, p.secondary, p.accent].map(c => (
+                      <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: 'inset 0 0 0 1px var(--color-rule-strong)' }} />
+                    ))}
+                  </span>
                   <span>{p.name}</span>
                 </button>
               ))}
@@ -317,7 +350,7 @@ export default function AdminBrandingPage({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1.5rem' }}>
             <div className="form-group">
-              <label className="form-label">Primary Color</label>
+              <label className="form-label">Primary colour</label>
               <div className="row">
                 <input aria-label="Primary colour"
                   type="color"
@@ -337,7 +370,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Secondary Color</label>
+              <label className="form-label">Secondary colour</label>
               <div className="row">
                 <input aria-label="Secondary colour"
                   type="color"
@@ -357,7 +390,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Accent / Gold</label>
+              <label className="form-label">Accent colour</label>
               <div className="row">
                 <input aria-label="Accent colour"
                   type="color"
@@ -378,97 +411,71 @@ export default function AdminBrandingPage({
           </div>
 
           {/* Live Preview Box */}
-          <div style={{
-            marginTop: '1.75rem',
-            background: 'color-mix(in oklab, var(--color-sidebar) 45%, transparent)',
-            padding: '1.25rem',
-            borderRadius: '12px',
-            border: `2px solid ${formData.primary_color}`,
+          {/* How the colours look on the site: a sample of the club's name, a button and a tag */}
+          <div aria-label="Preview" role="group" style={{
+            marginTop: 'var(--space-lg)',
+            background: 'var(--color-paper)',
+            padding: 'var(--space-md)',
+            borderRadius: 'var(--radius-card)',
+            border: '1px solid var(--color-rule)',
+            borderLeft: `4px solid ${formData.primary_color}`,
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
+            gap: 'var(--space-sm)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: formData.primary_color }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem' }}>{formData.name}</span>
-                <span className="text-note">({formData.short_name})</span>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '4px',
-                    background: 'color-mix(in oklab, var(--color-ink) 8%, transparent)',
-                    color: 'var(--text-secondary)',
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                >
-                  Est. {formData.founded_year}
-                </span>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', flexWrap: 'wrap', minWidth: 0 }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{formData.name}</span>
+              <span className="text-note">({formData.short_name})</span>
+              <span className="admin-pill">Est. {formData.founded_year}</span>
             </div>
 
-            <div className="row row-loose">
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{
-                  backgroundColor: formData.primary_color,
-                  color: contrastInfo.bestTextColor,
-                  fontWeight: 700,
-                  boxShadow: `0 2px 10px ${formData.primary_color}40`,
-                }}
-              >
-                Matchday CTA Button
-              </button>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-xs)' }}>
               <span
+                className="btn btn-sm"
+                aria-hidden="true"
+                style={{ backgroundColor: formData.primary_color, color: contrastInfo.bestTextColor, borderColor: formData.primary_color, cursor: 'default' }}
+              >
+                Button
+              </span>
+              <span
+                className="admin-pill"
                 style={{
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '6px',
-                  background: `${formData.primary_color}25`,
+                  background: `color-mix(in oklab, ${formData.primary_color} 18%, transparent)`,
                   color: 'var(--club-ink)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: `1px solid ${formData.primary_color}50`,
                 }}
               >
-                BADGE PREVIEW
+                Tag
               </span>
             </div>
           </div>
 
-          {/* Interactive Kit Customizer & Vector Jersey Showcase */}
-          <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <Shirt size={18} color="var(--color-accent-ink)" />
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                Live Matchwear & Jersey Kit Customizer
-              </h4>
-            </div>
+          {/* The kits drawn in the club's colours */}
+          <div style={{ marginTop: 'var(--space-xl)', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-lg)' }}>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)', fontWeight: 600, letterSpacing: 0, color: 'var(--text-primary)', margin: '0 0 var(--space-md)' }}>
+              <Shirt size={18} aria-hidden="true" style={{ color: 'var(--color-muted)' }} /> Kits
+            </h4>
             <KitDesignerPreview
               clubName={formData.name}
               shortName={formData.short_name}
               primaryColor={formData.primary_color}
               secondaryColor={formData.secondary_color}
               accentColor={formData.accent_color}
-              onColorsChange={handleApplyPalette}
               interactive={true}
             />
           </div>
         </div>
 
         {/* SECTION 2: IDENTITY & MEDIA ASSETS */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Shield size={20} aria-hidden="true" /> Name, crest and photos
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
             <div className="form-group">
-              <label htmlFor="branding-official-club-name" className="form-label">Official Club Name *</label>
+              <label htmlFor="branding-official-club-name" className="form-label">Club name *</label>
               <input id="branding-official-club-name"
                 type="text"
                 name="name"
@@ -480,7 +487,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="branding-short-acronym-code" className="form-label">Short Acronym / Code *</label>
+              <label htmlFor="branding-short-acronym-code" className="form-label">Short name *</label>
               <input id="branding-short-acronym-code"
                 type="text"
                 name="short_name"
@@ -495,7 +502,7 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label htmlFor="branding-club-establishment-year" className="form-label row">
                 <Calendar size={15} color="var(--color-accent-ink)" />
-                <span>Club Establishment Year *</span>
+                <span>Year founded *</span>
               </label>
               <input id="branding-club-establishment-year"
                 type="number"
@@ -518,7 +525,7 @@ export default function AdminBrandingPage({
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
                 <label className="form-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Link2 size={15} color="var(--color-accent-ink)" />
-                  <span>Club Web Slug & Live URL *</span>
+                  <span>Web address *</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                   <input
@@ -534,7 +541,7 @@ export default function AdminBrandingPage({
                     }}
                     style={{ accentColor: 'var(--club-primary)', cursor: 'pointer' }}
                   />
-                  <span>Auto-sync URL with Team Name</span>
+                  <span>Follow the club name</span>
                 </label>
               </div>
 
@@ -558,12 +565,13 @@ export default function AdminBrandingPage({
                   className="form-input"
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    borderColor: slugValidation.valid ? 'var(--color-accent-line)' : 'var(--color-danger)',
+                    borderColor: slugValidation.valid ? 'var(--color-field-edge)' : 'var(--color-danger)',
                   }}
                   value={formData.slug}
                   onChange={e => {
                     setAutoSyncSlug(false);
                     setHasUserEdited(true);
+                    setSaveError(null);
                     const clean = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                     setFormData(prev => ({ ...prev, slug: clean }));
                   }}
@@ -610,7 +618,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-club-motto-slogan" className="form-label">Club Motto / Slogan</label>
+              <label htmlFor="branding-club-motto-slogan" className="form-label">Motto</label>
               <input id="branding-club-motto-slogan"
                 type="text"
                 name="motto"
@@ -625,8 +633,8 @@ export default function AdminBrandingPage({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
             <ImageUploadZone
               clubId={club.id}
-              label="Official Club Crest / Logo"
-              recommendedText="Square 500x500px PNG or SVG (transparent background recommended)"
+              label="Crest"
+              recommendedText="Square, 500 x 500px, PNG or SVG with a transparent background"
               currentImageUrl={formData.logo_url}
               onUploadComplete={(url) => {
                 setHasUserEdited(true);
@@ -638,8 +646,8 @@ export default function AdminBrandingPage({
 
             <ImageUploadZone
               clubId={club.id}
-              label="Hero Home Ground Banner"
-              recommendedText="Wide 1920x1080px (16:9) home ground photography for public hero showcase"
+              label="Home page banner"
+              recommendedText="Wide, 1920 x 1080px: a photo of your home ground"
               currentImageUrl={formData.banner_url}
               onUploadComplete={(url) => {
                 setHasUserEdited(true);
@@ -655,7 +663,7 @@ export default function AdminBrandingPage({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
                 <ImageIcon size={15} color="var(--color-accent-ink)" />
-                <span>Multi-Slide Hero Images (Optional, one image URL per line)</span>
+                <span>More home page photos (optional, one image link per line)</span>
               </label>
               <Link
                 href={`/${club.slug}/admin/hero-slider`}
@@ -663,7 +671,7 @@ export default function AdminBrandingPage({
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
               >
                 <Sparkles size={13} />
-                <span>Open Hero Slider Pins Manager</span>
+                <span>Pin news and fixtures</span>
               </Link>
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
@@ -674,7 +682,7 @@ export default function AdminBrandingPage({
               rows={3}
               className="form-input"
               style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', resize: 'vertical' }}
-              placeholder="https://images.unsplash.com/...&#10;https://images.unsplash.com/..."
+              placeholder="https://yourclub.com.au/photos/grand-final.jpg&#10;https://yourclub.com.au/photos/presentation-night.jpg"
               value={formData.slider_images_text}
               onChange={handleChange}
             />
@@ -682,7 +690,7 @@ export default function AdminBrandingPage({
         </div>
 
         {/* SECTION 2B: CLUB STORY (the About page) */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BookOpen size={20} aria-hidden="true" /> Club story
           </h3>
@@ -708,14 +716,14 @@ export default function AdminBrandingPage({
         </div>
 
         {/* SECTION 3: HOME GROUND & VENUE SPECS */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <MapPin size={20} aria-hidden="true" /> Home ground
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label htmlFor="branding-home-ground-name" className="form-label">Home Ground Name</label>
+              <label htmlFor="branding-home-ground-name" className="form-label">Ground name</label>
               <input id="branding-home-ground-name"
                 type="text"
                 name="stadium_name"
@@ -726,7 +734,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="branding-pitch-surface" className="form-label">Pitch Surface</label>
+              <label htmlFor="branding-pitch-surface" className="form-label">Pitch surface</label>
               <select id="branding-pitch-surface"
                 name="stadium_pitch_type"
                 className="form-select"
@@ -743,7 +751,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-physical-address" className="form-label">Physical Address</label>
+              <label htmlFor="branding-physical-address" className="form-label">Address</label>
               <input id="branding-physical-address"
                 type="text"
                 name="stadium_address"
@@ -754,7 +762,7 @@ export default function AdminBrandingPage({
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-matchday-parking-transit-information" className="form-label">Matchday Parking & Transit Information</label>
+              <label htmlFor="branding-matchday-parking-transit-information" className="form-label">Parking and public transport</label>
               <input id="branding-matchday-parking-transit-information"
                 type="text"
                 name="stadium_parking_info"
@@ -770,7 +778,7 @@ export default function AdminBrandingPage({
         {club && <HomeGroundPanel club={club} />}
 
         {/* SECTION 4: PUBLIC CONTACT DETAILS */}
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Mail size={20} aria-hidden="true" /> Contact details
           </h3>
@@ -782,7 +790,7 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label htmlFor="branding-official-secretariat-email" className="form-label row">
                 <Mail size={14} color="var(--color-accent-ink)" />
-                <span>Club Contact Email</span>
+                <span>Email</span>
               </label>
               <input id="branding-official-secretariat-email"
                 type="email"
@@ -797,7 +805,7 @@ export default function AdminBrandingPage({
             <div className="form-group">
               <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label row">
                 <Phone size={14} color="var(--color-accent-ink)" />
-                <span>Club Contact Phone</span>
+                <span>Phone</span>
               </label>
               <input id="branding-secretariat-phone-matchday-hotline"
                 type="tel"
@@ -814,22 +822,51 @@ export default function AdminBrandingPage({
         {/* SECTION 5: CUSTOM DOMAIN (saved on its own, see CustomDomainPanel) */}
         {club && <CustomDomainPanel club={club} />}
 
-        {/* SAVE SUBMIT BAR */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-          <a
-            href={`/${slugValidation.valid && formData.slug ? slugValidation.cleanSlug : club?.slug || 'clubs'}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary row"
-          >
-            <span>Preview Public Portal</span>
-            <ExternalLink size={14} />
-          </a>
-          <button type="submit" className="btn btn-primary btn-lg row">
-            <Save size={18} />
-            <span>Save changes</span>
-          </button>
-        </div>
+        {/* The save bar: sticks to the bottom of the screen while there are unsaved changes, and
+            settles at the end of the form when scrolled there. The ground guide and the custom
+            domain above save on their own, so they never show here. */}
+        {savePhase && (
+          <div role="region" aria-label="Save changes" className={`admin-savebar is-${savePhase}`}>
+            <div className="admin-savebar-text" role="status" aria-live="polite">
+              {savePhase === 'error' && <AlertTriangle size={18} aria-hidden="true" className="admin-savebar-icon" />}
+              {savePhase === 'saved' && <CheckCircle2 size={18} aria-hidden="true" className="admin-savebar-icon" />}
+              {savePhase === 'saving' && <Loader2 size={18} aria-hidden="true" className="admin-savebar-icon spin" />}
+              <div style={{ minWidth: 0 }}>
+                <div className="admin-savebar-title">
+                  {savePhase === 'error' ? saveError
+                    : savePhase === 'saving' ? (redirectNotice || 'Saving your changes')
+                    : savePhase === 'saved' ? 'Saved'
+                    : 'You have unsaved changes'}
+                </div>
+                <div className="admin-savebar-sub">
+                  {savePhase === 'error' ? 'Pick another web address, then save again.'
+                    : savePhase === 'saving' ? (redirectNotice ? 'Saving, then moving you to the new address.' : 'Keep this page open for a moment.')
+                    : savePhase === 'saved' ? 'Your changes are live on the club site.'
+                    : `${changedSections.join(', ')}. Nothing changes on your site until you save.`}
+                </div>
+              </div>
+            </div>
+            <div className="admin-savebar-actions">
+              {savePhase === 'dirty' && (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={discardChanges}>Discard</button>
+                  <button type="submit" className="btn btn-primary row"><Save size={16} aria-hidden="true" /><span>Save changes</span></button>
+                </>
+              )}
+              {savePhase === 'error' && (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={goToSlug}>Go to web address</button>
+                  <button type="submit" className="btn btn-primary row"><Save size={16} aria-hidden="true" /><span>Save changes</span></button>
+                </>
+              )}
+              {savePhase === 'saved' && (
+                <a href={siteHref} target="_blank" rel="noopener noreferrer" className="btn btn-secondary row">
+                  <span>View your site</span><ExternalLink size={14} aria-hidden="true" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

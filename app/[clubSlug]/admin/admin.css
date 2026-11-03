@@ -1,3 +1,10 @@
+/* Hallmark · checked: 2026-11-03 · genre: modern-minimal · scope: app · target: Club and branding
+ * floor: 0 FAIL · fixed: 13 (10a, 19, 33, 34, 40, 48, 49a, 56, 63, 67; reflex 29, 39b, the duplicate colour presets)
+ * built: Hallmark · theme: brand · nav: the project's sidebar · redesign: polish · v2.0.0 */
+/* Hallmark · waive 39b · two drop areas, 92px and 155px, the crest and banner upload zones · a drop target is sized to the image it takes, not to a button */
+/* Hallmark · answered F19 · the one 800 left on branding is the rich-text editor's text-colour glyph, an icon, not running text */
+/* Hallmark · answered F4 · btn-primary, btn-danger and the pressed toggle are separate roles; branding shows one filled primary, Save changes */
+/* Hallmark · answered F7 · the sidebar's fold, group and quiet buttons share one recipe on purpose: one family of quiet controls */
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: brand · redesign: full
  * paper: the club secondary over oklch(15% 0.004 250) · accent: the club primary · display: Outfit · body: Plus Jakarta Sans
  * nav: the project's sidebar, kept and quietened; phones: one admin bar on top, the club tab bar below · signature: the Needs you queue beside the next match · states: loading, empty, error, full
@@ -74,6 +81,8 @@
   --color-muted: color-mix(in oklab, var(--club-secondary) 10%, var(--adm-dark-muted));
   --color-rule: color-mix(in oklab, var(--club-secondary) 18%, var(--adm-dark-rule));
   --color-rule-strong: color-mix(in oklab, var(--club-secondary) 18%, var(--adm-dark-rule-strong));
+  /* A field's edge: 3:1 against the surface it sits on, so an empty input still reads as one */
+  --color-field-edge: color-mix(in oklab, var(--color-muted) 62%, var(--color-rule-strong));
   /* Primary: fills (the main button, the current page, progress); its ink is the readable version for text */
   --color-accent: var(--club-primary);
   --color-on-accent: var(--club-primary-contrast, var(--adm-on-accent));
@@ -180,10 +189,10 @@
 .admin-search { margin-bottom: calc(var(--space-md) * -1); } /* AdminSearch brings its own bottom margin */
 .admin-search .form-input { font-size: max(16px, var(--text-sm)) !important; height: var(--control) !important; }
 
-.admin-fold-all { align-self: flex-end; display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: 28px; padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; cursor: pointer; }
+.admin-fold-all { align-self: flex-end; display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: max(32px, var(--control) - 4px); padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; cursor: pointer; }
 
 .admin-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
-.admin-nav-group-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-xs); min-height: 28px; padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; text-align: left; cursor: pointer; }
+.admin-nav-group-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-xs); min-height: max(32px, var(--control) - 4px); padding: 0 var(--space-xs); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-muted); font: inherit; font-size: var(--text-xs); font-weight: 600; text-align: left; cursor: pointer; }
 .admin-nav-group-toggle .admin-chevron { transition: transform var(--dur-micro) var(--ease-out); }
 .admin-nav-group-toggle[aria-expanded='false'] .admin-chevron { transform: rotate(-90deg); }
 .admin-nav-list { display: flex; flex-direction: column; gap: 1px; }
@@ -248,6 +257,7 @@
   .admin-main { padding-bottom: var(--space-md); }
   /* The club navbar would be a second menu on top: the admin bar and the club tab bar carry the way back */
   .club-theme-root[data-admin] .club-navbar { display: none; }
+  .admin-shell .rte-toolbar { top: calc(max(var(--space-2xs), env(safe-area-inset-top)) + var(--control) + var(--space-2xs) + 1px); }
 }
 body.admin-drawer-open { overflow: clip; }
 
@@ -283,11 +293,16 @@ body.admin-drawer-open { overflow: clip; }
 .admin-shell .badge-gold { background: var(--color-warn-wash); color: var(--color-warn); border: 1px solid color-mix(in oklab, var(--color-warn) 35%, transparent); }
 .admin-shell .form-input,
 .admin-shell .form-select,
-.admin-shell .form-textarea { background: var(--color-paper); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); color: var(--color-ink); }
+.admin-shell .form-textarea { background: var(--color-paper); border: 1px solid var(--color-field-edge); border-radius: var(--radius-control); color: var(--color-ink); }
 .admin-shell .form-input:focus,
 .admin-shell .form-select:focus,
 .admin-shell .form-textarea:focus { border-color: var(--color-accent); box-shadow: none; }
 .admin-shell .confirm-dialog-title { font-weight: 600; }
+/* One weight for emphasis across the admin: 600, like every heading */
+.admin-shell :is(strong, b) { font-weight: 600; }
+.admin-shell .rte-select { border-color: var(--color-field-edge); }
+/* The rich-text toolbar sticks under the club navbar on desks (and under the admin bar on phones, below) */
+.admin-shell .rte-toolbar { top: var(--admin-nav-h); }
 .admin-shell input[type='checkbox'], .admin-shell input[type='radio'] { accent-color: var(--color-accent); }
 .admin-shell .admin-save-banner.is-error { background: var(--color-danger-wash); border: 1px solid color-mix(in oklab, var(--color-danger) 50%, transparent); }
 .admin-shell .admin-save-banner.is-waiting { background: var(--color-warn-wash); border: 1px solid color-mix(in oklab, var(--color-warn) 50%, transparent); }
@@ -358,6 +373,29 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
 .admin-save-toast svg { flex: none; color: var(--color-accent-ink); }
 .admin-save-toast.is-error { border-color: var(--color-danger-line); }
 .admin-save-toast.is-error svg { color: var(--color-danger); }
+
+/* The save bar of a long form (Club and branding): it sticks to the bottom of the screen while there
+   are unsaved changes, clear of the club tab bar on phones, and settles at the form's end */
+.admin-savebar { position: sticky; bottom: calc(var(--tabbar-clear, 0px) + var(--space-md)); z-index: var(--z-sticky); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-lg); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-card); background: var(--color-paper-2); box-shadow: var(--shadow-pop); animation: admin-savebar-in var(--dur-short) var(--ease-out); }
+.admin-savebar.is-saved { border-color: var(--color-accent-line); }
+.admin-savebar.is-error { border-color: var(--color-danger-line); background: color-mix(in oklab, var(--color-danger) 10%, var(--color-paper-2)); }
+.admin-savebar-text { flex: 1 1 280px; min-width: 0; display: flex; align-items: flex-start; gap: var(--space-sm); }
+.admin-savebar-icon { flex: none; margin-top: 2px; color: var(--color-muted); }
+.admin-savebar.is-saved .admin-savebar-icon { color: var(--color-accent-ink); }
+.admin-savebar.is-error .admin-savebar-icon { color: var(--color-danger); }
+.admin-savebar-title { font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+.admin-savebar-sub { margin-top: var(--space-3xs); font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
+.admin-savebar-actions { flex: none; display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.admin-savebar-actions .btn { white-space: nowrap; }
+/* The corner Saving/Saved note would sit on top of the bar; the bar says the same */
+.admin-shell:has(.admin-savebar) .admin-save-pill { display: none; }
+@keyframes admin-savebar-in { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 40rem) {
+  .admin-savebar { bottom: calc(var(--tabbar-clear, 0px) + var(--space-xs)); padding: var(--space-sm); }
+  .admin-savebar-actions { flex: 1 1 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  .admin-savebar-actions > :only-child { grid-column: 1 / -1; }
+  .admin-savebar-actions .btn { justify-content: center; }
+}
 
 /* A choice drawn as a card: a radio or checkbox and its explanation */
 .admin-option { display: flex; align-items: flex-start; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); cursor: pointer; transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }

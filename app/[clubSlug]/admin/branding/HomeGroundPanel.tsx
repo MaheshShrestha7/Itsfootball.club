@@ -177,7 +177,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
   const live = ground ? groundPath(ground) : '';
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem' }}
+    <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}
       onKeyDown={e => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault(); }}>
       <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <MapPin size={20} aria-hidden="true" /> Public ground guide

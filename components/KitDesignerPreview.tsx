@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Shirt, RotateCw, Check, Palette } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 
 export type KitType = 'home' | 'away' | 'third';
 export type KitPattern = 'solid' | 'stripes' | 'hoops' | 'sash' | 'halves' | 'gradient';
@@ -12,69 +12,8 @@ interface KitDesignerPreviewProps {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
-  onColorsChange?: (colors: { primary: string; secondary: string; accent: string }) => void;
   interactive?: boolean;
 }
-
-interface PalettePreset {
-  name: string;
-  primary: string;
-  secondary: string;
-  accent: string;
-  description: string;
-}
-
-const KIT_PALETTE_PRESETS: PalettePreset[] = [
-  {
-    name: 'Emerald Apex',
-    primary: '#059669',
-    secondary: '#0F172A',
-    accent: '#F59E0B',
-    description: 'Vibrant pitch emerald with obsidian and champion gold',
-  },
-  {
-    name: 'Cobalt Royale',
-    primary: '#2563EB',
-    secondary: '#090D16',
-    accent: '#EF4444',
-    description: 'Electric cobalt blue with midnight black and crimson fire',
-  },
-  {
-    name: 'Crimson Dynamo',
-    primary: '#DC2626',
-    secondary: '#18181B',
-    accent: '#FBBF24',
-    description: 'Aggressive racing red with charcoal and amber gold',
-  },
-  {
-    name: 'Neon Ultra',
-    primary: '#7C3AED',
-    secondary: '#0B0F19',
-    accent: '#06B6D4',
-    description: 'Future city violet with deep space black and electric cyan',
-  },
-  {
-    name: 'Vibrant Amber',
-    primary: '#D97706',
-    secondary: '#111827',
-    accent: '#FFFFFF',
-    description: 'Stadium floodlight amber with raven black and optic white',
-  },
-  {
-    name: 'Blanco Galáctico',
-    primary: '#F8FAFC',
-    secondary: '#0284C7',
-    accent: '#EAB308',
-    description: 'Pristine optic white with royal cyan and gold badge trim',
-  },
-  {
-    name: 'Obsidian Shadow',
-    primary: '#0F172A',
-    secondary: '#1E293B',
-    accent: '#10B981',
-    description: 'Stealth night black with slate contrast and neon pitch green',
-  },
-];
 
 // Relative luminance for contrast calculation
 function getLuminance(hex: string): number {
@@ -100,7 +39,6 @@ export default function KitDesignerPreview({
   primaryColor = '#059669',
   secondaryColor = '#0F172A',
   accentColor = '#F59E0B',
-  onColorsChange,
   interactive = true,
 }: KitDesignerPreviewProps) {
   const [kitType, setKitType] = useState<KitType>('home');
@@ -139,140 +77,46 @@ export default function KitDesignerPreview({
     return getContrastRatio(kitColors.base, kitColors.text);
   }, [kitColors.base, kitColors.text]);
 
-  const handleApplyPreset = (preset: PalettePreset) => {
-    if (onColorsChange) {
-      onColorsChange({
-        primary: preset.primary,
-        secondary: preset.secondary,
-        accent: preset.accent,
-      });
-    }
-  };
+  const kitLabel = { home: 'Home', away: 'Away', third: 'Third' }[kitType];
+  const contrastOk = contrastRatio >= 4.5;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
-      {/* Kit Selector Bar (Home, Away, Third) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-      }}>
-        {/* Kit Edition Tabs */}
-        <div style={{
-          display: 'inline-flex',
-          padding: '4px',
-          background: 'rgba(var(--tint-rgb), 0.05)',
-          borderRadius: '12px',
-          border: '1px solid rgba(var(--tint-rgb), 0.1)',
-        }}>
-          {(['home', 'away', 'third'] as KitType[]).map(t => {
-            const isSelected = kitType === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setKitType(t)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: isSelected ? 'var(--club-primary, #10B981)' : 'transparent',
-                  color: isSelected ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-                  fontWeight: isSelected ? 800 : 600,
-                  fontSize: '0.8rem',
-                  fontFamily: 'var(--font-heading)',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {t} Kit
-              </button>
-            );
-          })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', width: '100%' }}>
+      {/* Which kit, and which side of it */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-xs)' }}>
+        <div className="admin-chips" role="group" aria-label="Kit">
+          {(['home', 'away', 'third'] as KitType[]).map(t => (
+            <button key={t} type="button" className="admin-chip" aria-pressed={kitType === t} onClick={() => setKitType(t)}>
+              {{ home: 'Home', away: 'Away', third: 'Third' }[t]}
+            </button>
+          ))}
         </div>
-
-        {/* Rotate View Front / Back */}
         <button
           type="button"
           onClick={() => setViewSide(v => (v === 'front' ? 'back' : 'front'))}
-          className="btn btn-secondary btn-sm"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+          className="btn btn-secondary btn-sm row"
         >
-          <RotateCw size={14} />
-          <span>Flip to {viewSide === 'front' ? 'Back' : 'Front'}</span>
+          <RotateCw size={14} aria-hidden="true" />
+          <span>Show the {viewSide === 'front' ? 'back' : 'front'}</span>
         </button>
       </div>
 
-      {/* Main Kit Showcase Stage */}
-      <div
-        className="kit-jersey-card"
-        style={{
-          border: `1.5px solid ${kitColors.base}`,
-          boxShadow: `inset 0 0 45px rgba(0, 0, 0, 0.9), 0 12px 35px rgba(0,0,0,0.6), 0 0 25px ${kitColors.base}33`,
-        }}
-      >
-        {/* Stadium Floodlight Gloss Sweep across jersey */}
-        <div className="kit-gloss-sweep" />
-
-        {/* Tag pills: one row across the top that wraps on a narrow card instead of overlapping */}
-        <div style={{
-          position: 'absolute',
-          top: '14px',
-          left: '16px',
-          right: '16px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          gap: '0.4rem',
-          zIndex: 6,
-        }}>
-        {/* Official Matchwear Tag Pill */}
-        <div data-theme="dark" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(6px)',
-          padding: '3px 8px',
-          borderRadius: '6px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          fontSize: '0.7rem',
-          fontWeight: 800,
-          color: '#FFFFFF',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}>
-          <Shirt size={11} color={kitColors.accent} />
-          <span>{kitType} Matchday Edition</span>
-        </div>
-
-        {/* Contrast Legibility Indicator */}
-        <div data-theme="dark" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.3rem',
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(6px)',
-          padding: '3px 8px',
-          borderRadius: '6px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          fontSize: '0.7rem',
-          fontWeight: 700,
-          color: contrastRatio >= 4.5 ? 'var(--c-green)' : 'var(--c-amber)',
-        }}>
-          <span>{contrastRatio}:1 Contrast</span>
-        </div>
-        </div>
-
+      {/* The shirt on a plain stage, edged in its own colour */}
+      <figure className="kit-jersey-card" style={{ margin: 0, borderColor: kitColors.base }}>
+        <span
+          className={contrastOk ? 'admin-pill is-ok' : 'admin-pill is-warn'}
+          title="How readable the shirt number is on the shirt colour. 4.5:1 or more reads well from the stands."
+          style={{ position: 'absolute', top: 'var(--space-sm)', right: 'var(--space-sm)', zIndex: 6 }}
+        >
+          Number contrast {contrastRatio}:1
+        </span>
         {/* 2D Vector Jersey SVG */}
         <div style={{ width: '220px', height: '240px', position: 'relative', marginTop: '0.75rem' }}>
           <svg
             viewBox="0 0 320 340"
             className="kit-jersey-svg"
+            role="img"
+            aria-label={`${kitLabel} kit in the club colours, ${viewSide} view`}
             style={{ width: '100%', height: '100%', overflow: 'visible' }}
           >
             <defs>
@@ -542,114 +386,28 @@ export default function KitDesignerPreview({
           </svg>
         </div>
 
-        {/* Current Kit Active Summary */}
-        <div style={{ textAlign: 'center', marginTop: '0.85rem' }}>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            {clubName} • {kitType.toUpperCase()} KIT
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {pattern.toUpperCase()} PATTERN • {viewSide.toUpperCase()} VIEW
-          </div>
-        </div>
-      </div>
+        <figcaption style={{ textAlign: 'center', marginTop: 'var(--space-sm)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          {kitLabel} kit, {viewSide}
+        </figcaption>
+      </figure>
 
-      {/* Pattern Selector Bar */}
+      {/* Pattern */}
       {interactive && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-            Kit Silhouette Pattern:
-          </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+        <div role="group" aria-labelledby="kit-pattern-label">
+          <span id="kit-pattern-label" className="form-label">Pattern</span>
+          <div className="admin-chips" style={{ flexWrap: 'wrap' }}>
             {[
-              { id: 'stripes', label: 'Vertical Stripes' },
-              { id: 'hoops', label: 'Horizontal Hoops' },
-              { id: 'sash', label: 'Diagonal Sash' },
-              { id: 'halves', label: 'Half & Half' },
-              { id: 'gradient', label: 'Fade Gradient' },
-              { id: 'solid', label: 'Clean Monochrome' },
-            ].map(p => {
-              const isActive = pattern === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPattern(p.id as KitPattern)}
-                  className="kit-pattern-pill"
-                  style={{
-                    padding: '0.35rem 0.65rem',
-                    borderRadius: '6px',
-                    border: `1px solid ${isActive ? primaryColor : 'rgba(var(--tint-rgb), 0.1)'}`,
-                    background: isActive ? 'rgba(var(--tint-rgb), 0.12)' : 'rgba(var(--tint-rgb), 0.03)',
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.75rem',
-                    fontWeight: isActive ? 800 : 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Curated Kit Color Preset Swatches */}
-      {interactive && onColorsChange && (
-        <div style={{
-          background: 'rgba(var(--tint-rgb), 0.02)',
-          padding: '1rem',
-          borderRadius: '12px',
-          border: '1px solid rgba(var(--tint-rgb), 0.08)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
-            <Palette size={14} color="var(--c-amber)" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              One-Click Kit Theme Swatches:
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 135px), 1fr))', gap: '0.5rem' }}>
-            {KIT_PALETTE_PRESETS.map(preset => {
-              const isSelected =
-                primaryColor.toLowerCase() === preset.primary.toLowerCase() &&
-                secondaryColor.toLowerCase() === preset.secondary.toLowerCase();
-
-              return (
-                <button
-                  key={preset.name}
-                  type="button"
-                  onClick={() => handleApplyPreset(preset)}
-                  className="kit-swatch-bubble"
-                  style={{
-                    padding: '0.5rem 0.65rem',
-                    borderRadius: '8px',
-                    border: `1.5px solid ${isSelected ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.08)'}`,
-                    background: isSelected ? 'rgba(245, 158, 11, 0.12)' : 'rgba(var(--shade-rgb), 0.35)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                  title={preset.description}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
-                    {/* 3 Color Dots */}
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.primary, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.secondary, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: preset.accent, border: '1px solid rgba(var(--tint-rgb), 0.4)' }} />
-                    {isSelected && (
-                      <Check size={12} color="var(--c-amber)" style={{ marginLeft: 'auto' }} />
-                    )}
-                  </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                    {preset.name}
-                  </span>
-                </button>
-              );
-            })}
+              { id: 'stripes', label: 'Stripes' },
+              { id: 'hoops', label: 'Hoops' },
+              { id: 'sash', label: 'Sash' },
+              { id: 'halves', label: 'Halves' },
+              { id: 'gradient', label: 'Fade' },
+              { id: 'solid', label: 'Plain' },
+            ].map(p => (
+              <button key={p.id} type="button" className="admin-chip" aria-pressed={pattern === p.id} onClick={() => setPattern(p.id as KitPattern)}>
+                {p.label}
+              </button>
+            ))}
           </div>
         </div>
       )}

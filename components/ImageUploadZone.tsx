@@ -264,13 +264,14 @@ export default function ImageUploadZone({
             style={{
               background: 'transparent',
               border: 'none',
-              color: showUrlInput ? 'var(--club-primary, #10B981)' : 'var(--text-muted)',
+              color: showUrlInput ? 'var(--club-ink)' : 'var(--text-muted)',
               fontSize: '0.75rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
               padding: '0.2rem 0.4rem',
+              minHeight: 32,
               borderRadius: '4px',
             }}
           >
@@ -291,6 +292,7 @@ export default function ImageUploadZone({
                 alignItems: 'center',
                 gap: '0.25rem',
                 padding: '0.2rem 0.4rem',
+                minHeight: 32,
                 borderRadius: '4px',
               }}
             >
@@ -362,7 +364,7 @@ export default function ImageUploadZone({
                 height: '64px',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                background: '#000',
+                background: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
                 flexShrink: 0,
                 display: 'flex',
@@ -382,7 +384,7 @@ export default function ImageUploadZone({
             </div>
 
             <div style={{ textAlign: 'left', flex: '1 1 120px', minWidth: 0 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Asset configured
               </div>
               <div className="text-meta">
@@ -414,7 +416,7 @@ export default function ImageUploadZone({
                 height: '44px',
                 borderRadius: '50%',
                 background: isDragging ? 'var(--club-primary)' : 'rgba(255, 255, 255, 0.05)',
-                color: isDragging ? 'var(--club-primary-contrast, #090D16)' : 'var(--club-primary)',
+                color: isDragging ? 'var(--club-primary-contrast)' : 'var(--club-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -429,7 +431,7 @@ export default function ImageUploadZone({
             </div>
 
             <div>
-              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                 {uploading ? 'Uploading asset...' : 'Choose a file or drag it here'}
               </span>
             </div>
