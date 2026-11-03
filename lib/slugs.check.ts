@@ -1,7 +1,7 @@
 // Self-check for club custom domain parsing and platform-host detection.
 // Run: npx esbuild lib/slugs.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { authReturnTarget, authReturnUrl, clubSlugFromPath, isPlatformHost, matchForParam, matchPath, normalizeDomain, safeNextPath } from './slugs';
+import { authReturnTarget, authReturnUrl, clubSlugFromPath, isPlatformHost, matchForParam, matchPath, normalizeDomain, oldAddressRedirect, safeNextPath } from './slugs';
 
 // Club pages, platform pages, and public tournament pages (which load their tournament-only club)
 assert.equal(clubSlugFromPath('/ancc/match/123'), 'ancc');
@@ -57,3 +57,10 @@ assert.equal(matchForParam([fixture], 'Riverside-FC-vs-Parramatta-City-2026-10-1
 assert.equal(matchForParam([fixture], 'riverside-fc-vs-parramatta-city-2026-10-09'), fixture);
 assert.equal(matchForParam([fixture], 'riverside-fc-vs-parramatta-city-2026-10-23'), undefined);
 assert.equal(matchForParam([{ id: 'a' }], '%E0%A4%A'), undefined);
+
+// Old club addresses move to the same page at the current one
+assert.equal(oldAddressRedirect('westvale', 'westvale-fc', '/westvale/fixtures', '?tab=results'), '/westvale-fc/fixtures?tab=results');
+assert.equal(oldAddressRedirect('westvale', 'westvale-fc', '/westvale', ''), '/westvale-fc');
+assert.equal(oldAddressRedirect('Westvale', 'westvale', '/Westvale/news', ''), null);
+assert.equal(oldAddressRedirect('westvale', null, '/westvale', ''), null);
+assert.equal(oldAddressRedirect('westvale', 'westvale-fc', '', ''), '/westvale-fc');

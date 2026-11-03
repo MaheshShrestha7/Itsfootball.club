@@ -199,6 +199,82 @@ export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now:
 // Emails to clubs (edited before sending; plain text)
 // ------------------------------------------------------------------------------------------------
 
+// ------------------------------------------------------------------------------------------------
+// System health: turns what platform_events and a few live checks say into traffic lights
+// ------------------------------------------------------------------------------------------------
+
+export type Light = 'green' | 'amber' | 'red' | 'grey';
+export interface HealthSignal { key: string; label: string; light: Light; summary: string }
+
+/** Scheduled jobs (worker.ts + wrangler.json) and how often each should run */
+export const JOBS: Record<string, { label: string; everyHours: number }> = {
+  reminders: { label: 'Daily reminder emails', everyHours: 24 },
+  indexnow: { label: 'Search engine ping (hourly)', everyHours: 1 },
+  health: { label: 'Health check and alerts (hourly)', everyHours: 1 },
+};
+
+export interface JobRun { name: string; lastAt: string | null; lastOk: boolean | null; lastOkAt: string | null }
+
+export interface HealthInput {
+  emailsSent24: number;
+  emailsFailed24: number;
+  jobs: JobRun[];
+  stripe: { events24: number; failed24: number; lastAt: string | null; connected: number; needDetails: number };
+  /** null: Cloudflare isn't set up, or the check was skipped */
+  domains: { total: number; pending: string[] } | null;
+  dbMs: number;
+}
+
+const ago = (iso: string | null, now: number) => (iso ? timeAgo(iso, now) : 'never');
+
+export function healthSignals(i: HealthInput, now: number = Date.now()): HealthSignal[] {
+  const out: HealthSignal[] = [];
+
+  const total = i.emailsSent24 + i.emailsFailed24;
+  const rate = total ? i.emailsFailed24 / total : 0;
+  out.push({
+    key: 'email', label: 'Emails',
+    light: i.emailsFailed24 === 0 ? 'green' : i.emailsFailed24 >= 10 || rate >= 0.05 ? 'red' : 'amber',
+    summary: `${i.emailsSent24.toLocaleString()} club emails sent, ${i.emailsFailed24} failed in 24 hours${total ? ` (${(rate * 100).toFixed(1)}%)` : ''}.`,
+  });
+
+  for (const j of i.jobs) {
+    const job = JOBS[j.name] || { label: j.name, everyHours: 24 };
+    const late = j.lastAt ? now - new Date(j.lastAt).getTime() > (job.everyHours * 1.5 * 60 + 15) * 60000 : false;
+    out.push({
+      key: `job:${j.name}`, label: job.label,
+      light: !j.lastAt ? 'grey' : late || j.lastOk === false ? 'red' : 'green',
+      summary: !j.lastAt ? 'No run recorded yet.'
+        : late ? `Last ran ${ago(j.lastAt, now)}, expected every ${job.everyHours === 1 ? 'hour' : `${job.everyHours} hours`}.`
+        : j.lastOk === false ? `Last run failed ${ago(j.lastAt, now)}. Last good run ${ago(j.lastOkAt, now)}.`
+        : `Ran ${ago(j.lastAt, now)}.`,
+    });
+  }
+
+  const s = i.stripe;
+  out.push({
+    key: 'stripe', label: 'Stripe payments',
+    light: s.failed24 > 0 ? 'red' : s.needDetails > 0 ? 'amber' : 'green',
+    summary: `${s.events24} webhooks in 24 hours${s.failed24 ? `, ${s.failed24} failed` : ', all handled'}. ${s.connected} clubs connected${s.needDetails ? `, ${s.needDetails} can't take payments yet` : ''}.${s.lastAt ? ` Last webhook ${ago(s.lastAt, now)}.` : ''}`,
+  });
+
+  out.push(i.domains
+    ? {
+      key: 'domains', label: 'Custom domains',
+      light: i.domains.pending.length ? 'amber' : 'green',
+      summary: i.domains.total === 0 ? 'No clubs use their own domain yet.'
+        : `${i.domains.total - i.domains.pending.length} of ${i.domains.total} live with a secure certificate.${i.domains.pending.length ? ` Waiting: ${i.domains.pending.join(', ')}.` : ''}`,
+    }
+    : { key: 'domains', label: 'Custom domains', light: 'grey', summary: 'Not checked.' });
+
+  out.push({
+    key: 'db', label: 'Database',
+    light: i.dbMs < 300 ? 'green' : i.dbMs < 800 ? 'amber' : 'red',
+    summary: `Answered in ${i.dbMs} ms from the server.`,
+  });
+  return out;
+}
+
 /** Saved replies for the support inbox; inserted at the cursor, then edited */
 export const SUPPORT_SNIPPETS: { label: string; text: string }[] = [
   { label: 'Stripe setup', text: 'To take fees by card, open Finance in your admin area and choose "Connect Stripe". It takes about five minutes, and fees go straight to the club\'s bank account.' },
@@ -207,7 +283,7 @@ export const SUPPORT_SNIPPETS: { label: string; text: string }[] = [
   { label: 'Fixed', text: 'Thanks for reporting this. It\'s fixed now. Let me know if you still see it.' },
 ];
 
-export type TemplateKey ='blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'suspended';
+export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'suspended' | 'closing';
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   blank: 'Blank',
@@ -216,6 +292,7 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   stripe: 'Stripe setup',
   approvals: 'People waiting',
   suspended: 'Club suspended',
+  closing: 'Club closing',
 };
 
 /** Subject and body for a template. `firstName` may be empty. */
@@ -247,6 +324,11 @@ export function emailTemplate(key: TemplateKey, club: { name: string; slug: stri
       return {
         subject: `${club.name} has been paused on itsfootball.club`,
         message: `${hi}\n\nI've paused ${club.name} on itsfootball.club, so its public pages are offline for now.\n\nReason: [REASON]\n\nReply to this email if you have questions or want it switched back on.\n\nCheers`,
+      };
+    case 'closing':
+      return {
+        subject: `${club.name} is closing on itsfootball.club`,
+        message: `${hi}\n\nAs agreed, I've closed ${club.name} on itsfootball.club. Its pages are offline now, and everything will be deleted for good in 30 days.\n\nI've downloaded a copy of all the club's records (spreadsheets of members, fixtures, payments and more). Reply if you'd like it.\n\nIf you change your mind before then, reply to this email and I'll switch it back on with nothing lost.\n\nCheers`,
       };
     default:
       return { subject: '', message: `${hi}\n\n` };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import sitemap from '@/app/sitemap';
 import { pingIndexNow } from '@/lib/indexnow';
 import { SITE_URL } from '@/lib/seo';
+import { logEvent } from '@/lib/platform-events';
 
 // Hourly IndexNow ping, triggered by the Cloudflare cron in worker.ts (or by hand:
 // POST with "Authorization: Bearer $CRON_SECRET"; add ?dry=1 to list the URLs without sending).
@@ -35,5 +36,6 @@ export async function POST(req: NextRequest) {
 
   if (req.nextUrl.searchParams.get('dry') === '1') return NextResponse.json({ dryRun: true, paths });
   await pingIndexNow(paths);
+  await logEvent('cron', 'indexnow', true, { sent: paths.length });
   return NextResponse.json({ sent: paths.length });
 }

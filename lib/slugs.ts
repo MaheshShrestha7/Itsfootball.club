@@ -93,3 +93,14 @@ export function clubSlugFromPath(pathname: string | null | undefined): string {
   if (first === 'tournaments') return second && !RESERVED_SLUGS.includes(second) ? second : '';
   return first && !RESERVED_SLUGS.includes(first) ? first : '';
 }
+
+/**
+ * Where an old club address (one of the club's previous_slugs) should move to: the same page and
+ * query at the current slug. Null when `requested` already is the current slug (any case).
+ */
+export function oldAddressRedirect(requested: string, current: string | null | undefined, pathname: string, search: string): string | null {
+  if (!current || requested.toLowerCase() === current.toLowerCase()) return null;
+  const parts = pathname.split('/');
+  const rest = parts[1]?.toLowerCase() === requested.toLowerCase() ? parts.slice(2).join('/') : '';
+  return `/${current}${rest ? `/${rest}` : ''}${search}`;
+}

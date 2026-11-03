@@ -1096,6 +1096,8 @@ export interface PlatformClubItem {
   approved_count?: number;
   oldest_pending_at?: string | null;
   admin_last_seen_at?: string | null;
+  /** Set while the club is closing: deleted for good 30 days later (migration 20261148) */
+  closed_at?: string | null;
 }
 
 /** get_platform_club_people(): the Owner, Club Admins and access-role holders */

@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { emailTickets } from '@/lib/email/tickets';
 import { emailSponsorPaid } from '@/lib/email/sponsor-paid';
 import type { Payment } from '@/lib/supabase/types';
+import { logEvent } from '@/lib/platform-events';
 
 // Connect webhook: receives events from every club's connected Stripe account.
 // Payments are matched on the Checkout Session id we stored, never on metadata, because a club
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       !db && (process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SUPABASE_SECRET_KEY' : 'NEXT_PUBLIC_SUPABASE_URL'),
     ].filter(Boolean);
     console.error('[stripe-webhook] not configured, missing:', missing.join(', '));
+    await logEvent('stripe', 'not_configured', false, { missing });
     return NextResponse.json({ error: 'Not configured' }, { status: 503 });
   }
 
@@ -33,6 +35,7 @@ export async function POST(req: NextRequest) {
       Stripe.createSubtleCryptoProvider()
     );
   } catch {
+    await logEvent('stripe', 'invalid_signature', false);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
       const { data: paid, error } = await db.rpc('fulfil_payment', { p_payment_id: payment.id });
       if (error) {
         console.error('fulfil_payment failed:', error.message);
+        await logEvent('stripe', event.type, false, { error: error.message, payment: payment.id });
         return NextResponse.json({ error: 'Fulfilment failed' }, { status: 500 }); // Stripe retries
       }
       if ((paid as Payment | null)?.kind === 'event_ticket' && (paid as Payment).status === 'paid') await emailTickets(db, paid as Payment);
@@ -95,5 +99,6 @@ export async function POST(req: NextRequest) {
       break;
     }
   }
+  await logEvent('stripe', event.type, true);
   return NextResponse.json({ received: true });
 }

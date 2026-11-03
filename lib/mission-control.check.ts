@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildQueue, bucketTotals, emailTemplate, firstName, greeting, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip } from './mission-control';
+import { buildQueue, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
 import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
 
 const day = (date: string, members: number, revenue_cents = 0): PlatformDailyTrend => ({ date, clubs: 0, users: 0, members, visits: 0, revenue_cents });
@@ -90,5 +90,31 @@ assert.ok(t.subject.includes('Westvale FC'));
 assert.ok(t.message.startsWith('Hi Sam,'));
 assert.ok(t.message.includes('https://itsfootball.club/westvale/admin'));
 assert.ok(emailTemplate('blank', { name: 'X', slug: 'x' }).message.startsWith('Hi,'));
+
+// Health lights
+const base: HealthInput = {
+  emailsSent24: 600, emailsFailed24: 0,
+  jobs: [{ name: 'indexnow', lastAt: '2026-10-26T11:20:00Z', lastOk: true, lastOkAt: '2026-10-26T11:20:00Z' }],
+  stripe: { events24: 5, failed24: 0, lastAt: null, connected: 3, needDetails: 0 },
+  domains: { total: 2, pending: [] },
+  dbMs: 120,
+};
+const light = (o: Partial<HealthInput>, key: string) => healthSignals({ ...base, ...o }, NOW).find(s => s.key === key)!.light;
+assert.ok(healthSignals(base, NOW).every(s => s.light === 'green'));
+assert.equal(light({ emailsFailed24: 3 }, 'email'), 'amber');
+assert.equal(light({ emailsFailed24: 40 }, 'email'), 'red');
+assert.equal(light({ emailsSent24: 20, emailsFailed24: 2 }, 'email'), 'red'); // 9%
+// Hourly job: late after 1h45m, failed run is red, never run is grey
+assert.equal(light({ jobs: [{ name: 'indexnow', lastAt: '2026-10-26T10:00:00Z', lastOk: true, lastOkAt: null }] }, 'job:indexnow'), 'red');
+assert.equal(light({ jobs: [{ name: 'indexnow', lastAt: '2026-10-26T10:30:00Z', lastOk: true, lastOkAt: null }] }, 'job:indexnow'), 'green');
+assert.equal(light({ jobs: [{ name: 'indexnow', lastAt: '2026-10-26T11:50:00Z', lastOk: false, lastOkAt: null }] }, 'job:indexnow'), 'red');
+assert.equal(light({ jobs: [{ name: 'reminders', lastAt: null, lastOk: null, lastOkAt: null }] }, 'job:reminders'), 'grey');
+// Daily job is fine 30 hours later
+assert.equal(light({ jobs: [{ name: 'reminders', lastAt: '2026-10-25T06:00:00Z', lastOk: true, lastOkAt: null }] }, 'job:reminders'), 'green');
+assert.equal(light({ stripe: { ...base.stripe, failed24: 1 } }, 'stripe'), 'red');
+assert.equal(light({ stripe: { ...base.stripe, needDetails: 1 } }, 'stripe'), 'amber');
+assert.equal(light({ domains: { total: 2, pending: ['a.com'] } }, 'domains'), 'amber');
+assert.equal(light({ domains: null }, 'domains'), 'grey');
+assert.equal(light({ dbMs: 900 }, 'db'), 'red');
 
 console.log('mission-control: ok');

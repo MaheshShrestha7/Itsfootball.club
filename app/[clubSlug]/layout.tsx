@@ -5,7 +5,7 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { clubExists } from '@/lib/supabase/server-data';
 import { SITE_NAME, clubImage, clubName, clubPageMetadata, clubPageTitle, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { findClubBySlug, newsMissing, resolveMatchParam } from '@/lib/supabase/club-lookup';
-import { decodeSlugParam } from '@/lib/slugs';
+import { decodeSlugParam, oldAddressRedirect } from '@/lib/slugs';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import ClubLayoutClient from './ClubLayoutClient';
 
@@ -70,7 +70,9 @@ export default async function ClubLayout({
   // Same for a deleted match or news article. Checked here rather than in their own layouts: those render
   // inside ClubLayoutClient, which shows a loading shell on the server, so a notFound() there never
   // reaches the status code and the page went out as a 200 "not found".
-  const subPage = await checkSubPage(clubSlug, (await headers()).get('x-pathname') || '');
+  const head = await headers();
+  const pathname = head.get('x-pathname') || '';
+  const subPage = await checkSubPage(clubSlug, pathname);
   if (subPage === 'missing') notFound();
 
   // JSON-LD sits outside ClubLayoutClient: that shows a loading shell during server rendering (club data
@@ -80,6 +82,9 @@ export default async function ClubLayout({
   const lookup = await findClubBySlug(clubSlug);
   // A tournament-only club has no club site: everything under it goes to its tournament page
   if (isEventClub(lookup)) redirect(tournamentPagePath(lookup!.slug));
+  // An old address (previous_slugs): move permanently to the same page at the current one
+  const moved = oldAddressRedirect(clubSlug, lookup?.slug, pathname, head.get('x-search') || '');
+  if (moved) permanentRedirect(moved);
   // One URL per match for search engines and shared links: the id and old slugs move to the readable slug.
   // The path keeps the club slug, which a club's own domain passes straight through (middleware.ts).
   if (subPage?.matchSlug) permanentRedirect(`/${lookup?.slug || clubSlug}/match/${subPage.matchSlug}`);

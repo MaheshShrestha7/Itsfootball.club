@@ -1,5 +1,7 @@
 // Sends email through the Resend API. Server-only: reads RESEND_API_KEY.
 
+import { logEvent } from '@/lib/platform-events';
+
 export const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || 'notifications@itsfootball.club';
 
 export interface OutgoingEmail {
@@ -31,6 +33,17 @@ const toResend = (email: OutgoingEmail) => ({
   ...(email.headers ? { headers: email.headers } : {}),
 });
 
+/** A failed send, recorded for Mission Control's Health tab (platform_events) */
+async function failed(error: string, emails: OutgoingEmail[]): Promise<{ ok: false; error: string }> {
+  await logEvent('email', 'send', false, {
+    error,
+    count: emails.length,
+    to: emails.slice(0, 20).map(e => e.to),
+    subject: emails[0]?.subject || '',
+  });
+  return { ok: false, error };
+}
+
 export async function sendEmail(email: OutgoingEmail): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: 'RESEND_API_KEY is not set' };
@@ -46,7 +59,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<SendResult> {
   }).catch((e: unknown) => ({ ok: false, status: 0, text: async () => String(e) }) as const);
 
   const body = await res.text();
-  if (!res.ok) return { ok: false, error: `Resend ${res.status}: ${body.slice(0, 300)}` };
+  if (!res.ok) return failed(`Resend ${res.status}: ${body.slice(0, 300)}`, [email]);
   try {
     return { ok: true, id: String(JSON.parse(body).id || '') };
   } catch {
@@ -75,7 +88,7 @@ export async function sendBatch(emails: OutgoingEmail[], idempotencyKey?: string
   }).catch((e: unknown) => ({ ok: false, status: 0, text: async () => String(e) }) as const);
 
   const body = await res.text();
-  if (!res.ok) return { ok: false, error: `Resend ${res.status}: ${body.slice(0, 300)}` };
+  if (!res.ok) return failed(`Resend ${res.status}: ${body.slice(0, 300)}`, emails);
   try {
     return { ok: true, ids: (JSON.parse(body).data || []).map((d: { id?: string }) => String(d.id || '')) };
   } catch {

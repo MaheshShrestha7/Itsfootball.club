@@ -2,11 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { buildQueue, firstName, greeting, timeAgo, type QueueKind } from '@/lib/mission-control';
+import { buildQueue, firstName, greeting, timeAgo, type HealthSignal, type QueueKind } from '@/lib/mission-control';
+import type { HealthReport } from '@/lib/platform-health';
+import { platformApi } from '@/components/admin/platform/api';
 import type { PlatformAuditRow, PlatformClubItem, SupportRequest } from '@/lib/supabase/types';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import { Crest } from '@/components/admin/platform/McArt';
-import { Clock, CreditCard, Sparkles, UserPlus, ArrowRight, Search, Inbox } from 'lucide-react';
+import { Clock, CreditCard, Sparkles, UserPlus, ArrowRight, Search, Inbox, AlertTriangle } from 'lucide-react';
 
 interface Props {
   clubs: PlatformClubItem[];
@@ -18,6 +20,7 @@ interface Props {
   onOpenLog: () => void;
   onOpenPalette: () => void;
   onOpenSupport: (id: string) => void;
+  onOpenHealth: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -31,21 +34,24 @@ const KIND: Record<QueueKind, { label: string; icon: React.ElementType; bg: stri
 const DONE_UNTIL = '2100-01-01T00:00:00Z';
 
 /** Today: everything across the platform that needs the founder, each with its fix. */
-export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, showToast }: Props) {
+export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, onOpenHealth, showToast }: Props) {
   const [snoozed, setSnoozed] = useState<Set<string>>(new Set());
   const [recent, setRecent] = useState<PlatformAuditRow[]>([]);
   const [support, setSupport] = useState<SupportRequest[]>([]);
+  const [broken, setBroken] = useState<HealthSignal[]>([]);
   const [filter, setFilter] = useState<QueueKind | 'all'>('all');
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
-    const [s, a, q] = await Promise.all([
+    const [s, a, q, h] = await Promise.all([
       client.from('platform_snoozes').select('key, until').gt('until', new Date().toISOString()),
       client.rpc('get_platform_audit', { p_club_id: null, p_limit: 6 }),
       client.from('support_requests').select('*').eq('status', 'open').order('created_at').limit(10),
+      platformApi<HealthReport>('health?quick=1'),
     ]);
     setSupport((q.data || []) as SupportRequest[]);
+    setBroken((h.signals || []).filter(x => x.light === 'red'));
     setSnoozed(new Set((s.data || []).map((r: { key: string }) => r.key)));
     setRecent((a.data || []) as PlatformAuditRow[]);
   }, []);
@@ -68,7 +74,7 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   };
 
   const name = firstName(userName, userEmail);
-  const urgent = queue.filter(i => i.kind !== 'welcome').length + support.length;
+  const urgent = queue.filter(i => i.kind !== 'welcome').length + support.length + broken.length;
 
   return (
     <div>
@@ -89,12 +95,23 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
           <div className="mc-card-h" style={{ flexWrap: 'wrap', gap: 8 }}>
             <h3>Needs you</h3>
             <span className="mc-tabs" role="group" aria-label="Filter the list" style={{ margin: 0 }}>
-              <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All {queue.length + support.length}</button>
+              <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All {queue.length + support.length + broken.length}</button>
               {(Object.keys(KIND) as QueueKind[]).filter(k => counts[k]).map(k => (
                 <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{KIND[k].label} {counts[k]}</button>
               ))}
             </span>
           </div>
+
+          {filter === 'all' && broken.map(s => (
+            <div key={s.key} className="mc-q">
+              <span className="mc-sq" style={{ background: 'var(--mc-red-bg)', color: 'var(--mc-red)' }}><AlertTriangle size={16} /></span>
+              <div className="body">
+                <div className="t"><b>{s.label}</b> <span className="mc-flag bad">Broken</span></div>
+                <p>{s.summary}</p>
+                <div className="acts"><button type="button" className="mc-pill-btn" onClick={onOpenHealth}>Open System health</button></div>
+              </div>
+            </div>
+          ))}
 
           {filter === 'all' && support.map(r => (
             <div key={r.id} className="mc-q">
@@ -107,7 +124,7 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
             </div>
           ))}
 
-          {!loading && shown.length === 0 && support.length === 0 && <div className="mc-empty">All clear. Nothing waiting on you.</div>}
+          {!loading && shown.length === 0 && support.length === 0 && broken.length === 0 && <div className="mc-empty">All clear. Nothing waiting on you.</div>}
 
           {shown.map(item => {
             const k = KIND[item.kind];

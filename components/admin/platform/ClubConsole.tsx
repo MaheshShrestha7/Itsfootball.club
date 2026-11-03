@@ -6,8 +6,14 @@ import { memberLabels } from '@/lib/permissions';
 import { setupSteps, timeAgo } from '@/lib/mission-control';
 import type { PlatformAuditRow, PlatformClubItem, PlatformClubNote, PlatformClubPerson } from '@/lib/supabase/types';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
-import { confirmAction, notify } from '@/components/ConfirmDialog';
-import { Check, Circle, Mail, Users, ClipboardList, History, StickyNote } from 'lucide-react';
+import { askText, confirmAction, notify } from '@/components/ConfirmDialog';
+import { validateClubSlug } from '@/lib/club-context';
+import { platformDownload } from '@/components/admin/platform/api';
+import { Check, Circle, Mail, Users, ClipboardList, History, StickyNote, Globe, Archive, Download } from 'lucide-react';
+
+/** The day a closing club is deleted for good */
+const closesOn = (closedAt: string) =>
+  new Date(new Date(closedAt).getTime() + 30 * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
 interface Props {
   club: PlatformClubItem;
@@ -30,6 +36,9 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
   const [adminEmail, setAdminEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [slug, setSlug] = useState(club.slug);
+  const [exporting, setExporting] = useState(false);
+  const [exported, setExported] = useState(false);
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
@@ -96,6 +105,50 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
     if (error) { notify('Could not save the note', error.message); return; }
     setNoteText('');
     load();
+  };
+
+  const changeSlug = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const check = validateClubSlug(slug, [], club.id);
+    if (!check.valid) { notify('That address won\'t work', check.error || ''); return; }
+    if (!(await confirmAction({
+      title: `Move ${club.name} to itsfootball.club/${check.cleanSlug}?`,
+      message: `itsfootball.club/${club.slug} keeps working and redirects to the new address. Tell the club so they update printed links.`,
+      confirmLabel: 'Change address',
+    }))) return;
+    if (await run('platform_set_club_slug', { p_club_id: club.id, p_slug: check.cleanSlug }, `✓ ${club.name} is now at /${check.cleanSlug}`)) onChanged();
+  };
+
+  const exportAll = async () => {
+    setExporting(true);
+    const error = await platformDownload(`export?clubId=${club.id}`, `${club.slug}-export.zip`);
+    setExporting(false);
+    if (error) { notify('Download failed', error); return; }
+    setExported(true);
+    showToast('✓ Export downloaded');
+  };
+
+  const closeClub = async () => {
+    const typed = await askText({
+      title: `Close ${club.name}?`,
+      message: 'Its pages go offline now. In 30 days the club and its records are deleted for good; payments are kept for accounting. You can reopen it until then.',
+      label: `Type ${club.slug} to confirm`,
+      required: true,
+      confirmLabel: 'Close club',
+      danger: true,
+    });
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== club.slug) { notify('Not closed', 'The address you typed didn\'t match.'); return; }
+    if (await run('platform_close_club', { p_club_id: club.id }, `✓ ${club.name} is closing`)) {
+      onChanged();
+      if (await confirmAction({ title: 'Tell the club?', message: 'Email the Owner and admins that the club is closing.', confirmLabel: 'Write email' })) {
+        onEmail({ club, to: 'admins', template: 'closing' });
+      }
+    }
+  };
+
+  const reopen = async () => {
+    if (await run('platform_reopen_club', { p_club_id: club.id }, `✓ ${club.name} is open again`)) onChanged();
   };
 
   const steps = setupSteps(club);
@@ -183,6 +236,45 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
             );
           })}
         </div>
+      </section>
+
+      <section className="glass-panel" style={{ padding: '1.25rem' }}>
+        <h3 style={head}><Globe size={14} color="#818CF8" /> Web address</h3>
+        <form onSubmit={changeSlug} style={{ display: 'flex', gap: '0.5rem' }}>
+          <label htmlFor="mc-slug" className="sr-only">Club web address</label>
+          <span style={{ ...small, alignSelf: 'center' }}>itsfootball.club/</span>
+          <input id="mc-slug" className="form-input" value={slug} onChange={e => setSlug(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || slug.trim().toLowerCase() === club.slug}>Change</button>
+        </form>
+        <p style={{ ...small, margin: '0.5rem 0 0' }}>The old address keeps working: it redirects to the new one.</p>
+      </section>
+
+      <section className="glass-panel" style={{ padding: '1.25rem', border: club.closed_at ? '1px solid rgba(239, 68, 68, 0.35)' : undefined }}>
+        <h3 style={head}><Archive size={14} color="var(--c-red)" /> Data and closing</h3>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={exporting} onClick={exportAll}>
+          <Download size={14} /> {exporting ? 'Preparing…' : exported ? 'Downloaded. Download again' : 'Download everything (ZIP)'}
+        </button>
+        <p style={{ ...small, margin: '0.5rem 0 1rem' }}>A spreadsheet for every kind of record the club has: members, fixtures, payments and more.</p>
+
+        {club.closed_at ? (
+          <>
+            <p style={{ fontSize: '0.85rem', color: 'var(--c-red)', margin: '0 0 0.6rem', fontWeight: 700 }}>
+              Closing. Deleted for good on {closesOn(club.closed_at)}. Payments are kept for accounting.
+            </p>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={reopen}>Reopen the club</button>
+          </>
+        ) : (
+          <>
+            <p style={{ ...small, margin: '0 0 0.6rem' }}>
+              Closing hides the club at once and deletes it for good after 30 days. Payments are kept for accounting. Download everything first.
+            </p>
+            <button type="button" className="btn btn-sm" disabled={busy || !exported} onClick={closeClub}
+              title={exported ? undefined : 'Download everything first'}
+              style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', border: '1px solid rgba(239, 68, 68, 0.4)', fontWeight: 800 }}>
+              Close {club.name}
+            </button>
+          </>
+        )}
       </section>
 
       {history.length > 0 && (

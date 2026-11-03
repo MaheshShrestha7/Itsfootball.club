@@ -205,7 +205,7 @@ export default function ClubsTab({
                 return (
                   <div key={c.id} className={`mc-card mc-gcard mc-lift${c.is_active ? '' : ' dim'}`}>
                     <button type="button" className="top" style={{ background: softTint(c.primary_color, 0.28) }} onClick={() => onSelectClub(c)} aria-label={`Open ${c.name}`}>
-                      <span className={`st${c.is_active ? '' : ' off'}`}>{c.is_active ? 'Active' : 'Suspended'}</span>
+                      <span className={`st${c.is_active ? '' : ' off'}`}>{c.is_active ? 'Active' : c.closed_at ? 'Closing' : 'Suspended'}</span>
                       <Crest logoUrl={c.logo_url} label={c.short_name} color={c.primary_color} />
                     </button>
                     <h3><button type="button" onClick={() => onSelectClub(c)}>{c.name}</button></h3>

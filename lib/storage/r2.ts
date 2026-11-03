@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID;
@@ -106,4 +106,32 @@ export async function getPrivateObjectUrl(key: string, expiresIn = 300): Promise
   const client = getR2Client();
   if (!client || !privateBucketName) return null;
   return getSignedUrl(client, new GetObjectCommand({ Bucket: privateBucketName, Key: key }), { expiresIn });
+}
+
+/** The "folders" directly under `prefix` in the public bucket ('clubs/' -> ['clubs/<id>/', ...]) */
+export async function listR2Folders(prefix: string): Promise<string[]> {
+  const client = getR2Client();
+  if (!client) return [];
+  const out: string[] = [];
+  let token: string | undefined;
+  do {
+    const res = await client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, Delimiter: '/', ContinuationToken: token }));
+    out.push(...(res.CommonPrefixes || []).map(p => p.Prefix || '').filter(Boolean));
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
+
+/** Every file under `prefix` in the public bucket, with its size in bytes */
+export async function listR2Files(prefix: string): Promise<{ key: string; size: number }[]> {
+  const client = getR2Client();
+  if (!client) return [];
+  const out: { key: string; size: number }[] = [];
+  let token: string | undefined;
+  do {
+    const res = await client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, ContinuationToken: token }));
+    out.push(...(res.Contents || []).filter(o => o.Key).map(o => ({ key: o.Key!, size: o.Size || 0 })));
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return out;
 }

@@ -469,6 +469,7 @@ export default function PlatformOwnerDashboard() {
             onOpenLog={() => setActiveTab('log')}
             onOpenPalette={() => setPaletteOpen(true)}
             onOpenSupport={id => { setSupportId(id); setActiveTab('support'); }}
+            onOpenHealth={() => setActiveTab('health')}
             showToast={showToast}
           />
         )}
@@ -524,7 +525,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'health' && (
-          <HealthTab />
+          <HealthTab showToast={showToast} />
         )}
 
         {activeTab === 'broadcasts' && (

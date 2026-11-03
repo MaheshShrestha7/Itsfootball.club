@@ -8,6 +8,7 @@ import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
 import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/format';
+import { logEvent } from '@/lib/platform-events';
 
 // Daily reminder emails, triggered by the Cloudflare cron in worker.ts (or by hand:
 // POST with "Authorization: Bearer $CRON_SECRET"; add ?dry=1 to list what would be sent).
@@ -222,6 +223,7 @@ export async function POST(req: NextRequest) {
   // Which settings are missing is only told to the cron itself
   if (!db || !process.env.RESEND_API_KEY) {
     const missing = [!db && 'SUPABASE_SECRET_KEY', !process.env.RESEND_API_KEY && 'RESEND_API_KEY'].filter(Boolean);
+    await logEvent('cron', 'reminders', false, { error: 'Not configured', missing });
     return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
   }
 
@@ -240,6 +242,7 @@ export async function POST(req: NextRequest) {
 
   const report = await sendClubEmails(db, await materialize(due.slice(0, MAX_SENDS)));
   const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS) };
+  await logEvent('cron', 'reminders', !report.error, body);
   if (report.error?.startsWith('email_log')) {
     console.error('[reminders]', report.error);
     return NextResponse.json(body, { status: 500 });
