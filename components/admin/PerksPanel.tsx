@@ -123,7 +123,7 @@ function PerkDialog({ perk, clubId, clubName, db, nextOrder, sponsors, onClose, 
           </label>
         </div>
 
-        {error && <p role="alert" style={{ margin: '1rem 0 0', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 700 }}>{error}</p>}
+        {error && <p role="alert" className="admin-flash is-error" style={{ margin: '1rem 0 0' }}>{error}</p>}
 
         <div className="confirm-dialog-actions">
           {perk && (
@@ -182,53 +182,50 @@ export default function PerksPanel({ club, sponsors }: { club: { id: string; slu
 
   if (ready === false) {
     return (
-      <div className="glass-panel" style={{ padding: '1.5rem' }}>
-        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Member perks need the database update <code>20261141_member_perks.sql</code>. Run it in Supabase, then reload this page.</p>
+      <div className="admin-panel admin-empty">
+        <p style={{ margin: 0 }}>Member perks need the database update <code>20261141_member_perks.sql</code>. Run it in Supabase, then reload this page.</p>
       </div>
     );
   }
 
   return (
-    <div className="stack">
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem' }}>
-        <div className="min-w-0">
-          <h2 style={{ fontWeight: 800, fontSize: '1.15rem', margin: 0, color: 'var(--text-primary)' }}>Member perks</h2>
-          <p className="text-note" style={{ margin: '0.25rem 0 0' }}>
-            Members see these in the Perks tab of <a href={`/${club.slug}/member`}>/{club.slug}/member</a>. A business that scans a pass sees them too, without the codes.
-          </p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> Add perk</button>
+    <div className="admin-stack">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-sm)' }}>
+        <p className="text-note" style={{ margin: 0, minWidth: 0, flex: '1 1 320px', maxWidth: '72ch' }}>
+          Members see these in the Perks tab of <a href={`/${club.slug}/member`} style={{ color: 'var(--color-accent-ink)', overflowWrap: 'anywhere' }}>/{club.slug}/member</a>. A business that scans a pass sees them too, without the codes.
+        </p>
+        {perks.length > 0 && <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} aria-hidden="true" /> Add perk</button>}
       </div>
 
       {feedback && (
-        <p role="status" style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: feedback.type === 'ok' ? 'var(--c-green)' : 'var(--c-red)' }}>{feedback.text}</p>
+        <p role="status" className={feedback.type === 'ok' ? 'admin-flash' : 'admin-flash is-error'} style={{ margin: 0 }}>{feedback.text}</p>
       )}
 
       {ready && perks.length === 0 && (
-        <div className="glass-panel" style={{ padding: '2rem 1.25rem', textAlign: 'center' }}>
-          <Gift size={28} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
-          <p style={{ margin: '0.5rem 0 1rem', color: 'var(--text-secondary)' }}>No perks yet. Ask a sponsor for a member discount: it gives members a reason to join and sends customers to the sponsor.</p>
-          <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> Add your first perk</button>
+        <div className="admin-panel admin-empty" style={{ alignItems: 'center', textAlign: 'center', padding: 'var(--space-xl) var(--space-md)' }}>
+          <Gift size={24} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+          <p style={{ margin: 0, maxWidth: '52ch' }}>No perks yet. Ask a sponsor for a member discount: it gives members a reason to join and sends customers to the sponsor.</p>
+          <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} aria-hidden="true" /> Add your first perk</button>
         </div>
       )}
 
       {perks.length > 0 && (
-        <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '0.85rem', margin: 0, padding: 0 }}>
+        <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 'var(--space-md)', margin: 0, padding: 0 }}>
           {perks.map(p => {
             const hidden = perkHiddenReason(p, clubWide);
             return (
-              <li key={p.id} className="glass-panel" style={{ listStyle: 'none', padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: hidden ? 0.8 : 1 }}>
+              <li key={p.id} className="admin-panel" style={{ listStyle: 'none', padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
                 <div className="min-w-0">
-                  <div className="text-meta" style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{businessOf(p)}</div>
-                  <h4 style={{ margin: '0.15rem 0 0', fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{p.title}</h4>
+                  <div className="text-meta" style={{ fontWeight: 500, overflowWrap: 'anywhere' }}>{businessOf(p)}</div>
+                  <h3 style={{ margin: 'var(--space-3xs) 0 0', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 'var(--text-md)', letterSpacing: 0, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{p.title}</h3>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  {p.code && <span>Code: <code style={{ fontFamily: 'var(--font-mono)' }}>{p.code}</code></span>}
+                <div><span className={hidden ? 'admin-pill is-warn' : 'admin-pill is-ok'} style={{ whiteSpace: 'normal' }}>{hidden || 'Showing to members'}</span></div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2xs) var(--space-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  {p.code && <span>Code: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{p.code}</code></span>}
                   {p.ends_on && <span>Until {formatEndDate(p.ends_on)}</span>}
                   <span>Used {uses.get(p.id) || 0} {uses.get(p.id) === 1 ? 'time' : 'times'} in the last 12 months</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.25rem' }}>
-                  <span className="text-meta" style={{ marginRight: 'auto', fontWeight: 700, color: hidden ? 'var(--c-amber)' : 'var(--c-green)' }}>{hidden || 'Showing to members'}</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-xs)', marginTop: 'auto', paddingTop: 'var(--space-sm)', borderTop: '1px solid var(--color-rule)' }}>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => toggleShown(p)}>
                     {p.is_active ? <><EyeOff size={14} /> Hide</> : <><Eye size={14} /> Show</>}
                   </button>

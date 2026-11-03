@@ -450,7 +450,8 @@ export default function AdminLayout({
       // A plain sub-item is the page's default tab, so it only matches while no other tab is open
       return isChild && currentTab ? 0 : 2;
     }
-    return path !== dashboardHref && pathname.startsWith(`${path}/`) ? 1 : 0;
+    // A link to one tab or section of a page (Tournament sides) isn't the page's parent: the plain link is
+    return !tab && !hash && path !== dashboardHref && pathname.startsWith(`${path}/`) ? 1 : 0;
   };
   // The one highlighted link: the best match, a sub-item winning a tie with its parent
   const activeLink = (() => {

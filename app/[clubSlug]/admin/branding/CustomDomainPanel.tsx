@@ -15,12 +15,13 @@ const CNAME_TARGET = `cname.${new URL(SITE_URL).host}`;
 const RECHECK_MS = 30_000;
 
 const box: React.CSSProperties = {
-  background: 'rgba(var(--shade-rgb), 0.3)',
-  border: '1px solid var(--border-subtle)',
-  borderRadius: '8px',
-  padding: '0.85rem 1rem',
-  marginTop: '0.75rem',
-  fontSize: '0.8rem',
+  background: 'var(--color-paper)',
+  border: '1px solid var(--color-rule)',
+  borderRadius: 'var(--radius-card)',
+  padding: 'var(--space-sm) var(--space-md)',
+  marginTop: 'var(--space-sm)',
+  fontSize: 'var(--text-sm)',
+  lineHeight: 1.55,
   color: 'var(--text-secondary)',
 };
 
@@ -73,10 +74,10 @@ export default function CustomDomainPanel({ club }: { club: Club }) {
 
   return (
     <div className="glass-panel" style={{ padding: '2rem' }}>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Globe size={20} color="var(--club-primary)" /> Custom Domain
+      <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Globe size={20} aria-hidden="true" /> Custom domain
       </h3>
-      <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+      <p className="text-note" style={{ marginBottom: '1.25rem', overflowWrap: 'anywhere' }}>
         Put your club site on your own domain (e.g. <code>www.yourclub.com</code>). Your <code>itsfootball.club/{club.slug}</code> address keeps working too.
       </p>
 
@@ -105,13 +106,13 @@ export default function CustomDomainPanel({ club }: { club: Club }) {
             </button>
           )}
         </div>
-        {message && <div role="alert" style={{ color: 'var(--danger, #ef4444)', fontSize: '0.8rem', marginTop: '0.5rem' }}>{message}</div>}
+        {message && <div role="alert" className="admin-flash is-error" style={{ margin: 'var(--space-xs) 0 0' }}>{message}</div>}
 
         {status === 'live' && (
           <div style={{ ...box, display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <CheckCircle2 size={16} color="var(--success, #10b981)" />
-            <strong>Live.</strong> Your site is at
-            <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="row" style={{ gap: '0.25rem' }}>
+            <CheckCircle2 size={16} aria-hidden="true" style={{ color: 'var(--color-ok)' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Live.</strong> Your site is at
+            <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="row" style={{ gap: '0.25rem', color: 'var(--club-ink)', overflowWrap: 'anywhere' }}>
               {domain} <ExternalLink size={12} />
             </a>
           </div>
@@ -119,17 +120,22 @@ export default function CustomDomainPanel({ club }: { club: Club }) {
 
         {status === 'pending' && (
           <div style={box} aria-live="polite">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-              <Clock size={16} /> <strong>Waiting for your DNS record.</strong>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              <Clock size={16} aria-hidden="true" style={{ color: 'var(--color-warn)' }} /> <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Waiting for your DNS record.</strong>
               <button type="button" className="btn btn-secondary btn-sm row" style={{ marginLeft: 'auto', gap: '0.3rem' }} onClick={check}>
-                <RefreshCw size={12} /> Check now
+                <RefreshCw size={12} aria-hidden="true" /> Check now
               </button>
             </div>
-            At your domain registrar (GoDaddy, Namecheap, Cloudflare...), add this record:
-            <table style={{ width: '100%', margin: '0.6rem 0', borderCollapse: 'collapse', fontFamily: 'var(--font-jetbrains), monospace' }}>
-              <thead><tr style={{ textAlign: 'left', color: 'var(--text-muted)' }}><th>Type</th><th>Name</th><th>Points to</th></tr></thead>
-              <tbody><tr><td>CNAME</td><td style={{ wordBreak: 'break-all' }}>{domain}</td><td style={{ wordBreak: 'break-all' }}>{CNAME_TARGET}</td></tr></tbody>
-            </table>
+            At your domain registrar (GoDaddy, Namecheap, Cloudflare…), add this record:
+            {/* Label and value rows rather than a table, so long names don't squeeze into narrow columns on a phone */}
+            <dl style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', gap: 'var(--space-2xs) var(--space-md)', margin: 'var(--space-xs) 0', padding: 'var(--space-sm) var(--space-md)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-control)', background: 'var(--color-paper-2)' }}>
+              {([['Type', 'CNAME'], ['Name', domain], ['Points to', CNAME_TARGET]] as const).map(([k, v]) => (
+                <React.Fragment key={k}>
+                  <dt style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', lineHeight: '1.6rem' }}>{k}</dt>
+                  <dd style={{ margin: 0, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', overflowWrap: 'anywhere', lineHeight: '1.6rem' }}>{v}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
             Some registrars want only the first part as the name (<code>{domain.split('.')[0]}</code>). It usually goes live within minutes, and this page updates by itself.
             Want the bare domain without <code>www</code> too? Set up forwarding from it to <code>{domain}</code> at your registrar.
           </div>

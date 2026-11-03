@@ -19,7 +19,6 @@ import {
   Shield,
   CheckCircle2,
   Users,
-  ChevronRight,
   ClipboardList,
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
@@ -96,7 +95,9 @@ export default function DraftLineupPage() {
   // The columns the line-up lives in: the team's own side in a tournament game
   const sideIn = (m: NonNullable<typeof activeMatch>) => (activeGroup ? teamSideIn(m, activeGroup.participant.name) : clubLineupSide(m));
   const kindList = kindGames(kind);
-  const pickerGames = activeMatch && kind !== 'tournament' && !kindList.some(m => m.id === activeMatch.id) ? [activeMatch, ...kindList] : kindList;
+  // The game on the board is always in the list, unless its tournament team's picker shows it instead
+  // (a past cup game, when nothing is coming up, has no team group and would leave the list empty)
+  const pickerGames = activeMatch && !activeGroup && !kindList.some(m => m.id === activeMatch.id) ? [activeMatch, ...kindList] : kindList;
 
   const matchAvailabilities = useMemo(() => {
     const ids = new Set(groupGames.map(g => g.id));
@@ -195,9 +196,9 @@ export default function DraftLineupPage() {
   if (club && !activeMatch && syncStatus.phase !== 'loading') {
     return (
       <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem 1.5rem', maxWidth: '560px', margin: '2rem auto' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No fixtures yet</h2>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No fixtures yet</h2>
         <p className="text-body" style={{ marginBottom: '1.25rem' }}>Schedule a match first, then come back here to pick the lineup.</p>
-        <Link href={`/${club.slug}/admin/matches`} className="btn btn-primary">Schedule a Match</Link>
+        <Link href={`/${club.slug}/admin/matches`} className="btn btn-primary">Schedule a match</Link>
       </div>
     );
   }
@@ -205,7 +206,7 @@ export default function DraftLineupPage() {
   if (!club || !activeMatch) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem' }}>
-        <p>Loading coach workbench...</p>
+        <p>Loading the lineup workbench…</p>
       </div>
     );
   }
@@ -265,89 +266,46 @@ export default function DraftLineupPage() {
 
   return (
     <AdminGuard club={club}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
+      <div className="admin-stack" style={{ paddingBottom: '3rem' }}>
 
-        {/* Header Breadcrumbs & Action Bar */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div className="min-w-0">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-              <Link href={`/${club.slug}/admin`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Admin</Link>
-              <ChevronRight size={14} />
-              <Link href={`/${club.slug}/admin/match-center`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Match Centre</Link>
-              <ChevronRight size={14} />
-              <span className="text-primary">Draft Lineup Workbench</span>
-            </div>
-
-            <h1 style={{ fontSize: 'clamp(1.3rem, 5vw, 1.75rem)', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              <Layers size={26} color="var(--c-amber)" />
-              <span>Draft Lineup & Tactical Workbench</span>
-              <span className="badge badge-gold" style={{ fontSize: '0.72rem' }}>Coach Sandbox</span>
+        {/* Heading and the screen's own actions, as on every admin screen */}
+        <div className="admin-head" style={{ marginBottom: 0 }}>
+          <div>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+              <Layers aria-hidden="true" />
+              <span>Lineup workbench</span>
+              <span className="admin-pill is-warn">Draft, coaches only</span>
             </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
-              Experiment with starting lineups and substitutions during the week without publishing changes prematurely.
-            </p>
+            <p>Try starting line-ups and substitutions during the week. Nothing shows in Match Centre until you publish.</p>
           </div>
 
-          <div className="row row-loose row-wrap">
-            <Link
-              href={`/${club.slug}/admin/availability`}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <Users size={14} color="var(--c-green)" />
-              <span>Availability Hub</span>
+          <div className="admin-head-actions">
+            <Link href={`/${club.slug}/admin/availability`} className="btn btn-secondary row">
+              <Users size={16} aria-hidden="true" />
+              <span>Player availability</span>
             </Link>
-
-            <button
-              onClick={() => setShowPublishModal(true)}
-              className="btn btn-primary btn-sm"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: 'var(--text-primary)',
-                border: 'none',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-              }}
-            >
-              <Send size={15} />
+            <button type="button" onClick={() => setShowPublishModal(true)} className="btn btn-primary row">
+              <Send size={16} aria-hidden="true" />
               <span>{groupGames.length > 1 ? `Publish to all ${groupGames.length} games` : 'Publish to Match Centre'}</span>
             </button>
           </div>
         </div>
 
-        {/* Feedback Toast */}
+        {/* The result of a save or publish: sticky, so it shows while the board is scrolled */}
         {feedback && (
-          <div
-            role="status"
-            style={{
-              position: 'sticky',
-              top: '0.5rem',
-              zIndex: 50,
-              padding: '0.75rem 1.25rem',
-              borderRadius: '10px',
-              fontSize: '0.85rem',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: feedback.type === 'error' ? 'rgba(60, 12, 12, 0.95)' : feedback.type === 'info' ? 'rgba(12, 24, 48, 0.95)' : 'rgba(6, 40, 28, 0.95)',
-              border: `1px solid ${feedback.type === 'error' ? '#EF4444' : feedback.type === 'info' ? '#3B82F6' : '#10B981'}`,
-              color: feedback.type === 'error' ? 'var(--c-red)' : feedback.type === 'info' ? 'var(--c-sky)' : 'var(--c-green)',
-            }}
-          >
-            {feedback.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+          <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}
+            style={{ position: 'sticky', top: 'var(--space-xs)', zIndex: 50, margin: 0, background: 'var(--color-paper-2)', boxShadow: 'var(--shadow-pop)' }}>
+            {feedback.type === 'error' ? <AlertTriangle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
             <span>{feedback.text}</span>
           </div>
         )}
 
         {/* Fixture selector & status */}
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem' }}>
+        <section className="admin-panel" aria-label="Fixture" style={{ padding: 'var(--space-md)', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 'var(--space-md)' }}>
           <div style={{ flex: '1 1 240px', minWidth: 0 }}>
             <MatchKindSwitch games={prepGames} active={kind} onPick={pickKind} />
-            <label htmlFor="fixture-select" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-              {activeGroup ? 'Team:' : 'Fixture Target:'}
+            <label htmlFor="fixture-select" className="form-label" style={{ display: 'block' }}>
+              {activeGroup ? 'Team' : 'Fixture'}
             </label>
             {activeGroup ? (
               <select data-view-ok
@@ -358,7 +316,7 @@ export default function DraftLineupPage() {
                   const g = teamGroups.find(x => x.key === e.target.value);
                   if (g) void handleSelectMatch(g.games[0].id, g.key);
                 }}
-                style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', width: '100%', maxWidth: '420px' }}
+                style={{ width: '100%', maxWidth: '420px' }}
               >
                 {teamGroups.map(g => (
                   <option key={g.key} value={g.key}>
@@ -372,7 +330,7 @@ export default function DraftLineupPage() {
                 className="form-select"
                 value={activeMatch.id}
                 onChange={e => handleSelectMatch(e.target.value)}
-                style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', width: '100%', maxWidth: '420px' }}
+                style={{ width: '100%', maxWidth: '420px' }}
               >
                 {pickerGames.map(m => (
                   <option key={m.id} value={m.id}>
@@ -382,7 +340,7 @@ export default function DraftLineupPage() {
               </select>
             )}
             {activeGroup && (
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+              <p className="text-meta" style={{ marginTop: 'var(--space-xs)' }}>
                 One line-up for the day, published to every game: {groupGames.map(g => {
                   const opp = teamSideIn(g, activeGroup.participant.name) === 'home' ? g.away_team_name : g.home_team_name;
                   return `${g.match_time ? `${g.match_time} ` : ''}vs ${opp}`;
@@ -391,37 +349,14 @@ export default function DraftLineupPage() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {isDirty && (
-              <span style={{
-                padding: '0.4rem 0.8rem',
-                borderRadius: '20px',
-                background: 'rgba(59, 130, 246, 0.15)',
-                border: '1px solid #3B82F6',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                color: 'var(--c-sky)',
-              }}>
-                Unsaved changes
-              </span>
-            )}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '20px',
-              background: currentDraft?.is_published ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-              border: `1px solid ${currentDraft?.is_published ? '#10B981' : '#F59E0B'}`,
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              color: currentDraft?.is_published ? 'var(--c-green)' : 'var(--c-amber)',
-            }}>
-              {currentDraft?.is_published ? <CheckCircle2 size={14} /> : <Shield size={14} />}
-              <span>{currentDraft?.is_published ? 'Published Live' : 'Draft Mode (Private)'}</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+            {isDirty && <span className="admin-pill is-warn">Unsaved changes</span>}
+            <span className={currentDraft?.is_published ? 'admin-pill is-ok' : 'admin-pill'}>
+              {currentDraft?.is_published ? <CheckCircle2 size={12} aria-hidden="true" /> : <Shield size={12} aria-hidden="true" />}
+              {currentDraft?.is_published ? 'Published' : 'Draft, not published'}
+            </span>
           </div>
-        </div>
+        </section>
 
         <LineupWorkbench
           players={squadPlayers}
@@ -437,107 +372,72 @@ export default function DraftLineupPage() {
           onSave={handleSaveDraft}
           onNotify={showFeedback}
           footer={
-            <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <ClipboardList size={16} color={club.primary_color} /> Coach Instructions & Tactical Cues
-              </h3>
-              <textarea aria-label="Coach instructions and tactical cues"
-                className="form-input"
-                rows={3}
-                placeholder="Add team instructions, set-piece assignments, pressing triggers..."
-                value={tacticalNotes}
-                onChange={e => { setTacticalNotes(e.target.value); setIsDirty(true); }}
-                style={{ width: '100%', fontSize: '0.85rem', resize: 'vertical' }}
-              />
-            </div>
+            <section className="admin-panel" aria-labelledby="lineup-notes-title">
+              <div className="admin-panel-head">
+                <h2 id="lineup-notes-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+                  <ClipboardList size={16} aria-hidden="true" style={{ color: 'var(--color-muted)' }} /> Coach instructions
+                </h2>
+              </div>
+              <div className="admin-section">
+                <textarea aria-label="Coach instructions"
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Team instructions, set-piece jobs, pressing triggers…"
+                  value={tacticalNotes}
+                  onChange={e => { setTacticalNotes(e.target.value); setIsDirty(true); }}
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+            </section>
           }
         />
 
-        {/* PUBLISH CONFIRMATION MODAL */}
+        {/* Publish confirmation */}
         {showPublishModal && (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}>
-            <div className="glass-panel" style={{ margin: 'auto', maxWidth: '480px', width: '100%', padding: '2rem', animation: 'fadeIn 0.25s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                <div style={{ width: '42px', height: '42px', flexShrink: 0, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Send size={22} color="var(--c-green)" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)' }}>Publish Lineup to Match Centre?</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                    This saves the lineup shown on the board and immediately updates the live public match centre.
-                  </p>
-                </div>
-              </div>
+          <div
+            onClick={() => setShowPublishModal(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              background: 'var(--color-scrim)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 'var(--space-md)',
+            }}>
+            <div role="dialog" aria-modal="true" aria-labelledby="publish-lineup-title" className="admin-panel"
+              onClick={e => e.stopPropagation()}
+              onKeyDown={e => { if (e.key === 'Escape') setShowPublishModal(false); }}
+              style={{ margin: 'auto', maxWidth: '480px', width: '100%', padding: 'var(--space-lg)', boxShadow: 'var(--shadow-pop)' }}>
+              <h2 id="publish-lineup-title" style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-ink)' }}>Publish this line-up?</h2>
+              <p style={{ margin: 'var(--space-2xs) 0 var(--space-md)', color: 'var(--color-ink-2)', fontSize: 'var(--text-sm)' }}>
+                It saves the line-up on the board and shows it in the public Match Centre straight away.
+              </p>
 
-              <div style={{
-                background: 'rgba(var(--shade-rgb), 0.4)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-subtle)',
-                marginBottom: '1.5rem',
-                fontSize: '0.82rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.4rem',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                  <span className="text-muted">Match:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', textAlign: 'right' }}>
-                    {activeGroup
-                      ? `${activeGroup.participant.name} · ${tournamentName(activeGroup.tournamentId)} (all ${groupGames.length} games)`
-                      : `${activeMatch.home_team_name} vs ${activeMatch.away_team_name}`}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Format:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--c-green)' }}>{matchFormat}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Formation:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--c-amber)' }}>{formation}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Starting Players:</span>
-                  <span style={{ fontWeight: 800, color: starterCount < lineupCoords.length ? 'var(--c-amber)' : 'var(--text-primary)' }}>
-                    {starterCount} of {lineupCoords.length} positions filled
-                  </span>
-                </div>
-              </div>
+              <dl style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', gap: 'var(--space-xs) var(--space-md)', margin: '0 0 var(--space-lg)', padding: 'var(--space-sm) var(--space-md)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-card)', background: 'var(--color-paper)', fontSize: 'var(--text-sm)' }}>
+                <dt style={{ color: 'var(--color-muted)' }}>Match</dt>
+                <dd style={{ margin: 0, fontWeight: 600, color: 'var(--color-ink)', overflowWrap: 'anywhere' }}>
+                  {activeGroup
+                    ? `${activeGroup.participant.name} · ${tournamentName(activeGroup.tournamentId)} (all ${groupGames.length} games)`
+                    : `${activeMatch.home_team_name} vs ${activeMatch.away_team_name}`}
+                </dd>
+                <dt style={{ color: 'var(--color-muted)' }}>Format</dt>
+                <dd style={{ margin: 0, fontWeight: 600, color: 'var(--color-ink)' }}>{matchFormat}</dd>
+                <dt style={{ color: 'var(--color-muted)' }}>Formation</dt>
+                <dd style={{ margin: 0, fontWeight: 600, color: 'var(--color-ink)' }}>{formation}</dd>
+                <dt style={{ color: 'var(--color-muted)' }}>Starters</dt>
+                <dd style={{ margin: 0, fontWeight: 600, color: starterCount < lineupCoords.length ? 'var(--color-warn)' : 'var(--color-ink)' }}>
+                  {starterCount} of {lineupCoords.length} positions filled
+                </dd>
+              </dl>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowPublishModal(false)}
-                  className="btn btn-secondary btn-sm"
-                  style={{ padding: '0.55rem 1rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePublish}
-                  className="btn btn-primary btn-sm"
-                  style={{
-                    padding: '0.55rem 1.25rem',
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    border: 'none',
-                    color: 'var(--text-primary)',
-                    fontWeight: 800,
-                  }}
-                >
-                  Confirm & Publish Live
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-xs)' }}>
+                <button type="button" onClick={() => setShowPublishModal(false)} className="btn btn-secondary">Cancel</button>
+                <button type="button" onClick={handlePublish} className="btn btn-primary row">
+                  <Send size={16} aria-hidden="true" /> Publish
                 </button>
               </div>
             </div>

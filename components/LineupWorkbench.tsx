@@ -211,7 +211,7 @@ export default function LineupWorkbench({
           {pendingSub && (
             <div
               role="status"
-              data-theme="dark" style={{
+              style={{
                 position: 'sticky',
                 top: '0.5rem',
                 zIndex: 45,
@@ -221,9 +221,9 @@ export default function LineupWorkbench({
                 padding: '0.6rem 0.75rem',
                 marginBottom: '0.75rem',
                 borderRadius: '10px',
-                background: 'rgba(8, 30, 20, 0.95)',
-                border: '1px solid #10B981',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                background: 'var(--color-paper-2)',
+                border: '1px solid var(--color-accent)',
+                boxShadow: 'var(--shadow-pop)',
                 color: 'var(--text-primary)',
                 fontSize: '0.82rem',
               }}
@@ -243,7 +243,7 @@ export default function LineupWorkbench({
               </button>
             </div>
           )}
-          <div className="glass-panel" style={{ padding: 'clamp(0.75rem, 3vw, 1.5rem)', maxWidth: '100%', boxSizing: 'border-box' }}>
+          <div className="admin-panel" style={{ padding: 'clamp(0.75rem, 3vw, 1.5rem)', maxWidth: '100%', boxSizing: 'border-box' }}>
             <TacticalPitch
               players={players}
               positions={positions}
@@ -258,7 +258,7 @@ export default function LineupWorkbench({
               orientation="vertical"
               allowOrientationToggle={true}
               onSaveFormation={onSave}
-              saveLabel="Save Draft"
+              saveLabel="Save draft"
               onSwapWithBench={slotId => setSwapSlotId(slotId)}
               onSendToBench={sendToBench}
               onSlotTap={handleSlotTap}
@@ -269,13 +269,13 @@ export default function LineupWorkbench({
         </div>
 
         {/* Bench */}
-        <div className="lineup-workbench-bench glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="lineup-workbench-bench admin-panel" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={18} color="var(--c-blue)" /> Substitutes & Reserves
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>({benchPlayers.length})</span>
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+            <h2 style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)', fontWeight: 600, letterSpacing: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+              <Users size={16} aria-hidden="true" style={{ color: 'var(--color-muted)' }} /> Bench
+              <span className="text-meta" style={{ fontWeight: 500 }}>{benchPlayers.length}</span>
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', margin: 'var(--space-2xs) 0 0' }}>
               Tap a player, then tap a pitch position to substitute, or drag them onto the pitch using the grip handle.
             </p>
           </div>
@@ -288,14 +288,14 @@ export default function LineupWorkbench({
               borderRadius: '8px',
               padding: '0.65rem 0.75rem',
               textAlign: 'center',
-              background: 'rgba(var(--tint-rgb), 0.02)',
-              transition: 'all 0.15s ease',
+              background: 'none',
+              transition: 'background-color 0.15s ease, border-color 0.15s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.45rem',
-              fontSize: '0.74rem',
-              fontWeight: 800,
+              fontSize: 'var(--text-xs)',
+              fontWeight: 500,
               color: 'var(--text-secondary)',
             }}
           >
@@ -349,8 +349,8 @@ export default function LineupWorkbench({
                       justifyContent: 'space-between',
                       padding: '0.5rem 0.65rem 0.5rem 0.35rem',
                       borderRadius: '8px',
-                      background: isPending ? 'rgba(16, 185, 129, 0.14)' : 'rgba(var(--dk-15-23-42), 0.65)',
-                      border: `1px solid ${isPending ? '#10B981' : 'var(--border-subtle)'}`,
+                      background: isPending ? 'var(--color-accent-wash)' : 'var(--color-paper)',
+                      border: `1px solid ${isPending ? 'var(--color-accent)' : 'var(--border-subtle)'}`,
                       gap: '0.5rem',
                       cursor: 'grab',
                       userSelect: 'none',
@@ -378,12 +378,11 @@ export default function LineupWorkbench({
                       </span>
                       <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} size={32} />
                       <div className="min-w-0">
-                        <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {player.full_name}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          <span style={{ color: primaryColor, fontWeight: 800 }}>#{player.jersey_number || '-'}</span>
-                          <span>•</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                          {player.jersey_number ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>#{player.jersey_number}</span> : null}
                           <span>{player.player_position || 'Squad'}</span>
                         </div>
                       </div>
@@ -394,13 +393,13 @@ export default function LineupWorkbench({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.3rem',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '12px',
-                        background: `${st.color}20`,
-                        border: `1px solid ${st.color}40`,
+                        padding: '0 var(--space-xs)',
+                        lineHeight: '20px',
+                        borderRadius: 'var(--radius-pill)',
+                        background: `color-mix(in oklab, ${st.color} 14%, transparent)`,
                         color: st.color,
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 600,
                         flexShrink: 0,
                       }}
                     >
@@ -420,7 +419,7 @@ export default function LineupWorkbench({
       {/* Drag ghost follows the pointer; pointer-events:none so hit-testing sees the pitch underneath */}
       {ghost && (
         <div
-          data-theme="dark" style={{
+          style={{
             position: 'fixed',
             left: ghost.x,
             top: ghost.y,
@@ -432,12 +431,12 @@ export default function LineupWorkbench({
             gap: '0.4rem',
             padding: '0.3rem 0.6rem 0.3rem 0.3rem',
             borderRadius: '999px',
-            background: overSlotId ? '#10B981' : 'rgba(12, 16, 22, 0.95)',
-            border: `1px solid ${overSlotId ? '#10B981' : primaryColor}`,
-            boxShadow: '0 10px 28px rgba(0,0,0,0.6)',
-            color: overSlotId ? '#04120b' : '#FFFFFF',
-            fontSize: '0.78rem',
-            fontWeight: 800,
+            background: overSlotId ? 'var(--color-accent)' : 'var(--color-paper-2)',
+            border: `1px solid ${overSlotId ? 'var(--color-accent)' : primaryColor}`,
+            boxShadow: 'var(--shadow-pop)',
+            color: overSlotId ? 'var(--color-on-accent)' : 'var(--color-ink)',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
             whiteSpace: 'nowrap',
           }}
         >
@@ -453,8 +452,7 @@ export default function LineupWorkbench({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(8px)',
+            background: 'var(--color-scrim)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -463,15 +461,18 @@ export default function LineupWorkbench({
           }}
         >
           <div
-            className="glass-panel"
+            className="admin-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isEmptySlot(swapSlot) ? `Fill ${swapSlot.position} slot` : `Replace ${swapSlot.name}`}
             onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '440px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}
+            style={{ maxWidth: '440px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 'var(--space-lg)', boxShadow: 'var(--shadow-pop)' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ArrowLeftRight size={18} color="var(--c-blue)" />
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ArrowLeftRight size={18} aria-hidden="true" style={{ color: 'var(--color-muted)' }} />
                 {isEmptySlot(swapSlot) ? `Fill ${swapSlot.position} slot` : `Replace ${swapSlot.name}`}
-              </h3>
+              </h2>
               <button
                 type="button"
                 onClick={() => setSwapSlotId(null)}
@@ -510,7 +511,7 @@ export default function LineupWorkbench({
                         justifyContent: 'space-between',
                         padding: '0.65rem 0.85rem',
                         borderRadius: '8px',
-                        background: 'rgba(var(--tint-rgb), 0.04)',
+                        background: 'var(--color-paper)',
                         border: '1px solid var(--border-subtle)',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -520,13 +521,13 @@ export default function LineupWorkbench({
                       <div className="row row-loose">
                         <PlayerAvatar photoUrl={benchP.photo_url} name={benchP.full_name} size={32} />
                         <div>
-                          <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{benchP.full_name}</div>
+                          <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{benchP.full_name}</div>
                           <div className="text-meta">
                             #{benchP.jersey_number || '-'} • {benchP.player_position || 'Squad'}
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: st.color, fontWeight: 800 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: 'var(--text-xs)', color: st.color, fontWeight: 600 }}>
                         <Icon size={12} />
                         <span>{st.label}</span>
                       </div>

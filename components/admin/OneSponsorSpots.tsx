@@ -31,10 +31,12 @@ export default function OneSponsorSpots({ club }: { club: Club }) {
   };
 
   return (
-    <section className="glass-panel" aria-labelledby="one-sponsor-spots" style={{ padding: '1.1rem 1.25rem', marginBottom: '1.5rem' }}>
-      <h2 id="one-sponsor-spots" style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>One-sponsor spots</h2>
-      <p className="text-meta" style={{ margin: '0.25rem 0 0.9rem' }}>Only sponsors whose package has that tick are listed.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1rem' }}>
+    <section className="admin-panel" aria-labelledby="one-sponsor-spots" style={{ marginBottom: 'var(--space-lg)' }}>
+      <div className="admin-panel-head">
+        <h2 id="one-sponsor-spots">One-sponsor spots</h2>
+        <span className="admin-meta">Only sponsors whose package has that tick</span>
+      </div>
+      <div className="admin-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--space-md)' }}>
         {ONE_SPONSOR_PLACES.map(({ place, configKey, label, hint }) => {
           const list = lists[place];
           const chosen = club.config?.[configKey];
@@ -58,7 +60,7 @@ export default function OneSponsorSpots({ club }: { club: Club }) {
           );
         })}
       </div>
-      {message && <p role="status" style={{ margin: '0.75rem 0 0', fontSize: '0.85rem', color: message.ok ? 'var(--c-green)' : 'var(--c-red)' }}>{message.text}</p>}
+      {message && <p role="status" className={message.ok ? 'admin-flash' : 'admin-flash is-error'} style={{ margin: '0 var(--space-md) var(--space-md)' }}>{message.text}</p>}
     </section>
   );
 }

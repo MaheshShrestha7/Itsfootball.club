@@ -44,8 +44,8 @@ const smallBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'cen
 function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className="touch-target"
-      style={{ flexShrink: 0, width: 48, height: 28, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'rgba(var(--tint-rgb), 0.1)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
-      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s ease' }} />
+      style={{ flexShrink: 0, width: 48, height: 28, padding: 0, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
+      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--color-print)', transition: 'left 0.2s ease' }} />
     </button>
   );
 }
@@ -179,17 +179,17 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
   return (
     <div className="glass-panel" style={{ padding: '2rem' }}
       onKeyDown={e => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault(); }}>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <MapPin size={20} color="var(--club-primary)" /> Public Ground Guide
+      <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <MapPin size={20} aria-hidden="true" /> Public ground guide
       </h3>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+      <p className="text-note" style={{ lineHeight: 1.55, marginBottom: '1.25rem' }}>
         A free page in the <a href="/grounds" target="_blank" rel="noopener" style={{ color: 'var(--club-ink)', fontWeight: 600 }}>grounds directory</a> that
         tells away teams and parents where to park, which pitch, toilets and canteen, and how to check if the ground is closed after rain.
         Ground facts are public once saved. Saved on its own, not with the button at the bottom.
       </p>
 
       {loading && <p style={hint}><Loader2 size={14} className="spin" /> Loading…</p>}
-      {!loading && !migrated && <p style={{ ...hint, color: 'var(--c-amber)' }}>The grounds directory isn&apos;t switched on yet (database migration 20261109_grounds.sql).</p>}
+      {!loading && !migrated && <p className="admin-notice" style={{ margin: 0 }}>The grounds directory isn&apos;t switched on yet (database migration 20261109_grounds.sql).</p>}
 
       {!loading && migrated && mode === 'view' && !ground && (
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -202,9 +202,9 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
       {!loading && migrated && mode === 'view' && ground && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <strong style={{ color: 'var(--text-primary)', fontSize: '1.05rem' }}>{ground.name}, {ground.suburb} {ground.state}</strong>
-            <a href={live} target="_blank" rel="noopener" style={{ ...smallBtn, color: 'var(--club-ink)', fontWeight: 600, fontSize: '0.85rem' }}>
-              itsfootball.club{live} <ExternalLink size={14} />
+            <strong style={{ color: 'var(--text-primary)', fontSize: 'var(--text-md)', fontWeight: 600 }}>{ground.name}, {ground.suburb} {ground.state}</strong>
+            <a href={live} target="_blank" rel="noopener" style={{ color: 'var(--club-ink)', fontWeight: 600, fontSize: 'var(--text-sm)', overflowWrap: 'anywhere', minWidth: 0 }}>
+              itsfootball.club{live} <ExternalLink size={14} aria-hidden="true" style={{ verticalAlign: '-2px' }} />
             </a>
           </div>
           {steward ? (
@@ -212,7 +212,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
               <li style={{ color: 'var(--text-muted)' }}>To show in Google and AI search, the guide needs:</li>
               {checks.map(c => (
                 <li key={c.text} style={{ ...smallBtn, color: c.done ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                  {c.done ? <CheckCircle2 size={16} color="var(--c-green)" /> : <Circle size={16} />} {c.text}
+                  {c.done ? <CheckCircle2 size={16} style={{ flex: 'none', color: 'var(--color-accent-ink)' }} aria-label="Done" /> : <Circle size={16} style={{ flex: 'none' }} aria-label="To do" />} {c.text}
                 </li>
               ))}
             </ul>
@@ -220,14 +220,14 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
             <p style={hint}>Another club looks after this ground&apos;s facts. Spotted something wrong? Use &quot;Suggest an edit&quot; on the guide.</p>
           )}
           {steward && suggestions.length > 0 && (
-            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderLeft: '3px solid var(--c-amber)' }}>
-              <strong style={{ ...smallBtn, color: 'var(--text-primary)' }}>
-                <MessageSquare size={16} color="var(--c-amber)" /> {suggestions.length} suggested edit{suggestions.length === 1 ? '' : 's'} from visitors
+            <div style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-warn-line)', background: 'var(--color-warn-wash)' }}>
+              <strong style={{ ...smallBtn, color: 'var(--text-primary)', fontWeight: 600 }}>
+                <MessageSquare size={16} aria-hidden="true" style={{ color: 'var(--color-warn)' }} /> {suggestions.length} suggested edit{suggestions.length === 1 ? '' : 's'} from visitors
               </strong>
               {suggestions.map(x => (
-                <div key={x.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)' }}>
+                <div key={x.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--color-rule)' }}>
                   <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <div className="text-meta" style={{ fontWeight: 500 }}>
                       {SUGGESTION_TOPICS.find(t => t.key === x.topic)?.label || 'Something else'}
                       {x.ground_name && x.ground_name !== ground.name ? ` · ${x.ground_name}` : ''} · {new Date(x.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                     </div>
@@ -235,10 +235,10 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
                     {x.contact && <p style={{ ...hint, marginTop: '0.2rem' }}>From {x.contact}</p>}
                   </div>
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button type="button" className="btn btn-outline" style={{ ...smallBtn, padding: '0.4rem 0.75rem', fontSize: '0.8rem' }} onClick={() => closeSuggestion(x.id, 'done')} title="I've updated the ground details">
+                    <button type="button" className="btn btn-secondary btn-sm" style={smallBtn} onClick={() => closeSuggestion(x.id, 'done')} title="I've updated the ground details">
                       <Check size={14} /> Done
                     </button>
-                    <button type="button" className="btn btn-outline" style={{ ...smallBtn, padding: '0.4rem 0.75rem', fontSize: '0.8rem' }} onClick={() => closeSuggestion(x.id, 'dismissed')} title="Not right, or not needed">
+                    <button type="button" className="btn btn-secondary btn-sm" style={smallBtn} onClick={() => closeSuggestion(x.id, 'dismissed')} title="Not right, or not needed">
                       <X size={14} /> Dismiss
                     </button>
                   </div>
@@ -249,8 +249,8 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
           )}
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {steward && <button type="button" className="btn btn-primary" style={smallBtn} onClick={() => setMode('edit')}>Edit ground details</button>}
-            <button type="button" className="btn btn-outline" style={smallBtn} onClick={() => { setMode('pick'); setQ(''); }}>Change ground</button>
-            <button type="button" className="btn btn-outline" style={smallBtn} onClick={unlink} disabled={busy}><Trash2 size={15} /> Remove</button>
+            <button type="button" className="btn btn-secondary" style={smallBtn} onClick={() => { setMode('pick'); setQ(''); }}>Change ground</button>
+            <button type="button" className="btn btn-secondary" style={smallBtn} onClick={unlink} disabled={busy}><Trash2 size={15} aria-hidden="true" /> Remove</button>
           </div>
         </div>
       )}
@@ -262,23 +262,24 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
             <Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: 'var(--text-muted)' }} aria-hidden="true" />
             <input id="ground-search" className="form-input" style={{ paddingLeft: 36 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Ground name, suburb or postcode" autoFocus />
           </div>
-          <div className="glass-panel" style={{ marginTop: '0.4rem', padding: '0.35rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginTop: '0.4rem', padding: 'var(--space-2xs)', display: 'flex', flexDirection: 'column', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-card)', background: 'var(--color-paper)' }}>
             {results.map(r => (
-              <button key={r.id} type="button" onClick={() => save(r.id)} disabled={busy}
-                style={{ textAlign: 'left', padding: '0.65rem 0.75rem', borderRadius: 10, display: 'flex', gap: '0.7rem', alignItems: 'flex-start', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>
-                <MapPin size={18} color="var(--club-primary)" style={{ marginTop: 2 }} />
+              <button key={r.id} type="button" onClick={() => save(r.id)} disabled={busy} className="admin-quiet-btn"
+                style={{ alignItems: 'flex-start', padding: 'var(--space-xs) var(--space-sm)', gap: 'var(--space-sm)' }}>
+                <MapPin size={18} aria-hidden="true" style={{ marginTop: 2 }} />
                 <span>
-                  <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{r.name}</strong>
+                  <strong style={{ display: 'block', color: 'var(--text-primary)', fontWeight: 600 }}>{r.name}</strong>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{[`${r.suburb} ${r.state}`, councilName(r)].filter(Boolean).join(' · ')}</span>
                 </span>
               </button>
             ))}
             <button type="button" onClick={() => { setForm(f => ({ ...fromClub(club), ...f, name: q.trim() || f.name })); setMode('edit'); }}
-              style={{ textAlign: 'left', padding: '0.65rem 0.75rem', display: 'flex', gap: '0.7rem', alignItems: 'center', color: 'var(--club-ink)', fontWeight: 700, background: 'transparent', border: 'none', borderTop: results.length ? '1px solid var(--border-subtle)' : 'none', cursor: 'pointer' }}>
-              <Plus size={18} /> Add a new ground{q.trim() ? ` “${q.trim()}”` : ''}
+              className="admin-quiet-btn"
+              style={{ padding: 'var(--space-xs) var(--space-sm)', gap: 'var(--space-sm)', color: 'var(--club-ink)', fontWeight: 600, borderTop: results.length ? '1px solid var(--color-rule)' : 'none', borderRadius: results.length ? 0 : undefined, overflowWrap: 'anywhere' }}>
+              <Plus size={18} aria-hidden="true" style={{ color: 'inherit' }} /> Add a new ground{q.trim() ? ` “${q.trim()}”` : ''}
             </button>
           </div>
-          <button type="button" className="btn btn-outline" style={{ marginTop: '0.75rem' }} onClick={() => setMode('view')}>Cancel</button>
+          <button type="button" className="btn btn-secondary" style={{ marginTop: '0.75rem' }} onClick={() => setMode('view')}>Cancel</button>
         </div>
       )}
 
@@ -314,7 +315,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
               {form.pin && (pin ? ' Pin found.' : ' No pin found in that yet.')}
             </p>
             {pin && (
-              <div style={{ height: 200, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-subtle)', marginTop: '0.5rem' }}>
+              <div style={{ height: 200, borderRadius: 'var(--radius-card)', overflow: 'hidden', border: '1px solid var(--border-subtle)', marginTop: '0.5rem' }}>
                 <iframe title="Pin preview" src={mapEmbedUrl({ lat: pin.lat, lng: pin.lng } as GroundRow)} style={{ border: 'none', width: '100%', height: '100%' }} loading="lazy" />
               </div>
             )}
@@ -354,11 +355,11 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
                   <label style={{ ...smallBtn, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                     <input type="checkbox" checked={!!p.lights} onChange={e => set('pitches', form.pitches.map((x, j) => (j === i ? { ...x, lights: e.target.checked } : x)))} /> Lights
                   </label>
-                  <button type="button" className="btn btn-outline" aria-label={`Remove ${p.label || 'pitch'}`} style={{ padding: '0.45rem 0.6rem' }}
+                  <button type="button" className="admin-icon-btn is-danger" aria-label={`Remove ${p.label || 'pitch'}`}
                     onClick={() => set('pitches', form.pitches.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
                 </div>
               ))}
-              <button type="button" className="btn btn-outline" style={{ ...smallBtn, alignSelf: 'flex-start' }}
+              <button type="button" className="btn btn-secondary" style={{ ...smallBtn, alignSelf: 'flex-start' }}
                 onClick={() => set('pitches', [...form.pitches, { label: `Pitch ${form.pitches.length + 1}`, surface: 'Grass' }])}>
                 <Plus size={15} /> Add a pitch
               </button>
@@ -382,7 +383,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
             <button type="button" className="btn btn-primary" style={smallBtn} onClick={() => save()} disabled={busy}>
               {busy ? <Loader2 size={15} className="spin" /> : <CheckCircle2 size={15} />} Save ground guide
             </button>
-            <button type="button" className="btn btn-outline" onClick={() => { setMode('view'); if (ground) setForm(fromGround(ground)); }}>Cancel</button>
+            <button type="button" className="btn btn-secondary" onClick={() => { setMode('view'); if (ground) setForm(fromGround(ground)); }}>Cancel</button>
           </div>
         </div>
       )}
@@ -391,8 +392,8 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
         <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-start', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
           <Switch checked={listed} onChange={toggleListed} label="Show our club and fixtures on public ground pages" />
           <div>
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Show our club and fixtures on public ground pages</div>
-            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: '0.25rem' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Show our club and fixtures on public ground pages</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: '0.25rem' }}>
               Ground facts like parking and toilets are public either way. With this on, your club name appears on your ground&apos;s page,
               and your senior fixtures appear on the guide of the ground they&apos;re played at. Junior teams, teams that hide scores, and training are never shown.
             </div>
@@ -400,7 +401,7 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
         </div>
       )}
 
-      {message && <p role="status" style={{ ...hint, marginTop: '1rem', color: message.ok ? 'var(--c-green)' : 'var(--c-red, #ef4444)' }}>{message.text}</p>}
+      {message && <p role="status" className={message.ok ? 'admin-flash' : 'admin-flash is-error'} style={{ margin: '1rem 0 0' }}>{message.text}</p>}
     </div>
   );
 }

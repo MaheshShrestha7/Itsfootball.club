@@ -26,7 +26,7 @@ function IncludesEditor({ row, set }: { row: SponsorshipPackage; set: SetRow }) 
         ['ground', 'At the ground and in print', 'These ticks decide who appears there: only sponsors on a package with the tick.'],
       ] as const).map(([group, heading, hint]) => (
         <div key={group} style={{ marginBottom: '0.6rem' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: group === 'ground' ? '0.4rem' : 0 }}>{heading}</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginTop: group === 'ground' ? '0.4rem' : 0 }}>{heading}</div>
           <p className="text-meta" style={{ margin: '0.15rem 0 0.25rem' }}>{hint}</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 190px), 1fr))', gap: '0.35rem 1rem' }}>
             {PACKAGE_INCLUDES.filter(i => i.group === group).map(i => (
@@ -152,7 +152,7 @@ function PackageDialog({ pkg, clubId, db, nextOrder, includesReady, limitsReady,
           {includesReady && <div style={{ gridColumn: '1 / -1' }}><IncludesEditor row={row} set={set} /></div>}
         </div>
 
-        {error && <p role="alert" style={{ margin: '1rem 0 0', color: 'var(--c-red)', fontSize: '0.85rem', fontWeight: 700 }}>{error}</p>}
+        {error && <p role="alert" className="admin-flash is-error" style={{ margin: '1rem 0 0' }}>{error}</p>}
 
         <div className="confirm-dialog-actions">
           {pkg && (
@@ -222,28 +222,30 @@ export default function SponsorPackagesPanel({ club }: { club: { id: string; slu
     const soldOut = limit !== null && n >= limit;
     const firstBenefit = p.benefits?.split('\n').find(l => l.trim());
     return (
-      <li key={p.id} className="glass-panel" style={{ listStyle: 'none', padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: p.is_active ? 1 : 0.8 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+      <li key={p.id} className="admin-panel" style={{ listStyle: 'none', padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-sm)' }}>
           <div className="min-w-0">
-            <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>{sponsorTierLabel(p.tier)}</span>
-            <h4 style={{ margin: '0.35rem 0 0', fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{p.name}</h4>
+            <span className="admin-pill">{sponsorTierLabel(p.tier)}</span>
+            <h3 style={{ margin: 'var(--space-2xs) 0 0', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 'var(--text-md)', letterSpacing: 0, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{p.name}</h3>
           </div>
-          <strong style={{ fontSize: '1.05rem', whiteSpace: 'nowrap', color: p.price_cents > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+          <span style={{ fontWeight: 600, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', color: p.price_cents > 0 ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: p.price_cents > 0 ? 'var(--text-md)' : 'var(--text-sm)' }}>
             {p.price_cents > 0 ? formatMoney(p.price_cents, currency) : 'Price on request'}
-          </strong>
+          </span>
         </div>
-        {firstBenefit && <p className="text-meta" style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{firstBenefit}</p>}
+        {firstBenefit && <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{firstBenefit}</p>}
         {(shown.length > 0 || extras.length > 0) && (
-          <ul style={{ margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }} aria-label="What's included">
-            {shown.map(s => <li key={s} style={{ listStyle: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Check size={12} aria-hidden="true" /> {s}</li>)}
+          <ul style={{ margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2xs) var(--space-sm)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }} aria-label="What's included">
+            {shown.map(s => <li key={s} style={{ listStyle: 'none', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2xs)' }}><Check size={12} aria-hidden="true" style={{ color: 'var(--color-accent-ink)' }} /> {s}</li>)}
             {extras.length > 0 && <li style={{ listStyle: 'none' }}>+{extras.length} {extras.length === 1 ? 'extra' : 'extras'}</li>}
           </ul>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.25rem' }}>
-          <span className="text-meta" style={{ marginRight: 'auto', fontWeight: soldOut ? 700 : 400, color: soldOut ? 'var(--c-amber)' : undefined }}>
-            {limit !== null
-              ? soldOut ? `All ${limit} taken` : `${limit - n} of ${limit} left`
-              : n > 0 ? `${n} ${n === 1 ? 'sponsor' : 'sponsors'}` : 'No limit'}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-xs)', marginTop: 'auto', paddingTop: 'var(--space-sm)', borderTop: '1px solid var(--color-rule)' }}>
+          <span style={{ marginRight: 'auto' }}>
+            {soldOut ? <span className="admin-pill is-warn">{limit === 1 ? 'Taken' : `All ${limit} taken`}</span> : (
+              <span className="text-meta">
+                {limit !== null ? `${limit - n} of ${limit} left` : n > 0 ? `${n} ${n === 1 ? 'sponsor' : 'sponsors'}` : 'No limit'}
+              </span>
+            )}
           </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => toggleShown(p)}
             title={p.is_active ? 'Take it off your sponsor page' : 'Show it on your sponsor page'}>
@@ -261,32 +263,29 @@ export default function SponsorPackagesPanel({ club }: { club: { id: string; slu
   const hidden = packages.filter(p => !p.is_active);
   const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '0.85rem', margin: 0, padding: 0 };
   const heading = (text: string, count: number) => (
-    <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
-      {text} ({count})
-    </h3>
+    <h2 style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-xs)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, letterSpacing: 0, color: 'var(--text-primary)', margin: '0 0 var(--space-sm)' }}>
+      {text} <span className="text-meta" style={{ fontWeight: 500 }}>{count}</span>
+    </h2>
   );
 
   return (
-    <div className="stack">
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem' }}>
-        <div className="min-w-0">
-          <h2 style={{ fontWeight: 800, fontSize: '1.15rem', margin: 0, color: 'var(--text-primary)' }}>Sponsorship packages</h2>
-          <p className="text-note" style={{ margin: '0.25rem 0 0' }}>
-            Businesses pick one on your public page: <a href={`/${club.slug}/sponsor`}>/{club.slug}/sponsor</a>
-          </p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> Add package</button>
+    <div className="admin-stack">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-sm)' }}>
+        <p className="text-note" style={{ margin: 0, minWidth: 0, overflowWrap: 'anywhere' }}>
+          Businesses pick one on your public page: <a href={`/${club.slug}/sponsor`} style={{ color: 'var(--color-accent-ink)' }}>/{club.slug}/sponsor</a>
+        </p>
+        {packages.length > 0 && <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} aria-hidden="true" /> Add package</button>}
       </div>
 
       {feedback && (
-        <p role="status" style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: feedback.type === 'ok' ? 'var(--c-green)' : 'var(--c-red)' }}>{feedback.text}</p>
+        <p role="status" className={feedback.type === 'ok' ? 'admin-flash' : 'admin-flash is-error'} style={{ margin: 0 }}>{feedback.text}</p>
       )}
 
       {loaded && packages.length === 0 && (
-        <div className="glass-panel" style={{ padding: '2rem 1.25rem', textAlign: 'center' }}>
-          <Package size={28} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
-          <p style={{ margin: '0.5rem 0 1rem', color: 'var(--text-secondary)' }}>No packages yet. Add one so businesses can sign up and pay on your sponsor page.</p>
-          <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> Add your first package</button>
+        <div className="admin-panel admin-empty" style={{ alignItems: 'center', textAlign: 'center', padding: 'var(--space-xl) var(--space-md)' }}>
+          <Package size={24} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+          <p style={{ margin: 0, maxWidth: '44ch' }}>No packages yet. Add one so businesses can sign up and pay on your sponsor page.</p>
+          <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}><Plus size={16} aria-hidden="true" /> Add your first package</button>
         </div>
       )}
 

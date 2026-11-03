@@ -433,7 +433,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 </div>
                 <div className="row row-wrap" style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-subtle)', gap: '0.5rem' }}>
                   <button onClick={() => openRoster(team)} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Users size={13} /> Squad & Staff
+                    <Users size={13} aria-hidden="true" /> Squad and staff
                   </button>
                   {!team.is_default && team.is_active && (
                     <button onClick={() => makeMain(team)} className="btn btn-secondary btn-sm">Make main team</button>
@@ -446,7 +446,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
       )}
 
       {editing && (
-        <Modal title={editing === 'new' ? 'Add Team' : `Edit ${editing.name}`} onClose={() => setEditing(null)}>
+        <Modal title={editing === 'new' ? 'Add a team' : `Edit ${editing.name}`} onClose={() => setEditing(null)}>
           <form onSubmit={saveTeam} className="stack stack-sm">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
               <div className="form-group" style={{ margin: 0 }}>
@@ -584,7 +584,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
       )}
 
       {rosterTeam && (
-        <Modal title={`${rosterTeam.name}: Squad & Staff`} onClose={() => setRosterTeam(null)}>
+        <Modal title={`${rosterTeam.name}: squad and staff`} onClose={() => setRosterTeam(null)}>
           <div className="stack stack-sm">
             <div>
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: '0.5rem' }}>
