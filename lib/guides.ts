@@ -181,6 +181,24 @@ export const GUIDES: Guide[] = [
     linkedFrom: [SEASON_FEE_TOOL.path],
     updated: '2026-10-22',
   },
+  {
+    path: '/guides/offside-rule-soccer',
+    published: '2026-11-03',
+    label: 'The offside rule, explained',
+    blurb: 'Offside position vs offence, the myths, and how a referee actually judges it',
+    question: 'What is the offside rule in soccer?',
+    tool: LINEUP_FORMAT_PAGES[0],
+    linkedFrom: [LINEUP_FORMAT_PAGES[0].path],
+  },
+  {
+    path: '/guides/soccer-rules',
+    published: '2026-11-03',
+    label: 'Soccer rules in plain English',
+    blurb: 'The 17 Laws of the Game, the 2026/27 changes, and what changes for juniors',
+    question: 'What are the basic rules of soccer?',
+    tool: LINEUP_TOOL,
+    linkedFrom: [LINEUP_TOOL.path],
+  },
 ];
 
 /** The date a guide was last checked against its sources */
@@ -447,6 +465,24 @@ export const SOURCES = {
     publisher: 'Hindmarsh Shire Council',
     url: 'https://www.hrcc.vic.gov.au/files/assets/public/v/1/document-resources/services/public-health/applying-to-register-a-simple-sausage-sizzle-in-victoria-step-by-step-guide-final.pdf',
     note: 'Victorian sizzles are registered through Streatrader as Class 4, with a Statement of Trade',
+  },
+  ifabLaw11: {
+    title: 'Laws of the Game: Law 11, Offside',
+    publisher: 'The IFAB',
+    url: 'https://www.theifab.com/laws/latest/offside/',
+    note: 'Offside position, the three ways to commit the offence, deliberate play vs save, and restarts',
+  },
+  ifabLaws: {
+    title: 'Laws of the Game 2026/27',
+    publisher: 'The IFAB',
+    url: 'https://www.theifab.com/laws/latest/',
+    note: 'All 17 Laws, in force from 1 July 2026',
+  },
+  ifabChanges2627: {
+    title: 'Law changes 2026/27',
+    publisher: 'The IFAB',
+    url: 'https://www.theifab.com/law-changes/latest/',
+    note: 'The 10-second substitution exit, one minute off after treatment, five-second restart countdowns and the seven-player minimum',
   },
   stripeAu: {
     title: 'Stripe pricing, Australia',
