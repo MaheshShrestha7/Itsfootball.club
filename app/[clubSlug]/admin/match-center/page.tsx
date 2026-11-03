@@ -3,6 +3,8 @@
 import React, { useState, use, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import { offerLineupAppearances } from '@/components/offerLineupAppearances';
 import { Match, MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
@@ -118,7 +120,10 @@ export default function AdminMatchCenterControllerPage({
     clubTeamMembers,
     updateTournamentMatchScore,
     tournaments,
+    loadMatchStatLines,
+    fixMatchStats,
   } = useClub();
+  const { user } = useAuth();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = matches.filter(m => m.club_id === club.id);
@@ -555,6 +560,11 @@ export default function AdminMatchCenterControllerPage({
       match_format: pitchFormat?.matchId === match.id ? pitchFormat.format : match.match_format,
     });
     showFeedback(`Tactical lineup & ${formationName} formation published live to Match Centre!`);
+    // Stats already saved for this match: offer the line-up players with no appearance one
+    const savedMatch = match;
+    void offerLineupAppearances([savedMatch], positions.map(p => p.member_id).filter(id => squadPlayers.some(sp => sp.id === id)), {
+      loadMatchStatLines, fixMatchStats, adminName: user?.full_name || 'Club Committee',
+    }).then(res => { if (res) showFeedback(res.message, res.ok ? 'success' : 'error'); });
   };
 
   // Full time and stats not saved yet: the one moment "Save Player Stats" should stand out

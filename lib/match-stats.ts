@@ -106,6 +106,24 @@ export function describeChange(before: MatchStatLine, after: MatchStatLine): str
   });
 }
 
+/** Minutes in a full match of this format */
+export const fullMatchMinutes = (format?: string | null) => (format === '7v7' ? 50 : format === '9v9' ? 60 : 90);
+
+/**
+ * Line-up players with no appearance in a match's saved stats, as fixed lines (played, full-match
+ * minutes, anything else they already had kept). Only ever adds: someone off the line-up may
+ * still have played (subbed off), so taking appearances away stays a manual fix.
+ */
+export function lineupAdditions(saved: MatchStatLine[], lineupIds: (string | null | undefined)[], format?: string | null): MatchStatLine[] {
+  const byId = new Map(saved.map(l => [l.member_id, l]));
+  return [...new Set(lineupIds)]
+    .filter((id): id is string => !!id && !byId.get(id)?.played)
+    .map(id => {
+      const line = byId.get(id) || emptyLine(id);
+      return { ...line, played: true, minutes: line.minutes || fullMatchMinutes(format) };
+    });
+}
+
 /** Keeps numbers in the ranges the database allows */
 export function cleanLine(l: MatchStatLine): MatchStatLine {
   const n = (v: number, max: number) => Math.min(max, Math.max(0, Math.round(Number(v) || 0)));

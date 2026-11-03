@@ -10,7 +10,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
-import { cleanLine, describeChange, emptyLine, lineDelta, pointChanges, type MatchStatLine } from '@/lib/match-stats';
+import { cleanLine, describeChange, emptyLine, lineDelta, lineupAdditions, pointChanges, type MatchStatLine } from '@/lib/match-stats';
 import { clubLineupSide } from '@/lib/tournament-engine';
 import type { ClubMember, Match } from '@/lib/supabase/types';
 
@@ -118,13 +118,9 @@ export default function StatsFixModal({ match, players, onClose, onFixed }: Prop
   // Line-up players with no stats from this match (e.g. the line-up was put in after the stats were saved)
   const lineupMissing = useMemo(() => {
     const coords = (clubLineupSide(match) === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
-    return [...new Set(coords.map(c => c.member_id))]
-      .filter((id): id is string => !!id && players.some(p => p.id === id) && !current(id).played);
+    return lineupAdditions(rowIds.map(current), coords.map(c => c.member_id).filter(id => players.some(p => p.id === id)), match.match_format);
   }, [match, players, saved, edited]); // eslint-disable-line react-hooks/exhaustive-deps
-  const addLineup = () => {
-    const full = match.match_format === '7v7' ? 50 : match.match_format === '9v9' ? 60 : 90;
-    setEdited(prev => ({ ...prev, ...Object.fromEntries(lineupMissing.map(id => [id, { ...current(id), played: true, minutes: current(id).minutes || full }])) }));
-  };
+  const addLineup = () => setEdited(prev => ({ ...prev, ...Object.fromEntries(lineupMissing.map(l => [l.member_id, l])) }));
   const score = `${match.home_team_name} ${match.home_score} – ${match.away_score} ${match.away_team_name}`;
 
   return (

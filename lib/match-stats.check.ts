@@ -2,7 +2,7 @@
 // Run: npx esbuild lib/match-stats.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
 import type { ClubScoreRuleConfig, MatchAuditPayload } from './supabase/types';
-import { cleanLine, describeChange, emptyLine, isEmptyLine, lineDelta, linesFromAudit, pointChanges } from './match-stats';
+import { cleanLine, describeChange, emptyLine, fullMatchMinutes, isEmptyLine, lineDelta, lineupAdditions, linesFromAudit, pointChanges } from './match-stats';
 
 const payload: MatchAuditPayload = {
   match_id: 'm1',
@@ -44,5 +44,18 @@ assert.deepEqual(describeChange(by('gk'), { ...by('gk'), clean_sheet: false }), 
 assert.deepEqual(cleanLine({ ...emptyLine('x'), minutes: -4, yellow_cards: 7, goals: 2.6 }), { ...emptyLine('x'), minutes: 0, yellow_cards: 2, goals: 3 });
 assert.equal(isEmptyLine(emptyLine('x')), true);
 assert.equal(isEmptyLine(by('sub')), false);
+
+// Line-up put in after the stats were saved: only the players with no appearance are added, once each
+assert.equal(fullMatchMinutes('9v9'), 60);
+assert.equal(fullMatchMinutes(undefined), 90);
+const scorerOnly = [{ ...emptyLine('st'), played: true, minutes: 60, goals: 2, motm: true }];
+const added = lineupAdditions(scorerOnly, ['st', 'gk', 'gk', null, 'cb'], '9v9');
+assert.deepEqual(added.map(l => [l.member_id, l.played, l.minutes]), [['gk', true, 60], ['cb', true, 60]]);
+// A saved line for someone marked not playing keeps what it had (a card) and gets the appearance
+const benched = [{ ...emptyLine('cb'), yellow_cards: 1 }];
+assert.deepEqual(lineupAdditions(benched, ['cb']), [{ ...emptyLine('cb'), played: true, minutes: 90, yellow_cards: 1 }]);
+assert.deepEqual(lineupAdditions(scorerOnly, ['st']), []);
+// Only appearances are added: points move by exactly one appearance each
+assert.deepEqual(pointChanges(emptyLine('gk'), added[0], rules).map(c => [c.event_type, c.points]), [['match_appearance', 5]]);
 
 console.log('match-stats checks passed');

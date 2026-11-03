@@ -2069,6 +2069,10 @@ export function ClubProvider({
     if (targetMatch.is_audited) {
       return { success: false, totalPointsAwarded: 0, message: 'Stats for this match are already saved; its points were awarded then.' };
     }
+    // Nobody ticked as playing would save the match with no appearances (and lock it as saved)
+    if (payload.appearance_member_ids.length === 0) {
+      return { success: false, totalPointsAwarded: 0, message: 'Nobody is ticked as playing. Add the line-up first, or tick who played under "Check each player first".' };
+    }
 
     let totalXP = 0;
     // The other side (the club can be home or away)

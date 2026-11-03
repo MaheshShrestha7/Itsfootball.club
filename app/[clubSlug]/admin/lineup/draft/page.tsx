@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
+import { useAuth } from '@/lib/auth-context';
+import { offerLineupAppearances } from '@/components/offerLineupAppearances';
 import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import { FORMAT_PRESETS, buildLineupForPreset, defaultPresetFor, normalizeLineup } from '@/components/TacticalPitch';
 import LineupWorkbench from '@/components/LineupWorkbench';
@@ -42,7 +44,10 @@ export default function DraftLineupPage() {
     tournaments,
     internalTeams,
     syncStatus,
+    loadMatchStatLines,
+    fixMatchStats,
   } = useClub();
+  const { user } = useAuth();
 
   const club = selectClubBySlug(slug);
 
@@ -250,6 +255,12 @@ export default function DraftLineupPage() {
     const res = results.find(r => !r.success) || results[0];
     setShowPublishModal(false);
     showFeedback(res && res.success && groupGames.length > 1 ? `Published to all ${groupGames.length} of ${activeGroup?.participant.name}'s games.` : res?.message || '', res?.success ? 'success' : 'error');
+    // Games whose stats are already saved: offer the line-up players with no appearance one
+    if (res?.success) {
+      void offerLineupAppearances(groupGames, lineupCoords.map(p => p.member_id), {
+        loadMatchStatLines, fixMatchStats, adminName: user?.full_name || 'Club Committee',
+      }).then(r => { if (r) showFeedback(r.message, r.ok ? 'success' : 'error'); });
+    }
   };
 
   const handleSelectMatch = async (matchId: string, groupKey?: string) => {

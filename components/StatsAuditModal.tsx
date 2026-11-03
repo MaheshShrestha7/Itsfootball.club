@@ -201,6 +201,8 @@ export default function StatsAuditModal({
       if (onAuditCompleted) onAuditCompleted();
     } else {
       setAuditError(res.message);
+      // Nobody ticked: open the per-player ticks so they can be set
+      if (appearanceMemberIds.length === 0) setShowDetails(true);
     }
   };
 
