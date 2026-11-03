@@ -2,10 +2,11 @@
 
 import React, { use, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Lock } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { clubTeamsOf, juniorMemberIds, squadPlayerIds } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
 
 const LINES: { title: string; positions: string[] }[] = [
   { title: 'Goalkeepers', positions: ['GK'] },
@@ -37,12 +38,7 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
   ].filter(g => g.list.length);
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '1080px' }}>
-        <Link href={`/${club.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          <ArrowLeft size={16} /> Back to {club.name}
-        </Link>
-        <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.4rem)', fontWeight: 900, marginBottom: '0.4rem' }}>Squad</h1>
+    <ClubSubPage club={club} title="Squad" intro={`${club.name}'s players, by position.`}>
         {teams.length > 1 && (
           <p className="text-body" style={{ marginBottom: '1.5rem' }}>
             By team:{' '}
@@ -52,8 +48,10 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
           </p>
         )}
 
-        {groups.length === 0 ? (
-          <p className="glass-panel text-note" style={{ padding: '1.25rem' }}>{isHydrated ? 'No players listed yet.' : 'Loading the squad…'}</p>
+        {!isHydrated ? (
+          <ListSkeleton rows={4} height={64} label="Loading the squad" />
+        ) : groups.length === 0 ? (
+          <EmptyState title="No players listed yet" />
         ) : (
           <div className="stack" style={{ gap: '2rem' }}>
             {groups.map(g => (
@@ -85,7 +83,6 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
             <span className="text-body">To protect our young players, junior squads aren&apos;t listed here. Each junior team&apos;s page has its fixtures.</span>
           </div>
         )}
-      </div>
-    </div>
+    </ClubSubPage>
   );
 }

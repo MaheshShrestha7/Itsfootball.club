@@ -8,18 +8,22 @@ import { useSearchParams } from 'next/navigation';
  * Switching uses history.replaceState with no state of its own, which Next keeps in sync with
  * useSearchParams (no reload); passing Next's own history state would skip that sync.
  */
-export function useUrlTab<T extends string>(tabs: readonly T[]): [T, (tab: T) => void] {
-  const params = useSearchParams();
-  const requested = params.get('tab');
+export function useUrlTab<T extends string>(tabs: readonly T[], key = 'tab'): [T, (tab: T) => void] {
+  const [requested, setParam] = useUrlParam(key);
   const tab = tabs.find(t => t === requested) ?? tabs[0];
+  return [tab, (next: T) => setParam(next === tabs[0] ? '' : next)];
+}
 
-  const setTab = (next: T) => {
+/** Any one setting kept in the URL the same way (?season=2025, ?team=u12): '' when absent, and
+ *  setting '' removes it. Public list pages use it so a filtered view can be shared and survives Back. */
+export function useUrlParam(key: string): [string, (value: string) => void] {
+  const value = useSearchParams().get(key) ?? '';
+  const setValue = (next: string) => {
     const query = new URLSearchParams(window.location.search);
-    if (next === tabs[0]) query.delete('tab');
-    else query.set('tab', next);
+    if (next) query.set(key, next);
+    else query.delete(key);
     const search = query.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
   };
-
-  return [tab, setTab];
+  return [value, setValue];
 }

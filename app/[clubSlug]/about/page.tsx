@@ -1,14 +1,14 @@
 'use client';
 
 import React, { use } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, BookOpen, MapPin, Award } from 'lucide-react';
+import { BookOpen, MapPin, Award } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { isArticleEmpty } from '@/lib/article-text';
 import { DEFAULT_CREST } from '@/lib/crest';
 import ArticleBody from '@/components/ArticleBody';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import ClubContactSection from '@/components/ClubContactSection';
+import ClubSubPage from '@/components/ClubSubPage';
 
 /** The club's About page: its story (written on the Branding page), home ground, contacts and committee */
 export default function AboutPage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -23,30 +23,17 @@ export default function AboutPage({ params }: { params: Promise<{ clubSlug: stri
   const ground = [club.stadium_address, club.stadium_pitch_type].filter(Boolean);
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '860px' }}>
-        <Link href={`/${club.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          <ArrowLeft size={16} /> Back to {club.name}
-        </Link>
-
-        <header style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-          <img src={club.logo_url || DEFAULT_CREST} alt={`${club.name} crest`} width={84} height={84}
-            style={{ width: 84, height: 84, objectFit: 'contain', flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
-            <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>ABOUT THE CLUB</span>
-            <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.15, overflowWrap: 'anywhere' }}>
-              {club.name}
-            </h1>
-            {(club.motto || club.founded_year) && (
-              <p style={{ color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-                {club.motto && <em>&ldquo;{club.motto}&rdquo;</em>}
-                {club.motto && club.founded_year ? ' · ' : ''}
-                {club.founded_year ? `Est. ${club.founded_year}` : ''}
-              </p>
-            )}
-          </div>
-        </header>
-
+    <ClubSubPage
+      club={club}
+      title="About the club"
+      width={900}
+      icon={<img src={club.logo_url || DEFAULT_CREST} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0 }} />}
+      intro={(club.motto || club.founded_year) ? <>
+        {club.motto && <em>&ldquo;{club.motto}&rdquo;</em>}
+        {club.motto && club.founded_year ? ' · ' : ''}
+        {club.founded_year ? `Est. ${club.founded_year}` : ''}
+      </> : undefined}
+    >
         <div className="stack" style={{ gap: '2.5rem' }}>
           <section aria-labelledby="about-story">
             <h2 id="about-story" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -102,7 +89,6 @@ export default function AboutPage({ params }: { params: Promise<{ clubSlug: stri
             </section>
           )}
         </div>
-      </div>
-    </div>
+    </ClubSubPage>
   );
 }

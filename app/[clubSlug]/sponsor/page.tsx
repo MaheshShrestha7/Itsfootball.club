@@ -4,8 +4,9 @@ import React, { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ClubContactSection from '@/components/ClubContactSection';
-import { ArrowLeft, CheckCircle2, AlertCircle, Check, FileText } from 'lucide-react';
-import SponsorLogo from '@/components/SponsorLogo';
+import { CheckCircle2, AlertCircle, Check, FileText } from 'lucide-react';
+import SponsorShowcase from '@/components/SponsorShowcase';
+import ClubSubPage from '@/components/ClubSubPage';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
@@ -105,6 +106,11 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   const linkDone = !!linkState && (!linkState.canPay || linkState.receiptWaiting);
   // The emailed link's package, while it's still offered and priced
   const payLinkPackage = payLink ? packages?.find(p => p.id === payLink.packageId && !isOnRequest(p)) : undefined;
+  // Mid sign-up or paying from an emailed link: the page is about their payment, not the pitch
+  // (an emailed link counts while its package loads, so the pitch doesn't flash up first)
+  const linkFlow = !!payLink && paymentNotice !== 'success' && (packages === null || !!payLinkPackage);
+  const inPaymentFlow = linkFlow || !!sponsorId || sentToClub;
+  const payingNow = (linkFlow && !linkDone) || (!!sponsorId && !sentToClub);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,44 +152,38 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   );
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '860px' }}>
-        <Link href={`/${club.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          <ArrowLeft size={16} /> Back to {club.name}
-        </Link>
-
-        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          {club.logo_url && (
-            <img src={club.logo_url} alt="" width={84} height={84} style={{ width: 84, height: 84, objectFit: 'contain', margin: '0 auto 0.85rem', display: 'block' }} />
-          )}
-          <h1 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.1rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-            Sponsor {club.name}
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto' }}>
-            {payLinkPackage && paymentNotice !== 'success' && !linkDone
-              ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
-              : 'Put your business in front of our players, families and matchday crowd. Choose a package below.'}
-          </p>
-        </div>
-
-        {/* SP-U6: the businesses already backing the club */}
-        {current.length > 0 && !payLink && !sponsorId && !sentToClub && (
-          <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
-            <p className="text-body" style={{ margin: '0 0 0.75rem' }}>
-              Join {current.slice(0, 2).map((s, i) => <React.Fragment key={s.id}>{i > 0 && (current.length === 2 ? ' and ' : ', ')}<strong className="text-primary">{s.name}</strong></React.Fragment>)}
-              {current.length > 2 && <> and {current.length - 2} other local {current.length - 2 === 1 ? 'business' : 'businesses'}</>}
-              {current.length <= 2 && <> {current.length === 1 ? 'as a club sponsor' : 'as club sponsors'}</>}
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-              {current.slice(0, 6).map(s => (
-                <span key={s.id} title={s.name} style={{ width: 96, height: 52, borderRadius: 10, background: s.logo_url ? '#fff' : 'rgba(var(--tint-rgb), 0.06)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem' }}>
-                  <SponsorLogo src={s.logo_url} name={s.name} height={36} style={{ maxWidth: '100%' }} />
-                </span>
-              ))}
-            </div>
-          </div>
+    <ClubSubPage
+      club={club}
+      title="Sponsors"
+      width={960}
+      intro={payingNow
+        ? 'Thanks for supporting the club. Pay for your package below, by card or bank transfer.'
+        : inPaymentFlow
+        ? `Thanks for supporting ${club.name}.`
+        : `The local businesses backing ${club.name}, and how yours can join them.`}
+      actions={!inPaymentFlow && packages && packages.length > 0 ? (
+        <a href="#packages" className="btn btn-primary btn-sm">See sponsorship packages</a>
+      ) : undefined}
+    >
+        {/* The businesses backing the club now, first: a business deciding to sponsor sees who it joins */}
+        {!inPaymentFlow && current.length > 0 && (
+          <section aria-labelledby="sponsors-current" style={{ marginBottom: '3rem' }}>
+            <h2 id="sponsors-current" className="club-sub-h2">Thank you to our sponsors <span className="text-meta">({current.length})</span></h2>
+            <SponsorShowcase sponsors={current} placement="sponsor_page" />
+          </section>
         )}
 
+        <section id="packages" aria-labelledby="sponsors-join" style={{ scrollMarginTop: '140px' }}>
+        {!inPaymentFlow && (
+          <>
+            <h2 id="sponsors-join" className="club-sub-h2">Become a sponsor</h2>
+            <p className="text-body" style={{ margin: '-0.5rem 0 1.5rem', maxWidth: '62ch' }}>
+              {current.length > 0
+                ? 'Put your business in front of our players, families and matchday crowd. Pick a package below.'
+                : `Be one of the first businesses to back ${club.name}. Put your business in front of our players, families and matchday crowd.`}
+            </p>
+          </>
+        )}
         {paymentNotice === 'success' && (
           <div role="status" className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #10B981', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
             <CheckCircle2 size={18} color="var(--c-green)" /> Payment received, thank you! The club will email you a link to your own sponsor page, where you can send your logo.
@@ -266,7 +266,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
                 return (
                 <button key={p.id} type="button" onClick={() => !soldOut && setSelected(p)} aria-pressed={selected?.id === p.id} aria-disabled={soldOut || undefined}
                   className={soldOut ? 'glass-panel' : 'glass-panel glass-panel-interactive'}
-                  style={{ padding: '1.25rem', textAlign: 'left', cursor: soldOut ? 'default' : 'pointer', opacity: soldOut ? 0.6 : undefined, border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
+                  style={{ padding: '1.25rem', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', cursor: soldOut ? 'default' : 'pointer', opacity: soldOut ? 0.6 : undefined, border: selected?.id === p.id ? '2px solid var(--club-primary)' : undefined }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
                     <span className="badge" style={TIER_BADGE[p.tier]}>{sponsorTierLabel(p.tier)}</span>
                     {/* SPP-4: a package the club can only sell so many of */}
@@ -344,7 +344,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
             )}
           </>
         )}
-      </div>
-    </div>
+        </section>
+    </ClubSubPage>
   );
 }

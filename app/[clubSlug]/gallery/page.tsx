@@ -1,22 +1,24 @@
 'use client';
 
 import React, { use, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Images } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { AlbumGrid, Lightbox, groupAlbums, photoCount } from '@/components/PhotoGallery';
 import NewsVideo from '@/components/NewsVideo';
 import LocalTime from '@/components/LocalTime';
 import { videoEmbed } from '@/lib/video';
+import { useUrlParam } from '@/lib/use-url-tab';
+import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
 
 export default function GalleryPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug, gallery, news, isHydrated } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
-  const [openName, setOpenName] = useState<string | null>(null);
+  // The open album is in the URL (?album=Grand%20Final) so it can be shared and Back closes it
+  const [openName, setAlbum] = useUrlParam('album');
+  const setOpenName = (name: string | null) => { setAlbum(name || ''); setViewing(null); };
   const [viewing, setViewing] = useState<number | null>(null);
-  // ponytail: the open album isn't in the URL, so albums can't be linked to directly; add ?album= if clubs ask
 
   const albums = groupAlbums(gallery.filter(g => g.club_id === club.id));
   const album = albums.find(a => a.name === openName);
@@ -26,31 +28,22 @@ export default function GalleryPage({ params }: { params: Promise<{ clubSlug: st
     .sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''));
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '1080px' }}>
-        {album ? (
-          <button type="button" onClick={() => setOpenName(null)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem', background: 'none', border: 0, padding: 0, cursor: 'pointer' }}>
-            <ArrowLeft size={16} /> All albums
-          </button>
-        ) : (
-          <Link href={`/${club.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            <ArrowLeft size={16} /> Back to {club.name}
-          </Link>
-        )}
-
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflowWrap: 'anywhere' }}>
-          <Images size={30} color="var(--club-primary)" className="shrink-0" /> {album ? album.name : 'Gallery & Videos'}
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          {album ? photoCount(album.photos.length) : `Photos and videos from ${club.name}: matchdays, training and club life.`}
-        </p>
-
+    <ClubSubPage
+      club={club}
+      title={album ? album.name : 'Gallery & videos'}
+      trail={album ? [{ href: `/${club.slug}/gallery`, label: 'Gallery' }] : []}
+      intro={album ? photoCount(album.photos.length) : `Photos and videos from ${club.name}: matchdays, training and club life.`}
+      actions={album ? (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpenName(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          <ArrowLeft size={15} aria-hidden="true" /> All albums
+        </button>
+      ) : undefined}
+    >
         {!album ? (
-          albums.length === 0 && videos.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              {isHydrated ? 'No photos or videos yet. Check back after the next matchday.' : 'Loading…'}
-            </div>
+          !isHydrated ? (
+            <ListSkeleton rows={2} height={200} label="Loading the gallery" />
+          ) : albums.length === 0 && videos.length === 0 ? (
+            <EmptyState title="No photos or videos yet">Check back after the next matchday.</EmptyState>
           ) : (
             <div className="stack" style={{ gap: '3rem' }}>
               {albums.length > 0 && (
@@ -91,7 +84,6 @@ export default function GalleryPage({ params }: { params: Promise<{ clubSlug: st
             <Lightbox photos={album.photos} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />
           </>
         )}
-      </div>
-    </div>
+    </ClubSubPage>
   );
 }
