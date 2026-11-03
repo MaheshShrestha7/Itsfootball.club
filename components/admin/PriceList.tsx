@@ -44,22 +44,22 @@ export default function PriceList<T extends { id: string; name: string; price_ce
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h3>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={add}><Plus size={14} /> Add</button>
+    <section className="admin-panel" aria-label={title}>
+      <div className="admin-panel-head">
+        <h2>{title}</h2>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={add}><Plus size={14} aria-hidden="true" /> Add</button>
       </div>
-      {rows.length === 0 && <p className="text-note">None yet.</p>}
-      <div className="stack stack-sm">
-        {rows.map(r => {
+      {rows.length === 0 && <p className="admin-empty" style={{ margin: 0, paddingTop: 0 }}>None yet.</p>}
+      <div className="admin-section">
+        {rows.map((r, i) => {
           const row = draft[r.id] || r;
           const set = (patch: Partial<T>) => setDraft(d => ({ ...d, [r.id]: { ...row, ...patch } }));
           return (
-            <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-xs)', alignItems: 'center', paddingTop: i ? 'var(--space-sm)' : 0, borderTop: i ? '1px solid var(--color-rule)' : 0 }}>
               <input className="form-input" style={{ flex: '1 1 180px' }} aria-label="Name" value={row.name} onChange={e => set({ name: e.target.value } as Partial<T>)} />
               <input className="form-input" style={{ width: 110 }} aria-label="Price" inputMode="decimal" value={prices[r.id] ?? ''} onChange={e => setPrices(p => ({ ...p, [r.id]: e.target.value }))} />
               <span title={extraLabel}>{extra(row, set)}</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2xs)', minHeight: 'var(--control)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 <input type="checkbox" checked={row.is_active} onChange={e => set({ is_active: e.target.checked } as Partial<T>)} /> Active
               </label>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => save(r.id)}><Save size={14} /> Save</button>
@@ -69,12 +69,12 @@ export default function PriceList<T extends { id: string; name: string; price_ce
                 value={(row[textField] as string) || ''} onChange={e => set({ [textField]: e.target.value } as Partial<T>)} />
               {below && <div style={{ flexBasis: '100%' }}>{below(row, set)}</div>}
               {!r.is_active && (
-                <p className="text-note" style={{ flexBasis: '100%', margin: 0 }}>Hidden from your public pages. Tick Active and Save when it&apos;s ready.</p>
+                <p style={{ flexBasis: '100%', margin: 0 }}><span className="admin-pill is-warn" style={{ whiteSpace: 'normal' }}>Hidden from your public pages. Tick Active and Save when it&apos;s ready.</span></p>
               )}
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

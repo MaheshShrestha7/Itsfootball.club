@@ -942,7 +942,7 @@ export default function AdminSponsorsPage({
         if (clubSponsors.length === 0) {
           return (
             <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No sponsors yet. Click &ldquo;Add New Sponsor&rdquo; to add your first club or event partner, or set up
+              No sponsors yet. Tap &ldquo;Add a sponsor&rdquo; to add your first club or event partner, or set up
               packages so businesses can sign up on your site.
             </div>
           );

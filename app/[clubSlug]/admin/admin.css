@@ -232,7 +232,8 @@
 /* ---------- Phones and tablets: one admin bar on top, the menu in a drawer, the club tab bar below ---------- */
 .admin-topbar, .admin-drawer, .admin-scrim { display: none; }
 @media (max-width: 60rem) {
-  .admin-shell, .admin-shell.is-rail { grid-template-columns: minmax(0, 1fr); min-height: 100dvh; }
+  /* align-content: a short page would otherwise share the spare height out to every row, the admin bar's included */
+  .admin-shell, .admin-shell.is-rail { grid-template-columns: minmax(0, 1fr); min-height: 100dvh; align-content: start; }
   .admin-shell > .admin-sidebar { display: none; }
   .admin-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-2xs); padding: var(--space-2xs) var(--space-xs); padding-top: max(var(--space-2xs), env(safe-area-inset-top)); background: var(--color-sidebar); border-bottom: 1px solid var(--color-rule); }
   .admin-topbar-menu { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: var(--control); padding: 0 var(--space-xs); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-control); background: var(--color-paper-2); color: var(--color-ink); cursor: pointer; }
@@ -286,6 +287,8 @@ body.admin-drawer-open { overflow: clip; }
 .admin-shell .form-input:focus,
 .admin-shell .form-select:focus,
 .admin-shell .form-textarea:focus { border-color: var(--color-accent); box-shadow: none; }
+.admin-shell .confirm-dialog-title { font-weight: 600; }
+.admin-shell input[type='checkbox'], .admin-shell input[type='radio'] { accent-color: var(--color-accent); }
 .admin-shell .admin-save-banner.is-error { background: var(--color-danger-wash); border: 1px solid color-mix(in oklab, var(--color-danger) 50%, transparent); }
 .admin-shell .admin-save-banner.is-waiting { background: var(--color-warn-wash); border: 1px solid color-mix(in oklab, var(--color-warn) 50%, transparent); }
 .admin-shell .admin-save-pill { background: var(--color-paper-2); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--color-rule-strong); box-shadow: 0 6px 20px var(--adm-pill-shadow); }

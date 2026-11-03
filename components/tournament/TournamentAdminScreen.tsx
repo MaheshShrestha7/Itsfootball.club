@@ -10,12 +10,21 @@ import TournamentMatchesList from '@/components/tournament/TournamentMatchesList
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
+
+// Inline and on the app's own tokens, not the admin's classes: this screen also shows on
+// /tournaments/{slug}/manage, outside the admin shell (inside it, the shell re-points these tokens)
+const panel: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '10px' };
+const actionBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.35rem' };
+const pill = (tone: string): React.CSSProperties => ({
+  display: 'inline-flex', alignItems: 'center', padding: '0 0.5rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, lineHeight: '20px',
+  whiteSpace: 'nowrap', background: `color-mix(in oklab, ${tone} 15%, transparent)`, color: tone,
+});
 
 /** A tournament's admin screen: on a club's admin pages, and on /tournaments/{slug}/manage for public tournaments */
 export default function TournamentAdminScreen({ clubSlug, tournamentId }: { clubSlug: string; tournamentId: string }) {
@@ -39,7 +48,8 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
 
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>('bracket');
+  // A league has no bracket tab, so it opens on its standings
+  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>(() => (tournament?.format === 'league' ? 'standings' : 'bracket'));
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
@@ -52,10 +62,10 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   if (!tournament) {
     return (
       <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-primary)' }}>
-        <h2>Tournament not found.</h2>
+        <h2>Tournament not found</h2>
         <p className="text-secondary">The requested tournament does not exist or has been deleted.</p>
         <Link href={`/${club.slug}/admin/tournaments`} className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
-          Back to Tournaments
+          Back to tournaments
         </Link>
       </div>
     );
@@ -71,7 +81,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const handleGenerateTiesheet = async (shuffle = false) => {
     if (participants.length < 2) {
       setFeedbackTone('error');
-      setFeedback('⚠ Add at least 2 teams before generating a tiesheet.');
+      setFeedback('Add at least 2 teams before generating a tiesheet.');
       setTimeout(() => setFeedback(null), 3500);
       return;
     }
@@ -82,14 +92,14 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     }
     const generated = generateTournamentTiesheet(tournament.id, { shuffle });
     setFeedbackTone('success');
-    setFeedback(`✓ Tiesheet generated! Created ${generated.length} tournament fixtures.`);
+    setFeedback(`Tiesheet generated: ${generated.length} tournament fixtures.`);
     setTimeout(() => setFeedback(null), 3500);
   };
 
   const handleProgressStage = () => {
     progressKnockoutStage(tournament.id);
     setFeedbackTone('success');
-    setFeedback('✓ Evaluated completed matches and advanced winners in knockout bracket!');
+    setFeedback('Winners of finished matches moved on in the knockout bracket.');
     setTimeout(() => setFeedback(null), 3500);
   };
 
@@ -98,7 +108,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     if (!newTeamName.trim()) return;
     if (participants.some(p => p.name.toLowerCase() === newTeamName.trim().toLowerCase())) {
       setFeedbackTone('error');
-      setFeedback(`⚠ "${newTeamName.trim()}" is already in this tournament. Team names must be unique.`);
+      setFeedback(`"${newTeamName.trim()}" is already in this tournament. Team names must be unique.`);
       setTimeout(() => setFeedback(null), 3500);
       return;
     }
@@ -117,248 +127,124 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     setNewTeamCode('');
     setAddTeamModalOpen(false);
     setFeedbackTone('success');
-    setFeedback(`✓ Added guest team "${newTeamName.trim()}"! Remember to regenerate tiesheet to include them.`);
+    setFeedback(`Added "${newTeamName.trim()}". Generate the tiesheet again to include them.`);
     setTimeout(() => setFeedback(null), 4000);
   };
 
   const formatLabel =
     tournament.format === 'knockout'
-      ? 'Single-Elimination Knockout'
+      ? 'Single-elimination knockout'
       : tournament.format === 'league'
-      ? 'Round-Robin League'
-      : 'Group Stage + Knockout';
+      ? 'Round-robin league'
+      : 'Group stage and knockout';
+
+  const STATUS: Record<string, { label: string; tone: string }> = {
+    draft: { label: 'Draft', tone: 'var(--text-secondary)' },
+    ongoing: { label: 'In progress', tone: 'var(--c-amber)' },
+    completed: { label: 'Completed', tone: 'var(--c-green)' },
+  };
+  const status = STATUS[tournament.status] || { label: tournament.status, tone: 'var(--text-secondary)' };
+  const liveCount = tourneyMatches.filter(m => m.status === 'live').length;
+  const tabs = ([
+    { id: 'bracket', label: 'Knockout bracket', Icon: Trophy, show: tournament.format !== 'league' },
+    { id: 'standings', label: 'Standings', Icon: Layers, show: tournament.format !== 'knockout' },
+    { id: 'fixtures', label: `Fixtures and results (${tourneyMatches.length})`, Icon: Calendar, show: true },
+    { id: 'teams', label: `Teams (${participants.length})`, Icon: Users, show: true },
+  ] as const).filter(t => t.show);
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
-      {/* Top Breadcrumb & Actions */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '1rem',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-        }}
+      <Link
+        href={isEvent ? publicHref : `/${club.slug}/admin/tournaments`}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', minHeight: 36, marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem', textDecoration: 'none' }}
       >
-        <Link
-          href={isEvent ? publicHref : `/${club.slug}/admin/tournaments`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--text-secondary)',
-            fontSize: '0.85rem',
-            textDecoration: 'none',
-          }}
-        >
-          <ArrowLeft size={16} />
-          <span>{isEvent ? 'Back to the tournament page' : 'Back to Tournaments'}</span>
-        </Link>
+        <ArrowLeft size={16} aria-hidden="true" />
+        <span>{isEvent ? 'Back to the tournament page' : 'Back to tournaments'}</span>
+      </Link>
+
+      {/* Heading and the screen's own actions, as on every admin screen */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.25rem' }}>
+        <div style={{ minWidth: 0, flex: '1 1 320px' }}>
+          {/* The status wraps under a long cup name instead of squeezing it into a narrow column */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem 0.65rem' }}>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.44rem, 4.5vw, 1.728rem)', lineHeight: 1.15, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)', margin: 0, overflowWrap: 'anywhere' }}>
+              {tournament.name}
+            </h1>
+            <span style={pill(status.tone)}>{status.label}</span>
+          </div>
+          {/* Spacing, not "•" separators: when the details wrap, a dot would be left dangling at a line end */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem 1.1rem', marginTop: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.875rem', flexWrap: 'wrap' }}>
+            <span className="row row-tight"><Layers size={14} aria-hidden="true" /><span>{formatLabel}</span></span>
+            <span className="row row-tight"><Calendar size={14} aria-hidden="true" /><span>Season {tournament.season}</span></span>
+            <span className="row row-tight">
+              <Clock size={14} aria-hidden="true" />
+              <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date to be confirmed'}</span>
+            </span>
+          </div>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <Link
-            href={publicHref}
-            target="_blank"
-            className="btn btn-sm btn-secondary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.8rem',
-              borderRadius: '8px',
-            }}
-          >
-            <span>{isEvent ? 'Public page' : 'Spectator Hub'}</span>
-            <ExternalLink size={13} />
+          <Link href={publicHref} target="_blank" className="btn btn-sm btn-secondary" style={actionBtn}>
+            <span>{isEvent ? 'Public page' : 'Spectator hub'}</span>
+            <ExternalLink size={13} aria-hidden="true" />
           </Link>
-
-          <button
-            onClick={() => setEditOpen(true)}
-            className="btn btn-sm btn-secondary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.8rem',
-              borderRadius: '8px',
-            }}
-            title="Edit name, dates, venue, cover, format and teams"
-          >
-            <Pencil size={14} />
-            <span>Edit Tournament</span>
+          <button type="button" onClick={() => setEditOpen(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Edit name, dates, venue, cover, format and teams">
+            <Pencil size={14} aria-hidden="true" />
+            <span>Edit</span>
           </button>
-
-          <button
-            onClick={handleProgressStage}
-            className="btn btn-sm btn-secondary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.8rem',
-              borderRadius: '8px',
-            }}
-            title="Advance knockout round winners"
-          >
-            <Sparkles size={14} color="var(--c-green)" />
-            <span>Progress Bracket</span>
+          <button type="button" onClick={handleProgressStage} className="btn btn-sm btn-secondary" style={actionBtn} title="Advance knockout round winners">
+            <Sparkles size={14} aria-hidden="true" />
+            <span>Progress bracket</span>
           </button>
-
-          <button
-            onClick={() => handleGenerateTiesheet(true)}
-            className="btn btn-sm btn-secondary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.8rem',
-              borderRadius: '8px',
-            }}
-            title="Randomize draw and regenerate fixtures"
-          >
-            <Shuffle size={14} />
-            <span>Shuffle Draw</span>
+          <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Randomise the draw and make the fixtures again">
+            <Shuffle size={14} aria-hidden="true" />
+            <span>Shuffle draw</span>
           </button>
-
-          <button
-            onClick={() => handleGenerateTiesheet(false)}
-            className="btn btn-sm btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              borderRadius: '8px',
-            }}
-          >
-            <RefreshCw size={14} />
-            <span>Generate Tiesheet</span>
+          <button type="button" onClick={() => handleGenerateTiesheet(false)} className="btn btn-sm btn-primary" style={actionBtn}>
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Generate tiesheet</span>
           </button>
         </div>
       </div>
 
       {feedback && (
         <div
+          role="status"
           style={{
-            background: feedbackTone === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-            border: feedbackTone === 'error' ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
-            color: feedbackTone === 'error' ? 'var(--c-red)' : 'var(--c-green)',
-            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: `color-mix(in oklab, ${feedbackTone === 'error' ? 'var(--c-red)' : 'var(--c-green)'} 14%, transparent)`,
+            border: `1px solid color-mix(in oklab, ${feedbackTone === 'error' ? 'var(--c-red)' : 'var(--c-green)'} 45%, transparent)`,
+            color: 'var(--text-primary)',
+            padding: '0.75rem 1rem',
             borderRadius: '10px',
             marginBottom: '1.25rem',
-            fontWeight: 700,
-            fontSize: '0.88rem',
+            fontWeight: 500,
+            fontSize: '0.875rem',
           }}
         >
+          {feedbackTone === 'error'
+            ? <AlertCircle size={16} aria-hidden="true" style={{ flex: 'none', color: 'var(--c-red)' }} />
+            : <CheckCircle2 size={16} aria-hidden="true" style={{ flex: 'none', color: 'var(--c-green)' }} />}
           {feedback}
         </div>
       )}
 
-      {/* Tournament Header Banner */}
-      <div
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          background: tournament.banner_url
-            ? `linear-gradient(135deg, rgba(var(--dk-17-24-39), 0.88) 0%, rgba(var(--dk-15-23-42), 0.94) 100%), url(${tournament.banner_url}) center/cover no-repeat`
-            : 'linear-gradient(135deg, rgba(var(--dk-17-24-39), 0.95) 0%, rgba(var(--dk-15-23-42), 0.95) 100%)',
-          border: '1px solid rgba(var(--tint-rgb), 0.08)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1.25rem',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flex: '1 1 320px', minWidth: 0 }}>
-          <div
-            style={{
-              flexShrink: 0,
-              width: '60px',
-              height: '60px',
-              borderRadius: '14px',
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '2px solid rgba(245, 158, 11, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--c-amber)',
-              boxShadow: '0 0 20px rgba(245, 158, 11, 0.2)',
-            }}
-          >
-            <Trophy size={30} />
+      {/* The figures: one ruled strip */}
+      <dl style={{ ...panel, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', margin: '0 0 1.5rem', overflow: 'hidden' }}>
+        {([
+          ['Teams', participants.length, undefined],
+          ['Fixtures', tourneyMatches.length, undefined],
+          ['Completed', tourneyMatches.filter(m => m.status === 'completed').length, undefined],
+          ['Live now', liveCount, liveCount > 0 ? 'var(--c-red)' : undefined],
+        ] as const).map(([label, value, tone], i) => (
+          <div key={label} style={{ minWidth: 0, padding: '0.75rem 1rem', borderLeft: i ? '1px solid var(--border-subtle)' : undefined }}>
+            <dt style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{label}</dt>
+            <dd style={{ margin: '0.15rem 0 0', fontFamily: 'var(--font-heading)', fontSize: '1.44rem', fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', color: tone || 'var(--text-primary)' }}>{value}</dd>
           </div>
-          <div style={{ minWidth: 0 }}>
-            {/* The status badge wraps under a long cup name instead of squeezing it into a narrow column */}
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem 0.65rem', marginBottom: '0.25rem' }}>
-              <h1 style={{ fontSize: 'clamp(1.2rem, 4.5vw, 1.6rem)', lineHeight: 1.2, fontWeight: 900, color: 'var(--text-primary)', margin: 0, overflowWrap: 'anywhere' }}>
-                {tournament.name}
-              </h1>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  color: 'var(--c-green)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {tournament.status}
-              </span>
-            </div>
-            {/* Spacing, not "•" separators: when the details wrap, a dot would be left dangling at a line end */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem 1.1rem', color: 'var(--text-secondary)', fontSize: '0.82rem', flexWrap: 'wrap' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
-                <Layers size={14} />
-                <span>{formatLabel}</span>
-              </span>
-              <span className="row row-tight">
-                <Calendar size={14} />
-                <span>Season {tournament.season}</span>
-              </span>
-              <span className="row row-tight">
-                <Clock size={14} />
-                <span>{parseTournamentDate(tournament.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
-              </span>
-              <span className="row row-tight">
-                <Users size={14} />
-                <span>{participants.length} Teams Enrolled</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Stats Block */}
-        <div style={{ display: 'flex', gap: '1rem', background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.75rem 1.25rem', borderRadius: '12px' }}>
-          <div className="text-center">
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{tourneyMatches.length}</div>
-            <div className="text-meta">Fixtures</div>
-          </div>
-          <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
-          <div className="text-center">
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-green)' }}>
-              {tourneyMatches.filter(m => m.status === 'completed').length}
-            </div>
-            <div className="text-meta">Completed</div>
-          </div>
-          <div style={{ width: '1px', background: 'rgba(var(--tint-rgb), 0.1)' }} />
-          <div className="text-center">
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-red)' }}>
-              {tourneyMatches.filter(m => m.status === 'live').length}
-            </div>
-            <div className="text-meta">Live Now</div>
-          </div>
-        </div>
-      </div>
+        ))}
+      </dl>
 
       {/* Public tournaments show teams only, no player names */}
       {!isEvent && (
@@ -370,103 +256,23 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
         />
       )}
 
-      {/* Tabs Switcher */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        {tournament.format !== 'league' && (
-          <button data-view-ok
-            onClick={() => setActiveTab('bracket')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'bracket' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'bracket' ? 'var(--c-green)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Trophy size={16} />
-            <span>Knockout Bracket (Tiesheet)</span>
-          </button>
-        )}
-
-        {tournament.format !== 'knockout' && (
-          <button data-view-ok
-            onClick={() => setActiveTab('standings')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'standings' ? '2px solid #10B981' : '2px solid transparent',
-              color: activeTab === 'standings' ? 'var(--c-green)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Layers size={16} />
-            <span>Points Table / Standings</span>
-          </button>
-        )}
-
-        <button data-view-ok
-          onClick={() => setActiveTab('fixtures')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'fixtures' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'fixtures' ? 'var(--c-green)' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.88rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Calendar size={16} />
-          <span>Fixtures & Results ({tourneyMatches.length})</span>
-        </button>
-
-        <button data-view-ok
-          onClick={() => setActiveTab('teams')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'teams' ? '2px solid #10B981' : '2px solid transparent',
-            color: activeTab === 'teams' ? 'var(--c-green)' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.88rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Users size={16} />
-          <span>Enrolled Teams ({participants.length})</span>
-        </button>
+      {/* Tabs: an underlined row that scrolls sideways on a phone */}
+      <div role="tablist" aria-label="Tournament" style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.5rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {tabs.map(({ id, label, Icon }) => {
+          const on = activeTab === id;
+          return (
+            <button key={id} type="button" role="tab" aria-selected={on} data-view-ok onClick={() => setActiveTab(id)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem', minHeight: 40, padding: '0 0.75rem', marginBottom: -1,
+                background: 'none', border: 0, borderBottom: `2px solid ${on ? 'var(--club-primary)' : 'transparent'}`,
+                color: on ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'inherit', fontSize: '0.875rem', fontWeight: on ? 600 : 500,
+                whiteSpace: 'nowrap', cursor: 'pointer',
+              }}>
+              <Icon size={14} aria-hidden="true" style={{ color: on ? 'var(--club-ink)' : 'var(--text-muted)' }} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab 1: Bracket / Tiesheet */}
@@ -474,7 +280,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Click any match card below to enter full-time score, penalties, or open in Match Centre.
+              Tap a match to enter the full-time score or penalties, or open it in Match Centre.
             </span>
           </div>
           <TournamentBracketView
@@ -496,7 +302,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
                 <div key={groupLetter}>
                   <TournamentStandingsTable
                     standings={groupStandings}
-                    groupTitle={tournament.group_count === 1 ? 'Group Stage Standings' : `Group ${groupLetter} Standings`}
+                    groupTitle={tournament.group_count === 1 ? 'Group stage standings' : `Group ${groupLetter} standings`}
                     advancingCount={tournament.teams_advancing_per_group ?? 2}
                   />
                 </div>
@@ -506,7 +312,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             // League standings
             <TournamentStandingsTable
               standings={getTournamentStandings(tournament.id)}
-              groupTitle={`${tournament.name} Standings`}
+              groupTitle="Standings"
               advancingCount={0}
             />
           )}
@@ -527,95 +333,51 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       {/* Tab 4: Teams & Roster */}
       {activeTab === 'teams' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Teams currently registered in this tournament. Internal club teams link to club members.
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <span style={{ flex: '1 1 260px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Teams in this tournament. Club teams link to club members.
             </span>
-            <button
-              onClick={() => setAddTeamModalOpen(true)}
-              className="btn btn-sm btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}
-            >
-              <Plus size={14} />
-              <span>Add Guest Team</span>
+            <button type="button" onClick={() => setAddTeamModalOpen(true)} className="btn btn-sm btn-primary" style={actionBtn}>
+              <Plus size={14} aria-hidden="true" />
+              <span>Add a guest team</span>
             </button>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
-              gap: '1rem',
-            }}
-          >
+          <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: '0.75rem', margin: 0, padding: 0, listStyle: 'none' }}>
             {participants.map(part => (
-              <div
-                key={part.id}
-                style={{
-                  background: 'rgba(var(--dk-15-23-42), 0.75)',
-                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
+              <li key={part.id} style={{ ...panel, padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div
                   style={{
+                    flex: 'none',
                     width: '40px',
                     height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(var(--shade-rgb), 0.35)',
-                    border: `2px solid ${part.color || '#10B981'}`,
+                    borderRadius: '8px',
+                    background: 'color-mix(in oklab, var(--text-primary) 6%, transparent)',
+                    boxShadow: `inset 0 0 0 2px ${part.color || 'var(--border-medium)'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    padding: '3px',
+                    padding: '4px',
                   }}
                 >
-                  <img loading="lazy" decoding="async"
-                    src={part.logo_url || DEFAULT_CREST}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
+                  <img loading="lazy" decoding="async" src={part.logo_url || DEFAULT_CREST} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {part.name}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
-                    <span
-                      style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        padding: '1px 5px',
-                        borderRadius: '4px',
-                        background:
-                          part.team_type === 'internal'
-                            ? 'rgba(16, 185, 129, 0.15)'
-                            : 'rgba(59, 130, 246, 0.15)',
-                        color: part.team_type === 'internal' ? 'var(--c-green)' : 'var(--c-sky)',
-                      }}
-                    >
-                      {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.25rem 0.5rem', marginTop: '0.25rem' }}>
+                    <span style={pill(part.team_type === 'internal' ? 'var(--c-green)' : 'var(--text-secondary)')}>
+                      {part.team_type === 'internal' ? 'Club team' : 'Guest team'}
                     </span>
-                    {part.seed && (
-                      <span className="text-meta">
-                        Seed #{part.seed}
-                      </span>
-                    )}
-                    {part.group && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
-                        Group {part.group}
-                      </span>
-                    )}
+                    {part.seed && <span className="text-meta">Seed {part.seed}</span>}
+                    {part.group && <span className="text-meta">Group {part.group}</span>}
                   </div>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -631,13 +393,13 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, status) => {
             updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, status);
             setFeedbackTone('success');
-            setFeedback('✓ Match score updated and points table / knockout progression recomputed!');
+            setFeedback('Score saved. The standings and bracket are up to date.');
             setTimeout(() => setFeedback(null), 3500);
           }}
         />
       )}
 
-      {/* Add Guest Team Modal */}
+      {/* Add a guest team */}
       {addTeamModalOpen && (
         <div
           style={{
@@ -645,7 +407,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             inset: 0,
             overflowY: 'auto',
             overscrollBehavior: 'contain',
-            background: 'rgba(var(--dk-4-6-9), 0.85)',
+            background: 'rgba(var(--dk-4-6-9), 0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -655,80 +417,52 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           onClick={() => setAddTeamModalOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tournament-guest-title"
             style={{
               margin: 'auto',
-              background: 'rgb(var(--dk-17-24-39))',
-              border: '1px solid rgba(var(--tint-rgb), 0.12)',
-              borderRadius: '14px',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '10px',
               width: '100%',
               maxWidth: '420px',
               padding: '1.5rem',
               color: 'var(--text-primary)',
             }}
             onClick={e => e.stopPropagation()}
+            onKeyDown={e => { if (e.key === 'Escape') setAddTeamModalOpen(false); }}
           >
-            <h3 style={{ margin: '0 0 1rem 0', fontWeight: 800 }}>Add Guest Team</h3>
+            <h2 id="tournament-guest-title" style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', fontWeight: 600 }}>Add a guest team</h2>
             <form onSubmit={handleAddGuestTeam}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label htmlFor="tournamentid-team-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  Team Name *
-                </label>
+              <div className="form-group">
+                <label htmlFor="tournamentid-team-name" className="form-label">Team name *</label>
                 <input id="tournamentid-team-name"
                   type="text"
+                  className="form-input"
                   required
+                  autoFocus
                   placeholder="e.g. Northern United"
                   value={newTeamName}
                   onChange={e => setNewTeamName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: 'rgba(var(--shade-rgb), 0.4)',
-                    border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.88rem',
-                  }}
                 />
               </div>
 
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label htmlFor="tournamentid-short-code" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  Short Code
-                </label>
+              <div className="form-group">
+                <label htmlFor="tournamentid-short-code" className="form-label">Short code</label>
                 <input id="tournamentid-short-code"
                   type="text"
+                  className="form-input"
                   maxLength={4}
                   placeholder="e.g. NUFC"
                   value={newTeamCode}
                   onChange={e => setNewTeamCode(e.target.value.toUpperCase())}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: 'rgba(var(--shade-rgb), 0.4)',
-                    border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.88rem',
-                  }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setAddTeamModalOpen(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.5rem 1rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: '0.5rem 1.25rem', fontWeight: 800 }}
-                >
-                  Enroll Team
-                </button>
+                <button type="button" onClick={() => setAddTeamModalOpen(false)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Add team</button>
               </div>
             </form>
           </div>
