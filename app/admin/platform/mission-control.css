@@ -442,3 +442,27 @@
 @media (prefers-reduced-motion: reduce) {
   .mc *, .mc *::before, .mc *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---- Phase 1: Today queue, email composer, Ctrl+K palette ---- */
+.mc-today { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.mc-q { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--mc-line); }
+.mc-q .body { flex: 1; min-width: 0; }
+.mc-q .t { display: flex; gap: 8px; align-items: center; }
+.mc-q .t b { font-size: 14px; color: var(--mc-ink); }
+.mc-q p { margin: 4px 0 10px; font-size: 12.5px; color: var(--mc-ink-2); line-height: 1.5; }
+.mc-q .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.mc-q-club { border: 0; padding: 0; background: none; cursor: pointer; flex-shrink: 0; }
+.mc-dialog { border: 0; padding: 0; background: transparent; width: min(620px, calc(100% - 32px)); max-height: calc(100% - 48px); color: var(--text-primary); }
+.mc-dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+.mc-dialog > .glass-panel { background: rgb(var(--dk-9-13-22)); }
+.mc-palette { margin-top: 12vh; }
+.mc-palette-in { display: flex; gap: 10px; align-items: center; padding: 0 16px; height: 56px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); }
+.mc-palette-in input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: 16px; }
+.mc-palette-in kbd { font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-subtle); }
+.mc-palette-list { max-height: 360px; overflow-y: auto; padding: 6px 0; }
+.mc-palette-it { display: flex; gap: 12px; align-items: center; width: 100%; min-height: 46px; padding: 6px 16px; border: 0; background: none; text-align: left; color: var(--text-primary); font: inherit; font-size: 14px; cursor: pointer; }
+.mc-palette-it[aria-selected='true'] { background: rgba(129, 140, 248, 0.16); }
+.mc-palette-it b { display: block; font-weight: 600; }
+.mc-palette-it small { display: block; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-palette-it .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: rgba(var(--tint-rgb), 0.06); flex-shrink: 0; }
+@media (max-width: 1180px) { .mc-today { grid-template-columns: minmax(0, 1fr); } }

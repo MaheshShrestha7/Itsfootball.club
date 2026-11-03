@@ -20,10 +20,10 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-export default function UsersTab() {
+export default function UsersTab({ initialQuery = '' }: { initialQuery?: string }) {
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

@@ -1092,6 +1092,45 @@ export interface PlatformClubItem {
   visits_30d: number;
   gmv_cents: number;
   stripe_ready: boolean;
+  /** Setup signals (migration 20261145); missing before it runs */
+  approved_count?: number;
+  oldest_pending_at?: string | null;
+  admin_last_seen_at?: string | null;
+}
+
+/** get_platform_club_people(): the Owner, Club Admins and access-role holders */
+export interface PlatformClubPerson {
+  member_id: string | null;
+  user_id: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  roles: string[] | null;
+  is_owner: boolean;
+  is_admin: boolean;
+  last_sign_in_at: string | null;
+}
+
+export interface PlatformClubNote {
+  id: string;
+  club_id: string;
+  kind: 'note' | 'email';
+  body: string;
+  author_email: string | null;
+  created_at: string;
+}
+
+/** get_platform_audit() */
+export interface PlatformAuditRow {
+  id: string;
+  club_id: string | null;
+  club_name: string | null;
+  club_slug: string | null;
+  actor_email: string | null;
+  action: string;
+  summary: string;
+  details: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface PlatformUserMembership {

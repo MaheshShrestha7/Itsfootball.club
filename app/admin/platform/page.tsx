@@ -24,8 +24,14 @@ import BroadcastsTab from '@/components/admin/platform/BroadcastsTab';
 import GroundsTab from '@/components/admin/platform/GroundsTab';
 import ClubDetailDrawer from '@/components/admin/platform/ClubDetailDrawer';
 import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal';
+import TodayTab from '@/components/admin/platform/TodayTab';
+import LogTab from '@/components/admin/platform/LogTab';
+import CommandPalette from '@/components/admin/platform/CommandPalette';
+import EmailComposer, { type EmailDraft } from '@/components/admin/platform/EmailComposer';
 
 import {
+  ListChecks,
+  History,
   Gauge,
   Building,
   Users,
@@ -51,7 +57,19 @@ type TabType = MissionTab;
 export default function PlatformOwnerDashboard() {
   const { user, isAuthenticated, isLoading: authLoading, isPlatformAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<TabType>('cockpit');
+  const [activeTab, setActiveTab] = useState<TabType>('today');
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [peopleQuery, setPeopleQuery] = useState('');
+
+  // Ctrl+K / Cmd+K opens the palette anywhere in Mission Control
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [periodDays, setPeriodDays] = useState<number>(30);
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [clubs, setClubs] = useState<PlatformClubItem[]>([]);
@@ -237,6 +255,12 @@ export default function PlatformOwnerDashboard() {
       if (selectedClub && selectedClub.id === clubId) {
         setSelectedClub(prev => (prev ? { ...prev, is_active: newStatus } : null));
       }
+
+      // Tell the club why (the email is kept in the club's notes)
+      const club = clubs.find(c => c.id === clubId);
+      if (!newStatus && club && await confirmAction({ title: 'Email the owner why?', message: `Let ${club.owner_name || 'the owner'} know ${club.name} is paused and why.`, confirmLabel: 'Write email' })) {
+        setEmailDraft({ club, to: 'owner', template: 'suspended' });
+      }
     } catch (err: any) {
       notify(`Could not update club status: ${err.message}`);
     } finally {
@@ -344,13 +368,18 @@ export default function PlatformOwnerDashboard() {
   const clubsNeedingAttention = clubs.filter(c => c.pending_count >= 5 || (c.membership_payment_policy === 'require_payment' && !c.stripe_ready)).length;
 
   const RAIL: { id: TabType; label: string; icon: React.ElementType; dot?: boolean }[] = [
-    { id: 'cockpit', label: 'Cockpit', icon: Gauge },
+    { id: 'today', label: 'Today', icon: ListChecks },
+    { id: 'cockpit', label: 'Stats', icon: Gauge },
     { id: 'clubs', label: `Clubs (${clubs.length})`, icon: Building, dot: clubsNeedingAttention > 0 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'grounds', label: 'Grounds', icon: MapPin },
     { id: 'health', label: 'System health', icon: Activity },
     { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
+    { id: 'log', label: 'Action log', icon: History },
   ];
+  const openClub = (c: PlatformClubItem) => setSelectedClub(c);
+  // The open club, refreshed whenever the list reloads (e.g. after an owner change)
+  const drawerClub = selectedClub ? clubs.find(c => c.id === selectedClub.id) || selectedClub : null;
 
   return (
     <div className="mc">
@@ -415,6 +444,22 @@ export default function PlatformOwnerDashboard() {
 
       <main className="mc-main">
         {/* ACTIVE TAB CONTENT */}
+        {activeTab === 'today' && (
+          <TodayTab
+            clubs={clubs}
+            loading={loadingClubs}
+            userName={user?.full_name}
+            userEmail={user?.email}
+            onSelectClub={openClub}
+            onEmail={setEmailDraft}
+            onOpenLog={() => setActiveTab('log')}
+            onOpenPalette={() => setPaletteOpen(true)}
+            showToast={showToast}
+          />
+        )}
+
+        {activeTab === 'log' && <LogTab />}
+
         {activeTab === 'cockpit' && (
           <CockpitTab
             metrics={metrics}
@@ -444,7 +489,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'users' && (
-          <UsersTab />
+          <UsersTab key={peopleQuery} initialQuery={peopleQuery} />
         )}
 
         {activeTab === 'grounds' && (
@@ -462,10 +507,25 @@ export default function PlatformOwnerDashboard() {
 
       {/* CLUB INSPECT SLIDING DRAWER */}
       <ClubDetailDrawer
-        club={selectedClub}
+        club={drawerClub}
         onClose={() => setSelectedClub(null)}
         onToggleStatus={handleToggleClubStatus}
         statusUpdating={statusUpdatingId === selectedClub?.id}
+        onEmail={setEmailDraft}
+        showToast={showToast}
+        onChanged={() => fetchClubs('')}
+      />
+
+      <EmailComposer draft={emailDraft} onClose={() => setEmailDraft(null)} onSent={showToast} />
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        clubs={clubs}
+        tabs={RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(\d+\)$/, '') }))}
+        onSelectClub={openClub}
+        onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
+        onSearchPeople={q => { setPeopleQuery(q); setActiveTab('users'); }}
       />
 
       {/* PLATFORM ADMINS MANAGEMENT MODAL */}

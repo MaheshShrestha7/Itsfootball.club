@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { PlatformClubItem } from '@/lib/supabase/types';
 import { formatMoney } from '@/lib/finance';
 import { formatDate } from '@/lib/dates';
+import ClubConsole from '@/components/admin/platform/ClubConsole';
+import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import {
   X,
   Building,
@@ -28,6 +30,9 @@ interface ClubDetailDrawerProps {
   onClose: () => void;
   onToggleStatus: (clubId: string, currentStatus: boolean) => Promise<void>;
   statusUpdating: boolean;
+  onEmail: (d: EmailDraft) => void;
+  showToast: (msg: string) => void;
+  onChanged: () => void;
 }
 
 export default function ClubDetailDrawer({
@@ -35,6 +40,9 @@ export default function ClubDetailDrawer({
   onClose,
   onToggleStatus,
   statusUpdating,
+  onEmail,
+  showToast,
+  onChanged,
 }: ClubDetailDrawerProps) {
   const [copiedEmail, setCopiedEmail] = React.useState(false);
   const [copiedSlug, setCopiedSlug] = React.useState(false);
@@ -190,6 +198,8 @@ export default function ClubDetailDrawer({
               <span>Enter Club Admin</span>
             </Link>
           </div>
+
+          <ClubConsole key={club.id} club={club} onEmail={onEmail} showToast={showToast} onChanged={onChanged} />
 
           {/* Section 1: Footprint & Activity */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>

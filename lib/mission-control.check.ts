@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { bucketTotals, firstName, greeting, initials, shortAge, softTint, timeAgo, weekHeading, weekStrip } from './mission-control';
-import type { PlatformDailyTrend } from './supabase/types';
+import { buildQueue, bucketTotals, emailTemplate, firstName, greeting, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip } from './mission-control';
+import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
 
 const day = (date: string, members: number, revenue_cents = 0): PlatformDailyTrend => ({ date, clubs: 0, users: 0, members, visits: 0, revenue_cents });
 
@@ -58,5 +58,37 @@ assert.equal(shortAge('2026-10-05T12:00:00Z', NOW), '3 weeks');
 
 assert.equal(softTint('#10B981', 0.5), 'rgba(16, 185, 129, 0.5)');
 assert.equal(softTint('nope', 0.5), 'rgba(16, 185, 129, 0.5)');
+
+// Setup steps and the Today queue
+const club = (o: Partial<PlatformClubItem>): PlatformClubItem => ({
+  id: 'c1', name: 'Westvale FC', short_name: 'WV', slug: 'westvale', is_active: true, created_at: '2026-10-01T00:00:00Z',
+  membership_payment_policy: 'allow_waiver', member_count: 0, pending_count: 0, team_count: 0, match_count: 0,
+  visits_30d: 0, gmv_cents: 0, stripe_ready: false, approved_count: 0, oldest_pending_at: null, admin_last_seen_at: null, ...o,
+});
+assert.equal(setupSteps(club({})).length, 5);
+assert.equal(setupSteps(club({ membership_payment_policy: 'require_payment' })).length, 6);
+assert.equal(setupSteps(club({ logo_url: 'x', team_count: 1, match_count: 2, approved_count: 10, admin_last_seen_at: '2026-10-20T00:00:00Z' }), NOW).every(s => s.done), true);
+assert.equal(setupSteps(club({ admin_last_seen_at: '2026-10-01T00:00:00Z' }), NOW).find(s => s.key === 'active')!.done, false);
+
+const kinds = (cs: PlatformClubItem[], snoozed: string[] = []) => buildQueue(cs, new Set(snoozed), NOW).map(i => i.kind);
+// 25 days old with nothing done: stalled
+assert.deepEqual(kinds([club({})]), ['stalled']);
+// Brand new: welcome, never stalled
+assert.deepEqual(kinds([club({ created_at: '2026-10-24T00:00:00Z' })]), ['welcome']);
+// Backlog by count or by age; ordered before the rest
+assert.deepEqual(kinds([club({ pending_count: 5, logo_url: 'x', team_count: 1, match_count: 1 })]), ['backlog']);
+assert.deepEqual(kinds([club({ pending_count: 1, oldest_pending_at: '2026-10-10T00:00:00Z' })]), ['backlog', 'stalled']);
+assert.deepEqual(kinds([club({ pending_count: 1, oldest_pending_at: '2026-10-25T00:00:00Z', logo_url: 'x', team_count: 1, match_count: 1 })]), []);
+// Charges to join without Stripe
+assert.deepEqual(kinds([club({ membership_payment_policy: 'require_payment', logo_url: 'x', team_count: 1, match_count: 1 })]), ['payments']);
+// Suspended clubs and snoozed items stay out
+assert.deepEqual(kinds([club({ is_active: false })]), []);
+assert.deepEqual(kinds([club({})], ['stalled:c1']), []);
+
+const t = emailTemplate('needHand', { name: 'Westvale FC', slug: 'westvale' }, 'Sam');
+assert.ok(t.subject.includes('Westvale FC'));
+assert.ok(t.message.startsWith('Hi Sam,'));
+assert.ok(t.message.includes('https://itsfootball.club/westvale/admin'));
+assert.ok(emailTemplate('blank', { name: 'X', slug: 'x' }).message.startsWith('Hi,'));
 
 console.log('mission-control: ok');
