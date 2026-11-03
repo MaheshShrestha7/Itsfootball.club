@@ -4,8 +4,9 @@ import { Moon, Sun } from 'lucide-react';
 
 /** Flips <html data-theme> and remembers it in a cookie, which app/layout.tsx reads on the server
  *  so the next page load paints in the right theme. Which icon shows is decided by CSS (globals.css). */
-/** A className replaces the default look (the admin passes its own icon-button class). */
-export default function ThemeToggle({ style, className }: { style?: React.CSSProperties; className?: string }) {
+/** A className replaces the default look (the admin passes its own icon-button class); a label shows
+ *  words beside the icon (the club menus' theme row). */
+export default function ThemeToggle({ style, className, label }: { style?: React.CSSProperties; className?: string; label?: string }) {
   const toggle = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
@@ -17,8 +18,8 @@ export default function ThemeToggle({ style, className }: { style?: React.CSSPro
     <button
       type="button"
       onClick={toggle}
-      aria-label="Switch between light and dark mode"
-      title="Switch between light and dark mode"
+      aria-label={label ? undefined : 'Switch between light and dark mode'}
+      title={label ? undefined : 'Switch between light and dark mode'}
       className={className ?? 'touch-target'}
       style={className ? style : {
         display: 'inline-flex',
@@ -37,6 +38,7 @@ export default function ThemeToggle({ style, className }: { style?: React.CSSPro
     >
       <Sun size={18} className="theme-icon-light" aria-hidden="true" />
       <Moon size={18} className="theme-icon-dark" aria-hidden="true" />
+      {label && <span>{label}</span>}
     </button>
   );
 }

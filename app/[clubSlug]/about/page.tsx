@@ -6,7 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { isArticleEmpty } from '@/lib/article-text';
 import { DEFAULT_CREST } from '@/lib/crest';
 import ArticleBody from '@/components/ArticleBody';
-import PlayerAvatar from '@/components/PlayerAvatar';
+import Link from 'next/link';
 import ClubContactSection from '@/components/ClubContactSection';
 import ClubSubPage from '@/components/ClubSubPage';
 
@@ -77,14 +77,11 @@ export default function AboutPage({ params }: { params: Promise<{ clubSlug: stri
               <h2 id="about-committee" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Award size={20} color="var(--club-primary)" /> The committee
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
-                {committee.map(m => (
-                  <div key={m.id} className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <PlayerAvatar photoUrl={m.photo_url} name={m.full_name} size={72} style={{ marginBottom: '0.75rem' }} />
-                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{m.full_name}</div>
-                    {m.executive_title && <div style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.8rem', marginTop: '0.2rem' }}>{m.executive_title}</div>}
-                  </div>
-                ))}
+              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  {committee.length === 1 ? '1 person runs' : `${committee.length} people run`} the club on the executive committee.
+                </span>
+                <Link href={`/${club.slug}/leadership`} className="btn btn-secondary btn-sm">Meet the committee</Link>
               </div>
             </section>
           )}

@@ -24,7 +24,8 @@ async function call(action: 'status' | 'follow' | 'unfollow', clubId: string, su
  * Bell in the club navbar: follow this club's notifications (match, event and news notices).
  * Only shown where web push works - on iPhone that means the site was added to the Home Screen.
  */
-export default function PushToggle({ clubId, clubName, labelled = false }: { clubId: string; clubName: string; labelled?: boolean }) {
+/** A className replaces the bell's default look (the club navbar's icon-button class) */
+export default function PushToggle({ clubId, clubName, labelled = false, className }: { clubId: string; clubName: string; labelled?: boolean; className?: string }) {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,8 +95,8 @@ export default function PushToggle({ clubId, clubName, labelled = false }: { clu
       aria-pressed={following}
       aria-label={label}
       title={label}
-      className="touch-target"
-      style={{
+      className={className ?? 'touch-target'}
+      style={className ? { cursor: busy ? 'wait' : undefined } : {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

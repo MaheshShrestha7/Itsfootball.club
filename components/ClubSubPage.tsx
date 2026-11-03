@@ -53,7 +53,7 @@ export default function ClubSubPage({
 /** The club's public sections as tabs, the same set (and conditions) as the navbar menu */
 function ClubSectionTabs({ club }: { club: Club }) {
   const { clubTeams } = useClub();
-  const { tournaments, gallery } = useClubSections(club.id);
+  const { tournaments, gallery, leadership } = useClubSections(club.id);
   const shop = useShopOpen(club.id);
   const pathname = usePathname() || '';
   const here = pathname.startsWith(`/${club.slug}`) ? pathname.slice(club.slug.length + 1) : pathname;
@@ -65,9 +65,10 @@ function ClubSectionTabs({ club }: { club: Club }) {
     multiTeam ? { path: '/teams', label: 'Teams' } : { path: '/squad', label: 'Squad' },
     { path: '/news', label: 'News' },
     ...(gallery ? [{ path: '/gallery', label: 'Gallery' }] : []),
-    ...(shop ? [{ path: '/shop', label: 'Shop' }] : []),
+    ...(leadership ? [{ path: '/leadership', label: 'Leadership' }] : []),
     { path: '/about', label: 'About' },
-    { path: '/sponsor', label: 'Sponsors' },
+    ...(shop ? [{ path: '/shop', label: 'Shop' }] : []),
+    { path: '/sponsor', label: 'Sponsor' },
   ];
   // Squad and player pages belong to Teams when the club has several (Squad isn't its own tab then)
   const active = (path: string) => here === path || here.startsWith(`${path}/`) || (path === '/teams' && here.startsWith('/squad'));

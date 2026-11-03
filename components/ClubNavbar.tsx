@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useEscapeToClose } from '@/lib/use-escape-to-close';
+import { useDialog } from '@/lib/use-escape-to-close';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -14,7 +14,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { useMyChildren } from '@/lib/use-my-children';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
-import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 import { useClubSections } from '@/lib/use-club-sections';
 
@@ -28,12 +28,26 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const multiTeam = hasMultipleTeams(clubTeams, club.id);
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  useEscapeToClose(mobileMenuOpen, setMobileMenuOpen);
+  const drawerRef = useDialog<HTMLDivElement>(mobileMenuOpen, () => setMobileMenuOpen(false));
+  // The avatar's menu: member pass, theme, sign out
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountPanelRef = useDialog<HTMLDivElement>(accountOpen, () => setAccountOpen(false));
+  const accountRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // A click anywhere outside the account menu closes it
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!accountRef.current?.contains(e.target as Node)) setAccountOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [accountOpen]);
 
   const isAdmin = hasClubAdminAccess(club.id);
   const userRole = user ? getUserRoleForClub(club.id) : null;
@@ -52,10 +66,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   // The Shop link only once the club has something on sale
   const hasShop = useShopOpen(club.id);
-  const { tournaments: hasTournaments, gallery: hasGallery } = useClubSections(club.id);
+  const { tournaments: hasTournaments, gallery: hasGallery, leadership: hasLeadership } = useClubSections(club.id);
 
-  // Check if any match for this club is currently LIVE
-  const liveMatch = matches.find(m => m.club_id === club.id && m.status === 'live');
+  // A match being played right now (half time included, as in the phone tab bar)
+  const liveMatch = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
 
   // The link bar shows as many links as fit beside the crest and club name. Links marked
   // data-nav-drop give way first (1 first); whatever is left out is still in the menu, so the
@@ -92,7 +106,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       const badge = name.nextElementSibling as HTMLElement | null;
       // 10% spare: canvas text runs a little narrower than the rendered heading font
       const brandMin = 56 + Math.ceil(nameMin * 1.1) + 4 + (badge ? badge.offsetWidth + 7 : 0);
-      // The theme/notification controls, without the menu button (shown or not, it's added below)
+      // The controls on the right, without the menu button (shown or not, it's added below)
       const trigger = triggerRef.current;
       const sideW = side.offsetWidth - (trigger && trigger.offsetWidth ? trigger.offsetWidth + 8 : 0);
       const gap = parseFloat(getComputedStyle(nav).columnGap) || 16;
@@ -118,7 +132,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       }
       setNavFits(drop <= droppable.length);
       // As a drop level: the data-nav-drop of the last link to give way (links not shown to this
-      // visitor, like Become a Sponsor when signed in, leave gaps in the numbering)
+      // visitor, like Sponsor when signed in, leave gaps in the numbering)
       const last = droppable[Math.min(drop, droppable.length) - 1];
       setDropCount(last ? Number(last.dataset.navDrop) : 0);
     };
@@ -129,6 +143,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     observer.observe(row);
     observer.observe(nav);
     observer.observe(name);
+    observer.observe(side);
     return () => observer.disconnect();
   }, [club.name, club.short_name]);
   const dropped = (n: number) => navFits && dropCount >= n;
@@ -137,34 +152,53 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const pathname = usePathname() || '';
   const here = pathname.startsWith(`/${club.slug}`) ? pathname.slice(club.slug.length + 1) || '/' : pathname;
   const isHere = (path: string) => (path === '/' ? here === '/' : here === path || here.startsWith(`${path}/`));
+
   const teamsLink = multiTeam ? { path: '/teams', label: 'Teams' } : { path: '/squad', label: 'Squad' };
-  // One look for every link in the bar; data-nav-drop: which give way first when space runs out (1 first)
-  const barLink = (path: string, label: string, drop?: number) => (
-    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} className="club-nav-link" aria-current={isHere(path) ? 'page' : undefined}
-      data-nav-drop={drop} hidden={drop ? dropped(drop) : undefined}>
+  // One look for every link in the bar; data-nav-drop: which give way first when space runs out (1 first).
+  // `group` starts a new group of links, set a little further from the one before.
+  const barLink = (path: string, label: string, drop?: number, group?: boolean) => (
+    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} className={`club-nav-link${group ? ' club-nav-group' : ''}`}
+      aria-current={isHere(path) ? 'page' : undefined} data-nav-drop={drop} hidden={drop ? dropped(drop) : undefined}>
       {label}
     </Link>
   );
-  // The menu, in three groups; links the visitor can't use (no shop yet) left out
+  // Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar
+  const showSponsor = !isAuthenticated;
+  // The menu, in the same three groups and order as the bar; links the visitor can't use (no shop yet) left out
   const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
     { title: 'Matchday', links: [
-      { path: '/fixtures', label: 'Fixtures & Results', icon: Calendar },
-      ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments & Cups', icon: Trophy }] : []),
-      { path: '/events', label: 'Events & Trainings', icon: CalendarDays },
+      { path: '/fixtures', label: 'Fixtures', icon: Calendar },
+      ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments', icon: Trophy }] : []),
+      { path: '/events', label: 'Events', icon: CalendarDays },
+      { path: teamsLink.path, label: teamsLink.label, icon: Users },
     ] },
     { title: 'The club', links: [
       { path: '/', label: 'Club home', icon: Shield },
-      { path: '/about', label: 'About the Club', icon: BookOpen },
-      { path: teamsLink.path, label: multiTeam ? 'Our Teams' : 'Squad & Stats', icon: Users },
-      { path: '/news', label: 'Latest News', icon: Newspaper },
-      ...(hasGallery ? [{ path: '/gallery', label: 'Gallery & Videos', icon: Images }] : []),
+      { path: '/news', label: 'News', icon: Newspaper },
+      ...(hasGallery ? [{ path: '/gallery', label: 'Gallery', icon: Images }] : []),
+      ...(hasLeadership ? [{ path: '/leadership', label: 'Leadership', icon: Award }] : []),
+      { path: '/about', label: 'About', icon: BookOpen },
     ] },
     { title: 'Support the club', links: [
-      ...(hasShop ? [{ path: '/shop', label: 'Club Shop', icon: ShoppingBag }] : []),
+      ...(hasShop ? [{ path: '/shop', label: 'Shop', icon: ShoppingBag }] : []),
       // SPP-5: for everyone, signed in too: the parents and players who run local businesses are the club's likeliest sponsors
-      { path: '/sponsor', label: 'Become a Sponsor', icon: Handshake },
+      { path: '/sponsor', label: 'Sponsor', icon: Handshake },
     ] },
   ];
+
+  const passLabel = isClubMember ? 'My member pass' : isParent ? 'My family' : 'Join the club';
+  const PassIcon = isClubMember ? CreditCard : isParent ? Users : UserPlus;
+  const passHref = isClubMember || isParent ? `/${club.slug}/member` : `/${club.slug}/member?join=1`;
+
+  const avatar = (size: number) => user && (user.avatar_url ? (
+    <img loading="lazy" decoding="async" width={size} height={size} src={user.avatar_url} alt=""
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  ) : (
+    <span aria-hidden="true" style={{ width: size, height: size, borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: size > 28 ? '0.8rem' : '0.7rem', fontWeight: 800, flexShrink: 0 }}>
+      {user.full_name.substring(0, 1).toUpperCase()}
+    </span>
+  ));
+  const who = user ? `${user.full_name}${userRole ? ` (${userRole})` : ''}` : '';
 
   return (
     <header className="club-navbar" data-nav-fits={navFits ? undefined : 'false'} data-nav-drop={navFits && dropCount ? dropCount : undefined} style={{
@@ -186,9 +220,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         height: '74px',
         gap: '1.25rem',
       }}>
-        {/* Club Crest & Title */}
+        {/* Club Crest & Title: the way home (the bar has no separate Home link) */}
         <Link
           href={`/${club.slug}`}
+          aria-current={here === '/' ? 'page' : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -267,144 +302,101 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           </div>
         </Link>
 
-        {/* Desktop Links */}
-        <nav ref={navRef} style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
-          {barLink('/', 'Club')}
+        {/* Desktop links, in three groups: matchday, the club, supporting it */}
+        <nav ref={navRef} aria-label="Club" style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
+          {barLink('/fixtures', 'Fixtures')}
+          {hasTournaments && barLink('/tournaments', 'Tournaments', 7)}
+          {barLink('/events', 'Events', 8)}
+          {barLink(teamsLink.path, teamsLink.label, 9)}
+          {barLink('/news', 'News', 6, true)}
+          {hasGallery && barLink('/gallery', 'Gallery', 2)}
+          {hasLeadership && barLink('/leadership', 'Leadership', 3)}
+          {barLink('/about', 'About', 4)}
+          {hasShop && barLink('/shop', 'Shop', 5, true)}
+          {showSponsor && barLink('/sponsor', 'Sponsor', 1, !hasShop)}
+        </nav>
 
-          {/* Live match: otherwise the match centre is just the Fixtures link, so it isn't listed twice */}
+        <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          {/* Live match: on phones the tab bar's Live tab says it, so the pill is for wider screens */}
           {liveMatch && (
-            <Link href={matchPath(club.slug, liveMatch)} aria-label="Live match: open the match centre" style={{ display: 'flex', alignItems: 'center' }}>
+            <Link href={matchPath(club.slug, liveMatch)} aria-label="Live match: open the match centre" className="club-nav-live">
               <span className="badge badge-live" style={{ padding: '0.2rem 0.5rem' }}>
                 <span className="pulse-dot" /> LIVE
               </span>
             </Link>
           )}
 
-          {barLink('/fixtures', 'Fixtures')}
-          {barLink(teamsLink.path, teamsLink.label, 8)}
-          {barLink('/events', 'Events', 7)}
-          {hasTournaments && barLink('/tournaments', 'Tournaments', 6)}
-          {barLink('/news', 'News', 5)}
-          {hasShop && barLink('/shop', 'Shop', 4)}
-          {barLink('/about', 'About', 3)}
-          {hasGallery && barLink('/gallery', 'Gallery', 2)}
-          {/* Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar */}
-          {!isAuthenticated && barLink('/sponsor', 'Sponsor', 1)}
-
-          {/* Admin Portal Gateway */}
-          {isAdmin && (
-            <Link
-              href={`/${club.slug}/admin`}
-              className="btn btn-sm"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                backgroundColor: 'rgba(var(--club-primary-rgb), 0.12)',
-                color: 'var(--club-ink)',
-                border: '1px solid rgba(var(--club-primary-rgb), 0.4)',
-                fontWeight: 700,
-              }}
-            >
-              <Settings size={14} />
-              <span>Admin Room</span>
-            </Link>
+          {/* Visitors: sign in (members sign in on the club's member page, by emailed link) and join */}
+          {!isAuthenticated && (
+            <Link href={`/${club.slug}/member`} className="club-nav-desk club-nav-text">Sign in</Link>
           )}
-
-          {/* Auth Identity Controls */}
-          {/* Join the Club, for anyone who isn't a member here (members reach their pass from their avatar) */}
           {!isClubMember && !isParent && (
-            <Link href={`/${club.slug}/member?join=1`} className="btn btn-primary btn-sm row" style={{ marginLeft: '0.25rem' }}>
-              <UserPlus size={14} />
+            <Link href={`/${club.slug}/member?join=1`} className="club-nav-desk btn btn-primary btn-sm row">
+              <UserPlus size={14} aria-hidden="true" />
               <span>Join</span>
             </Link>
           )}
 
-          {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Link
-                href={`/${club.slug}/member`}
-                aria-label={`${user.full_name}${userRole ? ` (${userRole})` : ''}: my member pass`}
-                title={`${user.full_name}${userRole ? ` (${userRole})` : ''}: my member pass`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.2rem',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'rgba(var(--tint-rgb), 0.05)',
-                  border: '1px solid var(--border-subtle)',
-                  textDecoration: 'none',
-                }}
-              >
-                {user.avatar_url ? (
-                  <img loading="lazy" decoding="async" width={24} height={24}
-                    src={user.avatar_url}
-                    alt={`${user.full_name} photo`}
-                    style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
-                    {user.full_name.substring(0, 1).toUpperCase()}
-                  </div>
-                )}
-              </Link>
+          {isAdmin && (
+            <Link href={`/${club.slug}/admin`} className="club-nav-desk club-nav-text" aria-current={isHere('/admin') ? 'page' : undefined}>
+              <Settings size={15} aria-hidden="true" />
+              <span>Admin Room</span>
+            </Link>
+          )}
 
+          <PushToggle clubId={club.id} clubName={club.name} className="club-icon-btn" />
+          {/* Signed in, the theme is in the avatar's menu; on phones it's in the menu drawer */}
+          {!(isAuthenticated && user) && <ThemeToggle className="club-nav-desk club-icon-btn" />}
+
+          {isAuthenticated && user && (
+            <div ref={accountRef} className="club-nav-desk" style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => logout()}
-                title="Sign Out"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '0.4rem',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                className="club-icon-btn club-icon-btn-round"
+                aria-expanded={accountOpen}
+                aria-controls="club-account-menu"
+                aria-label={`${who}: account menu`}
+                title={who}
+                onClick={() => setAccountOpen(o => !o)}
               >
-                <LogOut size={15} />
+                {avatar(28)}
               </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {/* Members sign in on the club's member page (emailed link), not with a platform account */}
-              <Link href={`/${club.slug}/member`} className="btn btn-secondary btn-sm row">
-                <User size={14} />
-                <span>Sign In</span>
-              </Link>
+              {accountOpen && (
+                <div ref={accountPanelRef} id="club-account-menu" className="club-account-panel"
+                  onClick={e => { if ((e.target as HTMLElement).closest('a')) setAccountOpen(false); }}>
+                  <div className="club-account-who">
+                    {avatar(32)}
+                    <div style={{ minWidth: 0 }}>
+                      <div className="club-account-name">{user.full_name}</div>
+                      <div className="text-meta">{userRole || 'Not a member yet'}</div>
+                    </div>
+                  </div>
+                  <Link href={passHref} className="club-menu-link">
+                    <PassIcon size={16} aria-hidden="true" />
+                    <span>{passLabel}</span>
+                  </Link>
+                  <ThemeToggle className="club-menu-link" label="Light or dark theme" />
+                  <button type="button" className="club-menu-link club-menu-signout" onClick={() => { setAccountOpen(false); logout(); }}>
+                    <LogOut size={16} aria-hidden="true" />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </nav>
 
-        <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-        <PushToggle clubId={club.id} clubName={club.name} />
-        <ThemeToggle />
-        {/* Mobile menu trigger */}
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            padding: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            borderRadius: '8px',
-          }}
-          aria-label="Toggle Menu"
-          ref={triggerRef}
-          className="mobile-trigger touch-target"
-        >
-          <Menu size={24} />
-        </button>
+          {/* Menu trigger: phones, and desktop whenever a link gave way for room */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="club-menu-drawer"
+            ref={triggerRef}
+            className="mobile-trigger club-icon-btn"
+          >
+            <Menu size={22} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
@@ -412,64 +404,78 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       {isMounted && mobileMenuOpen && createPortal(
         <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
           <div
+            ref={drawerRef}
+            id="club-menu-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${club.name} menu`}
             className="mobile-drawer-content"
             onClick={e => e.stopPropagation()}
             style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}
           >
             <div>
               {/* Drawer Club Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
-                <div className="row row-loose">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.25rem' }}>
+                <div className="row row-loose" style={{ minWidth: 0 }}>
                   <img loading="lazy" decoding="async" width={32} height={32}
                     src={club.logo_url || DEFAULT_CREST}
                     alt={`${club.name} crest`}
-                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain' }}
+                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: `1.5px solid ${club.primary_color}`, objectFit: 'contain', flexShrink: 0 }}
                   />
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{club.name}</div>
-                    <div className="text-meta">Official Matchday Portal</div>
-                  </div>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', minWidth: 0, overflowWrap: 'break-word' }}>{club.name}</div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  style={{ background: 'rgba(var(--tint-rgb), 0.06)', border: 'none', color: 'var(--text-primary)', padding: '0.45rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  aria-label="Close Menu"
+                  className="club-icon-btn"
+                  aria-label="Close menu"
                 >
-                  <X size={20} />
+                  <X size={20} aria-hidden="true" />
                 </button>
               </div>
 
-              {/* Action Buttons: Match Centre & Member Pass */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
-                <Link
-                  href={liveMatch ? matchPath(club.slug, liveMatch) : `/${club.slug}/fixtures`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="btn btn-sm"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    background: liveMatch ? 'rgba(239, 68, 68, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
-                    color: liveMatch ? 'var(--c-red)' : 'var(--text-primary)',
-                    border: `1px solid ${liveMatch ? 'rgba(239, 68, 68, 0.5)' : 'var(--border-subtle)'}`,
-                    padding: '0.65rem 1rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  <Radio size={16} color={liveMatch ? '#EF4444' : 'currentColor'} />
-                  <span>{liveMatch ? 'Watch Match Centre (LIVE)' : 'Match-Day Centre'}</span>
-                </Link>
+              {/* Who's signed in, first */}
+              {isAuthenticated && user && (
+                <div className="club-account-who" style={{ padding: '0 0.25rem 1rem' }}>
+                  {avatar(36)}
+                  <div style={{ minWidth: 0 }}>
+                    <div className="club-account-name">{user.full_name}</div>
+                    <div className="text-meta">{userRole || 'Not a member yet'}</div>
+                  </div>
+                </div>
+              )}
 
-                {/* Members: their member pass. Everyone else: join the club */}
+              {/* The one main action (and the match centre while a match is on) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                {liveMatch && (
+                  <Link
+                    href={matchPath(club.slug, liveMatch)}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="btn btn-sm"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      color: 'var(--c-red)',
+                      border: '1px solid rgba(239, 68, 68, 0.5)',
+                      padding: '0.65rem 1rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Radio size={16} aria-hidden="true" />
+                    <span>Live now: match centre</span>
+                  </Link>
+                )}
                 <Link
-                  href={isClubMember || isParent ? `/${club.slug}/member` : `/${club.slug}/member?join=1`}
+                  href={passHref}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-primary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem' }}
                 >
-                  {isClubMember ? <CreditCard size={16} /> : isParent ? <Users size={16} /> : <UserPlus size={16} />}
-                  <span>{isClubMember ? 'Digital Member Pass' : isParent ? 'My family' : 'Join the Club'}</span>
+                  <PassIcon size={16} aria-hidden="true" />
+                  <span>{passLabel}</span>
                 </Link>
               </div>
 
@@ -480,7 +486,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                   {group.links.map(({ path, label, icon: Icon }) => (
                     <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} onClick={() => setMobileMenuOpen(false)}
                       className="club-menu-link" aria-current={isHere(path) ? 'page' : undefined}>
-                      <Icon size={16} />
+                      <Icon size={16} aria-hidden="true" />
                       <span>{label}</span>
                     </Link>
                   ))}
@@ -491,62 +497,31 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                 <Link
                   href={`/${club.slug}/admin`}
                   onClick={() => setMobileMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    color: 'var(--club-ink)',
-                    background: 'rgba(var(--club-primary-rgb), 0.1)',
-                    border: '1px solid rgba(var(--club-primary-rgb), 0.3)',
-                    fontWeight: 700,
-                  }}
+                  className="club-menu-link club-menu-admin"
                 >
-                  <Settings size={16} />
-                  <span>Club Admin</span>
+                  <Settings size={16} aria-hidden="true" />
+                  <span>Admin Room</span>
                 </Link>
               )}
             </div>
 
-            {/* Mobile Auth Button */}
-            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+            {/* Theme, then sign in / out, at the foot */}
+            <div style={{ paddingTop: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <ThemeToggle className="club-menu-link" label="Light or dark theme" />
               {isAuthenticated && user ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div className="row">
-                    {user.avatar_url ? (
-                      <img loading="lazy" decoding="async" width={32} height={32} src={user.avatar_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
-                        {user.full_name.substring(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                        {user.full_name}
-                      </div>
-                      <div className="text-meta">
-                        {userRole || 'Not a member yet'}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--c-red)', padding: '0.45rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Sign Out
-                  </button>
-                </div>
+                <button type="button" className="club-menu-link club-menu-signout" onClick={() => { logout(); setMobileMenuOpen(false); }}>
+                  <LogOut size={16} aria-hidden="true" />
+                  <span>Sign out</span>
+                </button>
               ) : (
                 <Link
                   href={`/${club.slug}/member`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="btn btn-secondary"
-                  style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
                 >
-                  <User size={16} />
-                  <span>Sign in to the Club</span>
+                  <User size={16} aria-hidden="true" />
+                  <span>Sign in</span>
                 </Link>
               )}
             </div>
@@ -557,9 +532,16 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
       )}
 
       <style jsx>{`
+        /* Desktop-only controls (Sign in, Join, Admin Room, the avatar, the theme): on phones they're in the drawer */
+        .club-navbar :global(.club-nav-desk) {
+          display: none !important;
+        }
         @media (min-width: 900px) {
           .desktop-nav {
             display: flex !important;
+          }
+          .club-navbar :global(.club-nav-desk) {
+            display: inline-flex !important;
           }
           .mobile-trigger {
             display: none !important;
@@ -578,15 +560,25 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             transition: none !important;
           }
           header[data-nav-fits='false'] .mobile-trigger {
-            display: flex !important;
+            display: inline-flex !important;
           }
           /* Some links gave way for room: they're in the menu, so show its button too */
           header[data-nav-drop] .mobile-trigger {
-            display: flex !important;
+            display: inline-flex !important;
           }
           .desktop-nav > :global([hidden]) {
             display: none !important;
           }
+        }
+        /* Phones (and the installed app) have the tab bar's Live tab */
+        @media (max-width: 768px), (display-mode: standalone) {
+          .club-navbar :global(.club-nav-live) {
+            display: none;
+          }
+        }
+        .club-navbar :global(.club-nav-live) {
+          display: inline-flex;
+          align-items: center;
         }
         .desktop-nav > :global(.club-nav-link) {
           color: var(--text-secondary);
@@ -595,6 +587,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           padding: 0.35rem 0;
           border-bottom: 2px solid transparent;
         }
+        /* The first link of a group sits a little further from the group before */
+        .desktop-nav > :global(.club-nav-group) {
+          margin-left: 0.75rem;
+        }
         .desktop-nav > :global(.club-nav-link:hover) {
           color: var(--text-primary);
         }
@@ -602,11 +598,93 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           color: var(--text-primary);
           border-bottom-color: var(--club-primary);
         }
+        /* Quiet text controls on the right: Sign in, Admin Room */
+        .club-navbar :global(.club-nav-text) {
+          align-items: center;
+          gap: 0.4rem;
+          min-height: 40px;
+          padding: 0 0.5rem;
+          border-radius: 10px;
+          color: var(--text-secondary);
+          font-weight: 600;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+        .club-navbar :global(.club-nav-text:hover),
+        .club-navbar :global(.club-nav-text[aria-current='page']) {
+          color: var(--text-primary);
+          background: rgba(var(--tint-rgb), 0.06);
+        }
+        /* One look for every icon button in the bar and the drawer: bell, theme, avatar, menu, close */
+        :global(.club-icon-btn) {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          flex-shrink: 0;
+          padding: 0;
+          border-radius: 10px;
+          border: 1px solid var(--border-subtle);
+          background: rgba(var(--tint-rgb), 0.04);
+          color: var(--text-secondary);
+          cursor: pointer;
+        }
+        :global(.club-icon-btn:hover) {
+          color: var(--text-primary);
+          background: rgba(var(--tint-rgb), 0.08);
+        }
+        /* Phones: a full 44px tap target */
+        @media (max-width: 899px) {
+          :global(.club-icon-btn) {
+            width: 44px;
+            height: 44px;
+          }
+        }
+        :global(.club-icon-btn-round) {
+          border-radius: 50%;
+        }
+        /* The bell when following: the club's colour on the icon and edge, no filled tile */
+        :global(.club-icon-btn[aria-pressed='true']) {
+          color: var(--club-ink);
+          border-color: rgba(var(--club-primary-rgb), 0.45);
+        }
+        :global(.club-icon-btn[aria-expanded='true']) {
+          border-color: rgba(var(--club-primary-rgb), 0.45);
+        }
+        .club-navbar :global(.club-account-panel) {
+          position: absolute;
+          top: calc(100% + 0.6rem);
+          right: 0;
+          width: 260px;
+          padding: 0.5rem;
+          border-radius: 12px;
+          border: 1px solid var(--border-medium);
+          background: var(--bg-surface-elevated);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+          display: flex;
+          flex-direction: column;
+        }
+        :global(.club-account-who) {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          padding: 0.5rem 0.6rem 0.65rem;
+          min-width: 0;
+        }
+        .club-navbar :global(.club-account-who) {
+          border-bottom: 1px solid var(--border-subtle);
+          margin-bottom: 0.35rem;
+        }
+        :global(.club-account-name) {
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          overflow-wrap: break-word;
+        }
         :global(.club-menu-heading) {
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
+          font-size: 0.8rem;
+          font-weight: 700;
           color: var(--text-muted);
           padding: 0 0.85rem 0.35rem;
         }
@@ -614,11 +692,21 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           display: flex;
           align-items: center;
           gap: 0.75rem;
+          width: 100%;
           padding: 0.6rem 0.85rem;
           min-height: 44px;
+          border: 0;
           border-radius: 8px;
+          background: none;
           color: var(--text-secondary);
+          font: inherit;
           font-weight: 600;
+          text-align: left;
+          cursor: pointer;
+        }
+        :global(.club-menu-link:hover) {
+          color: var(--text-primary);
+          background: rgba(var(--tint-rgb), 0.04);
         }
         :global(.club-menu-link[aria-current='page']) {
           color: var(--text-primary);
@@ -627,13 +715,14 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         :global(.club-menu-link[aria-current='page'] svg) {
           color: var(--club-primary);
         }
-        @media (max-width: 480px) {
-          .hide-on-mobile-xs {
-            display: none !important;
-          }
+        :global(.club-menu-admin) {
+          color: var(--club-ink);
+          background: rgba(var(--club-primary-rgb), 0.1);
+        }
+        :global(.club-menu-signout:hover) {
+          color: var(--c-red);
         }
       `}</style>
     </header>
   );
 }
-
