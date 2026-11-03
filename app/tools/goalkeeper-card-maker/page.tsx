@@ -5,8 +5,8 @@ import { pageMetadata } from '@/lib/seo';
 import { PLAYER_CARD_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/goalkeeper-card-maker';
-const TITLE = 'Free Goalkeeper Card Maker | Football Keeper Card with Clean Sheets';
-const DESCRIPTION = 'Make a football goalkeeper card with your photo, rating, clean sheets, saves and appearances, in your club colours. Download for the team chat, Instagram or TikTok. Free, no sign-up.';
+const TITLE = 'Free Goalkeeper Card Maker with Clean Sheets & Saves';
+const DESCRIPTION = 'Make a football goalkeeper card with your photo, rating, clean sheets, saves and appearances, in your club colours. Download for Instagram or TikTok. Free.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
 

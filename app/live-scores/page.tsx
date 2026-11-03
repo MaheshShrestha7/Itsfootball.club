@@ -8,7 +8,7 @@ import { pageMetadata } from '@/lib/seo';
 import { howToSchema } from '@/lib/schema';
 
 export const metadata = pageMetadata({
-  title: 'Free Live Scores for Community Soccer Clubs | itsfootball.club',
+  title: 'Free Live Scores for Soccer Clubs | itsfootball.club',
   description: "Post live scores, goals, cards and subs from your phone at the ground. Supporters follow on your club's website, no app to install. Free for every club.",
   path: '/live-scores',
 });

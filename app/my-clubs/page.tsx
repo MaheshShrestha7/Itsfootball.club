@@ -131,9 +131,9 @@ export default function MyClubsPage() {
                 <Lock size={28} />
               </div>
 
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                 Sign In to View Your Clubs
-              </h2>
+              </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem', lineHeight: 1.5 }}>
                 Access the clubs you own, update matchday scoreboards, manage player registrations, and issue digital season passes.
               </p>

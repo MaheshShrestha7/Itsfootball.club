@@ -9,8 +9,8 @@ const PATH = '/guides/how-to-register-on-playfootball';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'How to Register on PlayFootball: Steps for Players and Parents',
-  description: 'Registering for a football club on PlayFootball, step by step: your Football Account, claiming last year’s record, what to have ready, why it says pending, and how refunds and transfers work.',
+  title: 'How to Register on PlayFootball: Players & Parents',
+  description: 'Registering on PlayFootball step by step: your Football Account, claiming last year’s record, what to have ready, why it says pending, refunds and transfers.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

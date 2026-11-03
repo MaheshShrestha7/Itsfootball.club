@@ -9,8 +9,8 @@ const PATH = '/guides/how-to-start-a-football-club-in-australia';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'How to Start a Football Club in Australia: Affiliation, Constitution & Setup',
-  description: 'Complete step-by-step guide to starting a community soccer club in Australia: incorporation, association affiliation, council pitch hire, and launching your club website.',
+  title: 'How to Start a Football Club in Australia (Step by Step)',
+  description: 'Step-by-step guide to starting a community soccer club in Australia: incorporation, association affiliation, council pitch hire and your club website.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

@@ -10,7 +10,7 @@ const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
   title: 'Football Club AGM Agenda Template and Rules (NSW, VIC, QLD)',
-  description: 'Running your football club’s AGM: when it has to be held, how much notice members need, an agenda you can copy, and what to lodge with Fair Trading or Consumer Affairs afterwards.',
+  description: 'Running your football club’s AGM: when to hold it, the notice members need, an agenda to copy, and what to lodge with Fair Trading or Consumer Affairs.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

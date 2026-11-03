@@ -10,8 +10,8 @@ const PATH = '/guides/how-much-to-charge-for-club-registration';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'How Much Should a Soccer Club Charge for Registration? (Australia)',
-  description: 'Work out a break-even registration fee: season costs plus a buffer, less sponsorship, divided by paying players. With Stripe card fees and the RBA card surcharge ban from 1 October 2026.',
+  title: 'How Much Should a Soccer Club Charge for Registration?',
+  description: 'Work out a break-even registration fee: season costs plus a buffer, less sponsorship, over paying players. Covers Stripe fees and the 2026 surcharge ban.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

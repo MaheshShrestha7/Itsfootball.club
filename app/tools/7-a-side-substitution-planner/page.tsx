@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { PLAYING_TIME_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/7-a-side-substitution-planner';
-const TITLE = '7-a-Side Substitution Planner | Fair Sub Rotation for 7v7 Junior Soccer';
+const TITLE = '7-a-Side Substitution Planner: Fair 7v7 Sub Rotation';
 const DESCRIPTION = 'Plan fair 7-a-side substitutions: enter 9 to 11 players to get equal playing time and the exact minute for every substitution. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });

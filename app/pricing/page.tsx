@@ -18,7 +18,7 @@ const PRICING_SLUGS = ['pitchero', 'spond', 'teamapp'] as const;
 const PRICING_COLUMNS = PRICING_SLUGS.map(slug => ({ ...competitorBySlug(slug)!, slug }));
 const PRICING_LABELS = ['Price for the club', 'Ads', 'Public club website', 'Fans need an app?'];
 const PRICING_ROWS = COMPARE_ROWS.filter(r => PRICING_LABELS.includes(r.label));
-const TITLE = 'Free Football Club Website & Match Centre Pricing | itsfootball.club';
+const TITLE = 'Free Football Club Website Pricing | itsfootball.club';
 const DESCRIPTION =
   'itsfootball.club is free for football clubs: no monthly subscription, no third-party ads, unlimited teams, custom domains and a live match centre. Every feature included.';
 

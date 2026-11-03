@@ -9,7 +9,7 @@ const PATH = '/guides/football-club-sponsorship-proposal-template';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Football Club Sponsorship Proposal: Packages, Valuation & Template',
+  title: 'Football Club Sponsorship Proposal Template & Packages',
   description: 'How to write a winning sponsorship proposal for a grassroots soccer club. Sponsorship package tiers, pricing guidelines, pitch assets, and email template.',
   path: PATH,
   image: toolOgImage(guide.tool.path),

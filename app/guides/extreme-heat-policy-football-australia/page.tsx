@@ -9,8 +9,8 @@ const PATH = '/guides/extreme-heat-policy-football-australia';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Extreme Heat Policy for Junior Football in Australia (and Lightning)',
-  description: 'When junior soccer is cancelled for heat in Australia: the Sports Medicine Australia heat tool, Football West’s temperature cut-offs, drinks breaks, and the 30-second lightning rule.',
+  title: 'Extreme Heat Policy for Junior Football in Australia',
+  description: 'When junior soccer is cancelled for heat in Australia: the Sports Medicine Australia heat tool, Football West cut-offs, drinks breaks and the lightning rule.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

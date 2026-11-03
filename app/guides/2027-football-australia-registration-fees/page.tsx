@@ -9,8 +9,8 @@ const PATH = '/guides/2027-football-australia-registration-fees';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: '2027 Football Australia Registration Fees: National Development Contribution Explained',
-  description: 'Football Australia is freezing base registration fees for 2027 and replacing legacy fees with a single National Football Development Contribution. Full club guide.',
+  title: '2027 Football Australia Registration Fees Explained',
+  description: 'Football Australia is freezing base registration fees for 2027 and replacing legacy fees with one National Football Development Contribution. Club guide.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

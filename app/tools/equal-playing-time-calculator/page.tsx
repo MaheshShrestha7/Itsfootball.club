@@ -6,7 +6,7 @@ import { pageMetadata } from '@/lib/seo';
 import { PLAYING_TIME_FORMAT_PAGES, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/equal-playing-time-calculator';
-const TITLE = 'Equal Playing Time Calculator | Free Soccer Sub Rotation Planner';
+const TITLE = 'Equal Playing Time Calculator: Free Soccer Sub Planner';
 const DESCRIPTION = 'Calculate fair, equal playing time for 5, 7, 9 or 11-a-side soccer. Get a minute-by-minute substitution schedule for every player. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });

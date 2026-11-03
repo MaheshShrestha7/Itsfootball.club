@@ -12,7 +12,7 @@ import { SITE_NAME, SITE_URL, fitDescription, fitTitle, pageMetadata } from '@/l
 import { ORGANIZATION_ID } from '@/lib/schema';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'Free Alternatives to Pitchero, Spond, and Stack Team App | itsfootball.club',
+  title: 'Free Alternative to Pitchero, Spond & Stack Team App',
   description: fitDescription(
     'Compare itsfootball.club with Pitchero, Spond, Stack Team App, and Heja.',
     'Free for clubs, no third-party ads, live match centre, digital passes and club shop.'

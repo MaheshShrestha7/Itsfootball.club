@@ -249,9 +249,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
 
           {/* Col 2: Match-Day & Team */}
           <div>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+            <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: '1rem', color: 'var(--text-primary)' }}>
               Matchday &amp; Team
-            </h4>
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
               {club ? (
                 <>
@@ -274,9 +274,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
           {/* Free tools column (platform pages only; club sites link the tools hub in the bottom row) */}
           {!club && (
             <div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+              <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: '1rem', color: 'var(--text-primary)' }}>
                 Free Tools
-              </h4>
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
                 <Link href="/tools/lineup-builder" style={{ color: 'var(--text-secondary)' }}>Free Lineup Builder</Link>
                 <Link href="/tools/equal-playing-time-calculator" style={{ color: 'var(--text-secondary)' }}>Equal Playing Time Calculator</Link>
@@ -293,9 +293,9 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
 
           {/* Col 3: Club Management */}
           <div>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+            <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: '1rem', color: 'var(--text-primary)' }}>
               Club Portal
-            </h4>
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
               {club ? (
                 <>

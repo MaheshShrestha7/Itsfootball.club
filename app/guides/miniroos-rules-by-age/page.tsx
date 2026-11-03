@@ -11,8 +11,8 @@ const [LINEUP_9, LINEUP_7] = [LINEUP_FORMAT_PAGES[1], LINEUP_FORMAT_PAGES[2]];
 const [SUBS_9, SUBS_7] = PLAYING_TIME_FORMAT_PAGES;
 
 export const metadata = pageMetadata({
-  title: 'MiniRoos Rules by Age: Players, Subs, Match Length & Pitch Size',
-  description: 'Football Australia MiniRoos formats for under 6 to under 11: 4-a-side, 7-a-side and 9-a-side, substitutes, half lengths, pitch, ball and goal sizes, with the official sources.',
+  title: 'MiniRoos Rules by Age: Players, Subs, Match & Pitch Size',
+  description: 'Football Australia MiniRoos formats for U6 to U11: 4-a-side, 7-a-side and 9-a-side, subs, half lengths, pitch, ball and goal sizes, with official sources.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

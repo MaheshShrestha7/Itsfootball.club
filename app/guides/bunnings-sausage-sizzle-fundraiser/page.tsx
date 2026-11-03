@@ -10,7 +10,7 @@ const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
   title: 'How to Book and Run a Bunnings Sausage Sizzle for Your Club',
-  description: 'A football club’s guide to the Bunnings sausage sizzle: how to ask your local store, food safety rules in NSW and Victoria, a volunteer roster, the shopping list and the onion question.',
+  description: 'How a football club books a Bunnings sausage sizzle: asking your local store, NSW and VIC food safety rules, a volunteer roster and the shopping list.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

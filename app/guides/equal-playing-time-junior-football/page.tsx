@@ -10,8 +10,8 @@ const guide = guideByPath(PATH);
 const [SUBS_9, SUBS_7, SUBS_5] = PLAYING_TIME_FORMAT_PAGES;
 
 export const metadata = pageMetadata({
-  title: 'Equal Playing Time in Junior Football: What the Rules Say (Australia)',
-  description: 'Football Australia’s game time policy: equal game time for MiniRoos (under 6 to 11) and at least half a game for youth (under 12 to 18), with minutes per player worked out by squad size.',
+  title: 'Equal Playing Time in Junior Football: Australian Rules',
+  description: 'Football Australia’s game time policy: equal time for MiniRoos (U6 to U11), at least half a game for youth (U12 to U18), and minutes per player by squad size.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

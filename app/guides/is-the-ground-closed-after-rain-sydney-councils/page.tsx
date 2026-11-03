@@ -10,8 +10,8 @@ const PATH = '/guides/is-the-ground-closed-after-rain-sydney-councils';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Is the Football Ground Closed After Rain? Sydney Councils Wet Weather Guide',
-  description: 'How Sydney councils decide sportsground wet weather closures: Friday cut-off times, council status hotlines, and ground rules for Liverpool, Penrith, and Blacktown.',
+  title: 'Is the Ground Closed After Rain? Sydney Council Guide',
+  description: 'How Sydney councils decide sportsground wet weather closures: Friday cut-offs, status hotlines and ground rules for Liverpool, Penrith and Blacktown.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

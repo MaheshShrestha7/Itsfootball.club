@@ -9,7 +9,7 @@ const PATH = '/guides/football-club-committee-roles-and-responsibilities';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Football Club Committee Roles & Responsibilities: Guide for Australian Clubs',
+  title: 'Football Club Committee Roles and Responsibilities',
   description: 'Core committee positions and duties for community soccer clubs: President, Secretary, Treasurer, Registrar, and Member Protection Officer (MPIO).',
   path: PATH,
   image: toolOgImage(guide.tool.path),

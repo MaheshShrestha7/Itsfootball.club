@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { PLAYER_CARD_TOOL, toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/soccer-player-card-maker';
-const TITLE = 'Free Soccer Player Card Maker | Custom Soccer Card with Your Stats';
+const TITLE = 'Free Soccer Player Card Maker: Custom Card with Stats';
 const DESCRIPTION = 'Create custom soccer player cards with your photo, team badge, rating and stats. Download ready-to-post cards for Instagram and TikTok. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });

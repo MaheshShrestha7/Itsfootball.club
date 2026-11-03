@@ -11,8 +11,8 @@ import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
 import { GUIDES, GUIDES_HUB, GUIDES_LAST_UPDATED } from '@/lib/guides';
 import { TOOLS_HUB, formatUpdated, toolOgImage } from '@/lib/tool-pages';
 
-const TITLE = 'Grassroots Football Guides: Junior Rules, Game Time, Fixtures & Fees';
-const DESCRIPTION = 'Short, sourced answers for Australian grassroots football: MiniRoos rules by age, equal playing time, round robin match counts and how much to charge for registration.';
+const TITLE = 'Grassroots Football Guides: Rules, Game Time & Fees';
+const DESCRIPTION = 'Short, sourced answers for Australian grassroots football: MiniRoos rules by age, equal playing time, round robin match counts and registration fees.';
 const H1 = 'Guides for coaches, organisers and treasurers';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: GUIDES_HUB.path, image: toolOgImage(TOOLS_HUB.path) });

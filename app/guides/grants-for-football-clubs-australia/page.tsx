@@ -9,8 +9,8 @@ const PATH = '/guides/grants-for-football-clubs-australia';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Grants for Football Clubs in Australia (2026–27): What’s Open and When',
-  description: 'Grants a community soccer club can apply for: Football Australia’s Growing Football grants, the Australian Sports Foundation, NSW Local Sport Grants, ClubGRANTS, Victoria’s Sporting Club Grants and your council. Amounts, dates and what they fund.',
+  title: 'Grants for Football Clubs in Australia (2026–27)',
+  description: 'Grants a community soccer club can apply for: Football Australia, the Australian Sports Foundation, NSW, Victoria, ClubGRANTS and councils. Amounts and dates.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

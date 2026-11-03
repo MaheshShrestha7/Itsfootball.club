@@ -11,7 +11,7 @@ const [ROUND_ROBIN, KNOCKOUT] = TOURNAMENT_FORMAT_PAGES;
 
 export const metadata = pageMetadata({
   title: 'How Many Matches in a Round Robin? Table for 3 to 12 Teams',
-  description: 'A round robin of n teams has n × (n − 1) ÷ 2 matches: 4 teams play 6, 6 play 15, 8 play 28. Rounds, games per team and time slots on 1, 2 or 3 pitches, with example fixtures.',
+  description: 'A round robin of n teams has n × (n − 1) ÷ 2 matches: 4 teams play 6, 6 play 15, 8 play 28. Rounds, games per team and time slots, with example fixtures.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

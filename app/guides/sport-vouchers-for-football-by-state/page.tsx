@@ -9,8 +9,8 @@ const PATH = '/guides/sport-vouchers-for-football-by-state';
 const guide = guideByPath(PATH);
 
 export const metadata = pageMetadata({
-  title: 'Sport Vouchers for Football Registration, State by State (2026)',
-  description: 'Which government sport vouchers cover soccer registration: NSW Active and Creative Kids, VIC Get Active Kids, QLD Play On!, WA KidSport, SA Sports Vouchers, TAS Ticket to Play and NT Sport Vouchers. Amounts, who’s eligible and how to use them.',
+  title: 'Sport Vouchers for Football Registration by State (2026)',
+  description: 'Which government sport vouchers cover soccer registration in NSW, VIC, QLD, WA, SA, TAS and NT: amounts, who’s eligible and how to use them.',
   path: PATH,
   image: toolOgImage(guide.tool.path),
 });

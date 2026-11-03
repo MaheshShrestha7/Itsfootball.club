@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/match-result-graphic-maker';
-const TITLE = 'Free Football Result Graphic Maker | Soccer Full-Time Score & MOTM';
+const TITLE = 'Free Football Result Graphic Maker: Full-Time Score';
 const DESCRIPTION = 'Create full-time match result graphics with club badges, score and goalscorers over your photo. Download for Instagram and WhatsApp. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });

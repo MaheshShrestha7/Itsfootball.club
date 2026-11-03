@@ -10,7 +10,7 @@ const guide = guideByPath(PATH);
 const [SUBS_9, SUBS_7] = PLAYING_TIME_FORMAT_PAGES;
 
 export const metadata = pageMetadata({
-  title: 'How Many Subs in 7-a-Side Football? Rules, Bench Limits & Rotations',
+  title: 'How Many Subs in 7-a-Side Football? Rules & Rotations',
   description: 'Under Football Australia MiniRoos rules, 7-a-side teams can have up to 4 substitutes on the bench (11 squad). Full guide on rolling subs and fair minutes.',
   path: PATH,
   image: toolOgImage(guide.tool.path),

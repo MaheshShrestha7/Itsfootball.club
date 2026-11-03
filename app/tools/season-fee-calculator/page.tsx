@@ -8,7 +8,7 @@ import {
 import { toolOgImage } from '@/lib/tool-pages';
 
 const PATH = '/tools/season-fee-calculator';
-const TITLE = 'Club Registration Fee Calculator | Season Budget & Subs Break-Even (AUD)';
+const TITLE = 'Club Registration Fee Calculator: Season Break-Even (AUD)';
 const DESCRIPTION = 'Calculate fair registration fees for your soccer club: add pitch hire, rego and refs to get the break-even player cost and card fees. Free, no sign-up.';
 
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH, image: toolOgImage(PATH) });
