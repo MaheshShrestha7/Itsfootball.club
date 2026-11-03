@@ -79,8 +79,9 @@ export default function ClubLayoutClient({
   // hidden and ended sponsors too, so filter here and show them what fans see.
   const clubSponsors = club ? sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s))) : [];
   // The home page has its own sponsor showcase and match pages their Club Sponsors strip,
-  // so the footer's sponsor block would show every sponsor twice there
-  const ownSponsorBlock = pathname === `/${club.slug}` || pathname === '/' || /^\/[^/]+\/match\//.test(pathname || '');
+  // so the footer's sponsor block would show every sponsor twice there (the Sponsors page too)
+  const ownSponsorBlock = pathname === `/${club.slug}` || pathname === '/' || /^\/[^/]+\/match\//.test(pathname || '')
+    || pathname === `/${club.slug}/sponsor` || pathname === '/sponsor';
   const isAdmin = /^\/[^/]+\/admin(\/|$)/.test(pathname || '');
 
   return (

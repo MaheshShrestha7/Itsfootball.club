@@ -2,12 +2,15 @@
 
 import React, { use, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, Lock, ShieldCheck } from 'lucide-react';
+import { Calendar, Users, Lock, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { decodeSlugParam } from '@/lib/slugs';
 import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, juniorMemberIds, publicMember, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import FixtureRow from '@/components/FixtureRow';
+import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
+import { isPastFixture } from '@/lib/club-lists';
+import { kickoff } from '@/lib/fixtures';
 
 export default function TeamPage({ params }: { params: Promise<{ clubSlug: string; teamSlug: string }> }) {
   const { clubSlug, teamSlug } = use(params);
@@ -46,50 +49,48 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
     () => (team ? matches.filter(m => m.club_id === team.club_id && teamOfMatch(m, clubTeams)?.id === team.id) : []),
     [matches, clubTeams, team]
   );
-  const upcoming = teamMatches
-    .filter(m => ['upcoming', 'live', 'halftime', 'postponed'].includes(m.status))
-    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
-    .slice(0, 8);
-  const results = teamMatches
-    .filter(m => m.status === 'completed')
-    .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
-    .slice(0, 8);
+  // Eight each here; the club's Fixtures page, filtered to this team, has the rest
+  const upcomingAll = teamMatches
+    .filter(m => !isPastFixture(m) && ['upcoming', 'live', 'halftime', 'postponed'].includes(m.status))
+    .sort((a, b) => kickoff(a) - kickoff(b));
+  const resultsAll = teamMatches.filter(m => isPastFixture(m)).sort((a, b) => kickoff(b) - kickoff(a));
+  const upcoming = upcomingAll.slice(0, 8);
+  const results = resultsAll.slice(0, 8);
 
   if (!club) return null;
 
-  const back = (
-    <Link href={`/${club.slug}/teams`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-      <ArrowLeft size={16} /> All teams
-    </Link>
-  );
+  const trail = [{ href: `/${club.slug}/teams`, label: 'Teams' }];
 
   if (!team) {
     return (
-      <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-        <div className="container" style={{ maxWidth: '1080px' }}>
-          {back}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>{isHydrated ? 'This team could not be found.' : 'Loading…'}</div>
-        </div>
-      </div>
+      <ClubSubPage club={club} title={isHydrated ? 'Team not found' : 'Team'} trail={trail}>
+        {isHydrated ? (
+          <EmptyState title="This team could not be found" action={<Link href={`/${club.slug}/teams`} className="btn btn-secondary btn-sm">See all teams</Link>} />
+        ) : <ListSkeleton rows={3} label="Loading the team" />}
+      </ClubSubPage>
     );
   }
 
   const typeLabel = TEAM_TYPES.find(t => t.value === team.team_type)?.label;
   const sectionTitle: React.CSSProperties = { fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' };
+  const seeAll = (view: 'upcoming' | 'past', count: number) => (
+    <Link href={`/${club.slug}/fixtures?team=${encodeURIComponent(team.slug)}${view === 'past' ? '&view=past&season=all' : ''}`}
+      className="btn btn-secondary btn-sm" style={{ marginTop: '0.85rem', alignSelf: 'flex-start' }}>
+      See all {count} {view === 'past' ? 'results' : 'fixtures'}
+    </Link>
+  );
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '1080px' }}>
-        {back}
-
-        <div style={{ borderLeft: `4px solid ${team.color || club.primary_color}`, paddingLeft: '1rem', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, overflowWrap: 'anywhere' }}>{team.name}</h1>
-          <div className="text-body" style={{ marginTop: '0.35rem' }}>
-            {[club.name, typeLabel, team.age_group, team.match_format].filter(Boolean).join(' · ')}
-          </div>
-          {team.description && <p className="text-body" style={{ marginTop: '0.75rem', whiteSpace: 'pre-line' }}>{team.description}</p>}
-        </div>
-
+    <ClubSubPage
+      club={club}
+      title={team.name}
+      trail={trail}
+      icon={<span aria-hidden="true" style={{ width: 6, alignSelf: 'stretch', borderRadius: 3, background: team.color || club.primary_color, flexShrink: 0 }} />}
+      intro={<>
+        {[typeLabel, team.age_group, team.match_format].filter(Boolean).join(' · ')}
+        {team.description && <span style={{ display: 'block', marginTop: '0.6rem', whiteSpace: 'pre-line' }}>{team.description}</span>}
+      </>}
+    >
         <div className="stack" style={{ gap: '2.5rem' }}>
           {staff.length > 0 && (
             <section aria-labelledby="team-staff">
@@ -162,10 +163,11 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
           <section aria-labelledby="team-fixtures">
             <h2 id="team-fixtures" style={sectionTitle}><Calendar size={20} color="var(--club-primary)" /> Fixtures</h2>
             {upcoming.length === 0 ? (
-              <div className="glass-panel" style={{ padding: '1.25rem' }}>No upcoming fixtures.</div>
+              <EmptyState title="No upcoming fixtures" />
             ) : (
               <div className="stack stack-sm">
                 {upcoming.map(m => <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={team.hide_public_scores} />)}
+                {upcomingAll.length > upcoming.length && seeAll('upcoming', upcomingAll.length)}
               </div>
             )}
           </section>
@@ -175,11 +177,11 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
               <h2 id="team-results" style={sectionTitle}>Results</h2>
               <div className="stack stack-sm">
                 {results.map(m => <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={team.hide_public_scores} />)}
+                {resultsAll.length > results.length && seeAll('past', resultsAll.length)}
               </div>
             </section>
           )}
         </div>
-      </div>
-    </div>
+    </ClubSubPage>
   );
 }

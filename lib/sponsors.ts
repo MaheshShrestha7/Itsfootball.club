@@ -244,6 +244,7 @@ export function matchSponsorPackage<P extends Pick<SponsorshipPackage, 'id' | 't
 /** Where a sponsor logo shows, in the words a volunteer or a sponsor would use (sponsor_analytics.placement) */
 export const PLACEMENT_LABELS: Record<string, string> = {
   club_home_showcase: 'Home page',
+  sponsor_page: 'Sponsors page',
   footer_marquee: 'Every page footer',
   match_center_marquee: 'Match pages',
   event_page: 'Event pages',

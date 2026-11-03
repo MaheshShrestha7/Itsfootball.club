@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { countsTowardClubRecord, type Match } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime } from '@/lib/fixtures';
+import { isAwaitingResult } from '@/lib/club-lists';
 import LocalTime from '@/components/LocalTime';
 import ResultChip from '@/components/ResultChip';
 import { formatClock } from '@/lib/dates';
@@ -53,6 +54,8 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { 
           <span className="text-meta">Played</span>
         ) : match.status === 'postponed' || match.status === 'cancelled' ? (
           <span className="text-meta" style={{ textTransform: 'capitalize' }}>{match.status}</span>
+        ) : isAwaitingResult(match) ? (
+          <span className="text-meta">Result to come</span>
         ) : countsTowardClubRecord(match) ? (
           <span className="fixture-row-ha">{match.is_club_home ? 'Home' : 'Away'}</span>
         ) : null}

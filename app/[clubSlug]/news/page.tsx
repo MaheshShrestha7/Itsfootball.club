@@ -2,12 +2,13 @@
 
 import React, { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { newsPath } from '@/lib/slugs';
 import { newestFirst } from '@/lib/news';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
+import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
+import { useUrlParam } from '@/lib/use-url-tab';
 
 const PAGE = 12;
 
@@ -16,7 +17,10 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug, news, isHydrated } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
-  const [tag, setTag] = useState('all');
+  // The topic is in the URL (?topic=Juniors) so a filtered list can be shared
+  const [topic, setTopic] = useUrlParam('topic');
+  const tag = topic || 'all';
+  const setTag = (t: string) => setTopic(t === 'all' ? '' : t);
   const [shown, setShown] = useState(PAGE);
 
   const clubNews = useMemo(() => newestFirst(news.filter(n => n.club_id === club.id)), [news, club.id]);
@@ -29,13 +33,7 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
   const filtered = tag === 'all' ? clubNews : clubNews.filter(n => n.tags?.includes(tag));
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '860px' }}>
-        <Link href={`/${club.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          <ArrowLeft size={16} /> Back to {club.name}
-        </Link>
-        <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.4rem)', fontWeight: 900, marginBottom: '0.4rem' }}>News</h1>
-        <p className="text-body" style={{ marginBottom: '1.5rem' }}>Match reports, announcements and updates from {club.name}.</p>
+    <ClubSubPage club={club} title="News" width={900} intro={`Match reports, announcements and updates from ${club.name}.`}>
 
         {tags.length > 0 && (
           <div role="group" aria-label="Topic" className="fixtures-team-chips">
@@ -48,8 +46,13 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
           </div>
         )}
 
-        {filtered.length === 0 ? (
-          <p className="glass-panel text-note" style={{ padding: '1.25rem' }}>{isHydrated ? 'No news posted yet. Check back soon.' : 'Loading news…'}</p>
+        {!isHydrated ? (
+          <ListSkeleton rows={4} height={120} label="Loading news" />
+        ) : filtered.length === 0 ? (
+          <EmptyState title={tag === 'all' ? 'No news posted yet' : `No news tagged “${tag}”`}
+            action={tag !== 'all' ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTag('all')}>Show all news</button> : undefined}>
+            {tag === 'all' ? 'Check back soon.' : undefined}
+          </EmptyState>
         ) : (
           <div className="stack stack-sm">
             {filtered.slice(0, shown).map(article => (
@@ -83,7 +86,6 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
             Show older news
           </button>
         )}
-      </div>
-    </div>
+    </ClubSubPage>
   );
 }

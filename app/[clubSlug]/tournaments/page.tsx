@@ -1,264 +1,82 @@
 'use client';
 
 import React, { use } from 'react';
-import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
+import { Trophy, Calendar, Layers, ChevronRight } from 'lucide-react';
+import LocalTime from '@/components/LocalTime';
 import { useClub } from '@/lib/club-context';
-import { Trophy, Calendar, Users, ArrowRight, Layers, Award } from 'lucide-react';
 import { parseTournamentDate } from '@/lib/tournament-engine';
+import { isPastTournament } from '@/lib/club-lists';
+import { useUrlTab } from '@/lib/use-url-tab';
+import type { Tournament } from '@/lib/supabase/types';
+import ClubSubPage, { EmptyState, ListSkeleton, UpcomingPastTabs } from '@/components/ClubSubPage';
 
-export default function PublicTournamentsPage({
-  params,
-}: {
-  params: Promise<{ clubSlug: string }>;
-}) {
-  const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, tournaments, tournamentParticipants, matches } = useClub();
+const VIEWS = ['upcoming', 'past'] as const;
+const FORMAT: Record<string, string> = { knockout: 'Knockout', league: 'League (round robin)' };
+const startOf = (t: Pick<Tournament, 'start_date'>) => parseTournamentDate(t.start_date)?.getTime() ?? 0;
 
-  const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+/** /club/tournaments: Live & upcoming (live first) | Past (finished, newest first), ?view=past in the URL */
+export default function PublicTournamentsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
+  const { clubSlug } = use(params);
+  const { clubs, selectClubBySlug, tournaments, tournamentParticipants, matches, isHydrated } = useClub();
+  const club = selectClubBySlug(clubSlug) || clubs[0];
+  const [view, setView] = useUrlTab(VIEWS, 'view');
+
   const clubTournaments = tournaments.filter(t => t.club_id === club.id);
+  const upcoming = clubTournaments.filter(t => !isPastTournament(t))
+    .sort((a, b) => Number(b.status === 'ongoing') - Number(a.status === 'ongoing') || startOf(a) - startOf(b));
+  const past = clubTournaments.filter(t => isPastTournament(t)).sort((a, b) => startOf(b) - startOf(a));
+  const list = view === 'upcoming' ? upcoming : past;
+
+  const card = (t: Tournament) => {
+    const teams = tournamentParticipants.filter(p => p.tournament_id === t.id).length;
+    const games = matches.filter(m => m.tournament_id === t.id);
+    const played = games.filter(m => m.status === 'completed').length;
+    const live = t.status === 'ongoing';
+    const done = isPastTournament(t);
+    const start = parseTournamentDate(t.start_date);
+    return (
+      <Link key={t.id} href={`/${club.slug}/tournaments/${t.id}`} className="glass-panel glass-panel-interactive club-tourn-card">
+        <div className="club-tourn-banner" style={{ backgroundImage: t.banner_url ? `url(${t.banner_url})` : undefined }}>
+          <span className={`badge ${live ? 'badge-live' : ''}`} style={live ? undefined : { background: 'rgba(0,0,0,0.45)', color: '#fff' }}>
+            {live ? <><span className="pulse-dot" /> Live</> : done ? 'Finished' : 'Upcoming'}
+          </span>
+        </div>
+        <div className="club-tourn-body">
+          <h2 className="club-tourn-name"><Trophy size={17} color="var(--c-amber)" aria-hidden="true" className="shrink-0" /> {t.name}</h2>
+          <div className="text-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.9rem' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Calendar size={13} aria-hidden="true" />{start ? <LocalTime value={start} options={{ day: 'numeric', month: 'short', year: 'numeric' }} /> : 'Date to be confirmed'}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Layers size={13} aria-hidden="true" />{FORMAT[t.format] || 'Groups + knockout'}</span>
+          </div>
+          {t.description && <p className="text-note club-tourn-desc">{t.description}</p>}
+          <div className="club-tourn-stats">
+            <span><strong>{teams}</strong> teams</span>
+            <span><strong>{games.length}</strong> games</span>
+            <span><strong>{played}</strong> played</span>
+            <ChevronRight size={18} color="var(--text-muted)" aria-hidden="true" style={{ marginLeft: 'auto' }} />
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(var(--dk-9-13-22))', color: 'var(--text-primary)' }}>
-
-      {/* Hero Section */}
-      <section
-        style={{
-          padding: '4rem 1.5rem 3rem 1.5rem',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(var(--club-primary-rgb), 0.15) 0%, rgba(var(--dk-9-13-22), 1) 75%)',
-          borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              background: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              color: 'var(--c-amber)',
-              padding: '0.3rem 0.85rem',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: '1rem',
-            }}
-          >
-            <Trophy size={14} />
-            <span>Cups & Tournaments</span>
-          </div>
-
-          <h1
-            style={{
-              fontSize: 'clamp(2rem, 5vw, 3rem)',
-              fontWeight: 900,
-              margin: '0 0 1rem 0',
-              lineHeight: 1.15,
-              background: 'linear-gradient(180deg, var(--text-primary) 0%, var(--text-secondary) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Club Tournaments & Brackets
-          </h1>
-
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', margin: 0, lineHeight: 1.6 }}>
-            Follow the club&apos;s cups and tournaments: live draws, brackets, tables and results.
-          </p>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '3rem 1.5rem' }}>
-        {clubTournaments.length === 0 ? (
-          <div
-            style={{
-              background: 'rgba(var(--dk-15-23-42), 0.6)',
-              border: '1px solid rgba(var(--tint-rgb), 0.08)',
-              borderRadius: '16px',
-              padding: '4rem 1.5rem',
-              textAlign: 'center',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <Trophy size={48} style={{ opacity: 0.3, margin: '0 auto 1.25rem auto' }} />
-            <h2 style={{ color: 'var(--text-primary)', fontWeight: 800, margin: '0 0 0.5rem 0' }}>
-              No Active Tournaments
-            </h2>
-            <p className="m-0">There are currently no public tournaments scheduled for this club.</p>
-          </div>
+    <ClubSubPage club={club} title="Tournaments & cups" intro={`Follow ${club.name}'s cups and tournaments: draws, brackets, tables and results.`}>
+      <div className="club-toolbar">
+        <UpcomingPastTabs view={view} onView={setView} upcoming={upcoming.length} past={past.length} labels={['Live & upcoming', 'Past']} />
+      </div>
+      {!isHydrated ? (
+        <ListSkeleton rows={3} height={220} label="Loading tournaments" />
+      ) : list.length === 0 ? (
+        view === 'upcoming' ? (
+          <EmptyState title="No tournaments on right now"
+            action={past.length > 0 ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => setView('past')}>See past tournaments</button> : undefined} />
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
-              gap: '1.75rem',
-            }}
-          >
-            {clubTournaments.map(tourn => {
-              const participants = tournamentParticipants.filter(p => p.tournament_id === tourn.id);
-              const tourneyMatches = matches.filter(m => m.tournament_id === tourn.id);
-              const completedCount = tourneyMatches.filter(m => m.status === 'completed').length;
-
-              const formatLabel =
-                tourn.format === 'knockout'
-                  ? 'Single-Elimination Knockout'
-                  : tourn.format === 'league'
-                  ? 'Round-Robin League'
-                  : 'Group Stage + Knockout';
-
-              return (
-                <div
-                  key={tourn.id}
-                  style={{
-                    background: 'linear-gradient(145deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-                    border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-                    transition: 'transform 0.2s ease, border-color 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.borderColor = 'rgba(var(--club-primary-rgb), 0.4)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = 'rgba(var(--tint-rgb), 0.08)';
-                  }}
-                >
-                  {/* Banner */}
-                  <div
-                    data-theme="dark" style={{
-                      height: '140px',
-                      background: `linear-gradient(rgba(var(--dk-15-23-42), 0.3), rgba(var(--dk-11-17-32), 0.98)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          padding: '3px 9px',
-                          borderRadius: '6px',
-                          background:
-                            tourn.status === 'ongoing'
-                              ? 'rgba(16, 185, 129, 0.25)'
-                              : 'rgba(59, 130, 246, 0.25)',
-                          color: tourn.status === 'ongoing' ? 'var(--c-green)' : 'var(--c-sky)',
-                          border:
-                            tourn.status === 'ongoing'
-                              ? '1px solid #10B981'
-                              : '1px solid rgba(59, 130, 246, 0.4)',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {tourn.status}
-                      </span>
-                    </div>
-
-                    <div className="row">
-                      <Trophy size={18} color="var(--c-amber)" />
-                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-                        {tourn.name}
-                      </h2>
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--c-green)', fontWeight: 700, fontSize: '0.82rem' }}>
-                      <Layers size={15} />
-                      <span>{formatLabel}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      <Calendar size={14} />
-                      <span>{parseTournamentDate(tourn.start_date) ? <LocalTime value={parseTournamentDate(tourn.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
-                    </div>
-
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      {tourn.description || 'Premier championship football tournament.'}
-                    </p>
-
-                    <div
-                      style={{
-                        background: 'rgba(var(--shade-rgb), 0.35)',
-                        borderRadius: '10px',
-                        padding: '0.75rem 1rem',
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '0.5rem',
-                        textAlign: 'center',
-                        fontSize: '0.75rem',
-                        marginTop: 'auto',
-                      }}
-                    >
-                      <div>
-                        <div className="text-muted">Teams</div>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                          {participants.length}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Fixtures</div>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                          {tourneyMatches.length}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Played</div>
-                        <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.95rem' }}>
-                          {completedCount}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CTA */}
-                  <div
-                    style={{
-                      padding: '1rem 1.25rem',
-                      background: 'rgba(var(--shade-rgb), 0.25)',
-                      borderTop: '1px solid rgba(var(--tint-rgb), 0.06)',
-                    }}
-                  >
-                    <Link
-                      href={`/${club.slug}/tournaments/${tourn.id}`}
-                      className="btn btn-primary"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        fontWeight: 800,
-                        padding: '0.75rem',
-                        borderRadius: '10px',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      <span>Explore Tournament Bracket</span>
-                      <ArrowRight size={15} />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+          <EmptyState title="No finished tournaments yet" />
+        )
+      ) : (
+        <div className="club-tourn-grid">{list.map(card)}</div>
+      )}
+    </ClubSubPage>
   );
 }
