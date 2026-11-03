@@ -2189,9 +2189,12 @@ export function ClubProvider({
     const { data, error } = await client.from('match_player_stats')
       .select('member_id, played, minutes, goals, assists, yellow_cards, red_cards, clean_sheet, motm')
       .eq('match_id', matchId);
-    if (error || !data || data.length === 0) return null;
+    if (error || !data) return null;
+    // No rows: saved before per-match rows existed (it awarded points then), or saved with nobody
+    // ticked (nothing awarded), which can still be fixed here
+    if (data.length === 0 && activityLogs.some(l => l.reference_id === matchId)) return null;
     return data as MatchStatLine[];
-  }, []);
+  }, [activityLogs]);
 
   const fixMatchStats = useCallback(async (
     matchId: string,

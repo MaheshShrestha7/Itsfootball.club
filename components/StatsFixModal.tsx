@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth-context';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
 import { cleanLine, describeChange, emptyLine, lineDelta, pointChanges, type MatchStatLine } from '@/lib/match-stats';
+import { clubLineupSide } from '@/lib/tournament-engine';
 import type { ClubMember, Match } from '@/lib/supabase/types';
 
 interface Props {
@@ -113,6 +114,17 @@ export default function StatsFixModal({ match, players, onClose, onFixed }: Prop
   };
 
   const addable = players.filter(p => !rowIds.includes(p.id));
+
+  // Line-up players with no stats from this match (e.g. the line-up was put in after the stats were saved)
+  const lineupMissing = useMemo(() => {
+    const coords = (clubLineupSide(match) === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
+    return [...new Set(coords.map(c => c.member_id))]
+      .filter((id): id is string => !!id && players.some(p => p.id === id) && !current(id).played);
+  }, [match, players, saved, edited]); // eslint-disable-line react-hooks/exhaustive-deps
+  const addLineup = () => {
+    const full = match.match_format === '7v7' ? 50 : match.match_format === '9v9' ? 60 : 90;
+    setEdited(prev => ({ ...prev, ...Object.fromEntries(lineupMissing.map(id => [id, { ...current(id), played: true, minutes: current(id).minutes || full }])) }));
+  };
   const score = `${match.home_team_name} ${match.home_score} – ${match.away_score} ${match.away_team_name}`;
 
   return (
@@ -198,6 +210,11 @@ export default function StatsFixModal({ match, players, onClose, onFixed }: Prop
               </div>
             );
           })}
+          {saved && lineupMissing.length > 0 && (
+            <button type="button" className="btn btn-secondary btn-sm touch-target" style={{ alignSelf: 'flex-start', marginTop: '0.4rem' }} onClick={addLineup}>
+              <Plus size={16} aria-hidden="true" /> Add the {lineupMissing.length} line-up player{lineupMissing.length === 1 ? '' : 's'} with no stats from this match
+            </button>
+          )}
           {saved && addable.length > 0 && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               Someone missing?
