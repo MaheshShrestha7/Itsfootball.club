@@ -385,10 +385,10 @@ export default function ImageUploadZone({
 
             <div style={{ textAlign: 'left', flex: '1 1 120px', minWidth: 0 }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Asset configured
+                Uploaded
               </div>
               <div className="text-meta">
-                Click or drag another file to replace
+                Click or drag another file to replace it
               </div>
             </div>
 

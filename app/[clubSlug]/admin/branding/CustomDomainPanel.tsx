@@ -74,9 +74,9 @@ export default function CustomDomainPanel({ club }: { club: Club }) {
 
   return (
     <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-      <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Globe size={20} aria-hidden="true" /> Custom domain
-      </h3>
+      </h2>
       <p className="text-note" style={{ marginBottom: '1.25rem', overflowWrap: 'anywhere' }}>
         Put your club site on your own domain (e.g. <code>www.yourclub.com</code>). Your <code>itsfootball.club/{club.slug}</code> address keeps working too.
       </p>

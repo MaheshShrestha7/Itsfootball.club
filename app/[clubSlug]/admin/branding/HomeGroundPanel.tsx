@@ -9,10 +9,11 @@ import { Check, CheckCircle2, Circle, ExternalLink, MapPin, MessageSquare, Plus,
 import { getAccessToken } from '@/lib/supabase/client';
 import { COUNCILS, STATES } from '@/lib/councils';
 import {
-  MIN_INDEXABLE_FACTS, SUGGESTION_TOPICS, councilName, factCount, groundPath, mapEmbedUrl, parseLatLng, type GroundRow, type Pitch,
+  MIN_INDEXABLE_FACTS, SUGGESTION_TOPICS, clubGroundFields, councilName, factCount, groundPath, mapEmbedUrl, parseLatLng, type GroundRow, type Pitch,
 } from '@/lib/grounds';
 import type { Club } from '@/lib/supabase/types';
 import { confirmAction } from '@/components/ConfirmDialog';
+import { useClub } from '@/lib/club-context';
 
 interface Suggestion { id: string; ground_name?: string; topic: string; message: string; contact: string | null; created_at: string }
 
@@ -45,7 +46,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className="touch-target"
       style={{ flexShrink: 0, width: 48, height: 28, padding: 0, borderRadius: 999, border: '1px solid var(--border-medium)', background: checked ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)', position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s ease' }}>
-      <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--color-print)', transition: 'left 0.2s ease' }} />
+      <span style={{ position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--color-print)', transform: checked ? 'translateX(20px)' : 'none', transition: 'transform 0.2s ease' }} />
     </button>
   );
 }
@@ -62,6 +63,7 @@ async function api(method: 'GET' | 'POST', body?: object, query = '') {
 }
 
 export default function HomeGroundPanel({ club }: { club: Club }) {
+  const { updateClubBranding } = useClub();
   const [loading, setLoading] = useState(true);
   const [migrated, setMigrated] = useState(true);
   const [ground, setGround] = useState<GroundRow | null>(null);
@@ -149,6 +151,9 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
     setGround(r.data.ground);
     setSteward(!!r.data.steward);
     setForm(fromGround(r.data.ground));
+    // Only what differs, so an unchanged ground doesn't rewrite the club
+    const changed = Object.fromEntries(Object.entries(clubGroundFields(r.data.ground)).filter(([k, v]) => club[k as keyof Club] !== v));
+    if (Object.keys(changed).length) updateClubBranding(club.id, changed);
     setMode('view');
     setMessage({ ok: true, text: 'Saved. The ground guide is live.' });
   };
@@ -175,21 +180,22 @@ export default function HomeGroundPanel({ club }: { club: Club }) {
     { done: factCount(ground) >= MIN_INDEXABLE_FACTS, text: `At least ${MIN_INDEXABLE_FACTS} of: pitches, parking, toilets, canteen, accessibility (${factCount(ground)} so far)` },
   ] : [];
   const live = ground ? groundPath(ground) : '';
-
+  // Where the grounds directory isn't set up there's nothing to edit here
+  if (!loading && !migrated) return null;
   return (
     <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}
       onKeyDown={e => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault(); }}>
-      <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <MapPin size={20} aria-hidden="true" /> Public ground guide
-      </h3>
+      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <MapPin size={20} aria-hidden="true" /> Home ground
+      </h2>
       <p className="text-note" style={{ lineHeight: 1.55, marginBottom: '1.25rem' }}>
         A free page in the <a href="/grounds" target="_blank" rel="noopener" style={{ color: 'var(--club-ink)', fontWeight: 600 }}>grounds directory</a> that
         tells away teams and parents where to park, which pitch, toilets and canteen, and how to check if the ground is closed after rain.
-        Ground facts are public once saved. Saved on its own, not with the button at the bottom.
+        Ground facts are public once saved. The name, address and parking also show on your About page and in your site&apos;s footer.
       </p>
 
       {loading && <p style={hint}><Loader2 size={14} className="spin" /> Loading…</p>}
-      {!loading && !migrated && <p className="admin-notice" style={{ margin: 0 }}>The grounds directory isn&apos;t switched on yet (database migration 20261109_grounds.sql).</p>}
+      
 
       {!loading && migrated && mode === 'view' && !ground && (
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>

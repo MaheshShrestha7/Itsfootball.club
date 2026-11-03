@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { areaName, matchFromAttributes } from './council-lookup';
 import { COUNCILS } from './councils';
 import {
-  cleanGroundInput, cleanSuggestion, factCount, groundForMatch, groundPath, mergeFixtures, pitchAnchor, venueText, groundQuestions, groundSitemapEntries, groundSummary, isIndexableGround,
+  cleanGroundInput, cleanSuggestion, clubGroundFields, factCount, groundForMatch, groundPath, mergeFixtures, pitchAnchor, venueText, groundQuestions, groundSitemapEntries, groundSummary, isIndexableGround,
   parseLatLng, pitchSummary, slugify, venueMatchesGround, type GroundRow,
 } from './grounds';
 
@@ -135,3 +135,16 @@ const long = cleanSuggestion({ message: 'x'.repeat(5000) });
 assert.ok('row' in long && long.row.message.length === 1000);
 
 console.log('grounds.check: ok');
+
+// The club's own ground fields, filled from its ground guide
+{
+  const g = { name: 'Craik Park', address: 'Fifteenth Avenue', suburb: 'Austral', state: 'NSW', postcode: '2179', lat: -33.93, lng: 150.81,
+    parking: 'Free car park', pitches: [{ label: 'Pitch 1', surface: 'Grass' }, { label: 'Pitch 2', surface: 'Synthetic' }, { label: 'Pitch 3', surface: 'Grass' }] } as unknown as GroundRow;
+  assert.deepEqual(clubGroundFields(g), {
+    stadium_name: 'Craik Park', stadium_address: 'Fifteenth Avenue, Austral NSW 2179', stadium_lat: -33.93, stadium_lng: 150.81,
+    stadium_parking_info: 'Free car park', stadium_pitch_type: 'Grass, Synthetic',
+  });
+  // Nothing known about pin, parking or pitches: those club fields are left as they are
+  const bare = clubGroundFields({ name: 'Oval', address: null, suburb: 'Leppington', state: 'NSW', postcode: null, lat: null, lng: null, parking: null, pitches: [] } as unknown as GroundRow);
+  assert.deepEqual(bare, { stadium_name: 'Oval', stadium_address: 'Leppington NSW' });
+}

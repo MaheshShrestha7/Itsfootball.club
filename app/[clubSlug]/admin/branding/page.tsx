@@ -18,41 +18,33 @@ import {
   Palette,
   CheckCircle2,
   Loader2,
-  ArrowRight,
   Save,
   Shield,
-  MapPin,
-  Sparkles,
   AlertCircle,
   ExternalLink,
-  Link2,
   Mail,
-  Phone,
-  Shirt,
-  Calendar,
   BookOpen,
-  Image as ImageIcon
 } from 'lucide-react';
 
-/** The form's values as the club has them saved: what the page loads, and what Discard puts back */
+/** The form's values as the club has them saved: what the page loads, and what Discard puts back.
+ *  The home ground isn't here: it's edited in its ground guide (HomeGroundPanel), which fills the club's ground fields. */
 function formFromClub(club: Club | undefined) {
+  const slides = club?.slider_images || [];
   return {
     name: club?.name || '',
     slug: club?.slug || '',
     short_name: club?.short_name || '',
     motto: club?.motto || '',
-    founded_year: club?.founded_year || 2018,
+    // Empty until the club gives one: never a made-up year
+    founded_year: (club?.founded_year || '') as number | '',
     primary_color: club?.primary_color || '#10B981',
     secondary_color: club?.secondary_color || '#0F172A',
     accent_color: club?.accent_color || '#F59E0B',
     logo_url: club?.logo_url || '',
     banner_url: club?.banner_url || '',
-    slider_images_text: club?.slider_images?.join('\n') || '',
-    stadium_name: club?.stadium_name || '',
-    stadium_address: club?.stadium_address || '',
-    stadium_capacity: club?.stadium_capacity || 5000,
-    stadium_pitch_type: club?.stadium_pitch_type || '',
-    stadium_parking_info: club?.stadium_parking_info || '',
+    // The home page reads two slide photos by position: the matchday slide, then the home ground slide
+    slide_matchday: slides[0] || '',
+    slide_ground: slides[1] || '',
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
   };
@@ -61,9 +53,8 @@ type BrandingForm = ReturnType<typeof formFromClub>;
 
 /** The page's sections and the fields each one saves, so the save bar can name what changed */
 const FORM_SECTIONS: [string, (keyof BrandingForm)[]][] = [
+  ['Name, crest and photos', ['name', 'slug', 'short_name', 'founded_year', 'motto', 'logo_url', 'banner_url', 'slide_matchday', 'slide_ground']],
   ['Club colours', ['primary_color', 'secondary_color', 'accent_color']],
-  ['Name, crest and photos', ['name', 'slug', 'short_name', 'founded_year', 'motto', 'logo_url', 'banner_url', 'slider_images_text']],
-  ['Home ground', ['stadium_name', 'stadium_pitch_type', 'stadium_address', 'stadium_parking_info', 'stadium_capacity']],
   ['Contact details', ['contact_email', 'contact_phone']],
 ];
 /** A field still as saved. Colours compare without case (a preset writes #10B981, the picker #10b981);
@@ -71,6 +62,16 @@ const FORM_SECTIONS: [string, (keyof BrandingForm)[]][] = [
 const sameValue = (key: keyof BrandingForm, a: unknown, b: unknown) => key.endsWith('_color')
   ? String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase()
   : String(a ?? '') === String(b ?? '');
+
+const COLOUR_FIELDS = [
+  { name: 'primary_color', label: 'Primary colour' },
+  { name: 'secondary_color', label: 'Secondary colour' },
+  { name: 'accent_color', label: 'Accent colour' },
+] as const;
+
+const panelPad = { padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' };
+const headingStyle: React.CSSProperties = { fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' };
+const hintStyle: React.CSSProperties = { fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' };
 
 export default function AdminBrandingPage({
   params,
@@ -119,10 +120,8 @@ export default function AdminBrandingPage({
     }
   }, [formData.primary_color, formData.secondary_color, formData.accent_color]);
 
-  // WCAG Contrast calculation
-  const contrastInfo = useMemo(() => {
-    return evaluateColorContrast(formData.primary_color);
-  }, [formData.primary_color]);
+  // Whether white or dark text reads on the primary colour (buttons, tags, the scoreboard)
+  const contrastInfo = useMemo(() => evaluateColorContrast(formData.primary_color), [formData.primary_color]);
 
   // Real-time Slug Validation
   const slugValidation = useMemo(() => {
@@ -138,29 +137,23 @@ export default function AdminBrandingPage({
       .replace(/--+/g, '-');
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const edit = (patch: Partial<BrandingForm>) => {
     setHasUserEdited(true);
     setSaveError(null);
-    const { name, value } = e.target;
-    if (name === 'founded_year') {
-      const parsed = parseInt(value, 10);
-      setFormData(prev => ({ ...prev, founded_year: isNaN(parsed) ? 1800 : parsed }));
-    } else if (name === 'name' && autoSyncSlug) {
-      const generatedSlug = slugify(value);
-      setFormData(prev => ({ ...prev, name: value, slug: generatedSlug }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, ...patch }));
   };
 
-  const handleApplyPalette = (palette: { primary: string; secondary: string; accent: string }) => {
-    setHasUserEdited(true);
-    setFormData(prev => ({
-      ...prev,
-      primary_color: palette.primary,
-      secondary_color: palette.secondary,
-      accent_color: palette.accent,
-    }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'founded_year') {
+      // Cleared stays cleared (the field is required, so the form asks for it), never a stand-in year
+      const parsed = parseInt(value, 10);
+      edit({ founded_year: isNaN(parsed) ? '' : parsed });
+    } else if (name === 'name' && autoSyncSlug) {
+      edit({ name: value, slug: slugify(value) });
+    } else {
+      edit({ [name]: value } as Partial<BrandingForm>);
+    }
   };
 
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,18 +181,20 @@ export default function AdminBrandingPage({
       return;
     }
 
-    const sliderImages = formData.slider_images_text
-      ? formData.slider_images_text.split('\n').map(s => s.trim()).filter(Boolean)
-      : undefined;
+    // The two slide photos keep their positions (an empty first one falls back to the banner); any
+    // further photos saved before this page had slots are kept after them
+    const slides = [formData.slide_matchday, formData.slide_ground, ...(club.slider_images || []).slice(2)];
+    while (slides.length && !slides[slides.length - 1]) slides.pop();
 
-    const { slider_images_text, ...restData } = formData;
+    const { name, short_name, motto, founded_year, primary_color, secondary_color, accent_color, logo_url, banner_url, contact_email, contact_phone } = formData;
     // Only sent when it changed, so saving the rest of the branding never depends on the story column
     const cleanStory = isArticleEmpty(story) ? '' : story;
     const storyChanged = cleanStory !== (club.about_story || '');
 
     updateClubBranding(club.id, {
-      ...restData,
-      slider_images: sliderImages,
+      name, short_name, motto, primary_color, secondary_color, accent_color, logo_url, banner_url, contact_email, contact_phone,
+      ...(founded_year ? { founded_year } : {}),
+      slider_images: slides,
       slug: newSlug,
       ...(storyChanged ? { about_story: cleanStory } : {}),
     });
@@ -296,7 +291,7 @@ export default function AdminBrandingPage({
       <div className="admin-head">
         <div>
           <h1>Club and branding</h1>
-          <p>Your club name, founding year, home ground, colours and web address. Changes show straight away on your public site and member passes.</p>
+          <p>Your club&apos;s name, crest, colours, story, contact details and home ground, as they show on your public site and member passes.</p>
         </div>
         <div className="admin-head-actions">
           <a href={siteHref} target="_blank" rel="noopener noreferrer" className="btn btn-secondary row">
@@ -307,25 +302,180 @@ export default function AdminBrandingPage({
       </div>
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {/* SECTION 1: CLUB COLORS & READABILITY */}
-        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Palette size={20} aria-hidden="true" color={formData.primary_color} /> Club colours
-            </h3>
-            <span
-              title={`Contrast ${contrastInfo.ratioFormatted} (WCAG 2.2 AA needs 4.5:1 for normal text)`}
-              className={contrastInfo.isWcagAA ? 'admin-pill is-ok' : 'admin-pill is-warn'}
-            >
-              {contrastInfo.isWcagAA ? 'Text is easy to read' : 'Small text is hard to read'}
-            </span>
+        {/* Name, web address, crest and photos */}
+        <section className="glass-panel" style={panelPad} aria-labelledby="branding-identity">
+          <h2 id="branding-identity" style={{ ...headingStyle, marginBottom: '1.5rem' }}>
+            <Shield size={20} aria-hidden="true" /> Name, crest and photos
+          </h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
+            <div className="form-group">
+              <label htmlFor="branding-name" className="form-label">Club name *</label>
+              <input id="branding-name" type="text" name="name" required className="form-input" value={formData.name} onChange={handleChange} />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="branding-short-name" className="form-label">Short name *</label>
+              <input id="branding-short-name" type="text" name="short_name" required maxLength={6} className="form-input"
+                aria-describedby="branding-short-name-hint" value={formData.short_name} onChange={handleChange} />
+              <div id="branding-short-name-hint" style={hintStyle}>Up to 6 characters, for places the full name doesn&apos;t fit.</div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="branding-founded" className="form-label">Year founded *</label>
+              <input id="branding-founded" type="number" name="founded_year" required min={1800} max={new Date().getFullYear() + 1}
+                className="form-input" value={formData.founded_year} onChange={handleChange} />
+            </div>
+
+            {/* Club web address */}
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <label htmlFor="branding-slug" className="form-label" style={{ marginBottom: 0 }}>Web address *</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoSyncSlug}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setAutoSyncSlug(checked);
+                      if (checked) setFormData(prev => ({ ...prev, slug: slugify(prev.name) }));
+                    }}
+                    style={{ accentColor: 'var(--club-primary)', cursor: 'pointer' }}
+                  />
+                  <span>Follow the club name</span>
+                </label>
+              </div>
+
+              <div className="row">
+                <span aria-hidden="true" style={{
+                  padding: '0.7rem 0.85rem',
+                  background: 'color-mix(in oklab, var(--color-ink) 5%, transparent)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.85rem',
+                  fontFamily: 'var(--font-mono)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  itsfootball.club/
+                </span>
+                <input id="branding-slug"
+                  type="text"
+                  name="slug"
+                  required
+                  className="form-input"
+                  aria-describedby="branding-slug-status"
+                  aria-invalid={!slugValidation.valid}
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    borderColor: slugValidation.valid ? 'var(--color-field-edge)' : 'var(--color-danger)',
+                  }}
+                  value={formData.slug}
+                  onChange={e => {
+                    setAutoSyncSlug(false);
+                    edit({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') });
+                  }}
+                  placeholder="club-slug"
+                />
+              </div>
+
+              <div id="branding-slug-status" style={{ marginTop: '0.45rem', fontSize: '0.78rem' }}>
+                {slugValidation.valid ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-green)' }}>
+                    <CheckCircle2 size={13} aria-hidden="true" />
+                    <span>Your address: <strong>/{slugValidation.cleanSlug}</strong></span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-red)' }}>
+                    <AlertCircle size={13} aria-hidden="true" />
+                    <span>{slugValidation.error}</span>
+                  </div>
+                )}
+              </div>
+
+              {club?.slug !== slugValidation.cleanSlug && slugValidation.valid && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  background: 'var(--color-warn-wash)',
+                  border: '1px solid var(--color-warn-line)',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.5,
+                }}>
+                  When you save, your address changes from <code>/{club.slug}</code> to <code>/{slugValidation.cleanSlug}</code>. Old links keep working.
+                </div>
+              )}
+            </div>
+
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="branding-motto" className="form-label">Motto</label>
+              <input id="branding-motto" type="text" name="motto" className="form-input" value={formData.motto} onChange={handleChange} />
+            </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+            <ImageUploadZone
+              clubId={club.id}
+              label="Crest"
+              recommendedText="Square, 500 x 500px, PNG or SVG with a transparent background"
+              currentImageUrl={formData.logo_url}
+              onUploadComplete={url => edit({ logo_url: url })}
+              folder="crests"
+              aspectRatio="1:1"
+            />
+            <ImageUploadZone
+              clubId={club.id}
+              label="Home page banner"
+              recommendedText="Wide, 1920 x 1080px: a photo of your home ground"
+              currentImageUrl={formData.banner_url}
+              onUploadComplete={url => edit({ banner_url: url })}
+              folder="banners"
+              aspectRatio="16:9"
+            />
+          </div>
+
+          {/* The home page slides' own photos, by slide */}
+          <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Home page slide photos</h3>
+              <Link href={`/${club.slug}/admin/hero-slider`} style={{ color: 'var(--club-ink)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
+                Choose what the slides show
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+              <ImageUploadZone
+                clubId={club.id}
+                label="Matchday slide (optional)"
+                recommendedText="Wide, 1920 x 1080px. Without one, the banner is used."
+                currentImageUrl={formData.slide_matchday}
+                onUploadComplete={url => edit({ slide_matchday: url })}
+                folder="banners"
+                aspectRatio="16:9"
+              />
+              <ImageUploadZone
+                clubId={club.id}
+                label="Home ground slide (optional)"
+                recommendedText="Wide, 1920 x 1080px. Without one, a gallery photo is used."
+                currentImageUrl={formData.slide_ground}
+                onUploadComplete={url => edit({ slide_ground: url })}
+                folder="banners"
+                aspectRatio="16:9"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Club colours */}
+        <section className="glass-panel" style={panelPad} aria-labelledby="branding-colours">
+          <h2 id="branding-colours" style={{ ...headingStyle, marginBottom: '0.5rem' }}>
+            <Palette size={20} aria-hidden="true" /> Club colours
+          </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            These colours are used across your public site, match scoreboard, member passes and buttons. Text on top of them switches between light and dark so it stays easy to read.
+            Used across your public site, match scoreboard, member passes and buttons.
           </p>
 
-          {/* Quick Football Color Palettes */}
           <div role="group" aria-labelledby="branding-ready-colours" style={{ marginBottom: 'var(--space-lg)' }}>
             <span id="branding-ready-colours" className="form-label">Ready-made colours</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2xs)' }}>
@@ -335,7 +485,7 @@ export default function AdminBrandingPage({
                   type="button"
                   className="admin-chip"
                   aria-pressed={[p.primary, p.secondary, p.accent].join().toLowerCase() === [formData.primary_color, formData.secondary_color, formData.accent_color].join().toLowerCase()}
-                  onClick={() => handleApplyPalette(p)}
+                  onClick={() => edit({ primary_color: p.primary, secondary_color: p.secondary, accent_color: p.accent })}
                 >
                   <span aria-hidden="true" style={{ display: 'inline-flex', gap: 'var(--space-3xs)' }}>
                     {[p.primary, p.secondary, p.accent].map(c => (
@@ -349,356 +499,46 @@ export default function AdminBrandingPage({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1.5rem' }}>
-            <div className="form-group">
-              <label className="form-label">Primary colour</label>
-              <div className="row">
-                <input aria-label="Primary colour"
-                  type="color"
-                  name="primary_color"
-                  value={formData.primary_color}
-                  onChange={handleChange}
-                  style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
-                />
-                <input aria-label="Primary colour hex code"
-                  type="text"
-                  name="primary_color"
-                  className="form-input"
-                  value={formData.primary_color}
-                  onChange={handleChange}
-                />
+            {COLOUR_FIELDS.map(f => (
+              <div key={f.name} className="form-group">
+                <label htmlFor={`branding-${f.name}`} className="form-label">{f.label}</label>
+                <div className="row">
+                  <input aria-label={`${f.label} picker`} type="color" name={f.name} value={formData[f.name]} onChange={handleChange}
+                    style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }} />
+                  <input id={`branding-${f.name}`} type="text" name={f.name} className="form-input" value={formData[f.name]} onChange={handleChange} />
+                </div>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Secondary colour</label>
-              <div className="row">
-                <input aria-label="Secondary colour"
-                  type="color"
-                  name="secondary_color"
-                  value={formData.secondary_color}
-                  onChange={handleChange}
-                  style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
-                />
-                <input aria-label="Secondary colour hex code"
-                  type="text"
-                  name="secondary_color"
-                  className="form-input"
-                  value={formData.secondary_color}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Accent colour</label>
-              <div className="row">
-                <input aria-label="Accent colour"
-                  type="color"
-                  name="accent_color"
-                  value={formData.accent_color}
-                  onChange={handleChange}
-                  style={{ width: '44px', height: '42px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
-                />
-                <input aria-label="Accent colour hex code"
-                  type="text"
-                  name="accent_color"
-                  className="form-input"
-                  value={formData.accent_color}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Live Preview Box */}
-          {/* How the colours look on the site: a sample of the club's name, a button and a tag */}
-          <div aria-label="Preview" role="group" style={{
-            marginTop: 'var(--space-lg)',
-            background: 'var(--color-paper)',
-            padding: 'var(--space-md)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-rule)',
-            borderLeft: `4px solid ${formData.primary_color}`,
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--space-sm)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', flexWrap: 'wrap', minWidth: 0 }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{formData.name}</span>
-              <span className="text-note">({formData.short_name})</span>
-              <span className="admin-pill">Est. {formData.founded_year}</span>
-            </div>
+          {/* Only when it's a problem: a mid-tone where neither white nor dark text reads well */}
+          {!contrastInfo.isWcagAA && (
+            <p className="admin-notice" role="status" style={{ marginTop: 'var(--space-md)', marginBottom: 0 }}>
+              <AlertTriangle size={16} aria-hidden="true" style={{ flexShrink: 0, color: 'var(--color-warn)' }} />
+              <span>Small text is hard to read on this primary colour: neither white nor dark text stands out enough. A darker or lighter shade works better for buttons.</span>
+            </p>
+          )}
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-xs)' }}>
-              <span
-                className="btn btn-sm"
-                aria-hidden="true"
-                style={{ backgroundColor: formData.primary_color, color: contrastInfo.bestTextColor, borderColor: formData.primary_color, cursor: 'default' }}
-              >
-                Button
-              </span>
-              <span
-                className="admin-pill"
-                style={{
-                  background: `color-mix(in oklab, ${formData.primary_color} 18%, transparent)`,
-                  color: 'var(--club-ink)',
-                }}
-              >
-                Tag
-              </span>
-            </div>
-          </div>
-
-          {/* The kits drawn in the club's colours */}
-          <div style={{ marginTop: 'var(--space-xl)', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-lg)' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)', fontWeight: 600, letterSpacing: 0, color: 'var(--text-primary)', margin: '0 0 var(--space-md)' }}>
-              <Shirt size={18} aria-hidden="true" style={{ color: 'var(--color-muted)' }} /> Kits
-            </h4>
+          <div style={{ marginTop: 'var(--space-lg)' }}>
             <KitDesignerPreview
-              clubName={formData.name}
               shortName={formData.short_name}
               primaryColor={formData.primary_color}
               secondaryColor={formData.secondary_color}
               accentColor={formData.accent_color}
-              interactive={true}
             />
           </div>
-        </div>
+        </section>
 
-        {/* SECTION 2: IDENTITY & MEDIA ASSETS */}
-        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Shield size={20} aria-hidden="true" /> Name, crest and photos
-          </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
-            <div className="form-group">
-              <label htmlFor="branding-official-club-name" className="form-label">Club name *</label>
-              <input id="branding-official-club-name"
-                type="text"
-                name="name"
-                required
-                className="form-input"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="branding-short-acronym-code" className="form-label">Short name *</label>
-              <input id="branding-short-acronym-code"
-                type="text"
-                name="short_name"
-                required
-                maxLength={6}
-                className="form-input"
-                value={formData.short_name}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="branding-club-establishment-year" className="form-label row">
-                <Calendar size={15} color="var(--color-accent-ink)" />
-                <span>Year founded *</span>
-              </label>
-              <input id="branding-club-establishment-year"
-                type="number"
-                name="founded_year"
-                required
-                min={1800}
-                max={new Date().getFullYear() + 1}
-                className="form-input"
-                value={formData.founded_year}
-                onChange={handleChange}
-                placeholder="e.g. 2018"
-              />
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                Displayed on the club header (Est. {formData.founded_year}), home ground entry, match badges, and member passes.
-              </div>
-            </div>
-
-            {/* Club Web Address & URL Slug */}
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                <label className="form-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Link2 size={15} color="var(--color-accent-ink)" />
-                  <span>Web address *</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={autoSyncSlug}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setAutoSyncSlug(checked);
-                      if (checked) {
-                        const generated = slugify(formData.name);
-                        setFormData(prev => ({ ...prev, slug: generated }));
-                      }
-                    }}
-                    style={{ accentColor: 'var(--club-primary)', cursor: 'pointer' }}
-                  />
-                  <span>Follow the club name</span>
-                </label>
-              </div>
-
-              <div className="row">
-                <span style={{
-                  padding: '0.7rem 0.85rem',
-                  background: 'color-mix(in oklab, var(--color-ink) 5%, transparent)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.85rem',
-                  fontFamily: 'var(--font-mono)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  itsfootball.club/
-                </span>
-                <input aria-label="Club URL slug"
-                  type="text"
-                  name="slug"
-                  required
-                  className="form-input"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    borderColor: slugValidation.valid ? 'var(--color-field-edge)' : 'var(--color-danger)',
-                  }}
-                  value={formData.slug}
-                  onChange={e => {
-                    setAutoSyncSlug(false);
-                    setHasUserEdited(true);
-                    setSaveError(null);
-                    const clean = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                    setFormData(prev => ({ ...prev, slug: clean }));
-                  }}
-                  placeholder="club-slug"
-                />
-              </div>
-
-              {/* Slug Validation Feedback */}
-              <div style={{ marginTop: '0.45rem', fontSize: '0.78rem' }}>
-                {slugValidation.valid ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-green)' }}>
-                    <CheckCircle2 size={13} />
-                    <span>Your address: <strong>/{slugValidation.cleanSlug}</strong></span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--c-red)' }}>
-                    <AlertCircle size={13} />
-                    <span>{slugValidation.error}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Migration / Redirect Advisory Alert */}
-              {club?.slug !== slugValidation.cleanSlug && slugValidation.valid && (
-                <div style={{
-                  marginTop: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '8px',
-                  background: 'var(--color-warn-wash)',
-                  border: '1px solid var(--color-warn-line)',
-                  fontSize: '0.8rem',
-                  color: 'var(--text-primary)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.6rem',
-                  lineHeight: 1.5,
-                }}>
-                  <ArrowRight size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
-                    <strong>Your address changes:</strong> When you save, your club URL will change from <code>/{club.slug}</code> to <code>/{slugValidation.cleanSlug}</code>. The admin and the public site move to the new address, and old links still work.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-club-motto-slogan" className="form-label">Motto</label>
-              <input id="branding-club-motto-slogan"
-                type="text"
-                name="motto"
-                className="form-input"
-                value={formData.motto}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* Real Drag-and-Drop & Direct URL Upload Zones */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
-            <ImageUploadZone
-              clubId={club.id}
-              label="Crest"
-              recommendedText="Square, 500 x 500px, PNG or SVG with a transparent background"
-              currentImageUrl={formData.logo_url}
-              onUploadComplete={(url) => {
-                setHasUserEdited(true);
-                setFormData(prev => ({ ...prev, logo_url: url }));
-              }}
-              folder="crests"
-              aspectRatio="1:1"
-            />
-
-            <ImageUploadZone
-              clubId={club.id}
-              label="Home page banner"
-              recommendedText="Wide, 1920 x 1080px: a photo of your home ground"
-              currentImageUrl={formData.banner_url}
-              onUploadComplete={(url) => {
-                setHasUserEdited(true);
-                setFormData(prev => ({ ...prev, banner_url: url }));
-              }}
-              folder="banners"
-              aspectRatio="16:9"
-            />
-          </div>
-
-          {/* Multiple Slider Images Configuration */}
-          <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-                <ImageIcon size={15} color="var(--color-accent-ink)" />
-                <span>More home page photos (optional, one image link per line)</span>
-              </label>
-              <Link
-                href={`/${club.slug}/admin/hero-slider`}
-                className="btn btn-primary btn-sm"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-              >
-                <Sparkles size={13} />
-                <span>Pin news and fixtures</span>
-              </Link>
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-              Add additional home ground photography, match celebrations, or banner graphics to cycle through on the public home page slider, or use the pinned content manager to pin fixtures, news, and events.
-            </p>
-            <textarea aria-label="Hero slider image URLs, one per line"
-              name="slider_images_text"
-              rows={3}
-              className="form-input"
-              style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', resize: 'vertical' }}
-              placeholder="https://yourclub.com.au/photos/grand-final.jpg&#10;https://yourclub.com.au/photos/presentation-night.jpg"
-              value={formData.slider_images_text}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        {/* SECTION 2B: CLUB STORY (the About page) */}
-        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Club story (the About page) */}
+        <section className="glass-panel" style={panelPad} aria-labelledby="branding-story-heading">
+          <h2 id="branding-story-heading" style={{ ...headingStyle, marginBottom: '0.5rem' }}>
             <BookOpen size={20} aria-hidden="true" /> Club story
-          </h3>
+          </h2>
           <p className="text-note" style={{ marginBottom: '1.25rem' }}>
-            Shown on your <Link href={`/${club?.slug || resolvedParams.clubSlug}/about`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>About page</Link>: how the club started, what it stands for, its proudest moments. Add pictures and YouTube videos from the toolbar.
+            Shown on your <Link href={`/${club?.slug || resolvedParams.clubSlug}/about`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>About page</Link>. Add pictures and YouTube videos from the toolbar.
           </p>
           <div className="form-group">
-            <label htmlFor="branding-club-story" className="form-label">Our Story</label>
+            <label htmlFor="branding-club-story" className="sr-only">Club story</label>
             {club && (
               <RichTextEditor
                 key={`${club.id}-${storyVersion}`}
@@ -713,118 +553,33 @@ export default function AdminBrandingPage({
               />
             )}
           </div>
-        </div>
+        </section>
 
-        {/* SECTION 3: HOME GROUND & VENUE SPECS */}
-        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <MapPin size={20} aria-hidden="true" /> Home ground
-          </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
-            <div className="form-group">
-              <label htmlFor="branding-home-ground-name" className="form-label">Ground name</label>
-              <input id="branding-home-ground-name"
-                type="text"
-                name="stadium_name"
-                className="form-input"
-                value={formData.stadium_name}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="branding-pitch-surface" className="form-label">Pitch surface</label>
-              <select id="branding-pitch-surface"
-                name="stadium_pitch_type"
-                className="form-select"
-                value={formData.stadium_pitch_type}
-                onChange={handleChange}
-              >
-                {/* Left unset, the site doesn't mention a surface at all */}
-                <option value="">Not set</option>
-                <option value="Natural Grass">Natural Grass</option>
-                <option value="Natural Hybrid Turf">Natural Hybrid Turf</option>
-                <option value="Hybrid Grass">Hybrid Grass</option>
-                <option value="3G / 4G All-Weather Synthetic">3G / 4G All-Weather Synthetic</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-physical-address" className="form-label">Address</label>
-              <input id="branding-physical-address"
-                type="text"
-                name="stadium_address"
-                className="form-input"
-                value={formData.stadium_address}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="branding-matchday-parking-transit-information" className="form-label">Parking and public transport</label>
-              <input id="branding-matchday-parking-transit-information"
-                type="text"
-                name="stadium_parking_info"
-                className="form-input"
-                value={formData.stadium_parking_info}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 3b: PUBLIC GROUND GUIDE (saved on its own, see HomeGroundPanel) */}
-        {club && <HomeGroundPanel club={club} />}
-
-        {/* SECTION 4: PUBLIC CONTACT DETAILS */}
-        <div className="glass-panel" style={{ padding: 'clamp(var(--space-md), 4vw, var(--space-xl))' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Public contact details */}
+        <section className="glass-panel" style={panelPad} aria-labelledby="branding-contact">
+          <h2 id="branding-contact" style={{ ...headingStyle, marginBottom: '0.5rem' }}>
             <Mail size={20} aria-hidden="true" /> Contact details
-          </h3>
+          </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
             Shown in your club site&apos;s footer and in replies to people who contact the club.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label htmlFor="branding-official-secretariat-email" className="form-label row">
-                <Mail size={14} color="var(--color-accent-ink)" />
-                <span>Email</span>
-              </label>
-              <input id="branding-official-secretariat-email"
-                type="email"
-                name="contact_email"
-                className="form-input"
-                placeholder="office@footballclub.org"
-                value={formData.contact_email}
-                onChange={handleChange}
-              />
+              <label htmlFor="branding-email" className="form-label">Email</label>
+              <input id="branding-email" type="email" name="contact_email" className="form-input" placeholder="office@footballclub.org"
+                value={formData.contact_email} onChange={handleChange} />
             </div>
-
             <div className="form-group">
-              <label htmlFor="branding-secretariat-phone-matchday-hotline" className="form-label row">
-                <Phone size={14} color="var(--color-accent-ink)" />
-                <span>Phone</span>
-              </label>
-              <input id="branding-secretariat-phone-matchday-hotline"
-                type="tel"
-                name="contact_phone"
-                className="form-input"
-                placeholder="e.g. 0400 000 000"
-                value={formData.contact_phone}
-                onChange={handleChange}
-              />
+              <label htmlFor="branding-phone" className="form-label">Phone</label>
+              <input id="branding-phone" type="tel" name="contact_phone" className="form-input" placeholder="e.g. 0400 000 000"
+                value={formData.contact_phone} onChange={handleChange} />
             </div>
           </div>
-        </div>
-
-        {/* SECTION 5: CUSTOM DOMAIN (saved on its own, see CustomDomainPanel) */}
-        {club && <CustomDomainPanel club={club} />}
+        </section>
 
         {/* The save bar: sticks to the bottom of the screen while there are unsaved changes, and
-            settles at the end of the form when scrolled there. The ground guide and the custom
-            domain above save on their own, so they never show here. */}
+            settles at the end of the form when scrolled there */}
         {savePhase && (
           <div role="region" aria-label="Save changes" className={`admin-savebar is-${savePhase}`}>
             <div className="admin-savebar-text" role="status" aria-live="polite">
@@ -868,6 +623,12 @@ export default function AdminBrandingPage({
           </div>
         )}
       </form>
+
+      {/* These save on their own (their own buttons), so they sit after the form and its save bar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '2rem' }}>
+        {club && <HomeGroundPanel club={club} />}
+        {club && <CustomDomainPanel club={club} />}
+      </div>
     </div>
   );
 }

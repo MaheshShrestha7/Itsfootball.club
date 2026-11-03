@@ -3,6 +3,7 @@
 // name and fixtures only appear when the club has opted in (clubs.grounds_directory_listed).
 // See migration 20261109_grounds.sql and /mnt/project-files/plans/grounds-directory-proposal.md.
 import { SITE_URL } from './slugs';
+import type { Club } from './supabase/types';
 import { COUNCILS, councilByKey, stateName, type AuState, type Council } from './councils';
 
 export const GROUNDS_PATH = '/grounds';
@@ -467,3 +468,15 @@ export function groundListSchema(name: string, path: string, grounds: GroundRow[
 }
 
 export { stateName };
+
+/** The club's own ground fields (shown on the About page, the footer, fixtures), filled from its ground guide */
+export function clubGroundFields(g: GroundRow): Partial<Pick<Club, 'stadium_name' | 'stadium_address' | 'stadium_lat' | 'stadium_lng' | 'stadium_parking_info' | 'stadium_pitch_type'>> {
+  const surfaces = [...new Set((g.pitches || []).map(p => p.surface).filter(Boolean))];
+  return {
+    stadium_name: g.name,
+    stadium_address: [g.address, [g.suburb, g.state, g.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+    ...(g.lat != null && g.lng != null ? { stadium_lat: g.lat, stadium_lng: g.lng } : {}),
+    ...(g.parking ? { stadium_parking_info: g.parking } : {}),
+    ...(surfaces.length ? { stadium_pitch_type: surfaces.join(', ') } : {}),
+  };
+}

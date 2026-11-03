@@ -106,37 +106,37 @@ export function clubInkVars(hex: string | null | undefined): Record<string, stri
 // Curated professional football club color presets
 export const FOOTBALL_COLOR_PALETTES = [
   {
-    name: 'Royal Emerald & Slate',
+    name: 'Green and navy',
     primary: '#10B981',
     secondary: '#0F172A',
     accent: '#F59E0B',
   },
   {
-    name: 'Blaugrana Passion',
+    name: 'Claret and blue',
     primary: '#A50044',
     secondary: '#004D98',
     accent: '#EDBB00',
   },
   {
-    name: 'Midnight Azure & Gold',
+    name: 'Sky blue and gold',
     primary: '#0284C7',
     secondary: '#0B132B',
     accent: '#FBBF24',
   },
   {
-    name: 'Striker Crimson & Onyx',
+    name: 'Red and black',
     primary: '#DC2626',
     secondary: '#18181B',
     accent: '#F97316',
   },
   {
-    name: 'Electric Neon & Obsidian',
+    name: 'Purple and black',
     primary: '#8B5CF6',
     secondary: '#090D16',
     accent: '#10B981',
   },
   {
-    name: 'Dorado & Carbon',
+    name: 'Gold and black',
     primary: '#EAB308',
     secondary: '#171717',
     accent: '#FFFFFF',
