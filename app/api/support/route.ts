@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sendEmail } from '@/lib/email/send';
+import { getServiceClient } from '@/lib/supabase/service';
+import { SITE_URL } from '@/lib/slugs';
 
 // Club admins message the itsfootball.club team. Emailed to SUPPORT_EMAIL with Reply-To set to the
 // admin's verified sign-in address, so support answers straight from their inbox.
@@ -39,7 +41,16 @@ export async function POST(req: NextRequest) {
   const name = String(userData.user?.user_metadata?.full_name || email);
   const clubLabel = club ? `${club.name} (/${club.slug})` : clubId;
 
-  const lines = [`From: ${name} <${email}>`, `Club: ${clubLabel}`, `Topic: ${topic}`, '', message];
+  // Kept for the Mission Control support inbox (migration 20261146). Not fatal: the email still goes.
+  const db = getServiceClient();
+  if (db && email) {
+    const { error } = await db.from('support_requests').insert({
+      club_id: clubId, user_id: auth.userId, from_email: email, from_name: name === email ? null : name, topic, message,
+    });
+    if (error) console.warn('[support] request not saved:', error.message);
+  }
+
+  const lines = [`From: ${name} <${email}>`, `Club: ${clubLabel}`, `Topic: ${topic}`, '', message, '', `Answer it in Mission Control: ${SITE_URL}/admin/platform`];
   const result = await sendEmail({
     to,
     subject: `[Support] ${topic}: ${club?.name || 'club admin'}`,

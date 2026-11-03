@@ -1133,6 +1133,39 @@ export interface PlatformAuditRow {
   created_at: string;
 }
 
+/** support_requests / support_replies (migration 20261146) */
+export interface SupportRequest {
+  id: string;
+  club_id: string | null;
+  user_id: string | null;
+  from_email: string;
+  from_name: string | null;
+  topic: string;
+  message: string;
+  status: 'open' | 'waiting' | 'done';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupportReply {
+  id: string;
+  request_id: string;
+  body: string;
+  author_email: string | null;
+  emailed: boolean;
+  created_at: string;
+}
+
+/** GET /api/platform/users?id= */
+export interface AccountStatus {
+  email: string | null;
+  email_confirmed_at: string | null;
+  last_sign_in_at: string | null;
+  banned: boolean;
+  two_step: number;
+  owned: { id: string; name: string; slug: string }[];
+}
+
 export interface PlatformUserMembership {
   club_id: string;
   club_name: string;

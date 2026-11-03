@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
+import { deleteAccount } from '@/lib/account-delete';
 
 // DELETE: the signed-in user deletes their own account (required by the App Store and Google Play).
-// Club records about them (squad entry, payments, attendance) belong to the club and stay, unlinked
-// from the account. Club owners must hand over or close their club first: a club without an owner
-// would have nobody able to run it.
+// Rules in lib/account-delete.ts. A club Owner is refused, and support gets a request in Mission
+// Control to hand the club over (one open request per person).
 
 export async function DELETE(req: NextRequest) {
   const auth = await requireUser(req);
@@ -13,21 +13,30 @@ export async function DELETE(req: NextRequest) {
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'Account deletion is not configured on the server.' }, { status: 503 });
 
-  const { data: owned, error: ownedError } = await db.from('clubs').select('name').eq('owner_id', auth.userId);
-  if (ownedError) return NextResponse.json({ error: 'Could not delete your account. Please try again.' }, { status: 500 });
-  if (owned?.length) {
-    return NextResponse.json({
-      error: `You own ${owned.map(c => c.name).join(', ')}. Contact itsfootball.club support to hand the club over or close it, then delete your account.`,
-    }, { status: 409 });
-  }
-
-  const { error: unlinkError } = await db.from('club_members').update({ user_id: null }).eq('user_id', auth.userId);
-  if (unlinkError) return NextResponse.json({ error: 'Could not delete your account. Please try again.' }, { status: 500 });
-
-  const { error } = await db.auth.admin.deleteUser(auth.userId);
-  if (error) {
-    console.error('[account] delete failed:', error.message);
+  const result = await deleteAccount(db, auth.userId);
+  if (result.ok) return NextResponse.json({ deleted: true });
+  if (result.status === 500) {
+    console.error('[account] delete failed:', result.error);
     return NextResponse.json({ error: 'Could not delete your account. Please try again.' }, { status: 500 });
   }
-  return NextResponse.json({ deleted: true });
+
+  const names = result.owned.map(c => c.name).join(', ');
+  const { data: open } = await db.from('support_requests').select('id')
+    .eq('user_id', auth.userId).eq('topic', 'Account deletion').neq('status', 'done').limit(1);
+  if (!open?.length) {
+    const { data: u } = await db.auth.admin.getUserById(auth.userId);
+    const { error } = await db.from('support_requests').insert({
+      club_id: result.owned[0].id,
+      user_id: auth.userId,
+      from_email: u.user?.email || auth.confirmedEmail || 'unknown',
+      from_name: (u.user?.user_metadata?.full_name as string | undefined) || null,
+      topic: 'Account deletion',
+      message: `Wants to delete their account but owns ${names}. Hand the club over (or close it), then delete the account.`,
+    });
+    // Before migration 20261146 there's no table; the person still gets the message below
+    if (error) console.warn('[account] support request not saved:', error.message);
+  }
+  return NextResponse.json({
+    error: `You own ${names}. We've let itsfootball.club support know: we'll email you to hand the club over to another admin, then delete your account.`,
+  }, { status: 409 });
 }

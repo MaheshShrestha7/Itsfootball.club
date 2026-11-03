@@ -106,7 +106,7 @@ export function softTint(hex: string | null | undefined, alpha = 0.22): string {
 }
 
 /** The pages of Mission Control, in rail order. */
-export type MissionTab = 'today' | 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
+export type MissionTab = 'today' | 'support' | 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
 
 // ------------------------------------------------------------------------------------------------
 // Club setup and the Today queue
@@ -199,7 +199,15 @@ export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now:
 // Emails to clubs (edited before sending; plain text)
 // ------------------------------------------------------------------------------------------------
 
-export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'suspended';
+/** Saved replies for the support inbox; inserted at the cursor, then edited */
+export const SUPPORT_SNIPPETS: { label: string; text: string }[] = [
+  { label: 'Stripe setup', text: 'To take fees by card, open Finance in your admin area and choose "Connect Stripe". It takes about five minutes, and fees go straight to the club\'s bank account.' },
+  { label: 'Custom domain', text: 'To use your own web address, open Club Profile & Branding, add the domain, then add the DNS record it shows at your domain provider. It can take up to a day to start working.' },
+  { label: 'Not built yet', text: 'That isn\'t something itsfootball.club does yet, but I\'ve noted it as a feature request. Thanks for telling me.' },
+  { label: 'Fixed', text: 'Thanks for reporting this. It\'s fixed now. Let me know if you still see it.' },
+];
+
+export type TemplateKey ='blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'suspended';
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   blank: 'Blank',

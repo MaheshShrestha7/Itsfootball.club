@@ -7,6 +7,7 @@ import { PlatformUserItem } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
 import { Avatar, Crest, LogoArt } from '@/components/admin/platform/McArt';
 import { initials } from '@/lib/mission-control';
+import AccountActions from '@/components/admin/platform/AccountActions';
 import {
   Search,
   RefreshCw,
@@ -20,7 +21,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-export default function UsersTab({ initialQuery = '' }: { initialQuery?: string }) {
+export default function UsersTab({ initialQuery = '', showToast }: { initialQuery?: string; showToast: (msg: string) => void }) {
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -144,6 +145,14 @@ export default function UsersTab({ initialQuery = '' }: { initialQuery?: string 
                 </div>
               </div>
             </div>
+
+            <AccountActions
+              key={selected.id}
+              userId={selected.id}
+              name={selected.full_name || selected.email}
+              showToast={showToast}
+              onChanged={() => { setSelectedId(null); fetchUsers(searchQuery); }}
+            />
 
             <div className="mc-kpis">
               <div className="mc-card mc-kpi">

@@ -3,10 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { buildQueue, firstName, greeting, timeAgo, type QueueKind } from '@/lib/mission-control';
-import type { PlatformAuditRow, PlatformClubItem } from '@/lib/supabase/types';
+import type { PlatformAuditRow, PlatformClubItem, SupportRequest } from '@/lib/supabase/types';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import { Crest } from '@/components/admin/platform/McArt';
-import { Clock, CreditCard, Sparkles, UserPlus, ArrowRight, Search } from 'lucide-react';
+import { Clock, CreditCard, Sparkles, UserPlus, ArrowRight, Search, Inbox } from 'lucide-react';
 
 interface Props {
   clubs: PlatformClubItem[];
@@ -17,6 +17,7 @@ interface Props {
   onEmail: (d: EmailDraft) => void;
   onOpenLog: () => void;
   onOpenPalette: () => void;
+  onOpenSupport: (id: string) => void;
   showToast: (msg: string) => void;
 }
 
@@ -30,18 +31,21 @@ const KIND: Record<QueueKind, { label: string; icon: React.ElementType; bg: stri
 const DONE_UNTIL = '2100-01-01T00:00:00Z';
 
 /** Today: everything across the platform that needs the founder, each with its fix. */
-export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, showToast }: Props) {
+export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, showToast }: Props) {
   const [snoozed, setSnoozed] = useState<Set<string>>(new Set());
   const [recent, setRecent] = useState<PlatformAuditRow[]>([]);
+  const [support, setSupport] = useState<SupportRequest[]>([]);
   const [filter, setFilter] = useState<QueueKind | 'all'>('all');
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
-    const [s, a] = await Promise.all([
+    const [s, a, q] = await Promise.all([
       client.from('platform_snoozes').select('key, until').gt('until', new Date().toISOString()),
       client.rpc('get_platform_audit', { p_club_id: null, p_limit: 6 }),
+      client.from('support_requests').select('*').eq('status', 'open').order('created_at').limit(10),
     ]);
+    setSupport((q.data || []) as SupportRequest[]);
     setSnoozed(new Set((s.data || []).map((r: { key: string }) => r.key)));
     setRecent((a.data || []) as PlatformAuditRow[]);
   }, []);
@@ -64,14 +68,14 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   };
 
   const name = firstName(userName, userEmail);
-  const urgent = queue.filter(i => i.kind !== 'welcome').length;
+  const urgent = queue.filter(i => i.kind !== 'welcome').length + support.length;
 
   return (
     <div>
       <div className="mc-page-h">
         <div>
           <h1>{greeting(new Date().getHours())}{name ? `, ${name}` : ''}.</h1>
-          <p>{loading ? 'Loading clubs…' : urgent === 0 ? 'No club needs you right now.' : `${urgent} ${urgent === 1 ? 'club needs' : 'clubs need'} you.`}</p>
+          <p>{loading ? 'Loading clubs…' : urgent === 0 ? 'No club needs you right now.' : `${urgent} ${urgent === 1 ? 'thing needs' : 'things need'} you.`}</p>
         </div>
         <div className="right">
           <button type="button" className="mc-pill-btn ghost" onClick={onOpenPalette}>
@@ -85,14 +89,25 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
           <div className="mc-card-h" style={{ flexWrap: 'wrap', gap: 8 }}>
             <h3>Needs you</h3>
             <span className="mc-tabs" role="group" aria-label="Filter the list" style={{ margin: 0 }}>
-              <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All {queue.length}</button>
+              <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All {queue.length + support.length}</button>
               {(Object.keys(KIND) as QueueKind[]).filter(k => counts[k]).map(k => (
                 <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{KIND[k].label} {counts[k]}</button>
               ))}
             </span>
           </div>
 
-          {!loading && shown.length === 0 && <div className="mc-empty">All clear. Nothing waiting on you.</div>}
+          {filter === 'all' && support.map(r => (
+            <div key={r.id} className="mc-q">
+              <span className="mc-sq" style={{ background: 'var(--mc-sky)', color: 'var(--mc-sky-ink)' }}><Inbox size={16} /></span>
+              <div className="body">
+                <div className="t"><b>{clubs.find(c => c.id === r.club_id)?.name || r.from_email} · {r.topic}</b></div>
+                <p>{r.from_name || r.from_email} · {timeAgo(r.created_at)}: &ldquo;{r.message.length > 160 ? `${r.message.slice(0, 160)}…` : r.message}&rdquo;</p>
+                <div className="acts"><button type="button" className="mc-pill-btn" onClick={() => onOpenSupport(r.id)}>Reply</button></div>
+              </div>
+            </div>
+          ))}
+
+          {!loading && shown.length === 0 && support.length === 0 && <div className="mc-empty">All clear. Nothing waiting on you.</div>}
 
           {shown.map(item => {
             const k = KIND[item.kind];

@@ -26,12 +26,14 @@ import ClubDetailDrawer from '@/components/admin/platform/ClubDetailDrawer';
 import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal';
 import TodayTab from '@/components/admin/platform/TodayTab';
 import LogTab from '@/components/admin/platform/LogTab';
+import SupportTab from '@/components/admin/platform/SupportTab';
 import CommandPalette from '@/components/admin/platform/CommandPalette';
 import EmailComposer, { type EmailDraft } from '@/components/admin/platform/EmailComposer';
 
 import {
   ListChecks,
   History,
+  Inbox,
   Gauge,
   Building,
   Users,
@@ -61,6 +63,9 @@ export default function PlatformOwnerDashboard() {
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [peopleQuery, setPeopleQuery] = useState('');
+  const [supportOpen, setSupportOpen] = useState(0);
+  const [supportId, setSupportId] = useState<string | null>(null);
+  const searchPeople = useCallback((q: string) => { setPeopleQuery(q); setActiveTab('users'); }, []);
 
   // Ctrl+K / Cmd+K opens the palette anywhere in Mission Control
   useEffect(() => {
@@ -158,6 +163,14 @@ export default function PlatformOwnerDashboard() {
   useEffect(() => {
     if (isAuthenticated && isPlatformAdmin) fetchAdmins();
   }, [isAuthenticated, isPlatformAdmin, fetchAdmins]);
+
+  // Open support requests, for the rail badge (the Support tab keeps it current)
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !isAuthenticated || !isPlatformAdmin) return;
+    client.from('support_requests').select('id', { count: 'exact', head: true }).eq('status', 'open')
+      .then(({ count }) => setSupportOpen(count || 0));
+  }, [isAuthenticated, isPlatformAdmin]);
 
   // Initial setup claim handler if no platform admins exist yet
   const handleClaimInitialAdmin = async () => {
@@ -369,6 +382,7 @@ export default function PlatformOwnerDashboard() {
 
   const RAIL: { id: TabType; label: string; icon: React.ElementType; dot?: boolean }[] = [
     { id: 'today', label: 'Today', icon: ListChecks },
+    { id: 'support', label: supportOpen ? `Support (${supportOpen} open)` : 'Support', icon: Inbox, dot: supportOpen > 0 },
     { id: 'cockpit', label: 'Stats', icon: Gauge },
     { id: 'clubs', label: `Clubs (${clubs.length})`, icon: Building, dot: clubsNeedingAttention > 0 },
     { id: 'users', label: 'Users', icon: Users },
@@ -454,7 +468,20 @@ export default function PlatformOwnerDashboard() {
             onEmail={setEmailDraft}
             onOpenLog={() => setActiveTab('log')}
             onOpenPalette={() => setPaletteOpen(true)}
+            onOpenSupport={id => { setSupportId(id); setActiveTab('support'); }}
             showToast={showToast}
+          />
+        )}
+
+        {activeTab === 'support' && (
+          <SupportTab
+            key={supportId || 'inbox'}
+            clubs={clubs}
+            initialId={supportId}
+            onSelectClub={openClub}
+            onSearchPeople={searchPeople}
+            showToast={showToast}
+            onOpenCount={setSupportOpen}
           />
         )}
 
@@ -489,7 +516,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'users' && (
-          <UsersTab key={peopleQuery} initialQuery={peopleQuery} />
+          <UsersTab key={peopleQuery} initialQuery={peopleQuery} showToast={showToast} />
         )}
 
         {activeTab === 'grounds' && (
@@ -522,10 +549,10 @@ export default function PlatformOwnerDashboard() {
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         clubs={clubs}
-        tabs={RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(\d+\)$/, '') }))}
+        tabs={RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(.*\)$/, '') }))}
         onSelectClub={openClub}
         onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
-        onSearchPeople={q => { setPeopleQuery(q); setActiveTab('users'); }}
+        onSearchPeople={searchPeople}
       />
 
       {/* PLATFORM ADMINS MANAGEMENT MODAL */}

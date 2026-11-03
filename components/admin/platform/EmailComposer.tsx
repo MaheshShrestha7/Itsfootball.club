@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Send } from 'lucide-react';
-import { getAccessToken } from '@/lib/supabase/client';
+import { platformApi } from '@/components/admin/platform/api';
 import { emailTemplate, firstName, TEMPLATE_LABELS, type EmailAudience, type TemplateKey } from '@/lib/mission-control';
 import type { PlatformClubItem } from '@/lib/supabase/types';
 
@@ -54,14 +54,8 @@ export default function EmailComposer({ draft, onClose, onSent }: Props) {
     setSending(true);
     setError('');
     try {
-      const token = await getAccessToken();
-      const res = await fetch('/api/platform/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ clubId: draft.club.id, to, subject, message }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(json.error || 'Could not send.'); return; }
+      const json = await platformApi<{ sent?: number }>('email', { clubId: draft.club.id, to, subject, message });
+      if (json.error) { setError(json.error); return; }
       onSent(`✓ Sent to ${json.sent} ${json.sent === 1 ? 'person' : 'people'} at ${draft.club.name}`);
       onClose();
     } finally {
