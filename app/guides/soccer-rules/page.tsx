@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import GuidePage, { GuideTable } from '@/components/GuidePage';
+import { BallInOutDiagram, FoulScaleDiagram, JuniorPathwayDiagram, PitchMarkingsDiagram } from '@/components/GuideDiagrams';
 import { linkStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
 import { SOURCES, guideByPath } from '@/lib/guides';
@@ -54,6 +55,7 @@ export default function SoccerRulesPage() {
                 touchline is in play. A foul on the edge of the penalty area line is a penalty. A ball resting on the goal line
                 is not a goal, however far it’s rolled over.
               </p>
+              <BallInOutDiagram />
             </div>
           ),
         },
@@ -62,6 +64,7 @@ export default function SoccerRulesPage() {
           heading: 'The 17 Laws and what each one decides',
           body: (
             <div className="guide-body">
+              <PitchMarkingsDiagram />
               <GuideTable
                 caption="The Laws of the Game 2026/27, summarised for a community match"
                 head={['Law', 'What it covers', 'The part that matters on a Saturday']}
@@ -97,15 +100,7 @@ export default function SoccerRulesPage() {
                 Law 12 is the one that starts arguments, but its logic is simple. The referee asks two questions about a
                 challenge: was it an offence, and how bad was it?
               </p>
-              <GuideTable
-                caption="How a referee grades a tackle, push, trip or charge"
-                head={['The challenge was…', 'Meaning', 'Outcome']}
-                rows={[
-                  ['Careless', 'The player didn’t take enough care', 'Direct free kick (penalty if inside the defender’s area). No card'],
-                  ['Reckless', 'The player ignored the danger to the opponent', 'Free kick and a yellow card'],
-                  ['Using excessive force', 'Far more force than needed, endangering the opponent', 'Free kick and a red card'],
-                ]}
-              />
+              <FoulScaleDiagram />
               <p>
                 <strong>Direct and indirect free kicks.</strong> Kicks, trips, pushes, charges, holding, biting, spitting
                 and handball are direct free kick offences, and you can score straight from them. Indirect free kicks are for
@@ -171,6 +166,7 @@ export default function SoccerRulesPage() {
                 Football Australia changes the Laws for children on purpose, so younger players get more touches, more goals
                 and less standing around. The MiniRoos formats run from under 6 to under 11:
               </p>
+              <JuniorPathwayDiagram />
               <GuideTable
                 caption="Football Australia MiniRoos formats"
                 head={['Age', 'Format', 'Match length', 'What’s different']}

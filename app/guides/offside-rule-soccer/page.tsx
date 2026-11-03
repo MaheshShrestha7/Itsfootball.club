@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import GuidePage, { GuideTable } from '@/components/GuidePage';
+import { DeliberatePlayDiagram, OffsideBodyDiagram, OffsideLineDiagram, OffsideTimingDiagram } from '@/components/GuideDiagrams';
 import { linkStyle } from '@/components/ToolLandingPage';
 import { pageMetadata } from '@/lib/seo';
 import { SOURCES, guideByPath } from '@/lib/guides';
@@ -48,6 +49,7 @@ export default function OffsideRulePage() {
                 is onside when the pass is struck can sprint five metres past the last defender before the ball arrives and is
                 still onside.
               </p>
+              <OffsideTimingDiagram />
               <p>
                 In that photo, the player is in an offside position only if all three of these are true:
               </p>
@@ -62,12 +64,14 @@ export default function OffsideRulePage() {
                 second-last opponent or level with the last two. That’s been the rule since 1990, and it’s why
                 “level is onside” is still the most useful thing a young striker can learn.
               </p>
+              <OffsideBodyDiagram />
               <p>
                 The “second-last opponent” is usually the last outfield defender, because the goalkeeper is normally the last
                 one. It isn’t always. When the keeper has come out for a corner or rushed off their line, count the two
                 deepest opponents, whoever they are. If a defender is on the goal line and the keeper is at the edge of the
                 box, the keeper is the second-last opponent.
               </p>
+              <OffsideLineDiagram />
               <p>
                 <strong>2. Did the player then get involved?</strong> Being in an offside position is legal. A striker can
                 stand there all afternoon. It only becomes an offence if the player does one of three things, covered in the
@@ -156,6 +160,7 @@ export default function OffsideRulePage() {
                   deliberate play, so a striker who was offside can’t score the rebound.
                 </li>
               </ul>
+              <DeliberatePlayDiagram />
               <p>
                 To tell a deliberate play from a deflection, referees look at four things. Did the ball travel some distance
                 with a clear view of it? Was it moving slowly? Was it going where you’d expect? Did the defender have time to

@@ -3404,6 +3404,11 @@ dialog.form-dialog::backdrop {
 .guide-join .guide-join-title { font-size: 1.02rem; font-weight: 900; color: var(--text-primary); margin: 0 0 0.25rem; }
 .guide-sources { margin: 0 0 0.8rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; line-height: 1.5; }
 .guide-sources span { display: block; font-size: 0.84rem; color: var(--text-muted); }
+.guide-figure { margin: 1.1rem 0 1.2rem; padding: 0.9rem; color: var(--text-secondary); }
+.guide-figure svg { display: block; width: 100%; height: auto; border-radius: 10px; }
+.guide-figure .guide-figure-strong { color: var(--text-primary); }
+.guide-figure figcaption { margin-top: 0.7rem; font-size: 0.86rem; line-height: 1.55; color: var(--text-muted); }
+.guide-figure figcaption strong { color: var(--text-primary); }
 /* Free equal playing time calculator (/tools/equal-playing-time-calculator): the lineup builder's glass
    layout, with the match and squad on the left and the plan (rotation chart and schedule) on the right */
 .pt-tool { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
