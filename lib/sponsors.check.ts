@@ -274,6 +274,9 @@ assert.equal(sponsorClickHref('https://acme.com.au/', undefined), 'https://acme.
   const pass = [{ id: 'p-pass', tier: 'gold' as const, price_cents: 100000, includes: ['member_pass', 'thanks_poster'] }];
   const two = [{ ...base, id: 'a', tier: 'gold' as const, package_id: 'p-pass', display_order: 0 }, { ...base, id: 'b', tier: 'gold' as const, package_id: 'p-pass', display_order: 1 }];
   assert.deepEqual(groundPlacesFor(two[1], two, pass, null, NOW), ['thanks_poster'], 'the biggest has the pass');
+  // Same tier, order and package: the same "biggest" whatever order the database returns them in
+  const tied = [{ ...base, id: 'x', tier: 'gold' as const, package_id: 'p-pass' }, { ...base, id: 'y', tier: 'gold' as const, package_id: 'p-pass' }];
+  assert.equal(groundSponsorList(tied, pass, 'member_pass', { now: NOW })[0].id, groundSponsorList([...tied].reverse(), pass, 'member_pass', { now: NOW })[0].id);
   assert.deepEqual(groundPlacesFor(two[1], two, pass, { pass_sponsor_id: 'b' }, NOW), ['thanks_poster', 'member_pass'], 'the admin picked them');
   const eventOwn = { ...base, id: 'ev-own', tier: 'platinum' as const, package_id: 'p-pass', event_id: 'ev1' };
   assert.deepEqual(groundPlacesFor(eventOwn, [eventOwn, ...two], pass, null, NOW), [], 'an event\'s own sponsor is never on the pass or the thank-you poster');

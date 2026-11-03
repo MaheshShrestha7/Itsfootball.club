@@ -477,9 +477,12 @@ export function groundSponsorList<
   S extends Pick<Sponsor, 'id' | 'tier' | 'display_order' | 'is_active' | 'package_status' | 'package_value'> & { ends_on?: string | null; package_id?: string | null; event_id?: string | null },
   P extends Pick<SponsorshipPackage, 'id' | 'tier' | 'price_cents' | 'includes'>,
 >(sponsors: S[], packages: P[], place: GroundPlace, opts: { eventId?: string | null; max?: number; now?: number } = {}): S[] {
+  // Ties on tier and display_order go to the bigger deal, then by id: the database returns rows in
+  // no set order, and the one-sponsor places (oneSponsorFor) take the first, so it must not change
   const ticked = sponsors.filter(s => isSponsorOnSite(s, opts.now)
     && (!s.event_id || s.event_id === opts.eventId)
-    && !!sponsorPackageFor(s, packages)?.includes?.includes(place));
+    && !!sponsorPackageFor(s, packages)?.includes?.includes(place))
+    .sort((a, b) => (Number(b.package_value) || 0) - (Number(a.package_value) || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const own = sortSponsorsByTier(ticked.filter(s => opts.eventId && s.event_id === opts.eventId));
   const club = sortSponsorsByTier(ticked.filter(s => !s.event_id));
   return [...own, ...club].slice(0, opts.max ?? GROUND_PLACE_MAX[place]);

@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import Link from 'next/link';
 import { ArrowRight, Download, ImagePlus, Lock, Scissors, Share2, Undo2, X } from 'lucide-react';
 import {
-  CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, drawPlayerCard, storyHeading,
+  CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, cardFromLink, drawPlayerCard, storyHeading,
   type PlayerCardFinish, type PlayerCardSize, type PlayerCardType, type PlayerStatKey,
 } from '@/lib/player-card';
 
@@ -170,6 +170,15 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
         });
       }
     } catch { /* storage blocked or corrupt */ }
+    // "Make a player card" on a club's player page: their name, club and season's stats win over what was saved
+    const linked = cardFromLink(window.location.search);
+    if (linked) {
+      setState(s => {
+        const position = linked.position || s.position;
+        const shown = linked.shown.length ? linked.shown : (s.position === 'GK') !== (position === 'GK') ? statDefaults(position) : s.shown;
+        return { ...s, ...linked, position, shown, stats: linked.shown.length ? linked.stats : s.stats };
+      });
+    }
     loaded.current = true;
     try {
       setCanShare(typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }));

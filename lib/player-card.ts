@@ -32,6 +32,37 @@ const DEFENSIVE = new Set<string>(['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB']);
 
 export type PlayerStats = Partial<Record<PlayerStatKey, number>>;
 
+/** A card filled in from a link, as a club's player page makes it (/tools/player-card-maker?name=…&goals=…):
+ *  the player, club and the season's stats. Only the stats in the link are shown on the card, so stats
+ *  left from an earlier card don't carry over. null when the link has none of these. */
+export function cardFromLink(search: string): {
+  name?: string; position?: Position; number?: string; club?: string; season?: string; colour?: string;
+  stats: Partial<Record<PlayerStatKey, string>>; shown: PlayerStatKey[];
+} | null {
+  const q = new URLSearchParams(search);
+  const text = (k: string, max: number) => q.get(k)?.trim().slice(0, max) || undefined;
+  const pos = q.get('pos')?.toUpperCase();
+  const stats: Partial<Record<PlayerStatKey, string>> = {};
+  for (const s of PLAYER_STATS) {
+    const v = q.get(s.key);
+    if (v && /^\d+$/.test(v)) stats[s.key] = String(Math.min(s.max, parseInt(v, 10)));
+  }
+  const out = {
+    name: text('name', 20),
+    position: (POSITIONS as readonly string[]).includes(pos || '') ? pos as Position : undefined,
+    number: /^\d{1,2}$/.test(q.get('number') || '') ? q.get('number')! : undefined,
+    club: text('club', 32),
+    season: text('season', 9),
+    colour: /^#[0-9a-f]{6}$/i.test(q.get('colour') || '') ? q.get('colour')! : undefined,
+    stats,
+    shown: PLAYER_STATS.map(s => s.key).filter(k => k in stats).slice(0, MAX_SHOWN_STATS),
+  };
+  const any = Object.values(out).some(v => (Array.isArray(v) ? v.length : typeof v === 'object' ? Object.keys(v).length : v));
+  if (!any) return null;
+  // Drop the unset keys so they don't overwrite what the browser remembered (club badge and so on)
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as typeof out;
+}
+
 /**
  * The rating worked out from the season's stats (the same formula is explained on the tool page):
  * 55, plus per game played: goals × 12, assists × 8, Player of the Match awards × 10, clean sheets × 10

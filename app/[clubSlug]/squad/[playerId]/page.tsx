@@ -88,6 +88,19 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     [player.player_position === 'GK' ? 'Clean sheets' : 'Player of the Match', (player.player_position === 'GK' ? stats?.clean_sheets : stats?.motm_awards) ?? 0],
   ];
   const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
+  // The card maker opens filled in with them and this season's stats (cardFromLink)
+  const isKeeper = player.player_position === 'GK';
+  const cardLink = `/tools/player-card-maker?${new URLSearchParams({
+    name: player.full_name.trim().split(/\s+/).pop() || '',
+    ...(player.player_position ? { pos: player.player_position } : {}),
+    ...(player.jersey_number != null ? { number: String(player.jersey_number) } : {}),
+    club: club.name,
+    season,
+    ...(club.primary_color ? { colour: club.primary_color } : {}),
+    ...(isKeeper ? { cs: String(stats?.clean_sheets ?? 0) } : { goals: String(stats?.goals ?? 0), assists: String(stats?.assists ?? 0) }),
+    apps: String(stats?.appearances ?? 0),
+    motm: String(stats?.motm_awards ?? 0),
+  })}`;
 
   return (
     <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
@@ -153,7 +166,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
           )}
         </section>
 
-        <Link href="/tools/player-card-maker" className="glass-panel glass-panel-interactive player-card-cta">
+        <Link href={cardLink} className="glass-panel glass-panel-interactive player-card-cta">
           <Sparkles size={18} color="var(--club-primary)" aria-hidden="true" />
           <span style={{ flex: 1 }}>Make a player card for {player.full_name.split(' ')[0]}</span>
           <ChevronRight size={16} aria-hidden="true" />
