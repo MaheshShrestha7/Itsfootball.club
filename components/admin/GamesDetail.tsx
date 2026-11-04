@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CalendarPlus, ChevronRight } from 'lucide-react';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import LocalTime from '@/components/LocalTime';
 import { DATE_LOCALE } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
 import {
-  byDay, formSummary, opponentLine, playedGames, playersNeeded, pct, topScorers,
+  byDay, formSummary, opponentLine, playedGames, playersNeeded, pct, topCleanSheets, topScorers, unsavedCleanSheets,
+  type CleanSheetGroup,
   type OverviewRange, type Outcome, type PlayedGame, type SideRecord,
 } from '@/lib/club-overview';
 import type { ClubMember, Match, MatchEvent } from '@/lib/supabase/types';
@@ -26,6 +28,8 @@ interface Props {
   canAvailability: boolean;
   canFixtures: boolean;
   canSchedule: boolean;
+  /** Can read saved player stats (Match Centre or Fixtures), which is where clean sheets live */
+  canStats: boolean;
 }
 
 const OUTCOME_CLASS: Record<Outcome, string> = { W: 'is-w', D: 'is-d', L: 'is-l' };
@@ -39,13 +43,30 @@ function Pill({ o, small }: { o: Outcome; small?: boolean }) {
 }
 
 /** The Games and availability detail screen: form, goals per game, what's coming up, scorers and results. */
-export default function GamesDetail({ clubSlug, games, next, range, events, replies, byMember, canAvailability, canFixtures, canSchedule }: Props) {
+export default function GamesDetail({ clubSlug, games, next, range, events, replies, byMember, canAvailability, canFixtures, canSchedule, canStats }: Props) {
   const played = useMemo(() => playedGames(games, range), [games, range]);
   const form = useMemo(() => formSummary(played), [played]);
   const scorers = useMemo(() => topScorers(events, played), [events, played]);
   const [scorerTab, setScorerTab] = useState<'goals' | 'assists'>('goals');
   const ranked = scorers.filter(s => s[scorerTab] > 0).sort((a, b) => b[scorerTab] - a[scorerTab] || a.name.localeCompare(b.name)).slice(0, 5);
   const days = useMemo(() => byDay(played), [played]);
+
+  // Clean sheets come from the player stats saved after each game (only keepers and defenders
+  // are offered one there), for the games kept clean in this range
+  const cleanIds = useMemo(() => played.filter(g => g.them === 0).map(g => g.match.id).sort().join(','), [played]);
+  const [sheets, setSheets] = useState<{ key: string; rows: { match_id: string; member_id: string }[] | null } | null>(null);
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!canStats || !cleanIds || !client) return;
+    let live = true;
+    client.from('match_player_stats').select('match_id, member_id').in('match_id', cleanIds.split(',')).eq('clean_sheet', true)
+      .then(({ data, error }) => { if (live) setSheets({ key: cleanIds, rows: error ? null : (data || []) }); });
+    return () => { live = false; };
+  }, [canStats, cleanIds]);
+  const [csGroup, setCsGroup] = useState<CleanSheetGroup>('all');
+  const sheetRows = sheets?.key === cleanIds ? sheets.rows : undefined; // undefined = loading, null = couldn't load
+  const keepers = useMemo(() => (sheetRows ? topCleanSheets(sheetRows, played, byMember, csGroup).slice(0, 5) : []), [sheetRows, played, byMember, csGroup]);
+  const unsaved = unsavedCleanSheets(played);
   const base = `/${clubSlug}/admin`;
   const gd = form.goalsFor - form.goalsAgainst;
   const chart = played.slice(-10);
@@ -170,6 +191,49 @@ export default function GamesDetail({ clubSlug, games, next, range, events, repl
         )}
         <div className="ov-foot"><span>From goals logged in Match Centre</span></div>
       </section>
+
+      {/* Top clean sheets: keepers and defenders */}
+      {canStats && (
+        <section className="admin-panel ov-card gv-o4" aria-labelledby="gv-clean">
+          <div className="admin-panel-head">
+            <h2 id="gv-clean">Top clean sheets</h2>
+            <div className="gv-tabs" role="group" aria-label="Show">
+              <button type="button" aria-pressed={csGroup === 'all'} onClick={() => setCsGroup('all')}>All</button>
+              <button type="button" aria-pressed={csGroup === 'keepers'} onClick={() => setCsGroup('keepers')}>Keepers</button>
+              <button type="button" aria-pressed={csGroup === 'defenders'} onClick={() => setCsGroup('defenders')}>Defenders</button>
+            </div>
+          </div>
+          {!cleanIds ? (
+            <p className="ov-empty">No clean sheets in these games yet.</p>
+          ) : sheetRows === undefined && getSupabaseClient() ? (
+            <p className="ov-empty">Loading…</p>
+          ) : !sheetRows ? (
+            <p className="ov-empty">Couldn&apos;t load the saved player stats. Try the refresh button.</p>
+          ) : keepers.length === 0 ? (
+            <p className="ov-empty">{csGroup === 'keepers' ? 'No keeper has been given a clean sheet in these games.' : csGroup === 'defenders' ? 'No defender has been given a clean sheet in these games.' : 'Nobody has been given a clean sheet in these games yet.'}</p>
+          ) : (
+            <ol className="gv-scorers">
+              {keepers.map((k, i) => (
+                <li key={k.member.id}>
+                  <span className="r">{i + 1}</span>
+                  <span className="ov-ava" aria-hidden="true">{initials(k.member.full_name)}</span>
+                  <span className="who">
+                    {k.member.full_name}{k.member.player_position && <span className="gv-tag">{k.member.player_position}</span>}
+                    <span className="bar" style={{ width: `${pct(k.n, keepers[0].n)}%` }} />
+                  </span>
+                  <span className="n">{k.n}<small>{k.n === 1 ? 'clean sheet' : 'clean sheets'}</small></span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="ov-foot">
+            <span>{unsaved > 0
+              ? `Player stats not saved yet for ${unsaved} clean-sheet ${unsaved === 1 ? 'game' : 'games'}`
+              : 'From player stats saved after each game'}</span>
+            {unsaved > 0 && <Link href={`${base}/match-center`}>Save stats<ChevronRight size={14} aria-hidden="true" /></Link>}
+          </div>
+        </section>
+      )}
 
       </div>
     </div>

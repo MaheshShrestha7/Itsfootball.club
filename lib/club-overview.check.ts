@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct, playedGames, formSummary, playersNeeded, topScorers, byDay } from './club-overview';
+import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct, playedGames, formSummary, playersNeeded, topScorers, byDay, topCleanSheets, unsavedCleanSheets } from './club-overview';
 import type { ClubMember, Match, MatchEvent } from './supabase/types';
 
 const now = new Date(2026, 10, 4, 12, 0).getTime(); // 4 Nov 2026, local
@@ -111,6 +111,28 @@ const days = byDay([
 assert.equal(days.length, 2);
 assert.equal(days[0].items.length, 1);
 assert.equal(days[1].items.length, 2);
+
+// Clean sheets: saved rows for games in range, duplicates ignored, grouped by position
+const kept = playedGames([
+  g('cs1', { home_score: 2, away_score: 0, is_audited: true }),
+  g('cs2', { is_club_home: false, home_score: 0, away_score: 1, is_audited: true }),
+  g('cs3', { home_score: 1, away_score: 0 }),
+  g('csOld', { season: '2025/26', home_score: 1, away_score: 0, is_audited: true }),
+], r);
+const squad = new Map([
+  ['gk', { id: 'gk', full_name: 'Max Keeper', player_position: 'GK' as const }],
+  ['cb', { id: 'cb', full_name: 'Ben Back', player_position: 'CB' as const }],
+  ['lb', { id: 'lb', full_name: 'Al Left', player_position: 'LB' as const }],
+]);
+const rows = [
+  { match_id: 'cs1', member_id: 'gk' }, { match_id: 'cs2', member_id: 'gk' }, { match_id: 'cs2', member_id: 'gk' },
+  { match_id: 'cs1', member_id: 'cb' }, { match_id: 'cs2', member_id: 'lb' }, { match_id: 'cs1', member_id: 'lb' },
+  { match_id: 'csOld', member_id: 'cb' }, { match_id: 'cs1', member_id: 'gone' },
+];
+assert.deepEqual(topCleanSheets(rows, kept, squad).map(x => [x.member.id, x.n]), [['lb', 2], ['gk', 2], ['cb', 1]]);
+assert.deepEqual(topCleanSheets(rows, kept, squad, 'keepers').map(x => x.member.id), ['gk']);
+assert.deepEqual(topCleanSheets(rows, kept, squad, 'defenders').map(x => x.member.id), ['lb', 'cb']);
+assert.equal(unsavedCleanSheets(kept), 1);
 
 assert.equal(pageName('/riverside', 'riverside'), 'Home page');
 assert.equal(pageName('/riverside/fixtures?x=1', 'riverside'), 'Fixtures');

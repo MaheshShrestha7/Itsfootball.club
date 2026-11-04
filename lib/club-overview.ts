@@ -302,3 +302,37 @@ export function byDay<T extends { match: Pick<Match, 'match_date'> }>(rows: T[])
   }
   return [...groups].map(([key, items]) => ({ key, items }));
 }
+
+/** Goalkeepers and the defenders the Save Player Stats screen offers a clean sheet to */
+export const KEEPER_POSITIONS = ['GK'] as const;
+export const DEFENDER_POSITIONS = ['CB', 'LB', 'RB'] as const;
+export type CleanSheetGroup = 'all' | 'keepers' | 'defenders';
+const inGroup = (pos: string | undefined, group: CleanSheetGroup) =>
+  group === 'all' || (group === 'keepers' ? (KEEPER_POSITIONS as readonly string[]) : (DEFENDER_POSITIONS as readonly string[])).includes(pos || '');
+
+export interface CleanSheetLeader<P extends Pick<ClubMember, 'id' | 'full_name' | 'player_position'>> { member: P; n: number }
+
+/** Clean sheets per player from the saved player stats (match_player_stats rows with clean_sheet),
+ *  only for games in `played`. Members no longer in the club are left out. */
+export function topCleanSheets<P extends Pick<ClubMember, 'id' | 'full_name' | 'player_position'>>(
+  rows: { match_id: string; member_id: string }[], played: PlayedGame[], byMember: Map<string, P>, group: CleanSheetGroup = 'all',
+): CleanSheetLeader<P>[] {
+  const ids = new Set(played.map(g => g.match.id));
+  const seen = new Set<string>();
+  const by = new Map<string, number>();
+  for (const r of rows) {
+    const k = `${r.match_id}:${r.member_id}`;
+    if (!ids.has(r.match_id) || seen.has(k)) continue;
+    seen.add(k);
+    by.set(r.member_id, (by.get(r.member_id) || 0) + 1);
+  }
+  const out: CleanSheetLeader<P>[] = [];
+  for (const [id, n] of by) {
+    const member = byMember.get(id);
+    if (member && inGroup(member.player_position, group)) out.push({ member, n });
+  }
+  return out.sort((a, b) => b.n - a.n || a.member.full_name.localeCompare(b.member.full_name));
+}
+
+/** Games kept clean whose player stats haven't been saved yet, so nobody has been credited */
+export const unsavedCleanSheets = (played: PlayedGame[]) => played.filter(g => g.them === 0 && !g.match.is_audited).length;

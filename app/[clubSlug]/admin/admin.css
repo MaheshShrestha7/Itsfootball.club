@@ -808,6 +808,7 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
 .gv-scorers li + li { border-top: 1px solid var(--color-rule); }
 .gv-scorers .r { font-size: var(--text-xs); color: var(--color-muted); text-align: center; font-variant-numeric: tabular-nums; }
 .gv-scorers .who { min-width: 0; overflow-wrap: anywhere; }
+.gv-scorers .who .gv-tag { margin-left: 6px; vertical-align: 1px; }
 .gv-scorers .bar { display: block; height: 5px; margin-top: 4px; border-radius: var(--radius-pill); background: var(--color-accent); }
 .gv-scorers .n { font: 600 var(--text-lg) var(--font-heading); font-variant-numeric: tabular-nums; }
 .gv-scorers .n small { margin-left: 3px; font: 500 var(--text-xs) var(--font-body); color: var(--color-muted); }

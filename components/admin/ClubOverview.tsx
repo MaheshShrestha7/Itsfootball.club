@@ -238,6 +238,7 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
           canAvailability={can(club.id, 'availability')}
           canFixtures={can(club.id, 'matches')}
           canSchedule={can(club.id, 'matches', 'edit')}
+          canStats={can(club.id, 'match-center') || can(club.id, 'matches')}
         />
       </div>
     );
