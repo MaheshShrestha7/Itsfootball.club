@@ -4,7 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 // Server-only. Never throws and never blocks the caller's real work on failure: health logging
 // must not break sending an email or handling a webhook.
 
-export type EventKind = 'cron' | 'email' | 'stripe' | 'alert';
+export type EventKind = 'cron' | 'email' | 'stripe' | 'alert' | 'error';
 
 export async function logEvent(kind: EventKind, name: string, ok: boolean, detail: Record<string, unknown> = {}): Promise<void> {
   const db = getServiceClient();

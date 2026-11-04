@@ -17,6 +17,7 @@ import {
 } from '@/lib/supabase/types';
 
 import CockpitTab from '@/components/admin/platform/CockpitTab';
+import OverviewTab from '@/components/admin/platform/OverviewTab';
 import ClubsTab from '@/components/admin/platform/ClubsTab';
 import UsersTab from '@/components/admin/platform/UsersTab';
 import HealthTab from '@/components/admin/platform/HealthTab';
@@ -34,7 +35,7 @@ import {
   ListChecks,
   History,
   Inbox,
-  Gauge,
+  Eye,
   Building,
   Users,
   Activity,
@@ -383,7 +384,7 @@ export default function PlatformOwnerDashboard() {
   const RAIL: { id: TabType; label: string; icon: React.ElementType; dot?: boolean }[] = [
     { id: 'today', label: 'Today', icon: ListChecks },
     { id: 'support', label: supportOpen ? `Support (${supportOpen} open)` : 'Support', icon: Inbox, dot: supportOpen > 0 },
-    { id: 'cockpit', label: 'Stats', icon: Gauge },
+    { id: 'overview', label: 'Overview', icon: Eye },
     { id: 'clubs', label: `Clubs (${clubs.length})`, icon: Building, dot: clubsNeedingAttention > 0 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'grounds', label: 'Grounds', icon: MapPin },
@@ -428,7 +429,7 @@ export default function PlatformOwnerDashboard() {
               type="button"
               className="mc-nav"
               aria-label={item.label}
-              aria-current={activeTab === item.id ? 'page' : undefined}
+              aria-current={activeTab === item.id || (item.id === 'overview' && activeTab === 'cockpit') ? 'page' : undefined}
               onClick={() => { setActiveTab(item.id); window.scrollTo({ top: 0 }); }}
             >
               <Icon size={18} />
@@ -487,6 +488,18 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'log' && <LogTab />}
+
+        {activeTab === 'overview' && (
+          <OverviewTab
+            clubs={clubs}
+            periodDays={periodDays}
+            periodOptions={PERIOD_OPTIONS}
+            onPeriodChange={setPeriodDays}
+            onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
+            onSelectClub={openClub}
+            onRefreshClubs={() => fetchClubs('')}
+          />
+        )}
 
         {activeTab === 'cockpit' && (
           <CockpitTab
@@ -550,7 +563,7 @@ export default function PlatformOwnerDashboard() {
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         clubs={clubs}
-        tabs={RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(.*\)$/, '') }))}
+        tabs={[...RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(.*\)$/, '') })), { id: 'cockpit' as TabType, label: 'More stats' }]}
         onSelectClub={openClub}
         onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
         onSearchPeople={searchPeople}

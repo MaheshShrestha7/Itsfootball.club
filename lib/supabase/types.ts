@@ -1100,6 +1100,93 @@ export interface PlatformClubItem {
   closed_at?: string | null;
 }
 
+/** get_platform_overview(p_days) (migration 20261149): Mission Control's Overview screen */
+export interface OverviewClubRef {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string | null;
+}
+export interface PlatformOverview {
+  period_days: number;
+  since: string;
+  money: {
+    /** First payment with a saved booking fee: earnings are counted from here */
+    fees_since: string | null;
+    earned_cents: number;
+    earned_all_cents: number;
+    fee_refunded_cents: number;
+    through_cents: number;
+    through_prev_cents: number;
+    by_method: Record<string, number>;
+    by_kind: Record<string, number>;
+    awaiting_review: { count: number; cents: number };
+    pending: { count: number; cents: number };
+    failed: number;
+    refunded: number;
+    top_fee_clubs: (OverviewClubRef & { fee_cents: number | null; through_cents: number })[];
+    daily: { date: string; through_cents: number; fee_cents: number }[];
+  };
+  growth: {
+    new_clubs: number;
+    new_clubs_prev: number;
+    new_members: number;
+    new_members_prev: number;
+    renew_30d: number;
+    lapsed_30d: number;
+    closing: number;
+    top_growing: (OverviewClubRef & { joined: number })[];
+  };
+  usage: {
+    clubs: number;
+    features: Record<string, number>;
+    /** club id -> feature keys used in the period */
+    by_club: Record<string, string[]>;
+  };
+  traffic: {
+    since: string | null;
+    visits: number;
+    visitors: number;
+    tool_uses: number;
+    create_club_visits: number;
+    top_pages: { path: string; visits: number }[];
+    top_tools: { path: string; uses: number }[];
+    groups: Record<string, number>;
+    sources: Record<string, number>;
+    devices: Record<string, number>;
+    daily: { date: string; visits: number }[];
+  };
+  problems: {
+    crashes_24h: number;
+    crashes_period: number;
+    recent_crashes: { at: string; path: string | null; message: string | null }[];
+    transfers_waiting_7d: { count: number; clubs: number };
+    support_open_2d: number;
+    enquiries_unread_3d: { count: number; clubs: number };
+    opt_outs_period: number;
+    failed_payments: number;
+  };
+}
+
+/** get_platform_club_members(p_club_id): no medical, emergency, guardian phone, safeguarding or birth date fields */
+export interface PlatformClubMember {
+  id: string;
+  full_name: string;
+  email: string | null;
+  role: string | null;
+  membership_tier: string | null;
+  membership_status: string;
+  joined_at: string | null;
+  expires_at: string | null;
+  fee_waived: boolean;
+  has_account: boolean;
+  paid_cents: number;
+  last_paid_at: string | null;
+  last_method: string | null;
+  awaiting_review: boolean;
+}
+
 /** get_platform_club_people(): the Owner, Club Admins and access-role holders */
 export interface PlatformClubPerson {
   member_id: string | null;

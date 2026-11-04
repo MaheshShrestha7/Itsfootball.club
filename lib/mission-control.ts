@@ -106,7 +106,7 @@ export function softTint(hex: string | null | undefined, alpha = 0.22): string {
 }
 
 /** The pages of Mission Control, in rail order. */
-export type MissionTab = 'today' | 'support' | 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
+export type MissionTab = 'today' | 'support' | 'overview' | 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
 
 // ------------------------------------------------------------------------------------------------
 // Club setup and the Today queue
@@ -333,4 +333,96 @@ export function emailTemplate(key: TemplateKey, club: { name: string; slug: stri
     default:
       return { subject: '', message: `${hi}\n\n` };
   }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Overview (get_platform_overview, migration 20261149)
+// ------------------------------------------------------------------------------------------------
+
+/** The features the Overview counts, in the order shown. Keys match get_platform_overview's usage. */
+export const FEATURES: { key: string; label: string }[] = [
+  { key: 'fixtures', label: 'Fixtures and results' },
+  { key: 'availability', label: 'Availability' },
+  { key: 'lineups', label: 'Line-ups' },
+  { key: 'match_centre', label: 'Live Match Centre' },
+  { key: 'news', label: 'News' },
+  { key: 'sponsors', label: 'Sponsors' },
+  { key: 'messages', label: 'Messages to members' },
+  { key: 'events', label: 'Events and tickets' },
+  { key: 'gate', label: 'Door scans' },
+  { key: 'tournaments', label: 'Tournaments' },
+  { key: 'gallery', label: 'Gallery' },
+  { key: 'shop', label: 'Shop' },
+  { key: 'perks', label: 'Member perks' },
+  { key: 'finances', label: 'Club finances' },
+  { key: 'push', label: 'Phone notifications' },
+];
+
+/** Change against the previous period, as a whole percent; null when there's nothing to compare with. */
+export function pctChange(now: number, prev: number): number | null {
+  if (!prev) return null;
+  return Math.round(((now - prev) / prev) * 100);
+}
+
+/** "+12%", "-3%", "0%"; '' when there's nothing to compare with */
+export function changeLabel(now: number, prev: number): string {
+  const p = pctChange(now, prev);
+  return p === null ? '' : `${p > 0 ? '+' : ''}${p}%`;
+}
+
+export interface FunnelStep { key: string; label: string; clubs: PlatformClubItem[] }
+
+/** How many open clubs got to each setup step (setupSteps), for the growth funnel. Signed up first. */
+export function setupFunnel(clubs: PlatformClubItem[], now: number = Date.now()): FunnelStep[] {
+  const open = clubs.filter(c => c.is_active && !c.closed_at);
+  const keys: [string, string][] = [['logo', 'Logo and colours'], ['team', 'First team'], ['fixture', 'First fixture'], ['members', '10+ members approved'], ['active', 'Admin active in 14 days']];
+  const steps: FunnelStep[] = [{ key: 'signed_up', label: 'Signed up', clubs: open }];
+  for (const [key, label] of keys) {
+    steps.push({ key, label, clubs: open.filter(c => setupSteps(c, now).find(s => s.key === key)?.done) });
+  }
+  return steps;
+}
+
+/** Open clubs where no admin has signed in for 14 days (or ever) */
+export function quietClubs(clubs: PlatformClubItem[], now: number = Date.now()): PlatformClubItem[] {
+  return clubs.filter(c => c.is_active && !c.closed_at && !setupSteps(c, now).find(s => s.key === 'active')?.done);
+}
+
+export const SOURCE_LABEL: Record<string, string> = {
+  search: 'Search engines', direct: 'Direct or app', social: 'Social media', ai: 'AI assistants', other: 'Other websites', internal: 'From our own pages',
+};
+export const METHOD_LABEL: Record<string, string> = { stripe: 'Card', bank_transfer: 'Bank transfer', cash: 'Cash', other: 'Other' };
+export const KIND_LABEL: Record<string, string> = {
+  membership_signup: 'Memberships', membership_renewal: 'Renewals', sponsorship: 'Sponsorship', event_ticket: 'Event tickets', shop_order: 'Shop', income_other: 'Other income',
+};
+export const GROUP_LABEL: Record<string, string> = {
+  home: 'Homepage', tools: 'Free tools', guides: 'Guides', grounds: 'Grounds', compare: 'Compare pages', tournaments: 'Tournaments',
+  pricing: 'Pricing', about: 'About', faq: 'FAQ', 'create-club': 'Create a club', clubs: 'Clubs directory', 'live-scores': 'Live scores',
+  'best-free-football-club-website-builders-australia': 'Best builders page', privacy: 'Privacy', terms: 'Terms',
+};
+
+/** "/tools/lineup-builder" -> "Lineup builder"; "/" -> "Homepage" */
+export function pageLabel(path: string): string {
+  if (!path || path === '/') return 'Homepage';
+  const last = path.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean).pop() || path;
+  const words = decodeURIComponent(last).replace(/[-_]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : path;
+}
+
+/** Sorted [key, value] pairs, biggest first, without zeros */
+export function ranked(rec: Record<string, number> | null | undefined): [string, number][] {
+  return Object.entries(rec || {}).map(([k, v]) => [k, Number(v) || 0] as [string, number]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+}
+
+/** n bars from a daily series (newest last), each the sum of its days, scaled 0-100 against the tallest */
+export function sparkBars(values: number[], n = 12): number[] {
+  if (!values.length) return new Array(n).fill(0);
+  const size = Math.max(1, Math.ceil(values.length / n));
+  const sums: number[] = [];
+  // Group from the newest end so the last bar is always the latest days
+  for (let end = values.length; end > 0 && sums.length < n; end -= size) {
+    sums.unshift(values.slice(Math.max(0, end - size), end).reduce((a, b) => a + (Number(b) || 0), 0));
+  }
+  const max = Math.max(...sums);
+  return sums.map(v => (max > 0 ? Math.round((v / max) * 100) : 0));
 }

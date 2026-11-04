@@ -17,6 +17,7 @@ import {
   MONTHLY_LIMIT, TEAM_SIZES, isCleanName, isEventClub, parseTeamNames, teamCode, tournamentManagePath,
 } from '@/lib/public-tournaments';
 import type { Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
+import { trackToolUse } from '@/lib/platform-tracking';
 
 const DRAFT_KEY = 'itsfootball_tournament_draft_v1';
 const MAX_TEAMS = 32;
@@ -221,6 +222,7 @@ export default function TournamentMakerTool({ defaultFormat }: Props = {}) {
       // The tournament's page checks on the server that it exists: going there before the background
       // save lands showed a 404 right after Publish
       await waitForClubSaved(club.id);
+      trackToolUse('tournament_created');
       router.push(tournamentManagePath(slug));
     } finally {
       publishingRef.current = false;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildQueue, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
+import { pctChange, changeLabel, pageLabel, ranked, sparkBars, setupFunnel, quietClubs, FEATURES } from './mission-control';
 import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
 
 const day = (date: string, members: number, revenue_cents = 0): PlatformDailyTrend => ({ date, clubs: 0, users: 0, members, visits: 0, revenue_cents });
@@ -118,3 +119,38 @@ assert.equal(light({ domains: null }, 'domains'), 'grey');
 assert.equal(light({ dbMs: 900 }, 'db'), 'red');
 
 console.log('mission-control: ok');
+
+// ---- Overview helpers ----
+{
+  assert.equal(pctChange(112, 100), 12);
+  assert.equal(pctChange(5, 0), null);
+  assert.equal(changeLabel(90, 100), '-10%');
+  assert.equal(changeLabel(100, 100), '0%');
+  assert.equal(changeLabel(3, 0), '');
+  assert.equal(pageLabel('/'), 'Homepage');
+  assert.equal(pageLabel('/tools/lineup-builder'), 'Lineup builder');
+  assert.equal(pageLabel('/guides/agm-guide/'), 'Agm guide');
+  assert.deepEqual(ranked({ a: 1, b: 5, c: 0 }), [['b', 5], ['a', 1]]);
+  assert.deepEqual(ranked(null), []);
+  assert.deepEqual(sparkBars([], 3), [0, 0, 0]);
+  assert.deepEqual(sparkBars([1, 1, 2, 2], 2), [50, 100]);
+  // 5 days into 2 bars: the newest bar holds the newest 3 days
+  assert.deepEqual(sparkBars([4, 1, 1, 1, 1], 2), [100, 60]);
+  assert.equal(new Set(FEATURES.map(f => f.key)).size, FEATURES.length);
+
+  const now = Date.parse('2026-11-04T00:00:00Z');
+  const club = (over: Partial<PlatformClubItem>): PlatformClubItem => ({
+    id: 'x', name: 'X', short_name: 'X', slug: 'x', is_active: true, created_at: '2026-10-01T00:00:00Z',
+    membership_payment_policy: 'standard', member_count: 0, pending_count: 0, team_count: 0, match_count: 0,
+    visits_30d: 0, gmv_cents: 0, stripe_ready: false, ...over,
+  } as PlatformClubItem);
+  const list = [
+    club({ id: 'a', logo_url: 'l', team_count: 1, match_count: 3, approved_count: 12, admin_last_seen_at: '2026-11-01T00:00:00Z' }),
+    club({ id: 'b', team_count: 1 }),
+    club({ id: 'c', is_active: false }),
+    club({ id: 'd', closed_at: '2026-11-01T00:00:00Z' }),
+  ];
+  const f = setupFunnel(list, now);
+  assert.deepEqual(f.map(s => s.clubs.length), [2, 1, 2, 1, 1, 1]);
+  assert.deepEqual(quietClubs(list, now).map(c => c.id), ['b']);
+}

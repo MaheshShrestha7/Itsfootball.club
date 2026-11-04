@@ -11,6 +11,7 @@ import { ArrowRight, Download, ImagePlus, Minus, Plus, Scissors, Share2, Star, T
 import { CARD_SIZES, drawMatchCard, type CardFormat, type CardOptions } from '@/lib/share-card';
 import { COVER_PRESETS } from '@/lib/cover-presets';
 import type { Club, Match } from '@/lib/supabase/types';
+import { trackToolUse } from '@/lib/platform-tracking';
 
 // The Player of the Match's name is drawn in a brush script, so it stands apart from the bold headline
 const nameFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 'swap' });
@@ -326,7 +327,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
-      if (!share || shared) setDownloaded(true);
+      if (!share || shared) { setDownloaded(true); trackToolUse(shared ? 'result_graphic_shared' : 'result_graphic_downloaded'); }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the image.');
     } finally {

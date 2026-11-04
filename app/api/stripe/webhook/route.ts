@@ -83,6 +83,12 @@ export async function POST(req: NextRequest) {
         // keeps our fee on the platform. Hand it back so a full refund never costs the club money.
         // ponytail: full refunds only; partial refunds keep the fee (add a proportional fee refund if clubs ask)
         const feeId = typeof charge.application_fee === 'string' ? charge.application_fee : charge.application_fee?.id;
+        // Mission Control stops counting the fee as earned (column from migration 20261149; best effort)
+        if (refunded?.length) {
+          await db.from('payments').update({ booking_fee_refunded_at: new Date().toISOString() })
+            .eq('stripe_payment_intent_id', intent).not('booking_fee_cents', 'is', null)
+            .then(({ error: feeError }) => { if (feeError) console.warn('[webhook] booking fee refund not saved:', feeError.message); }, () => {});
+        }
         if (feeId && refunded?.length) {
           // Logged, not retried: it also fails harmlessly when the fee was already refunded
           await stripe.applicationFees.createRefund(feeId).catch(err => console.error('Booking fee refund failed:', feeId, (err as Error).message));
