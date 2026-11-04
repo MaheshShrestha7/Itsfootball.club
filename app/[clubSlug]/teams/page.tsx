@@ -4,13 +4,14 @@ import React, { use, useMemo } from 'react';
 import Link from 'next/link';
 import { Users, ChevronRight, CalendarDays } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
-import { TEAM_TYPES, clubTeamsOf, teamMemberIds, teamOfMatch } from '@/lib/teams';
+import { TEAM_TYPES, clubTeamsOf, publicPlayerIds, teamMemberIds, teamOfMatch } from '@/lib/teams';
 import { clubResult, kickoff } from '@/lib/fixtures';
 import { isPastFixture } from '@/lib/club-lists';
 import type { Match } from '@/lib/supabase/types';
 import LocalTime from '@/components/LocalTime';
 import ResultChip from '@/components/ResultChip';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
+import PlayerSearch, { type SearchablePlayer } from '@/components/PlayerSearch';
 
 /** /club/teams: every team as a card with its next game and recent form, linking to the team's page */
 export default function TeamsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -22,6 +23,22 @@ export default function TeamsPage({ params }: { params: Promise<{ clubSlug: stri
     () => new Set(members.filter(m => m.club_id === club?.id && (m.membership_status || 'approved') === 'approved').map(m => m.id)),
     [members, club]
   );
+  // Everyone with a public player page, with the (non-junior) teams they play for
+  const searchable = useMemo<SearchablePlayer[]>(() => {
+    if (!club) return [];
+    const clubMembers = members.filter(m => m.club_id === club.id);
+    const ids = publicPlayerIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false });
+    const teamName = new Map(teams.filter(t => !t.is_junior).map(t => [t.id, t.name]));
+    return clubMembers
+      .filter(m => ids.has(m.id))
+      .map(m => ({
+        id: m.id, full_name: m.full_name, photo_url: m.photo_url, jersey_number: m.jersey_number, player_position: m.player_position,
+        teams: [...new Set(clubTeamMembers
+          .filter(r => r.member_id === m.id && r.team_role === 'player' && r.is_active !== false && teamName.has(r.team_id))
+          .map(r => teamName.get(r.team_id)!))],
+      }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [members, club, clubTeams, clubTeamMembers, teams]);
   // Each team's games, once
   const gamesByTeam = useMemo(() => {
     const map = new Map<string, Match[]>();
@@ -42,6 +59,8 @@ export default function TeamsPage({ params }: { params: Promise<{ clubSlug: stri
       ) : teams.length === 0 ? (
         <EmptyState title="No teams listed yet" />
       ) : (
+        <>
+        <PlayerSearch players={searchable} clubSlug={club.slug} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
           {teams.map(team => {
             const players = team.is_junior ? [] : teamMemberIds(clubTeamMembers, team.id).filter(id => approvedIds.has(id));
@@ -87,6 +106,7 @@ export default function TeamsPage({ params }: { params: Promise<{ clubSlug: stri
             );
           })}
         </div>
+        </>
       )}
     </ClubSubPage>
   );

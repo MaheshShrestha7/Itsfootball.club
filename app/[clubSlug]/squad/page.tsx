@@ -7,6 +7,7 @@ import { useClub } from '@/lib/club-context';
 import { clubTeamsOf, juniorMemberIds, squadPlayerIds } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
+import PlayerSearch from '@/components/PlayerSearch';
 
 const LINES: { title: string; positions: string[] }[] = [
   { title: 'Goalkeepers', positions: ['GK'] },
@@ -54,6 +55,7 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
           <EmptyState title="No players listed yet" />
         ) : (
           <div className="stack" style={{ gap: '2rem' }}>
+            {players.length > 6 && <PlayerSearch players={players} clubSlug={club.slug} />}
             {groups.map(g => (
               <section key={g.title} aria-label={g.title}>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>{g.title} <span className="text-meta">({g.list.length})</span></h2>

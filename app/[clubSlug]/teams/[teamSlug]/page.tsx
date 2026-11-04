@@ -9,6 +9,7 @@ import { STAFF_ROLES, TEAM_ROLE_LABELS, TEAM_TYPES, clubTeamsOf, juniorMemberIds
 import PlayerAvatar from '@/components/PlayerAvatar';
 import FixtureRow from '@/components/FixtureRow';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
+import PlayerSearch from '@/components/PlayerSearch';
 import { isPastFixture } from '@/lib/club-lists';
 import { kickoff } from '@/lib/fixtures';
 
@@ -119,6 +120,12 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
             ) : players.length === 0 ? (
               <div className="glass-panel" style={{ padding: '1.25rem' }}>{isHydrated ? 'No players listed yet.' : 'Loading…'}</div>
             ) : (
+              <>
+              {/* Only players with a public page: a junior playing up has none */}
+              {players.length > 6 && (
+                <PlayerSearch clubSlug={club.slug} placeholder={`Search the ${team.name} squad`}
+                  players={players.filter(p => !juniorIds.has(p.id) && !p.is_junior)} />
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: '0.75rem' }}>
                 {players.map(p => {
                   const card = (
@@ -141,6 +148,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
                   );
                 })}
               </div>
+              </>
             )}
           </section>
 
