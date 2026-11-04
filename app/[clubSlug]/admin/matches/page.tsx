@@ -42,6 +42,7 @@ import {
   Share2
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import { validHalfMinutes } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
 import { todayIso } from '@/lib/finance';
 import { useDoorCheckinUrl } from '@/lib/door-code';
@@ -442,6 +443,8 @@ export default function AdminMatchesPage({
         ...(groundId ? { ground_id: groundId, pitch_label: pitchLabel } : {}),
         // Youth teams play small-sided: start their fixtures in the team's format
         ...(newMatchFormat(teamId) ? { match_format: newMatchFormat(teamId) } : {}),
+        // The team's usual half length, so the clock and minutes played follow it
+        ...(validHalfMinutes(teams.find(t => t.id === teamId)?.half_minutes) ? { half_minutes: validHalfMinutes(teams.find(t => t.id === teamId)?.half_minutes) } : {}),
       });
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
     }

@@ -1,5 +1,5 @@
 import { Club, Match, NewsArticle, ClubEvent, HeroSliderPinnedItem } from './supabase/types';
-import { getLiveMinute } from './match-clock';
+import { getLiveMinuteLabel } from './match-clock';
 import { publicFixtures, soonestFirst } from './fixtures';
 
 /**
@@ -37,7 +37,7 @@ export function getDefaultHeroPinnedItems(
       target_id: liveOrUpcoming.id,
       title: `${liveOrUpcoming.home_team_name} vs ${liveOrUpcoming.away_team_name}`,
       subtitle: `${compLabel} • ${liveOrUpcoming.venue}`,
-      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(liveOrUpcoming)}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
+      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinuteLabel(liveOrUpcoming)}' IN PLAY` : `PINNED FIXTURE • ${compLabel.toUpperCase()}`,
       image_url: '',
       cta_label: isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${liveOrUpcoming.id}`,

@@ -12,7 +12,7 @@ import { matchPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import { isPlayerMember } from '@/lib/supabase/types';
 import { Calendar, QrCode } from 'lucide-react';
-import { getLiveMinute } from '@/lib/match-clock';
+import { getLiveMinuteLabel } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
@@ -167,7 +167,7 @@ export default function AdminDashboardPage({
               <div>
                 <dt>{liveMatch ? 'Live match' : 'Fixtures'}</dt>
                 <dd className={liveMatch ? 'is-live' : undefined}>{liveMatch ? `${liveMatch.home_score} : ${liveMatch.away_score}` : clubMatches.length}</dd>
-                <span className="admin-note">{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}′ in progress`) : 'This season'}</span>
+                <span className="admin-note">{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinuteLabel(liveMatch)}′ in progress`) : 'This season'}</span>
                 {canFixtures && <Link href={`/${club.slug}/admin/matches`}>Manage fixtures</Link>}
               </div>
               <div>

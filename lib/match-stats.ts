@@ -4,6 +4,7 @@
 import type { ClubScoreRuleConfig, MatchAuditPayload, PlayerPosition } from './supabase/types';
 import type { StatsDelta } from './player-stats';
 import { getGoalPointsForPosition } from './clubscore-defaults';
+import { fullMinutes } from './match-length';
 
 export interface MatchStatLine {
   member_id: string;
@@ -106,21 +107,23 @@ export function describeChange(before: MatchStatLine, after: MatchStatLine): str
   });
 }
 
-/** Minutes in a full match of this format */
-export const fullMatchMinutes = (format?: string | null) => (format === '7v7' ? 50 : format === '9v9' ? 60 : 90);
+type LengthOf = string | { half_minutes?: number | null; match_format?: string | null } | null | undefined;
+
+/** Minutes in a full match: the match's own half length when it has one, else its format's usual length */
+export const fullMatchMinutes = (match?: LengthOf) => fullMinutes(typeof match === 'string' || match == null ? { match_format: match } : match);
 
 /**
  * Line-up players with no appearance in a match's saved stats, as fixed lines (played, full-match
  * minutes, anything else they already had kept). Only ever adds: someone off the line-up may
  * still have played (subbed off), so taking appearances away stays a manual fix.
  */
-export function lineupAdditions(saved: MatchStatLine[], lineupIds: (string | null | undefined)[], format?: string | null): MatchStatLine[] {
+export function lineupAdditions(saved: MatchStatLine[], lineupIds: (string | null | undefined)[], match?: LengthOf): MatchStatLine[] {
   const byId = new Map(saved.map(l => [l.member_id, l]));
   return [...new Set(lineupIds)]
     .filter((id): id is string => !!id && !byId.get(id)?.played)
     .map(id => {
       const line = byId.get(id) || emptyLine(id);
-      return { ...line, played: true, minutes: line.minutes || fullMatchMinutes(format) };
+      return { ...line, played: true, minutes: line.minutes || fullMatchMinutes(match) };
     });
 }
 

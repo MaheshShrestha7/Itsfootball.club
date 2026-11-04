@@ -45,7 +45,7 @@ import {
   CalendarPlus
 } from 'lucide-react';
 import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
-import { getLiveMinute } from '@/lib/match-clock';
+import { getLiveMinuteLabel } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch, withTeamSide } from '@/lib/teams';
@@ -301,7 +301,7 @@ export default function ClubPublicPage({
             category: 'match',
             phoneTabLabel: isLive ? 'Live Match' : 'Fixture',
             tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
-            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinute(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
+            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinuteLabel(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
             bgImage: item.image_url || club.banner_url || '',
             title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
             subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
@@ -373,7 +373,7 @@ export default function ClubPublicPage({
         category: 'match',
         tabLabel: liveMatch ? 'Matchday Live' : 'Matchday Hub',
         badge: liveMatch
-          ? `MATCHDAY LIVE • ${getLiveMinute(liveMatch)}' IN PLAY`
+          ? `MATCHDAY LIVE • ${getLiveMinuteLabel(liveMatch)}' IN PLAY`
           : upcomingMatches[0]
           ? `UPCOMING FIXTURE • ${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? (upcomingMatches[0].match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`
           : 'MATCHDAY HUB',

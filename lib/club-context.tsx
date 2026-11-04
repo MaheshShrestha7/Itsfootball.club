@@ -47,6 +47,7 @@ import {
 import { getDefaultClubScoreRules, getGoalPointsForPosition } from './clubscore-defaults';
 import { addSeasonStats, type StatsDelta } from './player-stats';
 import { isEmptyLine, lineDelta, linesFromAudit, pointChanges, emptyLine, type MatchStatLine } from './match-stats';
+import { eventMinuteLabel } from './match-length';
 import { inSeason } from './member-season-stats';
 import {
   buildTiesheet,
@@ -2121,17 +2122,17 @@ export function ClubProvider({
         if (evt.event_type === 'goal' || evt.event_type === 'penalty') {
           const scorer = members.find(m => m.id === evt.player_id);
           const pts = getGoalPointsForPosition(rules, scorer?.player_position);
-          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Goal (${evt.minute}') vs ${opponent}`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'match_goal', `Goal (${eventMinuteLabel(evt)}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { goals: 1 });
         } else if (evt.event_type === 'yellow_card') {
           const pts = rules.points_yellow_card_penalty ?? -3;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow card (${evt.minute}') vs ${opponent}`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Yellow card (${eventMinuteLabel(evt)}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { yellow_cards: 1 });
         } else if (evt.event_type === 'red_card') {
           const pts = rules.points_red_card_penalty ?? -10;
-          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red card (${evt.minute}') vs ${opponent}`, matchId, season);
+          awardClubScorePoints(evt.player_id, pts, 'disciplinary_card', `Red card (${eventMinuteLabel(evt)}') vs ${opponent}`, matchId, season);
           totalXP += pts;
           addStats(evt.player_id, { red_cards: 1 });
         }
@@ -2139,7 +2140,7 @@ export function ClubProvider({
 
       if (evt.assist_player_id) {
         const pts = rules.points_assist ?? 7;
-        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Assist (${evt.minute}') vs ${opponent}`, matchId, season);
+        awardClubScorePoints(evt.assist_player_id, pts, 'match_assist', `Assist (${eventMinuteLabel(evt)}') vs ${opponent}`, matchId, season);
         totalXP += pts;
         addStats(evt.assist_player_id, { assists: 1 });
       }

@@ -30,7 +30,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { getLiveMinute } from '@/lib/match-clock';
+import { getLiveMinuteLabel } from '@/lib/match-clock';
 import { DATE_LOCALE } from '@/lib/dates';
 
 export default function AdminHeroSliderPage({
@@ -180,7 +180,7 @@ export default function AdminHeroSliderPage({
       target_id: m.id,
       title: `${m.home_team_name} vs ${m.away_team_name}`,
       subtitle: `${m.competition} • ${m.venue}`,
-      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinute(m)}'` : `FIXTURE • ${m.competition.toUpperCase()}`,
+      badge: isLive ? `MATCHDAY LIVE • ${getLiveMinuteLabel(m)}'` : `FIXTURE • ${m.competition.toUpperCase()}`,
       image_url: '',
       cta_label: isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups',
       cta_link: `/${club.slug}/match/${m.id}`,
@@ -798,7 +798,7 @@ export default function AdminHeroSliderPage({
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                           <span className={isLive ? 'admin-pill is-danger' : 'admin-pill'} style={{ textTransform: 'capitalize' }}>
-                            {isLive ? `Live, ${getLiveMinute(m)}′` : m.status}
+                            {isLive ? `Live, ${getLiveMinuteLabel(m)}′` : m.status}
                           </span>
                           <span className="text-meta">
                             {m.competition}

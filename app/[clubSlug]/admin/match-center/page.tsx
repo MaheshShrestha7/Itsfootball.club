@@ -50,6 +50,7 @@ import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS, useNowTick } from '@/lib/match-clock';
+import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, fullMinutes, halfMinutes, maxMinute, periodStartMinute, splitMinute } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -204,7 +205,7 @@ export default function AdminMatchCenterControllerPage({
     })).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, match?.status, match?.home_score, match?.away_score]);
-  const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => b.minute - a.minute);
+  const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => compareEventMinute(b, a));
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const squadPlayers = squadForMatch(members.filter(m => m.club_id === club.id && isPlayerMember(m)), match, clubTeams, clubTeamMembers);
 
@@ -438,14 +439,16 @@ export default function AdminMatchCenterControllerPage({
         level && pens ? match.away_penalty_score : undefined, 'completed');
       showFeedback('Full time. The result is saved to the tournament.');
     } else {
-      handlePeriodTransition('full_time', 'completed', 90);
+      // The clock stops on the real full-time minute (24 in a 2 × 12 game), or the end of extra time
+      handlePeriodTransition('full_time', 'completed', match.period === 'extra_time' || match.period === 'penalties'
+        ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match));
     }
     setIsAuditModalOpen(true);
   };
 
   // Adjust match minute
   const handleMinuteAdjust = (delta: number) => {
-    const newMin = Math.max(0, Math.min(120, getLiveMinute(match) + delta));
+    const newMin = Math.max(0, Math.min(maxMinute(match), getLiveMinute(match) + delta));
     updateMatch(match.id, { current_minute: newMin });
     setMinuteOverride(null);
   };
@@ -524,11 +527,15 @@ export default function AdminMatchCenterControllerPage({
     }
 
     // Read the clock now, not at the last re-render
-    const minute = Number(minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match));
+    const clockMinute = Number(minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match));
+    // Past the end of a half the minute is stoppage time: 14 in a 12-minute first half saves as 12+2
+    const split = splitMinute(match, match.period, clockMinute);
+    const minuteText = eventMinuteLabel({ minute: split.minute, added_minute: split.added });
     addMatchEvent({
       match_id: match.id,
       club_id: club.id,
-      minute,
+      minute: split.minute,
+      ...(split.added ? { added_minute: split.added } : {}),
       event_type: eventType,
       team_side: teamSide,
       player_name: resolvedPlayerName,
@@ -536,7 +543,7 @@ export default function AdminMatchCenterControllerPage({
       detail_text: detail || undefined,
     });
 
-    showFeedback(`Logged ${EVENT_LABEL[eventType] || eventType} for ${resolvedPlayerName} (${minute}')`);
+    showFeedback(`Logged ${EVENT_LABEL[eventType] || eventType} for ${resolvedPlayerName} (${minuteText}')`);
     setEventDetail('');
     setAssistName('');
     setSelectedAssistId('');
@@ -878,9 +885,9 @@ export default function AdminMatchCenterControllerPage({
 
               {/* Quick period changes */}
               <div className="mc-periods" role="group" aria-label="Period">
-                <button type="button" className="mc-period" aria-pressed={match.period === 'first_half'} onClick={() => handlePeriodTransition('first_half', 'live', 1)}>1st half</button>
-                <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', 45)}>Half time</button>
-                <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', 46)}>2nd half</button>
+                <button type="button" className="mc-period" aria-pressed={match.period === 'first_half'} onClick={() => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half'))}>1st half</button>
+                <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', halfMinutes(match))}>Half time</button>
+                <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half'))}>2nd half</button>
                 <button type="button" className="mc-period" aria-pressed={match.status === 'completed'} onClick={handleFullTime}>Full time</button>
               </div>
             </div>
@@ -1089,11 +1096,15 @@ export default function AdminMatchCenterControllerPage({
                       <input id="match-center-match-minute"
                         type="number"
                         min={0}
-                        max={120}
+                        max={maxMinute(match)}
                         className="form-input"
                         value={eventMinute}
+                        aria-describedby="match-center-minute-note"
                         onChange={e => setMinuteOverride({ matchId: match.id, minute: Number(e.target.value) })}
                       />
+                      {clockLabel(match, match.period, eventMinute) !== String(eventMinute) && (
+                        <small id="match-center-minute-note" style={{ color: 'var(--text-muted)' }}>Stoppage time, saves as {clockLabel(match, match.period, eventMinute)}&prime;</small>
+                      )}
                     </div>
                   </div>
 
@@ -1231,7 +1242,7 @@ export default function AdminMatchCenterControllerPage({
               <ol className="mc-log">
                 {events.map(evt => (
                   <li key={evt.id}>
-                    <span className="mc-log-min">{evt.minute}&prime;</span>
+                    <span className="mc-log-min">{eventMinuteLabel(evt)}&prime;</span>
                     <div className="mc-log-what">
                       <span className="mc-log-kind">
                         <EventIcon type={evt.event_type} size={14} />
@@ -1245,9 +1256,9 @@ export default function AdminMatchCenterControllerPage({
                     </div>
                     <button data-needs-full
                       type="button"
-                      onClick={() => handleDeleteEvent(evt.id, `${EVENT_LABEL[evt.event_type] || evt.event_type} (${evt.minute}')`)}
+                      onClick={() => handleDeleteEvent(evt.id, `${EVENT_LABEL[evt.event_type] || evt.event_type} (${eventMinuteLabel(evt)}')`)}
                       className="admin-icon-btn is-danger"
-                      aria-label={`Delete ${EVENT_LABEL[evt.event_type] || evt.event_type} at ${evt.minute} minutes`}
+                      aria-label={`Delete ${EVENT_LABEL[evt.event_type] || evt.event_type} at ${eventMinuteLabel(evt)} minutes`}
                       title="Delete event and revert score if goal"
                     >
                       <Trash2 size={14} aria-hidden="true" />
@@ -1331,11 +1342,11 @@ export default function AdminMatchCenterControllerPage({
             )}
             <div className="mc-period-list">
               {([
-                { label: 'Kick-off, first half', mark: '1′', go: () => handlePeriodTransition('first_half', 'live', 1) },
-                { label: 'Half time whistle', mark: '45′', go: () => handlePeriodTransition('halftime', 'halftime', 45) },
-                { label: 'Kick-off, second half', mark: '46′', go: () => handlePeriodTransition('second_half', 'live', 46) },
-                { label: 'Extra time (cup or knockout)', mark: '91′', go: () => handlePeriodTransition('extra_time', 'live', 91) },
-                { label: 'Penalty shootout', mark: 'Pens', go: () => handlePeriodTransition('penalties', 'live', 120) },
+                { label: 'Kick-off, first half', mark: `${periodStartMinute(match, 'first_half')}′`, go: () => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half')) },
+                { label: 'Half time whistle', mark: `${halfMinutes(match)}′`, go: () => handlePeriodTransition('halftime', 'halftime', halfMinutes(match)) },
+                { label: 'Kick-off, second half', mark: `${periodStartMinute(match, 'second_half')}′`, go: () => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half')) },
+                { label: 'Extra time (cup or knockout)', mark: `${periodStartMinute(match, 'extra_time')}′`, go: () => handlePeriodTransition('extra_time', 'live', periodStartMinute(match, 'extra_time')) },
+                { label: 'Penalty shootout', mark: 'Pens', go: () => handlePeriodTransition('penalties', 'live', fullMinutes(match) + 2 * extraHalfMinutes(match)) },
               ]).map(p => (
                 <button key={p.label} type="button" className="btn btn-secondary mc-period-row" onClick={p.go}>
                   <span>{p.label}</span>
