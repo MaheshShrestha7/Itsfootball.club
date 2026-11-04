@@ -195,7 +195,7 @@ export default function ClubIdentitySection({
             <div className="glass-panel cn-lead" style={reveal(40)}>
               <div className="cn-big">
                 <span className="cn-fig">
-                  <AnimatedCounter value={bigGames} enabled={isInView} duration={500} />
+                  <AnimatedCounter value={bigGames} enabled={isInView} duration={850} />
                 </span>
                 <span className="cn-big-label">
                   {plural(bigGames, 'game played', 'games played')}
@@ -243,7 +243,7 @@ export default function ClubIdentitySection({
                 {n.events > 0 && (
                   <Link href={`/${slug}/events`} className="glass-panel cn-tile" style={reveal(80)}>
                     <span className="cn-fig cn-fig-md">
-                      <AnimatedCounter value={n.events} enabled={isInView} duration={500} />
+                      <AnimatedCounter value={n.events} enabled={isInView} duration={850} />
                     </span>
                     <span className="cn-tile-label">{plural(n.events, 'Event', 'Events')}</span>
                     {n.upcomingEvents > 0 && <span className="cn-tile-sub">{n.upcomingEvents} coming up</span>}
@@ -259,7 +259,7 @@ export default function ClubIdentitySection({
                 {n.sponsors > 0 && (
                   <Link href={`/${slug}/sponsor`} className="glass-panel cn-tile" style={reveal(120)}>
                     <span className="cn-fig cn-fig-md">
-                      <AnimatedCounter value={n.sponsors} enabled={isInView} duration={500} />
+                      <AnimatedCounter value={n.sponsors} enabled={isInView} duration={850} />
                     </span>
                     <span className="cn-tile-label">{plural(n.sponsors, 'Sponsor', 'Sponsors')}</span>
                     <span className="cn-tile-sub">Backing the club</span>
@@ -279,7 +279,7 @@ export default function ClubIdentitySection({
                 {rows.map(r => {
                   const inner = (
                     <>
-                      <span className="cn-v">{r.value.toLocaleString()}</span>
+                      <span className="cn-v"><AnimatedCounter value={r.value} enabled={isInView} duration={850} /></span>
                       <span className="cn-t">{r.label}<span>{r.sub}</span></span>
                       {r.go ? <span className="cn-go">{r.go} →</span> : <span />}
                     </>
