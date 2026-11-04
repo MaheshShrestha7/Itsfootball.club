@@ -35,6 +35,7 @@ import {
   Target
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import { compareEventMinute, eventMinuteLabel, lengthLabel, validHalfMinutes } from '@/lib/match-length';
 import MatchShareButton from '@/components/MatchShareButton';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
@@ -96,7 +97,7 @@ export default function MatchCenterPage({
         .map(e => juniorFixture
           ? { ...e, player_name: juniorPublicName(e.player_name), assist_player_name: e.assist_player_name ? juniorPublicName(e.assist_player_name) : e.assist_player_name }
           : e)
-        .sort((a, b) => b.minute - a.minute)
+        .sort((a, b) => compareEventMinute(b, a))
     : [];
   const allSquadPlayers = club ? members.filter(m => m.club_id === club.id && isPlayerMember(m)) : [];
 
@@ -111,7 +112,7 @@ export default function MatchCenterPage({
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
   const motmMember = motmLog ? members.find(m => m.id === motmLog.member_id) : undefined;
-  const goalEvents = events.filter(e => GOAL_EVENT_TYPES.includes(e.event_type)).slice().sort((a, b) => a.minute - b.minute);
+  const goalEvents = events.filter(e => GOAL_EVENT_TYPES.includes(e.event_type)).slice().sort(compareEventMinute);
 
   // Each side's color: the club's goes to the club's own side, not simply to "home"
   const clubColor = club?.primary_color || '#10B981';
@@ -600,6 +601,10 @@ export default function MatchCenterPage({
                   <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </>
               )}
+              {/* The game's length, once it's set or isn't a full 90 */}
+              {(validHalfMinutes(match.half_minutes) !== null || (match.match_format && match.match_format !== '11v11')) && (
+                <span style={{ marginLeft: '0.4rem' }}>{lengthLabel(match)}</span>
+              )}
             </span>
             <span className="text-note">
               {(!match.competition || match.competition === 'Premier Regional League') ? (match.match_type ? `${match.match_type.toUpperCase()} FIXTURE` : 'CLUB FRIENDLY') : match.competition} • {match.venue}
@@ -738,8 +743,8 @@ export default function MatchCenterPage({
               venue: match.venue,
               // The club's time zone, so the server's HTML and the browser agree on the day
               dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
-              goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
-              redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, side: e.team_side, player: e.player_name })),
+              goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
+              redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name })),
               playerOfTheMatch: motmMember?.full_name,
             })}
           />
@@ -803,7 +808,7 @@ export default function MatchCenterPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   {goalEvents.map(evt => (
                     <div key={evt.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{evt.minute}&apos;</span>
+                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{eventMinuteLabel(evt)}&apos;</span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
                           {playerLink(evt.player_name, evt.team_side)}{evt.event_type === 'penalty' ? ' (pen.)' : evt.event_type === 'own_goal' ? ' (own goal)' : ''}
@@ -911,11 +916,13 @@ export default function MatchCenterPage({
                       justifyContent: 'center',
                       fontWeight: 900,
                       fontFamily: 'var(--font-heading)',
-                      fontSize: '0.9rem',
+                      // Stoppage minutes ("45+3'") need a smaller size to fit the circle
+                      fontSize: evt.added_minute ? '0.68rem' : '0.9rem',
+                      flexShrink: 0,
                       color: evt.event_type === 'yellow_card' ? '#000000' : '#FFFFFF',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
                     }}>
-                      {evt.minute}&apos;
+                      {eventMinuteLabel(evt)}&apos;
                     </div>
 
                     <div style={{ flex: 1 }}>

@@ -20,7 +20,7 @@ export async function offerLineupAppearances(games: Match[], lineupIds: (string 
     // null: saved before per-match stats were kept, so there's nothing to add to safely
     const saved = await deps.loadMatchStatLines(match.id);
     if (!saved) continue;
-    const added = lineupAdditions(saved, lineupIds, match.match_format);
+    const added = lineupAdditions(saved, lineupIds, match);
     if (added.length) plans.push({ match, saved, added });
   }
   if (!plans.length) return null;

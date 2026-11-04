@@ -6,6 +6,7 @@ import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from
 import { useClub } from '@/lib/club-context';
 import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
 import { clubLineupSide } from '@/lib/tournament-engine';
+import { eventMinuteLabel, fullMinutes } from '@/lib/match-length';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import {
@@ -58,6 +59,7 @@ export default function StatsAuditModal({
         return {
           id: e.id,
           minute: e.minute,
+          added_minute: e.added_minute || 0,
           event_type: e.event_type as 'goal' | 'penalty' | 'yellow_card' | 'red_card',
           team_side: clubSide,
           player_name: e.player_name,
@@ -111,7 +113,7 @@ export default function StatsAuditModal({
   // Minutes from what was recorded: starters (the lineup on the pitch) play the whole match unless
   // subbed off, a sub plays from the minute they came on. Anyone else ticked gets the appearance only.
   const minutesByMember = useMemo(() => {
-    const full = match.match_format === '7v7' ? 50 : match.match_format === '9v9' ? 60 : 90;
+    const full = fullMinutes(match);
     const byName = (name: string) => squadPlayers.find(p => p.full_name.toLowerCase() === name.trim().toLowerCase())?.id;
     const coords = (clubSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
     const on = new Map<string, number>();
@@ -128,7 +130,7 @@ export default function StatsAuditModal({
     const minutes: Record<string, number> = {};
     on.forEach((start, id) => { minutes[id] = Math.max(0, (off.get(id) ?? full) - start); });
     return minutes;
-  }, [match.match_format, match.home_lineup_coords, match.away_lineup_coords, clubSide, events, squadPlayers]);
+  }, [match, clubSide, events, squadPlayers]);
 
   if (!isOpen) return null;
 
@@ -360,7 +362,7 @@ export default function StatsAuditModal({
                     </div>
                     {goals.length > 0 && (
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '10px', padding: '0.5rem 0.75rem' }}>
-                        Scorers: {goals.map(e => `${e.player_name} ${e.minute}'`).join(', ')}
+                        Scorers: {goals.map(e => `${e.player_name} ${eventMinuteLabel(e)}'`).join(', ')}
                       </div>
                     )}
                     {(unlinked > 0 || appearanceMemberIds.length === 0) && (
@@ -415,7 +417,7 @@ export default function StatsAuditModal({
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '80px' }}>
                           <span style={{ fontSize: '0.78rem', fontWeight: 900, color: 'var(--c-amber)', fontFamily: 'var(--font-mono)' }}>
-                            {evt.minute}&apos;
+                            {eventMinuteLabel(evt)}&apos;
                           </span>
                           <span className={`badge ${evt.event_type.includes('card') ? 'badge-secondary' : 'badge-primary'}`} style={{ fontSize: '0.7rem' }}>
                             {evt.event_type.toUpperCase()}

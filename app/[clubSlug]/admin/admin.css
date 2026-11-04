@@ -842,3 +842,34 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
 @media (prefers-reduced-motion: reduce) {
   .admin-shell *, .admin-shell *::before, .admin-shell *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Half length (team and fixture forms): minus, the minutes, plus; one helper line the error replaces */
+.admin-shell .hl-field { display: grid; gap: 6px; min-width: 0; }
+.admin-shell .hl-field .form-label { margin: 0; }
+.admin-shell .hl-len { display: flex; align-items: center; gap: var(--space-sm); }
+.admin-shell .hl-step { display: inline-grid; grid-template-columns: 40px 5.5rem 40px; gap: 4px; align-items: center; }
+.admin-shell .hl-input { height: 40px; padding: 0 var(--space-xs); text-align: center; font-family: var(--font-heading); font-size: var(--text-lg); font-weight: 600; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; outline: 2px solid transparent; outline-offset: -3px; }
+.admin-shell .hl-input::-webkit-outer-spin-button, .admin-shell .hl-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.admin-shell .hl-input:focus-visible { outline-color: var(--color-accent); }
+.admin-shell .hl-input[aria-invalid='true'] { border-color: var(--color-danger); }
+.admin-shell .hl-step-btn { position: relative; height: 40px; border-radius: var(--radius-control); border: 1px solid var(--color-rule-strong); background: var(--color-paper-2); color: var(--color-ink); font: inherit; font-size: var(--text-lg); font-weight: 600; line-height: 1; cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out); }
+.admin-shell .hl-step-btn::before { content: ""; position: absolute; inset: -2px; }
+.admin-shell .hl-step-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.admin-shell .hl-step-btn:active:not(:disabled) { transform: translateY(1px); }
+.admin-shell .hl-step-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.admin-shell .hl-unit { font-size: var(--text-sm); color: var(--color-ink-2); }
+.admin-shell .hl-help { min-height: 1lh; margin: 0; font-size: var(--text-sm); line-height: 1.45; color: var(--color-ink-2); }
+.admin-shell .hl-help b { color: var(--color-ink); font-weight: 600; }
+.admin-shell .hl-help.is-error { color: var(--color-danger); }
+.admin-shell .hl-from { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
+.admin-shell .hl-from-val { min-width: 0; font-size: var(--text-md); color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.admin-shell .hl-from-val b { font-family: var(--font-heading); }
+.admin-shell .hl-from-val span { font-size: var(--text-sm); color: var(--color-ink-2); }
+.admin-shell .hl-link { position: relative; padding: 0; border: 0; background: none; color: var(--color-accent-ink); font: inherit; font-size: var(--text-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; cursor: pointer; transition: color var(--dur-micro) var(--ease-out); }
+.admin-shell .hl-link::before { content: ""; position: absolute; inset: -8px -4px; }
+.admin-shell .hl-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 4px; }
+@media (hover: hover) {
+  .admin-shell .hl-step-btn:hover:not(:disabled) { background: var(--color-paper-3); border-color: var(--color-muted); }
+  .admin-shell .hl-link:hover { color: var(--color-ink); }
+}
+@media (prefers-reduced-motion: reduce) { .admin-shell .hl-step-btn, .admin-shell .hl-link { transition: none; } .admin-shell .hl-step-btn:active:not(:disabled) { transform: none; } }

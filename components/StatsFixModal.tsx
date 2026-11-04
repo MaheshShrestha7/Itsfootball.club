@@ -118,7 +118,7 @@ export default function StatsFixModal({ match, players, onClose, onFixed }: Prop
   // Line-up players with no stats from this match (e.g. the line-up was put in after the stats were saved)
   const lineupMissing = useMemo(() => {
     const coords = (clubLineupSide(match) === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
-    return lineupAdditions(rowIds.map(current), coords.map(c => c.member_id).filter(id => players.some(p => p.id === id)), match.match_format);
+    return lineupAdditions(rowIds.map(current), coords.map(c => c.member_id).filter(id => players.some(p => p.id === id)), match);
   }, [match, players, saved, edited]); // eslint-disable-line react-hooks/exhaustive-deps
   const addLineup = () => setEdited(prev => ({ ...prev, ...Object.fromEntries(lineupMissing.map(l => [l.member_id, l])) }));
   const score = `${match.home_team_name} ${match.home_score} – ${match.away_score} ${match.away_team_name}`;

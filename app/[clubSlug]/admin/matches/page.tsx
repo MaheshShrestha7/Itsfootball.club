@@ -42,6 +42,8 @@ import {
   Share2
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
+import { DEFAULT_HALF_MINUTES, validHalfMinutes } from '@/lib/match-length';
+import HalfLengthField, { parseHalfMinutes, useHalfLengthReady } from '@/components/HalfLengthField';
 import { defaultSeasonLabel } from '@/lib/season';
 import { todayIso } from '@/lib/finance';
 import { useDoorCheckinUrl } from '@/lib/door-code';
@@ -177,6 +179,10 @@ export default function AdminMatchesPage({
     /** The ground in the public directory ('' = not linked) and its pitch */
     ground_id: string;
     pitch_label: string;
+    /** This game's own half length as typed; used only while half_custom is on */
+    half_text: string;
+    /** Off: the game follows its team's usual half length */
+    half_custom: boolean;
   }>({
     title: '',
     match_type: 'friendly',
@@ -200,6 +206,8 @@ export default function AdminMatchesPage({
     team_id: '',
     ground_id: '',
     pitch_label: '',
+    half_text: '',
+    half_custom: false,
   });
 
   const showToast = (msg: string) => {
@@ -235,6 +243,8 @@ export default function AdminMatchesPage({
       team_id: prefillTeam || (teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId),
       ground_id: '',
       pitch_label: '',
+      half_text: '',
+      half_custom: false,
     });
     setIsFormModalOpen(true);
   };
@@ -292,6 +302,10 @@ export default function AdminMatchesPage({
       team_id: m.team_id || mainTeamId,
       ground_id: m.ground_id || '',
       pitch_label: m.pitch_label || '',
+      // A game whose length differs from its team's opens on its own length
+      half_text: validHalfMinutes(m.half_minutes) ? String(m.half_minutes) : '',
+      half_custom: validHalfMinutes(m.half_minutes) !== null
+        && validHalfMinutes(m.half_minutes) !== validHalfMinutes(teams.find(t => t.id === (m.team_id || mainTeamId))?.half_minutes),
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setIsFormModalOpen(true);
@@ -327,6 +341,16 @@ export default function AdminMatchesPage({
     return format === '7v7' || format === '9v9' ? format : undefined;
   };
 
+  // Half length (migration 20261151): a fixture follows its team's usual length unless the admin
+  // changes it for this game. Hidden, and never sent, until the database has the column.
+  const halfReady = useHalfLengthReady();
+  const formTeamId = (form: { match_type: Match['match_type']; team_id: string }) =>
+    isTeamFixture({ match_type: form.match_type }) ? (form.team_id || mainTeamId || null) : null;
+  const teamHalfOf = (teamId: string | null) => validHalfMinutes(teams.find(t => t.id === teamId)?.half_minutes);
+  /** The length a game falls back to with no team length: its format's usual one */
+  const usualHalfOf = (teamId: string | null, editingFormat?: string | null) =>
+    DEFAULT_HALF_MINUTES[editingFormat || newMatchFormat(teamId) || '11v11'] ?? 45;
+
   // Submit Match Form (Create or Update)
   const handleSubmitMatch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,6 +369,13 @@ export default function AdminMatchesPage({
 
     if (!cleanOpponent) {
       showToast('Please provide an opponent name or internal squad name.');
+      return;
+    }
+
+    // This game's own half length, when the admin changed it; out of range stays in the form
+    const halfTyped = parseHalfMinutes(form.half_text);
+    if (halfReady && form.half_custom && !halfTyped.empty && halfTyped.minutes === null) {
+      document.getElementById('form-half')?.focus();
       return;
     }
 
@@ -374,6 +405,8 @@ export default function AdminMatchesPage({
     // database has these columns, so a club that hasn't run the migration never sends them)
     const groundId = form.ground_id || null;
     const pitchLabel = groundId ? form.pitch_label || null : null;
+    // Changed for this game: its own length (empty = the usual one); otherwise the team's
+    const halfMinutes = form.half_custom ? (halfTyped.empty ? null : halfTyped.minutes) : teamHalfOf(teamId);
 
     if (editingMatchId) {
       // Update existing fixture - PRESERVE status & scores
@@ -402,6 +435,7 @@ export default function AdminMatchesPage({
         ...(teamId !== (editingMatch?.team_id ?? null) ? { team_id: teamId } : {}),
         ...(groundId !== (editingMatch?.ground_id ?? null) ? { ground_id: groundId } : {}),
         ...(pitchLabel !== (editingMatch?.pitch_label ?? null) ? { pitch_label: pitchLabel } : {}),
+        ...(halfReady && halfMinutes !== validHalfMinutes(editingMatch?.half_minutes) ? { half_minutes: halfMinutes } : {}),
         // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -442,6 +476,8 @@ export default function AdminMatchesPage({
         ...(groundId ? { ground_id: groundId, pitch_label: pitchLabel } : {}),
         // Youth teams play small-sided: start their fixtures in the team's format
         ...(newMatchFormat(teamId) ? { match_format: newMatchFormat(teamId) } : {}),
+        // The team's usual half length (or this game's own), so the clock and minutes played follow it
+        ...(halfReady && halfMinutes !== null ? { half_minutes: halfMinutes } : {}),
       });
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
     }
@@ -1340,6 +1376,47 @@ export default function AdminMatchesPage({
                   />
                 </div>
               </div>
+
+              {halfReady && (() => {
+                const teamId = formTeamId(form);
+                const team = teams.find(t => t.id === teamId);
+                const teamHalf = teamHalfOf(teamId);
+                const editingFormat = editingMatchId ? clubMatches.find(x => x.id === editingMatchId)?.match_format : undefined;
+                const usual = usualHalfOf(teamId, editingFormat);
+                const follows = teamHalf ?? usual;
+                const source = team && teamHalf !== null ? `from ${team.name}` : `the usual ${editingFormat || newMatchFormat(teamId) || '11v11'} length`;
+                if (!form.half_custom) {
+                  return (
+                    <div className="hl-field" style={{ marginBottom: '1.25rem' }}>
+                      <span className="form-label" id="form-half-label">Half length</span>
+                      <div className="hl-from" aria-labelledby="form-half-label">
+                        <span className="hl-from-val"><b>{follows} min</b> each half <span>{source}</span></span>
+                        <button type="button" className="hl-link" onClick={() => setForm(f => ({ ...f, half_custom: true, half_text: String(follows) }))}>
+                          Change<span className="sr-only"> half length for this game</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+                const typed = parseHalfMinutes(form.half_text);
+                return (
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <HalfLengthField
+                      id="form-half"
+                      value={form.half_text}
+                      placeholder={follows}
+                      onChange={text => setForm(f => ({ ...f, half_text: text }))}
+                      helper={<>
+                        {!typed.empty && typed.minutes !== null && <b>A {typed.minutes * 2}-minute game. </b>}
+                        Only this fixture changes{team && teamHalf !== null ? `; ${team.name} stays at ${teamHalf}` : ''}.{' '}
+                        <button type="button" className="hl-link" onClick={() => setForm(f => ({ ...f, half_custom: false, half_text: '' }))}>
+                          {team && teamHalf !== null ? `Use the team's ${teamHalf}` : `Use the usual ${usual}`}
+                        </button>
+                      </>}
+                    />
+                  </div>
+                );
+              })()}
 
               <MatchGroundPicker
                 key={editingMatchId || 'new'}

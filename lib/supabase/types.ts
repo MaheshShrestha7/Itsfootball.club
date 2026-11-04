@@ -273,6 +273,8 @@ export interface Match {
   home_lineup_coords?: PitchPosition[];
   away_lineup_coords?: PitchPosition[];
   match_format?: MatchFormat;
+  /** Minutes in each half (copied from the team when the fixture is made); empty = the format's usual length */
+  half_minutes?: number | null;
   is_audited?: boolean;
   /** No push alerts to followers for this match (kick-off, goals, full time) */
   alerts_muted?: boolean;
@@ -648,6 +650,8 @@ export interface DraftLineup {
 export interface MatchAuditItem {
   id: string;
   minute: number;
+  /** Stoppage minutes after `minute` ("12+2'") */
+  added_minute?: number;
   event_type: 'goal' | 'penalty' | 'yellow_card' | 'red_card';
   team_side: 'home' | 'away';
   player_name: string;
@@ -745,6 +749,8 @@ export interface ClubTeam {
   is_junior: boolean;
   hide_public_scores: boolean;
   match_format: ClubTeamFormat;
+  /** The team's usual half length in minutes, copied onto its new fixtures; empty = the format's usual length */
+  half_minutes?: number | null;
   color?: string;
   logo_url?: string;
   description?: string;

@@ -2,7 +2,7 @@
 // the Match): no AI writing, nothing guessed. Search engines and AI answers quote plain sentences like these.
 // Junior names arrive already shortened (publicMember), and a team that hides its scores gets no report.
 
-export interface ReportGoal { minute: number; side: 'home' | 'away'; player: string; penalty?: boolean; ownGoal?: boolean }
+export interface ReportGoal { minute: number; /** Stoppage minutes: 12 + 2 reads 12+2' */ added?: number; side: 'home' | 'away'; player: string; penalty?: boolean; ownGoal?: boolean }
 
 export interface ReportInput {
   home: string;
@@ -15,9 +15,11 @@ export interface ReportInput {
   /** "Saturday 17 October 2026" */
   dateLabel?: string;
   goals: ReportGoal[];
-  redCards: { side: 'home' | 'away'; player: string; minute: number }[];
+  redCards: { side: 'home' | 'away'; player: string; minute: number; added?: number }[];
   playerOfTheMatch?: string;
 }
+
+const minuteText = (m: { minute: number; added?: number }) => `${m.minute}${m.added ? `+${m.added}` : ''}'`;
 
 const list = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
@@ -25,9 +27,9 @@ const list = (items: string[]) =>
 /** "Chris Nguyen (23', 67')", grouped per scorer in the order they first scored */
 function scorers(goals: ReportGoal[]) {
   const by = new Map<string, string[]>();
-  for (const g of [...goals].sort((a, b) => a.minute - b.minute)) {
+  for (const g of [...goals].sort((a, b) => a.minute - b.minute || (a.added || 0) - (b.added || 0))) {
     const name = g.ownGoal ? `${g.player} (own goal)` : g.player;
-    by.set(name, [...(by.get(name) || []), `${g.minute}'${g.penalty ? ' pen' : ''}`]);
+    by.set(name, [...(by.get(name) || []), `${minuteText(g)}${g.penalty ? ' pen' : ''}`]);
   }
   return list([...by].map(([name, mins]) => `${name} (${mins.join(', ')})`));
 }
@@ -52,7 +54,7 @@ export function matchReport(r: ReportInput): string[] {
   if (lines.length) out.push(`Goals for ${lines.join('. Goals for ')}.`);
   if (hs + as > 0 && logged < hs + as) out.push(logged ? 'Not every goal was logged.' : 'Goal details weren’t logged for this match.');
 
-  if (r.redCards.length) out.push(`Sent off: ${list(r.redCards.map(c => `${c.player} (${c.side === 'home' ? r.home : r.away}, ${c.minute}')`))}.`);
+  if (r.redCards.length) out.push(`Sent off: ${list(r.redCards.map(c => `${c.player} (${c.side === 'home' ? r.home : r.away}, ${minuteText(c)})`))}.`);
   if (r.playerOfTheMatch) out.push(`Player of the Match: ${r.playerOfTheMatch}.`);
   return out;
 }
