@@ -12,12 +12,16 @@ interface Props {
   /** Reload the page once it's on (Mission Control re-checks access) */
   reloadWhenOn?: boolean;
   intro?: string;
+  /** Inside Account settings: no top rule or heading of its own (the page's section has them) */
+  embedded?: boolean;
+  /** Told whether it's on, so the page can nudge club admins who haven't turned it on */
+  onStatus?: (on: boolean) => void;
 }
 
 interface Setup { factorId: string; uri: string; secret: string }
 
 /** Turn two-step sign-in (an authenticator app code) on or off for this account */
-export default function TwoStepSignIn({ reloadWhenOn, intro }: Props) {
+export default function TwoStepSignIn({ reloadWhenOn, intro, embedded, onStatus }: Props) {
   const [status, setStatus] = useState<MfaStatus | null | undefined>(undefined);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [code, setCode] = useState('');
@@ -26,6 +30,7 @@ export default function TwoStepSignIn({ reloadWhenOn, intro }: Props) {
 
   const load = useCallback(async () => setStatus(await getMfaStatus()), []);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (status) onStatus?.(Boolean(status.factorId)); }, [status, onStatus]);
 
   const start = async () => {
     const client = getSupabaseClient();
@@ -89,13 +94,20 @@ export default function TwoStepSignIn({ reloadWhenOn, intro }: Props) {
   const on = Boolean(status.factorId);
 
   return (
-    <section style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+    <section style={embedded ? undefined : { marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="min-w-0">
-          <h2 style={{ fontSize: '1rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <ShieldCheck size={16} aria-hidden="true" /> Two-step sign-in
-            {on && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>On</span>}
-          </h2>
+        <div className="min-w-0" style={embedded ? { flex: '1 1 240px' } : undefined}>
+          {embedded ? (
+            <div className="account-row-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              Two-step sign-in
+              <span className={`account-state ${on ? 'is-on' : ''}`}>{on ? 'On' : 'Off'}</span>
+            </div>
+          ) : (
+            <h2 style={{ fontSize: '1rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <ShieldCheck size={16} aria-hidden="true" /> Two-step sign-in
+              {on && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>On</span>}
+            </h2>
+          )}
           <p className="text-note" style={{ maxWidth: '560px' }}>
             {intro || 'Ask for a code from an authenticator app (such as Google Authenticator or 1Password) after you sign in. Recommended for club owners and admins.'}
           </p>

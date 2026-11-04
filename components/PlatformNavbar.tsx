@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isListedClub } from '@/lib/public-tournaments';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, LogOut, Menu, X, HelpCircle, Gauge, BookOpen, MapPin, Scale } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, UserCog, LogOut, Menu, X, HelpCircle, Gauge, BookOpen, MapPin, Scale } from 'lucide-react';
 import { ToolsMenuDesktop, ToolsMenuMobile } from '@/components/ToolsMenu';
 
 export default function PlatformNavbar() {
@@ -25,6 +25,28 @@ export default function PlatformNavbar() {
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // The account menu under your name; a click outside it or Escape closes it
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  useEscapeToClose(accountOpen, setAccountOpen);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!accountRef.current?.contains(e.target as Node)) setAccountOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [accountOpen]);
+
+  const avatar = (size: number) => user && (user.avatar_url ? (
+    <img loading="eager" decoding="async" width={size} height={size} src={user.avatar_url} alt=""
+      style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  ) : (
+    <span aria-hidden="true" style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${Math.round(size * 0.3)}px`, fontWeight: 800, flexShrink: 0 }}>
+      {user.full_name.substring(0, 1).toUpperCase()}
+    </span>
+  ));
 
 
   return (
@@ -194,51 +216,49 @@ export default function PlatformNavbar() {
                 <span>My Clubs</span>
               </Link>
 
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.35rem 0.65rem',
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(var(--tint-rgb), 0.05)',
-                border: '1px solid var(--border-subtle)',
-              }}>
-                {user.avatar_url ? (
-                  <img loading="eager" decoding="async" width={24} height={24}
-                    src={user.avatar_url}
-                    alt={`${user.full_name} photo`}
-                    style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
-                    {user.full_name.substring(0, 1)}
+              {/* Your name opens a small menu: My Clubs, Account settings, Sign out */}
+              <div ref={accountRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen(o => !o)}
+                  aria-expanded={accountOpen}
+                  aria-controls="platform-account-menu"
+                  aria-label={`${user.full_name}: account menu`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.35rem 0.65rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(var(--tint-rgb), 0.05)',
+                    border: `1px solid ${accountOpen ? 'rgba(16, 185, 129, 0.45)' : 'var(--border-subtle)'}`,
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                  }}
+                >
+                  {avatar(24)}
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{user.full_name.split(' ')[0]}</span>
+                  <ChevronDown size={14} aria-hidden="true" style={{ transform: accountOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {accountOpen && (
+                  <div id="platform-account-menu" className="platform-account-panel"
+                    onClick={e => { if ((e.target as HTMLElement).closest('a')) setAccountOpen(false); }}>
+                    <div className="platform-account-who">
+                      {avatar(32)}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{user.full_name}</div>
+                        <div className="text-meta" style={{ overflowWrap: 'anywhere' }}>{user.email}</div>
+                      </div>
+                    </div>
+                    <Link href="/my-clubs" className="platform-account-link"><Shield size={16} aria-hidden="true" /><span>My Clubs</span></Link>
+                    <Link href="/account" className="platform-account-link"><UserCog size={16} aria-hidden="true" /><span>Account settings</span></Link>
+                    <button type="button" className="platform-account-link is-signout" onClick={() => { setAccountOpen(false); logout(); }}>
+                      <LogOut size={16} aria-hidden="true" /><span>Sign out</span>
+                    </button>
                   </div>
                 )}
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                  {user.full_name.split(' ')[0]}
-                </span>
               </div>
-
-              <button
-                type="button"
-                onClick={() => logout()}
-                title="Sign Out"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '0.4rem',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-              >
-                <LogOut size={16} />
-              </button>
             </div>
           ) : (
             <button
@@ -348,6 +368,26 @@ export default function PlatformNavbar() {
                   >
                     <Shield size={18} color="var(--c-green)" />
                     <span>My Clubs</span>
+                  </Link>
+                )}
+                {isAuthenticated && user && (
+                  <Link
+                    href="/account"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      background: 'rgba(var(--tint-rgb), 0.03)',
+                    }}
+                  >
+                    <UserCog size={18} color="var(--c-green)" />
+                    <span>Account settings</span>
                   </Link>
                 )}
 
@@ -549,6 +589,53 @@ export default function PlatformNavbar() {
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <style jsx>{`
+        .platform-account-panel {
+          position: absolute;
+          top: calc(100% + 0.6rem);
+          right: 0;
+          width: 260px;
+          padding: 0.5rem;
+          border-radius: 12px;
+          border: 1px solid var(--border-medium);
+          background: var(--bg-surface-elevated);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+          display: flex;
+          flex-direction: column;
+          z-index: 100;
+        }
+        .platform-account-who {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          padding: 0.5rem 0.6rem 0.65rem;
+          border-bottom: 1px solid var(--border-subtle);
+          margin-bottom: 0.35rem;
+          min-width: 0;
+        }
+        .platform-account-panel :global(.platform-account-link) {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          width: 100%;
+          min-height: 44px;
+          padding: 0.6rem 0.85rem;
+          border: 0;
+          border-radius: 8px;
+          background: none;
+          color: var(--text-secondary);
+          font: inherit;
+          font-size: 0.9rem;
+          font-weight: 600;
+          text-align: left;
+          cursor: pointer;
+        }
+        .platform-account-panel :global(.platform-account-link:hover) {
+          color: var(--text-primary);
+          background: rgba(var(--tint-rgb), 0.04);
+        }
+        .platform-account-panel :global(.platform-account-link.is-signout:hover) {
+          color: var(--c-red);
+        }
         .desktop-platform-nav {
           display: none;
         }

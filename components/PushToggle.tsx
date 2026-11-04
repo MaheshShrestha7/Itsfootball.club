@@ -25,7 +25,8 @@ async function call(action: 'status' | 'follow' | 'unfollow', clubId: string, su
  * Only shown where web push works - on iPhone that means the site was added to the Home Screen.
  */
 /** A className replaces the bell's default look (the club navbar's icon-button class) */
-export default function PushToggle({ clubId, clubName, labelled = false, className }: { clubId: string; clubName: string; labelled?: boolean; className?: string }) {
+/** asSwitch: an on/off switch with the given label (Account settings' Notifications rows) */
+export default function PushToggle({ clubId, clubName, labelled = false, className, asSwitch }: { clubId: string; clubName: string; labelled?: boolean; className?: string; asSwitch?: string }) {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -70,6 +71,15 @@ export default function PushToggle({ clubId, clubName, labelled = false, classNa
   };
 
   const label = following ? `Stop notifications from ${clubName}` : `Get notifications from ${clubName}`;
+  if (asSwitch) {
+    return (
+      <label className="account-switch-wrap">
+        <span>{asSwitch}</span>
+        <button type="button" role="switch" aria-checked={following} aria-label={`${asSwitch}: ${clubName}`} onClick={toggle} disabled={busy}
+          className={`account-switch ${following ? 'is-on' : ''}`} />
+      </label>
+    );
+  }
   // The app home's "Follow the club" card (only where push works, like the bell): words, same toggle
   if (labelled) {
     return (

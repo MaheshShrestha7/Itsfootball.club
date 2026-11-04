@@ -14,7 +14,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { useMyChildren } from '@/lib/use-my-children';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
-import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, UserCog, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 import { useClubSections } from '@/lib/use-club-sections';
 
@@ -29,7 +29,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
   const { user, isAuthenticated, logout, hasClubAdminAccess, getUserRoleForClub } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const drawerRef = useDialog<HTMLDivElement>(mobileMenuOpen, () => setMobileMenuOpen(false));
-  // The avatar's menu: member pass, theme, sign out
+  // The avatar's menu: member pass, account settings, theme, sign out
   const [accountOpen, setAccountOpen] = useState(false);
   const accountPanelRef = useDialog<HTMLDivElement>(accountOpen, () => setAccountOpen(false));
   const accountRef = useRef<HTMLDivElement>(null);
@@ -375,6 +375,10 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
                     <PassIcon size={16} aria-hidden="true" />
                     <span>{passLabel}</span>
                   </Link>
+                  <Link href={`/${club.slug}/account`} className="club-menu-link" aria-current={isHere('/account') ? 'page' : undefined}>
+                    <UserCog size={16} aria-hidden="true" />
+                    <span>Account settings</span>
+                  </Link>
                   <ThemeToggle className="club-menu-link" label="Light or dark theme" />
                   <button type="button" className="club-menu-link club-menu-signout" onClick={() => { setAccountOpen(false); logout(); }}>
                     <LogOut size={16} aria-hidden="true" />
@@ -507,6 +511,13 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
             {/* Theme, then sign in / out, at the foot */}
             <div style={{ paddingTop: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+              {isAuthenticated && user && (
+                <Link href={`/${club.slug}/account`} onClick={() => setMobileMenuOpen(false)} className="club-menu-link"
+                  aria-current={isHere('/account') ? 'page' : undefined}>
+                  <UserCog size={16} aria-hidden="true" />
+                  <span>Account settings</span>
+                </Link>
+              )}
               <ThemeToggle className="club-menu-link" label="Light or dark theme" />
               {isAuthenticated && user ? (
                 <button type="button" className="club-menu-link club-menu-signout" onClick={() => { logout(); setMobileMenuOpen(false); }}>
