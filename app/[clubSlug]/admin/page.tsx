@@ -17,6 +17,8 @@ import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isCountedMember } from '@/lib/people';
+import ClubOverview, { OVERVIEW_VIEWS } from '@/components/admin/ClubOverview';
+import { useUrlTab } from '@/lib/use-url-tab';
 
 export default function AdminDashboardPage({
   params,
@@ -34,6 +36,9 @@ export default function AdminDashboardPage({
   const canFixtures = can(club.id, 'matches');
   const canAnalytics = can(club.id, 'analytics');
   const canMatchCentre = can(club.id, 'match-center');
+
+  // A card's detail screen (?view=money); the bare URL is the dashboard itself
+  const [view, setView] = useUrlTab(OVERVIEW_VIEWS, 'view');
 
   useEffect(() => {
     loadClubAnalytics(club.id);
@@ -58,138 +63,152 @@ export default function AdminDashboardPage({
 
   return (
     <div className="admin-dash">
-      <div className="admin-dash-head">
-        <div>
-          <h1>{club.name} dashboard</h1>
-          <p>Everything for running your club: matches, members, and your public website.</p>
-        </div>
-
-        {(canEditFixtures || canScan) && (
-          <div className="admin-dash-actions">
-            {canEditFixtures && (
-              <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">
-                <Calendar size={16} aria-hidden="true" />
-                <span>Schedule matches</span>
-              </Link>
-            )}
-            {canScan && (
-              <Link href={`/${club.slug}/admin/scanner`} className="btn btn-secondary admin-dash-scan">
-                <QrCode size={16} aria-hidden="true" />
-                <span>Scan passes</span>
-              </Link>
-            )}
-          </div>
-        )}
-      </div>
-
-      {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
-
-      {/* What's waiting on the committee, beside the club's next (or live) game; on phones the live game comes first */}
-      <div className={liveMatch ? 'admin-dash-lead is-live' : 'admin-dash-lead'}>
-        <NeedsYouCard items={attention} />
-
-        <section className={liveMatch ? 'admin-panel admin-matchday is-live' : 'admin-panel admin-matchday'} aria-labelledby="matchday-title">
-          <div className="admin-panel-head">
-            <h2 id="matchday-title">Matchday</h2>
-            {liveMatch ? (
-              <span className="admin-live-tag">{liveMatch.status === 'halftime' ? 'Live, half time' : <>Live, <LiveMinute match={liveMatch} />&prime;</>}</span>
-            ) : (
-              <span className="admin-meta">No live match</span>
-            )}
-          </div>
-
-          {liveMatch ? (
-            <div className="admin-match">
-              <div className="admin-score">
-                <div className="admin-score-side">{liveMatch.home_team_name}<small>Home</small></div>
-                <div className="admin-goals" aria-label={`${liveMatch.home_score} to ${liveMatch.away_score}`}>{liveMatch.home_score} : {liveMatch.away_score}</div>
-                <div className="admin-score-side">{liveMatch.away_team_name}<small>Away</small></div>
-              </div>
-              {canMatchCentre && (
-                <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary">Open Match Centre</Link>
-              )}
+      {!view && (
+        <>
+          <div className="admin-dash-head">
+            <div>
+              <h1>{club.name} dashboard</h1>
+              <p>Everything for running your club: matches, members, and your public website.</p>
             </div>
-          ) : nextMatch ? (
-            <div className="admin-match">
-              <div>
-                <p className="admin-kicker">Next match</p>
-                <p className="admin-fixture">{nextMatch.home_team_name} <span className="admin-vs">vs</span> {nextMatch.away_team_name}</p>
-              </div>
-              <dl className="admin-facts">
-                <div><dt>Date</dt><dd><LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></dd></div>
-                <div><dt>Kick-off</dt><dd><LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>
-                {nextMatch.venue && <div><dt>Venue</dt><dd>{nextMatch.venue}</dd></div>}
-              </dl>
-              <div className="admin-match-actions">
-                {canMatchCentre && (
-                  <Link href={`/${club.slug}/admin/match-center?match=${nextMatch.id}`} className="btn btn-primary">Start match in Match Centre</Link>
+
+            {(canEditFixtures || canScan) && (
+              <div className="admin-dash-actions">
+                {canEditFixtures && (
+                  <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">
+                    <Calendar size={16} aria-hidden="true" />
+                    <span>Schedule matches</span>
+                  </Link>
                 )}
-                <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary">Public match page</Link>
+                {canScan && (
+                  <Link href={`/${club.slug}/admin/scanner`} className="btn btn-secondary admin-dash-scan">
+                    <QrCode size={16} aria-hidden="true" />
+                    <span>Scan passes</span>
+                  </Link>
+                )}
               </div>
-            </div>
+            )}
+          </div>
+
+          {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
+
+          {/* What's waiting on the committee, beside the club's next (or live) game; on phones the live game comes first */}
+          <div className={liveMatch ? 'admin-dash-lead is-live' : 'admin-dash-lead'}>
+            <NeedsYouCard items={attention} />
+
+            <section className={liveMatch ? 'admin-panel admin-matchday is-live' : 'admin-panel admin-matchday'} aria-labelledby="matchday-title">
+              <div className="admin-panel-head">
+                <h2 id="matchday-title">Matchday</h2>
+                {liveMatch ? (
+                  <span className="admin-live-tag">{liveMatch.status === 'halftime' ? 'Live, half time' : <>Live, <LiveMinute match={liveMatch} />&prime;</>}</span>
+                ) : (
+                  <span className="admin-meta">No live match</span>
+                )}
+              </div>
+
+              {liveMatch ? (
+                <div className="admin-match">
+                  <div className="admin-score">
+                    <div className="admin-score-side">{liveMatch.home_team_name}<small>Home</small></div>
+                    <div className="admin-goals" aria-label={`${liveMatch.home_score} to ${liveMatch.away_score}`}>{liveMatch.home_score} : {liveMatch.away_score}</div>
+                    <div className="admin-score-side">{liveMatch.away_team_name}<small>Away</small></div>
+                  </div>
+                  {canMatchCentre && (
+                    <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary">Open Match Centre</Link>
+                  )}
+                </div>
+              ) : nextMatch ? (
+                <div className="admin-match">
+                  <div>
+                    <p className="admin-kicker">Next match</p>
+                    <p className="admin-fixture">{nextMatch.home_team_name} <span className="admin-vs">vs</span> {nextMatch.away_team_name}</p>
+                  </div>
+                  <dl className="admin-facts">
+                    <div><dt>Date</dt><dd><LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></dd></div>
+                    <div><dt>Kick-off</dt><dd><LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>
+                    {nextMatch.venue && <div><dt>Venue</dt><dd>{nextMatch.venue}</dd></div>}
+                  </dl>
+                  <div className="admin-match-actions">
+                    {canMatchCentre && (
+                      <Link href={`/${club.slug}/admin/match-center?match=${nextMatch.id}`} className="btn btn-primary">Start match in Match Centre</Link>
+                    )}
+                    <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary">Public match page</Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="admin-empty">
+                  <p>No match is live and nothing is scheduled.</p>
+                  {canEditFixtures && <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">Schedule a match</Link>}
+                </div>
+              )}
+            </section>
+          </div>
+        </>
+      )}
+
+      {/* Club at a glance: the cards and their detail screens. Before migration 20261150 it falls
+          back to the club's figures, one ruled strip */}
+      <ClubOverview
+        club={club}
+        view={view}
+        onView={setView}
+        fallback={(
+          <section className="admin-panel admin-dash-figures-wrap" aria-label="Club figures">
+            <dl className="admin-dash-figures">
+              <div>
+                <dt>Active season</dt>
+                <dd>{activeSeason?.name || defaultSeasonLabel()}</dd>
+                {canSeasons && <Link href={`/${club.slug}/admin/seasons`}>Manage seasons</Link>}
+              </div>
+              <div>
+                <dt>Players</dt>
+                <dd>{squadPlayers.length}</dd>
+                <span className="admin-note">{clubMembers.length} members in total{waitingCount > 0 && `, ${waitingCount} waiting to join`}</span>
+              </div>
+              <div>
+                <dt>{liveMatch ? 'Live match' : 'Fixtures'}</dt>
+                <dd className={liveMatch ? 'is-live' : undefined}>{liveMatch ? `${liveMatch.home_score} : ${liveMatch.away_score}` : clubMatches.length}</dd>
+                <span className="admin-note">{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}′ in progress`) : 'This season'}</span>
+                {canFixtures && <Link href={`/${club.slug}/admin/matches`}>Manage fixtures</Link>}
+              </div>
+              <div>
+                <dt>Member passes</dt>
+                <dd>{clubMembers.length}</dd>
+                <span className="admin-note">{analytics.gateScansCount.toLocaleString()} {analytics.gateScansCount === 1 ? 'pass scanned' : 'passes scanned'} at the gate</span>
+                {canScan && <Link href={`/${club.slug}/admin/scanner`}>Open the gate scanner</Link>}
+              </div>
+              <div>
+                <dt>Public page visits</dt>
+                <dd>{analytics.totalVisits.toLocaleString()}</dd>
+                {canAnalytics && <Link href={`/${club.slug}/admin/analytics`}>See visitor stats</Link>}
+              </div>
+            </dl>
+          </section>
+        )}
+      />
+
+      {!view && (
+        <section className="admin-panel" aria-labelledby="activity-title">
+          <div className="admin-panel-head">
+            <h2 id="activity-title">Recent activity</h2>
+            {can(club.id, 'activity') && <Link href={`/${club.slug}/admin/activity`} className="admin-dash-link">Activity log</Link>}
+          </div>
+          {recentActivity.length === 0 ? (
+            <p className="admin-empty">No activity yet.</p>
           ) : (
-            <div className="admin-empty">
-              <p>No match is live and nothing is scheduled.</p>
-              {canEditFixtures && <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">Schedule a match</Link>}
-            </div>
+            <table className="admin-log">
+              <thead><tr><th scope="col">What happened</th><th scope="col">When</th></tr></thead>
+              <tbody>
+                {recentActivity.map(act => (
+                  <tr key={act.id}>
+                    <td>{act.description}</td>
+                    <td className="admin-when">{new Date(act.created_at).toLocaleString(DATE_LOCALE)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </section>
-      </div>
-
-      {/* The club's figures, one ruled strip */}
-      <section className="admin-panel admin-dash-figures-wrap" aria-label="Club figures">
-        <dl className="admin-dash-figures">
-          <div>
-            <dt>Active season</dt>
-            <dd>{activeSeason?.name || defaultSeasonLabel()}</dd>
-            {canSeasons && <Link href={`/${club.slug}/admin/seasons`}>Manage seasons</Link>}
-          </div>
-          <div>
-            <dt>Players</dt>
-            <dd>{squadPlayers.length}</dd>
-            <span className="admin-note">{clubMembers.length} members in total{waitingCount > 0 && `, ${waitingCount} waiting to join`}</span>
-          </div>
-          <div>
-            <dt>{liveMatch ? 'Live match' : 'Fixtures'}</dt>
-            <dd className={liveMatch ? 'is-live' : undefined}>{liveMatch ? `${liveMatch.home_score} : ${liveMatch.away_score}` : clubMatches.length}</dd>
-            <span className="admin-note">{liveMatch ? (liveMatch.status === 'halftime' ? 'Half time' : `${getLiveMinute(liveMatch)}′ in progress`) : 'This season'}</span>
-            {canFixtures && <Link href={`/${club.slug}/admin/matches`}>Manage fixtures</Link>}
-          </div>
-          <div>
-            <dt>Member passes</dt>
-            <dd>{clubMembers.length}</dd>
-            <span className="admin-note">{analytics.gateScansCount.toLocaleString()} {analytics.gateScansCount === 1 ? 'pass scanned' : 'passes scanned'} at the gate</span>
-            {canScan && <Link href={`/${club.slug}/admin/scanner`}>Open the gate scanner</Link>}
-          </div>
-          <div>
-            <dt>Public page visits</dt>
-            <dd>{analytics.totalVisits.toLocaleString()}</dd>
-            {canAnalytics && <Link href={`/${club.slug}/admin/analytics`}>See visitor stats</Link>}
-          </div>
-        </dl>
-      </section>
-
-      <section className="admin-panel" aria-labelledby="activity-title">
-        <div className="admin-panel-head">
-          <h2 id="activity-title">Recent activity</h2>
-          {can(club.id, 'activity') && <Link href={`/${club.slug}/admin/activity`} className="admin-dash-link">Activity log</Link>}
-        </div>
-        {recentActivity.length === 0 ? (
-          <p className="admin-empty">No activity yet.</p>
-        ) : (
-          <table className="admin-log">
-            <thead><tr><th scope="col">What happened</th><th scope="col">When</th></tr></thead>
-            <tbody>
-              {recentActivity.map(act => (
-                <tr key={act.id}>
-                  <td>{act.description}</td>
-                  <td className="admin-when">{new Date(act.created_at).toLocaleString(DATE_LOCALE)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      )}
     </div>
   );
 }
