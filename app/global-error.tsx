@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { reportCrash } from '@/lib/report-crash';
 
 export default function GlobalError({
   error,
@@ -10,6 +11,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => { reportCrash(error, 'global'); }, [error]);
+
   return (
     <html lang="en-AU">
       <body style={{

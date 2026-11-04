@@ -11,6 +11,7 @@ import { FORMAT_PRESETS } from '@/components/TacticalPitch';
 import { MARKER_POINTS, MARKER_TEXT_DROP, MARKER_TEXT_SCALE, drawMatchCard, type CardFormat, type CardLook, type MarkerShape } from '@/lib/share-card';
 import type { Club, Match, PitchPosition } from '@/lib/supabase/types';
 import { juniorPublicName } from '@/lib/teams';
+import { trackToolUse } from '@/lib/platform-tracking';
 
 export type LineupFormat = '5v5' | '7v7' | '9v9' | '11v11';
 type Format = LineupFormat;
@@ -395,7 +396,7 @@ export default function LineupBuilderTool({ defaultFormat = '11v11', defaultShap
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
-      if (!share || shared) setDownloaded(true);
+      if (!share || shared) { setDownloaded(true); trackToolUse(shared ? 'lineup_shared' : 'lineup_downloaded'); }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the image.');
     } finally {

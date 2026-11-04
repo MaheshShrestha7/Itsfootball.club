@@ -8,6 +8,7 @@ import SyncStatusBanner from '@/components/SyncStatusBanner';
 import PlatformAnnouncementBanner from '@/components/PlatformAnnouncementBanner';
 import { ConfirmRoot } from '@/components/ConfirmDialog';
 import ServiceWorker from '@/components/ServiceWorker';
+import PlatformVisitTracker from '@/components/PlatformVisitTracker';
 import MfaChallenge from '@/components/MfaChallenge';
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { loadInitialData } from '@/lib/supabase/server-data';
@@ -77,6 +78,7 @@ export default async function RootLayout({
         <ConfirmRoot />
         <MfaChallenge />
         <ServiceWorker />
+        <PlatformVisitTracker />
       </body>
     </html>
   );

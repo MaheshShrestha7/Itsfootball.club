@@ -13,6 +13,7 @@ import {
   CARD_TYPES, KEEPER_STATS, MAX_SHOWN_STATS, OUTFIELD_STATS, PLAYER_CARD_SIZES, PLAYER_STATS, POSITIONS, autoRating, cardAccent, cardFromLink, drawPlayerCard, storyHeading,
   type PlayerCardFinish, type PlayerCardSize, type PlayerCardType, type PlayerStatKey,
 } from '@/lib/player-card';
+import { trackToolUse } from '@/lib/platform-tracking';
 
 type Foot = '' | 'R' | 'L' | 'LR';
 
@@ -302,7 +303,7 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
-      if (!share || shared) setDownloaded(true);
+      if (!share || shared) { setDownloaded(true); trackToolUse(shared ? 'player_card_shared' : 'player_card_downloaded'); }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the image.');
     } finally {

@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
   // Booking fee sits on top of the club's price as its own line; Stripe routes it to the platform
   // (application fee), so the club still receives amount_cents, which is what its ledger records.
   const fee = bookingFeeCents(draft.row.amount_cents);
+  // Mission Control's Overview counts the platform's earnings from this (migration 20261149).
+  // Best effort: before that migration the column doesn't exist, and checkout must still work.
+  await db.from('payments').update({ booking_fee_cents: fee }).eq('id', payment.id)
+    .then(({ error: feeError }) => { if (feeError) console.warn('[checkout] booking fee not saved:', feeError.message); }, () => {});
   try {
     const session = await stripe.checkout.sessions.create(
       {
