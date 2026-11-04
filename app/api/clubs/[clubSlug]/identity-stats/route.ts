@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { defaultSeasonLabel } from '@/lib/season';
-import { countsTowardClubRecord, isPlayerMember } from '@/lib/supabase/types';
-import { hiddenScoreTeams, matchScoreHidden } from '@/lib/supabase/club-lookup';
+import { countsTowardClubRecord } from '@/lib/supabase/types';
+import { clubNumbers } from '@/lib/club-numbers';
+import { matchScoreHidden, type HiddenScoreTeams } from '@/lib/supabase/club-lookup';
 
 // Only what the response uses (never owner_id, email_settings and the like)
 const CLUB_COLUMNS = 'id, name, slug, short_name, motto, founded_year, stadium_name, stadium_address, config';
@@ -92,38 +93,19 @@ export async function GET(
     const clubId = club.id;
 
     // 2. Approved members (public-safe view: personal details are not exposed)
-    const { data: members, error: membersError } = await supabase
+    const { data: members } = await supabase
       .from('club_members_public')
       .select('id, role, roles, player_position, status')
       .eq('club_id', clubId);
 
-    const totalMembers = members ? members.length : 0;
-    // Players by role (roles labels, else the role text), never by a position a supporter happens to have
-    const totalPlayers = members ? members.filter(isPlayerMember).length : 0;
-
-    // 3. Query raw Matches table
-    const { data: matches, error: matchesError } = await supabase
+    // 3. The club's matches, newest first (the "latest match" season fallback below reads the first row)
+    const { data: matches } = await supabase
       .from('matches')
-      .select('id, competition, season, home_score, away_score, is_club_home, status, tournament_id, match_type, team_id')
+      .select('id, competition, season, match_date, status, home_score, away_score, home_penalty_score, away_penalty_score, is_club_home, tournament_id, match_type, team_id')
       .eq('club_id', clubId)
-      // Newest first: the "latest match" season fallback below reads the first row
       .order('match_date', { ascending: false });
 
-    // Filter for the club's own matches that have actually been played (completed, live, or halftime)
-    const playedMatches = matches
-      ? matches.filter(
-          m =>
-            countsTowardClubRecord(m) &&
-            (m.status === 'completed' ||
-            m.status === 'live' ||
-            m.status === 'halftime' ||
-            m.status === 'full_time')
-        )
-      : [];
-    const matchesPlayed = playedMatches.length;
-
     // Query club_seasons for the designated active current season
-    let activeSeasonName: string | null = null;
     const { data: activeSeasonRow } = await supabase
       .from('club_seasons')
       .select('name')
@@ -131,43 +113,50 @@ export async function GET(
       .eq('is_current', true)
       .maybeSingle();
 
-    if (activeSeasonRow?.name) {
-      activeSeasonName = activeSeasonRow.name;
-    }
-
-    // Determine current active season (e.g. from club_seasons, or latest match, or the calendar default)
+    const playedFirst = (matches || []).find(
+      m => countsTowardClubRecord(m) && ['completed', 'full_time', 'live', 'halftime'].includes(m.status)
+    );
+    // Current season: club_seasons, else the latest played game's, else the latest game's, else the calendar default
     const currentSeason =
-      activeSeasonName ||
-      playedMatches[0]?.season ||
+      activeSeasonRow?.name ||
+      playedFirst?.season ||
       matches?.[0]?.season ||
       defaultSeasonLabel();
 
-    const currentSeasonMatches = playedMatches.filter(
-      m => !m.season || m.season === currentSeason
-    );
+    // 4. Active teams: how many there are, and which hide their scores publicly (junior rules)
+    const { data: teamRows } = await supabase
+      .from('club_teams')
+      .select('id, is_default, hide_public_scores')
+      .eq('club_id', clubId)
+      .eq('is_active', true);
+    const hiddenTeams: HiddenScoreTeams = {
+      hidden: new Set((teamRows || []).filter(t => t.hide_public_scores).map(t => t.id)),
+      defaultHidden: (teamRows || []).some(t => t.is_default && t.hide_public_scores),
+    };
 
-    // Sum goals scored by this club in the current season:
-    // If club was home: home_score. If club was away: away_score.
-    // Teams that hide their scores publicly (junior grassroots rules) don't add to the goal count
-    const hiddenTeams = await hiddenScoreTeams(clubId);
-    const goalsScored = currentSeasonMatches.filter(m => !matchScoreHidden(m, hiddenTeams)).reduce((sum, m) => {
-      const scored = m.is_club_home ? (m.home_score ?? 0) : (m.away_score ?? 0);
-      return sum + scored;
-    }, 0);
-
-    // 4. Query raw Events table
-    const { count: eventsCount, error: eventsError } = await supabase
+    // 5. Events (what row-level security lets the public read)
+    const { data: events } = await supabase
       .from('events')
-      .select('*', { count: 'exact', head: true })
+      .select('start_time, category, rsvp_count')
       .eq('club_id', clubId);
 
-    // 5. Club-wide sponsors, via the public-safe view (the sponsors table itself is admin-only;
-    //    the view already excludes inactive sponsors). Event-scoped sponsors don't count.
-    const { count: sponsorsCount, error: sponsorsError } = await supabase
+    // 6. Club-wide sponsors, via the public-safe view (the sponsors table itself is admin-only;
+    //    the view already leaves out inactive and lapsed sponsors). Event-scoped sponsors don't count.
+    const { data: sponsors } = await supabase
       .from('sponsors_public')
-      .select('*', { count: 'exact', head: true })
+      .select('tier')
       .eq('club_id', clubId)
       .is('event_id', null);
+
+    const numbers = clubNumbers({
+      members: members || [],
+      matches: matches || [],
+      scoreHidden: m => matchScoreHidden(m, hiddenTeams),
+      currentSeason,
+      events: events || [],
+      sponsors: sponsors || [],
+      teams: (teamRows || []).length,
+    });
 
     // Construct response with verified arithmetic sums
     return NextResponse.json({
@@ -186,13 +175,8 @@ export async function GET(
         stadium_address: club.config?.contact?.address || club.stadium_address || '',
       },
       stats: {
-        totalMembers,
-        totalPlayers,
-        matchesPlayed,
-        eventsCount: eventsCount ?? 0,
-        sponsorsCount: sponsorsCount ?? 0,
-        goalsScored,
-        currentSeason,
+        totalMembers: (members || []).length,
+        ...numbers,
       },
     }, {
       headers: {
