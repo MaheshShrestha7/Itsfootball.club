@@ -13,6 +13,8 @@ import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import HalfLengthField, { parseHalfMinutes, useHalfLengthReady } from '@/components/HalfLengthField';
+import { DEFAULT_HALF_MINUTES, validHalfMinutes } from '@/lib/match-length';
 import { Plus, Edit2, Trash2, Users, Star, X, Search, Baby, EyeOff, ShieldAlert, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const COLOR_PRESETS = ['#10B981', '#2563EB', '#EF4444', '#F59E0B', '#8B5CF6', '#06B6D4', '#334155'];
@@ -24,6 +26,8 @@ interface TeamForm {
   age_group: string;
   gender: ClubTeamGender;
   match_format: ClubTeamFormat;
+  /** The team's usual half length as typed ('' = the format's usual length) */
+  half_minutes: string;
   is_junior: boolean;
   hide_public_scores: boolean;
   color: string;
@@ -39,6 +43,7 @@ const EMPTY_FORM: TeamForm = {
   age_group: '',
   gender: 'mixed',
   match_format: '11v11',
+  half_minutes: '',
   is_junior: false,
   hide_public_scores: false,
   color: '#10B981',
@@ -55,6 +60,7 @@ function formFor(team: ClubTeam): TeamForm {
     age_group: team.age_group || '',
     gender: team.gender,
     match_format: team.match_format,
+    half_minutes: validHalfMinutes(team.half_minutes) ? String(team.half_minutes) : '',
     is_junior: team.is_junior,
     hide_public_scores: team.hide_public_scores,
     color: team.color || '#10B981',
@@ -106,6 +112,8 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
   // These are saved on the club itself, which takes Branding access (row-level security on clubs)
   const { can } = useAuth();
   const canEditClub = can(club.id, 'branding', 'edit');
+  // Half length needs migration 20261151; hidden (and never sent) until it has run
+  const halfReady = useHalfLengthReady();
   // Age groups are counted on the season's start date (U10 = under 10 on that day)
   const cutoff = ageGroupCutoff(getActiveSeason(club.id)?.start_date);
 
@@ -154,6 +162,13 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
     e.preventDefault();
     const name = form.name.replace(/[<>]/g, '').trim();
     if (!name) return;
+    // Half length: empty is the format's usual length; out of range stays in the form with its message
+    const half = parseHalfMinutes(form.half_minutes);
+    if (!half.empty && half.minutes === null) {
+      document.getElementById('team-half')?.focus();
+      return;
+    }
+    const halfMinutes = half.empty ? null : half.minutes;
     const fields = {
       name,
       short_name: form.short_name.replace(/[<>]/g, '').trim().slice(0, 32) || undefined,
@@ -161,6 +176,8 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
       age_group: form.age_group || undefined,
       gender: form.gender,
       match_format: form.match_format,
+      // Only once the database has the column, and only when it changed
+      ...(halfReady && halfMinutes !== (editing === 'new' || !editing ? null : validHalfMinutes(editing.half_minutes)) ? { half_minutes: halfMinutes } : {}),
       is_junior: form.is_junior,
       hide_public_scores: form.hide_public_scores,
       color: form.color || undefined,
@@ -486,6 +503,22 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 </select>
               </div>
             </div>
+
+            {halfReady && (() => {
+              const usual = DEFAULT_HALF_MINUTES[form.match_format] ?? 45;
+              const typed = parseHalfMinutes(form.half_minutes);
+              return (
+                <HalfLengthField
+                  id="team-half"
+                  value={form.half_minutes}
+                  placeholder={usual}
+                  onChange={text => setForm(f => ({ ...f, half_minutes: text }))}
+                  helper={typed.empty
+                    ? <>Empty uses the {form.match_format} usual of {usual}. New fixtures for this team start with it.</>
+                    : <><b>{(typed.minutes ?? 0) * 2}-minute games.</b> New fixtures start with this. Leave it empty for the {form.match_format} usual of {usual}.</>}
+                />
+              );
+            })()}
 
             <label className="row" style={{ alignItems: 'flex-start', cursor: 'pointer' }}>
               <input type="checkbox" checked={form.is_junior} onChange={e => setForm({ ...form, is_junior: e.target.checked })} style={{ marginTop: 3 }} />

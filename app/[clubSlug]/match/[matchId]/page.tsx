@@ -35,7 +35,7 @@ import {
   Target
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
-import { compareEventMinute, eventMinuteLabel } from '@/lib/match-length';
+import { compareEventMinute, eventMinuteLabel, lengthLabel, validHalfMinutes } from '@/lib/match-length';
 import MatchShareButton from '@/components/MatchShareButton';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
@@ -600,6 +600,10 @@ export default function MatchCenterPage({
                   <Clock size={12} style={{ marginLeft: '0.2rem' }} />
                   <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
                 </>
+              )}
+              {/* The game's length, once it's set or isn't a full 90 */}
+              {(validHalfMinutes(match.half_minutes) !== null || (match.match_format && match.match_format !== '11v11')) && (
+                <span style={{ marginLeft: '0.4rem' }}>{lengthLabel(match)}</span>
               )}
             </span>
             <span className="text-note">
