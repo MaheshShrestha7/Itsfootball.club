@@ -48,9 +48,14 @@ import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/
 import { getLiveMinute } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicPlayerIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch, withTeamSide } from '@/lib/teams';
+import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch, withTeamSide } from '@/lib/teams';
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
+import { POSITION_NAMES, initialsOf } from '@/lib/positions';
+
+type RankKey = 'overall' | 'goals' | 'assists' | 'motm_awards' | 'appearances';
+const RANK_TABS: [RankKey, string][] = [['overall', 'Overall'], ['goals', 'Goals'], ['assists', 'Assists'], ['motm_awards', 'Player of the Match'], ['appearances', 'Games']];
+const RANK_LABEL = Object.fromEntries(RANK_TABS) as Record<RankKey, string>;
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   match: 'Match',
@@ -139,7 +144,7 @@ export default function ClubPublicPage({
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   // Clubs with several teams: '' = the main team, 'ALL' = every team, else a team id
   const [fixturesTeamFilter, setFixturesTeamFilter] = useState<string>('');
-  const [leaderboardTab, setLeaderboardTab] = useState<'goals' | 'assists' | 'appearances'>('goals');
+  const [rankBy, setRankBy] = useState<RankKey>('overall');
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // Hero Slider states
@@ -257,50 +262,25 @@ export default function ClubPublicPage({
     (statFor(b.id)?.appearances ?? 0) - (statFor(a.id)?.appearances ?? 0) ||
     a.full_name.localeCompare(b.full_name)
   );
-  const topPlayers = rankedSquad.slice(0, 5);
+  // The table ranks overall (the order above) or by one figure; ties keep the overall order
+  const byFigure = rankBy === 'overall' ? rankedSquad
+    : [...rankedSquad].sort((a, b) => (statFor(b.id)?.[rankBy] ?? 0) - (statFor(a.id)?.[rankBy] ?? 0));
+  const topPlayers = byFigure.slice(0, 5);
   // A rank only means something once a player has played: no "1st" for whoever sorts first by name
   const hasSeasonStats = (memberId: string) => {
     const st = statFor(memberId);
     return !!(st?.appearances || st?.goals || st?.assists || st?.motm_awards);
   };
+  const rankedOn = (memberId: string) =>
+    rankBy === 'overall' ? hasSeasonStats(memberId) : (statFor(memberId)?.[rankBy] ?? 0) > 0;
   const anyRanked = topPlayers.some(p => hasSeasonStats(p.id));
-  const countOf = (n: number | undefined, word: string) => `${n || 0} ${word}${n === 1 ? '' : 's'}`;
+  // The leader card only for someone who has earned 1st; everyone else is a table row
+  const leader = topPlayers[0] && rankedOn(topPlayers[0].id) ? topPlayers[0] : null;
+  const tableRows = topPlayers.slice(leader ? 1 : 0).map((player, i) => ({
+    player,
+    rank: rankedOn(player.id) ? i + (leader ? 2 : 1) : null,
+  }));
 
-  const positionPills = (
-    <div className="scroll-pill-strip" style={{ maxWidth: '100%', flexWrap: 'wrap' }} role="group" aria-label="Filter players by position">
-      {(['ALL', 'GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
-        <button
-          key={pos}
-          type="button"
-          onClick={() => setSquadFilter(pos)}
-          aria-pressed={squadFilter === pos}
-          className="btn btn-sm scroll-pill-item touch-target"
-          style={{
-            background: squadFilter === pos ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-            color: squadFilter === pos ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-secondary)',
-            border: '1px solid var(--border-subtle)',
-            minHeight: '38px',
-          }}
-        >
-          {pos === 'ALL' ? 'All Positions' : pos === 'GK' ? 'Goalkeepers' : pos === 'DEF' ? 'Defenders' : pos === 'MID' ? 'Midfielders' : 'Forwards'}
-        </button>
-      ))}
-    </div>
-  );
-
-  // Top leaderboard players: this season only, and only people with at least one of the stat
-  const leaderboardValue = (s: { goals: number; assists: number; appearances: number }) =>
-    leaderboardTab === 'goals' ? s.goals : leaderboardTab === 'assists' ? s.assists : s.appearances;
-  const leaderboardList = [...playerStats]
-    .filter(s => s.club_id === clubId && !juniorIds.has(s.member_id) && s.season === currentSeasonName && (leaderboardValue(s) || 0) > 0)
-    .sort((a, b) => leaderboardValue(b) - leaderboardValue(a))
-    .slice(0, 5)
-    .map(stat => {
-      const player = clubMembers.find(m => m.id === stat.member_id);
-      return { stat, player };
-    });
-  // Who has a public player page (adult players), for the leaderboard's name links
-  const playerPageIds = publicPlayerIds(clubMembers, clubTeams, clubTeamMembers, { includeU18: club?.junior_includes_u18 !== false });
 
   // Dynamic multi-slider definition reading admin pinned items or falling back to defaults
   const heroSlides: HomeHeroSlide[] = useMemo(() => {
@@ -1939,238 +1919,114 @@ export default function ClubPublicPage({
       </section>
       )}
 
-      {/* 4.7 PLAYERS (SQUAD ROSTER) & LEADERBOARD */}
+      {/* 4.7 TOP PLAYERS: the leader in club colours, then a standings table (Hallmark redesign) */}
       <section id="squad" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          {/* Section Header & Position Filters */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: '1.5rem',
-            marginBottom: '2.5rem',
-          }}>
+          <div className="tp-head">
             <div>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Top Players</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+              <h2 className="tp-title">Top Players</h2>
+              <p className="tp-sub">
                 {anyRanked
-                  ? `${currentSeasonName}: ranked by goals, then assists, Player of the Match and appearances.`
+                  ? `${currentSeasonName}, ranked by ${rankBy === 'overall' ? 'goals, then assists, Player of the Match and games' : RANK_LABEL[rankBy].toLowerCase()}.`
                   : `${currentSeasonName}: rankings appear once the first match stats are saved.`}
               </p>
             </div>
-
-            {/* Position Filter Pills: Scrollable on mobile */}
-            {positionPills}
+            <div className="tp-seg" role="group" aria-label="Filter players by position">
+              {(['ALL', 'GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
+                <button key={pos} type="button" onClick={() => setSquadFilter(pos)} aria-pressed={squadFilter === pos}
+                  aria-label={pos === 'ALL' ? 'All positions' : pos === 'GK' ? 'Goalkeepers' : pos === 'DEF' ? 'Defenders' : pos === 'MID' ? 'Midfielders' : 'Forwards'}>
+                  {pos === 'ALL' ? 'All' : pos}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Top five this season */}
           {topPlayers.length === 0 && (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No players in this position yet.</p>
+            <p className="tp-empty">No players in this position yet.</p>
           )}
-          <div className="club-cards top-players" style={{ marginBottom: rankedSquad.length > 0 ? '1.5rem' : '3.5rem' }}>
-            {topPlayers.map((player, rank) => {
-              const stat = statFor(player.id);
-              const hasStats = !!(stat?.appearances || stat?.goals || stat?.assists || stat?.motm_awards);
 
+          {topPlayers.length > 0 && (
+          <div className={`tp-grid${leader ? '' : ' tp-grid-solo'}`}>
+            {leader && (() => {
+              const stat = statFor(leader.id);
+              const firstName = leader.full_name.trim().split(/\s+/)[0];
               return (
-                <Link
-                  key={player.id}
-                  href={`/${club.slug}/squad/${player.id}`}
-                  className="glass-panel glass-panel-interactive top-player"
-                  style={{
-                    color: 'inherit',
-                    textDecoration: 'none',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}
-                >
-                  {/* Photo & Number Banner */}
-                  <div className="top-player-photo" style={{ height: '220px', position: 'relative', overflow: 'hidden' }}>
-                    <PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.9), transparent)' }} />
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      fontFamily: 'var(--font-heading)',
-                      fontWeight: 900,
-                      fontSize: '1.75rem',
-                      color: 'var(--text-primary)',
-                      textShadow: '0 2px 8px rgba(0,0,0,0.8)',
-                    }}>
-                      {/* Labelled as the jersey number so it doesn't read as a rank next to the "2nd" badge */}
-                      {player.jersey_number ? (
-                        <><span style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.85, marginRight: '0.25rem' }}>Jersey No.</span>{player.jersey_number}</>
-                      ) : ''}
+                <Link href={`/${club.slug}/squad/${leader.id}`} className="tp-leader">
+                  {!leader.photo_url && <span className="tp-leader-no" aria-hidden="true">{leader.jersey_number ?? ''}</span>}
+                  <div className="tp-leader-top">
+                    <div className="min-w-0">
+                      <span className="tp-rank1"><Trophy size={14} aria-hidden="true" /> 1st</span>
+                      <h3 className="tp-leader-name">{leader.full_name}</h3>
+                      <p className="tp-leader-pos">
+                        {[leader.player_position ? POSITION_NAMES[leader.player_position] || leader.player_position : null, leader.jersey_number != null ? `number ${leader.jersey_number}` : null].filter(Boolean).join(', ')}
+                      </p>
                     </div>
-                    <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '0.35rem' }}>
-                      {hasStats && (
-                        <span className="badge" data-theme="dark" style={{ background: 'rgba(0,0,0,0.65)', color: '#FFFFFF' }}>{['1st', '2nd', '3rd', '4th', '5th'][rank]}</span>
-                      )}
-                    </div>
-                    <div style={{ position: 'absolute', bottom: '12px', left: '16px' }}>
-                      {player.player_position && (
-                        <span className="badge" style={{ backgroundColor: 'var(--club-primary)', color: 'var(--club-primary-contrast, #090D16)', marginBottom: '4px' }}>
-                          {player.player_position}
-                        </span>
-                      )}
-                      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        {player.full_name}
-                      </h3>
-                    </div>
+                    {leader.photo_url && <span className="tp-leader-photo"><PlayerAvatar photoUrl={leader.photo_url} name={leader.full_name} fill /></span>}
                   </div>
-
-                  {/* Player Stats Mini Grid */}
-                  <div className="top-player-body" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {/* All zeros says nothing: shown once the player has a stat */}
-                    {hasStats && (
-                    <div className="top-player-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div className="text-meta">APPS</div>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{stat?.appearances || 0}</div>
-                      </div>
-                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div className="text-meta">GOALS</div>
-                        <div style={{ fontWeight: 800, color: 'var(--c-green)' }}>{stat?.goals || 0}</div>
-                      </div>
-                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div className="text-meta">ASSISTS</div>
-                        <div style={{ fontWeight: 800, color: 'var(--c-amber)' }}>{stat?.assists || 0}</div>
-                      </div>
-                      <div style={{ background: 'rgba(var(--shade-rgb), 0.3)', padding: '0.5rem 0.2rem', borderRadius: '6px' }}>
-                        <div className="text-meta">MOTM</div>
-                        <div style={{ fontWeight: 800, color: 'var(--c-blue)' }}>{stat?.motm_awards || 0}</div>
-                      </div>
-                    </div>
-                    )}
-                    {/* Phone: one line instead of the four tiles */}
-                    {hasStats && (
-                      <div className="top-player-line text-meta">
-                        {countOf(stat?.appearances, 'app')} · {countOf(stat?.goals, 'goal')} · {countOf(stat?.assists, 'assist')}
-                      </div>
-                    )}
-
-                    {player.nationality && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Nationality: <strong className="text-secondary">{player.nationality}</strong>
-                      </div>
-                    )}
-                  </div>
+                  <dl className="tp-leader-stats">
+                    <div><dd>{stat?.goals ?? 0}</dd><dt>Goals</dt></div>
+                    <div><dd>{stat?.assists ?? 0}</dd><dt>Assists</dt></div>
+                    <div><dd>{stat?.motm_awards ?? 0}</dd><dt>Player of the Match</dt></div>
+                    <div><dd>{stat?.appearances ?? 0}</dd><dt>Games</dt></div>
+                  </dl>
+                  <span className="tp-leader-go"><span>{firstName}&rsquo;s season</span><ChevronRight size={16} aria-hidden="true" /></span>
                 </Link>
               );
-            })}
-          </div>
+            })()}
 
-          {rankedSquad.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3.5rem' }}>
-              <Link href={`/${club.slug}/squad`} className="btn btn-secondary">
-                <Users size={16} />
-                <span>View full squad ({rankedSquad.length})</span>
-              </Link>
-            </div>
-          )}
-
-          {/* Golden Boot & Playmaker: the one leaderboard on the page (ClubScore stays on members' own pages) */}
-            <div id="leaderboard" className="glass-panel" style={{ padding: 'clamp(1rem, 4vw, 2rem)' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Trophy size={20} color="var(--c-amber)" /> Season Leaderboard ({activeSeason?.name || defaultSeasonLabel()})
-                  </h3>
-                  <span className="text-note">Top individual season performances</span>
-                </div>
-
-                {/* Leaderboard Metric Selector */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {(['goals', 'assists', 'appearances'] as const).map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setLeaderboardTab(tab)}
-                      style={{
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: leaderboardTab === tab ? 'var(--club-primary)' : 'rgba(255,255,255,0.06)',
-                        color: leaderboardTab === tab ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        textTransform: 'uppercase',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {tab === 'goals' ? 'Top Scorers' : tab === 'assists' ? 'Top Assists' : 'Most Appearances'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {leaderboardList.length === 0 && (
-                  <div className="text-meta" style={{ textAlign: 'center', padding: '1.25rem 1rem', background: 'rgba(var(--shade-rgb), 0.25)', borderRadius: '8px', border: '1px dashed var(--border-subtle)' }}>
-                    {leaderboardTab === 'goals' ? 'No goals' : leaderboardTab === 'assists' ? 'No assists' : 'No appearances'} recorded yet this season. The table fills in as match stats are saved at full time.
-                  </div>
-                )}
-                {leaderboardList.map((item, index) => (
-                  <div
-                    key={item.player?.id || index}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      background: 'rgba(var(--shade-rgb), 0.25)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                      <div style={{
-                        flexShrink: 0,
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        background: index === 0 ? '#F59E0B' : index === 1 ? '#94A3B8' : index === 2 ? '#B45309' : 'rgba(255,255,255,0.1)',
-                        color: '#000000',
-                        fontWeight: 900,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                      }}>
-                        {index + 1}
-                      </div>
-
-                      <PlayerAvatar photoUrl={item.player?.photo_url} name={item.player?.full_name || 'Player'} size={36} style={{ borderRadius: '8px' }} />
-
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>
-                          {item.player && playerPageIds.has(item.player.id)
-                            ? <Link href={`/${club.slug}/squad/${item.player.id}`} className="player-name-link">{item.player.full_name}</Link>
-                            : item.player?.full_name}
-                        </div>
-                        <div className="text-meta">
-                          {[item.player?.jersey_number != null && `#${item.player.jersey_number}`, item.player?.player_position].filter(Boolean).join(' • ')}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.4rem', color: 'var(--club-ink)' }}>
-                      {leaderboardTab === 'goals' ? item.stat.goals : leaderboardTab === 'assists' ? item.stat.assists : item.stat.appearances}
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginLeft: '0.3rem' }}>
-                        {(() => {
-                          const n = leaderboardValue(item.stat);
-                          const word = leaderboardTab === 'goals' ? 'goal' : leaderboardTab === 'assists' ? 'assist' : 'app';
-                          return n === 1 ? word : `${word}s`;
-                        })()}
-                      </span>
-                    </div>
-                  </div>
+            <div id="leaderboard">
+              <div className="tp-tabs" role="group" aria-label="Rank players by">
+                {RANK_TABS.map(([key, label]) => (
+                  <button key={key} type="button" onClick={() => setRankBy(key)} aria-pressed={rankBy === key}>{label}</button>
                 ))}
               </div>
+              <table className="tp-table">
+                <thead>
+                  <tr>
+                    <th scope="col"><span className="sr-only">Rank</span></th>
+                    <th scope="col" className="tp-th-player">Player</th>
+                    <th scope="col">Goals</th>
+                    <th scope="col">Assists</th>
+                    <th scope="col"><abbr title="Player of the Match">PotM</abbr></th>
+                    <th scope="col" className="tp-col-gp">Games</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableRows.map(({ player, rank }) => {
+                    const stat = statFor(player.id);
+                    const val = (k: RankKey) => (k === 'overall' ? 0 : stat?.[k] ?? 0);
+                    const keyCol = rankBy === 'overall' ? 'goals' : rankBy;
+                    return (
+                      <tr key={player.id}>
+                        <td className="tp-rank">{rank ?? '–'}</td>
+                        <td className="tp-who">
+                          <Link href={`/${club.slug}/squad/${player.id}`}>
+                            {player.photo_url
+                              ? <span className="tp-kit tp-kit-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill /></span>
+                              : <span className={`tp-kit${player.jersey_number == null ? ' tp-kit-none' : ''}`} aria-hidden="true">{player.jersey_number ?? initialsOf(player.full_name)}</span>}
+                            <span className="min-w-0">
+                              <strong>{player.full_name}</strong>
+                              {player.player_position && <small>{POSITION_NAMES[player.player_position] || player.player_position}</small>}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className={keyCol === 'goals' ? 'tp-key' : undefined}>{val('goals')}</td>
+                        <td className={keyCol === 'assists' ? 'tp-key' : undefined}>{val('assists')}</td>
+                        <td className={keyCol === 'motm_awards' ? 'tp-key' : undefined}>{val('motm_awards')}</td>
+                        <td className={`tp-col-gp${keyCol === 'appearances' ? ' tp-key' : ''}`}>{val('appearances')}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {rankedSquad.length > 0 && (
+                <Link href={`/${club.slug}/squad`} className="tp-more">
+                  View full squad ({rankedSquad.length}) <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              )}
             </div>
+          </div>
+          )}
         </div>
       </section>
 

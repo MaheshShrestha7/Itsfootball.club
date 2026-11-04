@@ -2,27 +2,34 @@
 
 import React, { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Lock, Star } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { publicPlayerIds, teamsOfMember } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubResult, latestFirst } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
+import { POSITION_NAMES, POSITION_SPOTS } from '@/lib/positions';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import ResultChip from '@/components/ResultChip';
 import LocalTime from '@/components/LocalTime';
+import ShareLinkButton from '@/components/ShareLinkButton';
 
-const POSITION_NAMES: Record<string, string> = {
-  GK: 'Goalkeeper', CB: 'Centre-back', LB: 'Left-back', RB: 'Right-back', LWB: 'Left wing-back', RWB: 'Right wing-back',
-  CDM: 'Defensive midfielder', CM: 'Midfielder', CAM: 'Attacking midfielder', LM: 'Left midfielder', RM: 'Right midfielder',
-  LW: 'Left winger', RW: 'Right winger', ST: 'Striker', CF: 'Centre-forward',
-};
+/** A small football for "scored in this game" */
+function BallIcon() {
+  return (
+    <svg className="pp-ball" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 8l3.4 2.5-1.3 4h-4.2l-1.3-4z" fill="currentColor" />
+      <path d="M12 2.5V8M15.4 10.5l5.2-1.8M14.1 14.5l3.3 4.4M9.9 14.5l-3.3 4.4M8.6 10.5L3.4 8.7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
 
 /** /club/squad/{member id}: one adult player's public page. Juniors never get one (safeguarding). */
 export default function PlayerPage({ params }: { params: Promise<{ clubSlug: string; playerId: string }> }) {
   const { clubSlug, playerId } = use(params);
-  const { clubs, selectClubBySlug, members, clubTeams, clubTeamMembers, playerStats, matches, getActiveSeason, isHydrated } = useClub();
+  const { clubs, selectClubBySlug, members, clubTeams, clubTeamMembers, playerStats, matches, seasons, getActiveSeason, isHydrated } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const player = useMemo(() => {
@@ -31,13 +38,21 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     return open.has(playerId) ? clubMembers.find(x => x.id === playerId) : undefined;
   }, [members, club, clubTeams, clubTeamMembers, playerId]);
 
-  const season = getActiveSeason?.(club.id)?.name || defaultSeasonLabel();
-  const stats = player ? playerStats.find(s => s.member_id === player.id && s.season === season) : undefined;
-  const career = player ? playerStats.filter(s => s.member_id === player.id) : [];
-  const total = (k: 'appearances' | 'goals' | 'assists' | 'motm_awards') => career.reduce((n, s) => n + (s[k] || 0), 0);
+  const currentSeason = getActiveSeason?.(club.id)?.name || defaultSeasonLabel();
+  const career = useMemo(() => (player ? playerStats.filter(s => s.member_id === player.id) : []), [playerStats, player]);
+  // The picker: the club's seasons and any season they have stats in, newest first; opens on the current one
+  const seasonOptions = useMemo(() => {
+    const names = new Set<string>([currentSeason, ...seasons.filter(s => s.club_id === club.id).map(s => s.name), ...career.map(s => s.season)]);
+    return [...names].filter(Boolean).sort((a, b) => b.localeCompare(a));
+  }, [currentSeason, seasons, club.id, career]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const season = picked && seasonOptions.includes(picked) ? picked : currentSeason;
+  const stats = career.find(s => s.season === season);
+  const total = (k: 'appearances' | 'goals' | 'assists' | 'motm_awards' | 'clean_sheets') => career.reduce((n, s) => n + (s[k] || 0), 0);
   const teams = player ? teamsOfMember(clubTeamMembers, clubTeams.filter(t => t.club_id === club.id && !t.is_junior), player.id) : [];
+  const [crestFailed, setCrestFailed] = useState(false);
 
-  // Their last finished games from the stats saved at full time (public_player_games, migration
+  // Their finished games from the stats saved at full time (public_player_games, migration
   // 20261140), with goals, assists and Player of the Match. Before that migration runs, or for games
   // with no stats saved, the published line-ups they were in.
   const [statGames, setStatGames] = useState<{ match_id: string; goals: number; assists: number; motm: boolean }[] | null>(null);
@@ -45,13 +60,13 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   useEffect(() => {
     if (!playerKey) return;
     let live = true;
-    getSupabaseClient()?.rpc('public_player_games', { p_member_id: playerKey, p_limit: 5 })
+    getSupabaseClient()?.rpc('public_player_games', { p_member_id: playerKey, p_limit: 20 })
       .then(({ data, error }) => { if (live) setStatGames(error ? [] : (data || [])); });
     return () => { live = false; };
   }, [playerKey]);
   const recent = useMemo(() => {
     if (!player) return [];
-    const done = matches.filter(m => m.club_id === club.id && m.status === 'completed');
+    const done = matches.filter(m => m.club_id === club.id && m.status === 'completed' && (m.season ? m.season === season : season === currentSeason));
     const byStats = new Map((statGames || []).map(g => [g.match_id, g]));
     const inLineup = (m: (typeof done)[number]) =>
       [...(m.home_lineup_coords || []), ...(m.away_lineup_coords || [])].some(p => p.member_id === player.id);
@@ -60,11 +75,11 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
       .sort(latestFirst)
       .slice(0, 5)
       .map(m => ({ match: m, line: byStats.get(m.id) }));
-  }, [matches, club.id, player, statGames]);
+  }, [matches, club.id, player, statGames, season, currentSeason]);
 
   const back = (
-    <Link href={`/${club.slug}/squad`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-      <ArrowLeft size={16} /> Squad
+    <Link href={`/${club.slug}/squad`} className="pp-back">
+      <ArrowLeft size={16} aria-hidden="true" /> Squad
     </Link>
   );
 
@@ -81,15 +96,26 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     );
   }
 
-  const tiles: [string, number][] = [
-    ['Games', stats?.appearances ?? 0],
-    ['Goals', stats?.goals ?? 0],
-    ['Assists', stats?.assists ?? 0],
-    [player.player_position === 'GK' ? 'Clean sheets' : 'Player of the Match', (player.player_position === 'GK' ? stats?.clean_sheets : stats?.motm_awards) ?? 0],
-  ];
-  const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
-  // The card maker opens filled in with them and this season's stats (cardFromLink)
   const isKeeper = player.player_position === 'GK';
+  const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
+  const alsoPlays = (player.secondary_positions || []).filter(p => p !== player.player_position && p !== 'SUB' && POSITION_SPOTS[p]);
+  const firstName = player.full_name.trim().split(/\s+/)[0];
+  const figures: { label: string; n: number; all: number; lead?: boolean }[] = [
+    { label: 'Games', n: stats?.appearances ?? 0, all: total('appearances') },
+    isKeeper
+      ? { label: 'Clean sheets', n: stats?.clean_sheets ?? 0, all: total('clean_sheets'), lead: true }
+      : { label: 'Goals', n: stats?.goals ?? 0, all: total('goals'), lead: true },
+    { label: 'Assists', n: stats?.assists ?? 0, all: total('assists') },
+    { label: 'Player of the Match', n: stats?.motm_awards ?? 0, all: total('motm_awards') },
+  ];
+  const extras = [
+    stats?.minutes_played ? <span key="min"><b>{stats.minutes_played}</b> minutes</span> : null,
+    stats?.yellow_cards ? <span key="y"><i className="pp-card pp-card-y" aria-hidden="true" /><b>{stats.yellow_cards}</b> yellow card{stats.yellow_cards === 1 ? '' : 's'}</span> : null,
+    stats?.red_cards ? <span key="r"><i className="pp-card pp-card-r" aria-hidden="true" /><b>{stats.red_cards}</b> red card{stats.red_cards === 1 ? '' : 's'}</span> : null,
+  ].filter(Boolean);
+  const form = recent.filter(r => clubResult(r.match).outcome).slice().reverse();
+
+  // The card maker opens filled in with them and the picked season's stats (cardFromLink)
   const cardLink = `/tools/player-card-maker?${new URLSearchParams({
     name: player.full_name.trim().split(/\s+/).pop() || '',
     ...(player.player_position ? { pos: player.player_position } : {}),
@@ -101,76 +127,181 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     apps: String(stats?.appearances ?? 0),
     motm: String(stats?.motm_awards ?? 0),
   })}`;
+  const share = (
+    <ShareLinkButton url={`/${club.slug}/squad/${player.id}`} title={`${player.full_name}, ${club.name}`} className="pp-btn pp-btn-ghost" />
+  );
 
   return (
-    <div style={{ minHeight: '85vh', padding: '3rem 0 5rem 0' }}>
-      <div className="container" style={{ maxWidth: '760px' }}>
+    <div className="pp">
+      <div className="container">
         {back}
 
-        <div className="glass-panel player-hero">
-          <PlayerAvatar name={player.full_name} photoUrl={player.photo_url} size={88} />
-          <div className="min-w-0">
-            {player.jersey_number != null && <div className="player-hero-number">#{player.jersey_number}</div>}
-            <h1 className="player-hero-name">{player.full_name}</h1>
-            <div className="text-body">{[position, club.name].filter(Boolean).join(' · ')}</div>
-            {teams.length > 0 && (
-              <div className="row" style={{ flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
-                {teams.map(t => <Link key={t.id} href={`/${club.slug}/teams/${t.slug}`} className="badge badge-primary">{t.name}</Link>)}
+        {/* The band: club colour, their number (or their photo) as the picture */}
+        <section className={`pp-band${player.photo_url ? ' pp-band-has-photo' : ''}`} aria-labelledby="pp-name">
+          {player.photo_url
+            ? <div className="pp-band-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill eager /></div>
+            : player.jersey_number != null && <span className="pp-band-no" aria-hidden="true">{player.jersey_number}</span>}
+          <div className="pp-band-in">
+            <div className="pp-band-main">
+              <Link href={`/${club.slug}`} className="pp-band-club">
+                {club.logo_url && !crestFailed && (
+                  <img src={club.logo_url} alt="" width={40} height={40} onError={() => setCrestFailed(true)} />
+                )}
+                {club.name}
+              </Link>
+              <h1 id="pp-name" className="pp-name">{player.full_name}</h1>
+              {(position || player.jersey_number != null) && (
+                <p className="pp-pos">{[position, player.jersey_number != null ? `shirt number ${player.jersey_number}` : null].filter(Boolean).join(', ')}</p>
+              )}
+              {teams.length > 0 && (
+                <div className="pp-teams">
+                  {teams.map(t => <Link key={t.id} href={`/${club.slug}/teams/${t.slug}`}>{t.name}</Link>)}
+                </div>
+              )}
+            </div>
+            <div className="pp-band-actions">
+              {share}
+              <Link href={cardLink} className="pp-btn pp-btn-light pp-band-card">Make a player card</Link>
+            </div>
+          </div>
+        </section>
+
+        <div className="pp-cols">
+          <div className="pp-stack">
+            <section aria-labelledby="pp-season">
+              <div className="pp-head">
+                <h2 id="pp-season">Season stats</h2>
+                <label className="pp-picker">
+                  <span className="pp-picker-label">Season</span>
+                  <select value={season} onChange={e => setPicked(e.target.value)}>
+                    {seasonOptions.map(name => <option key={name} value={name}>{name === currentSeason ? `${name} (current)` : name}</option>)}
+                  </select>
+                </label>
               </div>
+              <dl className="pp-figures">
+                {figures.map(f => (
+                  <div key={f.label} className={f.lead ? 'pp-fig-lead' : undefined}>
+                    <dd>{f.n}</dd>
+                    <dt>{f.label}</dt>
+                    {career.length > 1 && <small>{f.all} in all seasons</small>}
+                  </div>
+                ))}
+              </dl>
+              {extras.length > 0 && <p className="pp-extras">{extras}</p>}
+            </section>
+
+            {form.length > 0 && (
+              <section aria-labelledby="pp-form">
+                <div className="pp-head"><h2 id="pp-form">Form</h2><span className="pp-note">Oldest first</span></div>
+                <ol className="pp-form" style={{ '--pp-form-n': form.length } as React.CSSProperties}>
+                  {form.map(({ match: m, line }) => {
+                    const outcome = clubResult(m).outcome!;
+                    return (
+                      <li key={m.id} className={`pp-form-${outcome.toLowerCase()}`}>
+                        <span className="pp-form-res"><ResultChip outcome={outcome} size="md" /></span>
+                        <span className="pp-form-did">
+                          {line?.goals ? <BallIcon /> : null}
+                          {line?.motm ? <Star size={14} fill="currentColor" aria-label="Player of the Match" /> : null}
+                        </span>
+                        <span className="pp-note"><LocalTime value={m.match_date} options={{ day: 'numeric', month: 'short' }} /></span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
             )}
+
+            <section aria-labelledby="pp-recent">
+              <div className="pp-head"><h2 id="pp-recent">Recent games</h2></div>
+              {recent.length === 0 ? (
+                <p className="pp-note">No finished games {season === currentSeason ? 'yet this season' : `in ${season}`}.</p>
+              ) : (
+                <table className="pp-games">
+                  <thead>
+                    <tr><th scope="col">Date</th><th scope="col">Game</th><th scope="col">{firstName}</th><th scope="col"><span className="sr-only">Result</span></th></tr>
+                  </thead>
+                  <tbody>
+                    {recent.map(({ match: m, line }) => {
+                      const r = clubResult(m);
+                      const opponent = m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name);
+                      return (
+                        <tr key={m.id}>
+                          <td className="pp-g-when"><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></td>
+                          <td className="pp-g-opp">
+                            <Link href={matchPath(club.slug, m)}>
+                              {m.match_type === 'internal' ? `${m.home_team_name} vs ${m.away_team_name}` : `${m.is_club_home ? 'vs' : 'at'} ${opponent}`}
+                            </Link>
+                          </td>
+                          <td className="pp-g-did">
+                            {line && (line.goals || line.assists || line.motm) ? (
+                              <span className="pp-did">
+                                {line.goals ? <span><BallIcon />{line.goals === 1 ? 'Goal' : `${line.goals} goals`}</span> : null}
+                                {line.assists ? <span>{line.assists === 1 ? 'Assist' : `${line.assists} assists`}</span> : null}
+                                {line.motm ? <span className="pp-did-potm"><Star size={14} fill="currentColor" aria-hidden="true" />Player of the Match</span> : null}
+                              </span>
+                            ) : 'Played'}
+                          </td>
+                          <td className="pp-g-score">
+                            <span>{r.outcome && <ResultChip outcome={r.outcome} />}{r.us} - {r.them}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          </div>
+
+          <div className="pp-stack">
+            {player.player_position && POSITION_SPOTS[player.player_position] && (
+              <section aria-labelledby="pp-position">
+                <div className="pp-head"><h2 id="pp-position">Position</h2></div>
+                <div className="pp-pitch" role="img" aria-label={`Position diagram: ${position}${alsoPlays.length ? `, also plays ${alsoPlays.join(', ')}` : ''}`}>
+                  <svg viewBox="0 0 68 60" preserveAspectRatio="none" aria-hidden="true">
+                    <g className="pp-pitch-lines"><rect x="2" y="2" width="64" height="56" /><line x1="2" y1="30" x2="66" y2="30" /><circle cx="34" cy="30" r="6" /><rect x="18" y="2" width="32" height="9" /><rect x="18" y="49" width="32" height="9" /></g>
+                  </svg>
+                  {alsoPlays.map(p => {
+                    const [x, y] = POSITION_SPOTS[p]!;
+                    return <span key={p} className="pp-spot pp-spot-alt" style={{ left: `${x}%`, top: `${y}%` }}>{p}</span>;
+                  })}
+                  {(() => {
+                    const [x, y] = POSITION_SPOTS[player.player_position]!;
+                    return <span className="pp-spot pp-spot-main" style={{ left: `${x}%`, top: `${y}%` }}>{player.player_position}</span>;
+                  })()}
+                </div>
+                <p className="pp-pitch-key"><span>Main position: {player.player_position}</span>{alsoPlays.length > 0 && <span>Also plays: {alsoPlays.join(', ')}</span>}</p>
+              </section>
+            )}
+
+            {career.length > 0 && (
+              <section aria-labelledby="pp-career">
+                <div className="pp-head"><h2 id="pp-career">By season</h2></div>
+                <table className="pp-career">
+                  <thead>
+                    <tr><th scope="col">Season</th><th scope="col">Games</th><th scope="col">{isKeeper ? 'Clean sheets' : 'Goals'}</th><th scope="col">Assists</th><th scope="col"><abbr title="Player of the Match">PotM</abbr></th></tr>
+                  </thead>
+                  <tbody>
+                    {[...career].sort((a, b) => b.season.localeCompare(a.season)).map(s => (
+                      <tr key={s.season}>
+                        <td>{s.season}</td><td>{s.appearances || 0}</td><td>{(isKeeper ? s.clean_sheets : s.goals) || 0}</td><td>{s.assists || 0}</td><td>{s.motm_awards || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {career.length > 1 && (
+                    <tfoot>
+                      <tr><td>All seasons</td><td>{total('appearances')}</td><td>{isKeeper ? total('clean_sheets') : total('goals')}</td><td>{total('assists')}</td><td>{total('motm_awards')}</td></tr>
+                    </tfoot>
+                  )}
+                </table>
+              </section>
+            )}
+
+            <div className="pp-actions">
+              <Link href={cardLink} className="pp-btn pp-btn-primary">Make a player card <ChevronRight size={16} aria-hidden="true" /></Link>
+            </div>
           </div>
         </div>
-
-        <section aria-labelledby="player-season" style={{ marginTop: '2rem' }}>
-          <h2 id="player-season" className="prematch-label" style={{ marginBottom: '0.75rem' }}>This season ({season})</h2>
-          <div className="player-stat-grid">
-            {tiles.map(([label, n]) => (
-              <div key={label} className="glass-panel player-stat">
-                <span className="player-stat-num">{n}</span>
-                <span className="text-meta">{label}</span>
-              </div>
-            ))}
-          </div>
-          {career.length > 1 && (
-            <p className="text-meta" style={{ marginTop: '0.6rem' }}>
-              All seasons: {total('appearances')} games · {total('goals')} goals · {total('assists')} assists · {total('motm_awards')} Player of the Match
-            </p>
-          )}
-        </section>
-
-        <section aria-labelledby="player-recent" style={{ marginTop: '2rem' }}>
-          <h2 id="player-recent" className="prematch-label" style={{ marginBottom: '0.75rem' }}>Recent games</h2>
-          {recent.length === 0 ? (
-            <p className="glass-panel text-note" style={{ padding: '1rem 1.25rem', margin: 0 }}>No finished games yet.</p>
-          ) : (
-            <div className="stack stack-sm">
-              {recent.map(({ match: m, line }) => {
-                const did = line ? [line.goals && `${line.goals} goal${line.goals === 1 ? '' : 's'}`, line.assists && `${line.assists} assist${line.assists === 1 ? '' : 's'}`, line.motm && 'Player of the Match'].filter(Boolean).join(' · ') : '';
-                const r = clubResult(m);
-                const opponent = m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name);
-                return (
-                  <Link key={m.id} href={matchPath(club.slug, m)} className="glass-panel glass-panel-interactive player-game">
-                    {r.outcome ? <ResultChip outcome={r.outcome} /> : <span className="player-game-chip-gap" aria-hidden="true" />}
-                    <div className="min-w-0" style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem', overflowWrap: 'anywhere' }}>
-                        {m.match_type === 'internal' ? `${m.home_team_name} vs ${m.away_team_name}` : `${m.is_club_home ? 'vs' : 'at'} ${opponent}`}
-                      </div>
-                      <div className="text-meta"><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{did && ` · ${did}`}</div>
-                    </div>
-                    <span className="player-game-score">{r.us} - {r.them}</span>
-                    <ChevronRight size={16} color="var(--text-muted)" aria-hidden="true" />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <Link href={cardLink} className="glass-panel glass-panel-interactive player-card-cta">
-          <Sparkles size={18} color="var(--club-primary)" aria-hidden="true" />
-          <span style={{ flex: 1 }}>Make a player card for {player.full_name.split(' ')[0]}</span>
-          <ChevronRight size={16} aria-hidden="true" />
-        </Link>
       </div>
     </div>
   );
