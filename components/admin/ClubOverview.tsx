@@ -8,10 +8,10 @@ import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, PAYMENT_KIND_LABEL } from '@/lib/finance';
 import { clubTeamsOf, hasMultipleTeams } from '@/lib/teams';
-import { clubResult } from '@/lib/fixtures';
 import { formatEndDate } from '@/lib/sponsors';
 import { DATE_LOCALE } from '@/lib/dates';
 import LocalTime from '@/components/LocalTime';
+import GamesDetail, { type Reply } from '@/components/admin/GamesDetail';
 import {
   PERIOD_OPTIONS, barHeights, fillBuckets, matchesForTeam, membersSummary, opponentLine, overviewBuckets,
   overviewRange, pageName, pct, seasonRecord, sponsorsSummary, upcomingGames, type Bucket, type OverviewPeriod,
@@ -22,7 +22,6 @@ import type { ClubMember } from '@/lib/supabase/types';
 export const OVERVIEW_VIEWS = ['', 'games', 'members', 'sponsors', 'money', 'traffic'] as const;
 export type OverviewView = typeof OVERVIEW_VIEWS[number];
 
-interface Reply { match_id: string; available: number; maybe: number; unavailable: number; pending: number; pending_ids: string[] }
 interface Waiting {
   id: string; kind: string; method: string; status: string; amount_cents: number; payer_name: string | null; description: string | null;
   member_id: string | null; sponsor_id: string | null; invoice_number: number | null; due_on: string | null; created_at: string;
@@ -64,7 +63,7 @@ const METHOD: Record<string, string> = { stripe: 'Card', bank_transfer: 'Bank tr
 
 /** The club admin Dashboard's "Club at a glance": five cards in the club's own look, each opening a detail screen. */
 export default function ClubOverview({ club, view, onView, fallback }: Props) {
-  const { members, matches, sponsors, seasons, clubTeams, getActiveSeason } = useClub();
+  const { members, matches, matchEvents, sponsors, seasons, clubTeams, getActiveSeason } = useClub();
   const { can } = useAuth();
 
   const show = {
@@ -93,6 +92,7 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
   const next = useMemo(() => upcomingGames(games, 6), [games]);
   const record = useMemo(() => seasonRecord(games, range), [games, range]);
 
+  const clubEvents = useMemo(() => matchEvents.filter(e => e.club_id === club.id), [matchEvents, club.id]);
   const clubMembers = useMemo(() => members.filter(m => m.club_id === club.id), [members, club.id]);
   const people = useMemo(() => membersSummary(clubMembers, range), [clubMembers, range]);
   const byMember = useMemo(() => new Map(clubMembers.map(m => [m.id, m])), [clubMembers]);
@@ -209,14 +209,14 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
   const waitingName = (w: Waiting) => w.payer_name || (w.member_id && byMember.get(w.member_id)?.full_name)
     || (w.sponsor_id && sponsorName.get(w.sponsor_id)) || w.description || PAYMENT_KIND_LABEL[w.kind] || 'Payment';
 
-  const head = (title: string) => (
+  const head = (title: string, extra?: React.ReactNode) => (
     <>
       <button type="button" className="ov-back" onClick={() => { onView(''); window.scrollTo({ top: 0 }); }}>
         <ChevronLeft size={16} aria-hidden="true" />Dashboard
       </button>
       <div className="admin-dash-head">
         <div><h1>{title}</h1><p>{range.label}</p></div>
-        {controls}
+        <div className="ov-controls">{controls}{extra}</div>
       </div>
     </>
   );
@@ -224,52 +224,21 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
 
   // ---------------- Detail screens ----------------
   if (view === 'games' && show.games) {
-    const results = games
-      .filter(m => m.status === 'completed' && (range.season ? m.season === range.season : new Date(m.match_date) >= range.from))
-      .sort((a, b) => b.match_date.localeCompare(a.match_date)).slice(0, 8);
     return (
       <div className="admin-dash">
-        {head('Games and availability')}{problem}
-        <section className="admin-panel ov-card">
-          <div className="admin-panel-head"><h2>Record</h2>{teamPicker || <span className="admin-meta">Club games</span>}</div>
-          <Record r={record} />
-        </section>
-        <section className="admin-panel ov-card">
-          <div className="admin-panel-head"><h2>Coming up</h2><span className="admin-meta">{plural(next.length, 'game')}</span></div>
-          {next.length === 0 ? <p className="ov-empty">No games scheduled.</p> : (
-            <ul className="ov-games">
-              {next.map(m => {
-                const r = replies.get(m.id);
-                const missing = (r?.pending_ids || []).map(id => byMember.get(id)?.full_name).filter(Boolean) as string[];
-                return (
-                  <li key={m.id}>
-                    <div className="t">{opponentLine(m)} <small><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></small></div>
-                    {data?.availability ? replyBar(r) : null}
-                    {missing.length > 0 && <p className="ov-names">No reply: {missing.slice(0, 12).join(', ')}{missing.length > 12 ? ` and ${missing.length - 12} more` : ''}</p>}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <div className="ov-foot">
-            <span>Replies come from Player availability</span>
-            {can(club.id, 'availability') && <Link href={`${base}/availability`}>Open Player availability<ChevronRight size={14} aria-hidden="true" /></Link>}
-          </div>
-        </section>
-        <section className="admin-panel ov-card">
-          <div className="admin-panel-head"><h2>Results</h2><span className="admin-meta">{range.label}</span></div>
-          {results.length === 0 ? <p className="ov-empty">No results in this range.</p> : (
-            <table className="ov-table">
-              <thead><tr><th scope="col">Game</th><th scope="col">Score</th></tr></thead>
-              <tbody>
-                {results.map(m => { const res = clubResult(m); return (
-                  <tr key={m.id}><td>{opponentLine(m)}<small>{shortDate(m.match_date)}</small></td><td>{res.outcome ? `${res.outcome} ` : ''}{res.us} : {res.them}</td></tr>
-                ); })}
-              </tbody>
-            </table>
-          )}
-          {can(club.id, 'matches') && <div className="ov-foot"><span>All fixtures and results</span><Link href={`${base}/matches`}>Open Fixtures<ChevronRight size={14} aria-hidden="true" /></Link></div>}
-        </section>
+        {head('Games and availability', teamPicker)}{problem}
+        <GamesDetail
+          clubSlug={club.slug}
+          games={games}
+          next={next}
+          range={range}
+          events={clubEvents}
+          replies={data?.availability ? replies : null}
+          byMember={byMember}
+          canAvailability={can(club.id, 'availability')}
+          canFixtures={can(club.id, 'matches')}
+          canSchedule={can(club.id, 'matches', 'edit')}
+        />
       </div>
     );
   }

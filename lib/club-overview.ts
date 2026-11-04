@@ -3,7 +3,7 @@
 // loads (members, fixtures, sponsors). Money, replies, sponsor clicks and visits come from
 // get_club_overview (supabase/migrations/20261150_club_overview.sql).
 
-import { countsTowardClubRecord, isPlayerMember, type ClubMember, type ClubSeason, type ClubTeam, type Match, type Sponsor } from './supabase/types';
+import { countsTowardClubRecord, isPlayerMember, type ClubMember, type ClubSeason, type ClubTeam, type Match, type MatchEvent, type Sponsor } from './supabase/types';
 import { clubResult } from './fixtures';
 import { isCountedMember } from './people';
 import { isEndingSoon, isSponsorOnSite, daysUntilEnd } from './sponsors';
@@ -216,3 +216,89 @@ export function pageName(path: string, clubSlug: string): string {
 
 /** Share of a total, as a whole percent */
 export const pct = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0);
+
+// ---------------- Games and availability detail screen ----------------
+
+export type Outcome = 'W' | 'D' | 'L';
+export interface PlayedGame<M extends Match = Match> { match: M; us: number; them: number; outcome: Outcome; home: boolean }
+
+/** Finished club games in the range, oldest first, each from the club's side */
+export function playedGames<M extends Match>(games: M[], range: Pick<OverviewRange, 'season' | 'from' | 'to'>): PlayedGame<M>[] {
+  const out: PlayedGame<M>[] = [];
+  for (const m of games) {
+    if (m.status !== 'completed') continue;
+    if (range.season ? m.season !== range.season : !inRange(m.match_date, range)) continue;
+    const res = clubResult(m);
+    if (!res.outcome) continue;
+    out.push({ match: m, us: res.us, them: res.them, outcome: res.outcome, home: m.is_club_home !== false });
+  }
+  return out.sort((a, b) => a.match.match_date.localeCompare(b.match.match_date));
+}
+
+export interface SideRecord { played: number; won: number; drawn: number; lost: number; goalsFor: number; goalsAgainst: number }
+export interface FormSummary extends SideRecord {
+  winRate: number;
+  cleanSheets: number;
+  /** Up to the last five outcomes, oldest first (so the newest sits on the right) */
+  last5: Outcome[];
+  home: SideRecord;
+  away: SideRecord;
+}
+
+const emptySide = (): SideRecord => ({ played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 });
+const addTo = (r: SideRecord, g: PlayedGame) => {
+  r.played += 1; r.goalsFor += g.us; r.goalsAgainst += g.them;
+  if (g.outcome === 'W') r.won += 1; else if (g.outcome === 'D') r.drawn += 1; else r.lost += 1;
+};
+
+export function formSummary(played: PlayedGame[]): FormSummary {
+  const all = emptySide(), home = emptySide(), away = emptySide();
+  let cleanSheets = 0;
+  for (const g of played) {
+    addTo(all, g);
+    addTo(g.home ? home : away, g);
+    if (g.them === 0) cleanSheets += 1;
+  }
+  return { ...all, winRate: pct(all.won, all.played), cleanSheets, last5: played.slice(-5).map(g => g.outcome), home, away };
+}
+
+/** Players a side fields for the game's format ('9v9' -> 9); 11 when it isn't set */
+export function playersNeeded(format: string | null | undefined): number {
+  const n = Number(/^(\d+)v\d+$/.exec(format || '')?.[1]);
+  return n > 0 && n <= 11 ? n : 11;
+}
+
+export interface Scorer { name: string; goals: number; assists: number }
+
+/** Goals and assists for the club's side, from the events logged in Match Centre. Own goals
+ *  count for the score, not for a scorer. Names as logged (events store the player's name). */
+export function topScorers(events: Pick<MatchEvent, 'match_id' | 'event_type' | 'team_side' | 'player_name' | 'assist_player_name'>[], played: PlayedGame[]): Scorer[] {
+  const sideOf = new Map(played.map(g => [g.match.id, g.home ? 'home' : 'away']));
+  const by = new Map<string, Scorer>();
+  const bump = (raw: string | undefined, key: 'goals' | 'assists') => {
+    const name = (raw || '').trim();
+    if (!name) return;
+    const id = name.toLowerCase();
+    const s = by.get(id) || { name, goals: 0, assists: 0 };
+    s[key] += 1;
+    by.set(id, s);
+  };
+  for (const e of events) {
+    const side = sideOf.get(e.match_id);
+    if (!side || e.team_side !== side) continue;
+    if (e.event_type !== 'goal' && e.event_type !== 'penalty') continue;
+    bump(e.player_name, 'goals');
+    bump(e.assist_player_name, 'assists');
+  }
+  return [...by.values()];
+}
+
+/** Results grouped by the local day they were played, newest day first */
+export function byDay<T extends { match: Pick<Match, 'match_date'> }>(rows: T[]): { key: string; items: T[] }[] {
+  const groups = new Map<string, T[]>();
+  for (const r of [...rows].sort((a, b) => b.match.match_date.localeCompare(a.match.match_date))) {
+    const key = dayKey(new Date(r.match.match_date));
+    groups.set(key, [...(groups.get(key) || []), r]);
+  }
+  return [...groups].map(([key, items]) => ({ key, items }));
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct } from './club-overview';
-import type { ClubMember, Match } from './supabase/types';
+import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct, playedGames, formSummary, playersNeeded, topScorers, byDay } from './club-overview';
+import type { ClubMember, Match, MatchEvent } from './supabase/types';
 
 const now = new Date(2026, 10, 4, 12, 0).getTime(); // 4 Nov 2026, local
 const season = { name: '2026/27', start_date: '2026-07-01', end_date: '2027-06-30' };
@@ -71,6 +71,46 @@ assert.deepEqual(rec, { played: 4, won: 2, drawn: 1, lost: 1, goalsFor: 5, goals
 assert.deepEqual(upcomingGames(club, 2, now).map(x => x.id), ['next', 'later']);
 assert.equal(opponentLine(club.find(x => x.id === 'next')!), 'at Northside');
 assert.equal(opponentLine(club.find(x => x.id === 'later')!), 'vs Eastside');
+
+// Played games: finished, in the season, oldest first, with the club's side of the score
+const played = playedGames(club, r);
+assert.deepEqual(played.map(x => x.match.id), ['w', 'l', 'dr', 'pens']);
+assert.deepEqual(played.map(x => x.outcome), ['W', 'L', 'D', 'W']);
+const form = formSummary(played);
+assert.equal(form.played, 4);
+assert.equal(form.winRate, 50);
+assert.equal(form.cleanSheets, 0);
+assert.deepEqual(form.last5, ['W', 'L', 'D', 'W']);
+assert.equal(form.home.played, 3);
+assert.equal(form.away.lost, 1);
+assert.equal(formSummary([]).winRate, 0);
+
+assert.equal(playersNeeded('9v9'), 9);
+assert.equal(playersNeeded('7v7'), 7);
+assert.equal(playersNeeded(null), 11);
+assert.equal(playersNeeded('weird'), 11);
+
+// Scorers: only the club's side, goals and penalties, own goals don't count, names merged by case
+const ev = (match_id: string, team_side: 'home' | 'away', event_type: string, player_name: string, assist_player_name?: string) =>
+  ({ match_id, team_side, event_type, player_name, assist_player_name } as MatchEvent);
+const scorers = topScorers([
+  ev('w', 'home', 'goal', 'Sam Lee', 'Ana Ruiz'),
+  ev('w', 'home', 'penalty', 'sam lee'),
+  ev('w', 'away', 'goal', 'Their Striker'),
+  ev('l', 'away', 'own_goal', 'Ana Ruiz'),
+  ev('old', 'home', 'goal', 'Old Timer'),
+], played);
+assert.deepEqual(scorers, [{ name: 'Sam Lee', goals: 2, assists: 0 }, { name: 'Ana Ruiz', goals: 0, assists: 1 }]);
+
+// Results grouped by local day, newest first
+const days = byDay([
+  { match: { match_date: '2026-09-01T01:00:00Z' } },
+  { match: { match_date: '2026-09-01T03:00:00Z' } },
+  { match: { match_date: '2026-09-08T01:00:00Z' } },
+]);
+assert.equal(days.length, 2);
+assert.equal(days[0].items.length, 1);
+assert.equal(days[1].items.length, 2);
 
 assert.equal(pageName('/riverside', 'riverside'), 'Home page');
 assert.equal(pageName('/riverside/fixtures?x=1', 'riverside'), 'Fixtures');
