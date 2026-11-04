@@ -3,19 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClub } from '@/lib/club-context';
 import { defaultSeasonLabel } from '@/lib/season';
-import {
-  Shield,
-  Calendar,
-  Users,
-  Trophy,
-  Flame,
-  Award
-} from 'lucide-react';
-import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, isPlayerMember, countsTowardClubRecord } from '@/lib/supabase/types';
+import Link from 'next/link';
+import { Club, ClubMember, Match, ClubEvent, Sponsor, PlayerStats, countsTowardClubRecord } from '@/lib/supabase/types';
 import { publicScoreHidden } from '@/lib/teams';
 import { latestFirst } from '@/lib/fixtures';
 import { isSponsorOnSite } from '@/lib/sponsors';
 import { isCountedMember } from '@/lib/people';
+import { clubNumbers, hasClubNumbers, type ClubNumbers } from '@/lib/club-numbers';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -27,16 +21,6 @@ interface ClubIdentitySectionProps {
   onOpenContactModal?: () => void;
 }
 
-interface DynamicIdentityStats {
-  totalMembers: number;
-  totalPlayers: number;
-  matchesPlayed: number;
-  eventsCount: number;
-  sponsorsCount: number;
-  goalsScored: number;
-  currentSeason: string;
-  source: 'supabase_raw_dataset' | 'client_context_raw' | 'loading';
-}
 
 /**
  * AnimatedCounter: Eased count-up ticker triggered once section is in viewport.
@@ -103,50 +87,36 @@ export default function ClubIdentitySection({
   const { getActiveSeason, clubTeams } = useClub();
   const sectionRef = useRef<HTMLElement>(null);
   const [isInView, setIsInView] = useState(false);
-  const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
 
-  // Compute immediate raw arithmetic values from context dataset as ground truth
+  // The page's own (realtime-synced) data, worked out with the same rules as the server route
   const clubId = club.id;
   // Waiting and rejected applications don't count (lib/people.ts), as on the dashboard and People
-  const rawClubMembers = members.filter(m => m.club_id === clubId && isCountedMember(m));
-  const rawTotalMembers = rawClubMembers.length;
-  // Players by their role only (a supporter with a position set isn't a player), as the server counts
-  const rawTotalPlayers = rawClubMembers.filter(isPlayerMember).length;
-
-  const rawClubMatches = matches.filter(m => m.club_id === clubId && countsTowardClubRecord(m));
-  const rawPlayedMatches = rawClubMatches.filter(
-    m => m.status === 'completed' || m.status === 'live' || m.status === 'halftime'
-  );
-  const rawMatchesPlayed = rawPlayedMatches.length;
-
+  const clubMembers = members.filter(m => m.club_id === clubId && isCountedMember(m));
+  const clubMatches = matches.filter(m => m.club_id === clubId);
   // No season set up: the latest played game's season (not whichever row happens to come first)
-  const latestPlayed = [...rawPlayedMatches].sort(latestFirst)[0];
-  const rawCurrentSeason = getActiveSeason(clubId)?.name || latestPlayed?.season || defaultSeasonLabel();
-  const rawSeasonMatches = rawPlayedMatches.filter(
-    m => !m.season || m.season === rawCurrentSeason
-  );
-  // Teams that hide their scores publicly (junior grassroots rules) don't add to the goal count
-  const rawGoalsScored = rawSeasonMatches.filter(m => !publicScoreHidden(m, clubTeams)).reduce((acc, m) => {
-    const scored = m.is_club_home ? (m.home_score ?? 0) : (m.away_score ?? 0);
-    return acc + scored;
-  }, 0);
-
-  const rawEventsCount = events.filter(e => e.club_id === clubId).length;
-  const rawSponsorsCount = sponsors.filter(s => s.club_id === clubId && isSponsorOnSite(s) && !s.event_id).length;
-
-  // Real-time dynamic stats state initialized with exact raw counts
-  const [stats, setStats] = useState<DynamicIdentityStats>({
-    totalMembers: rawTotalMembers,
-    totalPlayers: rawTotalPlayers,
-    matchesPlayed: rawMatchesPlayed,
-    eventsCount: rawEventsCount,
-    sponsorsCount: rawSponsorsCount,
-    goalsScored: rawGoalsScored,
-    currentSeason: rawCurrentSeason,
-    source: 'client_context_raw',
+  const latestPlayed = clubMatches
+    .filter(m => countsTowardClubRecord(m) && ['completed', 'full_time', 'live', 'halftime'].includes(m.status))
+    .sort(latestFirst)[0];
+  const currentSeason = getActiveSeason(clubId)?.name || latestPlayed?.season || defaultSeasonLabel();
+  const teams = clubTeams.filter(t => t.club_id === clubId && t.is_active);
+  const local = clubNumbers({
+    members: clubMembers,
+    matches: clubMatches,
+    // Teams that hide their scores publicly (junior grassroots rules) add no goals or results
+    scoreHidden: m => publicScoreHidden(m, clubTeams),
+    currentSeason,
+    events: events.filter(e => e.club_id === clubId),
+    sponsors: sponsors.filter(s => s.club_id === clubId && isSponsorOnSite(s) && !s.event_id),
+    teams: teams.length,
   });
+  // Changes whenever the synced data does, which is when the server numbers are fetched again
+  const localKey = JSON.stringify(local);
 
-  // IntersectionObserver to trigger count-up and entrance stagger
+  // The server's numbers (straight from Supabase) once they land; the page's own until then
+  const [server, setServer] = useState<ClubNumbers | null>(null);
+  const n = server ?? local;
+
+  // IntersectionObserver to trigger count-up and entrance
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const currentRef = sectionRef.current;
@@ -166,365 +136,320 @@ export default function ClubIdentitySection({
     return () => observer.disconnect();
   }, []);
 
-  // Fetch verified raw dataset on mount, then again only when the realtime-synced context counts
-  // change (i.e. the data actually changed). No polling: a 30s interval + focus refetch per open
-  // tab was most of the Worker's traffic and tripped its CPU limit (Error 1102, Nov 2026).
+  // Fetch on mount, then again only when the realtime-synced data changes. No polling: a 30s
+  // interval + focus refetch per open tab was most of the Worker's traffic and tripped its CPU
+  // limit (Error 1102, Nov 2026).
   useEffect(() => {
     let isMounted = true;
-    async function fetchSupabaseStats() {
+    (async () => {
       try {
         const res = await fetch(`/api/clubs/${encodeURIComponent(club.slug)}/identity-stats`);
         if (!res.ok) return;
         const json = await res.json();
-        if (json.success && json.stats && isMounted) {
-          setStats({
-            totalMembers: json.stats.totalMembers,
-            totalPlayers: json.stats.totalPlayers,
-            matchesPlayed: json.stats.matchesPlayed,
-            eventsCount: json.stats.eventsCount,
-            sponsorsCount: json.stats.sponsorsCount,
-            goalsScored: json.stats.goalsScored,
-            currentSeason: json.stats.currentSeason || rawCurrentSeason,
-            source: 'supabase_raw_dataset',
-          });
-        }
+        if (json.success && json.stats && isMounted && Array.isArray(json.stats.form)) setServer(json.stats as ClubNumbers);
       } catch (err) {
-        console.warn('[ClubIdentitySection] Failed to fetch Supabase stats, retaining verified context counts', err);
+        console.warn('[ClubIdentitySection] Failed to fetch Supabase stats, keeping the page counts', err);
       }
-    }
-
-    fetchSupabaseStats();
+    })();
     return () => {
       isMounted = false;
     };
-  }, [club.slug, club.id, rawCurrentSeason, rawTotalMembers, rawMatchesPlayed, rawEventsCount, rawSponsorsCount, rawGoalsScored]);
+  }, [club.slug, localKey]);
 
-  // Fall back to the (now realtime-synced) client context counts until the first server
-  // fetch above lands - once it has, that snapshot is kept fresh by the interval/focus
-  // refetch above instead, so it's no longer overridden here.
-  useEffect(() => {
-    if (stats.source !== 'supabase_raw_dataset') {
-      setStats({
-        totalMembers: rawTotalMembers,
-        totalPlayers: rawTotalPlayers,
-        matchesPlayed: rawMatchesPlayed,
-        eventsCount: rawEventsCount,
-        sponsorsCount: rawSponsorsCount,
-        goalsScored: rawGoalsScored,
-        currentSeason: rawCurrentSeason,
-        source: 'client_context_raw',
-      });
-    }
-  }, [
-    rawTotalMembers,
-    rawTotalPlayers,
-    rawMatchesPlayed,
-    rawEventsCount,
-    rawSponsorsCount,
-    rawGoalsScored,
-    rawCurrentSeason,
-    stats.source,
-  ]);
+  // A brand-new club with nothing to count: no section at all rather than a wall of zeros
+  if (!hasClubNumbers(n)) return null;
 
-  const primaryColor = club.primary_color || '#10B981';
+  const slug = club.slug;
+  const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+  const results = n.won + n.drawn + n.lost;
+  const seasonGames = n.games > 0;
+  const bigGames = seasonGames ? n.games : n.allTimeGames;
 
-  // Configured stat cards data
-  const statCards = [
-    {
-      id: 'members',
-      label: 'Members',
-      sublabel: 'Signed up with the club',
-      value: stats.totalMembers,
-      icon: Users,
-      accentColor: primaryColor,
-      isHighlight: false,
-    },
-    {
-      id: 'players',
-      label: 'Players',
-      sublabel: 'Across all our teams',
-      value: stats.totalPlayers,
-      icon: Shield,
-      accentColor: primaryColor,
-      isHighlight: false,
-    },
-    {
-      id: 'matches',
-      label: 'Matches Played',
-      sublabel: 'Results and live games',
-      value: stats.matchesPlayed,
-      icon: Trophy,
-      accentColor: '#F59E0B',
-      isHighlight: false,
-    },
-    {
-      id: 'goals',
-      label: 'Goals Scored',
-      sublabel: `Season ${stats.currentSeason} Total`,
-      value: stats.goalsScored,
-      icon: Flame,
-      accentColor: '#F59E0B',
-      isHighlight: true, // Emotional centerpiece
-    },
-    {
-      id: 'events',
-      label: 'Events',
-      sublabel: 'Trials, socials and meetings',
-      value: stats.eventsCount,
-      icon: Calendar,
-      accentColor: primaryColor,
-      isHighlight: false,
-    },
-    {
-      id: 'sponsors',
-      label: 'Sponsors',
-      sublabel: 'Local businesses backing us',
-      value: stats.sponsorsCount,
-      icon: Award,
-      accentColor: primaryColor,
-      isHighlight: false,
-    },
-  ];
+  // Rows with a 0 are left out
+  const rows = [
+    { id: 'goals', value: n.goals, label: plural(n.goals, 'Goal', 'Goals'), sub: `${n.season} season`, href: `/${slug}/fixtures`, go: 'Results' },
+    { id: 'clean', value: n.cleanSheets, label: plural(n.cleanSheets, 'Clean sheet', 'Clean sheets'), sub: `${n.season} season`, href: `/${slug}/fixtures`, go: 'Results' },
+    { id: 'players', value: n.players, label: plural(n.players, 'Player', 'Players'), sub: 'Signed up to play', href: `/${slug}/squad`, go: 'Squad' },
+    { id: 'supporters', value: n.supporters, label: plural(n.supporters, 'Supporter', 'Supporters'), sub: 'Signed up with the club', href: null, go: null },
+    { id: 'teams', value: n.teams, label: plural(n.teams, 'Team', 'Teams'), sub: 'Playing for the club', href: `/${slug}/teams`, go: 'Teams' },
+  ].filter(r => r.value > 0);
+
+  const reveal = (delayMs: number): React.CSSProperties => ({
+    opacity: isInView ? 1 : 0,
+    transform: isInView ? 'none' : 'translateY(10px)',
+    transition: `opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms`,
+  });
 
   return (
-    <section
-      ref={sectionRef}
-      id="club-identity"
-      aria-label={`${club.name} Impact & Identity`}
-      style={{
-        position: 'relative',
-        padding: '3.5rem 0 3.25rem 0',
-        background: 'linear-gradient(180deg, rgba(var(--dk-14-20-30), 0.96) 0%, rgba(var(--dk-8-12-18), 0.99) 100%)',
-        borderBottom: '1px solid var(--border-subtle)',
-        overflow: 'hidden',
-        scrollMarginTop: '90px',
-      }}
-    >
-      {/* Dynamic Keyframes & Scoped Animation Styles */}
-      <style>{`
-        @keyframes goalsBreathingGlow {
-          0%, 100% {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 16px rgba(245, 158, 11, 0.16);
-            border-color: rgba(245, 158, 11, 0.38);
-          }
-          50% {
-            box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 28px rgba(245, 158, 11, 0.32);
-            border-color: rgba(245, 158, 11, 0.65);
-          }
-        }
+    <section ref={sectionRef} id="club-identity" className="cn" aria-labelledby="club-numbers-heading">
+      <div className="container">
+        <p className="cn-club" style={reveal(0)}>
+          <b>{club.name}</b>
+          {club.founded_year ? <> · Est. {club.founded_year}</> : null}
+          {club.motto ? <> · &ldquo;{club.motto}&rdquo;</> : null}
+        </p>
+        <h2 id="club-numbers-heading" className="cn-title" style={reveal(0)}>Club&apos;s Impact in Numbers</h2>
 
-        @media (prefers-reduced-motion: reduce) {
-          .impact-stat-card, .impact-section-header, .goals-highlight-card {
-            animation: none !important;
-            transition: none !important;
-            transform: none !important;
-            opacity: 1 !important;
-          }
-        }
-      `}</style>
-
-      {/* Ambient background glow matching club primary color */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-120px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '700px',
-          height: '280px',
-          background: `radial-gradient(circle, ${primaryColor}22 0%, transparent 70%)`,
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
-
-      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-        {/* HEADER WITH METADATA & LIVE SOURCE STATUS */}
-        <div
-          className="impact-section-header"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1.25rem',
-            marginBottom: '1.75rem',
-            opacity: isInView ? 1 : 0,
-            transform: isInView ? 'translateY(0)' : 'translateY(8px)',
-            transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-              <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.65rem' }}>
-                EST. {club.founded_year || 2018}
-              </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{club.name}</span>
-              {club.motto && (
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                  • &ldquo;{club.motto}&rdquo;
+        <div className="cn-body">
+          {bigGames > 0 && (
+            <div className="glass-panel cn-lead" style={reveal(40)}>
+              <div className="cn-big">
+                <span className="cn-fig">
+                  <AnimatedCounter value={bigGames} enabled={isInView} duration={850} />
                 </span>
-              )}
-            </div>
-            <h2
-              style={{
-                fontSize: 'clamp(1.6rem, 3.2vw, 2.3rem)',
-                fontWeight: 900,
-                letterSpacing: '-0.02em',
-                color: 'var(--text-primary)',
-                margin: 0,
-              }}
-            >
-              Club&apos;s Impact in Numbers
-            </h2>
-          </div>
-        </div>
+                <span className="cn-big-label">
+                  {plural(bigGames, 'game played', 'games played')}
+                  <span>{seasonGames ? `${n.season} season` : 'All time'}</span>
+                </span>
+              </div>
 
-        {/* DYNAMIC LIVE STATS 6-METRIC GRID WITH COUNT-UP TICKER & ENTRANCE STAGGER */}
-        <div className="club-impact-grid">
-          {statCards.map((card, idx) => {
-            const Icon = card.icon;
-            const isHovered = hoveredCardIndex === idx;
-            const delayMs = idx * 40; // 0ms, 40ms, 80ms, 120ms, 160ms, 200ms
-
-            return (
-              <div
-                key={card.id}
-                className={`glass-panel impact-stat-card ${card.isHighlight ? 'goals-highlight-card' : ''}`}
-                data-theme={card.isHighlight ? 'dark' : undefined}
-                onMouseEnter={() => setHoveredCardIndex(idx)}
-                onMouseLeave={() => setHoveredCardIndex(null)}
-                style={{
-                  padding: '1.25rem',
-                  border: card.isHighlight
-                    ? isHovered
-                      ? `1px solid rgba(245, 158, 11, 0.8)`
-                      : `1px solid rgba(245, 158, 11, 0.38)`
-                    : isHovered
-                    ? `1px solid ${card.accentColor}80`
-                    : '1px solid rgba(var(--tint-rgb), 0.09)',
-                  background: card.isHighlight
-                    ? isHovered
-                      ? 'rgba(32, 26, 20, 0.95)'
-                      : 'rgba(25, 22, 18, 0.82)'
-                    : isHovered
-                    ? 'rgba(24, 34, 48, 0.88)'
-                    : 'rgba(var(--dk-18-26-38), 0.75)',
-                  boxShadow: isHovered
-                    ? `0 14px 30px rgba(0,0,0,0.55), 0 0 20px ${card.accentColor}30`
-                    : card.isHighlight
-                    ? '0 4px 16px rgba(0,0,0,0.4), 0 0 16px rgba(245, 158, 11, 0.16)'
-                    : 'none',
-                  transform: isHovered
-                    ? 'translateY(-4px)'
-                    : isInView
-                    ? 'translateY(0)'
-                    : 'translateY(12px)',
-                  opacity: isInView ? 1 : 0,
-                  transition: `opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease`,
-                  animation: card.isHighlight && isInView && !isHovered ? 'goalsBreathingGlow 4s infinite ease-in-out' : 'none',
-                  cursor: 'default',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Header: Label & Icon badge */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '0.65rem',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      color: card.isHighlight ? 'var(--c-amber)' : 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      transition: 'color 0.2s ease',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {card.label}
-                  </span>
-
-                  {/* Icon badge with hover scale */}
-                  <div
-                    style={{
-                      padding: '5px',
-                      borderRadius: '8px',
-                      background: card.isHighlight
-                        ? 'rgba(245, 158, 11, 0.16)'
-                        : isHovered
-                        ? `${card.accentColor}25`
-                        : 'rgba(var(--tint-rgb), 0.06)',
-                      transform: isHovered ? 'scale(1.12)' : 'scale(1)',
-                      transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon size={15} color={card.accentColor} />
+              {seasonGames && results > 0 && (
+                <div className="cn-wdl">
+                  <div className="cn-wdl-bar" aria-hidden="true">
+                    {n.won > 0 && <i className="w" style={{ flex: n.won }} />}
+                    {n.drawn > 0 && <i className="d" style={{ flex: n.drawn }} />}
+                    {n.lost > 0 && <i className="l" style={{ flex: n.lost }} />}
+                  </div>
+                  <div className="cn-wdl-key">
+                    <span><b>{n.won}</b> won</span>
+                    <span><b>{n.drawn}</b> drawn</span>
+                    <span><b>{n.lost}</b> lost</span>
                   </div>
                 </div>
+              )}
 
-                {/* Number with smooth Eased Count-Up Ticker */}
-                <div
-                  className="impact-stat-value"
-                  style={{
-                    fontSize: '2rem',
-                    fontWeight: 900,
-                    color: 'var(--text-primary)',
-                    lineHeight: 1,
-                    letterSpacing: '-0.02em',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  <AnimatedCounter value={card.value} enabled={isInView} duration={850} />
+              {n.form.length > 0 && (
+                <div className="cn-form">
+                  <span>Last {n.form.length}</span>
+                  <span className="cn-form-list" role="list" aria-label={`Last ${n.form.length} results, oldest first`}>
+                    {n.form.map((o, i) => (
+                      <i key={i} role="listitem" className={`o-${o}`} aria-label={o === 'W' ? 'Won' : o === 'D' ? 'Drawn' : 'Lost'}>{o}</i>
+                    ))}
+                  </span>
                 </div>
+              )}
 
-                {/* Subtext */}
-                <div
-                  style={{
-                    fontSize: '0.72rem',
-                    color: card.isHighlight ? 'var(--c-amber)' : 'var(--text-muted)',
-                    marginTop: '0.45rem',
-                    fontWeight: card.isHighlight ? 700 : 500,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {card.sublabel}
+              {seasonGames && n.allTimeGames > n.games && (
+                <div className="cn-alltime">
+                  All time: {n.allTimeGames} {plural(n.allTimeGames, 'game', 'games')} · {n.allTimeGoals} {plural(n.allTimeGoals, 'goal', 'goals')}
                 </div>
+              )}
+            </div>
+          )}
+
+          <div className="cn-right">
+            {(n.events > 0 || n.sponsors > 0) && (
+              <div className="cn-pair">
+                {n.events > 0 && (
+                  <Link href={`/${slug}/events`} className="glass-panel cn-tile" style={reveal(80)}>
+                    <span className="cn-fig cn-fig-md">
+                      <AnimatedCounter value={n.events} enabled={isInView} duration={850} />
+                    </span>
+                    <span className="cn-tile-label">{plural(n.events, 'Event', 'Events')}</span>
+                    {n.upcomingEvents > 0 && <span className="cn-tile-sub">{n.upcomingEvents} coming up</span>}
+                    {n.eventSignups > 0 && <span className="cn-tile-sub">{n.eventSignups} {plural(n.eventSignups, 'sign-up', 'sign-ups')}</span>}
+                    {n.eventTypes.length > 0 && (
+                      <span className="cn-chips">
+                        {n.eventTypes.map(t => <span key={t.label} className="cn-chip">{t.count} {t.label}</span>)}
+                      </span>
+                    )}
+                    <span className="cn-go">Events →</span>
+                  </Link>
+                )}
+                {n.sponsors > 0 && (
+                  <Link href={`/${slug}/sponsor`} className="glass-panel cn-tile" style={reveal(120)}>
+                    <span className="cn-fig cn-fig-md">
+                      <AnimatedCounter value={n.sponsors} enabled={isInView} duration={850} />
+                    </span>
+                    <span className="cn-tile-label">{plural(n.sponsors, 'Sponsor', 'Sponsors')}</span>
+                    <span className="cn-tile-sub">Backing the club</span>
+                    {n.sponsorTiers.length > 0 && (
+                      <span className="cn-chips">
+                        {n.sponsorTiers.map(t => <span key={t.label} className="cn-chip">{t.count} {t.label}</span>)}
+                      </span>
+                    )}
+                    <span className="cn-go">Become a sponsor →</span>
+                  </Link>
+                )}
               </div>
-            );
-          })}
-        </div>
+            )}
 
-        <style jsx>{`
-          .club-impact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-            gap: 1.15rem;
-          }
-          @media (max-width: 640px) {
-            .club-impact-grid {
-              grid-template-columns: repeat(2, 1fr) !important;
-              gap: 0.65rem !important;
-            }
-            .impact-stat-card {
-              padding: 0.9rem 0.8rem !important;
-            }
-            .impact-stat-value {
-              font-size: 1.55rem !important;
-            }
-          }
-        `}</style>
+            {rows.length > 0 && (
+              <ul className="glass-panel cn-list" style={reveal(160)}>
+                {rows.map(r => {
+                  const inner = (
+                    <>
+                      <span className="cn-v"><AnimatedCounter value={r.value} enabled={isInView} duration={850} /></span>
+                      <span className="cn-t">{r.label}<span>{r.sub}</span></span>
+                      {r.go ? <span className="cn-go">{r.go} →</span> : <span />}
+                    </>
+                  );
+                  return (
+                    <li key={r.id}>
+                      {r.href ? <Link href={r.href} className="cn-row">{inner}</Link> : <div className="cn-row">{inner}</div>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
+
+      <style jsx>{`
+        .cn {
+          position: relative;
+          padding: 3rem 0 3.25rem;
+          border-bottom: 1px solid var(--border-subtle);
+          scroll-margin-top: 90px;
+        }
+        .cn-club {
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+          margin: 0 0 0.5rem;
+        }
+        .cn-club b { color: var(--text-primary); font-weight: 700; }
+        .cn-title {
+          font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+          font-weight: 900;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+          color: var(--text-primary);
+          margin: 0;
+        }
+        .cn-body {
+          display: grid;
+          gap: 1rem;
+          margin-top: 1.5rem;
+        }
+        .cn-right { display: grid; gap: 1rem; align-content: start; }
+        :global(.cn-fig) {
+          font-family: var(--font-heading);
+          font-weight: 900;
+          line-height: 0.85;
+          letter-spacing: -0.04em;
+          color: var(--club-ink);
+          font-variant-numeric: tabular-nums;
+        }
+        .cn-lead { padding: 1.25rem; }
+        .cn-big { display: flex; align-items: baseline; gap: 0.75rem; }
+        .cn-big .cn-fig { font-size: 5.5rem; }
+        .cn-big-label { font-weight: 700; font-size: 1rem; line-height: 1.25; color: var(--text-primary); }
+        .cn-big-label span { display: block; font-weight: 500; font-size: 0.85rem; color: var(--text-secondary); }
+        .cn-wdl { margin-top: 1.1rem; }
+        .cn-wdl-bar { display: flex; gap: 2px; height: 8px; border-radius: 999px; overflow: hidden; }
+        .cn-wdl-bar i { display: block; }
+        .cn-wdl-bar .w { background: var(--club-primary); }
+        .cn-wdl-bar .d { background: rgba(var(--tint-rgb), 0.28); }
+        .cn-wdl-bar .l { background: rgba(var(--tint-rgb), 0.12); }
+        .cn-wdl-key {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem 1rem;
+          margin-top: 0.55rem;
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+          font-variant-numeric: tabular-nums;
+        }
+        .cn-wdl-key b { color: var(--text-primary); font-weight: 700; }
+        .cn-form {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          margin-top: 0.9rem;
+          font-size: 0.8rem;
+          color: var(--text-secondary);
+        }
+        .cn-form-list { display: flex; gap: 6px; }
+        .cn-form-list i {
+          font-style: normal;
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          display: grid;
+          place-items: center;
+          font-size: 0.7rem;
+          font-weight: 800;
+        }
+        .cn-form-list .o-W { background: var(--club-primary); color: var(--club-primary-contrast, #fff); }
+        .cn-form-list .o-D { background: rgba(var(--tint-rgb), 0.18); color: var(--text-primary); }
+        .cn-form-list .o-L { border: 1px solid var(--border-medium); color: var(--text-secondary); }
+        .cn-alltime {
+          margin-top: 0.9rem;
+          padding-top: 0.75rem;
+          border-top: 1px solid var(--border-subtle);
+          font-size: 0.8rem;
+          color: var(--text-muted);
+          font-variant-numeric: tabular-nums;
+        }
+        .cn-pair {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+          gap: 1rem;
+        }
+        :global(.cn-tile) {
+          padding: 1.1rem 1.1rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+          color: inherit;
+          text-decoration: none;
+          min-width: 0;
+        }
+        :global(.cn-fig-md) { font-size: 3.4rem; }
+        :global(.cn-tile-label) { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+        :global(.cn-tile-sub) { font-size: 0.8rem; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+        :global(.cn-chips) { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.2rem; }
+        :global(.cn-chip) {
+          font-size: 0.72rem;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: rgba(var(--tint-rgb), 0.06);
+          color: var(--text-secondary);
+          font-variant-numeric: tabular-nums;
+        }
+        :global(.cn-go) { color: var(--club-ink); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+        :global(.cn-tile .cn-go) { margin-top: auto; padding-top: 0.4rem; }
+        .cn-list { list-style: none; margin: 0; padding: 0 1.25rem; }
+        .cn-list li + li { border-top: 1px solid var(--border-subtle); }
+        :global(.cn-row) {
+          display: grid;
+          grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 0.75rem;
+          min-height: 56px;
+          padding: 0.55rem 0;
+          color: inherit;
+          text-decoration: none;
+        }
+        :global(.cn-v) {
+          font-family: var(--font-heading);
+          font-weight: 800;
+          font-size: 1.6rem;
+          letter-spacing: -0.02em;
+          font-variant-numeric: tabular-nums;
+          color: var(--text-primary);
+        }
+        :global(.cn-t) { font-weight: 600; font-size: 0.95rem; line-height: 1.25; color: var(--text-primary); }
+        :global(.cn-t span) { display: block; font-weight: 500; font-size: 0.78rem; color: var(--text-muted); }
+        @media (hover: hover) and (pointer: fine) {
+          :global(a.cn-tile:hover) { border-color: rgba(var(--club-primary-rgb), 0.4); }
+          :global(a.cn-row:hover .cn-go), :global(a.cn-tile:hover .cn-go) { text-decoration: underline; }
+        }
+        @media (min-width: 900px) {
+          .cn { padding: 3.5rem 0; }
+          .cn-body { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1.25rem; align-items: start; }
+          .cn-right { gap: 1.25rem; }
+          .cn-lead { padding: 1.75rem; }
+          .cn-big .cn-fig { font-size: 7.5rem; }
+          :global(.cn-fig-md) { font-size: 4.2rem; }
+          .cn-list { padding: 0.25rem 1.75rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cn :global(*) { transition: none !important; transform: none !important; opacity: 1 !important; }
+        }
+      `}</style>
     </section>
   );
 }
