@@ -10,6 +10,7 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { clubResult, latestFirst } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import { POSITION_NAMES, POSITION_SPOTS } from '@/lib/positions';
+import { inPositionGroup } from '@/lib/top-players';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import ResultChip from '@/components/ResultChip';
 import LocalTime from '@/components/LocalTime';
@@ -97,10 +98,17 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   }
 
   const isKeeper = player.player_position === 'GK';
+  // Defenders lead with clean sheets too, and keep their goals and assists (lib/top-players.ts)
+  const isDefender = inPositionGroup(player.player_position, 'DEF');
   const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
   const alsoPlays = (player.secondary_positions || []).filter(p => p !== player.player_position && p !== 'SUB' && POSITION_SPOTS[p]);
   const firstName = player.full_name.trim().split(/\s+/)[0];
-  const figures: { label: string; n: number; all: number; lead?: boolean }[] = [
+  const figures: { label: string; n: number; all: number; lead?: boolean }[] = isDefender ? [
+    { label: 'Games', n: stats?.appearances ?? 0, all: total('appearances') },
+    { label: 'Clean sheets', n: stats?.clean_sheets ?? 0, all: total('clean_sheets'), lead: true },
+    { label: 'Goals', n: stats?.goals ?? 0, all: total('goals') },
+    { label: 'Assists', n: stats?.assists ?? 0, all: total('assists') },
+  ] : [
     { label: 'Games', n: stats?.appearances ?? 0, all: total('appearances') },
     isKeeper
       ? { label: 'Clean sheets', n: stats?.clean_sheets ?? 0, all: total('clean_sheets'), lead: true }
@@ -109,6 +117,8 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     { label: 'Player of the Match', n: stats?.motm_awards ?? 0, all: total('motm_awards') },
   ];
   const extras = [
+    // Four figures already, so a defender's Player of the Match awards go on the line below
+    isDefender && stats?.motm_awards ? <span key="motm"><b>{stats.motm_awards}</b> Player of the Match</span> : null,
     stats?.minutes_played ? <span key="min"><b>{stats.minutes_played}</b> minutes</span> : null,
     stats?.yellow_cards ? <span key="y"><i className="pp-card pp-card-y" aria-hidden="true" /><b>{stats.yellow_cards}</b> yellow card{stats.yellow_cards === 1 ? '' : 's'}</span> : null,
     stats?.red_cards ? <span key="r"><i className="pp-card pp-card-r" aria-hidden="true" /><b>{stats.red_cards}</b> red card{stats.red_cards === 1 ? '' : 's'}</span> : null,
@@ -279,18 +289,18 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                 <div className="pp-head"><h2 id="pp-career">By season</h2></div>
                 <table className="pp-career">
                   <thead>
-                    <tr><th scope="col">Season</th><th scope="col">Games</th><th scope="col">{isKeeper ? 'Clean sheets' : 'Goals'}</th><th scope="col">Assists</th><th scope="col"><abbr title="Player of the Match">PotM</abbr></th></tr>
+                    <tr><th scope="col">Season</th><th scope="col">Games</th>{isDefender && <th scope="col">Clean sheets</th>}<th scope="col">{isKeeper ? 'Clean sheets' : 'Goals'}</th><th scope="col">Assists</th><th scope="col"><abbr title="Player of the Match">PotM</abbr></th></tr>
                   </thead>
                   <tbody>
                     {[...career].sort((a, b) => b.season.localeCompare(a.season)).map(s => (
                       <tr key={s.season}>
-                        <td>{s.season}</td><td>{s.appearances || 0}</td><td>{(isKeeper ? s.clean_sheets : s.goals) || 0}</td><td>{s.assists || 0}</td><td>{s.motm_awards || 0}</td>
+                        <td>{s.season}</td><td>{s.appearances || 0}</td>{isDefender && <td>{s.clean_sheets || 0}</td>}<td>{(isKeeper ? s.clean_sheets : s.goals) || 0}</td><td>{s.assists || 0}</td><td>{s.motm_awards || 0}</td>
                       </tr>
                     ))}
                   </tbody>
                   {career.length > 1 && (
                     <tfoot>
-                      <tr><td>All seasons</td><td>{total('appearances')}</td><td>{isKeeper ? total('clean_sheets') : total('goals')}</td><td>{total('assists')}</td><td>{total('motm_awards')}</td></tr>
+                      <tr><td>All seasons</td><td>{total('appearances')}</td>{isDefender && <td>{total('clean_sheets')}</td>}<td>{isKeeper ? total('clean_sheets') : total('goals')}</td><td>{total('assists')}</td><td>{total('motm_awards')}</td></tr>
                     </tfoot>
                   )}
                 </table>
