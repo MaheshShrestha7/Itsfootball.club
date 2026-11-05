@@ -15,15 +15,20 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number; rgbStr
   let r = 16;
   let g = 185;
   let b = 129;
+  // Only unreadable text falls back: 00 is a real channel (#ff0040 has no green)
+  const channel = (text: string, fallback: number) => {
+    const n = parseInt(text, 16);
+    return Number.isNaN(n) ? fallback : n;
+  };
 
   if (clean.length === 3) {
-    r = parseInt(clean[0] + clean[0], 16) || 16;
-    g = parseInt(clean[1] + clean[1], 16) || 185;
-    b = parseInt(clean[2] + clean[2], 16) || 129;
+    r = channel(clean[0] + clean[0], r);
+    g = channel(clean[1] + clean[1], g);
+    b = channel(clean[2] + clean[2], b);
   } else if (clean.length >= 6) {
-    r = parseInt(clean.substring(0, 2), 16) || 16;
-    g = parseInt(clean.substring(2, 4), 16) || 185;
-    b = parseInt(clean.substring(4, 6), 16) || 129;
+    r = channel(clean.substring(0, 2), r);
+    g = channel(clean.substring(2, 4), g);
+    b = channel(clean.substring(4, 6), b);
   }
 
   return { r, g, b, rgbString: `${r}, ${g}, ${b}` };

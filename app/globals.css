@@ -4081,8 +4081,7 @@ dialog.form-dialog::backdrop {
   /* The club colour, darkened just enough for white text (the light-theme club ink, 4.5:1) */
   --tp-field: var(--club-ink-light, var(--club-primary));
   --tp-on: #FFFFFF;
-  --tp-on-2: color-mix(in srgb, var(--tp-on) 86%, var(--tp-field));
-  --tp-deep: color-mix(in srgb, var(--tp-field), #000000 22%);
+  --tp-deep:color-mix(in srgb, var(--tp-field), #000000 22%);
   --tp-gold: #F5B83B;
   --tp-gold-ink: #2A1A00;
 }
@@ -4091,9 +4090,8 @@ dialog.form-dialog::backdrop {
 .tp-title { font-size: clamp(1.9rem, 5vw, 2.4rem); font-weight: 900; }
 .tp-sub { margin-top: 0.25rem; color: var(--text-muted); font-size: 0.9rem; }
 .tp-seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(var(--tint-rgb), 0.06); width: 100%; }
-.tp-seg button { flex: 1; min-height: 40px; padding: 0 0.85rem; border: 0; border-radius: 9px; background: none; color: var(--text-secondary); font: 700 0.88rem var(--font-heading); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
-.tp-seg button:hover { color: var(--text-primary); }
-.tp-seg button[aria-pressed='true'] { background: var(--tp-field); color: var(--tp-on); }
+.tp-seg button { flex: 1; min-height: 40px; padding: 0 0.85rem; border: 0; border-radius: 9px; background: none; color: var(--text-secondary); font: 700 0.88rem var(--font-heading); cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 120ms ease-out; }
+.tp-seg button[aria-pressed='true'] { background: rgba(var(--tint-rgb), 0.14); color: var(--text-primary); }
 .tp-seg button:focus-visible, .tp-tabs button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
 @media (min-width: 960px) { .tp-seg { width: auto; } }
 .tp-empty { color: var(--text-muted); text-align: center; padding: 2rem 0; }
@@ -4104,23 +4102,27 @@ dialog.form-dialog::backdrop {
 /* The leader, styled like the member pass: dark glass with the club colour glowing through, a frosted
    sheen, and the shirt number huge, faded and tilted behind (beside the photo when there is one).
    The glow uses --tp-field (the club colour darkened for white text), so light club colours stay readable. */
-.tp-leader { --tp-px: 0; --tp-py: 0; position: relative; overflow: hidden; isolation: isolate; display: block; padding: 1.5rem; border-radius: 18px;
-  background: #0B1120; color: #FFFFFF; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.28);
+.tp-leader { display: block; padding: 1.5rem; text-decoration: none; }
+:is(.tp-leader, .pp-band) { position: relative; overflow: hidden; isolation: isolate; border-radius: 18px;
+  background: #0B1120; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
-.tp-leader::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
+:is(.tp-leader, .pp-band)::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
   background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
     radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
     radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
-.tp-leader::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+:is(.tp-leader, .pp-band)::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
+:is(.tp-leader, .pp-band) abbr { text-decoration: none; }
 .tp-leader:focus-visible { outline: 3px solid var(--club-ink); outline-offset: 3px; }
+/* A new leader's details and a new table fade in; the silk behind them stays put */
+.tp-swap, .tp-table tbody { animation: tp-swap 150ms ease-out; }
+@keyframes tp-swap { from { opacity: 0; } }
 .tp-leader-no { position: absolute; right: -1rem; top: 1rem; z-index: -2; pointer-events: none;
   font: 900 13rem/1 var(--font-heading); letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
   color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
   -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
-  transform: rotate(-10deg); opacity: 0;
-  translate: calc(var(--tp-px) * -16px) calc(var(--tp-py) * -12px); transition: translate 250ms ease-out; }
+  transform: rotate(-10deg); opacity: 0; }
 .tp-leader-has-photo .tp-leader-no { right: 3rem; top: 4.5rem; }
 .tp-leader.is-seen .tp-leader-no { animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes tp-no-in {
@@ -4128,7 +4130,7 @@ dialog.form-dialog::backdrop {
   to { opacity: 1; transform: rotate(-10deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tp-leader-no, .tp-leader.is-seen .tp-leader-no { opacity: 1; animation: none; translate: none; transition: none; }
+  .tp-leader-no, .tp-leader.is-seen .tp-leader-no { opacity: 1; animation: none; }
 }
 .tp-leader-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .tp-leader-photo { position: relative; z-index: 1; flex-shrink: 0; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; padding: 4px; border-radius: 14px;
@@ -4142,10 +4144,9 @@ dialog.form-dialog::backdrop {
 .tp-leader-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin: 1.5rem 0 0; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.22); }
 .tp-leader-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tp-leader-stats dd { margin: 0; font: 900 2rem/1 var(--font-heading); font-variant-numeric: tabular-nums; }
-.tp-leader-stats dt { margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.tp-leader-stats dt { margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: #FFFFFF; }
 .tp-leader-line { margin-top: 0.75rem; font-size: 0.88rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 .tp-leader-go { display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-bottom: 0.1rem; font: 700 0.88rem var(--font-heading); }
-.tp-leader:hover .tp-leader-go span { text-decoration: underline; }
 @media (min-width: 960px) {
   .tp-leader { padding: 2.5rem; } .tp-leader-name { font-size: 3rem; } .tp-leader-photo { width: 150px; }
   .tp-leader-no { font-size: 19rem; right: -1rem; top: 1rem; }
@@ -4153,16 +4154,17 @@ dialog.form-dialog::backdrop {
 }
 
 /* The silk background (components/SilkBackdrop.tsx): a canvas under everything, the club glow
-   becomes a soft shade above it so white text reads, and the CSS number gives way to the printed one */
+   becomes a soft shade above it so white text reads, darkest under the stats along the bottom
+   (a bright club red alone gives white small print under 4:1), and the CSS number gives way to the printed one */
 .silk-backdrop { position: absolute; inset: 0; z-index: -3; display: block; width: 100%; height: 100%; pointer-events: none; }
 :is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
-  background: linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
+  background: linear-gradient(to top, rgba(5, 8, 15, 0.62) 0%, rgba(5, 8, 15, 0.38) 40%, transparent 65%),
+    linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
 :is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
-.tp-tabs button { flex-shrink: 0; min-height: 36px; padding: 0 0.75rem; border: 0; border-radius: 8px; background: none; color: var(--text-muted); font: 700 0.88rem var(--font-heading); white-space: nowrap; cursor: pointer; }
-.tp-tabs button:hover { color: var(--text-primary); }
+.tp-tabs button { flex-shrink: 0; min-height: 36px; padding: 0 0.75rem; border: 0; border-radius: 8px; background: none; color: var(--text-muted); font: 700 0.88rem var(--font-heading); white-space: nowrap; cursor: pointer; transition: color 120ms ease, transform 120ms ease-out; }
 .tp-tabs button[aria-pressed='true'] { background: rgba(var(--tint-rgb), 0.08); color: var(--text-primary); }
 .tp-table { width: 100%; border-collapse: collapse; }
 .tp-table th { padding: 0.5rem 0.25rem; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; }
@@ -4170,10 +4172,12 @@ dialog.form-dialog::backdrop {
 .tp-table abbr { text-decoration: none; }
 .tp-table td { padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--border-subtle); text-align: center; color: var(--text-secondary); font: 800 1.1rem var(--font-heading); font-variant-numeric: tabular-nums; }
 .tp-table td.tp-key { color: var(--text-primary); }
-.tp-table td.tp-rank { width: 28px; color: var(--text-muted); font-size: 1rem; }
+.tp-table td.tp-rank { width: 28px; color: var(--text-muted); font-size: 1rem; white-space: nowrap; }
+.tp-table tbody tr { position: relative; }
 .tp-table td.tp-who { text-align: left; }
 .tp-who a { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; color: var(--text-primary); text-decoration: none; }
-.tp-who a:hover strong { text-decoration: underline; }
+/* The player's link covers the whole row */
+.tp-who a::after { content: ''; position: absolute; inset: 0; }
 .tp-who a:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 6px; }
 .tp-who strong { display: block; font: 800 1rem/1.15 var(--font-heading); overflow-wrap: break-word; }
 .tp-who small { display: block; margin-top: 2px; color: var(--text-muted); font: 500 0.75rem var(--font-body); }
@@ -4182,85 +4186,73 @@ dialog.form-dialog::backdrop {
 .tp-kit-photo { background: rgba(var(--tint-rgb), 0.08); }
 .tp-col-gp { display: none; }
 @media (min-width: 960px) { .tp-table .tp-col-gp { display: table-cell; } }
-.tp-more { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 44px; margin-top: 0.5rem; color: var(--club-ink); font: 700 0.9rem var(--font-heading); text-decoration: none; }
-.tp-more:hover { text-decoration: underline; }
+.tp-more-row { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-top: 0.5rem; }
+.tp-more { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text-primary); font: 700 0.9rem var(--font-heading); text-decoration: none; cursor: pointer; transition: transform 120ms ease-out; }
+.tp-more:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
 
 /* Player page */
 .pp { min-height: 85vh; padding: 1.5rem 0 4rem; }
 .pp-back { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 44px; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.88rem; font-weight: 600; text-decoration: none; }
-.pp-back:hover { color: var(--text-primary); }
-.pp-band { position: relative; overflow: hidden; isolation: isolate; border-radius: 18px; background: var(--tp-field); color: var(--tp-on); }
-.pp-band-no { position: absolute; right: -1rem; top: -4rem; z-index: -1; font: 900 16rem/1 var(--font-heading); letter-spacing: -0.06em; color: var(--tp-deep); }
-.pp-band-photo { position: absolute; right: 1rem; top: 1rem; width: 96px; height: 120px; overflow: hidden; border-radius: 12px; background: var(--tp-deep); z-index: 0; }
+/* The band shares its glass, silk and shade with the Top Players leader (above) */
+.pp-band-no { position: absolute; z-index: -2; pointer-events: none; right: -1rem; top: 1rem; font: 900 14rem/1 var(--font-heading); letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
+  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
+  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+  transform: rotate(-10deg); animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both; }
+.pp-band-has-photo .pp-band-no { right: 3rem; top: 5rem; font-size: 12rem; }
+.pp-band-photo { position: absolute; right: 1rem; top: 1rem; z-index: 1; width: 96px; height: 120px; overflow: hidden; padding: 4px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 28px rgba(0, 0, 0, 0.35); }
+.pp-band-photo > * { border-radius: 10px; overflow: hidden; }
 .pp-band-photo img { object-position: top center; }
 .pp-band-in { position: relative; padding: 1.5rem; }
-.pp-band-club { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; margin-bottom: 1rem; color: var(--tp-on); font: 700 0.88rem var(--font-heading); text-decoration: none; }
-.pp-band-club:hover { text-decoration: underline; }
-.pp-band-club img { width: 40px; height: 40px; border-radius: 50%; object-fit: contain; background: var(--tp-on); box-shadow: 0 0 0 2px var(--tp-on); flex-shrink: 0; }
-.pp-name { font-size: 2.6rem; font-weight: 900; line-height: 0.98; max-width: 8ch; color: var(--tp-on); overflow-wrap: break-word; min-width: 0; }
-.pp-pos { margin-top: 0.5rem; color: var(--tp-on-2); font-weight: 600; }
+.pp-band-club { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; margin-bottom: 1rem; color: #FFFFFF; font: 700 0.88rem var(--font-heading); text-decoration: none; }
+.pp-band-club img { width: 40px; height: 40px; border-radius: 50%; object-fit: contain; background: #FFFFFF; box-shadow: 0 0 0 2px #FFFFFF; flex-shrink: 0; }
+.pp-name { font-size: 2.6rem; font-weight: 900; line-height: 0.98; max-width: 8ch; color: #FFFFFF; overflow-wrap: break-word; min-width: 0; }
+.pp-pos { margin-top: 0.5rem; color: rgba(255, 255, 255, 0.8); font-weight: 600; }
 .pp-teams { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-.pp-teams a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 0.75rem; border: 1px solid var(--tp-on-2); border-radius: 6px; color: var(--tp-on); font: 700 0.85rem var(--font-heading); text-decoration: none; }
-.pp-teams a:hover { background: var(--tp-deep); }
-.pp-band a:focus-visible, .pp-band button:focus-visible { outline: 2px solid var(--tp-on); outline-offset: 2px; }
+.pp-teams a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 0.75rem; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 6px; background: rgba(255, 255, 255, 0.06); color: #FFFFFF; font: 700 0.85rem var(--font-heading); text-decoration: none; }
+.pp-band a:focus-visible, .pp-band button:focus-visible, .pp-band select:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+/* The season in the band: the leader card's stat row with the season picker above it */
+.pp-band-season { margin-top: 1.5rem; }
+.pp-picker { display: inline-flex; }
+.pp-picker select { min-height: 40px; padding: 0 0.75rem; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: #FFFFFF; color-scheme: dark; font: 700 0.88rem var(--font-heading); cursor: pointer; }
+.pp-band-season .tp-leader-stats { margin-top: 1rem; }
+.pp-extras { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.75rem; color: #FFFFFF; font-size: 0.88rem; }
+.pp-extras span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.pp-extras b { font: 800 1rem var(--font-heading); }
+.pp-card { display: inline-block; width: 10px; height: 14px; border-radius: 2px; }
+.pp-card-y { background: #FACC15; }
+.pp-card-r { background: #EF4444; }
 .pp-band-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
-.pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 44px; padding: 0 1rem; border-radius: 10px; font: 700 0.9rem var(--font-heading); text-decoration: none; white-space: nowrap; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
-.pp-btn-ghost { background: none; color: var(--tp-on); border: 1px solid var(--tp-on-2); }
-.pp-btn-ghost:hover { background: var(--tp-deep); }
-.pp-btn-light { background: var(--tp-on); color: var(--tp-deep); border: 1px solid var(--tp-on); }
-.pp-btn-light:hover { background: var(--tp-on-2); }
+.pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 44px; padding: 0 1rem; border-radius: 10px; font: 700 0.9rem var(--font-heading); text-decoration: none; white-space: nowrap; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease-out; }
+.pp-btn-ghost { background: rgba(255, 255, 255, 0.06); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.4); }
+.pp-btn-light { background: #FFFFFF; color: #0B1120; border: 1px solid #FFFFFF; }
 .pp-btn-primary { width: 100%; background: var(--tp-field); color: var(--tp-on); border: 1px solid var(--tp-field); }
-.pp-btn-primary:hover { background: var(--tp-deep); }
 .pp-btn:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
 .pp-band-card { display: none; }
 .pp-band-has-photo .pp-band-club, .pp-band-has-photo .pp-name { max-width: calc(100% - 112px); }
 @media (min-width: 960px) {
-  .pp-band-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2.5rem; padding: 3rem 2.5rem; }
-  .pp-band-actions { margin-top: 0; }
+  .pp-band-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 2.5rem; padding: 3rem 2.5rem; }
+  .pp-band-main { grid-column: 1; grid-row: 1; }
+  .pp-band-actions { grid-column: 2; grid-row: 1; align-self: end; margin-top: 0; }
+  .pp-band-season { grid-column: 1 / -1; grid-row: 2; }
+  .pp-band-season .tp-leader-stats dd { font-size: 2.75rem; }
+  .pp-band-season .tp-leader-stats dt { font-size: 0.88rem; }
   .pp-band-card { display: inline-flex; }
   .pp-name { font-size: 4.5rem; max-width: 12ch; }
-  .pp-band-no { font-size: 24rem; top: -4rem; right: 4rem; }
+  .pp-band-no { font-size: 22rem; right: 2rem; top: 0; }
   .pp-band-has-photo { display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
-  .pp-band-has-photo .pp-band-photo { grid-column: 2; grid-row: 1; position: relative; right: auto; top: auto; width: auto; height: auto; min-height: 340px; margin: 2.5rem 2.5rem 0 0; border-radius: 18px 18px 0 0; }
+  .pp-band-has-photo .pp-band-no { font-size: 20rem; right: 20rem; top: 4rem; }
+  .pp-band-has-photo .pp-band-photo { grid-column: 2; grid-row: 1; align-self: start; position: relative; right: auto; top: auto; width: auto; height: auto; aspect-ratio: 4 / 5; margin: 2.5rem 2.5rem 2.5rem 0; border-radius: 18px; }
+  .pp-band-has-photo .pp-band-photo > * { border-radius: 14px; }
   .pp-band-has-photo .pp-band-in { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1fr); }
-  .pp-band-has-photo .pp-band-actions { margin-top: 1.5rem; }
-  .pp-band-has-photo .pp-band-club, .pp-band-has-photo .pp-name { max-width: 12ch; }
+  /* Stacked beside the photo: name, then season, then buttons */
+  .pp-band-has-photo .pp-band-main, .pp-band-has-photo .pp-band-season, .pp-band-has-photo .pp-band-actions { grid-column: 1; grid-row: auto; }
+  .pp-band-has-photo .pp-band-actions { align-self: auto; margin-top: 1.5rem; }
+  .pp-band-has-photo .pp-name { max-width: 12ch; }
   .pp-band-has-photo .pp-band-club { max-width: none; }
 }
-
-/* The band in the member-pass glass style, matching the Top Players leader card */
-.pp-band { --tp-px: 0; --tp-py: 0; background: #0B1120; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
-.pp-band::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
-  background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
-    radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
-    radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
-.pp-band::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
-    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
-.pp-band .pp-band-no { z-index: -2; pointer-events: none; right: -1rem; top: 1rem; font-size: 14rem; letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
-  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
-  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
-  transform: rotate(-10deg); translate: calc(var(--tp-px) * -16px) calc(var(--tp-py) * -12px); transition: translate 250ms ease-out;
-  animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both; }
-.pp-band-has-photo .pp-band-no { right: 3rem; top: 5rem; font-size: 12rem; }
-.pp-band .pp-band-photo { z-index: 1; padding: 4px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 14px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 28px rgba(0, 0, 0, 0.35); }
-.pp-band .pp-band-photo > * { border-radius: 10px; overflow: hidden; }
-.pp-band .pp-band-club, .pp-band .pp-name { color: #FFFFFF; }
-.pp-band .pp-pos { color: rgba(255, 255, 255, 0.8); }
-.pp-band .pp-teams a, .pp-band .pp-btn-ghost { border-color: rgba(255, 255, 255, 0.4); color: #FFFFFF; background: rgba(255, 255, 255, 0.06); }
-.pp-band .pp-teams a:hover, .pp-band .pp-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
-.pp-band .pp-btn-light { background: #FFFFFF; color: #0B1120; border-color: #FFFFFF; }
-.pp-band .pp-btn-light:hover { background: rgba(255, 255, 255, 0.85); }
-.pp-band a:focus-visible, .pp-band button:focus-visible { outline-color: #FFFFFF; }
-@media (min-width: 960px) {
-  .pp-band .pp-band-no { font-size: 22rem; right: 2rem; top: 0; }
-  .pp-band-has-photo .pp-band-no { font-size: 20rem; right: 20rem; top: 4rem; }
-  .pp-band-has-photo .pp-band-photo { margin-bottom: 2.5rem; border-radius: 18px; }
-  .pp-band-has-photo .pp-band-photo > * { border-radius: 14px; }
-}
-@media (prefers-reduced-motion: reduce) { .pp-band .pp-band-no { animation: none; translate: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pp-band-no { animation: none; } }
 
 .pp-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; margin-top: 2.5rem; }
 @media (min-width: 960px) { .pp-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 4rem; align-items: start; } }
@@ -4268,39 +4260,6 @@ dialog.form-dialog::backdrop {
 .pp-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
 .pp-head h2 { font-size: 1.45rem; font-weight: 800; }
 .pp-note { color: var(--text-muted); font-size: 0.85rem; }
-.pp-picker { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem; font-weight: 700; }
-.pp-picker select { min-height: 40px; padding: 0 0.75rem; border: 1px solid var(--text-muted); border-radius: 10px; background: var(--bg-surface-elevated); color: var(--text-primary); font: 700 0.88rem var(--font-heading); cursor: pointer; }
-.pp-picker select:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
-@media (max-width: 640px) { .pp-picker-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
-
-/* Season figures on hairlines, no tiles */
-.pp-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 2px solid var(--text-primary); }
-.pp-figures > div { padding: 0.75rem 0 1rem; border-bottom: 1px solid var(--border-subtle); }
-.pp-figures > div:nth-child(odd) { padding-right: 1rem; border-right: 1px solid var(--border-subtle); }
-.pp-figures > div:nth-child(even) { padding-left: 1rem; }
-.pp-figures dd { margin: 0; font: 900 3rem/1 var(--font-heading); font-variant-numeric: tabular-nums; color: var(--text-primary); }
-.pp-figures .pp-fig-lead dd { color: var(--club-ink); }
-.pp-figures dt { margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.88rem; font-weight: 600; }
-.pp-figures small { display: block; color: var(--text-muted); font-size: 0.75rem; }
-@media (min-width: 960px) {
-  .pp-figures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .pp-figures > div, .pp-figures > div:nth-child(odd), .pp-figures > div:nth-child(even) { padding: 0.75rem 1rem 1rem; border-right: 1px solid var(--border-subtle); }
-  .pp-figures > div:first-child { padding-left: 0; }
-  .pp-figures > div:last-child { border-right: 0; }
-}
-.pp-extras { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.88rem; }
-.pp-extras span { display: inline-flex; align-items: center; gap: 0.3rem; }
-.pp-extras b { color: var(--text-primary); font: 800 1rem var(--font-heading); }
-.pp-card { display: inline-block; width: 10px; height: 14px; border-radius: 2px; }
-.pp-card-y { background: #FACC15; }
-.pp-card-r { background: #EF4444; }
-
-/* Form, oldest first */
-.pp-form { display: grid; grid-template-columns: repeat(var(--pp-form-n, 5), minmax(0, 1fr)); gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-.pp-form li { display: grid; justify-items: center; gap: 0.3rem; }
-.pp-form-res { width: 100%; }
-.pp-form .result-chip { width: 100%; height: 44px; border-radius: 10px; font-size: 1.1rem; }
-.pp-form-did { display: flex; gap: 2px; min-height: 16px; color: var(--text-primary); }
 .pp-ball { width: 15px; height: 15px; flex-shrink: 0; }
 
 /* Recent games: a table, restacked on a phone */
@@ -4308,7 +4267,6 @@ dialog.form-dialog::backdrop {
 .pp-games th { padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-align: left; white-space: nowrap; }
 .pp-games td { padding: 0.75rem 0.5rem 0.75rem 0; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 0.88rem; vertical-align: middle; }
 .pp-g-opp a { color: var(--text-primary); font: 800 1rem var(--font-heading); text-decoration: none; }
-.pp-g-opp a:hover { text-decoration: underline; }
 .pp-g-opp a:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
 .pp-g-score span { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; color: var(--text-primary); font: 900 1.1rem var(--font-heading); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pp-did { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -4344,7 +4302,22 @@ dialog.form-dialog::backdrop {
 .pp-career tfoot td:first-child { color: var(--text-primary); font-weight: 800; }
 .pp-actions { display: flex; }
 @media (min-width: 960px) { .pp-actions { display: none; } }
-@media (prefers-reduced-motion: reduce) { .tp-seg button, .pp-btn { transition: none; } }
+
+/* Hover only with a real pointer, so it can't stick after a tap */
+@media (hover: hover) and (pointer: fine) {
+  .tp-seg button:hover, .tp-tabs button:hover, .pp-back:hover { color: var(--text-primary); }
+  .tp-leader:hover .tp-leader-go span, .tp-who a:hover strong, .tp-more:hover, .pp-band-club:hover, .pp-g-opp a:hover { text-decoration: underline; }
+  .tp-table tbody tr:hover { background: rgba(var(--tint-rgb), 0.04); }
+  .pp-teams a:hover, .pp-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
+  .pp-btn-light:hover { background: rgba(255, 255, 255, 0.85); }
+  .pp-btn-primary:hover { background: var(--tp-deep); }
+}
+/* Press feedback */
+.tp-seg button:active, .tp-tabs button:active, .tp-more:active, .pp-btn:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .tp-seg button, .tp-tabs button, .tp-more, .pp-btn { transition: none; }
+  .tp-seg button:active, .tp-tabs button:active, .tp-more:active, .pp-btn:active { transform: none; }
+}
 
 /* Admin Fixtures list: a date tile for fixtures without a flyer, Coming up / Played headings,
    and on a phone one summary line in place of the five tiles and actions two to a row */

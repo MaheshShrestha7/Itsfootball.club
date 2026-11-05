@@ -116,7 +116,7 @@ export function teamMemberIds(rows: ClubTeamMember[], teamId: string, role: Club
 
 /** Who counts as a player on the public squad: a 'player' club role, or a place in any team's
  *  squad (an admin or coach who also plays is listed on the team page, so the squad page too) */
-export function squadPlayerIds(members: Pick<ClubMember, 'id' | 'role' | 'roles'>[], rows: ClubTeamMember[]): Set<string> {
+export function squadPlayerIds(members: Pick<ClubMember, 'id' | 'role' | 'roles'>[], rows: (Pick<ClubTeamMember, 'member_id' | 'team_role'> & { is_active?: boolean })[]): Set<string> {
   const onTeams = new Set(rows.filter(r => r.team_role === 'player' && r.is_active !== false).map(r => r.member_id));
   return new Set(members.filter(m => isPlayerMember(m) || onTeams.has(m.id)).map(m => m.id));
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Lock, Star } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
@@ -104,18 +104,18 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
   const alsoPlays = (player.secondary_positions || []).filter(p => p !== player.player_position && p !== 'SUB' && POSITION_SPOTS[p]);
   const firstName = player.full_name.trim().split(/\s+/)[0];
-  const figures: { label: string; n: number; all: number; lead?: boolean }[] = isDefender ? [
-    { label: 'Games', n: stats?.appearances ?? 0, all: total('appearances') },
-    { label: 'Clean sheets', n: stats?.clean_sheets ?? 0, all: total('clean_sheets'), lead: true },
-    { label: 'Goals', n: stats?.goals ?? 0, all: total('goals') },
-    { label: 'Assists', n: stats?.assists ?? 0, all: total('assists') },
+  const figures: { label: string; abbr?: string; n: number }[] = isDefender ? [
+    { label: 'Games', n: stats?.appearances ?? 0 },
+    { label: 'Clean sheets', n: stats?.clean_sheets ?? 0 },
+    { label: 'Goals', n: stats?.goals ?? 0 },
+    { label: 'Assists', n: stats?.assists ?? 0 },
   ] : [
-    { label: 'Games', n: stats?.appearances ?? 0, all: total('appearances') },
+    { label: 'Games', n: stats?.appearances ?? 0 },
     isKeeper
-      ? { label: 'Clean sheets', n: stats?.clean_sheets ?? 0, all: total('clean_sheets'), lead: true }
-      : { label: 'Goals', n: stats?.goals ?? 0, all: total('goals'), lead: true },
-    { label: 'Assists', n: stats?.assists ?? 0, all: total('assists') },
-    { label: 'Player of the Match', n: stats?.motm_awards ?? 0, all: total('motm_awards') },
+      ? { label: 'Clean sheets', n: stats?.clean_sheets ?? 0 }
+      : { label: 'Goals', n: stats?.goals ?? 0 },
+    { label: 'Assists', n: stats?.assists ?? 0 },
+    { label: 'Player of the Match', abbr: 'PotM', n: stats?.motm_awards ?? 0 },
   ];
   const extras = [
     // Four figures already, so a defender's Player of the Match awards go on the line below
@@ -124,7 +124,6 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
     stats?.yellow_cards ? <span key="y"><i className="pp-card pp-card-y" aria-hidden="true" /><b>{stats.yellow_cards}</b> yellow card{stats.yellow_cards === 1 ? '' : 's'}</span> : null,
     stats?.red_cards ? <span key="r"><i className="pp-card pp-card-r" aria-hidden="true" /><b>{stats.red_cards}</b> red card{stats.red_cards === 1 ? '' : 's'}</span> : null,
   ].filter(Boolean);
-  const form = recent.filter(r => clubResult(r.match).outcome).slice().reverse();
 
   // The card maker opens filled in with them and the picked season's stats (cardFromLink)
   const cardLink = `/tools/player-card-maker?${new URLSearchParams({
@@ -147,17 +146,9 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
       <div className="container">
         {back}
 
-        {/* The band, styled like the member pass and the Top Players leader: dark glass with the club
-            colour glowing through, their shirt number huge and faded behind (beside the photo when
-            there is one). The number drifts in once and leans away from the mouse on desktop. */}
-        <section className={`pp-band${player.photo_url ? ' pp-band-has-photo' : ''}`} aria-labelledby="pp-name"
-          onPointerMove={e => {
-            if (e.pointerType !== 'mouse') return;
-            const r = e.currentTarget.getBoundingClientRect();
-            e.currentTarget.style.setProperty('--tp-px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
-            e.currentTarget.style.setProperty('--tp-py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
-          }}
-          onPointerLeave={e => { e.currentTarget.style.setProperty('--tp-px', '0'); e.currentTarget.style.setProperty('--tp-py', '0'); }}>
+        {/* The band, styled like the member pass and the Top Players leader: the club's silk with their
+            shirt number printed on it, the photo beside, and their season along the bottom. */}
+        <section className={`pp-band${player.photo_url ? ' pp-band-has-photo' : ''}`} aria-labelledby="pp-name">
           <SilkBackdrop primary={club.primary_color} secondary={club.secondary_color} numberSelector=".pp-band-no" number={player.jersey_number ?? null} />
           {player.jersey_number != null && <span className="pp-band-no" aria-hidden="true">{player.jersey_number}</span>}
           {player.photo_url && <div className="pp-band-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill eager /></div>}
@@ -177,6 +168,19 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                 </div>
               )}
             </div>
+            <div className="pp-band-season">
+              <h2 id="pp-season" className="sr-only">Season stats</h2>
+              <label className="pp-picker">
+                <span className="sr-only">Season</span>
+                <select value={season} onChange={e => setPicked(e.target.value)}>
+                  {seasonOptions.map(name => <option key={name} value={name}>{name === currentSeason ? `${name} (current)` : name}</option>)}
+                </select>
+              </label>
+              <dl className="tp-leader-stats" aria-labelledby="pp-season">
+                {figures.map(f => <div key={f.label}><dd>{f.n}</dd><dt>{f.abbr ? <abbr title={f.label}>{f.abbr}</abbr> : f.label}</dt></div>)}
+              </dl>
+              {extras.length > 0 && <p className="pp-extras">{extras}</p>}
+            </div>
             <div className="pp-band-actions">
               {share}
               <Link href={cardLink} className="pp-btn pp-btn-light pp-band-card">Make a player card</Link>
@@ -186,53 +190,15 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
 
         <div className="pp-cols">
           <div className="pp-stack">
-            <section aria-labelledby="pp-season">
-              <div className="pp-head">
-                <h2 id="pp-season">Season stats</h2>
-                <label className="pp-picker">
-                  <span className="pp-picker-label">Season</span>
-                  <select value={season} onChange={e => setPicked(e.target.value)}>
-                    {seasonOptions.map(name => <option key={name} value={name}>{name === currentSeason ? `${name} (current)` : name}</option>)}
-                  </select>
-                </label>
-              </div>
-              <dl className="pp-figures">
-                {figures.map(f => (
-                  <div key={f.label} className={f.lead ? 'pp-fig-lead' : undefined}>
-                    <dd>{f.n}</dd>
-                    <dt>{f.label}</dt>
-                    {career.length > 1 && <small>{f.all} in all seasons</small>}
-                  </div>
-                ))}
-              </dl>
-              {extras.length > 0 && <p className="pp-extras">{extras}</p>}
-            </section>
-
-            {form.length > 0 && (
-              <section aria-labelledby="pp-form">
-                <div className="pp-head"><h2 id="pp-form">Form</h2><span className="pp-note">Oldest first</span></div>
-                <ol className="pp-form" style={{ '--pp-form-n': form.length } as React.CSSProperties}>
-                  {form.map(({ match: m, line }) => {
-                    const outcome = clubResult(m).outcome!;
-                    return (
-                      <li key={m.id} className={`pp-form-${outcome.toLowerCase()}`}>
-                        <span className="pp-form-res"><ResultChip outcome={outcome} size="md" /></span>
-                        <span className="pp-form-did">
-                          {line?.goals ? <BallIcon /> : null}
-                          {line?.motm ? <Star size={14} fill="currentColor" aria-label="Player of the Match" /> : null}
-                        </span>
-                        <span className="pp-note"><LocalTime value={m.match_date} options={{ day: 'numeric', month: 'short' }} /></span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </section>
-            )}
-
             <section aria-labelledby="pp-recent">
               <div className="pp-head"><h2 id="pp-recent">Recent games</h2></div>
               {recent.length === 0 ? (
-                <p className="pp-note">No finished games {season === currentSeason ? 'yet this season' : `in ${season}`}.</p>
+                <p className="pp-note">
+                  {statGames === null && getSupabaseClient() ? 'Loading games…'
+                    // Figures saved for the season, but no game to list them against
+                    : stats?.appearances ? `Game-by-game records aren't available for ${season}.`
+                    : `No finished games ${season === currentSeason ? 'yet this season' : `in ${season}`}.`}
+                </p>
               ) : (
                 <table className="pp-games">
                   <thead>
@@ -257,7 +223,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                                 {line.assists ? <span>{line.assists === 1 ? 'Assist' : `${line.assists} assists`}</span> : null}
                                 {line.motm ? <span className="pp-did-potm"><Star size={14} fill="currentColor" aria-hidden="true" />Player of the Match</span> : null}
                               </span>
-                            ) : 'Played'}
+                            ) : null}
                           </td>
                           <td className="pp-g-score">
                             <span>{r.outcome && <ResultChip outcome={r.outcome} />}{r.us} - {r.them}</span>
@@ -297,7 +263,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                 <div className="pp-head"><h2 id="pp-career">By season</h2></div>
                 <table className="pp-career">
                   <thead>
-                    <tr><th scope="col">Season</th><th scope="col">Games</th>{isDefender && <th scope="col">Clean sheets</th>}<th scope="col">{isKeeper ? 'Clean sheets' : 'Goals'}</th><th scope="col">Assists</th><th scope="col"><abbr title="Player of the Match">PotM</abbr></th></tr>
+                    <tr><th scope="col">Season</th><th scope="col">Games</th>{isDefender && <th scope="col"><abbr title="Clean sheets">CS</abbr></th>}<th scope="col">{isKeeper ? <abbr title="Clean sheets">CS</abbr> : 'Goals'}</th><th scope="col">Assists</th><th scope="col"><abbr title="Player of the Match">PotM</abbr></th></tr>
                   </thead>
                   <tbody>
                     {[...career].sort((a, b) => b.season.localeCompare(a.season)).map(s => (

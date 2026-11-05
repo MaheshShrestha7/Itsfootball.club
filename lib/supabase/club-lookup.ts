@@ -1,6 +1,8 @@
 import type { CalendarEvent, CalendarMatch } from '../calendar';
 import { fetchPaged } from '../paged';
 import type { SummaryMatch } from '../public-tournaments';
+import { squadPlayerIds } from '../teams';
+import type { ClubMember, ClubTeamMember } from './types';
 
 // Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
 // Mirrors the slug/previous_slugs matching logic in lib/club-context.tsx's selectClubBySlug.
@@ -383,6 +385,23 @@ export interface TeamMetadataRow {
   age_group: string | null;
   description: string | null;
   logo_url: string | null;
+}
+
+/** The name for a player page's title: only for someone who has a public page (publicPlayerIds in
+ *  lib/teams.ts). club_members_public works out is_junior in the database and holds approved members only,
+ *  so anything but a clear "not a junior" (a failed lookup, an older view) stays unnamed. */
+export async function findPublicPlayerName(clubId: string, playerId: string): Promise<string | null> {
+  if (!UUID.test(clubId) || !UUID.test(playerId)) return null;
+  const scope = `club_id=eq.${clubId}`;
+  const [members, rows] = await Promise.all([
+    publicRows<{ id: string; full_name: string; role: ClubMember['role']; roles?: ClubMember['roles']; is_junior?: boolean }>(
+      `club_members_public?select=id,full_name,role,roles,is_junior&id=eq.${playerId}&${scope}&limit=1`),
+    publicRows<Pick<ClubTeamMember, 'member_id' | 'team_role'>>(
+      `club_team_members_public?select=member_id,team_role&member_id=eq.${playerId}&${scope}`),
+  ]);
+  const member = members?.[0];
+  if (!member || member.is_junior !== false || !rows) return null;
+  return squadPlayerIds([member], rows).has(member.id) ? member.full_name : null;
 }
 
 /** One active club team by its slug, for the team page's metadata */
