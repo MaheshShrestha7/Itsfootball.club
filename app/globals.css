@@ -4221,6 +4221,40 @@ dialog.form-dialog::backdrop {
   .pp-band-has-photo .pp-band-club { max-width: none; }
 }
 
+/* The band in the member-pass glass style, matching the Top Players leader card */
+.pp-band { --tp-px: 0; --tp-py: 0; background: #0B1120; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
+.pp-band::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
+  background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
+    radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
+    radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
+.pp-band::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
+.pp-band .pp-band-no { z-index: -2; pointer-events: none; right: -1rem; top: 1rem; font-size: 14rem; letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
+  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
+  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+  transform: rotate(-10deg); translate: calc(var(--tp-px) * -16px) calc(var(--tp-py) * -12px); transition: translate 250ms ease-out;
+  animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both; }
+.pp-band-has-photo .pp-band-no { right: 3rem; top: 5rem; font-size: 12rem; }
+.pp-band .pp-band-photo { z-index: 1; padding: 4px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 28px rgba(0, 0, 0, 0.35); }
+.pp-band .pp-band-photo > * { border-radius: 10px; overflow: hidden; }
+.pp-band .pp-band-club, .pp-band .pp-name { color: #FFFFFF; }
+.pp-band .pp-pos { color: rgba(255, 255, 255, 0.8); }
+.pp-band .pp-teams a, .pp-band .pp-btn-ghost { border-color: rgba(255, 255, 255, 0.4); color: #FFFFFF; background: rgba(255, 255, 255, 0.06); }
+.pp-band .pp-teams a:hover, .pp-band .pp-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
+.pp-band .pp-btn-light { background: #FFFFFF; color: #0B1120; border-color: #FFFFFF; }
+.pp-band .pp-btn-light:hover { background: rgba(255, 255, 255, 0.85); }
+.pp-band a:focus-visible, .pp-band button:focus-visible { outline-color: #FFFFFF; }
+@media (min-width: 960px) {
+  .pp-band .pp-band-no { font-size: 22rem; right: 2rem; top: 0; }
+  .pp-band-has-photo .pp-band-no { font-size: 20rem; right: 20rem; top: 4rem; }
+  .pp-band-has-photo .pp-band-photo { margin-bottom: 2.5rem; border-radius: 18px; }
+  .pp-band-has-photo .pp-band-photo > * { border-radius: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .pp-band .pp-band-no { animation: none; translate: none; transition: none; } }
+
 .pp-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; margin-top: 2.5rem; }
 @media (min-width: 960px) { .pp-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 4rem; align-items: start; } }
 .pp-stack { display: grid; gap: 2.5rem; min-width: 0; }

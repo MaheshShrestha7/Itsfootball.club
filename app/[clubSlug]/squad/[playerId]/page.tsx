@@ -146,11 +146,19 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
       <div className="container">
         {back}
 
-        {/* The band: club colour, their number (or their photo) as the picture */}
-        <section className={`pp-band${player.photo_url ? ' pp-band-has-photo' : ''}`} aria-labelledby="pp-name">
-          {player.photo_url
-            ? <div className="pp-band-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill eager /></div>
-            : player.jersey_number != null && <span className="pp-band-no" aria-hidden="true">{player.jersey_number}</span>}
+        {/* The band, styled like the member pass and the Top Players leader: dark glass with the club
+            colour glowing through, their shirt number huge and faded behind (beside the photo when
+            there is one). The number drifts in once and leans away from the mouse on desktop. */}
+        <section className={`pp-band${player.photo_url ? ' pp-band-has-photo' : ''}`} aria-labelledby="pp-name"
+          onPointerMove={e => {
+            if (e.pointerType !== 'mouse') return;
+            const r = e.currentTarget.getBoundingClientRect();
+            e.currentTarget.style.setProperty('--tp-px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+            e.currentTarget.style.setProperty('--tp-py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+          }}
+          onPointerLeave={e => { e.currentTarget.style.setProperty('--tp-px', '0'); e.currentTarget.style.setProperty('--tp-py', '0'); }}>
+          {player.jersey_number != null && <span className="pp-band-no" aria-hidden="true">{player.jersey_number}</span>}
+          {player.photo_url && <div className="pp-band-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill eager /></div>}
           <div className="pp-band-in">
             <div className="pp-band-main">
               <Link href={`/${club.slug}`} className="pp-band-club">
@@ -160,9 +168,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                 {club.name}
               </Link>
               <h1 id="pp-name" className="pp-name">{player.full_name}</h1>
-              {(position || player.jersey_number != null) && (
-                <p className="pp-pos">{[position, player.jersey_number != null ? `shirt number ${player.jersey_number}` : null].filter(Boolean).join(', ')}</p>
-              )}
+              {position && <p className="pp-pos">{position}</p>}
               {teams.length > 0 && (
                 <div className="pp-teams">
                   {teams.map(t => <Link key={t.id} href={`/${club.slug}/teams/${t.slug}`}>{t.name}</Link>)}
