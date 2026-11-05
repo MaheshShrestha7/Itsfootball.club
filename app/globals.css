@@ -4101,22 +4101,63 @@ dialog.form-dialog::backdrop {
 .tp-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
 @media (min-width: 960px) { .tp-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 2rem; align-items: start; } .tp-grid-solo { grid-template-columns: minmax(0, 1fr); } }
 
-/* The leader: the club colour, their number huge behind them, or their photo */
-.tp-leader { position: relative; overflow: hidden; isolation: isolate; display: block; padding: 1.5rem; border-radius: 18px; background: var(--tp-field); color: var(--tp-on); text-decoration: none; }
+/* The leader, styled like the member pass: dark glass with the club colour glowing through, a frosted
+   sheen, and the shirt number huge, faded and tilted behind (beside the photo when there is one).
+   The glow uses --tp-field (the club colour darkened for white text), so light club colours stay readable. */
+.tp-leader { --tp-px: 0; --tp-py: 0; position: relative; overflow: hidden; isolation: isolate; display: block; padding: 1.5rem; border-radius: 18px;
+  background: #0B1120; color: #FFFFFF; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
+.tp-leader::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
+  background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
+    radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
+    radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
+.tp-leader::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
 .tp-leader:focus-visible { outline: 3px solid var(--club-ink); outline-offset: 3px; }
-.tp-leader-no { position: absolute; right: -0.75rem; top: -1.5rem; z-index: -1; font: 900 13rem/1 var(--font-heading); letter-spacing: -0.06em; color: var(--tp-deep); }
+.tp-leader-no { position: absolute; right: -1rem; top: 1rem; z-index: -2; pointer-events: none;
+  font: 900 13rem/1 var(--font-heading); letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
+  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
+  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+  transform: rotate(-10deg); opacity: 0;
+  translate: calc(var(--tp-px) * -16px) calc(var(--tp-py) * -12px); transition: translate 250ms ease-out; }
+.tp-leader-has-photo .tp-leader-no { right: 3rem; top: 4.5rem; }
+.tp-leader.is-seen .tp-leader-no { animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes tp-no-in {
+  from { opacity: 0; transform: translateY(22%) rotate(-3deg) scale(1.08); }
+  to { opacity: 1; transform: rotate(-10deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-leader-no, .tp-leader.is-seen .tp-leader-no { opacity: 1; animation: none; translate: none; transition: none; }
+}
 .tp-leader-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.tp-leader-photo { flex-shrink: 0; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 12px; background: var(--tp-deep); }
+.tp-leader-photo { position: relative; z-index: 1; flex-shrink: 0; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; padding: 4px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 28px rgba(0, 0, 0, 0.35); }
+.tp-leader-photo > * { border-radius: 10px; overflow: hidden; }
 .tp-leader-photo img { object-position: top center; }
 .tp-rank1 { display: flex; width: max-content; align-items: center; gap: 0.3rem; min-height: 28px; padding: 0 0.55rem; border-radius: 6px; background: var(--tp-gold); color: var(--tp-gold-ink); font: 800 0.85rem var(--font-heading); }
-.tp-leader-name { margin-top: 2.5rem; font-size: 2.1rem; font-weight: 900; line-height: 1; max-width: 9ch; overflow-wrap: break-word; min-width: 0; color: var(--tp-on); }
-.tp-leader-pos { margin-top: 0.5rem; font-size: 0.88rem; font-weight: 600; color: var(--tp-on-2); }
-.tp-leader-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin: 1.5rem 0 0; padding-top: 0.75rem; border-top: 1px solid var(--tp-on-2); }
+.tp-leader-name { margin-top: 2.5rem; font-size: 2.1rem; font-weight: 900; line-height: 1; max-width: 9ch; overflow-wrap: break-word; min-width: 0; color: #FFFFFF; }
+.tp-leader-pos { margin-top: 0.5rem; font-size: 0.88rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.tp-leader-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin: 1.5rem 0 0; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.22); }
+.tp-leader-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tp-leader-stats dd { margin: 0; font: 900 2rem/1 var(--font-heading); font-variant-numeric: tabular-nums; }
-.tp-leader-stats dt { margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: var(--tp-on-2); }
+.tp-leader-stats dt { margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.tp-leader-line { margin-top: 0.75rem; font-size: 0.88rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 .tp-leader-go { display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-bottom: 0.1rem; font: 700 0.88rem var(--font-heading); }
 .tp-leader:hover .tp-leader-go span { text-decoration: underline; }
-@media (min-width: 960px) { .tp-leader { padding: 2.5rem; } .tp-leader-no { font-size: 17rem; } .tp-leader-name { font-size: 3rem; } .tp-leader-photo { width: 150px; } }
+@media (min-width: 960px) {
+  .tp-leader { padding: 2.5rem; } .tp-leader-name { font-size: 3rem; } .tp-leader-photo { width: 150px; }
+  .tp-leader-no { font-size: 19rem; right: -1rem; top: 1rem; }
+  .tp-leader-has-photo .tp-leader-no { right: 7rem; top: 5rem; }
+}
+
+/* The silk background (components/SilkBackdrop.tsx): a canvas under everything, the club glow
+   becomes a soft shade above it so white text reads, and the CSS number gives way to the printed one */
+.silk-backdrop { position: absolute; inset: 0; z-index: -3; display: block; width: 100%; height: 100%; pointer-events: none; }
+:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
+  background: linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
+:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
@@ -4186,6 +4227,40 @@ dialog.form-dialog::backdrop {
   .pp-band-has-photo .pp-band-club, .pp-band-has-photo .pp-name { max-width: 12ch; }
   .pp-band-has-photo .pp-band-club { max-width: none; }
 }
+
+/* The band in the member-pass glass style, matching the Top Players leader card */
+.pp-band { --tp-px: 0; --tp-py: 0; background: #0B1120; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
+.pp-band::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
+  background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
+    radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
+    radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
+.pp-band::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
+.pp-band .pp-band-no { z-index: -2; pointer-events: none; right: -1rem; top: 1rem; font-size: 14rem; letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
+  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
+  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+  transform: rotate(-10deg); translate: calc(var(--tp-px) * -16px) calc(var(--tp-py) * -12px); transition: translate 250ms ease-out;
+  animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both; }
+.pp-band-has-photo .pp-band-no { right: 3rem; top: 5rem; font-size: 12rem; }
+.pp-band .pp-band-photo { z-index: 1; padding: 4px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 28px rgba(0, 0, 0, 0.35); }
+.pp-band .pp-band-photo > * { border-radius: 10px; overflow: hidden; }
+.pp-band .pp-band-club, .pp-band .pp-name { color: #FFFFFF; }
+.pp-band .pp-pos { color: rgba(255, 255, 255, 0.8); }
+.pp-band .pp-teams a, .pp-band .pp-btn-ghost { border-color: rgba(255, 255, 255, 0.4); color: #FFFFFF; background: rgba(255, 255, 255, 0.06); }
+.pp-band .pp-teams a:hover, .pp-band .pp-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
+.pp-band .pp-btn-light { background: #FFFFFF; color: #0B1120; border-color: #FFFFFF; }
+.pp-band .pp-btn-light:hover { background: rgba(255, 255, 255, 0.85); }
+.pp-band a:focus-visible, .pp-band button:focus-visible { outline-color: #FFFFFF; }
+@media (min-width: 960px) {
+  .pp-band .pp-band-no { font-size: 22rem; right: 2rem; top: 0; }
+  .pp-band-has-photo .pp-band-no { font-size: 20rem; right: 20rem; top: 4rem; }
+  .pp-band-has-photo .pp-band-photo { margin-bottom: 2.5rem; border-radius: 18px; }
+  .pp-band-has-photo .pp-band-photo > * { border-radius: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .pp-band .pp-band-no { animation: none; translate: none; transition: none; } }
 
 .pp-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; margin-top: 2.5rem; }
 @media (min-width: 960px) { .pp-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 4rem; align-items: start; } }

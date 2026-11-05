@@ -25,7 +25,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Trophy,
   Users,
   Award,
   ChevronRight,
@@ -52,10 +51,9 @@ import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLab
 import { SITE_URL, matchPath, newsPath } from '@/lib/slugs';
 import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
 import { POSITION_NAMES, initialsOf } from '@/lib/positions';
+import { type PositionGroup, type RankKey, hasSeasonStats as statsShowPlay, inPositionGroup, rankPlayers, rankView } from '@/lib/top-players';
+import TopPlayerLeader from '@/components/TopPlayerLeader';
 
-type RankKey = 'overall' | 'goals' | 'assists' | 'motm_awards' | 'appearances';
-const RANK_TABS: [RankKey, string][] = [['overall', 'Overall'], ['goals', 'Goals'], ['assists', 'Assists'], ['motm_awards', 'Player of the Match'], ['appearances', 'Games']];
-const RANK_LABEL = Object.fromEntries(RANK_TABS) as Record<RankKey, string>;
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
   match: 'Match',
@@ -139,7 +137,7 @@ export default function ClubPublicPage({
   }, [isHydrated, club, resolvedParams.clubSlug]);
 
   // Tab & Filter states
-  const [squadFilter, setSquadFilter] = useState<'ALL' | 'GK' | 'DEF' | 'MID' | 'FWD'>('ALL');
+  const [squadFilter, setSquadFilter] = useState<PositionGroup>('ALL');
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   // Clubs with several teams: '' = the main team, 'ALL' = every team, else a team id
@@ -241,38 +239,24 @@ export default function ClubPublicPage({
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 
   // Squad filtering
-  const filteredSquad = squadPlayers.filter(p => {
-    if (squadFilter === 'ALL') return true;
-    if (squadFilter === 'GK') return p.player_position === 'GK';
-    if (squadFilter === 'DEF') return ['CB', 'LB', 'RB'].includes(p.player_position || '');
-    if (squadFilter === 'MID') return ['CDM', 'CM', 'CAM'].includes(p.player_position || '');
-    if (squadFilter === 'FWD') return ['LW', 'RW', 'ST'].includes(p.player_position || '');
-    return true;
-  });
+  const filteredSquad = squadPlayers.filter(p => inPositionGroup(p.player_position, squadFilter));
 
-  // Players ranked on the pitch this season: goals, then assists, Player of the Match, appearances.
+  // Players ranked on the pitch this season. Outfield: goals, then assists, Player of the Match, games.
+  // Keepers and defenders: clean sheets first, like the Golden Glove (lib/top-players.ts).
   // Not ClubScore XP: its sign-up and attendance points put brand-new members above people who played.
   const currentSeasonName = activeSeason?.name || defaultSeasonLabel();
   const statFor = (memberId: string) =>
     playerStats.find(st => st.member_id === memberId && st.season === currentSeasonName);
-  const rankedSquad = [...filteredSquad].sort((a, b) =>
-    (statFor(b.id)?.goals ?? 0) - (statFor(a.id)?.goals ?? 0) ||
-    (statFor(b.id)?.assists ?? 0) - (statFor(a.id)?.assists ?? 0) ||
-    (statFor(b.id)?.motm_awards ?? 0) - (statFor(a.id)?.motm_awards ?? 0) ||
-    (statFor(b.id)?.appearances ?? 0) - (statFor(a.id)?.appearances ?? 0) ||
-    a.full_name.localeCompare(b.full_name)
-  );
-  // The table ranks overall (the order above) or by one figure; ties keep the overall order
-  const byFigure = rankBy === 'overall' ? rankedSquad
-    : [...rankedSquad].sort((a, b) => (statFor(b.id)?.[rankBy] ?? 0) - (statFor(a.id)?.[rankBy] ?? 0));
+  const view = rankView(squadFilter);
+  // A tab from another position (Goals, then switching to GK) falls back to Overall
+  const rankOn: RankKey = view.tabs.some(([k]) => k === rankBy) ? rankBy : 'overall';
+  const rankedSquad = rankPlayers(filteredSquad, statFor, squadFilter, 'overall');
+  const byFigure = rankOn === 'overall' ? rankedSquad : rankPlayers(filteredSquad, statFor, squadFilter, rankOn);
   const topPlayers = byFigure.slice(0, 5);
   // A rank only means something once a player has played: no "1st" for whoever sorts first by name
-  const hasSeasonStats = (memberId: string) => {
-    const st = statFor(memberId);
-    return !!(st?.appearances || st?.goals || st?.assists || st?.motm_awards);
-  };
+  const hasSeasonStats = (memberId: string) => statsShowPlay(statFor(memberId));
   const rankedOn = (memberId: string) =>
-    rankBy === 'overall' ? hasSeasonStats(memberId) : (statFor(memberId)?.[rankBy] ?? 0) > 0;
+    rankOn === 'overall' ? hasSeasonStats(memberId) : (statFor(memberId)?.[rankOn] ?? 0) > 0;
   const anyRanked = topPlayers.some(p => hasSeasonStats(p.id));
   // The leader card only for someone who has earned 1st; everyone else is a table row
   const leader = topPlayers[0] && rankedOn(topPlayers[0].id) ? topPlayers[0] : null;
@@ -1927,7 +1911,7 @@ export default function ClubPublicPage({
               <h2 className="tp-title">Top Players</h2>
               <p className="tp-sub">
                 {anyRanked
-                  ? `${currentSeasonName}, ranked by ${rankBy === 'overall' ? 'goals, then assists, Player of the Match and games' : RANK_LABEL[rankBy].toLowerCase()}.`
+                  ? `${currentSeasonName}${squadFilter === 'GK' ? ' goalkeepers' : squadFilter === 'DEF' ? ' defenders' : ''}, ranked by ${rankOn === 'overall' ? view.overallText : (view.tabs.find(([k]) => k === rankOn)?.[1] || '').toLowerCase()}.`
                   : `${currentSeasonName}: rankings appear once the first match stats are saved.`}
               </p>
             </div>
@@ -1947,37 +1931,26 @@ export default function ClubPublicPage({
 
           {topPlayers.length > 0 && (
           <div className={`tp-grid${leader ? '' : ' tp-grid-solo'}`}>
-            {leader && (() => {
-              const stat = statFor(leader.id);
-              const firstName = leader.full_name.trim().split(/\s+/)[0];
-              return (
-                <Link href={`/${club.slug}/squad/${leader.id}`} className="tp-leader">
-                  {!leader.photo_url && <span className="tp-leader-no" aria-hidden="true">{leader.jersey_number ?? ''}</span>}
-                  <div className="tp-leader-top">
-                    <div className="min-w-0">
-                      <span className="tp-rank1"><Trophy size={14} aria-hidden="true" /> 1st</span>
-                      <h3 className="tp-leader-name">{leader.full_name}</h3>
-                      <p className="tp-leader-pos">
-                        {[leader.player_position ? POSITION_NAMES[leader.player_position] || leader.player_position : null, leader.jersey_number != null ? `number ${leader.jersey_number}` : null].filter(Boolean).join(', ')}
-                      </p>
-                    </div>
-                    {leader.photo_url && <span className="tp-leader-photo"><PlayerAvatar photoUrl={leader.photo_url} name={leader.full_name} fill /></span>}
-                  </div>
-                  <dl className="tp-leader-stats">
-                    <div><dd>{stat?.goals ?? 0}</dd><dt>Goals</dt></div>
-                    <div><dd>{stat?.assists ?? 0}</dd><dt>Assists</dt></div>
-                    <div><dd>{stat?.motm_awards ?? 0}</dd><dt>Player of the Match</dt></div>
-                    <div><dd>{stat?.appearances ?? 0}</dd><dt>Games</dt></div>
-                  </dl>
-                  <span className="tp-leader-go"><span>{firstName}&rsquo;s season</span><ChevronRight size={16} aria-hidden="true" /></span>
-                </Link>
-              );
-            })()}
+            {leader && (
+              <TopPlayerLeader
+                href={`/${club.slug}/squad/${leader.id}`}
+                name={leader.full_name}
+                position={leader.player_position ? POSITION_NAMES[leader.player_position] || leader.player_position : null}
+                jerseyNumber={leader.jersey_number ?? null}
+                primary={club.primary_color}
+                secondary={club.secondary_color}
+                photoUrl={leader.photo_url || null}
+                figures={view.leader.map(f => ({ label: f.label, n: statFor(leader.id)?.[f.key] ?? 0 }))}
+                line={squadFilter === 'GK' && (statFor(leader.id)?.appearances ?? 0) > 0
+                  ? `Kept a clean sheet in ${statFor(leader.id)?.clean_sheets ?? 0} of ${statFor(leader.id)?.appearances ?? 0} game${statFor(leader.id)?.appearances === 1 ? '' : 's'}.`
+                  : null}
+              />
+            )}
 
             <div id="leaderboard">
               <div className="tp-tabs" role="group" aria-label="Rank players by">
-                {RANK_TABS.map(([key, label]) => (
-                  <button key={key} type="button" onClick={() => setRankBy(key)} aria-pressed={rankBy === key}>{label}</button>
+                {view.tabs.map(([key, label]) => (
+                  <button key={key} type="button" onClick={() => setRankBy(key)} aria-pressed={rankOn === key}>{label}</button>
                 ))}
               </div>
               <table className="tp-table">
@@ -1985,17 +1958,17 @@ export default function ClubPublicPage({
                   <tr>
                     <th scope="col"><span className="sr-only">Rank</span></th>
                     <th scope="col" className="tp-th-player">Player</th>
-                    <th scope="col">Goals</th>
-                    <th scope="col">Assists</th>
-                    <th scope="col"><abbr title="Player of the Match">PotM</abbr></th>
-                    <th scope="col" className="tp-col-gp">Games</th>
+                    {view.columns.map(c => (
+                      <th key={c.key} scope="col" className={c.wide ? 'tp-col-gp' : undefined}>
+                        {c.abbr ? <abbr title={c.label}>{c.abbr}</abbr> : c.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {tableRows.map(({ player, rank }) => {
                     const stat = statFor(player.id);
-                    const val = (k: RankKey) => (k === 'overall' ? 0 : stat?.[k] ?? 0);
-                    const keyCol = rankBy === 'overall' ? 'goals' : rankBy;
+                    const keyCol = rankOn === 'overall' ? view.order[0] : rankOn;
                     return (
                       <tr key={player.id}>
                         <td className="tp-rank">{rank ?? '–'}</td>
@@ -2010,10 +1983,11 @@ export default function ClubPublicPage({
                             </span>
                           </Link>
                         </td>
-                        <td className={keyCol === 'goals' ? 'tp-key' : undefined}>{val('goals')}</td>
-                        <td className={keyCol === 'assists' ? 'tp-key' : undefined}>{val('assists')}</td>
-                        <td className={keyCol === 'motm_awards' ? 'tp-key' : undefined}>{val('motm_awards')}</td>
-                        <td className={`tp-col-gp${keyCol === 'appearances' ? ' tp-key' : ''}`}>{val('appearances')}</td>
+                        {view.columns.map(c => (
+                          <td key={c.key} className={[c.wide && 'tp-col-gp', keyCol === c.key && 'tp-key'].filter(Boolean).join(' ') || undefined}>
+                            {stat?.[c.key] ?? 0}
+                          </td>
+                        ))}
                       </tr>
                     );
                   })}
