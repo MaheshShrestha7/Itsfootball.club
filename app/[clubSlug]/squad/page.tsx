@@ -8,13 +8,7 @@ import { clubTeamsOf, juniorMemberIds, squadPlayerIds } from '@/lib/teams';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
 import PlayerSearch from '@/components/PlayerSearch';
-
-const LINES: { title: string; positions: string[] }[] = [
-  { title: 'Goalkeepers', positions: ['GK'] },
-  { title: 'Defenders', positions: ['CB', 'LB', 'RB', 'LWB', 'RWB'] },
-  { title: 'Midfielders', positions: ['CDM', 'CM', 'CAM', 'LM', 'RM'] },
-  { title: 'Forwards', positions: ['LW', 'RW', 'ST', 'CF'] },
-];
+import { groupByLine } from '@/lib/positions';
 
 /** /club/squad: the club's players by position. Juniors aren't listed (safeguarding), as on the home page. */
 export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: string }> }) {
@@ -32,11 +26,7 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
       .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999) || a.full_name.localeCompare(b.full_name));
   }, [members, club, clubTeams, clubTeamMembers]);
 
-  const known = new Set(LINES.flatMap(l => l.positions));
-  const groups = [
-    ...LINES.map(l => ({ title: l.title, list: players.filter(p => l.positions.includes(p.player_position || '')) })),
-    { title: 'Squad', list: players.filter(p => !known.has(p.player_position || '')) },
-  ].filter(g => g.list.length);
+  const groups = groupByLine(players);
 
   return (
     <ClubSubPage club={club} title="Squad" intro={`${club.name}'s players, by position.`}>

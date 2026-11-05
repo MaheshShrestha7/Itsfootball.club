@@ -93,6 +93,15 @@ export function rankPlaces<P extends { id: string }>(
   });
 }
 
+/** A player's season as four figures: keepers and defenders lead with clean sheets, and defenders keep
+ *  their goals and assists in place of Player of the Match */
+export function playerFigures(pos: string | null | undefined, st: Stat): { key: StatKey; label: string; abbr?: string; n: number }[] {
+  const fig = (key: StatKey, abbr?: string) => ({ key, label: LABEL[key], abbr, n: st?.[key] ?? 0 });
+  const games = fig('appearances'), sheets = fig('clean_sheets', 'CS'), potm = fig('motm_awards', 'PotM');
+  if (inPositionGroup(pos, 'DEF')) return [games, sheets, fig('goals'), fig('assists')];
+  return [games, pos === 'GK' ? sheets : fig('goals'), fig('assists'), potm];
+}
+
 /** Has done something this season, so a rank means something */
 export const hasSeasonStats = (st: Stat) =>
   !!(st?.appearances || st?.goals || st?.assists || st?.motm_awards || st?.clean_sheets);

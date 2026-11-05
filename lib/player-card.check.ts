@@ -2,7 +2,7 @@
 // llms.txt, stays between 45 and 95, and only counts clean sheets for keepers and defenders. The card type
 // labels and the Levelled Up rise read as the tool pages describe.
 import assert from 'node:assert/strict';
-import { CARD_TYPES, POSITIONS, autoRating, cardFromLink, cardLabel, storyHeading, upgradeBy } from './player-card';
+import { CARD_TYPES, POSITIONS, autoRating, cardFromLink, cardLabel, playerCardLink, storyHeading, upgradeBy } from './player-card';
 
 // The striker on /tools/player-card-maker: 55 + 9.8 + 4 + 2.7 + 9.5 + 3.5 = 84.5, shown as 85
 assert.equal(autoRating({ goals: 18, assists: 11, apps: 22, motm: 6, att: 95, streak: 14 }, 'LM'), 85);
@@ -59,5 +59,11 @@ const linked = cardFromLink('?name=Lama&pos=cm&number=7&club=ANCC&season=2026%2F
 assert.deepEqual(linked, { name: 'Lama', position: 'CM', number: '7', club: 'ANCC', season: '2026/27', colour: '#DC2626',
   stats: { goals: '2', assists: '0', apps: '4', motm: '1' }, shown: ['goals', 'assists', 'apps', 'motm'] });
 assert.equal(cardFromLink(''), null, 'the plain tool page');
+// A player's link reads back as the same card: surname, number, and clean sheets only for a keeper
+const fromPlayer = cardFromLink(playerCardLink({ full_name: 'Bivek Luitel', player_position: 'GK', jersey_number: 99 }, { name: 'ANCC', primary_color: '#ff0040' }, '2026/27', { clean_sheets: 2, appearances: 4 }).split('?')[1]);
+assert.equal(fromPlayer?.name, 'Luitel');
+assert.equal(fromPlayer?.number, '99');
+assert.equal(fromPlayer?.stats.cs, '2');
+assert.equal(fromPlayer?.stats.goals, undefined);
 assert.deepEqual(cardFromLink('?pos=XX&colour=red&goals=abc&number=123'), null, 'nothing usable');
 assert.equal(cardFromLink('?att=150')?.stats.att, '100', 'kept within the stat range');

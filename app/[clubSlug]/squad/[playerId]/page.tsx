@@ -10,7 +10,8 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { clubResult, latestFirst } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import { POSITION_NAMES, POSITION_SPOTS } from '@/lib/positions';
-import { inPositionGroup } from '@/lib/top-players';
+import { inPositionGroup, playerFigures } from '@/lib/top-players';
+import { playerCardLink } from '@/lib/player-card';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SilkBackdrop from '@/components/SilkBackdrop';
 import ResultChip from '@/components/ResultChip';
@@ -104,19 +105,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   const position = player.player_position ? POSITION_NAMES[player.player_position] || player.player_position : null;
   const alsoPlays = (player.secondary_positions || []).filter(p => p !== player.player_position && p !== 'SUB' && POSITION_SPOTS[p]);
   const firstName = player.full_name.trim().split(/\s+/)[0];
-  const figures: { label: string; abbr?: string; n: number }[] = isDefender ? [
-    { label: 'Games', n: stats?.appearances ?? 0 },
-    { label: 'Clean sheets', n: stats?.clean_sheets ?? 0 },
-    { label: 'Goals', n: stats?.goals ?? 0 },
-    { label: 'Assists', n: stats?.assists ?? 0 },
-  ] : [
-    { label: 'Games', n: stats?.appearances ?? 0 },
-    isKeeper
-      ? { label: 'Clean sheets', n: stats?.clean_sheets ?? 0 }
-      : { label: 'Goals', n: stats?.goals ?? 0 },
-    { label: 'Assists', n: stats?.assists ?? 0 },
-    { label: 'Player of the Match', abbr: 'PotM', n: stats?.motm_awards ?? 0 },
-  ];
+  const figures = playerFigures(player.player_position, stats);
   const extras = [
     // Four figures already, so a defender's Player of the Match awards go on the line below
     isDefender && stats?.motm_awards ? <span key="motm"><b>{stats.motm_awards}</b> Player of the Match</span> : null,
@@ -126,17 +115,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   ].filter(Boolean);
 
   // The card maker opens filled in with them and the picked season's stats (cardFromLink)
-  const cardLink = `/tools/player-card-maker?${new URLSearchParams({
-    name: player.full_name.trim().split(/\s+/).pop() || '',
-    ...(player.player_position ? { pos: player.player_position } : {}),
-    ...(player.jersey_number != null ? { number: String(player.jersey_number) } : {}),
-    club: club.name,
-    season,
-    ...(club.primary_color ? { colour: club.primary_color } : {}),
-    ...(isKeeper ? { cs: String(stats?.clean_sheets ?? 0) } : { goals: String(stats?.goals ?? 0), assists: String(stats?.assists ?? 0) }),
-    apps: String(stats?.appearances ?? 0),
-    motm: String(stats?.motm_awards ?? 0),
-  })}`;
+  const cardLink = playerCardLink(player, club, season, stats);
   const share = (
     <ShareLinkButton url={`/${club.slug}/squad/${player.id}`} title={`${player.full_name}, ${club.name}`} className="pp-btn pp-btn-ghost" />
   );

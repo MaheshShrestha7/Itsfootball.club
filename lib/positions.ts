@@ -14,5 +14,24 @@ export const POSITION_SPOTS: Partial<Record<PlayerPosition | 'LWB' | 'RWB' | 'LM
   LW: [20, 24], RW: [80, 24], CF: [50, 22], ST: [50, 14],
 };
 
+/** The lines of a squad, in pitch order, as the squad and team pages show them */
+export const SQUAD_LINES = [
+  { key: 'GK', title: 'Goalkeepers', positions: ['GK'] },
+  { key: 'DEF', title: 'Defenders', positions: ['CB', 'LB', 'RB', 'LWB', 'RWB'] },
+  { key: 'MID', title: 'Midfielders', positions: ['CDM', 'CM', 'CAM', 'LM', 'RM'] },
+  { key: 'FWD', title: 'Forwards', positions: ['LW', 'RW', 'ST', 'CF'] },
+] as const;
+export type SquadLineKey = (typeof SQUAD_LINES)[number]['key'] | 'OTHER';
+
+/** Players by line, leaving out empty lines; anyone without a known position goes last, under "Squad" */
+export function groupByLine<P extends { player_position?: string | null }>(players: P[]): { key: SquadLineKey; title: string; list: P[] }[] {
+  const on = (positions: readonly string[]) => players.filter(p => positions.includes(p.player_position || ''));
+  const known = SQUAD_LINES.flatMap(l => [...l.positions]) as string[];
+  return [
+    ...SQUAD_LINES.map(l => ({ key: l.key as SquadLineKey, title: l.title as string, list: on(l.positions) })),
+    { key: 'OTHER' as SquadLineKey, title: 'Squad', list: players.filter(p => !known.includes(p.player_position || '')) },
+  ].filter(g => g.list.length > 0);
+}
+
 export const initialsOf = (name: string) =>
   name.trim().split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';

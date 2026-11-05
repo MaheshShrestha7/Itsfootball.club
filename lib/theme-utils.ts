@@ -108,6 +108,12 @@ export function clubInkVars(hex: string | null | undefined): Record<string, stri
   return { '--club-ink-dark': readableClubInk(base, 'dark'), '--club-ink-light': readableClubInk(base, 'light') };
 }
 
+/** CSS variables for something in a team's colour: --team is the colour itself, --tp-field a shade of it
+ *  dark enough for white text, whatever colour the club picked */
+export function teamColourVars(hex: string): Record<string, string> {
+  return { '--team': hex, '--tp-field': readableClubInk(hex, 'light') };
+}
+
 // Curated professional football club color presets
 export const FOOTBALL_COLOR_PALETTES = [
   {

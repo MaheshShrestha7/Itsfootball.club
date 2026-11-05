@@ -13,10 +13,12 @@ import { Skeleton } from '@/components/Skeleton';
 /**
  * The frame every public club sub-page shares (fixtures, events, teams, news, ...): a breadcrumb back to
  * the club, the heading and intro, optional actions, then a row of section tabs that sticks under the
- * navbar so visitors can hop between sections without the menu. `width` matches the page's content.
+ * navbar so visitors on a phone can hop between sections without the menu (where the navbar shows its own
+ * links the row is hidden: see .club-subnav). `width` matches the page's content. `bare` is for a page that
+ * draws its own <h1> at the top of its content: just the breadcrumb here.
  */
 export default function ClubSubPage({
-  club, title, intro, icon, trail = [], actions, width = 1080, children,
+  club, title, intro, icon, trail = [], actions, width = 1080, bare = false, children,
 }: {
   club: Club;
   title: React.ReactNode;
@@ -26,11 +28,12 @@ export default function ClubSubPage({
   trail?: { href: string; label: string }[];
   actions?: React.ReactNode;
   width?: number;
+  bare?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="club-sub">
-      <header className="club-sub-head">
+      <header className={`club-sub-head${bare ? ' club-sub-head-bare' : ''}`}>
         <div className="container" style={{ maxWidth: width }}>
           <nav aria-label="Breadcrumb">
             <ol className="club-crumbs">
@@ -39,7 +42,7 @@ export default function ClubSubPage({
               <li aria-current="page">{title}</li>
             </ol>
           </nav>
-          <h1 className="club-sub-title">{icon}{title}</h1>
+          {!bare && <h1 className="club-sub-title">{icon}{title}</h1>}
           {intro && <p className="club-sub-intro">{intro}</p>}
           {actions && <div className="club-sub-actions">{actions}</div>}
         </div>

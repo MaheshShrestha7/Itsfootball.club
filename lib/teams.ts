@@ -114,6 +114,14 @@ export function teamMemberIds(rows: ClubTeamMember[], teamId: string, role: Club
     .map(r => r.member_id);
 }
 
+/** A team's type as the public reads it; the longer labels above are for the admin's picker */
+export function publicTeamType(type: ClubTeamType | null | undefined): string {
+  if (type === 'senior') return 'First team';
+  if (type === 'youth') return 'Youth';
+  if (type === 'other') return '';
+  return TEAM_TYPES.find(t => t.value === type)?.label || '';
+}
+
 /** Who counts as a player on the public squad: a 'player' club role, or a place in any team's
  *  squad (an admin or coach who also plays is listed on the team page, so the squad page too) */
 export function squadPlayerIds(members: Pick<ClubMember, 'id' | 'role' | 'roles'>[], rows: (Pick<ClubTeamMember, 'member_id' | 'team_role'> & { is_active?: boolean })[]): Set<string> {

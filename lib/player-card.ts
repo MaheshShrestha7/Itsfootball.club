@@ -35,6 +35,27 @@ export type PlayerStats = Partial<Record<PlayerStatKey, number>>;
 /** A card filled in from a link, as a club's player page makes it (/tools/player-card-maker?name=…&goals=…):
  *  the player, club and the season's stats. Only the stats in the link are shown on the card, so stats
  *  left from an earlier card don't carry over. null when the link has none of these. */
+/** The card maker's address, filled in with a player and one season (read back by cardFromLink) */
+export function playerCardLink(
+  player: { full_name: string; player_position?: string | null; jersey_number?: number | null },
+  club: { name: string; primary_color?: string | null },
+  season: string,
+  stats: { goals?: number | null; assists?: number | null; appearances?: number | null; motm_awards?: number | null; clean_sheets?: number | null } | undefined,
+): string {
+  const params = new URLSearchParams({
+    name: player.full_name.trim().split(/\s+/).pop() || '',
+    ...(player.player_position ? { pos: player.player_position } : {}),
+    ...(player.jersey_number != null ? { number: String(player.jersey_number) } : {}),
+    club: club.name,
+    season,
+    ...(club.primary_color ? { colour: club.primary_color } : {}),
+    ...(player.player_position === 'GK' ? { cs: String(stats?.clean_sheets ?? 0) } : { goals: String(stats?.goals ?? 0), assists: String(stats?.assists ?? 0) }),
+    apps: String(stats?.appearances ?? 0),
+    motm: String(stats?.motm_awards ?? 0),
+  });
+  return `/tools/player-card-maker?${params}`;
+}
+
 export function cardFromLink(search: string): {
   name?: string; position?: Position; number?: string; club?: string; season?: string; colour?: string;
   stats: Partial<Record<PlayerStatKey, string>>; shown: PlayerStatKey[];

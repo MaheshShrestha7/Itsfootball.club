@@ -10,6 +10,27 @@ export function kickoff(m: Pick<Match, 'match_date'>): number {
 export const soonestFirst = (a: Pick<Match, 'match_date'>, b: Pick<Match, 'match_date'>) => kickoff(a) - kickoff(b);
 export const latestFirst = (a: Pick<Match, 'match_date'>, b: Pick<Match, 'match_date'>) => kickoff(b) - kickoff(a);
 
+type ResultRow = Pick<Match, 'status' | 'match_date' | 'is_club_home' | 'home_score' | 'away_score' | 'home_penalty_score' | 'away_penalty_score' | 'match_type' | 'tournament_id'>;
+
+/** Finished games that count for the club's record, newest first */
+const decided = <M extends ResultRow>(matches: M[]) =>
+  matches.filter(m => m.status === 'completed' && clubResult(m).outcome).sort(latestFirst);
+
+/** The last few results as W/D/L, oldest first so the newest sits on the right (form guides read that way) */
+export const teamForm = (matches: ResultRow[], count = 5): ClubOutcome[] =>
+  decided(matches).slice(0, count).map(m => clubResult(m).outcome!).reverse();
+
+/** The newest finished game that counts */
+export const latestResult = <M extends ResultRow>(matches: M[]): M | undefined => decided(matches)[0];
+
+/** A team's record for one season. A game with no season saved belongs to the season asked for,
+ *  as on the player page. */
+export function teamRecord(matches: (ResultRow & Pick<Match, 'season'>)[], season: string) {
+  const inSeason = decided(matches).filter(m => (m.season || season) === season);
+  const count = (o: ClubOutcome) => inSeason.filter(m => clubResult(m).outcome === o).length;
+  return { played: inSeason.length, won: count('W'), drawn: count('D'), lost: count('L') };
+}
+
 /** Whether the club's own players take part: every match outside a tournament, and tournament
  *  matches unless both sides are invited (external) teams. A club hosting a cup between other
  *  clubs shouldn't list those games as its own fixtures or ask its players to RSVP for them.

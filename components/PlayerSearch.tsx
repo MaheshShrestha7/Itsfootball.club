@@ -1,6 +1,7 @@
 'use client';
 
-// Find a player by name, shirt number or position; each result opens that player's public page.
+// Find a player by name, shirt number or position; each result opens that player's public page,
+// or calls onPick when the caller has its own way of showing them.
 // Callers pass only players who have a public page (approved adults), so juniors never show here.
 import { useId, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -27,10 +28,11 @@ export function matchesPlayer(p: SearchablePlayer, query: string): boolean {
   return q.split(/\s+/).every(word => hay.includes(word));
 }
 
-export default function PlayerSearch({ players, clubSlug, placeholder = 'Search a player by name or shirt number' }: {
+export default function PlayerSearch({ players, clubSlug, placeholder = 'Search a player by name or shirt number', onPick }: {
   players: SearchablePlayer[];
   clubSlug: string;
   placeholder?: string;
+  onPick?: (playerId: string) => void;
 }) {
   const [q, setQ] = useState('');
   const listId = useId();
@@ -64,8 +66,8 @@ export default function PlayerSearch({ players, clubSlug, placeholder = 'Search 
             <>
               <p className="sr-only">{results.length} {results.length === 1 ? 'player' : 'players'} found</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: '0.6rem', marginTop: '0.75rem' }}>
-                {results.slice(0, MAX_RESULTS).map(p => (
-                  <Link key={p.id} href={`/${clubSlug}/squad/${p.id}`} className="glass-panel glass-panel-interactive row" style={{ padding: '0.7rem 1rem', color: 'inherit', textDecoration: 'none' }}>
+                {results.slice(0, MAX_RESULTS).map(p => {
+                  const body = (<>
                     <PlayerAvatar name={p.full_name} photoUrl={p.photo_url ?? undefined} size={40} />
                     <div className="min-w-0" style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
@@ -79,8 +81,13 @@ export default function PlayerSearch({ players, clubSlug, placeholder = 'Search 
                       ) : null}
                     </div>
                     <ChevronRight size={16} color="var(--text-muted)" className="shrink-0" aria-hidden="true" />
-                  </Link>
-                ))}
+                  </>);
+                  return onPick ? (
+                    <button key={p.id} type="button" aria-haspopup="dialog" onClick={() => onPick(p.id)} className="glass-panel glass-panel-interactive row" style={{ padding: '0.7rem 1rem', color: 'inherit', font: 'inherit', textAlign: 'left', width: '100%', cursor: 'pointer' }}>{body}</button>
+                  ) : (
+                    <Link key={p.id} href={`/${clubSlug}/squad/${p.id}`} className="glass-panel glass-panel-interactive row" style={{ padding: '0.7rem 1rem', color: 'inherit', textDecoration: 'none' }}>{body}</Link>
+                  );
+                })}
               </div>
               {results.length > MAX_RESULTS && (
                 <p className="text-note" style={{ margin: '0.6rem 0 0' }}>Showing {MAX_RESULTS} of {results.length}. Type more of the name to narrow it down.</p>

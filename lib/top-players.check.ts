@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { hasSeasonStats, inPositionGroup, leadsWithCleanSheets, rankPlaces, rankPlayers, rankView } from './top-players';
+import { hasSeasonStats, inPositionGroup, leadsWithCleanSheets, playerFigures, rankPlaces, rankPlayers, rankView } from './top-players';
+import { groupByLine } from './positions';
 
 const players = [
   { id: 'a', full_name: 'Arjun' }, { id: 'b', full_name: 'Bivek' }, { id: 'c', full_name: 'Chandra' },
@@ -47,4 +48,15 @@ assert.equal(rankView('ALL').leader[0].key, 'goals');
 assert.ok(leadsWithCleanSheets('GK') && leadsWithCleanSheets('LB') && !leadsWithCleanSheets('CM') && !leadsWithCleanSheets(null));
 assert.ok(inPositionGroup('ST', 'FWD') && !inPositionGroup('ST', 'MID') && inPositionGroup(undefined, 'ALL'));
 assert.ok(hasSeasonStats({ clean_sheets: 1 }) && !hasSeasonStats({}) && !hasSeasonStats(undefined));
+
+// A player's figures by position; nothing saved reads as noughts
+const season = { appearances: 4, goals: 2, assists: 1, motm_awards: 1, clean_sheets: 3 };
+assert.deepEqual(playerFigures('ST', season).map(f => [f.key, f.n]), [['appearances', 4], ['goals', 2], ['assists', 1], ['motm_awards', 1]]);
+assert.deepEqual(playerFigures('GK', season).map(f => f.key), ['appearances', 'clean_sheets', 'assists', 'motm_awards']);
+assert.deepEqual(playerFigures('CB', season).map(f => f.key), ['appearances', 'clean_sheets', 'goals', 'assists']);
+assert.deepEqual(playerFigures(null, undefined).map(f => f.n), [0, 0, 0, 0]);
+
+// A squad by line: pitch order, no empty lines, and an unknown position still appears
+const lined = groupByLine([{ player_position: 'ST' }, { player_position: 'GK' }, { player_position: 'LWB' }, { player_position: null }, { player_position: 'SUB' }]);
+assert.deepEqual(lined.map(g => [g.key, g.list.length]), [['GK', 1], ['DEF', 1], ['FWD', 1], ['OTHER', 2]]);
 console.log('top-players: ok');

@@ -3690,8 +3690,11 @@ dialog.form-dialog::backdrop {
 .club-sub-intro { margin: 0.5rem 0 0; max-width: 62ch; color: var(--text-secondary); font-size: 1rem; line-height: 1.55; }
 .club-sub-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; margin-top: 0.75rem; }
 .club-sub-body { padding-top: 1.75rem; }
+.club-sub-head-bare { padding-bottom: 0.5rem; background: none; }
+.club-sub-head-bare + .club-subnav + .club-sub-body, .club-sub-head-bare + .club-sub-body { padding-top: 0.75rem; }
 .club-sub-h2 { margin: 0 0 1.1rem; font-size: 1.35rem; font-weight: 900; color: var(--text-primary); }
 .club-subnav { position: sticky; top: 75px; z-index: 40; background: rgba(var(--dk-10-15-23), 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+@media (min-width: 900px) { .club-theme-root:has(.club-navbar:not([data-nav-fits='false'])) .club-subnav { display: none; } }
 .club-subnav-row { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .club-subnav-row::-webkit-scrollbar { display: none; }
 .club-subnav-link { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 46px; padding: 0 0.85rem; font-size: 0.86rem; font-weight: 700; color: var(--text-secondary); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; transition: color 150ms ease, border-color 150ms ease; }
@@ -4077,7 +4080,7 @@ dialog.form-dialog::backdrop {
 /* ===== Top Players (club home) and the public player page (/club/squad/{id}) =====
    Redesigned with the Hallmark rules: the club colour as the one field, the shirt number set huge
    in type (or the player's photo), labels in sentence case, tables with hairlines, no boxes in boxes. */
-#squad, .pp {
+#squad, .pp, .team-band {
   /* The club colour, darkened just enough for white text (the light-theme club ink, 4.5:1) */
   --tp-field: var(--club-ink-light, var(--club-primary));
   --tp-on: #FFFFFF;
@@ -4103,17 +4106,17 @@ dialog.form-dialog::backdrop {
    sheen, and the shirt number huge, faded and tilted behind (beside the photo when there is one).
    The glow uses --tp-field (the club colour darkened for white text), so light club colours stay readable. */
 .tp-leader { display: block; padding: 1.5rem; text-decoration: none; }
-:is(.tp-leader, .pp-band) { position: relative; overflow: hidden; isolation: isolate; border-radius: 18px;
+:is(.tp-leader, .pp-band, .team-band) { position: relative; overflow: hidden; isolation: isolate; border-radius: 18px;
   background: #0B1120; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.28); }
-:is(.tp-leader, .pp-band)::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
+:is(.tp-leader, .pp-band, .team-band)::before { content: ''; position: absolute; inset: 0; z-index: -3; pointer-events: none;
   background: radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--tp-field) 95%, transparent) 0%, color-mix(in srgb, var(--tp-field) 35%, transparent) 45%, transparent 75%),
     radial-gradient(circle at 92% 96%, color-mix(in srgb, var(--tp-field) 55%, transparent) 0%, transparent 55%),
     radial-gradient(circle at 35% 62%, color-mix(in srgb, var(--tp-field) 20%, transparent) 0%, transparent 45%); }
-:is(.tp-leader, .pp-band)::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+:is(.tp-leader, .pp-band, .team-band)::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
-:is(.tp-leader, .pp-band) abbr { text-decoration: none; }
+:is(.tp-leader, .pp-band, .team-band) abbr { text-decoration: none; }
 .tp-leader:focus-visible { outline: 3px solid var(--club-ink); outline-offset: 3px; }
 /* A new leader's details and a new table fade in; the silk behind them stays put */
 .tp-swap, .tp-table tbody { animation: tp-swap 150ms ease-out; }
@@ -4157,10 +4160,10 @@ dialog.form-dialog::backdrop {
    becomes a soft shade above it so white text reads, darkest under the stats along the bottom
    (a bright club red alone gives white small print under 4:1), and the CSS number gives way to the printed one */
 .silk-backdrop { position: absolute; inset: 0; z-index: -3; display: block; width: 100%; height: 100%; pointer-events: none; }
-:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
+:is(.tp-leader, .pp-band, .team-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
   background: linear-gradient(to top, rgba(5, 8, 15, 0.62) 0%, rgba(5, 8, 15, 0.38) 40%, transparent 65%),
     linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
-:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
+:is(.tp-leader, .pp-band, .team-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
@@ -4317,6 +4320,115 @@ dialog.form-dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   .tp-seg button, .tp-tabs button, .tp-more, .pp-btn { transition: none; }
   .tp-seg button:active, .tp-tabs button:active, .tp-more:active, .pp-btn:active { transform: none; }
+}
+
+/* Teams (/club/teams): find a player, then every team as a preview in its own colour.
+   The band's shade keeps white text readable whatever colour a club picks. */
+.team-find-h { margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: 800; }
+.team-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; }
+.team-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-medium); border-radius: 18px; background: var(--bg-surface); color: inherit; text-decoration: none; transition: transform 120ms ease-out, border-color 120ms ease; }
+.team-card:active { transform: scale(0.985); }
+.team-card:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.team-card-band { display: flex; flex-direction: column; justify-content: flex-end; min-height: 118px; padding: 1.25rem; color: #FFFFFF;
+  background: linear-gradient(to top, rgba(5, 8, 15, 0.78) 0%, rgba(5, 8, 15, 0.45) 60%, transparent 100%), var(--team); }
+.team-card-band h2 { margin: 0; color: #FFFFFF; font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
+.team-card-band p { margin: 0.2rem 0 0; color: #FFFFFF; font-size: 0.82rem; }
+.team-card-body { display: flex; flex-direction: column; flex: 1; gap: 0.8rem; padding: 1rem 1.25rem 1.15rem; }
+.team-card-kv { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0.6rem; align-items: baseline; color: var(--text-primary); font-size: 0.88rem; }
+.team-card-kv > span:first-child { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; }
+.team-card-kv b { font: 800 0.95rem var(--font-heading); font-variant-numeric: tabular-nums; }
+.team-card-kv small { display: block; color: var(--text-muted); font-size: 0.78rem; }
+.team-card-form { align-items: center; }
+.team-card-pile { display: flex; align-items: center; gap: 0.75rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 0.85rem; }
+.team-card-faces { display: flex; }
+.team-card-faces i { position: relative; display: grid; place-items: center; overflow: hidden; width: 30px; height: 30px; margin-right: -7px; border-radius: 50%; border: 2px solid var(--bg-surface); background: var(--tp-field); color: #FFFFFF; font: 800 0.68rem var(--font-heading); font-style: normal; }
+.team-card-faces i:last-child { margin-right: 0; }
+
+/* A team's page: its band, then the games beside the squad on desktop and above it on a phone */
+.team-page { display: grid; gap: 2rem; padding-bottom: 3rem; }
+.team-band-in { display: grid; gap: 1.5rem; padding: 1.5rem; }
+.team-band-name { color: #FFFFFF; font-size: clamp(2.2rem, 7vw, 4.25rem); font-weight: 900; line-height: 1; overflow-wrap: anywhere; }
+.team-band-meta { margin-top: 0.45rem; color: #FFFFFF; font-weight: 600; }
+.team-band-about { margin-top: 0.6rem; max-width: 60ch; color: #FFFFFF; font-size: 0.92rem; white-space: pre-line; }
+.team-band-low { display: grid; gap: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.25); }
+.team-band-season { margin-bottom: 0.6rem; color: #FFFFFF; font-size: 0.8rem; font-weight: 600; }
+.team-band .tp-leader-stats { margin: 0; padding: 0; border: 0; }
+.team-band-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0; color: #FFFFFF; font-size: 0.82rem; font-weight: 600; }
+.team-band .result-chip { background: rgba(5, 8, 15, 0.55); }
+.team-band .result-chip-win { color: #6EE7B7; border-color: #6EE7B7; }
+.team-band .result-chip-loss { color: #FCA5A5; border-color: #FCA5A5; }
+.team-band .result-chip-draw { color: #FFFFFF; border-color: #FFFFFF; }
+.team-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+.team-games, .team-squad { display: grid; gap: 1.75rem; align-content: start; min-width: 0; }
+.team-h { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 1.35rem; font-weight: 800; }
+.team-h small { color: var(--text-muted); font: 600 0.95rem var(--font-heading); }
+.team-quiet { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+/* Results as rows on hairlines here, rather than the cards they are on the Fixtures page */
+.team-games .fixture-row { padding: 0.6rem 0; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; transform: none; }
+.team-tools { display: grid; gap: 0.6rem; margin-bottom: 1.25rem; }
+.team-tools .tp-seg { width: 100%; }
+.team-tools .tp-seg button { padding: 0 0.5rem; }
+.team-lines { display: grid; gap: 1.75rem; }
+.team-line-h { display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 2px solid var(--text-primary); font-size: 1rem; font-weight: 800; }
+.team-line-h small { color: var(--text-muted); font-size: 0.82rem; font-weight: 600; }
+.team-rows { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+.team-row { display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: 58px; padding: 0.45rem 0; border: 0; border-bottom: 1px solid var(--border-subtle); background: none; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; transition: transform 120ms ease-out; }
+.team-row-plain { cursor: default; }
+button.team-row:active { transform: scale(0.985); }
+.team-row:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 6px; }
+.team-row strong { display: block; font: 800 0.98rem/1.2 var(--font-heading); overflow-wrap: anywhere; }
+.team-row small { display: block; color: var(--text-muted); font-size: 0.76rem; font-weight: 500; }
+.team-tile { position: relative; display: grid; place-items: center; overflow: hidden; width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0; background: var(--tp-field); color: #FFFFFF; font: 900 1.05rem var(--font-heading); font-variant-numeric: tabular-nums; }
+.team-tile-none { background: rgba(var(--tint-rgb), 0.08); color: var(--text-secondary); font-size: 0.75rem; font-weight: 800; }
+.team-tile-photo { background: rgba(var(--tint-rgb), 0.08); }
+.team-tile-photo img { object-position: top center; }
+@media (min-width: 720px) {
+  .team-tools { grid-template-columns: auto minmax(12rem, 1fr); align-items: center; }
+  .team-tools .tp-seg { width: auto; }
+  .team-tools .tp-seg button { padding: 0 0.85rem; }
+  .team-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.5rem; }
+}
+@media (min-width: 960px) {
+  .team-band-in { padding: 3rem 2.5rem 2rem; }
+  .team-band-low { grid-template-columns: minmax(0, 30rem) auto; justify-content: space-between; align-items: end; column-gap: 3rem; }
+  .team-band .tp-leader-stats dd { font-size: 2.75rem; }
+  .team-band .tp-leader-stats dt { font-size: 0.88rem; }
+  .team-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 3.5rem; align-items: start; }
+  .team-games { grid-column: 2; grid-row: 1; position: sticky; top: 91px; max-height: calc(100dvh - 107px); overflow-y: auto; }
+  .team-squad { grid-column: 1; grid-row: 1; }
+}
+
+/* A player's card over the page (components/PlayerCardDialog.tsx) */
+dialog.pc-dialog { margin: auto; width: min(26rem, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 0; border-radius: 18px; background: none; color: #FFFFFF; overflow-y: auto; overscroll-behavior: contain; }
+dialog.pc-dialog::backdrop { background: rgba(3, 5, 9, 0.72); }
+dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes pc-in { from { opacity: 0; transform: scale(0.97); } }
+.pc-in { display: grid; gap: 1.25rem; padding: 1.25rem 1.25rem 1.5rem; }
+.pc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+.pc-tile { display: grid; place-items: center; overflow: hidden; width: 92px; aspect-ratio: 4 / 5; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(5, 8, 15, 0.35); font: 900 2.4rem var(--font-heading); font-variant-numeric: tabular-nums; }
+.pc-tile > img { object-position: top center; }
+.pc-tile-none { font-size: 1.5rem; }
+.pc-close { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; background: rgba(5, 8, 15, 0.35); color: #FFFFFF; cursor: pointer; transition: transform 120ms ease-out; }
+.pc-close:active { transform: scale(0.97); }
+.pc-name { color: #FFFFFF; font-size: 2.3rem; font-weight: 900; line-height: 1; overflow-wrap: anywhere; }
+.pc-pos { margin-top: 0.4rem; color: #FFFFFF; font-weight: 600; }
+.pc-teams { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+.pc-teams span { padding: 0.2rem 0.6rem; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 6px; font: 700 0.8rem var(--font-heading); }
+.pc-season { padding-top: 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.25); }
+.pc-season > p { margin-bottom: 0.6rem; font-size: 0.8rem; font-weight: 600; }
+.pc-season .tp-leader-stats { margin: 0; padding: 0; border: 0; }
+.pc-links { display: grid; gap: 0.4rem; }
+.pc-links .pp-btn { width: 100%; }
+.team-band a:focus-visible, .team-band button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .team-card:hover { border-color: color-mix(in srgb, var(--team) 70%, transparent); }
+  button.team-row:hover strong { text-decoration: underline; }
+  .team-games .fixture-row:hover { transform: none; box-shadow: none; border-color: var(--border-subtle); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-card, .team-row, .pc-close { transition: none; }
+  .team-card:active, button.team-row:active, .pc-close:active { transform: none; }
+  dialog.pc-dialog[open] { animation: none; }
 }
 
 /* Admin Fixtures list: a date tile for fixtures without a flyer, Coming up / Played headings,
