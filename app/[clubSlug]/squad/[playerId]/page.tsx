@@ -12,6 +12,7 @@ import { matchPath } from '@/lib/slugs';
 import { POSITION_NAMES, POSITION_SPOTS } from '@/lib/positions';
 import { inPositionGroup } from '@/lib/top-players';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import SilkBackdrop from '@/components/SilkBackdrop';
 import ResultChip from '@/components/ResultChip';
 import LocalTime from '@/components/LocalTime';
 import ShareLinkButton from '@/components/ShareLinkButton';
@@ -157,6 +158,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
             e.currentTarget.style.setProperty('--tp-py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
           }}
           onPointerLeave={e => { e.currentTarget.style.setProperty('--tp-px', '0'); e.currentTarget.style.setProperty('--tp-py', '0'); }}>
+          <SilkBackdrop primary={club.primary_color} secondary={club.secondary_color} numberSelector=".pp-band-no" number={player.jersey_number ?? null} />
           {player.jersey_number != null && <span className="pp-band-no" aria-hidden="true">{player.jersey_number}</span>}
           {player.photo_url && <div className="pp-band-photo"><PlayerAvatar photoUrl={player.photo_url} name={player.full_name} fill eager /></div>}
           <div className="pp-band-in">

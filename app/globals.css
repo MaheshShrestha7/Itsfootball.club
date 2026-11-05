@@ -4152,6 +4152,13 @@ dialog.form-dialog::backdrop {
   .tp-leader-has-photo .tp-leader-no { right: 7rem; top: 5rem; }
 }
 
+/* The silk background (components/SilkBackdrop.tsx): a canvas under everything, the club glow
+   becomes a soft shade above it so white text reads, and the CSS number gives way to the printed one */
+.silk-backdrop { position: absolute; inset: 0; z-index: -3; display: block; width: 100%; height: 100%; pointer-events: none; }
+:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
+  background: linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
+:is(.tp-leader, .pp-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
+
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
 .tp-tabs button { flex-shrink: 0; min-height: 36px; padding: 0 0.75rem; border: 0; border-radius: 8px; background: none; color: var(--text-muted); font: 700 0.88rem var(--font-heading); white-space: nowrap; cursor: pointer; }

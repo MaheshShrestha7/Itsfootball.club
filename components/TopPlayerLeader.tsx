@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Trophy } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import SilkBackdrop from '@/components/SilkBackdrop';
 
 interface Props {
   href: string;
@@ -14,13 +15,16 @@ interface Props {
   figures: { label: string; n: number }[];
   /** A plain sentence under the figures, e.g. a keeper's clean sheets out of games */
   line?: string | null;
+  /** Club colours for the silk background */
+  primary?: string | null;
+  secondary?: string | null;
 }
 
 /** The 1st-place card on Top Players, styled like the member pass: dark glass with the club colour
  *  glowing through and the shirt number huge and faded behind, beside the photo when there is one.
  *  The number drifts in once when the card scrolls into view, again for each new leader (a GK/DEF
  *  switch), and leans away from the mouse on desktop. Reduced motion: it simply sits there. */
-export default function TopPlayerLeader({ href, name, position, jerseyNumber, photoUrl, figures, line }: Props) {
+export default function TopPlayerLeader({ href, name, position, jerseyNumber, photoUrl, figures, line, primary, secondary }: Props) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [seen, setSeen] = useState(false);
 
@@ -49,6 +53,7 @@ export default function TopPlayerLeader({ href, name, position, jerseyNumber, ph
   return (
     <Link ref={ref} href={href} onPointerMove={lean} onPointerLeave={rest}
       className={`tp-leader${photoUrl ? ' tp-leader-has-photo' : ''}${seen ? ' is-seen' : ''}`}>
+      <SilkBackdrop primary={primary} secondary={secondary} numberSelector=".tp-leader-no" number={jerseyNumber == null ? null : `${href}#${jerseyNumber}`} />
       {/* Keyed by player, so a new leader's number plays its entrance */}
       {jerseyNumber != null && <span key={href} className="tp-leader-no" aria-hidden="true">{jerseyNumber}</span>}
       <div className="tp-leader-top">
