@@ -565,18 +565,21 @@ export function sponsorLink(p: { brand: EmailBrand; contactName: string; busines
 
 /** SPP-2: an invoice sent before payment ("Invoice me first", or Send invoice in admin), for the
  *  business to pay or pass to whoever pays their bills */
-export function sponsorInvoice(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; number: string; dueOn: string; invoiceLink: string; canReply: boolean }): RenderedEmail {
+export function sponsorInvoice(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; number: string; dueOn: string; invoiceLink: string; canReply: boolean; instalment?: string | null; overdue?: boolean }): RenderedEmail {
+  const which = p.instalment ? `${p.instalment.toLowerCase()} for the ${p.packageName} package` : `the ${p.packageName} package`;
   return renderEmail({
     brand: p.brand,
-    subject: `Invoice ${p.number} from ${p.brand.name}`,
-    preheader: `${p.price} for the ${p.packageName} package, due ${p.dueOn}.`,
-    heading: `Invoice ${p.number}`,
+    subject: p.overdue ? `Reminder: invoice ${p.number} from ${p.brand.name} was due ${p.dueOn}` : `Invoice ${p.number} from ${p.brand.name}`,
+    preheader: `${p.price} for ${which}, due ${p.dueOn}.`,
+    heading: p.overdue ? `A reminder about invoice ${p.number}` : `Invoice ${p.number}`,
     paragraphs: [
-      `Hi ${firstName(p.contactName)}, thank you for sponsoring ${p.brand.name}. Here is ${p.business}'s invoice for the ${p.packageName} package.`,
+      p.overdue
+        ? `Hi ${firstName(p.contactName)}, ${p.brand.name} hasn't received ${p.business}'s payment for ${which}, which was due ${p.dueOn}. If it's already on its way, please ignore this.`
+        : `Hi ${firstName(p.contactName)}, thank you for sponsoring ${p.brand.name}. Here is ${p.business}'s invoice for ${which}.`,
       'Open it to print or save it as a PDF for your accounts. It has the club\'s bank details, and a button to pay by card.',
       ...(p.canReply ? ['Questions? Just reply to this email.'] : []),
     ],
-    details: [['Business', p.business], ['Package', p.packageName], ['Amount', p.price], ['Due', p.dueOn], ['Invoice', p.number]],
+    details: [['Business', p.business], ['Package', p.packageName], ...(p.instalment ? [['Instalment', p.instalment.replace('Instalment ', '')] as [string, string]] : []), ['Amount', p.price], [p.overdue ? 'Was due' : 'Due', p.dueOn], ['Invoice', p.number]],
     cta: { label: 'Open the invoice', url: p.invoiceLink },
     note: 'This link is just for your business. Please don\'t share it outside your business.',
     reason: `You're receiving this because ${p.business} signed up to sponsor ${p.brand.name}.`,
@@ -630,7 +633,7 @@ export function sponsorChangeReviewed(p: { brand: EmailBrand; contactName: strin
 
 /** A sponsor's payment went through (card, or the club verified their bank transfer): thanks, and the
  *  link to their own page to send their logo, see their results and open the invoice */
-export function sponsorPaid(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; pageLink: string; canReply: boolean }): RenderedEmail {
+export function sponsorPaid(p: { brand: EmailBrand; contactName: string; business: string; packageName: string; price: string; pageLink: string; canReply: boolean; instalment?: string | null }): RenderedEmail {
   return renderEmail({
     brand: p.brand,
     subject: `Thank you for sponsoring ${p.brand.name}`,
@@ -641,7 +644,7 @@ export function sponsorPaid(p: { brand: EmailBrand; contactName: string; busines
       'On your own sponsor page you can send us your logo and website, see how often your logo was seen, and open your invoice.',
       ...(p.canReply ? ['Questions? Just reply to this email.'] : []),
     ],
-    details: [['Business', p.business], ['Package', p.packageName], ['Paid', p.price]],
+    details: [['Business', p.business], ['Package', p.packageName], ...(p.instalment ? [['Instalment', p.instalment.replace('Instalment ', '')] as [string, string]] : []), ['Paid', p.price]],
     cta: { label: 'Open my sponsor page', url: p.pageLink },
     note: 'This link is just for your business. Please don\'t share it.',
     reason: `You're receiving this because ${p.business} sponsors ${p.brand.name}.`,

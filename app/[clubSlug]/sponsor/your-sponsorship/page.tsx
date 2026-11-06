@@ -348,6 +348,7 @@ export default function SponsorPortalPage({ params }: { params: Promise<{ clubSl
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.packageName ? `${p.packageName}${p.renewal ? ' renewal' : ''}` : p.description || 'Sponsorship'}</div>
+                      {p.instalment && <div className="text-meta">{p.instalment}</div>}
                       {p.period && <div className="text-meta">Covers {p.period}</div>}
                       <div className="text-meta" style={p.status === 'pending' ? { color: 'var(--c-amber)' } : undefined}>
                         {p.status === 'paid'

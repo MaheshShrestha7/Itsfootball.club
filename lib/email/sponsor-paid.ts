@@ -3,6 +3,7 @@ import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@
 import { looksLikeEmail, sendClubEmails } from '@/lib/email/club-emails';
 import { sponsorPaid } from '@/lib/email/templates';
 import { formatMoney } from '@/lib/finance';
+import { instalmentLabel } from '@/lib/sponsor-instalments';
 import { isSponsorKey, sponsorPageUrl } from '@/lib/sponsors';
 import type { Payment } from '@/lib/supabase/types';
 
@@ -35,6 +36,7 @@ export async function emailSponsorPaid(db: SupabaseClient, pay: Payment): Promis
       price: formatMoney(pay.amount_cents, pay.currency),
       pageLink: sponsorPageUrl(clubBaseUrl(row), sponsor.access_key),
       canReply: !!replyTo,
+      instalment: instalmentLabel(pay),
     }),
   }]);
   if (report.error) console.error('[sponsor-paid] email failed:', pay.id, report.error);

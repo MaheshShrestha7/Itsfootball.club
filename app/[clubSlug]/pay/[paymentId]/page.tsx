@@ -11,6 +11,7 @@ import PaymentStep from '@/components/PaymentStep';
 
 interface Bill {
   clubId: string;
+  kind: 'fee_request' | 'sponsorship';
   status: string;
   title: string;
   forName: string | null;
@@ -88,7 +89,7 @@ export default function PayPage({ params }: { params: Promise<{ clubSlug: string
     body = (
       <PaymentStep
         clubId={bill.clubId}
-        kind="fee_request"
+        kind={bill.kind}
         amountCents={bill.amountCents}
         label={bill.title}
         extra={{ paymentId }}

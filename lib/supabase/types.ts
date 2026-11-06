@@ -967,6 +967,10 @@ export interface Payment {
   /** Fee requests: shared by everyone asked for the same money, and its name (migration 20261152) */
   request_id?: string | null;
   request_title?: string | null;
+  /** Sponsors paying by instalments: shared by the whole plan, and which one this is (migration 20261153) */
+  instalment_plan_id?: string | null;
+  instalment_no?: number | null;
+  instalment_of?: number | null;
   created_at: string;
 }
 

@@ -43,7 +43,8 @@ export async function emailSponsorTransferRejected(db: SupabaseClient, pay: Paym
       packageName: pkg?.name || 'sponsorship',
       price: formatMoney(pay.amount_cents, pay.currency),
       reason: pay.rejection_reason?.trim() || null,
-      link: `${clubBaseUrl(club.row)}/sponsor?${query}`,
+      // An instalment is paid from its own page: the sign-up page would show the package's full price
+      link: pay.instalment_plan_id ? `${clubBaseUrl(club.row)}/pay/${pay.id}` : `${clubBaseUrl(club.row)}/sponsor?${query}`,
       canReply: !!club.replyTo,
     }),
   }]);

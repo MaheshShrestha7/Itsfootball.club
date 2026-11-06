@@ -15,9 +15,11 @@ import SponsorPackagesPanel from '@/components/admin/SponsorPackagesPanel';
 import PerksPanel from '@/components/admin/PerksPanel';
 import SponsorThanksPoster from '@/components/admin/SponsorThanksPoster';
 import OneSponsorSpots from '@/components/admin/OneSponsorSpots';
+import SponsorInstalmentsDialog from '@/components/admin/SponsorInstalmentsDialog';
+import { instalmentLabel, planSummary, type PlanRow } from '@/lib/sponsor-instalments';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import SponsorLogo from '@/components/SponsorLogo';
-import { DollarSign, Plus, Edit2, ExternalLink, X, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer, Gift } from 'lucide-react';
+import { CalendarRange, DollarSign, Plus, Edit2, ExternalLink, X, LayoutGrid, Eye, EyeOff, Maximize2, Calendar, Shield, Mail, Phone, User, Check, AlertCircle, Inbox, Package, RotateCcw, Power, GripVertical, ChevronUp, ChevronDown, Send, Copy, Trash2, RefreshCw, FileText, Banknote, Printer, Gift } from 'lucide-react';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
@@ -129,20 +131,28 @@ export default function AdminSponsorsPage({
     : clubSponsors.filter(sp => viewOf(sp) === view);
   const staleSignups = clubSponsors.filter(sp => isStaleSignup(sp));
 
-  const putOnSite = (sp: Sponsor) => updateSponsor(sp.id, {
-    is_active: true,
-    // Kept here too so hiding them later in this visit files them under Hidden (the database sets it)
-    went_live_at: sp.went_live_at || new Date().toISOString(),
-    // SPE-21: a price-on-request sign-up the club has agreed with is no longer "in talks"
-    ...(sp.package_status === 'prospect' && inKind(sp) ? { package_status: 'confirmed' as const } : {}),
-  });
+  // The admin's override: on or off the site whatever the payments say, and later instalments never
+  // change it. Saved straight away rather than by the background sync, which loses a click made while
+  // the page is still loading its data, and with a message if it fails.
+  const setOnSite = async (sp: Sponsor, on: boolean) => {
+    const saved = {
+      is_active: on,
+      // SPE-21: a price-on-request sign-up the club has agreed with is no longer "in talks"
+      ...(on && sp.package_status === 'prospect' && inKind(sp) ? { package_status: 'confirmed' as const } : {}),
+    };
+    // select: a role that isn't allowed changes no rows and gets no error, so count what changed
+    const { data } = await getSupabaseClient()?.from('sponsors').update(saved).eq('id', sp.id).select('id') ?? { data: null };
+    if (!data?.length) return setLinkResult({ sponsorId: sp.id, note: on ? 'They could not be put on the site. Please try again.' : 'They could not be taken off the site. Please try again.' });
+    // went_live_at is set by the database too; kept here so hiding them later in this visit files them under Hidden
+    updateSponsor(sp.id, { ...saved, ...(on ? { went_live_at: sp.went_live_at || new Date().toISOString() } : {}) });
+  };
   // Sponsorship payments by sponsor (Treasurer and Commercial Officer can read them, migration 20261136):
   // who has paid (SPE-15) and whose bank transfer receipt is waiting to be checked (SPE-7)
   // SPP-2: and each sponsor's open invoice (sent before payment, migration 20261137's due_on; '*' so
   // this still loads before that migration runs)
   type OpenInvoice = { id: string; due_on: string; amount_cents: number; currency: string };
-  const [sponsorPayments, setSponsorPayments] = useState<{ paid: Set<string>; receipt: Set<string>; invoice: Map<string, OpenInvoice> }>(
-    () => ({ paid: new Set(), receipt: new Set(), invoice: new Map() }));
+  const [sponsorPayments, setSponsorPayments] = useState<{ paid: Set<string>; receipt: Set<string>; invoice: Map<string, OpenInvoice>; rows: Map<string, PlanRow[]> }>(
+    () => ({ paid: new Set(), receipt: new Set(), invoice: new Map(), rows: new Map() }));
   const [paymentsLoaded, setPaymentsLoaded] = useState(0);
   const reloadPayments = () => setPaymentsLoaded(n => n + 1);
   useEffect(() => {
@@ -151,12 +161,16 @@ export default function AdminSponsorsPage({
       .then(({ data }) => {
         const rows = (data || []) as { id: string; sponsor_id: string | null; status: string; due_on?: string | null; amount_cents: number; currency: string; created_at: string }[];
         const invoice = new Map<string, OpenInvoice>();
-        rows.filter(r => r.status === 'pending' && r.due_on && r.sponsor_id).sort((a, b) => a.created_at.localeCompare(b.created_at))
+        // The last one set wins, so on instalments this is the next one due (as the server picks it)
+        rows.filter(r => r.status === 'pending' && r.due_on && r.sponsor_id).sort((a, b) => b.due_on!.localeCompare(a.due_on!))
           .forEach(r => invoice.set(r.sponsor_id!, { id: r.id, due_on: r.due_on!, amount_cents: r.amount_cents, currency: r.currency }));
+        const bySponsor = new Map<string, PlanRow[]>();
+        (rows as PlanRow[]).forEach(r => { if (r.sponsor_id && r.instalment_plan_id) bySponsor.set(r.sponsor_id, [...(bySponsor.get(r.sponsor_id) || []), r]); });
         setSponsorPayments({
           paid: new Set(rows.filter(r => r.status === 'paid' && r.sponsor_id).map(r => r.sponsor_id!)),
           receipt: new Set(rows.filter(r => r.status === 'awaiting_review' && r.sponsor_id).map(r => r.sponsor_id!)),
           invoice,
+          rows: bySponsor,
         });
       });
   }, [club.id, paymentsLoaded]);
@@ -195,6 +209,28 @@ export default function AdminSponsorsPage({
     }
   };
 
+  // Paying by instalments (app/api/sponsors/instalments)
+  const [planFor, setPlanFor] = useState<Sponsor | null>(null);
+  const planOf = (sp: Sponsor) => planSummary(sponsorPayments.rows.get(sp.id) || [], localDateISO());
+  const cancelPlan = async (sp: Sponsor) => {
+    const plan = planOf(sp);
+    if (!plan || !(await confirmAction({
+      title: `Cancel what's left of ${sp.name}'s plan?`,
+      message: `${formatMoney(plan.leftCents, plan.rows[0].currency)} will no longer be asked for, and their pay links stop working. What they have paid stays paid, and this doesn't take them off your site.`,
+      confirmLabel: 'Cancel the rest', danger: true,
+    }))) return;
+    setLinkResult({ sponsorId: sp.id, busy: true });
+    const res = await fetch('/api/sponsors/instalments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+      body: JSON.stringify({ clubId: club.id, sponsorId: sp.id, action: 'cancel' }),
+    }).catch(() => null);
+    const json = await res?.json().catch(() => ({})) ?? {};
+    if (!res?.ok) return setLinkResult({ sponsorId: sp.id, note: json.error || 'The plan could not be cancelled.' });
+    if (json.paidCents > 0) updateSponsor(sp.id, { package_value: json.paidCents / 100, ...(sp.package_status === 'confirmed' ? { package_status: 'paid' as const } : {}) });
+    setLinkResult({ sponsorId: sp.id, note: 'The rest of the plan was cancelled.' });
+    reloadPayments();
+  };
   // SPP-3: money that came in outside the app (app/api/sponsors/record-payment)
   const [recording, setRecording] = useState<{ sponsor: Sponsor; amount: string; method: string; paidOn: string; until: string; busy?: boolean; error?: string } | null>(null);
   const openRecord = (sp: Sponsor) => {
@@ -227,9 +263,10 @@ export default function AdminSponsorsPage({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) return setRecording({ ...recording, busy: false, error: json.error || 'The payment could not be recorded.' });
       const sp = recording.sponsor;
-      updateSponsor(sp.id, { package_status: 'paid', package_value: (json.amount_cents ?? cents) / 100, ...(json.ends_on ? { ends_on: json.ends_on } : {}) });
+      // What the server made of it: an instalment leaves them Confirmed, worth the whole deal, and can put them on the site
+      updateSponsor(sp.id, { package_status: json.package_status ?? 'paid', package_value: json.package_value ?? (json.amount_cents ?? cents) / 100, ...(json.ends_on ? { ends_on: json.ends_on } : {}), ...(typeof json.is_active === 'boolean' ? { is_active: json.is_active } : {}) });
       setRecording(null);
-      setLinkResult({ sponsorId: sp.id, note: `Payment recorded${json.sent ? `. ${sp.name} was emailed a thank-you with their invoice` : '. Their invoice is on their sponsor page'}${isSponsorOnSite(sp) ? '' : '. Tap Put on site when they\'re ready'}.` });
+      setLinkResult({ sponsorId: sp.id, note: `Payment recorded${json.sent ? `. ${sp.name} was emailed a thank-you with their invoice` : '. Their invoice is on their sponsor page'}${json.is_active ?? isSponsorOnSite(sp) ? '' : '. Tap Put on site when they\'re ready'}.` });
       reloadPayments();
     } catch {
       setRecording({ ...recording, busy: false, error: 'The payment could not be recorded. Check your connection and try again.' });
@@ -666,12 +703,15 @@ export default function AdminSponsorsPage({
           // SPP-2: an invoice sent before payment, and whether it's past its due date
           const invoice = sponsorPayments.invoice.get(sponsor.id);
           const overdue = !!invoice && invoice.due_on < localDateISO();
+          const plan = planOf(sponsor);
+          const openPlan = plan?.open ? plan : null;
           // Something to pay for: not paid yet, or a renewal that is due (or an invoice already out)
           const payable = !receiptWaiting && sponsor.package_status !== 'cancelled'
             && (!!invoice || sponsor.package_status !== 'paid' || canPayRenewal(sponsor))
             // A deal agreed in goods or services has no money to come in
             && (!!invoice || !(sponsor.package_status === 'confirmed' && inKind(sponsor)));
           const statusText = receiptWaiting ? 'Receipt to check'
+            : openPlan ? (overdue ? 'Instalment overdue' : openPlan.next?.due_on ? `Next due ${formatEndDate(openPlan.next.due_on)}` : 'Instalments')
             : invoice ? (overdue ? 'Invoice overdue' : `Invoice due ${formatEndDate(invoice.due_on)}`)
             : stage === 'new' && sponsor.package_status === 'prospect' ? 'Not paid yet'
             : sponsor.package_status === 'confirmed' && inKind(sponsor) ? 'Agreed, in kind'
@@ -792,6 +832,22 @@ export default function AdminSponsorsPage({
                       </span>
                     )}
                   </div>
+                  {/* Paying by instalments: where they're up to */}
+                  {plan && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {plan.paidCount} of {plan.rows.length} instalments paid, {formatMoney(plan.paidCents, plan.rows[0].currency)} in
+                        {plan.leftCents > 0 ? `, ${formatMoney(plan.leftCents, plan.rows[0].currency)} to come` : ''}
+                      </div>
+                      <ul style={{ listStyle: 'none', margin: '0.25rem 0 0', padding: 0, display: 'grid', gap: '0.15rem' }}>
+                        {plan.rows.map(r => (
+                          <li key={r.id} className="text-meta" style={{ color: r.status === 'pending' && r.due_on && r.due_on < localDateISO() ? 'var(--c-red)' : undefined }}>
+                            {instalmentLabel(r)}: {formatMoney(r.amount_cents, r.currency)}, {r.status === 'paid' ? 'paid' : r.status === 'awaiting_review' ? 'receipt to check' : `due ${r.due_on ? formatEndDate(r.due_on) : ''}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {/* A website sign-up: what to check before it goes on the site */}
                   {stage === 'new' && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 0.9rem', marginTop: '0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
@@ -850,12 +906,12 @@ export default function AdminSponsorsPage({
                     <DollarSign size={14} /> Check the receipt in Finance
                   </a>
                 )}
-                {stage === 'new' && sponsor.package_status === 'prospect' && Number(sponsor.package_value) > 0 && !receiptWaiting && (
+                {stage === 'new' && sponsor.package_status === 'prospect' && Number(sponsor.package_value) > 0 && !receiptWaiting && !openPlan && (
                   <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'payment')} className="btn btn-secondary btn-sm" style={actionStyle}>
                     <Send size={14} /> {sponsor.link_sent_at && sponsor.link_kind !== 'renewal' ? 'Send payment link again' : 'Send payment link'}
                   </button>
                 )}
-                {renewalsReady && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
+                {renewalsReady && !openPlan && (endingSoon || (stage === 'ended' && isPastEndDate(sponsor))) && (
                   <button type="button" disabled={result?.busy} onClick={() => sendLink(sponsor, 'renewal')} className="btn btn-secondary btn-sm" style={actionStyle}>
                     <Send size={14} /> {sponsor.link_sent_at && sponsor.link_kind === 'renewal' ? 'Send renewal link again' : 'Send renewal link'}
                   </button>
@@ -870,6 +926,17 @@ export default function AdminSponsorsPage({
                   <button type="button" disabled={result?.busy} onClick={() => sendInvoice(sponsor, !!invoice)} className="btn btn-secondary btn-sm" style={actionStyle}
                     title={invoice ? 'Email them the same invoice again' : `An invoice due in 14 days${packageFor(sponsor) ? ` for ${packageFor(sponsor)!.name}` : ''}`}>
                     <FileText size={14} /> {invoice ? 'Send invoice again' : 'Send invoice'}
+                  </button>
+                )}
+                {/* Instalments: only when there's nothing else open to pay, as the server also insists */}
+                {payable && !invoice && !openPlan && !inKind(sponsor) && (
+                  <button type="button" onClick={() => setPlanFor(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <CalendarRange size={14} /> Pay by instalments
+                  </button>
+                )}
+                {openPlan && (
+                  <button type="button" disabled={result?.busy} onClick={() => cancelPlan(sponsor)} className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <X size={14} /> Cancel the rest
                   </button>
                 )}
                 {/* SPP-3: cash, cheque or a direct deposit the treasurer saw in the bank */}
@@ -887,8 +954,13 @@ export default function AdminSponsorsPage({
                   <Edit2 size={14} />
                 </button>
                 {(stage === 'new' || stage === 'hidden') && (
-                  <button type="button" onClick={() => putOnSite(sponsor)} className="btn btn-primary btn-sm" style={actionStyle}>
+                  <button type="button" onClick={() => setOnSite(sponsor, true)} className="btn btn-primary btn-sm" style={actionStyle}>
                     <Eye size={14} /> Put on site
+                  </button>
+                )}
+                {stage === 'live' && (
+                  <button type="button" onClick={() => setOnSite(sponsor, false)} title="Hide them from your site without ending the sponsorship. Put on site brings them back." className="btn btn-secondary btn-sm" style={actionStyle}>
+                    <EyeOff size={14} /> Take off site
                   </button>
                 )}
                 {stage === 'live' && (
@@ -1409,6 +1481,13 @@ export default function AdminSponsorsPage({
         </div>
       )}
 
+      {planFor && (
+        <SponsorInstalmentsDialog clubId={club.id} sponsor={planFor} currency={currency}
+          totalCents={Number(planFor.package_value) > 0 ? Math.round(Number(planFor.package_value) * 100) : packageFor(planFor)?.price_cents ?? null}
+          onClose={() => setPlanFor(null)}
+          onDone={note => { setLinkResult({ sponsorId: planFor.id, note }); setPlanFor(null); reloadPayments(); }} />
+      )}
+
       {/* SPP-3: Record a payment (cash, cheque or a direct deposit) */}
       {recording && (
         <div role="dialog" aria-modal="true" aria-labelledby="record-payment-title"
@@ -1422,7 +1501,9 @@ export default function AdminSponsorsPage({
               </button>
             </div>
             <p className="text-meta" style={{ margin: '0 0 1.1rem' }}>
-              Money {recording.sponsor.name} paid outside the website. They&apos;re marked Paid, it goes in Finance, and their invoice shows on their sponsor page.
+              {planOf(recording.sponsor)?.open
+                ? `Money ${recording.sponsor.name} paid outside the website for their next instalment. It goes in Finance, and its invoice shows on their sponsor page.`
+                : <>Money {recording.sponsor.name} paid outside the website. They&apos;re marked Paid, it goes in Finance, and their invoice shows on their sponsor page.</>}
             </p>
             {sponsorPayments.invoice.get(recording.sponsor.id) ? (
               <div className="form-group">
@@ -1457,7 +1538,8 @@ export default function AdminSponsorsPage({
                 <input id="record-paid-on" type="date" className="form-input" required max={localDateISO()} value={recording.paidOn}
                   onChange={e => setRecording({ ...recording, paidOn: e.target.value, error: undefined })} />
               </div>
-              {renewalsReady && (
+              {/* A later instalment pays for the term the first one set */}
+              {renewalsReady && !(planOf(recording.sponsor)?.paidCount) && (
                 <div className="form-group">
                   <label htmlFor="record-until" className="form-label">Sponsorship runs until</label>
                   <input id="record-until" type="date" className="form-input" required min={recording.paidOn} value={recording.until}

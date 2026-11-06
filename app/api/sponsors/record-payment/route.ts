@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
   const paidOn = typeof body.paidOn === 'string' && DATE_RE.test(body.paidOn) ? body.paidOn : null;
   if (!how) return NextResponse.json({ error: 'Choose how they paid.' }, { status: 400 });
   if (!paidOn || paidOn > today) return NextResponse.json({ error: 'Enter the day the money arrived (today or earlier).' }, { status: 400 });
-  const until = typeof body.until === 'string' && DATE_RE.test(body.until) ? body.until : null;
-  if (body.until && (!until || until <= paidOn)) return NextResponse.json({ error: 'The end date must be after the day they paid.' }, { status: 400 });
+  const askedUntil = typeof body.until === 'string' && DATE_RE.test(body.until) ? body.until : null;
+  if (body.until && (!askedUntil || askedUntil <= paidOn)) return NextResponse.json({ error: 'The end date must be after the day they paid.' }, { status: 400 });
 
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'Payments cannot be recorded right now.' }, { status: 503 });
@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
   }
   const amount = invoice ? invoice.amount_cents : Math.round(Number(body.amountCents));
   if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000) return NextResponse.json({ error: 'Enter the amount they paid.' }, { status: 400 });
+
+  // A later instalment pays for the term the first one set, so it never moves the end date
+  const until = invoice?.instalment_plan_id && paidBefore ? null : askedUntil;
 
   // Noon, so the day reads the same in any time zone
   const paidAt = new Date(`${paidOn}T12:00:00`).toISOString();
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
     await db.from('sponsors').update({ ends_on: until }).eq('id', sponsor.id);
     await db.from('payments').update({ covers_until: until }).eq('id', paymentId).then(() => undefined, () => undefined);
   }
-  const { data: after } = await db.from('sponsors').select('ends_on, package_status').eq('id', sponsor.id).maybeSingle();
+  const { data: after } = await db.from('sponsors').select('ends_on, package_status, package_value, is_active').eq('id', sponsor.id).maybeSingle();
   const sent = await emailSponsorPaid(db, paid as Payment).catch(() => false);
-  return NextResponse.json({ ok: true, paymentId, sent, ends_on: after?.ends_on ?? null, package_status: after?.package_status ?? 'paid', amount_cents: amount });
+  return NextResponse.json({ ok: true, paymentId, sent, ends_on: after?.ends_on ?? null, package_status: after?.package_status ?? 'paid', package_value: after?.package_value ?? amount / 100, is_active: after?.is_active, amount_cents: amount });
 }

@@ -5,6 +5,7 @@ import { getSupabaseClient } from './supabase/client';
 import { useClub } from './club-context';
 import { useAuth } from './auth-context';
 import { attentionItems, type AttentionItem } from './admin-attention';
+import { siteToday } from './member-prices';
 import { isEndingSoon, hasRecentlyLapsed, hasSentChange, isStaleSignup, sponsorSignupStage } from './sponsors';
 
 /** The dashboard's "Needs you" list for one club, limited to what this person's roles can act on */
@@ -14,6 +15,7 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
   const [receiptsToReview, setReceiptsToReview] = useState(0);
   const [ordersToHandOut, setOrdersToHandOut] = useState(0);
   const [claimsToReview, setClaimsToReview] = useState(0);
+  const [instalmentsOverdue, setInstalmentsOverdue] = useState(0);
   // Sponsor sign-ups whose bank transfer receipt is waiting: counted under receipts, not "not paid yet" (SPE-7)
   const [sponsorReceipts, setSponsorReceipts] = useState<Set<string>>(() => new Set());
   // Re-checked every minute so "enter the result" appears without a reload on matchday
@@ -35,6 +37,10 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
     db.from('expense_claims').select('id', { count: 'exact', head: true })
       .eq('club_id', club.id).eq('status', 'submitted')
       .then(({ count }) => setClaimsToReview(count || 0));
+    // Before migration 20261153 this errors and stays 0
+    db.from('payments').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('kind', 'sponsorship').eq('status', 'pending').not('instalment_plan_id', 'is', null).lt('due_on', siteToday())
+      .then(({ count }) => setInstalmentsOverdue(count || 0));
     db.from('payments').select('sponsor_id')
       .eq('club_id', club.id).eq('kind', 'sponsorship').eq('status', 'awaiting_review')
       .then(({ data }) => setSponsorReceipts(new Set((data || []).map(p => p.sponsor_id as string))));
@@ -55,6 +61,7 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
     sponsorsEndingSoon: clubSponsors.filter(s => isEndingSoon(s, now)).length,
     sponsorsLapsed: clubSponsors.filter(s => hasRecentlyLapsed(s, now)).length,
     staleSponsorSignups: clubSponsors.filter(s => isStaleSignup(s, now)).length,
+    instalmentsOverdue,
     sponsorChanges: clubSponsors.filter(s => hasSentChange(s)).length,
   };
   return attentionItems(club.slug, counts, matches.filter(m => m.club_id === club.id), now)

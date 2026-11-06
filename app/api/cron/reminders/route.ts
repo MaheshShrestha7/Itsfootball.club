@@ -4,6 +4,10 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { availabilityReminder, eventReminder, renewalReminder, sponsorLink } from '@/lib/email/templates';
 import { formatMoney } from '@/lib/finance';
 import { formatEndDate, isSponsorKey, matchSponsorPackage, sponsorPageUrl } from '@/lib/sponsors';
+import { sendInstalmentInvoice } from '@/lib/sponsor-invoice-server';
+import { invoiceIsDue, reminderIsDue } from '@/lib/sponsor-instalments';
+import { alreadyLogged } from '@/lib/email/club-emails';
+import type { Payment } from '@/lib/supabase/types';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
@@ -16,6 +20,8 @@ import { logEvent } from '@/lib/platform-events';
 //   - events: registered attendees, for events starting in the next 30 hours
 //   - membership: 14 days before expiry, and once in the week after it lapses (clubs with paid plans)
 //   - sponsors: 30 days before the sponsorship ends, and once in the week after, with the renewal link
+//   - sponsor instalments: each invoice 14 days before it's due, and one reminder 3 days after. These are
+//     bills the club set up, so they go out whatever its reminder settings or the sponsor's opt-out say
 // Juniors' reminders go to their parent or guardian (memberRecipient).
 // Each club switches these on in Admin -> Email Notifications (clubs.email_settings); all start off.
 // Unsubscribed addresses are skipped, and each reminder goes out at most once (email_log).
@@ -205,6 +211,34 @@ async function sponsorRenewalDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   });
 }
 
+/** Each unpaid instalment's invoice and reminder that hasn't gone yet. Before migration 20261153 finds none. */
+async function instalmentEmails(db: SupabaseClient, dry: boolean) {
+  const today = localDate();
+  const { data } = await db.from('payments').select('*')
+    .eq('kind', 'sponsorship').eq('status', 'pending').not('instalment_plan_id', 'is', null)
+    .lte('due_on', localDate(14));
+  const rows = (data || []) as Payment[];
+  const sponsorIds = [...new Set(rows.map(r => r.sponsor_id!))];
+  const sponsors = sponsorIds.length ? (await db.from('sponsors').select('*').in('id', sponsorIds)).data || [] : [];
+  // An ended sponsorship stops the emails; the club cancels what's left in Sponsors
+  const live = new Map(sponsors.filter(s => s.package_status !== 'expired' && s.package_status !== 'cancelled').map(s => [s.id, s]));
+  const jobs = rows.filter(r => live.has(r.sponsor_id!)).flatMap(r => [
+    ...(invoiceIsDue(r.due_on!, today) ? [{ row: r, overdue: false, key: `sponsor_invoice:${r.id}` }] : []),
+    ...(reminderIsDue(r.due_on!, today) ? [{ row: r, overdue: true, key: `sponsor_instalment_overdue:${r.id}` }] : []),
+  ]);
+  const sent = await alreadyLogged(db, jobs.map(j => j.key));
+  const due = jobs.filter(j => !sent.has(j.key));
+  if (dry) return { due: due.map(j => j.key), sent: 0, failed: 0 };
+  let ok = 0;
+  let failed = 0;
+  for (const j of due.slice(0, MAX_SENDS)) {
+    // One bad row (no address, a failed send) mustn't stop the others
+    const result = await sendInstalmentInvoice(db, live.get(j.row.sponsor_id!), j.row, j.overdue).catch(() => ({ emailed: false }));
+    if (result.emailed) ok++; else failed++;
+  }
+  return { due: due.map(j => j.key), sent: ok, failed };
+}
+
 /** Equal-time string compare, so the secret can't be guessed byte by byte from response timing */
 function sameSecret(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -234,6 +268,7 @@ export async function POST(req: NextRequest) {
   if (req.nextUrl.searchParams.get('dry') === '1') {
     return NextResponse.json({
       dryRun: true,
+      instalments: (await instalmentEmails(db, true)).due,
       due: due.map(d => ({ key: d.key, to: d.to, subject: d.render(null).subject })),
       alreadySent,
       optedOut,
@@ -241,7 +276,8 @@ export async function POST(req: NextRequest) {
   }
 
   const report = await sendClubEmails(db, await materialize(due.slice(0, MAX_SENDS)));
-  const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS) };
+  const instalments = await instalmentEmails(db, false);
+  const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS), instalments: { sent: instalments.sent, failed: instalments.failed } };
   await logEvent('cron', 'reminders', !report.error, body);
   if (report.error?.startsWith('email_log')) {
     console.error('[reminders]', report.error);
