@@ -10,6 +10,8 @@ const DAY = 24 * HOUR;
 export interface AttentionCounts {
   pendingApplications: number;
   receiptsToReview: number;
+  /** Expense claims members sent, waiting for the treasurer */
+  claimsToReview?: number;
   unreadMessages: number;
   /** How many of those came through the website's contact form (the Inbox's Contact form tab) */
   unreadContact?: number;
@@ -67,6 +69,7 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   }
   if (counts.pendingApplications) items.push({ key: 'applications', area: 'members', count: counts.pendingApplications, text: `${plural(counts.pendingApplications, 'application', 'applications')} to approve`, href: `${base}/people?tab=applications`, tone: 'urgent' });
   if (counts.receiptsToReview) items.push({ key: 'receipts', area: 'finance', count: counts.receiptsToReview, text: `${plural(counts.receiptsToReview, 'bank transfer receipt', 'bank transfer receipts')} to check`, href: `${base}/finance`, tone: 'urgent' });
+  if (counts.claimsToReview) items.push({ key: 'claims', area: 'finance', count: counts.claimsToReview, text: `${plural(counts.claimsToReview, 'expense claim', 'expense claims')} to review`, href: `${base}/finance?tab=claims`, tone: 'urgent' });
   if (counts.unreadMessages) items.push({ key: 'messages', area: 'inquiries', count: counts.unreadMessages, text: `${plural(counts.unreadMessages, 'unread message', 'unread messages')}`, href: `${base}/inquiries${counts.unreadContact && counts.unreadContact * 2 >= counts.unreadMessages ? '?tab=contact' : ''}`, tone: 'normal' });
   if (counts.sponsorsToPutOnSite) items.push({ key: 'sponsors-paid', area: 'sponsors', count: counts.sponsorsToPutOnSite, text: `${plural(counts.sponsorsToPutOnSite, 'paid sponsor', 'paid sponsors')} waiting to go on the site`, href: `${base}/sponsors?view=new`, tone: 'urgent' });
   if (counts.sponsorSignups) items.push({ key: 'sponsors-new', area: 'sponsors', count: counts.sponsorSignups, text: `${plural(counts.sponsorSignups, 'new sponsor sign-up', 'new sponsor sign-ups')} not paid yet`, href: `${base}/sponsors?view=new`, tone: 'normal' });

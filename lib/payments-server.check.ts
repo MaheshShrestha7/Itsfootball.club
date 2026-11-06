@@ -2,7 +2,8 @@
 // Who may pay a membership fee: the member, or their parent / guardian (guardian accounts, 20261103).
 import assert from 'node:assert/strict';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { preparePayment, readPaymentInput } from './payments-server';
+import type Stripe from 'stripe';
+import { closeOpenCheckout, preparePayment, readPaymentInput } from './payments-server';
 
 const CLUB = '00000000-0000-4000-8000-00000000000a';
 const PLAN = '00000000-0000-4000-8000-000000000600';
@@ -30,6 +31,12 @@ const EXPIRED_USER = '99999999-9999-4999-8999-000000000003';
 const SUSPENDED_USER = '99999999-9999-4999-8999-000000000004';
 const PENDING_USER = '99999999-9999-4999-8999-000000000005';
 const OTHER_CLUB = '00000000-0000-4000-8000-00000000000b';
+const FEE_OPEN = '00000000-0000-4000-8000-000000000a01';
+const FEE_PAID = '00000000-0000-4000-8000-000000000a02';
+const FEE_CHECKING = '00000000-0000-4000-8000-000000000a03';
+const FEE_EXCUSED = '00000000-0000-4000-8000-000000000a04';
+const FEE_OTHER_KIND = '00000000-0000-4000-8000-000000000a05';
+const feeBill = (id: string, status: string, kind = 'fee_request') => ({ id, club_id: CLUB, kind, status, category: 'match_fees', member_id: KID, request_title: 'Match fee', description: 'Match fee (Kid One)', amount_cents: 1500, currency: 'NZD', due_on: '2026-11-13', payer_name: 'Pat Parent', payer_email: 'pat@x.test' });
 
 const tables: Record<string, Record<string, unknown>[]> = {
   clubs: [{ id: CLUB, slug: 'alpha', name: 'Alpha FC', is_active: true }],
@@ -56,6 +63,7 @@ const tables: Record<string, Record<string, unknown>[]> = {
     { id: SHIRT_WANTER, club_id: CLUB, name: 'Late Larry', contact_name: 'Larry', contact_email: 'l@x.test', package_status: 'prospect', access_key: '2'.repeat(64), package_id: SHIRT_PKG, created_at: new Date(Date.now() - 5 * 864e5).toISOString() },
   ],
   payments: [
+    feeBill(FEE_OPEN, 'pending'), feeBill(FEE_PAID, 'paid'), feeBill(FEE_CHECKING, 'awaiting_review'), feeBill(FEE_EXCUSED, 'rejected'), feeBill(FEE_OTHER_KIND, 'pending', 'income_other'),
     { id: 'p1', sponsor_id: BANK_SPONSOR, kind: 'sponsorship', status: 'awaiting_review' },
     // SPP-2: an invoice the club sent for next year, before the renewal window opens
     { id: 'p2', club_id: CLUB, sponsor_id: INVOICED_SPONSOR, package_id: PKG, kind: 'sponsorship', status: 'pending', due_on: inDays(14), amount_cents: 120000, currency: 'AUD', description: 'Gold Package renewal (Hills Hardware)', created_at: new Date().toISOString() },
@@ -193,7 +201,53 @@ async function main() {
   } as Record<string, unknown>)[k]), null, null);
   assert.equal(amount(typedEmail), 6000, 'the typed buyer email never unlocks member prices');
 
-  console.log('payments-server: renewal by member or guardian, sponsorship sign-up and renewal, invoices, package limits and member prices OK');
+  // Fee requests: the bill's own row is paid, for the amount on the bill, whatever the browser sends
+  const pay = (paymentId: string, over: object = {}) => preparePayment(db, readPaymentInput(k => ({ clubId: CLUB, kind: 'fee_request', paymentId, amountCents: 1, ...over } as Record<string, unknown>)[k]));
+  const open = await pay(FEE_OPEN);
+  assert.ok(open.ok, 'an open bill can be paid while signed out');
+  if (open.ok) {
+    assert.equal(open.draft.invoiceId, FEE_OPEN, 'pays that same row instead of adding one');
+    assert.equal(open.draft.row.amount_cents, 1500, 'the amount comes from the bill, never the request');
+    assert.equal(open.draft.row.member_id, KID);
+    assert.equal(open.draft.currency, 'NZD', 'the currency it was billed in, even if the club has changed its setting since');
+    assert.equal(open.draft.label, 'Alpha FC: Match fee');
+  }
+  const refused = async (result: Awaited<ReturnType<typeof pay>>, status: number, why: string) => {
+    assert.equal(result.ok, false, why);
+    if (!result.ok) assert.equal(result.status, status, why);
+  };
+  await refused(await pay(FEE_PAID), 409, 'already paid: no second charge');
+  await refused(await pay(FEE_CHECKING), 409, 'receipt being checked: nothing more to pay');
+  await refused(await pay(FEE_EXCUSED), 409, 'excused: nothing to pay');
+  await refused(await pay(FEE_OPEN, { clubId: OTHER_CLUB }), 404, "another club's address never opens this bill");
+  await refused(await pay('00000000-0000-4000-8000-00000000dead'), 404, 'unknown bill');
+  await refused(await pay('not-a-uuid'), 404, 'junk id');
+  await refused(await pay(FEE_OTHER_KIND), 404, 'the key only opens fee requests, not any payment');
+
+  // A checkout left open is closed before its bill is paid another way
+  const fakeStripe = (session: () => { status: string }) => {
+    const calls: string[] = [];
+    const stripe = { checkout: { sessions: {
+      retrieve: async (_id: string, _params: object, opts: { stripeAccount: string }) => { calls.push(`retrieve:${opts.stripeAccount}`); return session(); },
+      expire: async (_id: string, _params: object, opts: { stripeAccount: string }) => { calls.push(`expire:${opts.stripeAccount}`); },
+    } } } as unknown as Stripe;
+    return { stripe, calls };
+  };
+  const openTab = fakeStripe(() => ({ status: 'open' }));
+  assert.equal(await closeOpenCheckout(openTab.stripe, 'cs_1', 'acct_1'), 'closed');
+  assert.deepEqual(openTab.calls, ['retrieve:acct_1', 'expire:acct_1'], 'an open checkout is closed, on the club\'s own account');
+  const paidTab = fakeStripe(() => ({ status: 'complete' }));
+  assert.equal(await closeOpenCheckout(paidTab.stripe, 'cs_1', 'acct_1'), 'paid', 'money already taken: the caller must stop');
+  assert.deepEqual(paidTab.calls, ['retrieve:acct_1'], 'nothing is expired once paid');
+  const oldTab = fakeStripe(() => ({ status: 'expired' }));
+  assert.equal(await closeOpenCheckout(oldTab.stripe, 'cs_1', 'acct_1'), 'closed');
+  assert.deepEqual(oldTab.calls, ['retrieve:acct_1'], 'nothing to expire');
+  const gone = fakeStripe(() => { throw Object.assign(new Error('gone'), { code: 'resource_missing' }); });
+  assert.equal(await closeOpenCheckout(gone.stripe, 'cs_1', 'acct_1'), 'closed', 'Stripe has no such session');
+  const down = fakeStripe(() => { throw new Error('network'); });
+  await assert.rejects(closeOpenCheckout(down.stripe, 'cs_1', 'acct_1'), /network/, 'unsure if it was paid: never carry on as if it was closed');
+
+  console.log('payments-server: renewal by member or guardian, sponsorship sign-up and renewal, invoices, package limits, member prices and fee requests OK');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

@@ -57,6 +57,7 @@ const MIX: { id: string; label: string; kinds: string[] }[] = [
   { id: 'sponsors', label: 'Sponsors', kinds: ['sponsorship'] },
   { id: 'tickets', label: 'Tickets', kinds: ['event_ticket'] },
   { id: 'shop', label: 'Shop', kinds: ['shop_order'] },
+  { id: 'fees', label: 'Fees', kinds: ['fee_request'] },
   { id: 'other', label: 'Other', kinds: ['income_other'] },
 ];
 const METHOD: Record<string, string> = { stripe: 'Card', bank_transfer: 'Bank transfer', cash: 'Cash', other: 'Other' };

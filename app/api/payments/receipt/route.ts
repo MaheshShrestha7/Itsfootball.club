@@ -3,21 +3,25 @@ import { requireClubPerm, requireUser } from '@/lib/supabase/server-auth';
 import { storeReceipt, receiptUrl, MAX_RECEIPT_SIZE } from '@/lib/storage/receipts';
 import { durableRateLimit } from '@/lib/rate-limit';
 
-// GET ?type=payment|expense&id=...  -> { url } short-lived link to a receipt (finance viewers only)
+// GET ?type=payment|expense|claim&id=...  -> { url } short-lived link to a receipt (finance viewers only;
+// an expense claim's own receipt also to the person who sent it)
 export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const type = req.nextUrl.searchParams.get('type');
   const id = req.nextUrl.searchParams.get('id') || '';
-  const table = type === 'expense' ? 'expenses' : type === 'payment' ? 'payments' : null;
+  const table = type === 'expense' ? 'expenses' : type === 'payment' ? 'payments' : type === 'claim' ? 'expense_claims' : null;
   if (!table || !id) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
   // Read with the caller's own session: row-level security only returns rows of clubs they run
   const { data } = await auth.supabase.from(table).select('club_id, receipt_key').eq('id', id).maybeSingle();
   if (!data?.receipt_key) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
-  const { data: canSee } = await auth.supabase.rpc('has_club_perm', { p_club_id: data.club_id, p_areas: ['finance'], p_level: 'view' });
-  if (canSee !== true) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
+  // A claim's row-level security is exactly who may see it: its finance team and the claimant
+  if (type !== 'claim') {
+    const { data: canSee } = await auth.supabase.rpc('has_club_perm', { p_club_id: data.club_id, p_areas: ['finance'], p_level: 'view' });
+    if (canSee !== true) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
+  }
 
   const url = await receiptUrl(data.receipt_key);
   if (!url) return NextResponse.json({ error: 'Receipt storage is not available right now.' }, { status: 503 });

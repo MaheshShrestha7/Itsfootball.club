@@ -358,6 +358,47 @@ export function renewalReminder(p: ClubEmailExtras & ForGuardian & { brand: Emai
   });
 }
 
+/** A bill from the club (a fee request), or a nudge about one that's still unpaid */
+export function feeRequest(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; memberName: string; title: string; price: string; dueOn: string; overdue: boolean; reminder: boolean; link: string }): RenderedEmail {
+  const who = p.childName ? `${firstName(p.childName)}'s` : 'your';
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
+    subject: p.reminder ? `Reminder: ${p.title}, ${p.price} ${p.overdue ? `was due ${p.dueOn}` : `due ${p.dueOn}`}` : `${p.title}: ${p.price} due ${p.dueOn}`,
+    preheader: p.reminder ? `${p.brand.name} hasn't received this yet.` : `Pay ${p.brand.name} online in a minute.`,
+    heading: p.reminder ? `A reminder about ${p.title}` : p.title,
+    paragraphs: [
+      p.reminder
+        ? `Hi ${firstName(p.memberName)}, ${p.brand.name} hasn't received ${who} payment for ${p.title} yet.`
+        : `Hi ${firstName(p.memberName)}, ${p.brand.name} is asking for ${who} payment for ${p.title}.`,
+    ],
+    details: [...(p.childName ? [['For', p.childName] as [string, string]] : []), ['Amount', p.price], [p.overdue ? 'Was due' : 'Due', p.dueOn]],
+    cta: { label: `Pay ${p.price}`, url: p.link },
+    note: 'Already paid? You can ignore this. Bank transfers show as paid once the club has checked them.',
+    reason: p.childName
+      ? `You're receiving this because you're the parent or guardian of ${p.childName} at ${p.brand.name}.`
+      : `You're receiving this because you're a member of ${p.brand.name}.`,
+  });
+}
+
+/** What happened to a member's expense claim */
+export function expenseClaimUpdate(p: { brand: EmailBrand; memberName: string; description: string; price: string; outcome: 'approved' | 'rejected' | 'paid'; reason?: string | null; link: string }): RenderedEmail {
+  const words = {
+    approved: { subject: 'approved', heading: 'Your expense claim is approved', line: 'The club will pay you back soon.' },
+    rejected: { subject: 'not approved', heading: 'Your expense claim wasn\'t approved', line: 'Reply to the club if you have a question, or send it again with what they asked for.' },
+    paid: { subject: 'paid', heading: 'Your expense claim has been paid', line: 'The club has marked this as paid back to you.' },
+  }[p.outcome];
+  return renderEmail({
+    brand: p.brand,
+    subject: `Expense claim ${words.subject}: ${p.description}`,
+    preheader: words.line,
+    heading: words.heading,
+    paragraphs: [`Hi ${firstName(p.memberName)}, here's the latest on your claim to ${p.brand.name}. ${words.line}`],
+    details: [['Claim', p.description], ['Amount', p.price], ...(p.reason ? [['Reason', p.reason] as [string, string]] : [])],
+    cta: { label: 'See my claims', url: p.link },
+    reason: `You're receiving this because you sent ${p.brand.name} an expense claim.`,
+  });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Admin notices (sent from the Email notifications admin page)
 // ---------------------------------------------------------------------------------------------
