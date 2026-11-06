@@ -32,6 +32,8 @@ interface GuardianPortalProps {
   onAddChild: () => void;
   /** The child the renewal email was about (?renew=): their renewal opens, however far off their expiry is */
   renewChildId?: string | null;
+  /** Fee requests each child still owes (by member id) */
+  feesOwed?: Map<string, number>;
 }
 
 type Section = 'pass' | 'renew' | 'messages' | 'details';
@@ -47,7 +49,7 @@ function statusOf(child: ClubMember): { label: string; color: string } {
   return { label: 'Active member', color: 'var(--c-green)' };
 }
 
-export default function GuardianPortal({ club, childMembers, guardianEmail, plans, currency, signupPaid, onAddChild, renewChildId }: GuardianPortalProps) {
+export default function GuardianPortal({ club, childMembers, guardianEmail, plans, currency, signupPaid, onAddChild, renewChildId, feesOwed }: GuardianPortalProps) {
   const { sendMemberMessage, getMemberMessages, markClubMessagesRead, matches, clubTeams, clubTeamMembers, tournamentParticipants, playerStats, getActiveSeason } = useClub();
   const teams = clubTeamsOf(clubTeams, club.id);
   const season = getActiveSeason(club.id)?.name || defaultSeasonLabel();
@@ -157,6 +159,8 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
           const stats = playerStats.find(p => p.member_id === child.id && p.season === season);
           const due = unpaid && signupPlan ? `${formatMoney(signupPlan.price_cents, currency)} joining fee`
             : renewDue ? `Renewal due${days !== null && days >= 0 ? ` in ${days} day${days === 1 ? '' : 's'}` : ''}` : null;
+          const owed = feesOwed?.get(child.id) || 0;
+          const feeText = [due, owed ? `${owed} ${owed === 1 ? 'fee' : 'fees'} to pay` : null].filter(Boolean).join(', ');
           const d = detailsOf(child);
           const dState = detailState[child.id];
           return (
@@ -180,7 +184,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                   <div><dt>Team</dt><dd>{childTeams.map(t => t.name).join(', ') || 'Not placed yet'}</dd></div>
                   <div><dt>Next game</dt><dd>{nextMatch ? <>{fixtureWhen(nextMatch.match_date)}<br /><span className="text-meta">{nextMatch.home_team_name} v {nextMatch.away_team_name}{nextMatch.venue ? ` · ${nextMatch.venue}` : ''}</span></> : 'None scheduled'}</dd></div>
                   <div><dt>{season}</dt><dd>{stats ? `${stats.appearances} games · ${stats.goals} goals` : 'No games yet'}</dd></div>
-                  <div><dt>Fees</dt><dd style={{ color: due ? 'var(--c-amber)' : undefined }}>{due || 'Nothing due'}</dd></div>
+                  <div><dt>Fees</dt><dd style={{ color: feeText ? 'var(--c-amber)' : undefined }}>{feeText || 'Nothing due'}</dd></div>
                 </dl>
               )}
 

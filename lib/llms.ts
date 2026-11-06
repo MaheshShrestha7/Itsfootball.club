@@ -15,7 +15,7 @@ const SUMMARY =
   'itsfootball.club is a free platform that gives grassroots and community football (soccer) clubs their own official website: a live match centre with real-time scores and events, published starting lineups, fixtures and results, club news, tournaments, a club merch shop, sponsor showcases and digital member passes. Built for clubs in Australia, New Zealand, the Pacific and the UK, and open to clubs anywhere.';
 
 const PRICING_LINE = hasFee
-  ? `Pricing: free for clubs, with every feature included and no subscription or paid tier. Card payments made to a club (memberships, sponsorships, shop orders, event tickets) carry a booking fee of ${bookingFeeText()}, paid by the person paying on top of the club's price.`
+  ? `Pricing: free for clubs, with every feature included and no subscription or paid tier. Card payments made to a club (memberships, sponsorships, fees the club asks for, shop orders, event tickets) carry a booking fee of ${bookingFeeText()}, paid by the person paying on top of the club's price.`
   : 'Pricing: free for clubs, with every feature included and no subscription or paid tier.';
 
 export function llmsTxt(): string {
@@ -82,7 +82,7 @@ export function pricingMarkdown(): string {
     ? `## Booking fee on card payments
 
 - Rate: ${bookingFeeText()}
-- Applies to: card, Apple Pay and Google Pay payments made to a club through itsfootball.club (memberships, sponsorships, club shop orders and event tickets)
+- Applies to: card, Apple Pay and Google Pay payments made to a club through itsfootball.club (memberships, sponsorships, fees the club asks for, club shop orders and event tickets)
 - Paid by: the person paying, added on top of the club's price and shown before they pay
 - The club receives: its full price, less Stripe's standard card processing fee, straight into its own Stripe account
 - Refunds: the booking fee is refunded too when the club refunds a payment in full

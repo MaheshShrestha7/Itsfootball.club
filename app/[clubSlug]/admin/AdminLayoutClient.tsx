@@ -183,7 +183,12 @@ export default function AdminLayout({
   // Bank transfer receipts waiting for the treasurer, and paid shop orders to hand over (refreshed on navigation)
   const [receiptsToReview, setReceiptsToReview] = useState(0);
   const [ordersToHandOut, setOrdersToHandOut] = useState(0);
+  // Expense claims waiting (the query fails, leaving 0, before migration 20261152)
+  const [claimsToReview, setClaimsToReview] = useState(0);
   useEffect(() => {
+    getSupabaseClient()?.from('expense_claims').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('status', 'submitted')
+      .then(({ count }) => setClaimsToReview(count || 0));
     getSupabaseClient()?.from('payments').select('id', { count: 'exact', head: true })
       .eq('club_id', club.id).eq('status', 'awaiting_review')
       .then(({ count }) => setReceiptsToReview(count || 0));
@@ -210,7 +215,7 @@ export default function AdminLayout({
   // Website sponsor sign-ups still waiting on the club (paid and waiting to go on the site, or new)
   const sponsorSignups = sponsors.filter(s => s.club_id === club.id && sponsorSignupStage(s) !== null).length;
   // The phone menu is closed behind one button: it carries the total of the red counts inside
-  const menuAttentionCount = unreadInquiries + receiptsToReview + ordersToHandOut
+  const menuAttentionCount = unreadInquiries + receiptsToReview + claimsToReview + ordersToHandOut
     + (can(club.id, 'members') ? pendingMembersCount : 0) + (can(club.id, 'sponsors') ? sponsorSignups : 0);
 
   interface NavItem {
@@ -317,11 +322,13 @@ export default function AdminLayout({
           area: 'finance',
           href: `/${club.slug}/admin/finance`,
           icon: Wallet,
-          badge: badgeOf(receiptsToReview, 'to check'),
+          badge: badgeOf(receiptsToReview + claimsToReview, 'to check'),
           children: [
             { label: 'Overview', href: `/${club.slug}/admin/finance` },
             { label: 'Income', href: `/${club.slug}/admin/finance?tab=income` },
             { label: 'Expenses', href: `/${club.slug}/admin/finance?tab=expenses` },
+            { label: 'Fee requests', href: `/${club.slug}/admin/finance?tab=requests` },
+            { label: 'Expense claims', href: `/${club.slug}/admin/finance?tab=claims`, badge: badgeOf(claimsToReview, 'to review') },
             { label: 'Payment settings', href: `/${club.slug}/admin/finance?tab=settings` },
           ],
         },

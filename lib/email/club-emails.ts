@@ -12,7 +12,8 @@ export type EmailKind =
   | 'notice_match' | 'notice_event' | 'notice_news' | 'notice_renewal'
   | 'member_applied' | 'member_approved' | 'member_rejected'
   | 'inquiry_reply' | 'sponsor_payment' | 'sponsor_renewal' | 'sponsor_paid'
-  | 'sponsor_rejected' | 'sponsor_change' | 'sponsor_invoice' | 'sponsor_reminder';
+  | 'sponsor_rejected' | 'sponsor_change' | 'sponsor_invoice' | 'sponsor_reminder'
+  | 'fee_request' | 'fee_reminder' | 'expense_claim';
 
 export interface ClubEmail {
   /** Unique name of this email; a key already in email_log is never sent again */

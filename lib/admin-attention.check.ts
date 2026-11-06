@@ -40,6 +40,8 @@ assert.equal(inboxHref(0, 3), '/rfc/admin/inquiries');
 assert.equal(inboxHref(1, 5), '/rfc/admin/inquiries');
 assert.equal(items[3].href, '/rfc/admin/lineup/draft?match=m2');
 assert.deepEqual(attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0 }, [], NOW), []);
+const claimItem = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, claimsToReview: 2, unreadMessages: 0, ordersToHandOut: 0 }, [], NOW)[0];
+assert.deepEqual([claimItem.text, claimItem.area, claimItem.href], ['2 expense claims to review', 'finance', '/rfc/admin/finance?tab=claims'], 'expense claims go to finance people, on the right tab');
 
 // Sponsor sign-ups: paid ones first (urgent), then new unpaid ones, both open New sign-ups
 const sponsorItems = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, sponsorsToPutOnSite: 1, sponsorSignups: 2 }, [], NOW);

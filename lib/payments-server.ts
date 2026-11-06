@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type Stripe from 'stripe';
 import { describeItems, parseCart, priceCart, type OrderItem, type PricedProduct } from './shop';
 import { ticketOrderError, type TicketedEvent } from './tickets';
 import { hasActiveMembership, siteToday, ticketUnitCents, type MembershipRow } from './member-prices';
@@ -8,7 +9,7 @@ import { openSponsorInvoice, packageIsFull, PACKAGE_TAKEN } from './sponsor-invo
 // Server-only: works out what a payer owes from ids alone. The amount always comes from the
 // club's plan / package / product rows, never from the client.
 
-export type PayableKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket';
+export type PayableKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket' | 'fee_request';
 
 export interface PaymentDraft {
   club: { id: string; slug: string; name: string };
@@ -22,7 +23,7 @@ export interface PaymentDraft {
   row: {
     club_id: string;
     kind: PayableKind;
-    category: 'membership' | 'sponsorship' | 'merchandise' | 'events_tickets';
+    category: string;
     member_id: string | null;
     sponsor_id: string | null;
     plan_id: string | null;
@@ -36,12 +37,30 @@ export interface PaymentDraft {
     event_id?: string;
   };
   /** SPP-2: the sponsor's open invoice this pays. The routes turn that row paid instead of adding one,
-   *  so the invoice number stays the same. */
+   *  so the invoice number stays the same. Fee requests pay their own row the same way. */
   invoiceId?: string;
+}
+
+/**
+ * Closes a Checkout Session before its row is paid another way, or by a newer session. The webhook only
+ * knows the row's latest session, so paying an older tab would take the money without recording it.
+ * 'paid' means that session already took the payment and the caller must stop. Network errors throw.
+ */
+export async function closeOpenCheckout(stripe: Stripe, sessionId: string, stripeAccount: string): Promise<'closed' | 'paid'> {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {}, { stripeAccount });
+    if (session.status === 'complete') return 'paid';
+    if (session.status === 'open') await stripe.checkout.sessions.expire(sessionId, {}, { stripeAccount });
+    return 'closed';
+  } catch (err) {
+    if ((err as { code?: string }).code === 'resource_missing') return 'closed';
+    throw err;
+  }
 }
 
 export const SPONSOR_ALREADY_PAID = 'This sponsorship is already paid, thank you. Your sponsor page has your invoice, and offers renewal nearer the end date.';
 export const SPONSOR_RECEIPT_WAITING = 'Your bank transfer receipt is with the club. There is nothing more to pay until they have checked it.';
+export const FEE_ALREADY_PAID = 'This has already been paid, thank you.';
 
 type Result = { ok: true; draft: PaymentDraft } | { ok: false; status: number; error: string };
 
@@ -54,7 +73,9 @@ export function readPaymentInput(get: (key: string) => unknown) {
   const kind = get('kind');
   return {
     clubId: uuid(get('clubId')),
-    kind: (['membership_signup', 'membership_renewal', 'sponsorship', 'shop_order', 'event_ticket'].includes(kind as string) ? kind : null) as PayableKind | null,
+    kind: (['membership_signup', 'membership_renewal', 'sponsorship', 'shop_order', 'event_ticket', 'fee_request'].includes(kind as string) ? kind : null) as PayableKind | null,
+    /** The bill being paid (fee requests); its unguessable id is the key, as on the tickets page */
+    paymentId: uuid(get('paymentId')),
     memberId: uuid(get('memberId')),
     sponsorId: uuid(get('sponsorId')),
     /** The secret from a payment or renewal link the club emailed (sponsors.access_key) */
@@ -78,6 +99,7 @@ export function readPaymentInput(get: (key: string) => unknown) {
  *                       so renewing an existing sponsorship also needs the secret key from the club's renewal link
  *   shop_order          anyone: it pays for new goods, never for someone else's record
  *   event_ticket        anyone: new tickets for a public event, priced from the event row
+ *   fee_request         anyone holding the link: it pays one bill the club sent, for the amount on the bill
  * Shop orders and tickets cost the member price (migration 20261143) only when the signed-in payer is an
  * active member of the club, or the guardian of one (payerIsActiveMember); everyone else pays the full price.
  */
@@ -119,6 +141,32 @@ export async function preparePayment(
     stripeAccountId: settings?.stripe_account_id ?? null,
     stripeChargesEnabled: Boolean(settings?.stripe_charges_enabled),
   };
+
+  if (input.kind === 'fee_request') {
+    if (!input.paymentId) return bad('Payment not found.', 404);
+    const { data: bill } = await db.from('payments').select('*').eq('id', input.paymentId).eq('club_id', club.id).eq('kind', 'fee_request').maybeSingle();
+    if (!bill) return bad('Payment not found.', 404);
+    if (bill.status === 'paid') return bad(FEE_ALREADY_PAID, 409);
+    if (bill.status === 'awaiting_review') return bad('Your bank transfer receipt is with the club. There is nothing more to pay until they have checked it.', 409);
+    if (bill.status !== 'pending') return bad('This is no longer due. Please contact the club if you have a question.', 409);
+    const title = bill.request_title || bill.description || 'Club fee';
+    return {
+      ok: true,
+      draft: {
+        ...base,
+        // The bill's currency: the club may have changed its setting since sending it
+        currency: bill.currency,
+        label: `${club.name}: ${title}`,
+        row: {
+          club_id: club.id, kind: 'fee_request', category: bill.category,
+          member_id: bill.member_id, sponsor_id: null, plan_id: null, package_id: null,
+          description: bill.description, amount_cents: bill.amount_cents, currency: bill.currency,
+          payer_name: bill.payer_name, payer_email: bill.payer_email,
+        },
+        invoiceId: bill.id,
+      },
+    };
+  }
 
   if (input.kind === 'shop_order') {
     if (!input.cart) return bad('Your cart is empty.');

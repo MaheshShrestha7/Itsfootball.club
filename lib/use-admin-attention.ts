@@ -13,6 +13,7 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
   const { can } = useAuth();
   const [receiptsToReview, setReceiptsToReview] = useState(0);
   const [ordersToHandOut, setOrdersToHandOut] = useState(0);
+  const [claimsToReview, setClaimsToReview] = useState(0);
   // Sponsor sign-ups whose bank transfer receipt is waiting: counted under receipts, not "not paid yet" (SPE-7)
   const [sponsorReceipts, setSponsorReceipts] = useState<Set<string>>(() => new Set());
   // Re-checked every minute so "enter the result" appears without a reload on matchday
@@ -31,6 +32,9 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
     db.from('payments').select('id', { count: 'exact', head: true })
       .eq('club_id', club.id).eq('kind', 'shop_order').eq('status', 'paid').is('fulfilled_at', null)
       .then(({ count }) => setOrdersToHandOut(count || 0));
+    db.from('expense_claims').select('id', { count: 'exact', head: true })
+      .eq('club_id', club.id).eq('status', 'submitted')
+      .then(({ count }) => setClaimsToReview(count || 0));
     db.from('payments').select('sponsor_id')
       .eq('club_id', club.id).eq('kind', 'sponsorship').eq('status', 'awaiting_review')
       .then(({ data }) => setSponsorReceipts(new Set((data || []).map(p => p.sponsor_id as string))));
@@ -42,6 +46,7 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
   const counts = {
     pendingApplications: members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length,
     receiptsToReview,
+    claimsToReview,
     unreadMessages: unreadContact + unreadMemberMessages,
     unreadContact,
     ordersToHandOut,

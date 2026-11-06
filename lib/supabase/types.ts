@@ -855,7 +855,7 @@ export interface TournamentStanding {
 // ==============================================================================
 // Finance (supabase/migrations/20261010_finance.sql). Read and written directly, not synced.
 // ==============================================================================
-export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket' | 'income_other';
+export type PaymentKind = 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket' | 'fee_request' | 'income_other';
 export type PaymentMethod = 'stripe' | 'bank_transfer' | 'cash' | 'other';
 export type PaymentStatus = 'pending' | 'awaiting_review' | 'paid' | 'rejected' | 'refunded' | 'failed';
 
@@ -964,6 +964,9 @@ export interface Payment {
   invoice_number?: number | null;
   /** An invoice sent before payment is due by this day (SPP-2, migration 20261137) */
   due_on?: string | null;
+  /** Fee requests: shared by everyone asked for the same money, and its name (migration 20261152) */
+  request_id?: string | null;
+  request_title?: string | null;
   created_at: string;
 }
 
@@ -996,6 +999,29 @@ export interface Expense {
   paid_by_member_id?: string | null;
   reimbursed: boolean;
   season?: string | null;
+  created_at: string;
+}
+
+/** A member asking for money back; becomes an Expense when approved (migration 20261152) */
+export interface ExpenseClaim {
+  id: string;
+  club_id: string;
+  member_id?: string | null;
+  submitted_by: string;
+  claimant_name: string;
+  claimant_email?: string | null;
+  category: string;
+  description: string;
+  vendor?: string | null;
+  amount_cents: number;
+  currency: string;
+  spent_on: string;
+  receipt_key: string;
+  payout_details?: string | null;
+  status: 'submitted' | 'approved' | 'rejected' | 'paid';
+  rejection_reason?: string | null;
+  expense_id?: string | null;
+  reviewed_at?: string | null;
   created_at: string;
 }
 

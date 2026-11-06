@@ -21,6 +21,7 @@ import { perkBusiness } from '@/lib/perks';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
+import { MemberExpenseClaims, MemberFees, useOpenFees } from '@/components/MemberMoney';
 import ClubShop from '@/components/ClubShop';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
@@ -300,6 +301,12 @@ export default function MemberPortalPage({
   const [messageContent, setMessageContent] = useState('');
   const [messageSentToast, setMessageSentToast] = useState(false);
 
+
+  // Fee requests the club sent this member or their children
+  const openFees = useOpenFees(club.id, [...(activeMember ? [activeMember.id] : []), ...childMembers.map(c => c.id)]);
+  const feeNames = new Map(childMembers.map(c => [c.id, c.full_name]));
+  const feesOwed = new Map<string, number>();
+  openFees.filter(f => f.status === 'pending').forEach(f => feesOwed.set(f.member_id, (feesOwed.get(f.member_id) || 0) + 1));
 
   /** Reads the signed-in user's pending or rejected application here (null if none, or before the migration) */
   const loadMyApplication = async (): Promise<MyApplication | null> => {
@@ -831,7 +838,8 @@ export default function MemberPortalPage({
             {/* A parent or guardian (not a member themselves): their children, instead of the tabs */}
             {!activeMember && childMembers.length > 0 && !addingChild && signedInEmail && (
               <>
-                <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} />
+                <MemberFees clubSlug={club.slug} fees={openFees} names={feeNames} />
+                <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} feesOwed={feesOwed} />
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>
                   Signed in as {signedInEmail}.{' '}
                   <button type="button" onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--club-ink)', cursor: 'pointer', fontWeight: 700, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', minHeight: '44px', padding: '0 0.4rem' }}>
@@ -1518,8 +1526,11 @@ export default function MemberPortalPage({
               );
             })()}
 
+            <MemberFees clubSlug={club.slug} fees={openFees} names={childMembers.length ? feeNames : undefined} />
+            <MemberExpenseClaims clubId={club.id} memberId={activeMember.id} currency={currency} />
+
             {childMembers.length > 0 && signedInEmail && (
-              <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} />
+              <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} feesOwed={feesOwed} />
             )}
 
             {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop opens one directly, e.g. from a message email) */}

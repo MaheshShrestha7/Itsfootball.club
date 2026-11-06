@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
-import { preparePayment, readPaymentInput } from '@/lib/payments-server';
+import { closeOpenCheckout, preparePayment, readPaymentInput } from '@/lib/payments-server';
 import { bookingFeeCents } from '@/lib/finance';
 import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase/server-auth';
@@ -28,6 +28,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This club does not take card payments yet. Please use bank transfer.' }, { status: 400 });
   }
 
+  // A second tab on the same bill: close the first, or paying it would take money the webhook can't match
+  if (draft.invoiceId) {
+    const { data: open } = await db.from('payments').select('stripe_session_id').eq('id', draft.invoiceId).maybeSingle();
+    if (open?.stripe_session_id) {
+      const closed = await closeOpenCheckout(stripe, open.stripe_session_id, draft.stripeAccountId).catch(() => null);
+      if (closed === 'paid') return NextResponse.json({ error: 'This payment has just gone through. It will show here shortly.' }, { status: 409 });
+      if (!closed) return NextResponse.json({ error: 'Card payment could not be started. Please try again.' }, { status: 502 });
+    }
+  }
+
   // SPP-2: paying an invoice the club sent pays that same row, so its invoice number stays the same
   const { data: payment, error } = draft.invoiceId
     ? await db.from('payments').update({ method: 'stripe' }).eq('id', draft.invoiceId).eq('status', 'pending').select('id').single()
@@ -36,7 +46,8 @@ export async function POST(req: NextRequest) {
 
   const origin = new URL(req.url).origin;
   const page = draft.row.kind === 'sponsorship' ? 'sponsor' : draft.row.kind === 'shop_order' ? 'shop' : 'member';
-  const path = `/${draft.club.slug}/${page}`;
+  // A fee request comes back to its own bill
+  const path = draft.row.kind === 'fee_request' ? `/${draft.club.slug}/pay/${payment.id}` : `/${draft.club.slug}/${page}`;
   // Tickets: the buyer lands on their tickets; the order id is the (unguessable) key to that page
   const ticketsPath = `/${draft.club.slug}/tickets/${payment.id}`;
   // Sponsors land on their own page (SP-F1/F3), where they send their logo next
@@ -77,7 +88,8 @@ export async function POST(req: NextRequest) {
       },
       { stripeAccount: draft.stripeAccountId }
     );
-    await db.from('payments').update({ stripe_session_id: session.id }).eq('id', payment.id);
+    // method again: the webhook for a session closed above may have set a bill back to bank transfer by now
+    await db.from('payments').update({ stripe_session_id: session.id, method: 'stripe' }).eq('id', payment.id);
     return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error('Stripe checkout error:', err);

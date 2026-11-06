@@ -12,7 +12,7 @@ export async function receiptLink(type: 'payment' | 'expense', id: string): Prom
 }
 
 // Receipts are private: ask the API for a short-lived link, then open it
-export async function openReceipt(type: 'payment' | 'expense', id: string) {
+export async function openReceipt(type: 'payment' | 'expense' | 'claim', id: string) {
   const win = window.open('', '_blank'); // opened synchronously so pop-up blockers allow it
   const token = await getAccessToken();
   const res = await fetch(`/api/payments/receipt?type=${type}&id=${id}`, { headers: { Authorization: `Bearer ${token}` } });

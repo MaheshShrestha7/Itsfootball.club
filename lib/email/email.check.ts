@@ -1,7 +1,7 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail, feeRequest, expenseClaimUpdate } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
@@ -140,6 +140,29 @@ async function main() {
   assert.ok(withSponsors.html.includes('Corner &lt;Cafe&gt;') && !withSponsors.html.includes('javascript:'), 'unsafe logo and link left out, name escaped');
   assert.ok(withSponsors.text.includes('This event is supported by: Harbour Physio, Corner <Cafe>'));
 }
+
+  // --- fee requests and expense claims ---
+  {
+    const base = { brand: evil, memberName: 'Al Adult', title: 'Match <fee>', price: '$15.00', dueOn: '13 Nov 2026', overdue: false, reminder: false, link: 'https://x/pay/1' };
+    const bill = feeRequest(base);
+    assert.ok(bill.subject.includes('$15.00') && bill.subject.includes('13 Nov 2026'), 'the subject says how much and when');
+    assert.ok(bill.html.includes('Match &lt;fee&gt;') && !bill.html.includes('Match <fee>'), 'title escaped');
+    assert.ok(bill.html.includes('https://x/pay/1') && bill.text.includes('Pay $15.00: https://x/pay/1'), 'pay link in both versions');
+    assert.ok(bill.text.includes('Hi Al,') && bill.text.includes('your payment'), 'written to the member');
+    const kid = feeRequest({ ...base, memberName: 'Pat Parent', childName: 'Kid One' });
+    assert.ok(kid.text.includes("Kid's payment") && kid.text.includes('For: Kid One') && kid.text.includes('parent or guardian'), 'a guardian is told whose fee it is');
+    const nudge = feeRequest({ ...base, reminder: true, overdue: true });
+    assert.ok(nudge.subject.startsWith('Reminder:') && nudge.subject.includes('was due') && nudge.text.includes('Was due: 13 Nov 2026'), 'an overdue nudge says so');
+    const withNote = feeRequest({ ...base, message: 'Bring your boots', unsubscribeUrl: 'https://x/u' });
+    assert.ok(withNote.text.includes('Bring your boots') && withNote.text.includes('Unsubscribe: https://x/u'), 'club note and unsubscribe link');
+
+    const claim = { brand: evil, memberName: 'Al Adult', description: 'Oranges', price: '$42.50', link: 'https://x/member' };
+    const turnedDown = expenseClaimUpdate({ ...claim, outcome: 'rejected', reason: 'Blurry <receipt>' });
+    assert.ok(turnedDown.subject.includes('not approved') && turnedDown.text.includes('Reason: Blurry <receipt>') && turnedDown.html.includes('Blurry &lt;receipt&gt;'), 'the reason reaches them, escaped');
+    assert.ok(expenseClaimUpdate({ ...claim, outcome: 'approved' }).subject.includes('approved'));
+    assert.ok(expenseClaimUpdate({ ...claim, outcome: 'paid' }).text.includes('paid back to you'));
+    assert.ok(!expenseClaimUpdate({ ...claim, outcome: 'approved', reason: null }).text.includes('Reason:'), 'no empty reason line');
+  }
 
 console.log('email: webhook signatures, unsubscribe tokens and templates OK');
 }

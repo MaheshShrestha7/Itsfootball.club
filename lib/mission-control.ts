@@ -393,7 +393,7 @@ export const SOURCE_LABEL: Record<string, string> = {
 };
 export const METHOD_LABEL: Record<string, string> = { stripe: 'Card', bank_transfer: 'Bank transfer', cash: 'Cash', other: 'Other' };
 export const KIND_LABEL: Record<string, string> = {
-  membership_signup: 'Memberships', membership_renewal: 'Renewals', sponsorship: 'Sponsorship', event_ticket: 'Event tickets', shop_order: 'Shop', income_other: 'Other income',
+  membership_signup: 'Memberships', membership_renewal: 'Renewals', sponsorship: 'Sponsorship', event_ticket: 'Event tickets', shop_order: 'Shop', fee_request: 'Fee requests', income_other: 'Other income',
 };
 export const GROUP_LABEL: Record<string, string> = {
   home: 'Homepage', tools: 'Free tools', guides: 'Guides', grounds: 'Grounds', compare: 'Compare pages', tournaments: 'Tournaments',

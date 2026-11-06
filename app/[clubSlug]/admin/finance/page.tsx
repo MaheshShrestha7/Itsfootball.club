@@ -22,13 +22,19 @@ import { askText, confirmAction } from '@/components/ConfirmDialog';
 import PriceList from '@/components/admin/PriceList';
 import { DATE_LOCALE } from '@/lib/dates';
 import { openReceipt } from '@/lib/receipts';
+import FeeRequestsTab from '@/components/admin/FeeRequestsTab';
+import ExpenseClaimsTab from '@/components/admin/ExpenseClaimsTab';
+import { isLedgerRow } from '@/lib/fee-requests';
+import { siteToday } from '@/lib/member-prices';
 
-type Tab = 'overview' | 'income' | 'expenses' | 'settings';
-const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'settings'];
+type Tab = 'overview' | 'income' | 'expenses' | 'requests' | 'claims' | 'settings';
+const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'requests', 'claims', 'settings'];
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'income', label: 'Income' },
   { id: 'expenses', label: 'Expenses' },
+  { id: 'requests', label: 'Fee requests' },
+  { id: 'claims', label: 'Expense claims' },
   { id: 'settings', label: 'Settings' },
 ];
 const STATUS_TONE: Record<string, string> = {
@@ -51,6 +57,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [season, setSeason] = useState('all');
+  // Before migration 20261152 this query fails and stays 0
+  const [claimsToReview, setClaimsToReview] = useState(0);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
 
   const currency = settings?.currency || 'AUD';
@@ -77,6 +85,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
     setPlans(pl.data || []);
     setPayments(pay.data || []);
     setExpenses(exp.data || []);
+    const { count } = await db.from('expense_claims').select('id', { count: 'exact', head: true }).eq('club_id', club.id).eq('status', 'submitted');
+    setClaimsToReview(count || 0);
   }, [db, club.id]);
   useEffect(() => { load(); }, [load]);
 
@@ -91,7 +101,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   const exportCsv = () => {
     const rows: (string | number | null | undefined)[][] = [
       ['Type', 'Date', 'Season', 'Category', 'Description', 'Party', 'Method', 'Status', 'Amount', 'Currency', 'Reference'],
-      ...seasonPayments.map(p => ['Income', (p.paid_at || p.created_at).slice(0, 10), p.season, INCOME_CATEGORIES[p.category] || p.category,
+      // A bill nobody has paid isn't income
+      ...seasonPayments.filter(isLedgerRow).map(p => ['Income', (p.paid_at || p.created_at).slice(0, 10), p.season, INCOME_CATEGORIES[p.category] || p.category,
         p.description, p.payer_name, PAYMENT_METHOD_LABEL[p.method], p.status, (p.amount_cents / 100).toFixed(2), p.currency, p.reference]),
       ...seasonExpenses.map(e => ['Expense', e.spent_on, e.season, EXPENSE_CATEGORIES[e.category] || e.category,
         e.description, e.vendor, PAYMENT_METHOD_LABEL[e.method], e.reimbursed ? 'reimbursed' : 'paid', (e.amount_cents / 100).toFixed(2), e.currency, '']),
@@ -139,17 +150,24 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
                 <span className="sr-only">, </span>{payments.filter(p => p.status === 'awaiting_review').length}<span className="sr-only"> to check</span>
               </span>
             )}
+            {t.id === 'claims' && claimsToReview > 0 && (
+              <span className="admin-count"><span className="sr-only">, </span>{claimsToReview}<span className="sr-only"> to review</span></span>
+            )}
           </button>
         ))}
       </div>
 
       {tab === 'overview' && (
         <Overview {...shared} payments={seasonPayments} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)}
-          sponsors={sponsors.filter(s => s.club_id === club.id)} onReview={() => setTab('income')} />
+          sponsors={sponsors.filter(s => s.club_id === club.id)} onReview={() => setTab('income')}
+          claimsToReview={claimsToReview} onClaims={() => setTab('claims')} onFees={() => setTab('requests')} />
       )}
       {tab === 'income' && <IncomeTab {...shared} payments={seasonPayments} plans={plans} members={members.filter(m => m.club_id === club.id)}
         sponsors={sponsors.filter(s => s.club_id === club.id).map(s => ({ id: s.id, name: s.name, package_value: s.package_value }))} />}
       {tab === 'expenses' && <ExpensesTab {...shared} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)} />}
+      {tab === 'requests' && <FeeRequestsTab {...shared} payments={seasonPayments} onCheckReceipts={() => setTab('income')}
+        canPayOnline={!!settings?.stripe_charges_enabled || !!settings?.bank_details?.trim()} />}
+      {tab === 'claims' && <ExpenseClaimsTab club={club} flash={flash} load={load} />}
       {tab === 'settings' && <SettingsTab {...shared} settings={settings} plans={plans} />}
     </div>
   );
@@ -166,15 +184,17 @@ type Shared = {
 type MemberLite = { id: string; full_name: string; membership_status?: string; membership_expires_at?: string };
 
 // ------------------------------------------------------------------------------------------------
-function Overview({ money, payments, expenses, members, sponsors, onReview }: Shared & {
+function Overview({ money, payments, expenses, members, sponsors, onReview, claimsToReview, onClaims, onFees }: Shared & {
   payments: Payment[]; expenses: Expense[]; members: MemberLite[];
   sponsors: { id: string; name: string; package_status?: string; package_value?: number | null }[]; onReview: () => void;
+  claimsToReview: number; onClaims: () => void; onFees: () => void;
 }) {
   const paid = payments.filter(p => p.status === 'paid');
   const income = paid.reduce((n, p) => n + p.amount_cents, 0);
   const spent = expenses.reduce((n, e) => n + e.amount_cents, 0);
   const toReview = payments.filter(p => p.status === 'awaiting_review');
   const owedToMembers = expenses.filter(e => e.paid_by_member_id && !e.reimbursed);
+  const overdueFees = payments.filter(p => p.kind === 'fee_request' && p.status === 'pending' && p.due_on && p.due_on < siteToday());
 
   const byCategory = (rows: { category: string; amount_cents: number }[], labels: Record<string, string>) => {
     const totals = new Map<string, number>();
@@ -199,7 +219,7 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
 
   return (
     <div className="admin-stack">
-      {(toReview.length > 0 || owedToMembers.length > 0) && (
+      {(toReview.length > 0 || owedToMembers.length > 0 || claimsToReview > 0 || overdueFees.length > 0) && (
         <section className="admin-panel" aria-labelledby="fin-todo-title">
           <div className="admin-panel-head"><h2 id="fin-todo-title">Needs you</h2></div>
           <ul className="admin-dash-queue">
@@ -209,6 +229,24 @@ function Overview({ money, payments, expenses, members, sponsors, onReview }: Sh
                   <span className="admin-dash-mark"><span className="sr-only">Urgent: </span><FileText size={18} aria-hidden="true" /></span>
                   <span>{plural(toReview.length, 'bank transfer receipt')} to check</span>
                   <span className="admin-dash-go" aria-hidden="true">Review</span>
+                </button>
+              </li>
+            )}
+            {claimsToReview > 0 && (
+              <li className="is-urgent">
+                <button type="button" onClick={onClaims} className="admin-queue-row">
+                  <span className="admin-dash-mark"><span className="sr-only">Urgent: </span><FileText size={18} aria-hidden="true" /></span>
+                  <span>{plural(claimsToReview, 'expense claim')} to review</span>
+                  <span className="admin-dash-go" aria-hidden="true">Review</span>
+                </button>
+              </li>
+            )}
+            {overdueFees.length > 0 && (
+              <li>
+                <button type="button" onClick={onFees} className="admin-queue-row">
+                  <span className="admin-dash-mark"><CreditCard size={18} aria-hidden="true" /></span>
+                  <span>{plural(overdueFees.length, 'fee')} overdue, {money(overdueFees.reduce((n, p) => n + p.amount_cents, 0))}</span>
+                  <span className="admin-dash-go" aria-hidden="true">Open</span>
                 </button>
               </li>
             )}
@@ -307,7 +345,8 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
   const blank = { type: 'other', category: 'match_fees', description: '', amount: '', method: 'cash', payer_name: '', member_id: '', plan_id: '', sponsor_id: '', date: today() };
   const [form, setForm] = useState(blank);
 
-  const rows = payments.filter(p => (status === 'all' || p.status === status) && (kind === 'all' || p.kind === kind));
+  // A bill nobody has paid isn't income: it's on the Fee requests tab until it is
+  const rows = payments.filter(isLedgerRow).filter(p => (status === 'all' || p.status === status) && (kind === 'all' || p.kind === kind));
   const memberName = (id?: string | null) => members.find(m => m.id === id)?.full_name;
 
   const verify = async (p: Payment) => {
@@ -610,6 +649,14 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
     load();
   };
 
+  // Also settles the member's claim, if this came from one (trigger in migration 20261152)
+  const markReimbursed = async (e: Expense) => {
+    const { error } = await db!.from('expenses').update({ reimbursed: true }).eq('id', e.id);
+    if (error) return flash('error', error.message);
+    flash('ok', 'Marked as reimbursed.');
+    load();
+  };
+
   const remove = async (e: Expense) => {
     if (!(await confirmAction({ title: `Delete "${e.description}"?`, message: 'This expense will be removed from your records.', confirmLabel: 'Delete expense', danger: true }))) return;
     const { error } = await db!.from('expenses').delete().eq('id', e.id);
@@ -703,6 +750,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
                 <td className="is-num is-strong">{formatMoney(e.amount_cents, e.currency)}</td>
                 <td className="is-actions">
                   {e.receipt_key && <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => openReceipt('expense', e.id)} aria-label="View receipt"><FileText size={14} aria-hidden="true" /></button>}
+                  {e.paid_by_member_id && !e.reimbursed && <button type="button" className="btn btn-primary btn-sm" onClick={() => markReimbursed(e)}><CheckCircle2 size={14} aria-hidden="true" /> Reimbursed</button>}
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => edit(e)}>Edit</button>
                   <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={() => remove(e)} aria-label="Delete expense"><Trash2 size={14} aria-hidden="true" /></button>
                 </td>

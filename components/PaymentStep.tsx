@@ -9,14 +9,14 @@ import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha'
 
 interface PaymentStepProps {
   clubId: string;
-  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket';
+  kind: 'membership_signup' | 'membership_renewal' | 'sponsorship' | 'shop_order' | 'event_ticket' | 'fee_request';
   memberId?: string;
   sponsorId?: string;
   planId?: string;
   packageId?: string;
   amountCents: number;
   label: string;
-  /** Extra fields for the payment routes (shop: items; tickets: eventId, quantity; both: buyerName, buyerEmail) */
+  /** Extra fields for the payment routes (shop: items; tickets: eventId, quantity; both: buyerName, buyerEmail; fee requests: paymentId) */
   extra?: Record<string, string>;
   /** Card only, no bank transfer (shop orders, tickets) */
   cardOnly?: boolean;
