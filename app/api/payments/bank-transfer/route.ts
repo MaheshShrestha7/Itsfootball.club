@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
 
   // One receipt waiting per membership / sponsorship, or per buyer per event, is enough. A fee request is
   // per bill and preparePayment already checked this one: a receipt for another fee mustn't block it.
-  if (row.kind !== 'fee_request') {
+  // An instalment is the same.
+  if (row.kind !== 'fee_request' && !prepared.draft.instalment) {
     let pending = db.from('payments').select('id').eq('club_id', row.club_id).eq('kind', row.kind).eq('status', 'awaiting_review');
     pending = row.kind === 'event_ticket' ? pending.eq('event_id', row.event_id!).eq('payer_email', row.payer_email!)
       : row.member_id ? pending.eq('member_id', row.member_id) : pending.eq('sponsor_id', row.sponsor_id!);

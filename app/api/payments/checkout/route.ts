@@ -47,12 +47,12 @@ export async function POST(req: NextRequest) {
   const origin = new URL(req.url).origin;
   const page = draft.row.kind === 'sponsorship' ? 'sponsor' : draft.row.kind === 'shop_order' ? 'shop' : 'member';
   // A fee request comes back to its own bill
-  const path = draft.row.kind === 'fee_request' ? `/${draft.club.slug}/pay/${payment.id}` : `/${draft.club.slug}/${page}`;
+  const path = draft.row.kind === 'fee_request' || draft.instalment ? `/${draft.club.slug}/pay/${payment.id}` : `/${draft.club.slug}/${page}`;
   // Tickets: the buyer lands on their tickets; the order id is the (unguessable) key to that page
   const ticketsPath = `/${draft.club.slug}/tickets/${payment.id}`;
   // Sponsors land on their own page (SP-F1/F3), where they send their logo next
   let sponsorPage: string | null = null;
-  if (draft.row.kind === 'sponsorship' && draft.row.sponsor_id) {
+  if (draft.row.kind === 'sponsorship' && draft.row.sponsor_id && !draft.instalment) {
     const { data: sponsor } = await db.from('sponsors').select('*').eq('id', draft.row.sponsor_id).maybeSingle();
     if (isSponsorKey(sponsor?.access_key)) sponsorPage = `/${draft.club.slug}/sponsor/your-sponsorship?k=${sponsor.access_key}&payment=success`;
   }

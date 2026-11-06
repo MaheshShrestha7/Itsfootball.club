@@ -3,6 +3,7 @@ import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@
 import { looksLikeEmail, sendClubEmails } from '@/lib/email/club-emails';
 import { sponsorInvoice } from '@/lib/email/templates';
 import { formatMoney } from '@/lib/finance';
+import { instalmentLabel } from '@/lib/sponsor-instalments';
 import { invoiceLabel } from '@/lib/invoice';
 import { formatEndDate, holdsPackageSpot, INVOICE_DUE_DAYS, isSponsorKey, localDateISO, packageSpotsLeft } from '@/lib/sponsors';
 import type { Payment } from '@/lib/supabase/types';
@@ -12,12 +13,12 @@ import type { Payment } from '@/lib/supabase/types';
 
 export const PACKAGE_TAKEN = 'Sorry, that package has just been taken. Please pick another one, or contact the club.';
 
-/** The sponsor's open invoice (sent before payment, not paid yet), or null. Null before migration
- *  20261137 too: the due_on filter then errors and nothing is found. */
+/** The sponsor's open invoice (sent before payment, not paid yet), or null; on instalments, the next one
+ *  due. Null before migration 20261137 too: the due_on filter then errors and nothing is found. */
 export async function openSponsorInvoice(db: SupabaseClient, sponsorId: string): Promise<Payment | null> {
   const { data } = await db.from('payments').select('*')
     .eq('sponsor_id', sponsorId).eq('kind', 'sponsorship').eq('status', 'pending').not('due_on', 'is', null)
-    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    .order('due_on', { ascending: true }).limit(1).maybeSingle();
   return (data as Payment | null) ?? null;
 }
 
@@ -101,10 +102,23 @@ export async function issueSponsorInvoice(
 export const sponsorInvoiceUrl = (club: ClubBrandRow, paymentId: string, accessKey: string) =>
   `${clubBaseUrl(club)}/sponsor/invoice/${paymentId}?k=${encodeURIComponent(accessKey)}`;
 
+/** Numbers one instalment's invoice and emails it (or, with `overdue`, its one reminder). These are bills,
+ *  so like fee requests they don't depend on the club's reminder settings. */
+export async function sendInstalmentInvoice(
+  db: SupabaseClient, sponsor: InvoiceSponsor, payment: Payment, overdue = false
+): Promise<{ emailed: boolean; note?: string }> {
+  const { data: number, error } = await db.rpc('assign_invoice_number', { p_payment_id: payment.id });
+  if (error || typeof number !== 'number') {
+    console.error('[sponsor-invoice] number:', error?.message);
+    return { emailed: false, note: 'The invoice could not be numbered. Use Send invoice again.' };
+  }
+  return emailSponsorInvoice(db, sponsor, payment, number, false, overdue);
+}
+
 /** Emails the invoice to the sponsor's contact. `resend` lets an admin send it again (once a minute at
- *  most); otherwise it goes out once per invoice. */
+ *  most); otherwise it goes out once per invoice. `overdue` is the one reminder for a late instalment. */
 export async function emailSponsorInvoice(
-  db: SupabaseClient, sponsor: InvoiceSponsor, payment: Payment, number: number, resend = false
+  db: SupabaseClient, sponsor: InvoiceSponsor, payment: Payment, number: number, resend = false, overdue = false
 ): Promise<{ emailed: boolean; note?: string }> {
   if (!looksLikeEmail(sponsor.contact_email)) return { emailed: false, note: 'They have no email address, so copy the link and send it yourself.' };
   if (!process.env.RESEND_API_KEY) return { emailed: false, note: 'Email isn\'t set up yet, so copy the link and send it yourself.' };
@@ -117,7 +131,7 @@ export async function emailSponsorInvoice(
   const row = club as ClubBrandRow & { contact_email?: string | null };
   const replyTo = looksLikeEmail(row.contact_email) ? row.contact_email.trim() : undefined;
   const report = await sendClubEmails(db, [{
-    key: `sponsor_invoice:${payment.id}${resend ? `:${new Date().toISOString().slice(0, 16)}` : ''}`,
+    key: overdue ? `sponsor_instalment_overdue:${payment.id}` : `sponsor_invoice:${payment.id}${resend ? `:${new Date().toISOString().slice(0, 16)}` : ''}`,
     clubId: row.id,
     kind: 'sponsor_invoice',
     refId: sponsor.id,
@@ -134,6 +148,8 @@ export async function emailSponsorInvoice(
       dueOn: payment.due_on ? formatEndDate(payment.due_on) : 'on receipt',
       invoiceLink: sponsorInvoiceUrl(row, payment.id, sponsor.access_key),
       canReply: !!replyTo,
+      instalment: instalmentLabel(payment),
+      overdue,
     }),
   }]);
   if (report.error) console.error('[sponsor-invoice] email failed:', payment.id, report.error);

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from '@/lib/email/club-brand';
 import { fetchPaged } from '@/lib/paged';
 import { cleanAbn, invoiceIsTax } from '@/lib/invoice';
+import { instalmentLabel } from '@/lib/sponsor-instalments';
 import { canPayRenewal, groundPlacesFor, isPosterPlace, isSponsorKey, sponsorshipPaidFor, isSponsorOnSite, localDateISO, matchSponsorPackage, summariseSponsorEvents, type GroundPlace, type SponsorResults } from '@/lib/sponsors';
 import { loadGroundInputs } from '@/lib/sponsor-ground-server';
 import type { Sponsor } from '@/lib/supabase/types';
@@ -40,6 +41,8 @@ export interface PortalPayment {
   created_at: string;
   /** A tax invoice (the club's GST registration and ABN when this payment was made, SPE-5) */
   taxInvoice: boolean;
+  /** "Instalment 2 of 3", for a sponsor paying that way */
+  instalment: string | null;
   /** SPE-14: a renewal, and the period it pays for ("7 Nov 2026 to 7 Nov 2027") when known */
   renewal: boolean;
   period: string | null;
@@ -78,6 +81,8 @@ export interface PortalData {
   receiptWaiting: boolean;
   /** SPP-2: they can ask for an invoice to pay against (something to pay, and no invoice open yet) */
   canInvoice: boolean;
+  /** Instalments still to pay: each is paid from its own invoice, not the renewal or sign-up link */
+  onInstalments: boolean;
 }
 
 export interface AtGround {
@@ -175,10 +180,13 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
   ]);
 
   // A 'pending' row is an abandoned card checkout, unless it's an invoice the club sent (due_on, SPP-2)
-  const shown = (payments || []).filter(p => p.status !== 'pending' || p.due_on);
+  const shown = (payments || []).filter(p => p.status !== 'pending' || p.due_on)
+    // A plan's instalments are all created together, so they read in their own order
+    .sort((a, b) => (a.instalment_plan_id && a.instalment_plan_id === b.instalment_plan_id ? a.instalment_no - b.instalment_no : 0));
   const packageName = new Map((packages || []).map(p => [p.id as string, p.name as string]));
+  const onInstalments = shown.some(p => p.instalment_plan_id && p.status === 'pending');
   let renewLink: string | null = null;
-  if (canPayRenewal(sponsor)) {
+  if (canPayRenewal(sponsor) && !onInstalments) {
     const active = (packages || []).filter(p => p.is_active);
     const pkg = active.find(p => p.id === sponsor.package_id && p.price_cents > 0) || matchSponsorPackage(sponsor, active);
     if (pkg) renewLink = `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: pkg.id, k: sponsor.access_key })}`;
@@ -215,11 +223,13 @@ export async function loadPortal(db: SupabaseClient, sponsor: PortalSponsorRow, 
       paid_at: p.paid_at,
       created_at: p.created_at,
       taxInvoice: invoiceIsTax(p, settings),
+      instalment: instalmentLabel(p),
       ...sponsorshipPaidFor(p),
     })),
     taxInvoice: !!settings?.gst_registered && !!cleanAbn(settings.abn),
     renewLink,
-    canPay: sponsor.package_status === 'prospect' || canPayRenewal(sponsor),
+    canPay: !onInstalments && (sponsor.package_status === 'prospect' || canPayRenewal(sponsor)),
+    onInstalments,
     receiptWaiting: shown.some(p => p.status === 'awaiting_review'),
     // Something to pay for, no invoice or receipt open, and a priced package that fits (as the invoice
     // route picks it). Before migration 20261137 there's no due_on, so nothing is open and the

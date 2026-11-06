@@ -5,6 +5,7 @@ import { findSponsorByKey } from '@/lib/sponsor-portal-server';
 import { clubBaseUrl } from '@/lib/email/club-brand';
 import { isUuid } from '@/lib/ids';
 import { gstIncludedCents, invoiceTaxDetails } from '@/lib/invoice';
+import { instalmentLabel } from '@/lib/sponsor-instalments';
 import { sponsorshipPaidFor } from '@/lib/sponsors';
 import { paymentReference } from '@/lib/finance';
 
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest) {
   // The GST registration and ABN the club had when this was paid (SPE-5), so the invoice never changes
   const { taxInvoice, abn } = invoiceTaxDetails(payment, settings);
   const paidFor = sponsorshipPaidFor(payment);
+  const instalment = instalmentLabel(payment);
 
   return NextResponse.json({
     number,
@@ -71,7 +73,7 @@ export async function GET(req: NextRequest) {
       description: pkg?.name
         ? `${pkg.name} sponsorship${paidFor.renewal ? ' renewal' : ''}${paidFor.period ? `, ${paidFor.period}` : payment.season ? `, ${payment.season} season` : ''}`
         : payment.description || 'Sponsorship',
-      detail: pkg?.benefits ? String(pkg.benefits).split('\n')[0].slice(0, 160) : null,
+      detail: instalment || (pkg?.benefits ? String(pkg.benefits).split('\n')[0].slice(0, 160) : null),
     },
     amount_cents: payment.amount_cents,
     gst_cents: taxInvoice ? gstIncludedCents(payment.amount_cents) : 0,
@@ -85,8 +87,9 @@ export async function GET(req: NextRequest) {
     // How to pay an open invoice: the club's bank details (with the reference) and its card payment link
     ...(payment.status === 'pending' ? {
       bank_details: settings?.bank_details?.trim() || null,
-      reference: paymentReference(sponsor.id),
-      pay_link: payment.package_id ? `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: payment.package_id, k: sponsor.access_key })}` : null,
+      // Each instalment has its own reference and pay page
+      reference: paymentReference(instalment ? payment.id : sponsor.id),
+      pay_link: instalment ? `${clubBaseUrl(club)}/pay/${payment.id}` : payment.package_id ? `${clubBaseUrl(club)}/sponsor?${new URLSearchParams({ pay: sponsor.id, package: payment.package_id, k: sponsor.access_key })}` : null,
     } : {}),
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

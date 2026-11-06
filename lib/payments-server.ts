@@ -39,6 +39,8 @@ export interface PaymentDraft {
   /** SPP-2: the sponsor's open invoice this pays. The routes turn that row paid instead of adding one,
    *  so the invoice number stays the same. Fee requests pay their own row the same way. */
   invoiceId?: string;
+  /** One instalment of a sponsor's plan: paid from its own page, and a receipt for another doesn't block it */
+  instalment?: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export async function closeOpenCheckout(stripe: Stripe, sessionId: string, strip
 export const SPONSOR_ALREADY_PAID = 'This sponsorship is already paid, thank you. Your sponsor page has your invoice, and offers renewal nearer the end date.';
 export const SPONSOR_RECEIPT_WAITING = 'Your bank transfer receipt is with the club. There is nothing more to pay until they have checked it.';
 export const FEE_ALREADY_PAID = 'This has already been paid, thank you.';
+export const SPONSOR_ON_INSTALMENTS = 'This sponsorship is being paid by instalments. Please use the pay link on your invoice, or on your sponsor page.';
 
 type Result = { ok: true; draft: PaymentDraft } | { ok: false; status: number; error: string };
 
@@ -229,6 +232,31 @@ export async function preparePayment(
     };
   }
 
+  // One instalment, from its own pay page: the unguessable payment id is the key, as for a fee request
+  if (input.kind === 'sponsorship' && input.paymentId) {
+    const { data: bill } = await db.from('payments').select('*').eq('id', input.paymentId).eq('club_id', club.id).eq('kind', 'sponsorship').not('instalment_plan_id', 'is', null).maybeSingle();
+    if (!bill) return bad('Payment not found.', 404);
+    if (bill.status === 'paid') return bad(FEE_ALREADY_PAID, 409);
+    if (bill.status === 'awaiting_review') return bad(SPONSOR_RECEIPT_WAITING, 409);
+    if (bill.status !== 'pending') return bad('This is no longer due. Please contact the club if you have a question.', 409);
+    return {
+      ok: true,
+      draft: {
+        ...base,
+        currency: bill.currency,
+        label: `${club.name}: ${bill.request_title || bill.description || 'Sponsorship'}`,
+        row: {
+          club_id: club.id, kind: 'sponsorship', category: bill.category,
+          member_id: null, sponsor_id: bill.sponsor_id, plan_id: null, package_id: bill.package_id,
+          description: bill.description, amount_cents: bill.amount_cents, currency: bill.currency,
+          payer_name: bill.payer_name, payer_email: bill.payer_email,
+        },
+        invoiceId: bill.id,
+        instalment: true,
+      },
+    };
+  }
+
   if (input.kind === 'sponsorship') {
     if (!input.sponsorId) return bad('Choose a sponsorship package.');
     // access_key only exists after migration 20261132, so it's only asked for when a link sent one
@@ -250,6 +278,8 @@ export async function preparePayment(
     const sponsor = sponsorRow as unknown as { id: string; name: string; contact_name: string | null; contact_email: string | null; package_status: string | null; access_key?: string | null; ends_on?: string | null } | null;
     if (!sponsor || !pkg || (invoice && invoice.club_id !== club.id)) return bad('Sponsorship not found.', 404);
     if (waiting) return bad(SPONSOR_RECEIPT_WAITING, 409);
+    // This page charges the invoice but shows the package's price, so an instalment can't be paid from it
+    if (invoice?.instalment_plan_id) return bad(SPONSOR_ON_INSTALMENTS, 409);
     const renewing = !!input.sponsorKey && !!sponsor.access_key && sponsor.access_key === input.sponsorKey;
     if (sponsor.package_status !== 'prospect' && !renewing) return bad('This sponsorship is already set up. Please contact the club about payment.', 409);
     // SPE-1: the link's key renews only when a renewal is due, so an old payment or renewal link

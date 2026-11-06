@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
   ]);
   if (!sponsor || !club) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
+  // Their link would quote the package's full price. Before migration 20261153 this finds nothing.
+  const { data: instalment } = await db.from('payments').select('id').eq('sponsor_id', sponsor.id).eq('kind', 'sponsorship').eq('status', 'pending').not('instalment_plan_id', 'is', null).limit(1).maybeSingle();
+  if (instalment) return NextResponse.json({ error: 'They are paying by instalments. Use Send invoice again for the next one.' }, { status: 409 });
+
   if (kind === 'payment' && sponsor.package_status !== 'prospect') {
     return NextResponse.json({ error: 'They have already paid or been set up. Use Send renewal link instead.' }, { status: 409 });
   }

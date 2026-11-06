@@ -211,6 +211,10 @@ function Overview({ money, payments, expenses, members, sponsors, onReview, clai
   // Deals with money still to come: not ones paying in kind (no value, SPE-21), and not ones whose
   // bank transfer receipt is already waiting above (SPE-7)
   const receiptFrom = new Set(toReview.filter(p => p.kind === 'sponsorship' && p.sponsor_id).map(p => p.sponsor_id));
+  // On instalments, what's left rather than the whole deal
+  const instalmentsLeft = new Map<string, number>();
+  payments.filter(p => p.instalment_plan_id && p.sponsor_id && (p.status === 'pending' || p.status === 'awaiting_review'))
+    .forEach(p => instalmentsLeft.set(p.sponsor_id!, (instalmentsLeft.get(p.sponsor_id!) || 0) + p.amount_cents));
   const pledges = sponsors.filter(s => (s.package_status === 'confirmed' || s.package_status === 'prospect')
     && Number(s.package_value) > 0 && !receiptFrom.has(s.id));
 
@@ -300,8 +304,8 @@ function Overview({ money, payments, expenses, members, sponsors, onReview, clai
               <ul className="admin-list">
                 {pledges.map(s => (
                   <li key={s.id}>
-                    <span>{s.name} <span style={{ color: 'var(--color-muted)' }}>({s.package_status === 'prospect' ? 'not paid yet' : 'agreed'})</span></span>
-                    <span>{s.package_value ? money(Math.round(s.package_value * 100)) : '—'}</span>
+                    <span>{s.name} <span style={{ color: 'var(--color-muted)' }}>({instalmentsLeft.has(s.id) ? 'instalments left' : s.package_status === 'prospect' ? 'not paid yet' : 'agreed'})</span></span>
+                    <span>{instalmentsLeft.has(s.id) ? money(instalmentsLeft.get(s.id)!) : s.package_value ? money(Math.round(s.package_value * 100)) : '—'}</span>
                   </li>
                 ))}
               </ul>

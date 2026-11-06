@@ -40,7 +40,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
   // A payment or renewal link the club emailed: ?pay={sponsor}&package={package}&k={secret}
   const [payLink, setPayLink] = useState<{ sponsorId: string; packageId: string; key: string | null } | null>(null);
   // What the emailed link can do now (SPE-1): undefined while checking, null if it couldn't be checked
-  const [linkState, setLinkState] = useState<{ canPay: boolean; receiptWaiting: boolean } | null | undefined>(undefined);
+  const [linkState, setLinkState] = useState<{ canPay: boolean; receiptWaiting: boolean; onInstalments?: boolean } | null | undefined>(undefined);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captcha = useRef<CaptchaHandle>(null);
   // SPP-4: how many of each package are taken (sponsor_package_spots, migration 20261137)
@@ -86,7 +86,7 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
       // Already paid, or a receipt waiting? Then the link shows that instead of a second payment
       if (key) fetch(`/api/sponsors/portal?k=${encodeURIComponent(key)}`)
         .then(res => (res.ok ? res.json() : null))
-        .then(json => setLinkState(json ? { canPay: json.canPay !== false, receiptWaiting: !!json.receiptWaiting } : null))
+        .then(json => setLinkState(json ? { canPay: json.canPay !== false, receiptWaiting: !!json.receiptWaiting, onInstalments: !!json.onInstalments } : null))
         .catch(() => setLinkState(null));
       else setLinkState(null);
     }
@@ -205,10 +205,12 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
         ) : payLinkPackage && paymentNotice !== 'success' && payLink && linkDone && linkState ? (
           <div role="status" className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #10B981' }}>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-              <CheckCircle2 size={18} color="var(--c-green)" /> {linkState.receiptWaiting ? 'Your receipt is with the club' : 'This sponsorship is already paid'}
+              <CheckCircle2 size={18} color="var(--c-green)" /> {linkState.onInstalments ? 'You\'re paying by instalments' : linkState.receiptWaiting ? 'Your receipt is with the club' : 'This sponsorship is already paid'}
             </div>
             <p className="text-body" style={{ margin: '0 0 0.75rem' }}>
-              {linkState.receiptWaiting
+              {linkState.onInstalments
+                ? 'Please pay each instalment from its invoice. They are all on your sponsor page.'
+                : linkState.receiptWaiting
                 ? 'There is nothing more to pay until the club has checked your bank transfer.'
                 : `Thank you for supporting ${club.name}. There is nothing to pay. Your sponsor page has your invoice, and offers renewal nearer the end date.`}
             </p>
