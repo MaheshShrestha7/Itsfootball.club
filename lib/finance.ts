@@ -1,7 +1,29 @@
 // Club finance: shared labels and formatting (client + server). Category keys match the CHECK
 // constraints in supabase/migrations/20261010_finance.sql.
 
-import { DATE_LOCALE } from './dates';
+import { DATE_LOCALE, SITE_TIME_ZONE } from './dates';
+
+/**
+ * The season a payment counts in. Money received belongs to the season whose dates contain the day it
+ * was paid, in the site's time zone, even if the bill was raised in an earlier one. With no dated season
+ * around that day it stays under the season it was filed in, so it isn't lost from every total. Anything
+ * unpaid has no paid date, so it stays where it was filed. Same rule as payment_season() in migration
+ * 20261154, which the club dashboard uses.
+ */
+export function paymentSeason(
+  p: { status: string; season?: string | null; paid_at?: string | null; created_at?: string | null },
+  seasons: { name: string; start_date?: string | null; end_date?: string | null }[]
+): string | null {
+  const filed = p.season ?? null;
+  const at = p.paid_at || p.created_at;
+  if ((p.status !== 'paid' && p.status !== 'refunded') || !at) return filed;
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: SITE_TIME_ZONE }).format(new Date(at));
+  const containing = seasons
+    .filter(s => s.name?.trim() && s.start_date && s.end_date && s.start_date <= day && day <= s.end_date)
+    // Two seasons sharing a day: the later one
+    .sort((a, b) => b.start_date!.localeCompare(a.start_date!))[0];
+  return containing ? containing.name.trim() : filed;
+}
 
 export const INCOME_CATEGORIES: Record<string, string> = {
   membership: 'Membership fees',

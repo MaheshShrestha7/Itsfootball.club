@@ -7,6 +7,7 @@ import {
   membershipTermEnd,
   parseMoneyToCents,
   paymentReference,
+  paymentSeason,
   toCsv,
   DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
   MEMBERSHIP_PAYMENT_POLICIES,
@@ -88,5 +89,22 @@ assert.equal(policyAutoApprovesOnPayment('allow_waiver'), false);
 
 assert.equal(MEMBERSHIP_PAYMENT_POLICIES.length, 4);
 assert.equal(MEMBERSHIP_PAYMENT_POLICIES[0].id, 'require_payment');
+
+// --- which season a payment counts in ---
+const seasons2 = [{ name: '2025', start_date: '2025-01-01', end_date: '2025-12-31' }, { name: '2026', start_date: '2026-01-01', end_date: '2026-12-31' }];
+const inSeason = (over: object) => paymentSeason({ status: 'paid', season: '2025', ...over }, seasons2);
+assert.equal(inSeason({ paid_at: '2026-03-01T02:00:00Z' }), '2026', 'billed in 2025, paid in 2026: counts in 2026');
+assert.equal(inSeason({ season: '2026', paid_at: '2025-03-01T02:00:00Z' }), '2025', 'and the other way round');
+assert.equal(inSeason({ season: '2025', paid_at: '2025-12-31T12:59:00Z' }), '2025', 'late on 31 Dec in Sydney');
+assert.equal(inSeason({ season: '2025', paid_at: '2025-12-31T13:30:00Z' }), '2026', 'already 1 Jan in Sydney, though still 31 Dec in UTC');
+assert.equal(inSeason({ status: 'refunded', paid_at: '2026-03-01T02:00:00Z' }), '2026', 'a refund stays with the season it was paid in');
+assert.equal(inSeason({ paid_at: null, created_at: '2026-03-01T02:00:00Z' }), '2026', 'no paid date recorded: when it was entered');
+assert.equal(inSeason({ status: 'pending', paid_at: null, created_at: '2026-03-01T02:00:00Z' }), '2025', 'unpaid stays where it was filed');
+assert.equal(inSeason({ status: 'rejected', created_at: '2026-03-01T02:00:00Z' }), '2025');
+assert.equal(inSeason({ season: 'Old', paid_at: '2019-06-01T02:00:00Z' }), 'Old', 'outside every dated season: not lost, stays where filed');
+assert.equal(inSeason({ season: null, paid_at: '2019-06-01T02:00:00Z' }), null, 'nothing to go on');
+assert.equal(paymentSeason({ status: 'paid', season: '2025/26', paid_at: '2026-03-01T02:00:00Z' }, []), '2025/26', 'a club with no dated seasons works as before');
+assert.equal(paymentSeason({ status: 'paid', season: 'x', paid_at: '2026-03-01T02:00:00Z' }, [{ name: 'Undated', start_date: null, end_date: null }]), 'x', 'an undated season can\'t claim anything');
+assert.equal(paymentSeason({ status: 'paid', paid_at: '2026-07-01T02:00:00Z' }, [{ name: 'A', start_date: '2026-01-01', end_date: '2026-07-01' }, { name: ' B ', start_date: '2026-07-01', end_date: '2027-06-30' }]), 'B', 'a shared day goes to the later season, name trimmed');
 
 console.log('finance: money, booking fee, CSV, file signatures, membership terms and payment policies OK');

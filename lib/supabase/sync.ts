@@ -13,6 +13,30 @@ import { isUuid, stableId } from '../ids';
 
 type Row = Record<string, any>;
 
+/**
+ * What a load puts in state, keeping what the person changed while it was running. `loaded` is the row
+ * as the server has it, `baseline` the state when the load began and `current` the state now: a field
+ * that differs between those last two was edited during the load. The caller seeds the sync engine with
+ * `loaded` BEFORE this, so the next flush sees those fields as changed and uploads them. Every other
+ * field takes the server's value, so another admin's changes still arrive.
+ */
+export function keepEditsMadeDuringLoad<T extends { id: string }>(loaded: T[], current: T[] | undefined, baseline: T[] | undefined): T[] {
+  if (!current || !baseline || current === baseline) return loaded;
+  const before = new Map(baseline.map(r => [r.id, r]));
+  const now = new Map(current.map(r => [r.id, r]));
+  const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
+  return loaded.map(row => {
+    const was = before.get(row.id);
+    const is = now.get(row.id);
+    if (!was || !is || was === is) return row;
+    const edited: Row = {};
+    for (const key of new Set([...Object.keys(was), ...Object.keys(is)])) {
+      if (!same((was as Row)[key], (is as Row)[key])) edited[key] = (is as Row)[key];
+    }
+    return Object.keys(edited).length ? { ...row, ...edited } : row;
+  });
+}
+
 export type EntityKey =
   | 'clubs'
   | 'members'

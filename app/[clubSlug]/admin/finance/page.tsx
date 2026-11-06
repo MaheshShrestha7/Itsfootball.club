@@ -1,7 +1,7 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
+import { BarChart3, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useUrlTab } from '@/lib/use-url-tab';
@@ -9,7 +9,7 @@ import { clubTeamsOf } from '@/lib/teams';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
-  bookingFeeCents, formatMoney, parseMoneyToCents, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
+  bookingFeeCents, formatMoney, parseMoneyToCents, paymentSeason, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
   MEMBERSHIP_PAYMENT_POLICIES, DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
 } from '@/lib/finance';
 import type { RenewalMode, MembershipPaymentPolicy } from '@/lib/finance';
@@ -22,6 +22,7 @@ import { askText, confirmAction } from '@/components/ConfirmDialog';
 import PriceList from '@/components/admin/PriceList';
 import { DATE_LOCALE } from '@/lib/dates';
 import { openReceipt } from '@/lib/receipts';
+import { fetchPaged } from '@/lib/paged';
 import FeeRequestsTab from '@/components/admin/FeeRequestsTab';
 import ExpenseClaimsTab from '@/components/admin/ExpenseClaimsTab';
 import { isLedgerRow } from '@/lib/fee-requests';
@@ -43,10 +44,11 @@ const STATUS_TONE: Record<string, string> = {
 /** "Awaiting review", "Paid", ... */
 const statusText = (status: string) => status.replace('_', ' ').replace(/^./, c => c.toUpperCase());
 const today = () => new Date().toISOString().slice(0, 10);
+const LEDGER_MAX = 100000;
 
 export default function FinancePage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, members, sponsors } = useClub();
+  const { clubs, selectClubBySlug, members, sponsors, seasons: allSeasons } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const db = getSupabaseClient();
 
@@ -69,7 +71,9 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   };
 
 
-  // ponytail: loads the club's whole ledger; page it by season if a club passes a few thousand rows
+  // The whole ledger, a page at a time: one request stops at 1,000 rows, and the totals and the CSV
+  // would come up short without saying so.
+  // ponytail: loads every row; fetch by season if a club passes tens of thousands
   const load = useCallback(async () => {
     if (!db) return;
     const [s, pl, pay, exp] = await Promise.all([
@@ -78,24 +82,31 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       db.from('club_payment_settings').select(`${PUBLIC_PAYMENT_SETTINGS}, stripe_connected`).eq('club_id', club.id).maybeSingle()
         .then(res => (res.error ? db.from('club_payment_settings').select('*').eq('club_id', club.id).maybeSingle() : res)),
       db.from('membership_plans').select('*').eq('club_id', club.id).order('sort_order'),
-      db.from('payments').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
-      db.from('expenses').select('*').eq('club_id', club.id).order('spent_on', { ascending: false }),
+      fetchPaged<Payment>((from, to) => db.from('payments').select('*').eq('club_id', club.id).order('created_at', { ascending: false }).order('id').range(from, to), LEDGER_MAX),
+      fetchPaged<Expense>((from, to) => db.from('expenses').select('*').eq('club_id', club.id).order('spent_on', { ascending: false }).order('id').range(from, to), LEDGER_MAX),
     ]);
     setSettings(s.data ?? null);
     setPlans(pl.data || []);
-    setPayments(pay.data || []);
-    setExpenses(exp.data || []);
+    setPayments(pay.data);
+    setExpenses(exp.data);
+    // Partial figures look like real ones, so say so
+    if (pay.error || exp.error) setFeedback({ type: 'error', text: 'Some of the club\'s records couldn\'t be read, so these totals may be short. Please refresh.' });
     const { count } = await db.from('expense_claims').select('id', { count: 'exact', head: true }).eq('club_id', club.id).eq('status', 'submitted');
     setClaimsToReview(count || 0);
   }, [db, club.id]);
   useEffect(() => { load(); }, [load]);
 
+  // Money received counts in the season it was paid (lib/finance.ts paymentSeason)
+  const countedPayments = useMemo(() => {
+    const clubSeasons = allSeasons.filter(s => s.club_id === club.id);
+    return payments.map(p => ({ ...p, season: paymentSeason(p, clubSeasons) }));
+  }, [payments, allSeasons, club.id]);
   const seasons = useMemo(
-    () => Array.from(new Set([...payments, ...expenses].map(r => r.season).filter(Boolean) as string[])).sort().reverse(),
-    [payments, expenses]
+    () => Array.from(new Set([...countedPayments, ...payments, ...expenses].map(r => r.season).filter(Boolean) as string[])).sort().reverse(),
+    [countedPayments, payments, expenses]
   );
   const inSeason = <T extends { season?: string | null }>(rows: T[]) => (season === 'all' ? rows : rows.filter(r => r.season === season));
-  const seasonPayments = inSeason(payments);
+  const seasonPayments = inSeason(countedPayments);
   const seasonExpenses = inSeason(expenses);
 
   const exportCsv = () => {
@@ -131,6 +142,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
             {seasons.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} aria-hidden="true" /> Export CSV</button>
+          <Link href={`/${club.slug}/admin/finance/budget`} className="btn btn-secondary"><BarChart3 size={16} aria-hidden="true" /> Budget</Link>
+          <Link href={`/${club.slug}/admin/finance/agm`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> AGM report</Link>
         </div>
       </div>
 
@@ -165,7 +178,8 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       {tab === 'income' && <IncomeTab {...shared} payments={seasonPayments} plans={plans} members={members.filter(m => m.club_id === club.id)}
         sponsors={sponsors.filter(s => s.club_id === club.id).map(s => ({ id: s.id, name: s.name, package_value: s.package_value }))} />}
       {tab === 'expenses' && <ExpensesTab {...shared} expenses={seasonExpenses} members={members.filter(m => m.club_id === club.id)} />}
-      {tab === 'requests' && <FeeRequestsTab {...shared} payments={seasonPayments} onCheckReceipts={() => setTab('income')}
+      {/* By the season each request was raised in: people paying either side of a season's end are still one request */}
+      {tab === 'requests' && <FeeRequestsTab {...shared} payments={inSeason(payments)} onCheckReceipts={() => setTab('income')}
         canPayOnline={!!settings?.stripe_charges_enabled || !!settings?.bank_details?.trim()} />}
       {tab === 'claims' && <ExpenseClaimsTab club={club} flash={flash} load={load} />}
       {tab === 'settings' && <SettingsTab {...shared} settings={settings} plans={plans} />}

@@ -59,7 +59,7 @@ import { getAccessToken, getSupabaseClient, isSupabaseConfigured } from './supab
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
-import { SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
+import { keepEditsMadeDuringLoad, SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 import { cacheSafeMembers } from './cache-safe';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
@@ -585,20 +585,26 @@ export function ClubProvider({
 
   // Initial / repeat load from Supabase
   const lastLoadAtRef = useRef(0);
+  // State when the running load began, to tell what was edited during it (kept across a restarted load)
+  const loadBaselineRef = useRef<Partial<SyncState> | null>(null);
   useEffect(() => {
     if (!isHydrated || !isSupabaseConfigured || authLoading) return;
     const client = getSupabaseClient();
     if (!client) return;
 
     let cancelled = false;
+    // A reload cancels the save timer, so anything changed in the last moment goes up first
+    const previous = syncRef.current;
+    const saved = previous ? previous.flush(syncStateRef.current, pendingDeletesRef.current).catch(() => null) : Promise.resolve(null);
     const engine = new SupabaseSync(client);
     syncRef.current = engine;
     lastLoadAtRef.current = Date.now();
+    loadBaselineRef.current ??= syncStateRef.current;
     setSyncReady(false);
     setSyncStatus({ phase: 'loading' });
 
-    engine
-      .load({ slug: scopeSlug, clubIds: scopeClubIdsKey ? scopeClubIdsKey.split(',') : [] })
+    saved
+      .then(() => engine.load({ slug: scopeSlug, clubIds: scopeClubIdsKey ? scopeClubIdsKey.split(',') : [] }))
       .then(({ data, errors, clubIds }) => {
         if (cancelled) return;
         setLoadedClubIds(clubIds);
@@ -623,8 +629,10 @@ export function ClubProvider({
           const remoteIds = new Set(remoteRows.map(r => r.id));
           const previouslySynced = new Set(syncedIdsRef.current[entityName] || []);
           nextSyncedIds[entityName] = Array.from(remoteIds);
+          // Deleted while this load was running: it goes at the next flush, so it mustn't come back now
+          const deleting = pendingDeletesRef.current[entityName as EntityKey];
           return [
-            ...remoteRows.map(r => ({ ...(localById.get(r.id) || {}), ...r })),
+            ...remoteRows.filter(r => !deleting?.has(r.id)).map(r => ({ ...(localById.get(r.id) || {}), ...r })),
             ...localRows.filter(r => {
               if (remoteIds.has(r.id) || previouslySynced.has(r.id)) return false;
               const createdAt = r.created_at ? Date.parse(r.created_at) : NaN;
@@ -677,6 +685,18 @@ export function ClubProvider({
         }
 
         engine.seed(mergedState);
+
+        // Now the engine knows what the server has, put back what was edited meanwhile: the next flush
+        // uploads it. (Rules are one record per club, not rows, and are saved on their own.)
+        const baseline = loadBaselineRef.current;
+        loadBaselineRef.current = null;
+        if (baseline) {
+          for (const key of Object.keys(mergedState) as (keyof SyncState)[]) {
+            if (key === 'clubScoreRules') continue;
+            (mergedState as any)[key] = keepEditsMadeDuringLoad((mergedState as any)[key], (local as any)[key], (baseline as any)[key]);
+          }
+          if (mergedState.clubs) setClubs(mergedState.clubs);
+        }
 
         if (mergedState.members) setMembers(mergedState.members);
         if (mergedState.seasons) setSeasons(mergedState.seasons);
