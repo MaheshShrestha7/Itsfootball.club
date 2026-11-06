@@ -18,11 +18,10 @@ const DAY_MS = 86400000;
 export async function collectHealth(db: SupabaseClient, opts: { domains: boolean }): Promise<HealthReport> {
   const since = new Date(Date.now() - DAY_MS).toISOString();
 
-  const t0 = Date.now();
-  const sent = await db.from('email_log').select('key', { count: 'exact', head: true }).gte('sent_at', since);
-  const dbMs = Date.now() - t0;
+  const { ms: dbMs, error: dbError } = await timeDatabase(db);
 
-  const [failed, stripeAll, stripeBad, stripeLast, connected, needDetails, jobs, domains] = await Promise.all([
+  const [sent, failed, stripeAll, stripeBad, stripeLast, connected, needDetails, jobs, domains] = await Promise.all([
+    db.from('email_log').select('key', { count: 'exact', head: true }).gte('sent_at', since),
     db.from('platform_events').select('detail, created_at').eq('kind', 'email').eq('ok', false).gte('created_at', since)
       .order('created_at', { ascending: false }).limit(200),
     db.from('platform_events').select('id', { count: 'exact', head: true }).eq('kind', 'stripe').gte('created_at', since),
@@ -58,8 +57,28 @@ export async function collectHealth(db: SupabaseClient, opts: { domains: boolean
     },
     domains,
     dbMs,
+    dbError,
   };
   return { checkedAt: new Date().toISOString(), signals: healthSignals(input), failures: failures.slice(0, 50) };
+}
+
+const DB_SAMPLES = 3;
+
+/**
+ * How fast the database answers a tiny query, as the best of a few tries one after another.
+ * The first try in a freshly started worker also pays for opening the connection (DNS and TLS
+ * to Supabase), which alone can take a second; one slow try is noise, all of them slow is real.
+ * Any error means the database didn't answer, which is reported as such and never as "fast".
+ */
+export async function timeDatabase(db: SupabaseClient, samples = DB_SAMPLES): Promise<{ ms: number; error: string | null }> {
+  let best = Infinity;
+  for (let n = 0; n < samples; n++) {
+    const t0 = Date.now();
+    const { error } = await db.from('platform_events').select('id').limit(1);
+    if (error) return { ms: Date.now() - t0, error: error.message || 'Unknown error' };
+    best = Math.min(best, Date.now() - t0);
+  }
+  return { ms: best, error: null };
 }
 
 /** Each club domain's Cloudflare status; null when Cloudflare isn't set up */

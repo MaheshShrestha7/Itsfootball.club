@@ -117,6 +117,10 @@ assert.equal(light({ stripe: { ...base.stripe, needDetails: 1 } }, 'stripe'), 'a
 assert.equal(light({ domains: { total: 2, pending: ['a.com'] } }, 'domains'), 'amber');
 assert.equal(light({ domains: null }, 'domains'), 'grey');
 assert.equal(light({ dbMs: 900 }, 'db'), 'red');
+assert.equal(light({ dbMs: 400 }, 'db'), 'amber');
+// An error is never "fast": a failed query that returns in 5 ms is still red
+assert.equal(light({ dbMs: 5, dbError: 'connection refused' }, 'db'), 'red');
+assert.ok(healthSignals({ ...base, dbError: 'timeout' }, NOW).find(s => s.key === 'db')!.summary.includes("Didn't answer"));
 
 console.log('mission-control: ok');
 

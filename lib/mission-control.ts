@@ -222,7 +222,10 @@ export interface HealthInput {
   stripe: { events24: number; failed24: number; lastAt: string | null; connected: number; needDetails: number };
   /** null: Cloudflare isn't set up, or the check was skipped */
   domains: { total: number; pending: string[] } | null;
+  /** Best of a few quick queries (see timeDatabase in lib/platform-health.ts) */
   dbMs: number;
+  /** Set when the database returned an error instead of answering */
+  dbError?: string | null;
 }
 
 const ago = (iso: string | null, now: number) => (iso ? timeAgo(iso, now) : 'never');
@@ -267,11 +270,13 @@ export function healthSignals(i: HealthInput, now: number = Date.now()): HealthS
     }
     : { key: 'domains', label: 'Custom domains', light: 'grey', summary: 'Not checked.' });
 
-  out.push({
-    key: 'db', label: 'Database',
-    light: i.dbMs < 300 ? 'green' : i.dbMs < 800 ? 'amber' : 'red',
-    summary: `Answered in ${i.dbMs} ms from the server.`,
-  });
+  out.push(i.dbError
+    ? { key: 'db', label: 'Database', light: 'red', summary: `Didn't answer: ${i.dbError}` }
+    : {
+      key: 'db', label: 'Database',
+      light: i.dbMs < 300 ? 'green' : i.dbMs < 800 ? 'amber' : 'red',
+      summary: `Answered in ${i.dbMs} ms from the server (best of 3 tries).`,
+    });
   return out;
 }
 
