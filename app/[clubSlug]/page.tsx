@@ -139,8 +139,8 @@ export default function ClubPublicPage({
   const [squadFilter, setSquadFilter] = useState<PositionGroup>('ALL');
   const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
-  // Clubs with several teams: '' = the main team, 'ALL' = every team, else a team id
-  const [fixturesTeamFilter, setFixturesTeamFilter] = useState<string>('');
+  // Clubs with several teams: 'ALL' = every team, else a team id
+  const [fixturesTeamId, setFixturesTeamId] = useState<string>('ALL');
   const [rankBy, setRankBy] = useState<StatKey>('goals');
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -200,7 +200,7 @@ export default function ClubPublicPage({
   // What's coming up never hides behind a season label: the current view lists every future game
   const ourAllMatches = publicFixtures(clubMatches.filter(m => clubPlaysIn(m, tournamentParticipants, club?.name || '')), clubMatches);
   const upcomingSource = fixturesSeasonFilter === 'CURRENT' ? ourAllMatches : ourMatches;
-  // The hero and matchday strip lead with the main team's games (as the Fixtures list below does);
+  // The hero and matchday strip lead with the main team's games;
   // another team's game only when the main team has nothing coming up
   const mainTeamFirst = (a: typeof clubMatches[number], b: typeof clubMatches[number]) => {
     const otherTeam = (m: typeof clubMatches[number]) => {
@@ -213,16 +213,18 @@ export default function ClubPublicPage({
   // The Upcoming list also keeps postponed games, so fans can see a game was moved rather than lose it
   const upcomingFixtures = upcomingSource.filter(m => m.status === 'upcoming' || m.status === 'postponed').sort(soonestFirst);
   const pastMatches = ourMatches.filter(m => m.status === 'completed').sort(latestFirst);
-  // Matchday strip: the latest result of any season and any team (a 35s game counts too),
-  // so it never empties when a season rolls over
-  const lastResult = ourAllMatches.filter(m => m.status === 'completed').sort(latestFirst)[0];
   // The fixtures list can be narrowed to one team; internal and tournament matches show under every team
-  const fixturesTeamId = fixturesTeamFilter || mainTeam?.id || 'ALL';
   const inFixturesTeam = (m: typeof clubMatches[number]) => {
     if (!multiTeam || fixturesTeamId === 'ALL') return true;
     const team = teamOfMatch(m, clubTeams);
     return !team || team.id === fixturesTeamId;
   };
+  const upcomingShown = upcomingFixtures.filter(inFixturesTeam);
+  // Nothing coming up: the latest 3 results instead. Same source as Upcoming, so the current view
+  // reaches back past a season rollover rather than going empty.
+  const recentResults = upcomingSource.filter(m => m.status === 'completed' && inFixturesTeam(m)).sort(latestFirst).slice(0, 3);
+  const fixtureCards = fixturesTab === 'results' ? pastMatches.filter(inFixturesTeam)
+    : upcomingShown.length > 0 ? upcomingShown : recentResults;
   const clubEvents = events.filter(e => e.club_id === clubId);
   // Soonest first, and only events that haven't finished yet
   const nowMs = Date.now();
@@ -1340,14 +1342,8 @@ export default function ClubPublicPage({
         </div>
       </section>
 
-      {/* 4.15 MATCHDAY STRIP: next match and last result, always in view under the hero */}
-      <MatchdayStrip
-        club={club}
-        live={liveMatch}
-        next={stripNextMatch}
-        last={lastResult}
-        lastScoreHidden={lastResult ? publicScoreHidden(lastResult, clubTeams) : false}
-      />
+      {/* 4.15 MATCHDAY STRIP: the live or next match, always in view under the hero */}
+      <MatchdayStrip club={club} live={liveMatch} next={stripNextMatch} />
 
       {/* 4.2 DEDICATED CLUB IDENTITY SECTION (DYNAMIC SUM COUNTS FROM RAW DATASET) */}
       <ClubIdentitySection
@@ -1392,7 +1388,7 @@ export default function ClubPublicPage({
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>TEAM:</span>
                   <select aria-label="Team"
                     value={fixturesTeamId}
-                    onChange={(e) => setFixturesTeamFilter(e.target.value)}
+                    onChange={(e) => setFixturesTeamId(e.target.value)}
                     style={{
                       padding: '0.45rem 0.85rem',
                       background: 'rgba(var(--tint-rgb), 0.07)',
@@ -1496,15 +1492,16 @@ export default function ClubPublicPage({
           </div>
 
           <div className="stack">
-            {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).length === 0 && (
-              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0.5rem 1rem', textAlign: 'center' }}>
-                <span className="text-meta">{fixturesTab === 'upcoming' ? 'No upcoming fixtures yet. Check back soon.' : 'No results yet this season.'}</span>
-                {fixturesTab === 'upcoming' && pastMatches.some(inFixturesTeam) && (
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setFixturesTab('results')}>See latest results</button>
-                )}
+            {(fixturesTab === 'results' ? fixtureCards.length === 0 : upcomingShown.length === 0) && (
+              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>
+                <span className="text-meta">
+                  {fixturesTab === 'results' ? 'No results yet this season.'
+                    : fixtureCards.length > 0 ? 'No upcoming fixtures yet. Here are the latest results.'
+                    : 'No upcoming fixtures yet. Check back soon.'}
+                </span>
               </div>
             )}
-            {(fixturesTab === 'upcoming' ? upcomingFixtures : pastMatches).filter(inFixturesTeam).map(match => {
+            {fixtureCards.map(match => {
               const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
               const hideScore = publicScoreHidden(match, clubTeams);
               const competitionLabel = match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition;

@@ -3989,7 +3989,7 @@ dialog.form-dialog::backdrop {
   color: var(--club-ink);
 }
 
-/* ===== Matchday strip (club home, under the hero): next match + last result ===== */
+/* ===== Matchday strip (club home, under the hero) and the match page's pre-match tiles ===== */
 .matchday-strip {
   padding: clamp(1.25rem, 3vw, 2rem) 0;
   border-bottom: 1px solid var(--border-subtle);
