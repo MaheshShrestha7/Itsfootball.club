@@ -8,7 +8,7 @@ import { isUuid } from '@/lib/ids';
 import { siteToday } from '@/lib/member-prices';
 
 // A member claims money back: POST multipart { clubId, description, amount, category, spentOn, vendor?,
-// payoutDetails?, receipt }. It waits for the treasurer and is not in the club's books until approved.
+// accountName?, bankName?, bsb?, accountNumber?, receipt }. It waits for the treasurer and is not in the club's books until approved.
 export async function POST(req: NextRequest) {
   if (Number(req.headers.get('content-length') || 0) > MAX_RECEIPT_SIZE + 512 * 1024) {
     return NextResponse.json({ error: 'Receipt must be 5 MB or smaller.' }, { status: 413 });

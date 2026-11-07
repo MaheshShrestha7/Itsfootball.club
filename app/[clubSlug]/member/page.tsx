@@ -21,7 +21,8 @@ import { perkBusiness } from '@/lib/perks';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import VirtualPassCard from '@/components/VirtualPassCard';
 import GuardianPortal from '@/components/GuardianPortal';
-import { MemberExpenseClaims, MemberFees, useOpenFees } from '@/components/MemberMoney';
+import { MemberExpenseClaims, MemberFees, useExpenseClaims, useOpenFees } from '@/components/MemberMoney';
+import { isOpenClaim } from '@/lib/expense-claims';
 import ClubShop from '@/components/ClubShop';
 import { useAuth } from '@/lib/auth-context';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
@@ -48,6 +49,7 @@ import {
   Phone,
   Send,
   MessageSquare,
+  Receipt,
   ShoppingBag,
   Gift,
   LogOut,
@@ -110,7 +112,7 @@ const guessRole = (tier: string): 'player' | 'supporter' =>
 /** Short, readable application reference ('3F9A21C0' rather than a full database id) */
 const applicationRef = (id: string) => id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
-const CLUBHOUSE_TABS = ['pass', 'stats', 'messages', 'perks', 'shop'] as const;
+const CLUBHOUSE_TABS = ['pass', 'stats', 'messages', 'perks', 'shop', 'expenses'] as const;
 type ClubhouseTab = (typeof CLUBHOUSE_TABS)[number];
 
 export default function MemberPortalPage({
@@ -305,6 +307,8 @@ export default function MemberPortalPage({
   // Fee requests the club sent this member or their children
   const openFees = useOpenFees(club.id, [...(activeMember ? [activeMember.id] : []), ...childMembers.map(c => c.id)]);
   const feeNames = new Map(childMembers.map(c => [c.id, c.full_name]));
+  const { claims: expenseClaims, refresh: refreshExpenseClaims } = useExpenseClaims(club.id, activeMember?.id ?? null);
+  const openClaimCount = expenseClaims?.filter(isOpenClaim).length ?? 0;
   const feesOwed = new Map<string, number>();
   openFees.filter(f => f.status === 'pending').forEach(f => feesOwed.set(f.member_id, (feesOwed.get(f.member_id) || 0) + 1));
 
@@ -1527,24 +1531,28 @@ export default function MemberPortalPage({
             })()}
 
             <MemberFees clubSlug={club.slug} fees={openFees} names={childMembers.length ? feeNames : undefined} />
-            <MemberExpenseClaims clubId={club.id} memberId={activeMember.id} currency={currency} />
 
             {childMembers.length > 0 && signedInEmail && (
               <GuardianPortal club={club} childMembers={childMembers} guardianEmail={signedInEmail} plans={plans} currency={currency} signupPaid={childSignupPaid} onAddChild={startAddChild} renewChildId={renewFor} feesOwed={feesOwed} />
             )}
 
-            {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop opens one directly, e.g. from a message email) */}
-            {/* One even row on every screen; phones get the short labels so nothing wraps onto its own line */}
+            {/* Clubhouse Sub-Tabs (?tab=stats|messages|shop|expenses opens one directly, e.g. from a message email) */}
+            {/* One even row on every screen; below 960px the icon sits over a short label so six tabs fit without scrolling */}
             <style>{`
-              .member-tabs { display: grid; grid-template-columns: repeat(${3 + Number(shopOpen) + Number(perksOpen)}, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; }
-              .member-tabs button { justify-content: center; min-width: 0; }
+              .member-tabs { display: flex; gap: 0.25rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); }
+              .member-tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 0.45rem; min-width: 0; min-height: 52px; padding: 0 1rem; margin-bottom: -1px; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary); font-weight: 700; font-size: 0.88rem; cursor: pointer; }
+              .member-tabs button:hover { color: var(--text-primary); }
+              .member-tabs button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+              .member-tabs button[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--club-primary); }
+              .member-tab-count { min-width: 1.25rem; box-sizing: border-box; padding: 0.1rem 0.35rem; border-radius: var(--radius-full); background: var(--border-medium); color: var(--text-primary); font-size: 0.72rem; font-weight: 700; text-align: center; }
               .member-tab-short { display: none; }
-              @media (max-width: 599px) {
-                .member-tabs button { padding: 0.6rem 0.35rem !important; font-size: 0.8rem !important; gap: 0.3rem !important; }
+              @media (max-width: 959px) {
+                .member-tabs { display: grid; grid-template-columns: repeat(${3 + Number(shopOpen) + Number(perksOpen) + Number(expenseClaims !== null)}, minmax(0, 1fr)); gap: 0; }
+                .member-tabs button { flex-direction: column; gap: 0.3rem; min-height: 58px; padding: 0.35rem 0; font-size: 0.69rem; }
                 .member-tab-long { display: none; }
                 .member-tab-short { display: inline; }
+                .member-tab-count { position: absolute; top: 0.2rem; left: calc(50% + 0.35rem); font-size: 0.65rem; padding: 0 0.3rem; min-width: 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); }
               }
-              @media (min-width: 760px) { .member-tabs { display: flex; gap: 0.75rem; } }
             `}</style>
             <div role="tablist" aria-label="Member area" className="member-tabs">
               {([
@@ -1553,8 +1561,10 @@ export default function MemberPortalPage({
                 { id: 'messages', label: 'Messages', short: 'Messages', Icon: MessageSquare },
                 ...(perksOpen ? [{ id: 'perks' as const, label: 'Member Perks', short: 'Perks', Icon: Gift }] : []),
                 ...(shopOpen ? [{ id: 'shop' as const, label: 'Club Shop', short: 'Shop', Icon: ShoppingBag }] : []),
+                ...(expenseClaims ? [{ id: 'expenses' as const, label: 'Expenses', short: 'Expenses', Icon: Receipt }] : []),
               ] as const).map(({ id, label, short, Icon }) => {
                 const selected = activeClubhouseTab === id;
+                const count = id === 'messages' ? memberMessagesList.length : id === 'expenses' ? openClaimCount : 0;
                 return (
                   <button
                     key={id}
@@ -1563,39 +1573,20 @@ export default function MemberPortalPage({
                     id={`member-tab-${id}`}
                     aria-selected={selected}
                     onClick={() => openClubhouseTab(id)}
-                    style={{
-                      padding: '0.65rem 1.25rem',
-                      borderRadius: '8px',
-                      border: selected ? '1px solid var(--club-primary)' : '1px solid transparent',
-                      background: selected ? 'rgba(var(--club-primary-rgb), 0.15)' : 'transparent',
-                      color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: 800,
-                      fontSize: '0.88rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                    }}
                   >
-                    <Icon size={17} color={selected ? 'var(--club-primary)' : undefined} />
+                    <Icon size={17} color={selected ? 'var(--club-primary)' : undefined} aria-hidden="true" />
                     <span className="member-tab-long">{label}</span>
                     <span className="member-tab-short">{short}</span>
-                    {id === 'messages' && memberMessagesList.length > 0 && (
-                      <span style={{
-                        background: 'var(--club-primary)',
-                        color: 'var(--club-primary-contrast, #090D16)',
-                        borderRadius: '10px',
-                        padding: '0.1rem 0.4rem',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                      }}>
-                        {memberMessagesList.length}
-                      </span>
-                    )}
+                    {count > 0 && <span className="member-tab-count">{count}</span>}
                   </button>
                 );
               })}
             </div>
+
+            {/* SUB-TAB: EXPENSE CLAIMS */}
+            {activeClubhouseTab === 'expenses' && expenseClaims && (
+              <MemberExpenseClaims clubId={club.id} currency={currency} claims={expenseClaims} onSent={refreshExpenseClaims} />
+            )}
 
             {/* SUB-TAB: CLUB SHOP (the same shop as /{slug}/shop, kept inside the clubhouse) */}
             {activeClubhouseTab === 'shop' && shopOpen && <ClubShop club={club} embedded />}
