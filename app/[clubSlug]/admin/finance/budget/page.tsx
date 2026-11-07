@@ -8,7 +8,7 @@ import { confirmAction } from '@/components/ConfirmDialog';
 import { agmMoney, seasonOptions, type AgmExpense, type AgmPayment } from '@/lib/agm-report';
 import { budgetCsv, budgetKey, budgetLines, budgetTotals, CATEGORIES, paceSeries, parseBudgetCsv, pieSlices, siteDay, varianceWord, type BudgetKind, type BudgetLine } from '@/lib/budget';
 import { useClub } from '@/lib/club-context';
-import { formatMoney, parseMoneyToCents, paymentSeason } from '@/lib/finance';
+import { formatMoney, parseMoneyToCents, paymentSeason, expenseSeason } from '@/lib/finance';
 import { siteToday } from '@/lib/member-prices';
 import { fetchPaged } from '@/lib/paged';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -19,7 +19,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 
 type Row = { season: string; kind: BudgetKind; category: string; amount_cents: number };
 type Payment = AgmPayment & { paid_at?: string | null; created_at?: string | null };
-type Expense = AgmExpense & { spent_on?: string | null };
+type Expense = AgmExpense;
 
 const MAX_ROWS = 100000;
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -65,14 +65,15 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
 
   const clubSeasons = useMemo(() => seasons.filter(s => s.club_id === club.id), [seasons, club.id]);
   const payments = useMemo(() => (ledger?.payments || []).map(p => ({ ...p, season: paymentSeason({ ...p, paid_at: p.paid_at ?? null }, clubSeasons) })), [ledger, clubSeasons]);
-  const options = useMemo(() => seasonOptions(clubSeasons, [...payments, ...(ledger?.expenses || []), ...(saved || [])]), [clubSeasons, payments, ledger, saved]);
+  const expenses = useMemo(() => (ledger?.expenses || []).map(e => ({ ...e, season: expenseSeason(e, clubSeasons) })), [ledger, clubSeasons]);
+  const options = useMemo(() => seasonOptions(clubSeasons, [...payments, ...expenses, ...(saved || [])]), [clubSeasons, payments, expenses, saved]);
   const active = getActiveSeason(club.id)?.name?.trim();
   const season = picked ?? (options.some(o => o.name === active) ? active! : options[0]?.name ?? '');
   const seasonIndex = options.findIndex(o => o.name === season);
   const info = options[seasonIndex];
   const previous = options[seasonIndex + 1]?.name ?? null;
 
-  const money = useMemo(() => (ledger && season ? agmMoney(payments, ledger.expenses, season, previous) : null), [ledger, payments, season, previous]);
+  const money = useMemo(() => (ledger && season ? agmMoney(payments, expenses, season, previous) : null), [ledger, payments, expenses, season, previous]);
   const currency = ledger?.currency || 'AUD';
   const fmt = (cents: number) => formatMoney(cents, currency);
 
@@ -104,9 +105,9 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
     incomeTotal.budget, info!.start_date!, info!.end_date!, today
   ) : []), [dated, payments, season, incomeTotal.budget, info, today]);
   const expensePace = useMemo(() => (dated ? paceSeries(
-    (ledger?.expenses || []).filter(e => e.season === season).map(e => ({ day: e.spent_on || info!.start_date!, cents: e.amount_cents })),
+    expenses.filter(e => e.season === season).map(e => ({ day: e.spent_on || info!.start_date!, cents: e.amount_cents })),
     expenseTotal.budget, info!.start_date!, info!.end_date!, today
-  ) : []), [dated, ledger, season, expenseTotal.budget, info, today]);
+  ) : []), [dated, expenses, season, expenseTotal.budget, info, today]);
 
   const switchSeason = async (next: string) => {
     if (dirty && !(await confirmAction({ title: 'Leave without saving?', message: 'Your changes to this budget haven\'t been saved.', confirmLabel: 'Leave without saving', danger: true }))) return;
@@ -247,7 +248,7 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
         {others.length > 0 && (
           <div className="admin-section">
             <label className="form-label" htmlFor={`add-${kind}`}>Add a category</label>
-            <select id={`add-${kind}`} className="form-select" style={{ width: 'auto', maxWidth: '100%' }} value=""
+            <select id={`add-${kind}`} className="form-select" style={{ width: 'auto', maxWidth: '100%', alignSelf: 'flex-start' }} value=""
               onChange={e => { if (e.target.value) setBox(budgetKey(kind, e.target.value), '0.00'); }}>
               <option value="">Choose…</option>
               {others.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
@@ -335,7 +336,7 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
 
           {table('income', 'Income', incomeLines, incomeTotal)}
           {table('expense', 'Spending', expenseLines, expenseTotal)}
-          <p className="admin-table-foot">Actuals come from Finance: income in the season it was paid, spending in the season it was filed. To import, use the same columns as the export: Type, Category and Budget.</p>
+          <p className="admin-table-foot">Actuals come from Finance: income in the season it was paid, spending in the season it was spent. To import, use the same columns as the export: Type, Category and Budget.</p>
         </div>
       )}
     </div>

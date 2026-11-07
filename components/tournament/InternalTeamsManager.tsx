@@ -484,7 +484,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
               <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label htmlFor="internalteamsmanager-team-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-team-name" className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
                     Team Name *
                   </label>
                   <input id="internalteamsmanager-team-name"
@@ -493,19 +493,11 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     placeholder="e.g. U-21 Academy"
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: 'rgba(var(--shade-rgb), 0.4)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem',
-                    }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label htmlFor="internalteamsmanager-short-code" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-short-code" className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
                     Short Code
                   </label>
                   <input id="internalteamsmanager-short-code"
@@ -514,25 +506,17 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     placeholder="e.g. U21"
                     value={shortName}
                     onChange={e => setShortName(e.target.value.toUpperCase())}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: 'rgba(var(--shade-rgb), 0.4)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem',
-                      fontWeight: 700,
-                    }}
+                    className="form-input"
+                    style={{ fontWeight: 700 }}
                   />
                 </div>
               </div>
 
               {/* Accent Color Presets */}
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <div className="form-label" style={{ marginBottom: '0.4rem' }}>
                   Kit / Accent Color
-                </label>
+                </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {COLOR_PRESETS.map(c => (
                     <button
@@ -622,7 +606,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               {/* Coach & Captain */}
               <div className="form-row-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label htmlFor="internalteamsmanager-coach-manager" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <label htmlFor="internalteamsmanager-coach-manager" className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>
                     Coach / Manager
                   </label>
                   <input id="internalteamsmanager-coach-manager"
@@ -630,19 +614,11 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     placeholder="e.g. Diego Morales"
                     value={coachName}
                     onChange={e => setCoachName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: 'rgba(var(--shade-rgb), 0.4)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem',
-                    }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  <div className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                     <span>Team Captain</span>
                     {captainId && (
                       <button
@@ -653,7 +629,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                         Clear
                       </button>
                     )}
-                  </label>
+                  </div>
                   <PlayerSearchSelect
                     id="internal-team-captain"
                     players={clubMembers}
@@ -667,9 +643,9 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               {/* Squad Member Selection */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                  <div className="form-label">
                     Allocate Club Members ({selectedPlayerIds.length} Selected)
-                  </label>
+                  </div>
                   <button
                     type="button"
                     onClick={() =>
@@ -699,15 +675,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                     placeholder="Search players..."
                     value={playerSearch}
                     onChange={e => setPlayerSearch(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.75rem 0.5rem 2rem',
-                      background: 'rgba(var(--shade-rgb), 0.4)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.8rem',
-                    }}
+                    className="form-input"
+                    style={{ paddingLeft: '2rem' }}
                   />
                 </div>
 

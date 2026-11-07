@@ -14,18 +14,6 @@ import { confirmAction } from '@/components/ConfirmDialog';
 
 type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'>;
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.65rem 0.85rem',
-  background: 'rgba(var(--shade-rgb), 0.4)',
-  border: '1px solid rgba(var(--tint-rgb), 0.12)',
-  borderRadius: '8px',
-  color: 'var(--text-primary)',
-  fontSize: '0.88rem',
-  colorScheme: 'dark',
-};
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem' };
-
 /** Create a tournament, or edit one when `tournament` is given */
 export default function TournamentFormModal({
   club,
@@ -212,30 +200,30 @@ export default function TournamentFormModal({
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: '2 1 260px' }}>
-              <label htmlFor="tournamentformmodal-tournament-title" style={labelStyle}>Tournament Title *</label>
-              <input id="tournamentformmodal-tournament-title" type="text" required placeholder="e.g. Summer Intra-Club Cup" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          <div className="form-row-2-1" style={{ gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label htmlFor="tournamentformmodal-tournament-title" className="form-label">Tournament Title *</label>
+              <input id="tournamentformmodal-tournament-title" className="form-input" type="text" required placeholder="e.g. Summer Intra-Club Cup" value={name} onChange={e => setName(e.target.value)} />
             </div>
-            <div style={{ flex: '1 1 140px' }}>
-              <label htmlFor="tournamentformmodal-season" style={labelStyle}>Season</label>
-              <input id="tournamentformmodal-season" type="text" value={season} onChange={e => setSeason(e.target.value)} style={inputStyle} />
+            <div className="form-group" style={{ margin: 0 }}>
+              <label htmlFor="tournamentformmodal-season" className="form-label">Season</label>
+              <input id="tournamentformmodal-season" className="form-input" type="text" value={season} onChange={e => setSeason(e.target.value)} />
             </div>
           </div>
 
           {/* Schedule */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '0.4rem' }}>
-            <div>
-              <label htmlFor="tournamentformmodal-starts-date-kick-off" style={labelStyle}>Starts (date & kick-off) *</label>
-              <input id="tournamentformmodal-starts-date-kick-off" type="datetime-local" required value={startAt} onChange={e => setStartAt(e.target.value)} style={inputStyle} />
+          <div className="form-grid" style={{ marginBottom: '0.4rem' }}>
+            <div className="form-group">
+              <label htmlFor="tournamentformmodal-starts-date-kick-off" className="form-label">Starts (date & kick-off) *</label>
+              <input id="tournamentformmodal-starts-date-kick-off" className="form-input" type="datetime-local" required value={startAt} onChange={e => setStartAt(e.target.value)} />
             </div>
-            <div>
-              <label htmlFor="tournamentformmodal-ends" style={labelStyle}>Ends</label>
-              <input id="tournamentformmodal-ends" type="datetime-local" value={endAt} min={startAt} onChange={e => setEndAt(e.target.value)} style={inputStyle} />
+            <div className="form-group">
+              <label htmlFor="tournamentformmodal-ends" className="form-label">Ends</label>
+              <input id="tournamentformmodal-ends" className="form-input" type="datetime-local" value={endAt} min={startAt} onChange={e => setEndAt(e.target.value)} />
             </div>
-            <div>
-              <label htmlFor="tournamentformmodal-venue" style={labelStyle}>Venue</label>
-              <input id="tournamentformmodal-venue" type="text" placeholder="e.g. Club Ground" value={venue} onChange={e => setVenue(e.target.value)} style={inputStyle} />
+            <div className="form-group">
+              <label htmlFor="tournamentformmodal-venue" className="form-label">Venue</label>
+              <input id="tournamentformmodal-venue" className="form-input" type="text" placeholder="e.g. Club Ground" value={venue} onChange={e => setVenue(e.target.value)} />
             </div>
           </div>
           <p style={{ margin: '0 0 1rem 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -243,9 +231,9 @@ export default function TournamentFormModal({
             Each fixture&apos;s date & time can be changed afterwards from its match card.
           </p>
 
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label htmlFor="tournamentformmodal-description" style={labelStyle}>Description</label>
-            <textarea id="tournamentformmodal-description" rows={2} value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label htmlFor="tournamentformmodal-description" className="form-label">Description</label>
+            <textarea id="tournamentformmodal-description" className="form-textarea" rows={2} value={description} onChange={e => setDescription(e.target.value)} style={{ resize: 'vertical' }} />
           </div>
 
           <div style={{ marginBottom: '1.25rem' }}>
@@ -263,7 +251,7 @@ export default function TournamentFormModal({
 
           {/* Format */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ ...labelStyle, marginBottom: '0.5rem' }}>Tournament Format</label>
+            <div className="form-label" style={{ marginBottom: '0.5rem' }}>Tournament Format</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: '0.65rem' }}>
               {[
                 { id: 'knockout', label: 'Knockout Bracket', desc: 'Single elimination with optional 3rd place' },
@@ -306,19 +294,19 @@ export default function TournamentFormModal({
             >
               {format === 'group_knockout' && (
                 <>
-                  <div>
-                    <label htmlFor="tournamentformmodal-groups" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Groups</label>
-                    <select id="tournamentformmodal-groups" value={groupCount} onChange={e => setGroupCount(parseInt(e.target.value, 10))} style={{ ...inputStyle, padding: '0.5rem', marginTop: '3px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="tournamentformmodal-groups" className="form-label">Groups</label>
+                    <select id="tournamentformmodal-groups" className="form-select" value={groupCount} onChange={e => setGroupCount(parseInt(e.target.value, 10))}>
                       {[1, 2, 3, 4, 6, 8].map(n => (
                         <option key={n} value={n}>{n === 1 ? '1 Group (single pool)' : `${n} Groups (A–${'ABCDEFGH'[n - 1]})`}</option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label htmlFor="tournamentformmodal-groupcount-1-teams-advancing-to-knockout" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="tournamentformmodal-groupcount-1-teams-advancing-to-knockout" className="form-label">
                       {groupCount === 1 ? 'Teams advancing to knockout' : 'Teams advancing per group'}
                     </label>
-                    <select id="tournamentformmodal-groupcount-1-teams-advancing-to-knockout" value={teamsAdvancing} onChange={e => setTeamsAdvancing(parseInt(e.target.value, 10))} style={{ ...inputStyle, padding: '0.5rem', marginTop: '3px' }}>
+                    <select id="tournamentformmodal-groupcount-1-teams-advancing-to-knockout" className="form-select" value={teamsAdvancing} onChange={e => setTeamsAdvancing(parseInt(e.target.value, 10))}>
                       {(groupCount === 1 ? [2, 3, 4, 8, 16] : [1, 2, 3, 4]).map(n => (
                         <option key={n} value={n}>{groupCount === 1 ? (n === 3 ? 'Top 3 (1st gets bye to Final)' : `Top ${n}`) : `Top ${n} per group`}</option>
                       ))}
@@ -326,7 +314,7 @@ export default function TournamentFormModal({
                   </div>
                 </>
               )}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.78rem', alignSelf: 'end', paddingBottom: '0.5rem' }}>
+              <label className="form-check" style={{ alignSelf: 'end' }}>
                 <input type="checkbox" checked={hasThirdPlace} onChange={e => setHasThirdPlace(e.target.checked)} />
                 Include 3rd Place Match
               </label>
@@ -352,7 +340,7 @@ export default function TournamentFormModal({
           {/* Internal Teams */}
           <div style={{ marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>Internal Teams ({selectedInternalTeamIds.length} selected)</label>
+              <div className="form-label">Internal Teams ({selectedInternalTeamIds.length} selected)</div>
               <span style={{ fontSize: '0.72rem', color: 'var(--c-green)' }}>From your club squads</span>
             </div>
             {clubInternalTeams.length === 0 ? (
@@ -395,9 +383,10 @@ export default function TournamentFormModal({
 
           {/* Guest Teams (optional) */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>Guest Teams ({externalTeams.length}) — optional</label>
+            <div className="form-label" style={{ marginBottom: '0.4rem' }}>Guest Teams ({externalTeams.length}) — optional</div>
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <input aria-label="Guest club name"
+                className="form-input"
                 type="text"
                 placeholder="Guest club name"
                 value={newExternalName}
@@ -408,16 +397,17 @@ export default function TournamentFormModal({
                     handleAddExternalTeam();
                   }
                 }}
-                style={{ ...inputStyle, flex: 2, padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
+                style={{ flex: 2, minWidth: 0 }}
               />
               <input
+                className="form-input"
                 type="text"
                 maxLength={4}
                 placeholder="Code"
                 aria-label="Short code"
                 value={newExternalCode}
                 onChange={e => setNewExternalCode(e.target.value.toUpperCase())}
-                style={{ ...inputStyle, width: '70px', padding: '0.5rem', textAlign: 'center', fontSize: '0.82rem' }}
+                style={{ width: '80px', flexShrink: 0, padding: '0.5rem', textAlign: 'center' }}
               />
               <button type="button" onClick={handleAddExternalTeam} className="btn btn-secondary" style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}>
                 Add

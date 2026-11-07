@@ -124,17 +124,17 @@ export function MemberExpenseClaims({ clubId, memberId, currency }: { clubId: st
       {sent && <p role="status" className="text-note" style={{ margin: '0.75rem 0 0', color: 'var(--c-green)' }}>Claim sent. The treasurer will check it, and you&apos;ll get an email when they do.</p>}
 
       {open && (
-        <form onSubmit={send} style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
+        <form onSubmit={send} className="form-grid" style={{ marginTop: '1rem' }}>
           <div className="form-group">
-            <label className="form-label" htmlFor="claim-description">What did you buy?</label>
+            <label className="form-label" htmlFor="claim-description">What did you buy? *</label>
             <input id="claim-description" className="form-input" required maxLength={300} placeholder="Oranges and strapping tape" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="claim-amount">Amount ({currency})</label>
+            <label className="form-label" htmlFor="claim-amount">Amount ({currency}) *</label>
             <input id="claim-amount" className="form-input" inputMode="decimal" required placeholder="42.50" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="claim-date">Date on the receipt</label>
+            <label className="form-label" htmlFor="claim-date">Date on the receipt *</label>
             <input id="claim-date" type="date" className="form-input" required max={siteToday()} value={form.spentOn} onChange={e => setForm({ ...form, spentOn: e.target.value })} />
           </div>
           <div className="form-group">
@@ -147,17 +147,20 @@ export function MemberExpenseClaims({ clubId, memberId, currency }: { clubId: st
             <label className="form-label" htmlFor="claim-vendor">Shop or supplier (optional)</label>
             <input id="claim-vendor" className="form-input" maxLength={255} value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} />
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="claim-receipt">Receipt (photo or PDF, max 5 MB)</label>
+          <div className="form-group form-wide">
+            <label className="form-label" htmlFor="claim-receipt">Receipt (photo or PDF, max 5 MB) *</label>
             <input id="claim-receipt" type="file" className="form-input" required accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} />
           </div>
-          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <div className="form-group form-wide">
             <label className="form-label" htmlFor="claim-payout">Where should the club pay you? (optional)</label>
             <input id="claim-payout" className="form-input" maxLength={300} autoComplete="off" placeholder="Account name, BSB and account number" value={form.payoutDetails} onChange={e => setForm({ ...form, payoutDetails: e.target.value })} />
             <p className="text-meta" style={{ marginTop: '0.35rem' }}>Only the club&apos;s finance team sees this. It&apos;s erased once you&apos;ve been paid or the claim is turned down.</p>
           </div>
-          {error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.85rem', margin: 0, gridColumn: '1 / -1' }}>{error}</p>}
-          <button type="submit" className="btn btn-primary" disabled={busy} style={{ justifySelf: 'start' }}><Upload size={16} aria-hidden="true" /> {busy ? 'Sending…' : 'Send claim'}</button>
+          {error && <p role="alert" className="form-wide" style={{ color: 'var(--c-red)', fontSize: '0.85rem', margin: 0 }}>{error}</p>}
+          <div className="form-actions form-wide" style={{ marginTop: 0 }}>
+            <button type="button" className="btn btn-secondary" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={busy}><Upload size={16} aria-hidden="true" /> {busy ? 'Sending…' : 'Send claim'}</button>
+          </div>
         </form>
       )}
 

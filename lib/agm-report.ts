@@ -2,7 +2,7 @@
 // owed both ways, and the season in numbers. Pure, so the totals can be checked without a browser
 // (lib/agm-report.check.ts). Money follows the Finance page's own rules, so the two always agree:
 // income is what's marked paid, in the season it was paid (the page passes payments through
-// paymentSeason in lib/finance.ts first); expenses are everything filed under the season.
+// paymentSeason in lib/finance.ts first); expenses are what was spent in the season (expenseSeason).
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './finance';
 
 export interface AgmPayment {
@@ -22,6 +22,7 @@ export interface AgmExpense {
   category: string;
   amount_cents: number;
   season?: string | null;
+  spent_on?: string | null;
   paid_by_member_id?: string | null;
   reimbursed: boolean;
 }

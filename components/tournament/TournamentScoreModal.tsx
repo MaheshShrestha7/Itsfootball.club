@@ -179,27 +179,10 @@ export default function TournamentScoreModal({
                 { label: 'Kick-off', type: 'time', value: matchTime, set: setMatchTime },
                 { label: 'Venue', type: 'text', value: venue, set: setVenue },
               ].map(f => (
-                <label key={f.label} style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                  {f.label}
-                  <input
-                    type={f.type}
-                    value={f.value}
-                    required={f.type === 'date'}
-                    onChange={e => f.set(e.target.value)}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      marginTop: '0.3rem',
-                      padding: '0.5rem 0.6rem',
-                      background: 'rgba(var(--shade-rgb), 0.4)',
-                      border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                      colorScheme: 'dark',
-                    }}
-                  />
-                </label>
+                <div key={f.label} className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor={`score-${f.type}`} className="form-label">{f.label}{f.type === 'date' ? ' *' : ''}</label>
+                  <input id={`score-${f.type}`} className="form-input" style={{ height: 45 }} type={f.type} value={f.value} required={f.type === 'date'} onChange={e => f.set(e.target.value)} />
+                </div>
               ))}
             </div>
           )}
@@ -234,18 +217,8 @@ export default function TournamentScoreModal({
                 max="99"
                 value={homeScore}
                 onChange={scoreTyped(setHomeScore)}
-                style={{
-                  width: '64px',
-                  height: '52px',
-                  fontSize: '1.75rem',
-                  fontWeight: 900,
-                  textAlign: 'center',
-                  background: 'rgba(var(--dk-15-23-42), 0.9)',
-                  border: '2px solid rgba(16, 185, 129, 0.4)',
-                  borderRadius: '10px',
-                  color: 'var(--text-primary)',
-                  marginTop: '0.5rem',
-                }}
+                className="form-input"
+                style={{ width: '64px', height: '52px', padding: 0, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', marginTop: '0.5rem' }}
               />
             </div>
 
@@ -270,27 +243,15 @@ export default function TournamentScoreModal({
                 max="99"
                 value={awayScore}
                 onChange={scoreTyped(setAwayScore)}
-                style={{
-                  width: '64px',
-                  height: '52px',
-                  fontSize: '1.75rem',
-                  fontWeight: 900,
-                  textAlign: 'center',
-                  background: 'rgba(var(--dk-15-23-42), 0.9)',
-                  border: '2px solid rgba(16, 185, 129, 0.4)',
-                  borderRadius: '10px',
-                  color: 'var(--text-primary)',
-                  marginTop: '0.5rem',
-                }}
+                className="form-input"
+                style={{ width: '64px', height: '52px', padding: 0, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', marginTop: '0.5rem' }}
               />
             </div>
           </div>
 
           {/* Match Status Selection */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-              Match Status
-            </label>
+            <div className="form-label" style={{ marginBottom: '0.5rem' }}>Match Status</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
               {(['upcoming', 'live', 'completed'] as const).map(st => (
                 <button
@@ -337,7 +298,7 @@ export default function TournamentScoreModal({
                     </span>
                   )}
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', color: '#D1D5DB' }}>
+                <label className="form-check">
                   <input
                     type="checkbox"
                     checked={isPensEnabled}
@@ -356,18 +317,8 @@ export default function TournamentScoreModal({
                       min="0"
                       value={homePens}
                       onChange={e => setHomePens(parseInt(e.target.value, 10) || 0)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        textAlign: 'center',
-                        background: 'rgba(var(--shade-rgb), 0.5)',
-                        border: '1px solid #F59E0B',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontWeight: 800,
-                        fontSize: '1.1rem',
-                        marginTop: '0.25rem',
-                      }}
+                      className="form-input"
+                      style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', marginTop: '0.25rem' }}
                     />
                   </div>
                   <div>
@@ -377,18 +328,8 @@ export default function TournamentScoreModal({
                       min="0"
                       value={awayPens}
                       onChange={e => setAwayPens(parseInt(e.target.value, 10) || 0)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        textAlign: 'center',
-                        background: 'rgba(var(--shade-rgb), 0.5)',
-                        border: '1px solid #F59E0B',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontWeight: 800,
-                        fontSize: '1.1rem',
-                        marginTop: '0.25rem',
-                      }}
+                      className="form-input"
+                      style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', marginTop: '0.25rem' }}
                     />
                   </div>
                 </div>

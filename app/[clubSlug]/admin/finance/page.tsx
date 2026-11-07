@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { use, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
@@ -9,7 +9,7 @@ import { clubTeamsOf } from '@/lib/teams';
 import { getSupabaseClient, getAccessToken } from '@/lib/supabase/client';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_KIND_LABEL, PAYMENT_METHOD_LABEL, CURRENCIES,
-  bookingFeeCents, formatMoney, parseMoneyToCents, paymentSeason, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
+  bookingFeeCents, formatMoney, parseMoneyToCents, paymentSeason, expenseSeason, toCsv, membershipTermEnd, todayIso, MONTH_NAMES,
   MEMBERSHIP_PAYMENT_POLICIES, DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
 } from '@/lib/finance';
 import type { RenewalMode, MembershipPaymentPolicy } from '@/lib/finance';
@@ -96,18 +96,17 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
   }, [db, club.id]);
   useEffect(() => { load(); }, [load]);
 
-  // Money received counts in the season it was paid (lib/finance.ts paymentSeason)
-  const countedPayments = useMemo(() => {
-    const clubSeasons = allSeasons.filter(s => s.club_id === club.id);
-    return payments.map(p => ({ ...p, season: paymentSeason(p, clubSeasons) }));
-  }, [payments, allSeasons, club.id]);
+  // Money counts in the season it was paid or spent (lib/finance.ts)
+  const clubSeasons = useMemo(() => allSeasons.filter(s => s.club_id === club.id), [allSeasons, club.id]);
+  const countedPayments = useMemo(() => payments.map(p => ({ ...p, season: paymentSeason(p, clubSeasons) })), [payments, clubSeasons]);
+  const countedExpenses = useMemo(() => expenses.map(e => ({ ...e, season: expenseSeason(e, clubSeasons) })), [expenses, clubSeasons]);
   const seasons = useMemo(
-    () => Array.from(new Set([...countedPayments, ...payments, ...expenses].map(r => r.season).filter(Boolean) as string[])).sort().reverse(),
-    [countedPayments, payments, expenses]
+    () => Array.from(new Set([...countedPayments, ...payments, ...countedExpenses].map(r => r.season).filter(Boolean) as string[])).sort().reverse(),
+    [countedPayments, payments, countedExpenses]
   );
   const inSeason = <T extends { season?: string | null }>(rows: T[]) => (season === 'all' ? rows : rows.filter(r => r.season === season));
   const seasonPayments = inSeason(countedPayments);
-  const seasonExpenses = inSeason(expenses);
+  const seasonExpenses = inSeason(countedExpenses);
 
   const exportCsv = () => {
     const rows: (string | number | null | undefined)[][] = [
@@ -148,7 +147,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       </div>
 
       {feedback && (
-        <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}>
+        <div role="status" className={feedback.type === 'error' ? 'admin-save-toast is-error' : 'admin-save-toast'}>
           {feedback.type === 'error' ? <XCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
           <span>{feedback.text}</span>
         </div>
@@ -353,6 +352,61 @@ function Bars({ title, rows, money, spend }: { title: string; rows: { label: str
 }
 
 // ------------------------------------------------------------------------------------------------
+const FormError = ({ text }: { text: string | null }) => (text ? (
+  <p role="alert" className="admin-flash is-error" style={{ margin: 0 }}><XCircle size={16} aria-hidden="true" /><span>{text}</span></p>
+) : null);
+
+/** Adding or editing a record opens in the same native dialog as the rest of the admin. onSubmit returns
+ *  what went wrong, if anything; on success the tab closes the dialog. */
+function FormDialog({ id, title, submitLabel, disabled, onSubmit, onClose, children }: {
+  id: string; title: string; submitLabel: string; disabled?: boolean;
+  onSubmit: () => Promise<string | void>; onClose: () => void; children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const edited = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    // Before it leaves the page, so focus returns to the button that opened it
+    return () => dialog?.close();
+  }, []);
+
+  const tryClose = async () => {
+    if (saving) return;
+    if (edited.current && !(await confirmAction({ title: 'Discard your changes?', message: 'What you typed here will be lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true }))) return;
+    onClose();
+  };
+
+  // One save at a time: a double click must not record the money twice
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving || disabled) return;
+    setSaving(true);
+    setError(null);
+    const problem = await onSubmit().catch(() => 'That didn\'t save. Check your connection and try again.');
+    setSaving(false);
+    if (problem) setError(problem);
+  };
+
+  return (
+    <dialog ref={ref} className="form-dialog glass-panel" aria-labelledby={`${id}-title`} onCancel={e => { e.preventDefault(); void tryClose(); }}>
+      <form onSubmit={submit} onChange={() => { edited.current = true; }}>
+        <h2 id={`${id}-title`} className="confirm-dialog-title" style={{ marginTop: 0 }}>{title}</h2>
+        <div className="form-dialog-grid">{children}</div>
+        {error && <div style={{ marginTop: '1rem' }}><FormError text={error} /></div>}
+        <div className="confirm-dialog-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => void tryClose()}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={saving || disabled}><Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : submitLabel}</button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
+
+// ------------------------------------------------------------------------------------------------
 function IncomeTab({ club, db, currency, money, load, flash, payments, plans, members, sponsors }: Shared & {
   sponsors: { id: string; name: string; package_value?: number | null }[];
   payments: Payment[]; plans: MembershipPlan[]; members: MemberLite[];
@@ -424,27 +478,26 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
     load();
   };
 
-  const record = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const record = async () => {
     const cents = parseMoneyToCents(form.amount);
-    if (cents === null) return flash('error', 'Enter a valid amount, e.g. 25 or 25.50');
+    if (cents === null) return 'Enter a valid amount, e.g. 25 or 25.50';
     // SPP-3: a sponsor's payment goes against their sponsorship: Paid, end date, invoice (app/api/sponsors/record-payment)
     if (form.type === 'sponsorship') {
-      if (!form.sponsor_id) return flash('error', 'Choose the sponsor.');
+      if (!form.sponsor_id) return 'Choose the sponsor.';
       const res = await fetch('/api/sponsors/record-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
         body: JSON.stringify({ clubId: club.id, sponsorId: form.sponsor_id, amountCents: cents, method: form.method, paidOn: form.date }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) return flash('error', json.error || 'Could not record the payment.');
+      if (!res.ok) return json.error || 'Could not record the payment.';
       flash('ok', json.sent ? 'Payment recorded. The sponsor was emailed a thank-you with their invoice on their sponsor page.' : 'Payment recorded. Their invoice is on their sponsor page.');
-      setForm(blank);
       setAdding(false);
-      return load();
+      load();
+      return;
     }
     const isMembership = form.type === 'membership';
-    if (isMembership && (!form.member_id || !form.plan_id)) return flash('error', 'Choose the member and plan.');
+    if (isMembership && (!form.member_id || !form.plan_id)) return 'Choose the member and plan.';
     const plan = plans.find(p => p.id === form.plan_id);
     // Paying for an application that is still pending is the sign-up payment, not a renewal
     const isSignup = isMembership && members.find(m => m.id === form.member_id)?.membership_status === 'pending';
@@ -462,14 +515,12 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
       paid_at: isMembership ? null : new Date(form.date).toISOString(),
       payer_name: form.payer_name || (isMembership ? memberName(form.member_id) : null),
     }).select('id').single();
-    if (error || !data) return flash('error', error?.message || 'Could not save.');
-    // Membership payments go through fulfilment so the expiry date moves too
-    if (isMembership) {
-      const res = await db!.rpc('fulfil_payment', { p_payment_id: data.id });
-      if (res.error) return flash('error', res.error.message);
-    }
-    flash('ok', isSignup ? 'Payment recorded. The application can now be approved in Members.' : 'Income recorded.');
-    setForm(blank);
+    if (error || !data) return error?.message || 'Could not save.';
+    // Membership payments go through fulfilment so the expiry date moves too. By now the payment exists,
+    // so the dialog closes either way: saving again would record it twice. It's on the list to verify.
+    const fulfilled = isMembership ? await db!.rpc('fulfil_payment', { p_payment_id: data.id }) : null;
+    if (fulfilled?.error) flash('error', `The payment is saved, but the membership wasn't extended: ${fulfilled.error.message}. Verify it from the list.`);
+    else flash('ok', isSignup ? 'Payment recorded. The application can now be approved in Members.' : 'Income recorded.');
     setAdding(false);
     load();
   };
@@ -485,12 +536,12 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
           <option value="all">All types</option>
           {Object.entries(PAYMENT_KIND_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => setAdding(a => !a)} aria-expanded={adding}><Plus size={16} aria-hidden="true" /> Record income</button>
+        <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => { setForm(blank); setAdding(true); }} aria-haspopup="dialog"><Plus size={16} aria-hidden="true" /> Record income</button>
       </div>
 
       {adding && (
-        <form onSubmit={record} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
-          <div className="form-group">
+        <FormDialog id="income-dialog" title="Record income" submitLabel="Save" onSubmit={record} onClose={() => setAdding(false)}>
+          <div className="form-group form-wide">
             <label className="form-label" htmlFor="inc-type">Type</label>
             <select id="inc-type" className="form-select" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
               <option value="other">General income</option>
@@ -501,30 +552,30 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
           {form.type === 'sponsorship' ? (
             <>
               <div className="form-group">
-                <label className="form-label" htmlFor="inc-sponsor">Sponsor</label>
-                <select id="inc-sponsor" className="form-select" value={form.sponsor_id}
+                <label className="form-label" htmlFor="inc-sponsor">Sponsor *</label>
+                <select id="inc-sponsor" className="form-select" required value={form.sponsor_id}
                   onChange={e => { const sp = sponsors.find(x => x.id === e.target.value); setForm({ ...form, sponsor_id: e.target.value, amount: sp?.package_value ? Number(sp.package_value).toFixed(2) : form.amount }); }}>
                   <option value="">Choose…</option>
                   {[...sponsors].sort((a, b) => a.name.localeCompare(b.name)).map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="inc-sp-date">Date received</label>
-                <input id="inc-sp-date" type="date" className="form-input" max={today()} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                <label className="form-label" htmlFor="inc-sp-date">Date received *</label>
+                <input id="inc-sp-date" type="date" className="form-input" required max={today()} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
               </div>
             </>
           ) : form.type === 'membership' ? (
             <>
               <div className="form-group">
-                <label className="form-label" htmlFor="inc-member">Member</label>
-                <select id="inc-member" className="form-select" value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })}>
+                <label className="form-label" htmlFor="inc-member">Member *</label>
+                <select id="inc-member" className="form-select" required value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })}>
                   <option value="">Choose…</option>
                   {[...members].sort((a, b) => a.full_name.localeCompare(b.full_name)).map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="inc-plan">Plan</label>
-                <select id="inc-plan" className="form-select" value={form.plan_id}
+                <label className="form-label" htmlFor="inc-plan">Plan *</label>
+                <select id="inc-plan" className="form-select" required value={form.plan_id}
                   onChange={e => { const p = plans.find(x => x.id === e.target.value); setForm({ ...form, plan_id: e.target.value, amount: p ? (p.price_cents / 100).toFixed(2) : form.amount }); }}>
                   <option value="">Choose…</option>
                   {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -544,19 +595,19 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
                 <input id="inc-from" className="form-input" value={form.payer_name} onChange={e => setForm({ ...form, payer_name: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="inc-date">Date</label>
-                <input id="inc-date" type="date" className="form-input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                <label className="form-label" htmlFor="inc-date">Date *</label>
+                <input id="inc-date" type="date" className="form-input" required value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
               </div>
             </>
           )}
           {form.type !== 'sponsorship' && (
-            <div className="form-group">
+            <div className={form.type === 'membership' ? 'form-group form-wide' : 'form-group'}>
               <label className="form-label" htmlFor="inc-desc">Description</label>
               <input id="inc-desc" className="form-input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
           )}
           <div className="form-group">
-            <label className="form-label" htmlFor="inc-amount">Amount ({currency})</label>
+            <label className="form-label" htmlFor="inc-amount">Amount ({currency}) *</label>
             <input id="inc-amount" className="form-input" inputMode="decimal" required value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
           </div>
           <div className="form-group">
@@ -568,8 +619,7 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
               <option value="other">Other</option>
             </select>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ alignSelf: 'end' }}><Save size={16} /> Save</button>
-        </form>
+        </FormDialog>
       )}
 
       <div className="admin-panel admin-table-wrap">
@@ -631,38 +681,43 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
   const [form, setForm] = useState(blank);
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const edit = (e: Expense) => {
     setForm({ id: e.id, category: e.category, description: e.description, vendor: e.vendor || '', amount: (e.amount_cents / 100).toFixed(2),
       spent_on: e.spent_on, method: e.method, paid_by_member_id: e.paid_by_member_id || '', reimbursed: e.reimbursed, receipt_key: e.receipt_key || '' });
+    setUploadError(null);
     setOpen(true);
   };
 
-  const upload = async (file: File) => {
+  const upload = async (input: HTMLInputElement) => {
     setUploading(true);
+    setUploadError(null);
     const body = new FormData();
     body.append('clubId', club.id);
-    body.append('receipt', file);
-    const res = await fetch('/api/payments/receipt', { method: 'POST', body, headers: { Authorization: `Bearer ${await getAccessToken()}` } });
-    const json = await res.json().catch(() => ({}));
+    body.append('receipt', input.files![0]);
+    const res = await fetch('/api/payments/receipt', { method: 'POST', body, headers: { Authorization: `Bearer ${await getAccessToken()}` } }).catch(() => null);
+    const json = await res?.json().catch(() => ({})) ?? {};
     setUploading(false);
-    if (!res.ok) return flash('error', json.error || 'Upload failed.');
+    if (!res?.ok) {
+      // Cleared, or choosing the same file again to retry wouldn't count as a change
+      input.value = '';
+      return setUploadError(json.error || 'That receipt didn\'t upload. Check your connection and try again.');
+    }
     setForm(f => ({ ...f, receipt_key: json.key }));
   };
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const save = async () => {
     const cents = parseMoneyToCents(form.amount);
-    if (cents === null) return flash('error', 'Enter a valid amount, e.g. 120 or 120.50');
+    if (cents === null) return 'Enter a valid amount, e.g. 120 or 120.50';
     const row = {
       club_id: club.id, category: form.category, description: form.description, vendor: form.vendor || null, amount_cents: cents,
       currency, spent_on: form.spent_on, method: form.method, paid_by_member_id: form.paid_by_member_id || null,
       reimbursed: form.reimbursed, receipt_key: form.receipt_key || null,
     };
     const { error } = form.id ? await db!.from('expenses').update(row).eq('id', form.id) : await db!.from('expenses').insert(row);
-    if (error) return flash('error', error.message);
+    if (error) return error.message;
     flash('ok', form.id ? 'Expense updated.' : 'Expense added.');
-    setForm(blank);
     setOpen(false);
     load();
   };
@@ -684,10 +739,10 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
 
   return (
     <div className="stack">
-      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setOpen(o => !o); }} aria-expanded={open}><Plus size={16} aria-hidden="true" /> Add expense</button>
+      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={() => { setForm(blank); setUploadError(null); setOpen(true); }} aria-haspopup="dialog"><Plus size={16} aria-hidden="true" /> Add expense</button>
 
       {open && (
-        <form onSubmit={save} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+        <FormDialog id="expense-dialog" title={form.id ? 'Edit expense' : 'Add expense'} submitLabel={uploading ? 'Uploading…' : form.id ? 'Update' : 'Save'} disabled={uploading} onSubmit={save} onClose={() => setOpen(false)}>
           <div className="form-group">
             <label className="form-label" htmlFor="exp-cat">Category</label>
             <select id="exp-cat" className="form-select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
@@ -695,7 +750,7 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="exp-desc">Description</label>
+            <label className="form-label" htmlFor="exp-desc">Description *</label>
             <input id="exp-desc" className="form-input" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           </div>
           <div className="form-group">
@@ -703,11 +758,11 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
             <input id="exp-vendor" className="form-input" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="exp-amount">Amount ({currency})</label>
+            <label className="form-label" htmlFor="exp-amount">Amount ({currency}) *</label>
             <input id="exp-amount" className="form-input" inputMode="decimal" required value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="exp-date">Date</label>
+            <label className="form-label" htmlFor="exp-date">Date *</label>
             <input id="exp-date" type="date" className="form-input" required value={form.spent_on} onChange={e => setForm({ ...form, spent_on: e.target.value })} />
           </div>
           <div className="form-group">
@@ -726,20 +781,18 @@ function ExpensesTab({ club, db, currency, money, load, flash, expenses, members
               {[...members].sort((a, b) => a.full_name.localeCompare(b.full_name)).map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
           </div>
-          {form.paid_by_member_id && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-              <input type="checkbox" checked={form.reimbursed} onChange={e => setForm({ ...form, reimbursed: e.target.checked })} /> Reimbursed
-            </label>
-          )}
           <div className="form-group">
             <label className="form-label" htmlFor="exp-receipt">Receipt {form.receipt_key && '(attached)'}</label>
             <input id="exp-receipt" type="file" className="form-input" accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
+              onChange={e => { if (e.target.files?.[0]) void upload(e.target); }} />
           </div>
-          <button type="submit" className="btn btn-primary" disabled={uploading} style={{ alignSelf: 'end' }}>
-            <Save size={16} /> {uploading ? 'Uploading…' : form.id ? 'Update' : 'Save'}
-          </button>
-        </form>
+          {form.paid_by_member_id && (
+            <label className="form-check form-wide">
+              <input type="checkbox" checked={form.reimbursed} onChange={e => setForm({ ...form, reimbursed: e.target.checked })} /> Reimbursed
+            </label>
+          )}
+          {uploadError && <div className="form-wide"><FormError text={uploadError} /></div>}
+        </FormDialog>
       )}
 
       <div className="admin-panel admin-table-wrap">
@@ -794,10 +847,12 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
   useEffect(() => { setPolicy(savedPolicy); }, [savedPolicy]);
 
   const dirty = policy !== savedPolicy;
+  const [problem, setProblem] = useState<string | null>(null);
 
   const save = async () => {
+    setProblem(null);
     const { error } = await db!.rpc('set_membership_payment_policy', { p_club_id: clubId, p_policy: policy });
-    if (error) return flash('error', error.message);
+    if (error) return setProblem(error.message);
     updateClubBranding(clubId, { membership_payment_policy: policy });
     flash('ok', 'Membership approval & payment policy saved.');
   };
@@ -807,15 +862,16 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
   const [savingFree, setSavingFree] = useState(false);
   const toggleAutoFree = async () => {
     setSavingFree(true);
+    setProblem(null);
     const { error } = await db!.rpc('set_auto_approve_free', { p_club_id: clubId, p_on: !autoFree });
     setSavingFree(false);
-    if (error) return flash('error', error.code === 'PGRST202' ? 'This needs the 20261120_auto_approve_free.sql database migration.' : error.message);
+    if (error) return setProblem(error.code === 'PGRST202' ? 'This needs the 20261120_auto_approve_free.sql database migration.' : error.message);
     updateClubBranding(clubId, { auto_approve_free: !autoFree });
     flash('ok', !autoFree ? 'Free supporter sign-ups are now approved straight away.' : 'Free supporter sign-ups now wait for the committee again.');
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+    <div className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
@@ -845,7 +901,6 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
       <button
         type="button"
         className="btn btn-primary"
-        style={{ alignSelf: 'flex-start', marginTop: '0.25rem' }}
         onClick={save}
         disabled={!dirty}
       >
@@ -861,6 +916,7 @@ function MembershipPaymentPolicyPanel({ clubId, db, flash }: { clubId: string; d
           </span>
         </span>
       </label>
+      <FormError text={problem} />
     </div>
   );
 }
@@ -884,11 +940,13 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
   const dirty = mode !== savedMode || (mode === 'fiscal' && (month !== savedMonth || grace !== savedGrace));
   // The fiscal year start this year's joiners renew on, and the first day the grace period moves them to the next one
   const nextStart = membershipTermEnd(today, { ...rule, fiscal_grace_days: 0 });
+  const [problem, setProblem] = useState<string | null>(null);
   const graceFrom = (() => { const d = new Date(`${nextStart}T00:00:00Z`); d.setUTCDate(d.getUTCDate() - grace); return d.toISOString().slice(0, 10); })();
 
   const save = async () => {
+    setProblem(null);
     const { error } = await db!.rpc('set_membership_renewal', { p_club_id: clubId, p_mode: mode, p_fiscal_start_month: month, p_grace_days: grace });
-    if (error) return flash('error', error.message);
+    if (error) return setProblem(error.message);
     updateClubBranding(clubId, { membership_renewal: mode, fiscal_year_start_month: month, fiscal_grace_days: grace });
     flash('ok', 'Renewal method saved. It applies to new members and renewals from now on.');
   };
@@ -904,24 +962,24 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
   );
 
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
       <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Membership renewal</h3>
       <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))' }}>
         {option('anniversary', 'Year to year', 'Each membership renews on the anniversary of the day it started: joined 1 August 2025, renews 1 August 2026.')}
         {option('fiscal', 'Fiscal year to fiscal year', 'Everyone renews together at the start of the club’s fiscal year, whenever they joined.')}
       </div>
       {mode === 'fiscal' && (
-        <div className="form-group" style={{ margin: 0 }}>
+        <div className="form-group">
           <label className="form-label" htmlFor="fiscal-month">Fiscal year starts on the 1st of</label>
-          <select id="fiscal-month" className="form-select" style={{ maxWidth: 220 }} value={month} onChange={e => setMonth(Number(e.target.value))}>
+          <select id="fiscal-month" className="form-select form-narrow" value={month} onChange={e => setMonth(Number(e.target.value))}>
             {MONTH_NAMES.map((name, i) => <option key={name} value={i + 1}>{name}</option>)}
           </select>
         </div>
       )}
       {mode === 'fiscal' && (
-        <div className="form-group" style={{ margin: 0 }}>
+        <div className="form-group">
           <label className="form-label" htmlFor="fiscal-grace">Grace period (days before the fiscal year starts)</label>
-          <input id="fiscal-grace" className="form-input" type="number" inputMode="numeric" min={0} max={183} style={{ maxWidth: 140 }}
+          <input id="fiscal-grace" className="form-input form-narrow" type="number" inputMode="numeric" min={0} max={183}
             value={grace} onChange={e => setGrace(Math.max(0, Math.min(183, Math.round(Number(e.target.value) || 0))))} />
           <p className="text-meta" style={{ marginTop: '0.35rem' }}>
             {grace > 0
@@ -936,7 +994,8 @@ function RenewalPanel({ clubId, db, flash }: { clubId: string; db: Shared['db'];
         {mode === 'fiscal' && ' Plan lengths (Months) are not used: every plan runs to the next fiscal year.'}
         {' '}Existing members keep their current expiry until they next renew.
       </p>
-      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={!dirty}><Save size={16} /> Save</button>
+      <FormError text={problem} />
+      <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty}><Save size={16} aria-hidden="true" /> Save</button>
     </div>
   );
 }
@@ -948,6 +1007,7 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
   const [abn, setAbn] = useState('');
   const [gst, setGst] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   useEffect(() => {
     db?.from('club_payment_settings').select('abn, gst_registered').eq('club_id', clubId).maybeSingle()
       .then(({ data, error }) => {
@@ -961,20 +1021,21 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
   const abnDigits = abn.trim() ? cleanAbn(abn) : null;
   const abnWrong = !!abn.trim() && !abnDigits;
   const save = async () => {
-    if (abnWrong) return flash('error', 'That ABN doesn\'t look right. Check it on abr.business.gov.au.');
+    if (abnWrong) return setProblem('That ABN doesn\'t look right. Check it on abr.business.gov.au.');
+    setProblem(null);
     setSaving(true);
     const values = { abn: abnDigits, gst_registered: gst, updated_at: new Date().toISOString() };
     const { error } = hasSettings
       ? await db!.from('club_payment_settings').update(values).eq('club_id', clubId)
       : await db!.from('club_payment_settings').insert({ club_id: clubId, ...values });
     setSaving(false);
-    if (error) return flash('error', error.message);
+    if (error) return setProblem(error.message);
     flash('ok', 'Invoice details saved.');
     load();
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
       <div>
         <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><FileText size={18} /> Invoices</h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.35rem 0 0' }}>
@@ -983,7 +1044,7 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="set-abn">ABN (Australian Business Number)</label>
-        <input id="set-abn" className="form-input" inputMode="numeric" autoComplete="off" style={{ maxWidth: 240 }} value={abn}
+        <input id="set-abn" className="form-input form-narrow" inputMode="numeric" autoComplete="off" value={abn}
           placeholder="12 345 678 901" aria-invalid={abnWrong} onChange={e => setAbn(e.target.value)}
           onBlur={() => abnDigits && setAbn(formatAbn(abnDigits))} />
         {/* SPE-22: 11 digits that fail the ABN check get their own message */}
@@ -993,11 +1054,11 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
             : <>That ABN doesn&apos;t look right: it should be 11 digits.</>}
         </p>}
       </div>
-      <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer' }}>
-        <input type="checkbox" checked={gst} onChange={e => setGst(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+      <label className="admin-option">
+        <input type="checkbox" checked={gst} onChange={e => setGst(e.target.checked)} />
         <span>
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Registered for GST</span>
-          <span className="text-meta" style={{ display: 'block' }}>
+          <b>Registered for GST</b>
+          <span>
             {gst
               ? 'Sponsors get a "Tax invoice". Your prices include GST, and the invoice shows it (1/11th of the price).'
               : 'Sponsors get an "Invoice" that says no GST has been charged. Most small clubs aren\'t registered.'}
@@ -1005,7 +1066,8 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
         </span>
       </label>
       {gst && !abnDigits && <p className="text-note" style={{ margin: 0, color: 'var(--c-amber)' }}>Add your ABN too: a tax invoice needs it. Until then sponsors get a plain invoice.</p>}
-      <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={saving}><Save size={16} /> {saving ? 'Saving…' : 'Save'}</button>
+      <FormError text={problem} />
+      <button type="button" className="btn btn-primary" onClick={save} disabled={saving}><Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save'}</button>
     </div>
   );
 }
@@ -1019,15 +1081,17 @@ function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
   const [currency, setCurrency] = useState(settings?.currency || 'AUD');
   const [bank, setBank] = useState(settings?.bank_details || '');
   const [connecting, setConnecting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   useEffect(() => { setCurrency(settings?.currency || 'AUD'); setBank(settings?.bank_details || ''); }, [settings]);
 
   const saveSettings = async () => {
     // Admins may only write these columns (see the migration's column grants), so no upsert
+    setProblem(null);
     const values = { currency, bank_details: bank.trim() || null, updated_at: new Date().toISOString() };
     const { error } = settings
       ? await db!.from('club_payment_settings').update(values).eq('club_id', club.id)
       : await db!.from('club_payment_settings').insert({ club_id: club.id, ...values });
-    if (error) return flash('error', error.message);
+    if (error) return setProblem(error.message);
     flash('ok', 'Payment settings saved.');
     load();
   };
@@ -1090,11 +1154,11 @@ function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
       <MembershipPaymentPolicyPanel clubId={club.id} db={db} flash={flash} />
       <RenewalPanel clubId={club.id} db={db} flash={flash} />
 
-      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
         <h3 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Currency & bank transfer</h3>
         <div className="form-group">
           <label className="form-label" htmlFor="set-currency">Currency</label>
-          <select id="set-currency" className="form-select" style={{ maxWidth: 200 }} value={currency} onChange={e => setCurrency(e.target.value)}>
+          <select id="set-currency" className="form-select form-narrow" value={currency} onChange={e => setCurrency(e.target.value)}>
             {Array.from(new Set([...CURRENCIES, currency])).map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -1103,7 +1167,8 @@ function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
           <textarea id="set-bank" className="form-textarea" rows={4} value={bank} onChange={e => setBank(e.target.value)}
             placeholder={'Account name: Example FC\nBSB: 000-000   Account: 12345678\nUse the reference shown so we can match your payment.'} />
         </div>
-        <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={saveSettings}><Save size={16} /> Save</button>
+        <FormError text={problem} />
+        <button type="button" className="btn btn-primary" onClick={saveSettings}><Save size={16} aria-hidden="true" /> Save</button>
       </div>
 
       <InvoiceDetailsPanel clubId={club.id} db={db} flash={flash} load={load} hasSettings={!!settings} />

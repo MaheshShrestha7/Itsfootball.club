@@ -2445,9 +2445,9 @@ dialog.confirm-dialog::backdrop {
 .confirm-dialog-icon.is-danger { background: rgba(239, 68, 68, 0.15); color: var(--c-red); }
 .confirm-dialog-title { font-size: 1.1rem; font-weight: 800; line-height: 1.35; margin: 0.35rem 0 0; }
 .confirm-dialog-message { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0.5rem 0 0; }
-.confirm-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
+.confirm-dialog-actions, .form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
 @media (max-width: 480px) {
-  .confirm-dialog-actions .btn { flex: 1; justify-content: center; }
+  .confirm-dialog-actions .btn, .form-actions .btn { flex: 1; justify-content: center; }
 }
 
 /* A form in a modal dialog (components/admin/SponsorPackagesPanel.tsx). Scrolls inside itself;
@@ -2484,6 +2484,22 @@ dialog.form-dialog::backdrop {
   .form-dialog-grid { grid-template-columns: minmax(0, 1fr); }
   dialog.form-dialog { padding: 1.15rem; }
 }
+
+/* Laying out a form: fields in columns (.form-grid) or one under another (.form-stack). The gap does
+   the spacing, so .form-group's own margin goes and a button lines up with the fields beside it */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1rem; }
+.form-stack { display: flex; flex-direction: column; gap: 1rem; }
+.form-grid > *, .form-dialog-grid > * { min-width: 0; }
+.form-grid > .form-group, .form-stack > .form-group, .form-dialog-grid > .form-group { margin: 0; }
+/* Text boxes, dates, lists and file pickers differ by a couple of pixels, which shows side by side */
+:is(.form-grid, .form-dialog-grid) > .form-group > :is(input.form-input, select.form-select) { height: 45px; }
+.form-wide { grid-column: 1 / -1; }
+.form-narrow { max-width: 240px; }
+.form-stack > .btn { align-self: flex-start; }
+.form-stack > .form-actions { margin-top: 0.25rem; }
+/* A plain tick box with its label. .admin-option is the bigger one, with a description */
+.form-check { display: flex; align-items: center; gap: 0.5rem; min-height: 36px; font-size: 0.88rem; font-weight: 500; color: var(--text-primary); cursor: pointer; }
+.form-check input { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* ==============================================================================
    Shared layout & text utilities. Use these instead of repeating the same inline

@@ -88,7 +88,7 @@ export default function SponsorInstalmentsDialog({ clubId, sponsor, currency, to
 
         <div className="form-row-2" style={{ gap: '1rem' }}>
           <div className="form-group">
-            <label htmlFor="plan-total" className="form-label">Total ({currency})</label>
+            <label htmlFor="plan-total" className="form-label">Total ({currency}) *</label>
             <input id="plan-total" className="form-input" inputMode="decimal" value={total} placeholder="3000" onChange={e => rebuild({ total: e.target.value })} />
           </div>
           <div className="form-group">
@@ -98,7 +98,7 @@ export default function SponsorInstalmentsDialog({ clubId, sponsor, currency, to
             </select>
           </div>
           <div className="form-group">
-            <label htmlFor="plan-first" className="form-label">First due</label>
+            <label htmlFor="plan-first" className="form-label">First due *</label>
             <input id="plan-first" type="date" className="form-input" min={today} value={firstDue} onChange={e => rebuild({ firstDue: e.target.value })} />
           </div>
           <div className="form-group">

@@ -229,64 +229,49 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
 
         <div className="mc-card">
           <div className="mc-card-h"><h3>New broadcast</h3><Bell size={16} color="var(--mc-ink-3)" /></div>
-          <form className="mc-form" onSubmit={handleCreateAnnouncement}>
-            <label htmlFor="bc-title">
-              Title
-              <input
-                id="bc-title"
-                ref={titleRef}
-                type="text"
-                required
-                placeholder="e.g. Scheduled database maintenance"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-              />
-            </label>
-            <label htmlFor="bc-message">
-              Message
-              <textarea
-                id="bc-message"
-                required
-                rows={3}
-                placeholder="What is happening, and what people should do"
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-              />
-            </label>
-            <div className="lbl">
-              Type
+          <form className="form-stack" onSubmit={handleCreateAnnouncement}>
+            <div className="form-group">
+              <label htmlFor="bc-title" className="form-label">Title *</label>
+              <input id="bc-title" ref={titleRef} className="form-input" type="text" required placeholder="e.g. Scheduled database maintenance" value={title} onChange={e => setTitle(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="bc-message" className="form-label">Message *</label>
+              <textarea id="bc-message" className="form-textarea" required rows={3} placeholder="What is happening, and what people should do" value={message} onChange={e => setMessage(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <span className="form-label">Type</span>
               <span className="mc-chips" role="group" aria-label="Type">
                 {LEVELS.map(([k, label]) => (
                   <button key={k} type="button" aria-pressed={level === k} onClick={() => setLevel(k)}>{label}</button>
                 ))}
               </span>
             </div>
-            <div className="lbl">
-              Who sees it
+            <div className="form-group">
+              <span className="form-label">Who sees it</span>
               <span className="mc-chips" role="group" aria-label="Who sees it">
                 {(Object.keys(TARGETS) as (keyof typeof TARGETS)[]).map(k => (
                   <button key={k} type="button" aria-pressed={target === k} onClick={() => setTarget(k as typeof target)}>{TARGETS[k]}</button>
                 ))}
               </span>
             </div>
-            <div className="two">
-              <label htmlFor="bc-link">
-                Link (optional)
-                <input id="bc-link" type="url" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} />
-              </label>
-              <label htmlFor="bc-link-text">
-                Button text (optional)
-                <input id="bc-link-text" type="text" placeholder="e.g. Read more" value={linkText} onChange={e => setLinkText(e.target.value)} />
-              </label>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="bc-link" className="form-label">Link (optional)</label>
+                <input id="bc-link" className="form-input" type="url" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="bc-link-text" className="form-label">Button text (optional)</label>
+                <input id="bc-link-text" className="form-input" type="text" placeholder="e.g. Read more" value={linkText} onChange={e => setLinkText(e.target.value)} />
+              </div>
             </div>
-            <div className="lbl">
-              Preview
+            <div className="form-group">
+              <span className="form-label">Preview</span>
               <span className="mc-preview" style={{ background: preview.bg, color: preview.color }}>
                 <PreviewIcon size={14} style={{ marginTop: 1 }} />
                 <span>{title.trim() || 'Your title shows here'}</span>
               </span>
             </div>
-            <button type="submit" className="mc-pill-btn" disabled={saving || !title.trim() || !message.trim()} style={{ justifySelf: 'start' }}>
+            <button type="submit" className="mc-pill-btn" disabled={saving || !title.trim() || !message.trim()} style={{ alignSelf: 'flex-start' }}>
               {saving ? 'Publishing…' : 'Publish broadcast'}
             </button>
           </form>

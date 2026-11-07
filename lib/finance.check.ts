@@ -8,6 +8,7 @@ import {
   parseMoneyToCents,
   paymentReference,
   paymentSeason,
+  expenseSeason,
   toCsv,
   DEFAULT_MEMBERSHIP_PAYMENT_POLICY,
   MEMBERSHIP_PAYMENT_POLICIES,
@@ -106,5 +107,18 @@ assert.equal(inSeason({ season: null, paid_at: '2019-06-01T02:00:00Z' }), null, 
 assert.equal(paymentSeason({ status: 'paid', season: '2025/26', paid_at: '2026-03-01T02:00:00Z' }, []), '2025/26', 'a club with no dated seasons works as before');
 assert.equal(paymentSeason({ status: 'paid', season: 'x', paid_at: '2026-03-01T02:00:00Z' }, [{ name: 'Undated', start_date: null, end_date: null }]), 'x', 'an undated season can\'t claim anything');
 assert.equal(paymentSeason({ status: 'paid', paid_at: '2026-07-01T02:00:00Z' }, [{ name: 'A', start_date: '2026-01-01', end_date: '2026-07-01' }, { name: ' B ', start_date: '2026-07-01', end_date: '2027-06-30' }]), 'B', 'a shared day goes to the later season, name trimmed');
+
+// --- which season an expense counts in ---
+const spent = (over: object) => expenseSeason({ season: '2025', ...over }, seasons2);
+assert.equal(spent({ spent_on: '2026-03-01' }), '2026', 'filed under 2025, spent in 2026: counts in 2026');
+assert.equal(spent({ season: '2026', spent_on: '2025-03-01' }), '2025', 'and the other way round');
+assert.equal(spent({ spent_on: '2025-12-31' }), '2025', 'the last day of a season');
+assert.equal(spent({ spent_on: '2026-01-01' }), '2026', 'the first day of the next');
+assert.equal(spent({ season: 'Old', spent_on: '2019-06-01' }), 'Old', 'outside every dated season: not lost, stays where filed');
+assert.equal(spent({ season: null, spent_on: '2019-06-01' }), null, 'nothing to go on');
+assert.equal(spent({ spent_on: null }), '2025', 'no date: where it was filed');
+assert.equal(expenseSeason({ season: '2025/26', spent_on: '2026-03-01' }, []), '2025/26', 'a club with no dated seasons works as before');
+assert.equal(expenseSeason({ season: 'x', spent_on: '2026-03-01' }, [{ name: 'Undated', start_date: null, end_date: null }]), 'x', 'an undated season can\'t claim anything');
+assert.equal(expenseSeason({ spent_on: '2026-07-01' }, [{ name: 'A', start_date: '2026-01-01', end_date: '2026-07-01' }, { name: ' B ', start_date: '2026-07-01', end_date: '2027-06-30' }]), 'B', 'a shared day goes to the later season, name trimmed');
 
 console.log('finance: money, booking fee, CSV, file signatures, membership terms and payment policies OK');

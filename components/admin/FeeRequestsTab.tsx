@@ -117,7 +117,7 @@ export default function FeeRequestsTab({ club, currency, money, load, flash, pay
 
       {adding && (
         <NewRequest people={people} teams={teams} teamMembers={clubTeamMembers} currency={currency} clubId={club.id}
-          onSent={async text => { setAdding(false); flash('ok', text); await load(); }} onError={text => flash('error', text)} />
+          onSent={async text => { setAdding(false); flash('ok', text); await load(); }} onCancel={() => setAdding(false)} />
       )}
 
       {groups.length === 0 && !adding && <p className="admin-table-foot">No fee requests yet.</p>}
@@ -213,20 +213,21 @@ function StatusPill({ p, today }: { p: Payment; today: string }) {
   return <span className={`admin-pill ${p.due_on && p.due_on < today ? 'is-danger' : 'is-warn'}`}>{p.due_on && p.due_on < today ? 'Overdue' : 'Not paid'}</span>;
 }
 
-function NewRequest({ people, teams, teamMembers, currency, clubId, onSent, onError }: {
+function NewRequest({ people, teams, teamMembers, currency, clubId, onSent, onCancel }: {
   people: { id: string; full_name: string }[];
   teams: { id: string; name: string }[];
   teamMembers: Parameters<typeof teamMemberIds>[0];
   currency: string;
   clubId: string;
   onSent: (text: string) => Promise<void>;
-  onError: (text: string) => void;
+  onCancel: () => void;
 }) {
   const [form, setForm] = useState({ title: '', amount: '', dueOn: inAWeek(), category: 'match_fees', message: '' });
   const [source, setSource] = useState('');
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
   const known = new Set(people.map(p => p.id));
   // Only narrows what's listed: anyone already ticked stays ticked, and the Send button counts them
   const listed = people.filter(p => matchesSearch(search, p.full_name));
@@ -247,30 +248,31 @@ function NewRequest({ people, teams, teamMembers, currency, clubId, onSent, onEr
   const cents = parseMoneyToCents(form.amount);
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cents === null) return onError('Enter a valid amount, e.g. 15 or 15.50');
-    if (!picked.size) return onError('Choose who this is for.');
+    if (cents === null) return setProblem('Enter a valid amount, e.g. 15 or 15.50');
+    if (!picked.size) return setProblem('Choose who this is for.');
+    setProblem(null);
     setSending(true);
     const { ok, json } = await post('/api/payments/fee-requests', {
       clubId, title: form.title, amountCents: cents, dueOn: form.dueOn, category: form.category, message: form.message, memberIds: [...picked],
     });
     setSending(false);
-    if (!ok) return onError(json.error || 'The request could not be sent.');
+    if (!ok) return setProblem(json.error || 'The request could not be sent.');
     await onSent(emailSummary(json, 'Sent to'));
   };
 
   return (
-    <form onSubmit={send} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '0.75rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
+    <form onSubmit={send} className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
+      <div className="form-grid">
         <div className="form-group">
-          <label className="form-label" htmlFor="fee-title">What is it for?</label>
+          <label className="form-label" htmlFor="fee-title">What is it for? *</label>
           <input id="fee-title" className="form-input" required maxLength={120} placeholder="Match fee, Saturday v Rovers" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="fee-amount">Amount each ({currency})</label>
+          <label className="form-label" htmlFor="fee-amount">Amount each ({currency}) *</label>
           <input id="fee-amount" className="form-input" inputMode="decimal" required placeholder="15.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="fee-due">Due by</label>
+          <label className="form-label" htmlFor="fee-due">Due by *</label>
           <input id="fee-due" type="date" className="form-input" required min={siteToday()} value={form.dueOn} onChange={e => setForm({ ...form, dueOn: e.target.value })} />
         </div>
         <div className="form-group">
@@ -282,7 +284,7 @@ function NewRequest({ people, teams, teamMembers, currency, clubId, onSent, onEr
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="fee-message">Message in the email (optional)</label>
-        <textarea id="fee-message" className="form-input" rows={2} maxLength={1000} value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} />
+        <textarea id="fee-message" className="form-textarea" rows={2} maxLength={1000} value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} />
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="fee-source">Who is it for?</label>
@@ -301,17 +303,21 @@ function NewRequest({ people, teams, teamMembers, currency, clubId, onSent, onEr
         {people.length === 0 && <p className="admin-note">Nobody at the club yet.</p>}
         {people.length > 0 && listed.length === 0 && <p className="admin-note">Nobody matches that search.</p>}
         {listed.map(p => (
-          <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minHeight: 36, fontSize: '0.9rem' }}>
+          <label key={p.id} className="form-check">
             <input type="checkbox" checked={picked.has(p.id)} onChange={() => toggle(p.id)} /> {p.full_name}
           </label>
         ))}
       </fieldset>
-      <button type="submit" className="btn btn-primary" disabled={sending || !picked.size} style={{ justifySelf: 'start' }}>
-        <Send size={16} aria-hidden="true" />{' '}
-        {sending ? 'Sending…' : picked.size
-          ? `Send to ${plural(picked.size, 'person', 'people')}${cents ? `, ${formatMoney(cents * picked.size, currency)} in total` : ''}`
-          : 'Choose who it’s for'}
-      </button>
+      {problem && <p role="alert" className="admin-flash is-error" style={{ margin: 0 }}><XCircle size={16} aria-hidden="true" /><span>{problem}</span></p>}
+      <div className="form-actions">
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="btn btn-primary" disabled={sending || !picked.size}>
+          <Send size={16} aria-hidden="true" />{' '}
+          {sending ? 'Sending…' : picked.size
+            ? `Send to ${plural(picked.size, 'person', 'people')}${cents ? `, ${formatMoney(cents * picked.size, currency)} in total` : ''}`
+            : 'Choose who it’s for'}
+        </button>
+      </div>
     </form>
   );
 }

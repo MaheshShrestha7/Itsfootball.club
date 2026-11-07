@@ -10,7 +10,7 @@ import { matchesForTeam, membersSummary, seasonRecord } from '@/lib/club-overvie
 import { isCountedMember } from '@/lib/people';
 import { clubTeamsOf, publicScoreHidden } from '@/lib/teams';
 import { formatDate } from '@/lib/dates';
-import { formatMoney, parseMoneyToCents, paymentSeason } from '@/lib/finance';
+import { formatMoney, parseMoneyToCents, paymentSeason, expenseSeason } from '@/lib/finance';
 import { formatAbn } from '@/lib/invoice';
 import { fetchPaged } from '@/lib/paged';
 import { formatEndDate } from '@/lib/sponsors';
@@ -72,16 +72,17 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
   }, [club.id]);
 
   const clubSeasons = useMemo(() => seasons.filter(s => s.club_id === club.id), [seasons, club.id]);
-  // Money received counts in the season it was paid, whatever season the bill was raised in
+  // Money counts in the season it was paid or spent, whatever season it was billed or entered in
   const payments = useMemo(() => (ledger?.payments || []).map(p => ({ ...p, season: paymentSeason(p, clubSeasons) })), [ledger, clubSeasons]);
-  const options = useMemo(() => seasonOptions(clubSeasons, [...payments, ...(ledger?.expenses || [])]), [clubSeasons, payments, ledger]);
+  const expenses = useMemo(() => (ledger?.expenses || []).map(e => ({ ...e, season: expenseSeason(e, clubSeasons) })), [ledger, clubSeasons]);
+  const options = useMemo(() => seasonOptions(clubSeasons, [...payments, ...expenses]), [clubSeasons, payments, expenses]);
   const active = getActiveSeason(club.id)?.name?.trim();
   const season = picked ?? (options.some(o => o.name === active) ? active! : options[0]?.name ?? '');
   const seasonIndex = options.findIndex(o => o.name === season);
   const info = options[seasonIndex];
   const previous = options[seasonIndex + 1]?.name ?? null;
 
-  const money = useMemo(() => (ledger && season ? agmMoney(payments, ledger.expenses, season, previous) : null), [ledger, payments, season, previous]);
+  const money = useMemo(() => (ledger && season ? agmMoney(payments, expenses, season, previous) : null), [ledger, payments, expenses, season, previous]);
   const owed = useMemo(() => (ledger ? agmOwed(ledger.payments, ledger.expenses, ledger.claims) : null), [ledger]);
   const sponsorLines = useMemo(() => (ledger && season ? agmSponsors(payments, sponsors.filter(s => s.club_id === club.id), season) : []), [ledger, payments, sponsors, club.id, season]);
 
@@ -315,6 +316,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
               <ul style={{ margin: 0, paddingLeft: '1.1rem', color: '#334155', fontSize: '0.84rem' }}>
                 <li>Prepared from the club&apos;s records in itsfootball.club. These figures have not been audited.</li>
                 <li>Income is money received, counted in the season it was paid. Refunds are left out{money.refundedCents > 0 ? ` (${fmt(money.refundedCents)} this season)` : ''}. Money owed isn&apos;t counted as income until it&apos;s paid.</li>
+                <li>Expenses are counted in the season the money was spent.</li>
                 {money.anyCard && <li>Card payments are shown at the full amount charged. Stripe&apos;s processing fees come out before the money reaches the club&apos;s bank, and aren&apos;t included unless they were recorded as an expense.</li>}
                 {ledger.settings?.gst_registered && <li>Amounts include GST where it was charged.</li>}
                 {money.unfiledCents > 0 && <li>{fmt(money.unfiledCents)} of records aren&apos;t filed under any season, so they aren&apos;t in these totals.</li>}

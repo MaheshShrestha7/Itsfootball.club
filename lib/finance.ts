@@ -3,6 +3,16 @@
 
 import { DATE_LOCALE, SITE_TIME_ZONE } from './dates';
 
+type DatedSeason = { name: string; start_date?: string | null; end_date?: string | null };
+
+/** The season whose dates contain a day (YYYY-MM-DD). Two seasons sharing a day: the later one. */
+function seasonOfDay(day: string, seasons: DatedSeason[]): string | null {
+  const containing = seasons
+    .filter(s => s.name?.trim() && s.start_date && s.end_date && s.start_date <= day && day <= s.end_date)
+    .sort((a, b) => b.start_date!.localeCompare(a.start_date!))[0];
+  return containing ? containing.name.trim() : null;
+}
+
 /**
  * The season a payment counts in. Money received belongs to the season whose dates contain the day it
  * was paid, in the site's time zone, even if the bill was raised in an earlier one. With no dated season
@@ -12,17 +22,22 @@ import { DATE_LOCALE, SITE_TIME_ZONE } from './dates';
  */
 export function paymentSeason(
   p: { status: string; season?: string | null; paid_at?: string | null; created_at?: string | null },
-  seasons: { name: string; start_date?: string | null; end_date?: string | null }[]
+  seasons: DatedSeason[]
 ): string | null {
   const filed = p.season ?? null;
   const at = p.paid_at || p.created_at;
   if ((p.status !== 'paid' && p.status !== 'refunded') || !at) return filed;
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: SITE_TIME_ZONE }).format(new Date(at));
-  const containing = seasons
-    .filter(s => s.name?.trim() && s.start_date && s.end_date && s.start_date <= day && day <= s.end_date)
-    // Two seasons sharing a day: the later one
-    .sort((a, b) => b.start_date!.localeCompare(a.start_date!))[0];
-  return containing ? containing.name.trim() : filed;
+  return seasonOfDay(day, seasons) ?? filed;
+}
+
+/**
+ * The season an expense counts in: the one containing the day it was spent, whenever it was entered. With
+ * no dated season around that day it stays where it was filed, so it isn't lost from every total. Same
+ * rule as expense_season() in migration 20261156, which the club dashboard uses.
+ */
+export function expenseSeason(e: { season?: string | null; spent_on?: string | null }, seasons: DatedSeason[]): string | null {
+  return (e.spent_on ? seasonOfDay(e.spent_on.slice(0, 10), seasons) : null) ?? e.season ?? null;
 }
 
 export const INCOME_CATEGORIES: Record<string, string> = {
