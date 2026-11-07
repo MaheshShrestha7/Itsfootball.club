@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft, Download, Printer } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -15,6 +15,7 @@ import { formatAbn } from '@/lib/invoice';
 import { fetchPaged } from '@/lib/paged';
 import { formatEndDate } from '@/lib/sponsors';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { cell, heading, heavy, ink, muted, num, paper, PAPER_PRINT_CSS, rule, small, th, thNum, totalCell, totalNum } from '@/lib/report-paper';
 
 // The treasurer's report for the AGM: one season on white paper that prints or saves as a PDF. Read
 // from the whole ledger, page by page: a total worked out from a partial read would be wrong without
@@ -28,19 +29,6 @@ interface Ledger {
 }
 
 const MAX_ROWS = 100000;
-const ink = '#0f172a';
-const muted = '#64748b';
-const rule = '1px solid #e2e8f0';
-const heavy = '2px solid #0f172a';
-const cell: React.CSSProperties = { padding: '0.4rem 0.5rem 0.4rem 0', borderBottom: rule, verticalAlign: 'top' };
-// A set width, so the figures line up from one table to the next
-const num: React.CSSProperties = { ...cell, width: '20%', textAlign: 'right', whiteSpace: 'nowrap', paddingRight: 0, paddingLeft: '0.75rem', fontVariantNumeric: 'tabular-nums' };
-const totalCell: React.CSSProperties = { ...cell, fontWeight: 800, borderBottom: heavy };
-const totalNum: React.CSSProperties = { ...num, fontWeight: 800, borderBottom: heavy };
-const heading: React.CSSProperties = { fontSize: '1.05rem', fontWeight: 800, color: ink, margin: '1.75rem 0 0.5rem', breakAfter: 'avoid' };
-const small: React.CSSProperties = { color: muted, fontSize: '0.8rem', margin: '0.4rem 0 0' };
-const th: React.CSSProperties = { ...cell, fontSize: '0.72rem', letterSpacing: '0.04em', color: muted, fontWeight: 700, textAlign: 'left' };
-const thNum: React.CSSProperties = { ...th, width: '20%', textAlign: 'right', paddingRight: 0, paddingLeft: '0.75rem', whiteSpace: 'nowrap' };
 
 export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
@@ -120,18 +108,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
 
   return (
     <div>
-      <style>{`
-        @media print {
-          @page { margin: 14mm; }
-          /* color-scheme: the dark theme otherwise paints the page margins black */
-          html, body { background: #fff !important; color-scheme: light !important; }
-          body::before, body::after { display: none !important; }
-          body * { visibility: hidden; }
-          .agm-paper, .agm-paper * { visibility: visible; }
-          .agm-paper { position: absolute; left: 0; top: 0; width: 100%; box-sizing: border-box; max-width: none !important; box-shadow: none !important; padding: 0 3px !important; border-radius: 0 !important; }
-          .agm-paper section, .agm-paper tr { break-inside: avoid; }
-        }
-      `}</style>
+      <style>{PAPER_PRINT_CSS}</style>
 
       <div className="admin-head">
         <div>
@@ -176,7 +153,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
             </p>
           </div>
 
-          <article className="agm-paper" style={{ background: '#fff', color: ink, borderRadius: 14, padding: 'clamp(1.25rem, 5vw, 3rem)', boxShadow: '0 20px 50px rgba(0,0,0,0.35)', fontSize: '0.92rem', lineHeight: 1.45, maxWidth: 860, margin: '0 auto' }}>
+          <article className="agm-paper" style={paper}>
             <header style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', paddingBottom: '1rem', borderBottom: heavy }}>
               <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', minWidth: 0 }}>
                 {club.logo_url && <img src={club.logo_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }} />}
@@ -330,7 +307,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
             </section>
           </article>
           <p className="text-meta" style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <Download size={13} aria-hidden="true" style={{ verticalAlign: 'text-bottom' }} /> Need every transaction for the auditor? Use Export CSV on the <Link href={`/${club.slug}/admin/finance`}>Finance page</Link>.
+            <Download size={13} aria-hidden="true" style={{ verticalAlign: 'text-bottom' }} /> Need every transaction for the auditor? Use the <Link href={`/${club.slug}/admin/finance/audit-pack`}>Audit pack</Link>.
           </p>
         </>
       )}

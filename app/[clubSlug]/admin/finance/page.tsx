@@ -143,6 +143,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
           <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} aria-hidden="true" /> Export CSV</button>
           <Link href={`/${club.slug}/admin/finance/budget`} className="btn btn-secondary"><BarChart3 size={16} aria-hidden="true" /> Budget</Link>
           <Link href={`/${club.slug}/admin/finance/agm`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> AGM report</Link>
+          <Link href={`/${club.slug}/admin/finance/audit-pack`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> Audit pack</Link>
         </div>
       </div>
 

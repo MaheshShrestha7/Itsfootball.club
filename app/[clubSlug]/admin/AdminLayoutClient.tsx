@@ -331,6 +331,7 @@ export default function AdminLayout({
             { label: 'Expense claims', href: `/${club.slug}/admin/finance?tab=claims`, badge: badgeOf(claimsToReview, 'to review') },
             { label: 'Budget vs actuals', href: `/${club.slug}/admin/finance/budget` },
             { label: 'AGM report', href: `/${club.slug}/admin/finance/agm` },
+            { label: 'Audit pack', href: `/${club.slug}/admin/finance/audit-pack` },
             { label: 'Payment settings', href: `/${club.slug}/admin/finance?tab=settings` },
           ],
         },
