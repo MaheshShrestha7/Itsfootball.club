@@ -2,7 +2,7 @@
 // updates and explicit deletes.
 // Run: npx esbuild lib/supabase/sync.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { ENTITIES, SupabaseSync, oneCallSources } from './sync';
+import { ENTITIES, SupabaseSync, keepEditsMadeDuringLoad, oneCallSources } from './sync';
 
 type Op = { table: string; kind?: string; filters: unknown[][]; rows?: unknown; options?: unknown; patch?: Record<string, unknown> };
 
@@ -135,6 +135,26 @@ async function main() {
   assert.ok(!log.some(o => o.kind === 'update'), 'server row seeded as saved');
 
   console.log('sync: scoped load, column updates, explicit deletes and pending local rows OK');
+}
+
+// --- edits made while a load is running ---
+{
+  type R = { id: string; name?: string; active?: boolean; tags?: string[] };
+  const base: R = { id: 'a', name: 'old', active: false, tags: ['x'] };
+  const unchanged: R = { id: 'b', name: 'b' };
+  const before = [base, unchanged];
+  const server: R[] = [{ id: 'a', name: 'renamed by someone else', active: false, tags: ['x'] }, { id: 'b', name: 'b2' }];
+  const edited = keepEditsMadeDuringLoad(server, [{ ...base, active: true }, unchanged], before);
+  assert.deepEqual(edited[0], { id: 'a', name: 'renamed by someone else', active: true, tags: ['x'] }, 'my edit stays, and someone else\'s change to another field arrives');
+  assert.equal(edited[1], server[1], 'a row nobody touched is the server\'s, untouched');
+  assert.equal(keepEditsMadeDuringLoad(server, before, before), server, 'no edits at all: nothing to do');
+  assert.equal(keepEditsMadeDuringLoad(server, undefined, before), server, 'nothing to compare');
+  assert.deepEqual(keepEditsMadeDuringLoad(server, [{ ...base }, unchanged], before)[0], server[0], 'a copy with the same values is not an edit');
+  assert.deepEqual(keepEditsMadeDuringLoad(server, [{ ...base, tags: ['x'] }, unchanged], before)[0], server[0], 'nor is an equal list');
+  assert.equal(keepEditsMadeDuringLoad(server, [{ ...base, tags: ['y'] }, unchanged], before)[0].tags![0], 'y', 'a changed list is');
+  assert.deepEqual(keepEditsMadeDuringLoad(server, [{ id: 'a', name: 'old', tags: ['x'] }, unchanged], before)[0].active, undefined, 'clearing a field is an edit too');
+  assert.deepEqual(keepEditsMadeDuringLoad([{ id: 'new', name: 'n' }], [{ id: 'new', name: 'mine' }], []), [{ id: 'new', name: 'n' }], 'a row that wasn\'t there at the start is the server\'s');
+  assert.deepEqual(keepEditsMadeDuringLoad([{ id: 'a', name: 's' }], [], [base]), [{ id: 'a', name: 's' }], 'removed locally: the caller handles deletes');
 }
 
 main().catch(err => {
