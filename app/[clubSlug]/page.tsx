@@ -30,7 +30,6 @@ import {
   ChevronRight,
   ChevronLeft,
   ExternalLink,
-  Mail,
   Flame,
   Play,
   ArrowRight,
@@ -325,8 +324,8 @@ export default function ClubPublicPage({
             bgIsFlyer: Boolean(evt?.flyer_url),
             title: item.title || evt?.title || `${club.name} Open Event`,
             subtitle: item.subtitle || evt?.description || 'Fan sessions and trial opportunities.',
-            ctaLabel: item.cta_label || 'RSVP / Inquire for Event',
-            ctaLink: item.cta_link || `/${club.slug}#events`,
+            // Slides saved before Nov 2026 carry the default "RSVP / Event Details"; there's no RSVP to make
+            ctaLabel: (item.cta_label === 'RSVP / Event Details' ? '' : item.cta_label) || 'Event Details',
             targetEvent: evt,
           };
         }
@@ -694,21 +693,21 @@ export default function ClubPublicPage({
                         </p>
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                          <button
-                            onClick={() => setContactModalOpen(true)}
+                          <Link
+                            href={activeSlideEvent ? `/${club.slug}/events/${activeSlideEvent.id}` : `/${club.slug}/events`}
                             className="btn btn-primary row"
                           >
-                            <Mail size={16} />
-                            <span>{currentSlide.ctaLabel || 'RSVP / Inquire for Event'}</span>
-                          </button>
+                            <span>{currentSlide.ctaLabel || 'Event Details'}</span>
+                            <ArrowRight size={14} />
+                          </Link>
 
-                          <a
-                            href="#events"
+                          <Link
+                            href={`/${club.slug}/calendar`}
                             className="btn btn-secondary row"
                           >
                             <Calendar size={16} />
                             <span>Full Club Calendar</span>
-                          </a>
+                          </Link>
                         </div>
                       </div>
                     )}
@@ -1107,13 +1106,13 @@ export default function ClubPublicPage({
                         </div>
                         )}
 
-                        <button
-                          onClick={() => setContactModalOpen(true)}
+                        <Link
+                          href={`/${club.slug}/events/${activeSlideEvent.id}`}
                           className="btn btn-primary btn-sm"
                           style={{ width: '100%', justifyContent: 'center' }}
                         >
-                          Confirm RSVP Attendance
-                        </button>
+                          {(activeSlideEvent.ticket_price_cents ?? 0) > 0 ? 'Get tickets' : 'View event details'}
+                        </Link>
                       </div>
                     );
                   })()}

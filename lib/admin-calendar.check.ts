@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { ClubEvent, ClubSeason, ClubTeam, Match, Tournament } from './supabase/types';
 import {
   buildCalendarItems, dayKey, filterItems, itemsOnDay, layoutDay, matchStart, monthGrid, newItemHref, parseNewItemRequest,
-  openItemHref, startOfWeek, weekDays,
+  openItemHref, publicCalendarItems, startOfWeek, weekDays,
   type CalendarKind,
 } from './admin-calendar';
 
@@ -146,5 +146,22 @@ assert.equal(parseNewItemRequest('?tab=results'), null);
 // Opening one item from the calendar: the link names it
 assert.equal(openItemHref('/rfc/admin/events', 'a b/c'), '/rfc/admin/events?open=a+b%2Fc');
 assert.equal(new URLSearchParams(openItemHref('/rfc/admin/matches', 'a b/c').split('?')[1]).get('open'), 'a b/c');
+
+// The public calendar: in-house games and private events stay out, and a team's hidden scores stay hidden
+const fans = new Map(publicCalendarItems({
+  clubId: 'c1',
+  clubTeams: [team('first', true), { ...team('u9'), hide_public_scores: true }],
+  tournaments: [],
+  matches: [
+    match('senior', { status: 'completed', home_score: 2, away_score: 1 }),
+    match('u9-game', { team_id: 'u9', status: 'completed', home_score: 9, away_score: 0 }),
+    match('in-house', { match_type: 'internal', home_team_name: 'Reds', away_team_name: 'Blues' }),
+  ],
+  events: [event('open'), event('private', { is_public: false })],
+}).map(i => [i.key, i]));
+assert.deepEqual([...fans.keys()].sort(), ['event:open', 'match:senior', 'match:u9-game']);
+assert.equal(fans.get('match:senior')!.score, '2-1');
+assert.equal(fans.get('match:u9-game')!.score, undefined);
+assert.equal(fans.get('match:u9-game')!.result, undefined);
 
 console.log('admin-calendar checks passed');

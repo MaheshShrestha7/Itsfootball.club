@@ -5,7 +5,8 @@
 // already loads; nothing here writes. Dates are shown in the viewer's local time.
 // ==============================================================================
 import type { ClubEvent, ClubSeason, ClubTeam, Match, Tournament } from './supabase/types';
-import { teamOfMatch } from './teams';
+import { publicFixtures } from './fixtures';
+import { publicScoreHidden, teamOfMatch } from './teams';
 import { parseTournamentDate } from './tournament-engine';
 
 export type CalendarKind = 'match' | 'training' | 'social' | 'trial' | 'tournament' | 'season';
@@ -247,6 +248,24 @@ export function buildCalendarItems(p: {
   }
 
   return items;
+}
+
+/**
+ * The calendar as fans see it: no in-house games, private events or season markers, and no score
+ * for a team that keeps its scores off the public site.
+ */
+export function publicCalendarItems(p: {
+  clubId: string;
+  matches: Match[];
+  events: ClubEvent[];
+  tournaments: Tournament[];
+  clubTeams: ClubTeam[];
+}): CalendarItem[] {
+  const own = p.matches.filter(m => m.club_id === p.clubId);
+  const games = publicFixtures(own, own);
+  const hidden = new Set(games.filter(m => publicScoreHidden(m, p.clubTeams)).map(m => m.id));
+  return buildCalendarItems({ ...p, matches: games, events: p.events.filter(e => e.is_public), seasons: [] })
+    .map(i => (i.source === 'matches' && hidden.has(i.id) ? { ...i, score: undefined, result: undefined } : i));
 }
 
 /** Items of the picked kinds, for one team ('ALL' for every team) */

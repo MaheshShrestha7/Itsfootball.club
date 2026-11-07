@@ -159,8 +159,8 @@ export default function AdminHeroSliderPage({
       subtitle: evt.description,
       badge: `PINNED EVENT • ${evt.category.toUpperCase()}`,
       image_url: '',
-      cta_label: 'RSVP / Event Details',
-      cta_link: `/${club.slug}#events`,
+      cta_label: 'Event Details',
+      cta_link: `/${club.slug}/events/${evt.id}`,
       is_active: true,
       order: pinnedItems.length + 1,
     };

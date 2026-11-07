@@ -14,7 +14,7 @@ import { useShopOpen } from '@/lib/use-shop-open';
 import { useMyChildren } from '@/lib/use-my-children';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { hasMultipleTeams } from '@/lib/teams';
-import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, Trophy, Settings, Menu, X, User, LogOut, UserCog, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
+import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, ChevronDown, Trophy, Settings, Menu, X, User, LogOut, UserCog, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 import { useClubSections } from '@/lib/use-club-sections';
 
@@ -48,6 +48,17 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
   }, [accountOpen]);
+
+  // The link bar's open dropdown (Football, Club): a click outside any of them closes it
+  const [navMenu, setNavMenu] = useState<string | null>(null);
+  useEffect(() => {
+    if (!navMenu) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element).closest?.('.club-nav-menu')) setNavMenu(null);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [navMenu]);
 
   const isAdmin = hasClubAdminAccess(club.id);
   const userRole = user ? getUserRoleForClub(club.id) : null;
@@ -155,16 +166,48 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   const teamsLink = multiTeam ? { path: '/teams', label: 'Teams' } : { path: '/squad', label: 'Squad' };
   // One look for every link in the bar; data-nav-drop: which give way first when space runs out (1 first).
-  // `group` starts a new group of links, set a little further from the one before.
-  const barLink = (path: string, label: string, drop?: number, group?: boolean) => (
-    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} className={`club-nav-link${group ? ' club-nav-group' : ''}`}
+  const barLink = (path: string, label: string, drop?: number) => (
+    <Link key={path} href={`/${club.slug}${path === '/' ? '' : path}`} className="club-nav-link"
       aria-current={isHere(path) ? 'page' : undefined} data-nav-drop={drop} hidden={drop ? dropped(drop) : undefined}>
       {label}
     </Link>
   );
+  // A dropdown of links, or a plain link when the club has only one of them. Links people Tab through,
+  // so navigation rather than role="menu": Escape closes it and focus goes back to its button.
+  const barMenu = (label: string, links: { path: string; label: string }[], drop?: number) => {
+    if (links.length === 1) return barLink(links[0].path, links[0].label, drop);
+    const open = navMenu === label;
+    const panelId = `club-nav-${label.toLowerCase()}`;
+    return (
+      <div key={label} className="club-nav-menu" data-nav-drop={drop} hidden={drop ? dropped(drop) : undefined}
+        onKeyDown={e => {
+          if (e.key === 'Escape' && open) {
+            setNavMenu(null);
+            e.currentTarget.querySelector('button')?.focus();
+          }
+        }}
+        // Tabbing past the last link closes it. relatedTarget is empty on a click, which must still reach the link.
+        onBlur={e => { if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setNavMenu(null); }}>
+        <button type="button" className="club-nav-link club-nav-trigger" aria-expanded={open} aria-controls={open ? panelId : undefined}
+          aria-current={links.some(l => isHere(l.path)) ? 'true' : undefined} onClick={() => setNavMenu(open ? null : label)}>
+          {label}
+          <ChevronDown size={14} aria-hidden="true" />
+        </button>
+        {open && (
+          <div id={panelId} className="club-nav-panel">
+            {links.map(l => (
+              <Link key={l.path} href={`/${club.slug}${l.path}`} className="club-menu-link" aria-current={isHere(l.path) ? 'page' : undefined} onClick={() => setNavMenu(null)}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
   // Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar
   const showSponsor = !isAuthenticated;
-  // The menu, in the same three groups and order as the bar; links the visitor can't use (no shop yet) left out
+  // The menu: every page the bar reaches, in three groups; links the visitor can't use (no shop yet) left out
   const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
     { title: 'Matchday', links: [
       { path: '/fixtures', label: 'Fixtures', icon: Calendar },
@@ -182,7 +225,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     { title: 'Support the club', links: [
       ...(hasShop ? [{ path: '/shop', label: 'Shop', icon: ShoppingBag }] : []),
       // SPP-5: for everyone, signed in too: the parents and players who run local businesses are the club's likeliest sponsors
-      { path: '/sponsor', label: 'Sponsor', icon: Handshake },
+      { path: '/sponsor', label: 'Sponsors', icon: Handshake },
     ] },
   ];
 
@@ -302,18 +345,22 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           </div>
         </Link>
 
-        {/* Desktop links, in three groups: matchday, the club, supporting it */}
-        <nav ref={navRef} aria-label="Club" style={{ display: 'none', alignItems: 'center', gap: '1rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
-          {barLink('/fixtures', 'Fixtures')}
-          {hasTournaments && barLink('/tournaments', 'Tournaments', 7)}
-          {barLink('/events', 'Events', 8)}
-          {barLink(teamsLink.path, teamsLink.label, 9)}
-          {barLink('/news', 'News', 6, true)}
-          {hasGallery && barLink('/gallery', 'Gallery', 2)}
-          {hasLeadership && barLink('/leadership', 'Leadership', 3)}
-          {barLink('/about', 'About', 4)}
-          {hasShop && barLink('/shop', 'Shop', 5, true)}
-          {showSponsor && barLink('/sponsor', 'Sponsor', 1, !hasShop)}
+        {/* Desktop links: the busiest pages direct, the rest in two dropdowns */}
+        <nav ref={navRef} aria-label="Club" style={{ display: 'none', alignItems: 'center', gap: '1.25rem', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }} className="desktop-nav">
+          {barMenu('Football', [
+            { path: '/fixtures', label: 'Fixtures' },
+            ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments' }] : []),
+            teamsLink,
+          ])}
+          {barLink('/events', 'Events', 5)}
+          {barLink('/news', 'News', 4)}
+          {barMenu('Club', [
+            ...(hasGallery ? [{ path: '/gallery', label: 'Gallery' }] : []),
+            ...(hasLeadership ? [{ path: '/leadership', label: 'Leadership' }] : []),
+            { path: '/about', label: 'About' },
+          ], 3)}
+          {showSponsor && barLink('/sponsor', 'Sponsors', 1)}
+          {hasShop && barLink('/shop', 'Shop', 2)}
         </nav>
 
         <div ref={sideRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
@@ -591,23 +638,37 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           display: inline-flex;
           align-items: center;
         }
-        .desktop-nav > :global(.club-nav-link) {
+        .desktop-nav :global(.club-nav-link) {
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
           color: var(--text-secondary);
           font-weight: 600;
           font-size: 0.9rem;
           padding: 0.35rem 0;
+          border: 0;
           border-bottom: 2px solid transparent;
         }
-        /* The first link of a group sits a little further from the group before */
-        .desktop-nav > :global(.club-nav-group) {
-          margin-left: 0.75rem;
-        }
-        .desktop-nav > :global(.club-nav-link:hover) {
+        .desktop-nav :global(.club-nav-link:hover),
+        .desktop-nav :global(.club-nav-trigger[aria-expanded='true']) {
           color: var(--text-primary);
         }
-        .desktop-nav > :global(.club-nav-link[aria-current='page']) {
+        /* The page they're on; a dropdown's button counts when the page is inside it */
+        .desktop-nav :global(.club-nav-link[aria-current]) {
           color: var(--text-primary);
           border-bottom-color: var(--club-primary);
+        }
+        .desktop-nav :global(.club-nav-menu) {
+          position: relative;
+        }
+        .desktop-nav :global(.club-nav-trigger) {
+          gap: 0.25rem;
+          background: none;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .desktop-nav :global(.club-nav-trigger[aria-expanded='true'] svg) {
+          transform: rotate(180deg);
         }
         /* Quiet text controls on the right: Sign in, Admin Room */
         .club-navbar :global(.club-nav-text) {
@@ -663,7 +724,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
         :global(.club-icon-btn[aria-expanded='true']) {
           border-color: rgba(var(--club-primary-rgb), 0.45);
         }
-        .club-navbar :global(.club-account-panel) {
+        .club-navbar :global(.club-account-panel),
+        .club-navbar :global(.club-nav-panel) {
           position: absolute;
           top: calc(100% + 0.6rem);
           right: 0;
@@ -675,6 +737,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
           display: flex;
           flex-direction: column;
+        }
+        .club-navbar :global(.club-nav-panel) {
+          right: auto;
+          left: -0.75rem;
+          width: 200px;
         }
         :global(.club-account-who) {
           display: flex;

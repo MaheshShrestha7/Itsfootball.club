@@ -74,8 +74,8 @@ export function getDefaultHeroPinnedItems(
       subtitle: clubEvents[0].description,
       badge: `UPCOMING EVENT • ${clubEvents[0].category.toUpperCase()}`,
       image_url: '',
-      cta_label: 'RSVP / Event Details',
-      cta_link: `/${club.slug}#events`,
+      cta_label: 'Event Details',
+      cta_link: `/${club.slug}/events/${clubEvents[0].id}`,
       is_active: true,
       order: defaults.length + 1,
     });
